@@ -469,7 +469,12 @@ public sealed class MarkupClassCoverageTests
             // Segmented control phase 8 (plan ff043b2e): TmSegmentedControl's per-instance id prefix is
             // one literal ("tm-segmented-{Guid…}" in TmSegmentedControl.razor.cs) that every option id is
             // built from by position — 70 → 71.
-            ExpectedUnmeasurableStems: 71),
+            // Kanban collapse phase 3 (plan a98e4a71): the board root stopped interpolating its class
+            // in markup ("tm-kanban@(SwimlanesEnabled ? …)") and composes a precomputed `rootCss`
+            // instead, so the bare `tm-kanban` stem left the population — 71 → 70. The class is still
+            // a literal token in the same file ("tm-kanban" + …, and the root's @Class splat), so this
+            // is a LOST INTERPOLATION, not a lost class.
+            ExpectedUnmeasurableStems: 70),
         new Scope("Signing", "Tempo.Blazor.Signing", UnstyledSigningMarkupClasses,
             MinRazorFiles: 28, MinMarkupClasses: 400, InheritsCoreCss: true,
             // Signing redesign phase 2 (B25): the runner's single step panel id

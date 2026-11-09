@@ -9,7 +9,16 @@
         + (Disabled ? " tm-kanban-disabled" : "");
 }
 
-<div class="@rootCss @Class" @attributes="AdditionalAttributes">
+<div class="@rootCss @Class" data-focus-target="@(IsMoveMenuEnabled ? _focusTarget : null)" @attributes="AdditionalAttributes">
+    @* The keyboard instructions and the ONE polite live region of the whole board sit outside the
+       columns: a card's keys are described once, and a move is announced once instead of once per
+       column. Both are visually hidden (position: absolute), so the flex layout is untouched, and both
+       exist only while the non-drag path does. *@
+    @if (IsMoveMenuEnabled)
+    {
+        <p class="tm-sr-only" id="@InstructionsId">@CardInstructions</p>
+    }
+
     @if (Columns is not null && !SwimlanesEnabled)
     {
         @foreach (var col in Columns)
@@ -25,12 +34,14 @@
             var showIndicator = !Disabled && _draggedItem is not null && _dropTargetColumn == col.Id && _dropTargetSwimlane is null;
 
             <div class="@colCss"
+                 @ref="ZoneHandle(col.Id, null).Ref"
                  data-testid="@TestId($"board-column-{col.Id}")"
                  title="@(isCollapsed ? col.Title : null)"
                  role="@(isCollapsed ? "group" : null)"
                  aria-label="@(isCollapsed ? CollapsedColumnSummary(col, colItems.Count) : null)"
+                 tabindex="@(IsMoveMenuEnabled ? "-1" : null)"
                  @ondragover="@(() => HandleColumnDragOver(col.Id, null))"
-                 @ondragover:preventDefault="true"
+                 @ondragover:preventDefault="@(!Disabled)"
                  @ondrop="@(() => HandleDrop(col.Id, null))">
 
                 <div class="tm-kanban__header" @onclick="@(() => HandleColumnHeaderClick(col))">
@@ -109,10 +120,12 @@
                     + (isCollapsed ? " tm-kanban__column--collapsed" : "");
 
                 <div class="@colCss"
+                     @ref="ZoneHandle(col.Id, null).Ref"
                      data-testid="@TestId($"colhead-{col.Id}")"
                      title="@(isCollapsed ? col.Title : null)"
                      role="@(isCollapsed ? "group" : null)"
-                     aria-label="@(isCollapsed ? CollapsedColumnSummary(col, colItems.Count) : null)">
+                     aria-label="@(isCollapsed ? CollapsedColumnSummary(col, colItems.Count) : null)"
+                     tabindex="@(IsMoveMenuEnabled ? "-1" : null)">
                     <div class="tm-kanban__header" @onclick="@(() => HandleColumnHeaderClick(col))">
                         @if (ColumnsCollapsible)
                         {
@@ -191,9 +204,11 @@
                             var showIndicator = !Disabled && _draggedItem is not null && _dropTargetColumn == col.Id && _dropTargetSwimlane == laneKey;
 
                             <div class="@cellCss"
+                                 @ref="ZoneHandle(col.Id, laneKey).Ref"
                                  data-testid="@TestId($"cell-{col.Id}-{laneTestId}")"
+                                 tabindex="@(IsMoveMenuEnabled ? "-1" : null)"
                                  @ondragover="@(() => HandleColumnDragOver(col.Id, laneKey))"
-                                 @ondragover:preventDefault="true"
+                                 @ondragover:preventDefault="@(!Disabled)"
                                  @ondrop="@(() => HandleDrop(col.Id, laneKey))">
                                 @if (!colCollapsed)
                                 {
@@ -218,15 +233,26 @@
                                 + (IsActiveDropTarget(col.Id, laneKey) ? " tm-kanban__lane-slot--drop-target" : "");
 
                             <div class="@slotCss"
+                                 @ref="ZoneHandle(col.Id, laneKey).Ref"
                                  data-testid="@TestId($"lane-slot-{col.Id}-{laneTestId}")"
+                                 tabindex="@(IsMoveMenuEnabled ? "-1" : null)"
                                  @ondragover="@(() => HandleColumnDragOver(col.Id, laneKey))"
-                                 @ondragover:preventDefault="true"
+                                 @ondragover:preventDefault="@(!Disabled)"
                                  @ondrop="@(() => HandleDrop(col.Id, laneKey))"></div>
                         }
                     </div>
                 }
             </div>
         }
+    }
+
+    @if (IsMoveMenuEnabled)
+    {
+        <span class="tm-sr-only"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+              data-testid="@TestId("kanban-status")">@_announcement</span>
     }
 </div>
 
@@ -544,12 +570,11 @@
             return;
         }
 
+        var rovingIndex = RovingIndex(columnId, laneId, items);
+
         for (var i = 0; i < items.Count; i++)
         {
-            var capturedItem = items[i];
-            var capturedIndex = i;
-
-            if (showIndicator && _dropTargetIndex == capturedIndex)
+            if (showIndicator && _dropTargetIndex == i)
             {
                 builder.OpenElement(6, "div");
                 builder.SetKey("tm-kanban-drop-indicator");
@@ -557,18 +582,7 @@
                 builder.CloseElement();
             }
 
-            builder.OpenElement(8, "div");
-            builder.SetKey(capturedIndex);
-            builder.AddAttribute(9, "class", "tm-kanban__card");
-            builder.AddAttribute(10, "draggable", "true");
-            builder.AddAttribute(11, "ondragstart", EventCallback.Factory.Create(this, () => HandleDragStart(capturedItem, columnId, laneId)));
-            builder.AddAttribute(12, "ondragover", EventCallback.Factory.Create<Microsoft.AspNetCore.Components.Web.DragEventArgs>(this, _ => HandleCardDragOver(columnId, laneId, capturedIndex)));
-            builder.AddEventPreventDefaultAttribute(13, "ondragover", true);
-            builder.AddEventStopPropagationAttribute(14, "ondragover", true);
-            builder.AddAttribute(15, "ondragend", EventCallback.Factory.Create(this, HandleDragEnd));
-            builder.AddAttribute(16, "onclick", EventCallback.Factory.Create(this, () => HandleCardClick(capturedItem)));
-            builder.AddContent(17, CardTemplate?.Invoke(capturedItem));
-            builder.CloseElement();
+            AddCard(builder, columnId, laneId, items[i], i, rovingIndex, keyed: true);
         }
 
         if (showIndicator && _dropTargetIndex >= items.Count)
@@ -583,11 +597,13 @@
     private const string TrailingDropIndicatorKey = "tm-kanban-drop-indicator";
 
     // A single card rendered inside <Virtualize>. Reuses the identical card markup (draggable + click +
-    // CardTemplate) as RenderCells so virtualization is a pure windowing optimisation. The drop position
-    // index is resolved from the item's place in the current cell list (dragging in huge columns is rare).
+    // CardTemplate + the non-drag move menu) as RenderCells so virtualization is a pure windowing
+    // optimisation. The drop position index is resolved from the item's place in the current cell list
+    // (dragging in huge columns is rare).
     private RenderFragment RenderVirtualCard(string columnId, string? laneId, IReadOnlyList<TItem> items, TItem item, bool showIndicator) => builder =>
     {
         var index = IndexOfItem(items, item);
+        var rovingIndex = RovingIndex(columnId, laneId, items);
 
         if (showIndicator && _dropTargetIndex == index)
         {
@@ -597,17 +613,7 @@
             builder.CloseElement();
         }
 
-        builder.OpenElement(2, "div");
-        builder.AddAttribute(3, "class", "tm-kanban__card");
-        builder.AddAttribute(4, "draggable", "true");
-        builder.AddAttribute(5, "ondragstart", EventCallback.Factory.Create(this, () => HandleDragStart(item, columnId, laneId)));
-        builder.AddAttribute(6, "ondragover", EventCallback.Factory.Create<Microsoft.AspNetCore.Components.Web.DragEventArgs>(this, _ => HandleCardDragOver(columnId, laneId, index)));
-        builder.AddEventPreventDefaultAttribute(7, "ondragover", true);
-        builder.AddEventStopPropagationAttribute(8, "ondragover", true);
-        builder.AddAttribute(9, "ondragend", EventCallback.Factory.Create(this, HandleDragEnd));
-        builder.AddAttribute(10, "onclick", EventCallback.Factory.Create(this, () => HandleCardClick(item)));
-        builder.AddContent(11, CardTemplate?.Invoke(item));
-        builder.CloseElement();
+        AddCard(builder, columnId, laneId, item, index, rovingIndex, keyed: false);
     };
 
     private static int IndexOfItem(IReadOnlyList<TItem> items, TItem item)

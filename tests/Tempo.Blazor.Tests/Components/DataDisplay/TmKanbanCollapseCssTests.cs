@@ -223,9 +223,13 @@ public sealed class TmKanbanCollapseCssTests
     public void SlotDropTarget_OutlineMeetsTheNonTextContrastMinimum_OnEverySurface(bool dark)
     {
         // WCAG 1.4.11 — a non-text indicator needs 3:1 against its neighbour. The outline is
-        // --tm-color-primary; the surfaces it can sit on are the lane's muted panel and the page surface.
-        // The dark target wash (primary-500 at 15 % over --tm-bg-muted) lifts the background just enough
-        // to read 3.49:1, so the pair clears the minimum without a dark-only override.
+        // --tm-color-primary and the drop target paints --tm-color-primary-subtle UNDER it, so the
+        // surfaces it can sit on are the lane's muted panel, the page surface AND that wash. The dark
+        // wash is `rgb(from --tm-color-primary-500 / 0.15)`, i.e. measured as painted, composited over
+        // the muted panel — the lightest backdrop it can land on and therefore the worst case.
+        //
+        // Measured (24px outline on its own background, `ThemeCss` resolver): light 4.70 on muted,
+        // 5.17 on surface, 4.75 on the wash; dark 4.07 on muted, 5.75 on surface, 3.48 on the wash.
         foreach (var surface in new[] { "var(--tm-bg-muted)", "var(--tm-bg-surface)" })
         {
             ThemeCss.Ratio("var(--tm-color-primary)", surface, dark).Should()
@@ -233,5 +237,98 @@ public sealed class TmKanbanCollapseCssTests
                     "the drop-target outline must be perceivable on {0} in the {1} theme",
                     surface, dark ? "dark" : "light");
         }
+
+        ThemeCss.PaintedRatio("var(--tm-color-primary)", "var(--tm-color-primary-subtle)", dark,
+                backdrop: "var(--tm-bg-muted)").Should()
+            .BeGreaterThanOrEqualTo(3.0,
+                "the outline sits on the target's own wash in the {0} theme (measured 4.75 light / 3.48 dark)",
+                dark ? "dark" : "light");
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // Phase 3 review (fze-3) — the whole-gesture wash and the drop claim
+    // ══════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void CollapsedStrips_AdvertiseThemselvesForTheWholeGesture_LikeTheLaneSlots()
+    {
+        var css = Sheet();
+
+        // A collapsed strip is a drop zone for the WHOLE gesture, so it joins the lane slots' in-flight
+        // wash instead of staying invisible until the pointer happens to be over it. Its own
+        // --drop-target rule repeats the dragging prefix and outweighs this wash.
+        Body(css, ".tm-kanban--dragging .tm-kanban__column--collapsed").Should()
+            .Contain("border-color: var(--tm-color-primary-soft-border)",
+                "the root's gesture class turns every strip into a visible target");
+
+        Body(css, ".tm-kanban__column--collapsed.tm-kanban__column--drop-target").Should()
+            .Contain("border-color: var(--tm-color-primary)")
+            .And.Contain("background-color: var(--tm-color-primary-subtle)");
+
+        Bundle().Should().Contain(".tm-kanban--dragging .tm-kanban__column--collapsed");
+    }
+
+    /// <summary>
+    /// The render-time <c>preventDefault</c> flag never reaches the DOM (it lives on the event handler
+    /// descriptor), so no bUnit assertion can observe it and a real drag only shows its effect when the
+    /// drop lands. It is nevertheless the contract: a DISABLED board must not claim a drop it will
+    /// refuse, or the browser paints a drop cursor and the drop event dies on the floor. Hence the one
+    /// source guard in this suite — every drop zone binds <c>@(!Disabled)</c>, never a constant.
+    /// </summary>
+    [Fact]
+    public void EveryDropZone_ClaimsTheDropOnlyWhileTheBoardIsEnabled()
+    {
+        var razor = Read("src", "Tempo.Blazor", "Components", "DataDisplay", "TmKanbanBoard.razor");
+
+        Regex.Matches(razor, @"@ondragover:preventDefault=""@\(!Disabled\)""").Count.Should()
+            .Be(3, "the column, the swimlane cell and the collapsed lane's slot each bind the live flag");
+        razor.Should().NotContain("@ondragover:preventDefault=\"true\"",
+            "a constant true would let a disabled board claim the drop");
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // Phase 4 (plan a98e4a71) — the card's non-drag move trigger
+    // ══════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void TheCardMoveTrigger_IsATokenOnlyTouchTarget_AndNeverRestylesTheMenusOwnTrigger()
+    {
+        var css = Sheet();
+
+        Body(css, ".tm-kanban__card").Should().Contain("position: relative",
+            "the trigger is positioned in the card's own corner");
+        Body(css, ".tm-kanban__card--movable").Should()
+            .Contain("padding-inline-end: calc(var(--tm-space-3, 0.75rem) + var(--tm-space-6))",
+                "the reserved corner keeps the host's content out from under the trigger");
+        Body(css, ".tm-kanban__card-content").Should().NotBeNullOrEmpty();
+        Body(css, ".tm-kanban__card-actions").Should().Contain("position: absolute");
+
+        var trigger = Body(css, ".tm-kanban__card-move-trigger");
+        trigger.Should().Contain("inline-size: var(--tm-space-6)",
+                "the glyph is a 24×24 target (WCAG 2.5.8)")
+            .And.Contain("block-size: var(--tm-space-6)")
+            .And.Contain("color: var(--tm-text-secondary)");
+
+        var coarse = MediaBlock(css, "@media (pointer: coarse)");
+        Body(coarse, ".tm-kanban__card-move-trigger").Should()
+            .Contain("inline-size: var(--tm-touch-target)")
+            .And.Contain("block-size: var(--tm-touch-target)");
+
+        Body(css, ".tm-kanban__card-move:hover .tm-kanban__card-move-trigger").Should()
+            .Contain("background-color: var(--tm-bg-muted)")
+            .And.Contain("color: var(--tm-text-primary)");
+
+        // Ownership: the menu's own trigger is a foreign element, so this sheet styles ITS OWN glyph
+        // through the wrapper's state and never the wrapper itself.
+        css.Should().NotContain(".tm-context-menu__trigger",
+            "the kanban stylesheet must not restyle the context menu's own trigger");
+
+        Body(css, ".tm-kanban__card:focus-visible").Should().Contain("box-shadow: var(--tm-focus-ring)",
+            "the focusable card paints the shared focus ring");
+
+        var bundle = Bundle();
+        bundle.Should().Contain(".tm-kanban__card-move-trigger");
+        bundle.Should().Contain(".tm-kanban__card--movable");
+        bundle.Should().Contain("--tm-touch-target");
     }
 }

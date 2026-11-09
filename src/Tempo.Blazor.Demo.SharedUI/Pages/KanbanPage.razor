@@ -16,7 +16,11 @@
         the exact insertion point, and the new order is persisted into the sample data. The collapse button in each
         column header narrows the column to a strip that still shows its title, count and WIP badge — and still catches
         a card dropped on it (appended to the end), so a wide board stays readable. Click anywhere on a collapsed
-        column to expand it again.
+        column to expand it again. Every card is also reachable without a mouse (WCAG 2.5.7): Tab reaches one card per
+        column, <kbd>M</kbd> / <kbd>Alt</kbd>+<kbd>↓</kbd> opens the card's move menu (or a pointer uses the “Move…”
+        button in the card's corner) to pick a column (and swimlane), or to nudge the card with Move up / Move down.
+        The result is reported through the same <code>OnItemMoved</code> / <code>OnItemReordered</code> events as a
+        drop and announced in a live region; on a phone the menu becomes a bottom sheet.
     </p>
 
     <TmKanbanBoard TItem="TaskItem"
@@ -25,6 +29,7 @@
                    ColumnSelector="t => t.Status"
                    CardTemplate="RenderCard"
                    ColumnsCollapsible="true"
+                   CardLabelSelector="t => t.Title"
                    OnCardClick="HandleCardClick"
                    OnItemMoved="HandleItemMoved"
                    OnItemReordered="HandleItemReordered" />
@@ -85,6 +90,7 @@
                    SwimlaneSelector="t => string.IsNullOrEmpty(t.Assignee) ? null : t.Assignee"
                    CardTemplate="RenderCard"
                    ColumnsCollapsible="true"
+                   CardLabelSelector="t => t.Title"
                    OnItemMoved="HandleSwimMove"
                    OnItemReordered="HandleSwimReorder" />
 
@@ -110,6 +116,7 @@
                    Items="_manyTasks"
                    ColumnSelector="t => t.Status"
                    CardTemplate="RenderCard"
+                   CardLabelSelector="t => t.Title"
                    VirtualizeCards="true"
                    CardItemSize="92" />
 </section>

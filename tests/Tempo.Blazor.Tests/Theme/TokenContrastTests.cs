@@ -744,47 +744,15 @@ public sealed partial class TokenContrastTests
     /// <c>rgb(from …)</c> wash. A translucent fill is not a colour a viewer sees on its own.
     /// </summary>
     private static double PaintedRatio(string foreground, string surface, bool dark)
-    {
-        var tokens = ThemeCss.TokenGraph(dark);
-        return ThemeCss.Contrast(ThemeCss.ResolveColour(foreground, tokens), PaintedColour(surface, tokens));
-    }
+        => ThemeCss.PaintedRatio(foreground, surface, dark);
 
     /// <summary>
-    /// The colour a viewer sees for a token. A translucent wash declares its alpha as
-    /// <c>rgb(from … / a)</c> somewhere along the <c>var()</c> chain; that colour is composited over the
-    /// surface, because the bare colour is not what gets painted.
+    /// The colour a viewer sees for a token, composited over the surface when it is a translucent
+    /// wash — the shared <see cref="ThemeCss.PaintedColour"/> resolver, so two guards can no longer
+    /// composite differently.
     /// </summary>
     private static string PaintedColour(string tokenExpr, Dictionary<string, string> tokens)
-    {
-        var colour = ThemeCss.ResolveColour(tokenExpr, tokens);
-        var alpha = AlphaAlongChain(tokenExpr, tokens);
-        return alpha is null
-            ? colour
-            : ThemeCss.Composite(colour, alpha.Value, ThemeCss.ResolveColour("var(--tm-bg-surface)", tokens));
-    }
-
-    private static double? AlphaAlongChain(string value, Dictionary<string, string> tokens, int depth = 0)
-    {
-        if (depth > 16)
-        {
-            return null;
-        }
-
-        var alpha = Regex.Match(value, @"/\s*([0-9.]+)\s*\)", RegexOptions.None, TimeSpan.FromSeconds(5));
-        if (alpha.Success)
-        {
-            return double.Parse(alpha.Groups[1].Value, CultureInfo.InvariantCulture);
-        }
-
-        var reference = ThemeCss.FirstVar(value);
-        if (reference is null)
-        {
-            return null;
-        }
-
-        var name = ThemeCss.SplitOnTopLevelComma(reference[4..^1]).Name.Trim();
-        return tokens.TryGetValue(name, out var referenced) ? AlphaAlongChain(referenced, tokens, depth + 1) : null;
-    }
+        => ThemeCss.PaintedColour(tokenExpr, tokens);
 
     [Theory]
     [InlineData(false, false)]

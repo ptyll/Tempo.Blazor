@@ -55,6 +55,37 @@ public class TmContextMenuTests : LocalizationTestBase
     }
 
     [Fact]
+    public void ContextMenu_TriggerTabIndex_MinusOne_LeavesTheTabOrder_ButKeepsTheMenuClickable()
+    {
+        // A host whose trigger sits INSIDE another focusable element (the Kanban card owns one roving
+        // stop per cell) opts out of a second tab stop; the menu stays pointer-activatable.
+        var cut = Render<TmContextMenu>(p => p
+            .Add(x => x.Trigger, (RenderFragment)(b => b.AddMarkupContent(0, "<span>Actions</span>")))
+            .Add(x => x.TriggerTabIndex, -1)
+            .AddChildContent<TmContextMenuItem>(mi => mi
+                .Add(x => x.Label, "Edit")));
+
+        var trigger = cut.Find(".tm-context-menu__trigger");
+        trigger.GetAttribute("tabindex").Should().Be("-1");
+        trigger.GetAttribute("role").Should().Be("button", "the trigger keeps its menu-button semantics");
+
+        trigger.Click();
+        cut.Find("[role='menu']").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void ContextMenu_TriggerTabIndex_Null_OmitsTheAttribute()
+    {
+        var cut = Render<TmContextMenu>(p => p
+            .Add(x => x.Trigger, (RenderFragment)(b => b.AddMarkupContent(0, "<span>Actions</span>")))
+            .Add(x => x.TriggerTabIndex, null)
+            .AddChildContent<TmContextMenuItem>(mi => mi
+                .Add(x => x.Label, "Edit")));
+
+        cut.Find(".tm-context-menu__trigger").GetAttribute("tabindex").Should().BeNull();
+    }
+
+    [Fact]
     public void ContextMenu_Enter_OpensMenu()
     {
         var cut = Render<TmContextMenu>(p => p

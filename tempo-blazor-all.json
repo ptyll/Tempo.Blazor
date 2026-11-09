@@ -11612,7 +11612,7 @@
           "kind": "Component",
           "category": "Data Display",
           "namespace": "Tempo.Blazor.Components.DataDisplay",
-          "description": "Generic drag-and-drop Kanban board with typed items, configurable columns with optional color and WIP limits, optional horizontal swimlanes, custom card/column/swimlane templates, cross-column and cross-lane moves, in-column reordering with a visual drop indicator, and events for card moves and clicks.",
+          "description": "Generic drag-and-drop Kanban board with typed items, configurable columns with optional color and WIP limits, optional horizontal swimlanes, custom card/column/swimlane templates, cross-column and cross-lane moves, in-column reordering with a visual drop indicator, and events for card moves and clicks. Every card is also a focusable, keyboard-operable move target (WCAG 2.5.7): a \"Move…\" menu on the card offers every column × swimlane destination, collapsed zones included, plus Move up / Move down, and reports the same OnItemMoved / OnItemReordered contract as a drop.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/TmKanbanBoard.razor",
           "documentationStatus": "merged",
@@ -11632,6 +11632,12 @@
               "isRequired": false,
               "default": "88",
               "description": "Estimated card row height (px) handed to <Virtualize ItemSize> when VirtualizeCards is enabled. Defaults to 88."
+            },
+            {
+              "name": "CardLabelSelector",
+              "type": "Func<TItem, string>?",
+              "isRequired": false,
+              "description": "Optional function that names a card for assistive technology. The \"Move …\" trigger, the move menu's sheet title, the current cell's menu entry and the live region's \"{0} moved to {1}\" announcement read it. Prefer setting it: when null the item's ToString() is used only if the item's type overrides it (a record's generated ToString() names its fields); a plain class or struct would print its type name, so the board uses the localized \"card {n}\" (the card's 1-based position in its cell) instead."
             },
             {
               "name": "CardTemplate",
@@ -11734,6 +11740,13 @@
               "description": "Fires when a card is dropped within the same cell (same column and, if enabled, same swimlane) to change its position. When no handler is attached, same-cell drops are a no-op."
             },
             {
+              "name": "ShowMoveMenu",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether every card offers the non-drag \"Move…\" action: a focusable card with ONE roving tab stop per cell (Tab reaches it, M / Alt+ArrowDown open the menu, Enter / Space raise OnCardClick), the menu of every column x swimlane target (the cell the card sits in is marked \"(current)\" and disabled), Move up / Move down and the live-region announcement of the result. Defaults to true because a drag-only card fails WCAG 2.5.7. false restores the pre-2.11 card markup (inert drag plus the card click, no wrapper, no tab stop, no aria attributes, no live region) — see the CHANGELOG migration note. The action is never rendered while Disabled."
+            },
+            {
               "name": "SwimlaneHeaderTemplate",
               "type": "RenderFragment<KanbanSwimlane>?",
               "isRequired": false,
@@ -11798,7 +11811,12 @@
             "tm-kanban__lane-slot",
             "tm-kanban__lane-slot--collapsed",
             "tm-kanban__lane-slot--drop-target",
-            "tm-kanban--dragging"
+            "tm-kanban--dragging",
+            "tm-kanban__card--movable",
+            "tm-kanban__card-content",
+            "tm-kanban__card-actions",
+            "tm-kanban__card-move",
+            "tm-kanban__card-move-trigger"
           ],
           "examples": [
             {
@@ -11812,6 +11830,10 @@
             {
               "title": "Swimlanes grouped by assignee",
               "code": "<TmKanbanBoard TItem=\"TaskItem\"\n               Items=\"@tasks\"\n               Columns=\"@columns\"\n               ColumnSelector=\"t => t.Status\"\n               SwimlaneSelector=\"t => string.IsNullOrEmpty(t.Assignee) ? null : t.Assignee\"\n               CardTemplate=\"RenderCard\"\n               OnItemMoved=\"HandleMove\"\n               OnItemReordered=\"HandleReorder\" />\n\n@code {\n    // e.ToSwimlane is the target assignee (null = unassigned / \"no value\" lane)\n    void HandleMove(KanbanMoveEvent<TaskItem> e)\n        => Apply(e, e.Item with { Status = e.ToColumn, Assignee = e.ToSwimlane ?? \"\" });\n}"
+            },
+            {
+              "title": "Keyboard / tap move (no drag)",
+              "code": "<TmKanbanBoard TItem=\"TaskItem\"\n               Items=\"@tasks\"\n               Columns=\"@columns\"\n               ColumnSelector=\"t => t.Status\"\n               SwimlaneSelector=\"t => t.Assignee\"\n               CardLabelSelector=\"t => t.Title\"\n               CardTemplate=\"RenderCard\"\n               OnItemMoved=\"HandleMove\"\n               OnItemReordered=\"HandleReorder\" />\n\n@code {\n    // Same contract as a drop: a menu move appends to the chosen (column, lane) cell and a\n    // Move up / Move down reports the cell's new index. The card keeps the focus afterwards.\n}"
             }
           ]
         },
@@ -26137,6 +26159,13 @@
               "type": "RenderFragment?",
               "isRequired": false,
               "description": "The trigger element that opens the menu."
+            },
+            {
+              "name": "TriggerTabIndex",
+              "type": "int?",
+              "isRequired": false,
+              "default": "0",
+              "description": "Tab index of the trigger. Defaults to 0: the trigger is the menu's own tab stop. -1 takes it out of the tab order while keeping it pointer-activatable — what a host needs when the trigger sits INSIDE another focusable element that already owns the tab stop (TmKanbanBoard's card owns one roving stop per cell and opens the menu with M / Alt+ArrowDown, so a second stop would double the cell's tab stops). null omits the attribute."
             }
           ],
           "cssClasses": [

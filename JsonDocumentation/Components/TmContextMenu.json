@@ -39,6 +39,13 @@
       "description": "Raised when the menu opens or closes, including a close from the overlay. A host that mounts the menu only while it is open uses this to drop that mount."
     },
     {
+      "name": "TriggerTabIndex",
+      "type": "int?",
+      "isRequired": false,
+      "default": "0",
+      "description": "Tab index of the trigger. Defaults to 0: the trigger is the menu's own tab stop. -1 takes it out of the tab order while keeping it pointer-activatable — what a host needs when the trigger sits INSIDE another focusable element that already owns the tab stop (TmKanbanBoard's card owns one roving stop per cell and opens the menu with M / Alt+ArrowDown, so a second stop would double the cell's tab stops). null omits the attribute."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

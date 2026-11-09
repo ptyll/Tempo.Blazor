@@ -9,7 +9,7 @@
     <div class="tm-context-menu__trigger"
          @ref="_triggerRef"
          role="button"
-         tabindex="0"
+         tabindex="@TriggerTabIndexText"
          aria-haspopup="menu"
          aria-expanded="@BoolText(_isOpen)"
          @onclick="ToggleMenu"
@@ -104,6 +104,16 @@
     /// it is open uses this to drop that mount, so a later render cannot reopen it.
     /// </summary>
     [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+
+    /// <summary>
+    /// Tab index of the trigger. Defaults to <c>0</c>: the trigger is the menu's own tab stop.
+    /// <c>-1</c> takes the trigger out of the tab order while keeping it pointer-activatable — what a
+    /// host needs when the trigger sits INSIDE another focusable element that already owns the tab
+    /// stop (a Kanban card owns one roving stop per cell and opens this menu with M / Alt+ArrowDown,
+    /// so a second stop would double the cell's tab stops). <see langword="null"/> omits the attribute
+    /// entirely.
+    /// </summary>
+    [Parameter] public int? TriggerTabIndex { get; set; } = 0;
 
     /// <summary>Additional CSS class for the root element.</summary>
     [Parameter] public string? Class { get; set; }
@@ -231,4 +241,8 @@
     }
 
     private static string BoolText(bool value) => value ? "true" : "false";
+
+    // The attribute is a raw number (or absent), never a culture-formatted value.
+    private string? TriggerTabIndexText
+        => TriggerTabIndex?.ToString(System.Globalization.CultureInfo.InvariantCulture);
 }

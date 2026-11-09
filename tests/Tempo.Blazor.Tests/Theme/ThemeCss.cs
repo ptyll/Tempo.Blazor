@@ -375,4 +375,61 @@ internal static class ThemeCss
         var tokens = TokenGraph(dark);
         return Contrast(ResolveColour(foregroundValue, tokens), ResolveColour(backgroundValue, tokens));
     }
+
+    /// <summary>
+    /// The alpha a token declares along its <c>var()</c> chain (<c>rgb(from … r g b / a)</c>), or
+    /// <see langword="null"/> when the chain ends in an opaque colour.
+    /// </summary>
+    public static double? AlphaAlongChain(string value, Dictionary<string, string> tokens, int depth = 0)
+    {
+        if (depth > 16)
+        {
+            return null;
+        }
+
+        var alpha = Regex.Match(value, @"/\s*([0-9.]+)\s*\)", RegexOptions.None, RegexTimeout);
+        if (alpha.Success)
+        {
+            return double.Parse(alpha.Groups[1].Value, CultureInfo.InvariantCulture);
+        }
+
+        var reference = FirstVar(value);
+        if (reference is null)
+        {
+            return null;
+        }
+
+        var name = SplitOnTopLevelComma(reference[4..^1]).Name.Trim();
+        return tokens.TryGetValue(name, out var referenced) ? AlphaAlongChain(referenced, tokens, depth + 1) : null;
+    }
+
+    /// <summary>
+    /// The colour a viewer actually sees for a token painted over <paramref name="backdrop"/>: a
+    /// translucent wash declares its alpha somewhere along the <c>var()</c> chain, and the bare
+    /// colour is not what gets painted. The default backdrop is the page surface — a fill that
+    /// replaces an element's own background is composited over whatever the element sits on.
+    /// </summary>
+    public static string PaintedColour(
+        string tokenExpr,
+        Dictionary<string, string> tokens,
+        string backdrop = "var(--tm-bg-surface)")
+    {
+        var colour = ResolveColour(tokenExpr, tokens);
+        var alpha = AlphaAlongChain(tokenExpr, tokens);
+        return alpha is null ? colour : Composite(colour, alpha.Value, ResolveColour(backdrop, tokens));
+    }
+
+    /// <summary>
+    /// Contrast between two CSS values where the BACKGROUND is painted first (a translucent fill is
+    /// composited over <paramref name="backdrop"/> before it is measured).
+    /// </summary>
+    public static double PaintedRatio(
+        string foregroundValue,
+        string backgroundValue,
+        bool dark,
+        string backdrop = "var(--tm-bg-surface)")
+    {
+        var tokens = TokenGraph(dark);
+        return Contrast(ResolveColour(foregroundValue, tokens), PaintedColour(backgroundValue, tokens, backdrop));
+    }
 }

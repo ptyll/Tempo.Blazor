@@ -111,6 +111,13 @@
         min-width: var(--tm-touch-target);
         min-height: var(--tm-touch-target);
     }
+
+    /* A phone cannot hit a 24 px glyph, and the move menu is the only way a finger moves a card
+       without a long press: the card's trigger grows to the shared touch target. */
+    .tm-kanban__card-move-trigger {
+        inline-size: var(--tm-touch-target);
+        block-size: var(--tm-touch-target);
+    }
 }
 
 .tm-kanban__column-toggle:focus-visible,
@@ -162,6 +169,7 @@
 /* ── Card ── */
 
 .tm-kanban__card {
+    position: relative;
     padding: var(--tm-space-3, 0.75rem);
     background-color: var(--tm-bg-surface);
     border: 1px solid var(--tm-border-color);
@@ -180,6 +188,58 @@
 .tm-kanban__card:active {
     cursor: grabbing;
 }
+
+/* The card is a non-native focusable (it owns the move menu and the Enter/Space activation), so the
+   focus ring is its own: the shared ring token against the card's surface, like every other
+   interactive element in the library. */
+.tm-kanban__card:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+/* ── Non-drag move (plan a98e4a71, phase 4 / WCAG 2.5.7) ──
+
+   A card with the move action reserves the top-right corner for the "⋯" trigger, so the host's card
+   content never runs underneath it. The trigger is OUR span over the context menu's own wrapper: the
+   menu keeps sole ownership of its trigger (this sheet styles only its own glyph through the
+   wrapper's hover/focus-within state). */
+
+.tm-kanban__card--movable {
+    padding-inline-end: calc(var(--tm-space-3, 0.75rem) + var(--tm-space-6));
+}
+
+.tm-kanban__card-content {
+    min-inline-size: 0;
+}
+
+.tm-kanban__card-actions {
+    position: absolute;
+    inset-block-start: var(--tm-space-1, 0.25rem);
+    inset-inline-end: var(--tm-space-1, 0.25rem);
+    display: inline-flex;
+}
+
+.tm-kanban__card-move {
+    display: inline-flex;
+}
+
+.tm-kanban__card-move-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--tm-space-6);
+    block-size: var(--tm-space-6);
+    border-radius: var(--tm-radius-sm);
+    color: var(--tm-text-secondary);
+}
+
+.tm-kanban__card-move:hover .tm-kanban__card-move-trigger,
+.tm-kanban__card-move:focus-within .tm-kanban__card-move-trigger {
+    background-color: var(--tm-bg-muted);
+    color: var(--tm-text-primary);
+}
+
+
 
 /* ── Swimlanes ── */
 
@@ -325,6 +385,13 @@
     flex: 0 0 var(--tm-kanban-collapsed-width);
     min-width: var(--tm-kanban-collapsed-width);
     max-width: var(--tm-kanban-collapsed-width);
+}
+
+/* While a card is in flight every collapsed strip advertises itself as a target, exactly like the
+   collapsed lane's slots (D4) — the strip is a drop zone for the whole gesture, not only under the
+   pointer. The hovered strip's own --drop-target rule below outweighs this wash. */
+.tm-kanban--dragging .tm-kanban__column--collapsed {
+    border-color: var(--tm-color-primary-soft-border);
 }
 
 .tm-kanban__column--collapsed .tm-kanban__header {

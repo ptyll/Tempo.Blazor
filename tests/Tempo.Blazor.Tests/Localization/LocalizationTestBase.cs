@@ -1405,6 +1405,18 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmKanbanBoard_Empty"] = "No items",
         ["TmKanban_NoSwimlane"] = "No value",
         ["TmKanban_ToggleSwimlane"] = "Toggle swimlane",
+        // TmKanbanBoard — the non-drag move (plan a98e4a71, phase 4 / WCAG 2.5.7). {0} is the card
+        // label (CardLabelSelector, the item's ToString when it overrides it, or "card {n}") and {1}
+        // the target title; the activation sentence only renders when OnCardClick has a delegate.
+        ["TmKanban_CardInstructions"] = "Press M or Alt+ArrowDown to choose where to move it; the arrow keys move between the cards of one column.",
+        ["TmKanban_CardInstructionsOpen"] = "Press Enter to open a card.",
+        ["TmKanban_CardMoved"] = "{0} moved to {1}",
+        ["TmKanban_CardNumber"] = "card {0}",
+        ["TmKanban_CardRoleDescription"] = "card",
+        ["TmKanban_CurrentTarget"] = "(current)",
+        ["TmKanban_MoveCard"] = "Move {0}",
+        ["TmKanban_MoveDown"] = "Move down",
+        ["TmKanban_MoveUp"] = "Move up",
         // TmKanbanBoard — collapsible columns (plan a98e4a71). The plural family keeps the count in
         // {0} (Loc.Plural always formats the count there) and the column title in {1}.
         ["TmKanban_CollapseColumn"] = "Collapse column {0}",

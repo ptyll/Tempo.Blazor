@@ -110,11 +110,13 @@
     }
 }
 
-/* The sheet body already pads like the sheet header's left edge (T15 sibling): the popover's
-   own item padding would push the text further in, so items become full-width rows flush with
-   the title, like the dropdown sheet. */
+/* The sheet body already pads like the sheet header's left edge (T15 sibling): the popover's own
+   item padding would push the text further in, so items become full-width rows like the dropdown
+   sheet. Review fze-4: with a zero inline padding the row's 2px focus ring (outline-offset: -2px)
+   was painted straight onto the leading icon and flush with the sheet's content edge, so the row
+   keeps ONE spacing step of inline ring room and the divider stays on the row's own box. */
 .tm-overlay-panel-sheet .tm-context-menu__item {
-    padding-inline: 0;
+    padding-inline: var(--tm-space-2);
 }
 
 .tm-overlay-panel-sheet .tm-context-menu__divider {

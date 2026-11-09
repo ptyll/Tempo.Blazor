@@ -1608,7 +1608,12 @@ Karta se statistikou (KPI).
 
 ### TmKanbanBoard\<TItem\>
 
-Kanban board s drag & drop.
+Kanban board s drag & drop a ne-drag přesunem karty (WCAG 2.5.7): karta je fokusovatelná (jeden roving
+tab stop na sloupec/buňku), nese tlačítko „Přesunout…“ (24×24, na dotyku `--tm-touch-target`) a menu
+s cíli všech sloupců × swimlanes (i sbalených) plus Nahoru/Dolů; klávesa `M` / `Alt+Šipka dolů` otevře
+totéž menu z fokusované karty. Výsledek je stejný kontrakt jako drop (`OnItemMoved` / `OnItemReordered`)
+a oznámí se v jedné polite live region (`TmKanban_CardMoved`); fokus zůstane na přesunuté kartě, nebo
+na cílové sbalené zóně.
 
 #### CSS třídy
 
@@ -1619,6 +1624,8 @@ Kanban board s drag & drop.
 | `tm-kanban__count` / `__wip-limit` | Počítadla |
 | `tm-kanban__cards` / `__card` / `__empty` | Karty |
 | `tm-kanban__column--over-limit` | Překročení WIP limitu |
+| `tm-kanban__card--movable` / `__card-content` / `__card-actions` | Karta s ne-drag akcí (rezervovaný roh, fencovaný obsah) |
+| `tm-kanban__card-move` / `__card-move-trigger` | Trigger menu „Přesunout…“ |
 
 #### Parametry
 
@@ -1633,7 +1640,9 @@ Kanban board s drag & drop.
 | `ColumnHeaderTemplate` | `RenderFragment<KanbanColumn>?` | `null` | Custom hlavička sloupce |
 | `EmptyColumnTemplate` | `RenderFragment<KanbanColumn>?` | `null` | Prázdný sloupec |
 | `Class` | `string?` | `null` | Další CSS třídy |
-| `Disabled` | `bool` | `false` | Zakáže drag & drop |
+| `Disabled` | `bool` | `false` | Zakáže drag & drop a skryje ne-drag akci |
+| `ShowMoveMenu` | `bool` | `true` | Ne-drag akce „Přesunout…“ na každé kartě; `false` vrátí markup před 2.11 (jen drag + klik) |
+| `CardLabelSelector` | `Func<TItem, string>?` | `null` | Název karty pro trigger, titulek sheetu, položku „(current)“ a oznámení. Doporučeno nastavit: fallback je `ToString()`, jen když ho typ přepisuje (record), jinak lokalizované „karta {n}“ podle pozice |
 | `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
@@ -2500,6 +2509,7 @@ Kontextové menu (pravé kliknutí).
 |----------|-----|---------|-------|
 | `Trigger` | `RenderFragment` | — | Element, na kterém se otevírá |
 | `ChildContent` | `RenderFragment` | — | TmContextMenuItem děti |
+| `TriggerTabIndex` | `int?` | `0` | `tabindex` triggeru; `-1` ho vyjme z tab pořadí, když trigger leží uvnitř jiného fokusovatelného prvku (kanban karta) |
 | `Class` | `string?` | `null` | Další CSS třídy |
 | `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
