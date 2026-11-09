@@ -215,8 +215,14 @@ public sealed class SchedulerAccessibilityE2ETests : WasmTestBase
             await SetLightAsync(page);
         }
 
-        var tab = page.Locator("[data-testid='scheduler-month-section'] [data-tm-group='view'] [role='tab'][aria-selected='true']");
-        await tab.FocusAsync();
+        // The pill tablist is display:none once the toolbar's own container is under 60rem (the
+        // compact view dropdown replaces it), so focus whichever switcher the bar is showing.
+        var switcher = page.Locator("[data-testid='scheduler-month-section'] [data-tm-group='view']");
+        var tab = switcher.Locator("[role='tab'][aria-selected='true']");
+        if (await tab.IsVisibleAsync())
+            await tab.FocusAsync();
+        else
+            await switcher.Locator("[data-testid='scheduler-view-menu'] button[aria-haspopup='true']").FocusAsync();
         await SaveElementAsync(page, "[data-testid='scheduler-month-section'] .tm-scheduler-toolbar", "scheduler-view-tab-focus");
     }
 

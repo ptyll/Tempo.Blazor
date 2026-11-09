@@ -37,7 +37,7 @@ off that, never a positional selector:
 | `header-start` | `HeaderStart`, only when the host supplied it |
 | `navigation` | Today, Previous, Next |
 | `title` | the range; the trigger of the date popover (`role="button"`, `aria-haspopup="dialog"`) |
-| `view` | the view switcher (`TmTabs`, pill). The body is the matching `tabpanel` |
+| `view` | the view switcher (pill `TmTabs`; a toolbar under 60rem of its own width swaps it for the compact view dropdown). The body is the matching `tabpanel` |
 | `header-actions` | `HeaderActions`, only when supplied |
 | `filter` | the resource filter, only with `ShowResourceFilter` |
 | `primary` | New event, only when `OnAddClick` has a delegate |
@@ -45,6 +45,11 @@ off that, never a positional selector:
 
 Stable test ids: `scheduler-prev`, `scheduler-next`, `scheduler-today`, `scheduler-print`,
 `scheduler-add`, `scheduler-view-menu`, `scheduler-resource-filter`, `scheduler-close-detail`.
+`scheduler-view-menu` names the view-switcher region in BOTH presentations (the pill group or the
+compact dropdown wrapper — they never render together) and `scheduler-view` names the dropdown; the
+pills carry `data-view="<enum>"`, and so do the dropdown options. The hidden pills stay in the DOM
+(`display:none`), so a test switches views by clicking the pill when it is visible and otherwise
+opening `scheduler-view-menu` and picking the `data-view` option.
 
 **Tablet is one row** (decision SCH-TABLET-ONE-ROW). The bar does not wrap; what does not fit goes
 to More. The bar needs `flex: 1 1 auto; width: 100%; min-width: 0` — `TmToolbar` is a size container,

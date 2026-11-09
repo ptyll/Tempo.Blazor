@@ -328,8 +328,9 @@ public class SchedulerTouchE2ETests : WasmTestBase
 
     private static async Task SwitchViewAsync(IPage page, string view)
     {
-        await page.Locator($"[data-testid='scheduler-interactive'] [role='tab'][data-view='{view}']").ClickAsync();
-        await page.Locator($"[data-testid='scheduler-interactive'] [data-event-id='i2']").WaitForAsync(
+        var host = page.Locator("[data-testid='scheduler-interactive']");
+        await SchedulerViewSwitcher.SwitchViewAsync(host, view);
+        await host.Locator("[data-event-id='i2']").WaitForAsync(
             new LocatorWaitForOptions { Timeout = 10000 });
     }
 

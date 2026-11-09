@@ -106,7 +106,9 @@
                 }
             </TmTabs>
         </div>
-        <div class="tm-scheduler-toolbar-view-menu">@ViewMenu</div>
+        @* Same stable id as the compact row's wrapper: the two presentations never render together,
+           so `scheduler-view-menu` always names the view-switcher region, whichever one is shown. *@
+        <div class="tm-scheduler-toolbar-view-menu" data-testid="@TestId("scheduler-view-menu")">@ViewMenu</div>
     </TmToolbarGroup>
 
     @if (HeaderActions is not null)
