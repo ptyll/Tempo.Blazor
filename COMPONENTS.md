@@ -1668,42 +1668,94 @@ Karta se statistikou (KPI).
 
 ### TmKanbanBoard\<TItem\>
 
-Kanban board s drag & drop a ne-drag přesunem karty (WCAG 2.5.7): karta je fokusovatelná (jeden roving
+Kanban board s drag & drop a ne-drag přesunem karty (WCAG 2.5.7). Karta je fokusovatelná (jeden roving
 tab stop na sloupec/buňku), nese tlačítko „Přesunout…“ (24×24, na dotyku `--tm-touch-target`) a menu
 s cíli všech sloupců × swimlanes (i sbalených) plus Nahoru/Dolů; klávesa `M` / `Alt+Šipka dolů` otevře
 totéž menu z fokusované karty. Výsledek je stejný kontrakt jako drop (`OnItemMoved` / `OnItemReordered`)
 a oznámí se v jedné polite live region (`TmKanban_CardMoved`); fokus zůstane na přesunuté kartě, nebo
 na cílové sbalené zóně.
 
+Sloupce i swimlanes lze sbalit a **sbalená zóna zůstává drop targetem**: sbalený sloupec je úzký pruh
+(token `--tm-kanban-collapsed-width`), který při dropu kartu appenduje na konec sloupce, a sbalená
+swimlane vykreslí `__swimlane-slots` s jedním droppable slotem pro každý sloupec. Board sám nikdy
+nemění hostitelský seznam — jen hlásí `KanbanMoveEvent` a hostitel data přeuspořádá (pro persistenci
+pořadí je spolehlivější `TargetBeforeItem` než `TargetIndex`).
+
+Kompletní kontrakt — chování sbalených zón, `data-testid`, a11y, tokeny, demo a wireframe role —
+popisuje [docs/kanban-board.md](docs/kanban-board.md).
+
 #### CSS třídy
 
 | Třída | Popis |
 |-------|-------|
-| `tm-kanban` | Root |
-| `tm-kanban__column` / `__header` / `__header-color` / `__header-title` | Sloupec |
+| `tm-kanban` | Root (`--swimlanes` varianta, `--dragging` po dobu gesta, `tm-kanban-disabled` při `Disabled`) |
+| `tm-kanban__column` / `__header` / `__header-color` / `__header-title` | Sloupec a jeho hlavička |
+| `tm-kanban__column--collapsed` | Sbalený sloupec = úzký pruh (svislý titulek, počet, WIP badge); nemaže `board-column-{id}` element |
+| `tm-kanban__column-toggle` | Nativní `<button>` pro sbalení/rozbalení sloupce (vždy mimo `ColumnHeaderTemplate`) |
+| `tm-kanban__column--drop-target` | Cílová zóna během dragu (sbalený pruh i zúžená buňka); nikdy na `Disabled` boardu |
+| `tm-kanban__column--over-limit` | Překročení WIP limitu (přežije i sbalení) |
 | `tm-kanban__count` / `__wip-limit` | Počítadla |
-| `tm-kanban__cards` / `__card` / `__empty` | Karty |
-| `tm-kanban__column--over-limit` | Překročení WIP limitu |
+| `tm-kanban__cards` / `tm-kanban__cards--virtual` / `__card` / `__empty` | Tělo sloupce s kartami (`--virtual` = scroll kontejner pro `<Virtualize>`), karta a prázdný stav |
+| `tm-kanban__drop-indicator` | Vodorovná linka pozice vložení — jen v rozbaleném sloupci |
+| `tm-kanban__column-headers` | Sticky řádek hlaviček ve swimlane layoutu (sdílí inset s lane řádky) |
+| `tm-kanban__column--header-only` / `__column--lane-cell` | Hlavičková buňka a buňka `(sloupec, lane)` |
+| `tm-kanban__swimlane` / `--collapsed` / `__swimlane-header` / `__swimlane-toggle` / `__swimlane-color` / `__swimlane-title` / `__swimlane-count` / `__swimlane-body` | Swimlane |
+| `tm-kanban__swimlane-slots` | Tělo SBALENÉ swimlane: pruh se sloty pro drop |
+| `tm-kanban__lane-slot` / `--collapsed` / `--drop-target` | Drop slot sbalené lane pro jeden sloupec (pod sbaleným sloupcem úzký, během dragu zvýrazněný) |
 | `tm-kanban__card--movable` / `__card-content` / `__card-actions` | Karta s ne-drag akcí (rezervovaný roh, fencovaný obsah) |
 | `tm-kanban__card-move` / `__card-move-trigger` | Trigger menu „Přesunout…“ |
+
+#### CSS proměnné
+
+| Proměnná | Výchozí | Popis |
+|----------|---------|-------|
+| `--tm-kanban-column-width` | `280px` | Šířka sloupce — čte ji klasický sloupec, lane buňka i slot sbalené lane, takže se jejich šířky nemohou rozejít |
+| `--tm-kanban-collapsed-width` | `48px` | Šířka pruhu sbaleného sloupce (hlavička ve swimlane layoutu i zúžená buňka/lane slot) |
+| `--tm-kanban-collapsed-header-height` | `10rem` | Výška svislého titulku sbaleného sloupce ve sticky řádku hlaviček (řádek se roztáhne) |
+| `--tm-kanban-lane-slot-height` | `var(--tm-space-8)` | Klidová výška drop slotu sbalené swimlane |
+| `--tm-kanban-lane-padding` | `var(--tm-space-2, 0.5rem)` | Padding těla lane / slotů |
+| `--tm-kanban-lane-inset` | `calc(var(--tm-kanban-lane-padding) + var(--tm-border-width))` | Levý inset řádku hlaviček — stejný jako inset lane buněk, aby hlavička neseděla o pár px vedle své buňky |
+| `--tm-kanban-virtual-max-height` | `520px` | Maximální výška scroll kontejneru `<Virtualize>` (`VirtualizeCards`) |
 
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
 |----------|-----|---------|-------|
-| `Columns` | `List<KanbanColumn>` | **povinný** | Definice sloupců |
-| `Items` | `IEnumerable<TItem>` | **povinný** | Položky |
-| `ColumnSelector` | `Func<TItem, string>` | **povinný** | Funkce pro přiřazení sloupce |
-| `CardTemplate` | `RenderFragment<TItem>` | **povinný** | Šablona karty |
-| `OnItemMoved` | `EventCallback<KanbanItemMovedEventArgs<TItem>>` | — | Přesunutí položky |
-| `OnCardClick` | `EventCallback<TItem>` | — | Klik na kartu |
-| `ColumnHeaderTemplate` | `RenderFragment<KanbanColumn>?` | `null` | Custom hlavička sloupce |
-| `EmptyColumnTemplate` | `RenderFragment<KanbanColumn>?` | `null` | Prázdný sloupec |
-| `Class` | `string?` | `null` | Další CSS třídy |
-| `Disabled` | `bool` | `false` | Zakáže drag & drop a skryje ne-drag akci |
-| `ShowMoveMenu` | `bool` | `true` | Ne-drag akce „Přesunout…“ na každé kartě; `false` vrátí markup před 2.11 (jen drag + klik) |
+| `Columns` | `IReadOnlyList<KanbanColumn>?` | **povinný** | Definice sloupců (`Id`, `Title`, `Color`, `MaxItems` = WIP limit) |
+| `Items` | `IReadOnlyList<TItem>?` | **povinný** | Všechny karty boardu |
+| `ColumnSelector` | `Func<TItem, string>?` | **povinný** | Sloupec, do kterého karta patří |
+| `CardTemplate` | `RenderFragment<TItem>?` | **povinný** | Šablona karty |
+| `OnItemMoved` | `EventCallback<KanbanMoveEvent<TItem>>` | — | Přesun do jiného sloupce/lane (nebo append v rámci buňky); nese `TargetIndex` / `TargetBeforeItem` a `From/ToSwimlane` |
+| `OnItemReordered` | `EventCallback<KanbanMoveEvent<TItem>>` | — | Změna pořadí v rámci stejné buňky; bez handleru je same-cell drop no-op |
+| `OnCardClick` | `EventCallback<TItem>` | — | Aktivace karty (klik, Enter, Space) |
+| `SwimlaneSelector` | `Func<TItem, string?>?` | `null` | Seskupení do horizontálních swimlanes; `null` = karta do poslední lane „No value“; bez selectoru se swimlane layout nepoužívá |
+| `Swimlanes` | `IReadOnlyList<KanbanSwimlane>?` | `null` | Explicitní lane (pořadí + titulky); bez nich se odvodí z `SwimlaneSelector` podle prvního výskytu |
+| `SwimlaneHeaderTemplate` | `RenderFragment<KanbanSwimlane>?` | `null` | Vlastní hlavička swimlane |
+| `SwimlanesCollapsible` | `bool` | `true` | Toggle sbalení swimlane v její hlavičce |
+| `ColumnsCollapsible` | `bool` | `false` | Toggle sbalení sloupce v každé hlavičce (klasický i swimlane layout). Sbalený sloupec = úzký pruh s titulkem, počtem a WIP badge, bez karet, ale stále drop target (append). Vypnuto = dnešní markup beze změny |
+| `CollapsedColumns` | `IReadOnlyCollection<string>?` | `null` | Hostitelský stav sbalených sloupců; `null` = interní stav. Při zapnuté množině toggle jen raise `CollapsedColumnsChanged` |
+| `CollapsedColumnsChanged` | `EventCallback<IReadOnlyCollection<string>>` | — | Kompletní nová množina pro `@bind-CollapsedColumns`; nekontrolovaný board si ji aplikuje sám |
+| `CollapsedLanes` | `IReadOnlyCollection<string>?` | `null` | Hostitelský stav sbalených swimlanes; lane „No value“ se adresuje konstantou `TmKanbanBoard<TItem>.NoSwimlaneId` |
+| `CollapsedLanesChanged` | `EventCallback<IReadOnlyCollection<string>>` | — | Kompletní nová množina pro `@bind-CollapsedLanes` („No value“ lane jako `NoSwimlaneId`) |
+| `ColumnHeaderTemplate` | `RenderFragment<KanbanColumn>?` | `null` | Vlastní obsah hlavičky sloupce — nahradí jen obsah, nikdy toggle |
+| `EmptyColumnTemplate` | `RenderFragment?` | `null` | Obsah prázdné buňky místo lokalizovaného „No items“ |
+| `VirtualizeCards` | `bool` | `false` | Opt-in virtualizace karet ve sloupci (scroll kontejner + `<Virtualize>`) |
+| `CardItemSize` | `double` | `88` | Odhadovaná výška řádku karty pro `<Virtualize>` |
+| `ShowMoveMenu` | `bool` | `true` | Ne-drag akce „Přesunout…“ na každé kartě; `false` vrátí markup před 2.11 (jen drag + klik, žádný tab stop) |
 | `CardLabelSelector` | `Func<TItem, string>?` | `null` | Název karty pro trigger, titulek sheetu, položku „(current)“ a oznámení. Doporučeno nastavit: fallback je `ToString()`, jen když ho typ přepisuje (record), jinak lokalizované „karta {n}“ podle pozice |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `Disabled` | `bool` | `false` | Zakáže drag & drop, skryje ne-drag akci a nezvýrazní cíle. Sbalování zůstává funkční (čistě view stav) |
+| `DataTestId` / `TestIdPrefix` | `string?` | `null` | Root `data-testid`, resp. prefix všech vnitřních `data-testid` (děděno z `TmComponentBase`) |
 | `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
+
+#### Modely a eventy
+
+| Typ | Členy |
+|-----|-------|
+| `KanbanColumn` | `Id`, `Title`, `Color`, `MaxItems` (WIP limit) |
+| `KanbanSwimlane` | `Id`, `Title`, `Color` |
+| `KanbanMoveEvent<TItem>` | `Item`, `FromColumn`, `ToColumn`, `TargetIndex` (`null` = append / bez pozice), `TargetBeforeItem`, `FromSwimlane`, `ToSwimlane` (`null` = lane „No value“) |
+| `TmKanbanBoard<TItem>.NoSwimlaneId` | Veřejná konstanta pro adresování lane „No value“ v `CollapsedLanes`; v `KanbanMoveEvent` se dál mapuje na `null` |
 
 #### Příklady
 
@@ -1728,6 +1780,30 @@ na cílové sbalené zóně.
         </div>
     </CardTemplate>
 </TmKanbanBoard>
+```
+
+Sbalitelné sloupce s hostitelským stavem a dropem do sbalené zóny:
+
+```razor
+<TmKanbanBoard TItem="TaskItem"
+    Columns="_columns"
+    Items="_tasks"
+    ColumnSelector="@(t => t.Status)"
+    ColumnsCollapsible="true"
+    @bind-CollapsedColumns="_collapsedColumns"
+    SwimlaneSelector="@(t => string.IsNullOrEmpty(t.Assignee) ? null : t.Assignee)"
+    @bind-CollapsedLanes="_collapsedLanes"
+    CardLabelSelector="@(t => t.Title)"
+    OnItemMoved="HandleMoved"
+    OnItemReordered="HandleMoved">
+    <CardTemplate Context="task">@task.Title</CardTemplate>
+</TmKanbanBoard>
+
+@code {
+    private IReadOnlyCollection<string> _collapsedColumns = ["done"];
+    // Lane "No value" se adresuje sentinelem, ne null:
+    private IReadOnlyCollection<string> _collapsedLanes = [TmKanbanBoard<TaskItem>.NoSwimlaneId];
+}
 ```
 
 ### TmMultiViewList\<TItem\>

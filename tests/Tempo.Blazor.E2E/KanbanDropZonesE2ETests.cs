@@ -166,6 +166,11 @@ public class KanbanDropZonesE2ETests : WasmTestBase
         StringAssert.Contains(text, "ToSwimlane=\"Alice\"", "the move event carries the lane id");
         StringAssert.Contains(text, "TargetIndex=2", "(todo, Alice) held two cards, so the drop appends");
 
+        // Phase 5 (fze-5): BOTH halves of the contract the slot drop produces — ToColumn and ToSwimlane —
+        // are reported on the one "Last change" line, in the order the demo formats them.
+        StringAssert.Contains(text, "→ column todo, lane 'Alice' (ToSwimlane=\"Alice\", TargetIndex=2)",
+            "the slot drop reports ToColumn AND ToSwimlane in one event");
+
         await page.WaitForTimeoutAsync(200);
         Assert.AreEqual(0, await page.Locator(".tm-kanban--swimlanes.tm-kanban--dragging").CountAsync(),
             "the gesture class is gone once the drop committed");
@@ -209,5 +214,27 @@ public class KanbanDropZonesE2ETests : WasmTestBase
         // To Do held two cards ("Write API docs", "Implement auth module") → the drop appends at index 2.
         Assert.AreEqual("3", (await strip.Locator(".tm-kanban__count").InnerTextAsync()).Trim(),
             "the collapsed strip's count reflects the appended card");
+
+        // Phase 5 (fze-5, subtask 1): the appended card lands at the END of the column — expanding the
+        // strip must show it last, both on the board and in the demo's "Persisted order" list.
+        await strip.Locator("[data-testid='column-toggle-todo']").ClickAsync();
+        await page.WaitForTimeoutAsync(250);
+        Assert.IsFalse((await strip.GetAttributeAsync("class") ?? string.Empty)
+                .Contains("tm-kanban__column--collapsed", StringComparison.Ordinal),
+            "the strip expands again with a click on its toggle");
+
+        var expanded = await strip.Locator(".tm-kanban__cards .tm-kanban__card").AllInnerTextsAsync();
+        Assert.AreEqual(3, expanded.Count, "the expanded To Do column renders the appended card");
+        StringAssert.Contains(expanded[^1], "Code review PR #42",
+            "a drop on the collapsed strip APPENDS the card to the end of the column");
+
+        var persistedTodo = page.Locator("section", new PageLocatorOptions { HasText = "Persisted order" })
+            .Locator("div.rounded-lg")
+            .Filter(new LocatorFilterOptions { HasText = "To Do" })
+            .Locator("ol li");
+        var persisted = await persistedTodo.AllInnerTextsAsync();
+        Assert.AreEqual(3, persisted.Count, "the persisted To Do list holds the appended card");
+        StringAssert.Contains(persisted[^1], "Code review PR #42",
+            "the persisted order keeps the same appended position");
     }
 }

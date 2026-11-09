@@ -95,6 +95,16 @@ public sealed class TmKanbanCollapseCssTests
         Body(css, ".tm-kanban__column--collapsed .tm-kanban__header")
             .Should().Contain("cursor: pointer",
                 "the whole collapsed header is the pointer expand target");
+
+        // Phase 5: the sticky row's strip carries the classic column's PANEL. Without it the vertical
+        // title, dot and count float on the page background inside a 160px-tall header row, so the
+        // column does not read as collapsed at all (the phase-5 visual review caught exactly that).
+        Body(css, ".tm-kanban__column--header-only.tm-kanban__column--collapsed").Should()
+            .Contain("background-color: var(--tm-bg-muted)",
+                "the sticky strip paints the same panel as the classic column")
+            .And.Contain("border: var(--tm-border-width) solid var(--tm-border-color)")
+            .And.Contain("border-radius: var(--tm-radius-lg, 0.75rem)",
+                "the strip is one continuous column with the narrowed lane cells below it");
     }
 
     [Fact]
@@ -181,8 +191,8 @@ public sealed class TmKanbanCollapseCssTests
         Body(css, ".tm-kanban__swimlane-slots").Should()
             .Contain("display: flex")
             .And.Contain("gap: var(--tm-space-4, 1rem)")
-            .And.Contain("padding: var(--tm-space-2, 0.5rem)",
-                "the slots line up with the lane body they replace");
+            .And.Contain("padding: var(--tm-kanban-lane-padding)",
+                "the slots line up with the lane body they replace — one knob drives both");
 
         var slot = Body(css, ".tm-kanban__lane-slot");
         slot.Should().Contain("flex: 0 0 var(--tm-kanban-column-width)")
@@ -330,5 +340,98 @@ public sealed class TmKanbanCollapseCssTests
         bundle.Should().Contain(".tm-kanban__card-move-trigger");
         bundle.Should().Contain(".tm-kanban__card--movable");
         bundle.Should().Contain("--tm-touch-target");
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // Phase 5 (plan a98e4a71, fze-5) — the sticky header row shares the lane inset
+    // ══════════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// A swimlane's cells start after the lane's own border and its body's padding, while the sticky header
+    /// row is a sibling of the lanes with no such border — so without the same inset on the header row a
+    /// header cell sat 9px to the LEFT of the lane cells it heads. The phase-5 geometry spec
+    /// (<c>KanbanCollapsedLayoutE2ETests</c>) measures the real boxes; this guard keeps the declarations
+    /// that produce that geometry tied to ONE knob, so a future padding/border edit cannot split them again
+    /// without failing here (the E2E would only see it as a 9px drift in a browser).
+    /// </summary>
+    [Fact]
+    public void TheStickyHeaderRow_SharesTheLaneRowsInset_ThroughOneKnob()
+    {
+        var css = Sheet();
+
+        var root = Body(css, ".tm-kanban");
+        root.Should().Contain("--tm-kanban-lane-padding: var(--tm-space-2, 0.5rem)",
+            "the lane body's padding is a knob the header row can read");
+        root.Should().Contain("--tm-kanban-lane-inset: calc(var(--tm-kanban-lane-padding) + var(--tm-border-width))",
+            "the lane's border is read from the shared width token, never repeated as a literal");
+
+        Body(css, ".tm-kanban__column-headers").Should()
+            .Contain("padding-inline: var(--tm-kanban-lane-inset)",
+                "the header row starts where every lane row starts");
+        Body(css, ".tm-kanban__swimlane-body").Should()
+            .Contain("padding: var(--tm-kanban-lane-padding)");
+        Body(css, ".tm-kanban__swimlane-slots").Should()
+            .Contain("padding: var(--tm-kanban-lane-padding)");
+        Body(css, ".tm-kanban__swimlane").Should()
+            .Contain("border: var(--tm-border-width) solid var(--tm-border-color)",
+                "the border the inset accounts for is the same token");
+
+        var bundle = Bundle();
+        bundle.Should().Contain("--tm-kanban-lane-inset", "a consumer links the bundle, not the partial");
+        bundle.Should().Contain("padding-inline:var(--tm-kanban-lane-inset)");
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // Phase 5 (plan a98e4a71, fze-5) — the strip's WIP reading and breach cue
+    // ══════════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// A collapsed strip keeps exactly three signals: the vertical title, the count and the WIP badge.
+    /// The phase-5 visual review found two contrast problems the eye alone would have negotiated with:
+    /// the WIP badge read in <c>--tm-text-tertiary</c> (4.39:1 light / 4.04:1 dark on the muted panel —
+    /// under AA for its 11.2px), and the over-limit state leaned on the decorative danger pair, which is
+    /// ~1.3:1 and therefore invisible on the strip that has no card body left to show the breach.
+    /// </summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void TheCollapsedStrip_KeepsItsBadgesReadable_AndStatesTheWipBreachAtTheNonTextMinimum(bool dark)
+    {
+        var css = Sheet();
+
+        Body(css, ".tm-kanban__wip-limit").Should()
+            .Contain("color: var(--tm-text-secondary)",
+                "the 11.2px badge must clear AA (tertiary is 4.39:1 light / 4.04:1 dark on the muted panel)");
+        Body(css, ".tm-kanban__count").Should().Contain("color: var(--tm-text-secondary)");
+
+        ThemeCss.Ratio("var(--tm-text-secondary)", "var(--tm-bg-muted)", dark).Should()
+            .BeGreaterThanOrEqualTo(4.5,
+                "the strip's numbers are small text on the muted panel in the {0} theme",
+                dark ? "dark" : "light");
+
+        Body(css, ".tm-kanban__column--collapsed.tm-kanban__column--over-limit").Should()
+            .Contain("border-color: var(--tm-color-danger)")
+            .And.Contain("outline: 2px solid var(--tm-color-danger)")
+            .And.Contain("background-color: var(--tm-color-danger-subtle)");
+
+        // Measured against the muted panel, the WORST case for both inks: in dark mode the wash is
+        // rgba(239,68,68,0.15) over that panel (#4f4152), i.e. a touch lighter than the panel itself, so
+        // the real pair is a hair stronger (danger 3.43:1, danger-text 5.01:1) than these floors.
+        ThemeCss.Ratio("var(--tm-color-danger)", "var(--tm-bg-muted)", dark).Should()
+            .BeGreaterThanOrEqualTo(3.0,
+                "the strip's over-limit edge is the only non-text cue and must be perceivable (WCAG 1.4.11)");
+
+        foreach (var number in new[] { "__count", "__wip-limit" })
+        {
+            Body(css, $".tm-kanban__column--collapsed.tm-kanban__column--over-limit .tm-kanban{number}").Should()
+                .Contain("color: var(--tm-color-danger-text)");
+        }
+
+        ThemeCss.Ratio("var(--tm-color-danger-text)", "var(--tm-bg-muted)", dark).Should()
+            .BeGreaterThanOrEqualTo(4.5,
+                "the numbers stay readable over the breach wash in the {0} theme", dark ? "dark" : "light");
+
+        Bundle().Should().Contain(".tm-kanban__column--collapsed.tm-kanban__column--over-limit",
+            "a consumer links the bundle, not the partial");
     }
 }
