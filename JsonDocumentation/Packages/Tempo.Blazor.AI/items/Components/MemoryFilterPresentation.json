@@ -1,0 +1,11 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "description": "How a TmMemoryPanel presents its status filter. Auto (the default) renders BOTH surfaces and lets a container query on the panel's own box decide which one is visible: the five-segment tray on a wide card, and a real TmSelect on a narrow one (a 375 px phone card), because a segmented tray that has to scroll reads as clipped exactly where it is the only way to narrow the list. Segmented and Select pin one presentation at every width. The switch is a container query, never the viewport: the same panel is wide in a dashboard column and narrow inside a sheet on the very same screen.",
+  "packageId": "Tempo.Blazor.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/MemoryFilterPresentation.cs",
+  "documentationStatus": "documented",
+  "itemName": "MemoryFilterPresentation",
+  "usageExample": "<TmMemoryPanel Items=\"_items\" FilterPresentation=\"MemoryFilterPresentation.Select\" />"
+}

@@ -1,6 +1,7 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.JSInterop;
 using Tempo.Blazor.AI.Models;
 using Tempo.Blazor.Components.Inputs;
 
@@ -24,7 +25,7 @@ namespace Tempo.Blazor.Components.AI;
 /// second region, because its message is already in front of the reader.
 /// </para>
 /// </summary>
-public partial class TmAutonomyDial : TmComponentBase
+public partial class TmAutonomyDial : TmComponentBase, IAsyncDisposable
 {
     private readonly string _id = $"tm-ai-autonomy-{Guid.NewGuid():n}"[..24];
 
@@ -44,6 +45,9 @@ public partial class TmAutonomyDial : TmComponentBase
     private ElementReference _confirmAccept;
     private bool _focusSliderAfterRender;
     private bool _focusConfirmAfterRender;
+    private AutonomyDialInterop? _interop;
+
+    [Inject] private IJSRuntime JS { get; set; } = default!;
 
     // ── Parameters ───────────────────────────────────────────────────────────
 
@@ -247,6 +251,9 @@ public partial class TmAutonomyDial : TmComponentBase
     // ── Lifecycle ────────────────────────────────────────────────────────────
 
     /// <inheritdoc />
+    protected override void OnInitialized() => _interop = new AutonomyDialInterop(JS);
+
+    /// <inheritdoc />
     protected override void OnParametersSet()
     {
         _levels = Normalize(Levels);
@@ -281,6 +288,13 @@ public partial class TmAutonomyDial : TmComponentBase
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // The segmented presentation renders no role=slider, so there is no page scroll to swallow: the guard is armed on
+        // the dial only, and only while the dial is what is on screen.
+        if (!IsSegmented && _interop is not null && _slider.Id is not null)
+        {
+            await _interop.AttachAsync(_slider);
+        }
+
         // The focus move happens AFTER the paint: the control that has to receive it is created (or enabled) by this very
         // render, and a browser only focuses an element once it is patched.
         if (_focusConfirmAfterRender)
@@ -297,6 +311,20 @@ public partial class TmAutonomyDial : TmComponentBase
         {
             _focusSliderAfterRender = false;
             await TryFocusAsync(_slider);
+        }
+    }
+
+    /// <summary>
+    /// Releases the scroll guard with the component: the slider a disposed dial owned cannot keep a listener, and the
+    /// module holds no state of its own. A disposal never throws (the circuit may already be gone).
+    /// </summary>
+    /// <returns>A task that completes once the guard has been released.</returns>
+    public async ValueTask DisposeAsync()
+    {
+        if (_interop is not null)
+        {
+            await _interop.DisposeAsync();
+            _interop = null;
         }
     }
 

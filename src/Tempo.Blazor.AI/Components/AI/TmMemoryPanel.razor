@@ -11,14 +11,21 @@
    icon (the tone is the third cue), and while the reader edits it the text becomes a textarea that commits on Enter and
    rolls back on Escape. The master switch turns storage off but keeps what is already known readable.
 
-   A removal leaves the row out at once and opens ONE undo window; the host is told when that window closes (or at once in
-   Immediate mode), never before the reader can take it back. Disposing the panel (navigation) closes the window the reader
-   can no longer reach and still reports the removal. Exactly one polite live region announces every change,
-   including a failure — the visible error text is printed beside the rows. *@
+   A removal leaves the row out at once and opens an undo window; the host is told when that window closes (or at once in
+   Immediate mode), never before the reader can take it back. UndoMode=Queue keeps ONE window and one undo row per pending
+   removal; Single (the default) reports the previous removal when a second one starts. Disposing the panel (navigation)
+   closes every window the reader can no longer reach and still reports the removals. Exactly one polite live region
+   announces every change, including a failure — the visible error text is printed beside the rows.
+
+   The status filter is two surfaces: the five-segment tray and a real <select>. Auto renders both and a container query on
+   the panel's OWN box shows the select on a narrow card, where a scrolling tray reads as clipped. *@
 <section class="@RootClass"
          data-testid="@RootTestId("memory-panel")"
          data-enabled="@(_enabled ? "true" : "false")"
          data-busy="@(IsBusy ? "true" : "false")"
+         data-filter="@FilterPresentationSlug"
+         data-undo-mode="@UndoModeSlug"
+         data-editable="@EditableFieldsSlug"
          aria-busy="@(IsBusy ? "true" : null)"
          @attributes="AdditionalAttributes">
 
@@ -53,12 +60,28 @@
                @oninput="OnSearchInputAsync" />
 
         <div class="tm-ai-memory__filter" data-testid="@TestId("memory-status-filter")">
-            <TmSegmentedControl TValue="string"
-                                Size="SegmentedControlSize.Sm"
-                                Label="@Loc["TmMemoryPanel_FilterLabel"]"
-                                Options="FilterOptions"
-                                Value="@CurrentFilterSlug"
-                                ValueChanged="OnStatusFilterChangedAsync" />
+            @if (ShowsSegmentedFilter)
+            {
+                <div class="tm-ai-memory__filter-segmented" data-testid="@TestId("memory-status-filter-segmented")">
+                    <TmSegmentedControl TValue="string"
+                                        Size="SegmentedControlSize.Sm"
+                                        Label="@Loc["TmMemoryPanel_FilterLabel"]"
+                                        Options="FilterOptions"
+                                        Value="@CurrentFilterSlug"
+                                        ValueChanged="OnStatusFilterChangedAsync" />
+                </div>
+            }
+
+            @if (ShowsSelectFilter)
+            {
+                <div class="tm-ai-memory__filter-select" data-testid="@TestId("memory-status-filter-select")">
+                    <TmSelect TValue="string"
+                              AriaLabel="@Loc["TmMemoryPanel_FilterStatusLabel"]"
+                              Options="FilterSelectOptions"
+                              Value="@CurrentFilterSlug"
+                              ValueChanged="OnStatusFilterChangedAsync" />
+                </div>
+            }
         </div>
     </div>
 
@@ -176,12 +199,46 @@
                                     <div class="tm-ai-memory__body">
                                         @if (editing)
                                         {
-                                            <textarea class="tm-ai-memory__edit-box"
-                                                      data-testid="@TestId("memory-item-edit-box")"
-                                                      aria-label="@Loc["TmMemoryPanel_EditLabel"]"
-                                                      @ref="_editBox"
-                                                      @oninput="OnDraftInputAsync"
-                                                      @onkeydown="OnEditKeyDownAsync">@_draft</textarea>
+                                            @if (CanEditText)
+                                            {
+                                                <textarea class="tm-ai-memory__edit-box"
+                                                          data-testid="@TestId("memory-item-edit-box")"
+                                                          aria-label="@Loc["TmMemoryPanel_EditLabel"]"
+                                                          @ref="_editBox"
+                                                          @oninput="OnDraftInputAsync"
+                                                          @onkeydown="OnEditKeyDownAsync">@_draft</textarea>
+                                            }
+
+                                            @if (CanEditCategory)
+                                            {
+                                                @* The wrapping <label> IS the field's accessible name, so an aria-label would only duplicate it. *@
+                                                <label class="tm-ai-memory__edit-field">
+                                                    <span class="tm-ai-memory__edit-label">@Loc["TmMemoryPanel_CategoryLabel"]</span>
+                                                    <input type="text"
+                                                           class="tm-ai-memory__edit-input"
+                                                           data-testid="@TestId("memory-item-edit-category")"
+                                                           @ref="_editCategory"
+                                                           value="@_draftCategory"
+                                                           @oninput="OnDraftCategoryInputAsync"
+                                                           @onkeydown="OnEditKeyDownAsync" />
+                                                </label>
+                                            }
+
+                                            @if (CanEditSource)
+                                            {
+                                                @* The wrapping <label> IS the field's accessible name, so an aria-label would only duplicate it. *@
+                                                <label class="tm-ai-memory__edit-field">
+                                                    <span class="tm-ai-memory__edit-label">@Loc["TmMemoryPanel_SourceLabel"]</span>
+                                                    <input type="text"
+                                                           class="tm-ai-memory__edit-input"
+                                                           data-testid="@TestId("memory-item-edit-source")"
+                                                           @ref="_editSource"
+                                                           value="@_draftSource"
+                                                           @oninput="OnDraftSourceInputAsync"
+                                                           @onkeydown="OnEditKeyDownAsync" />
+                                                </label>
+                                            }
+
                                             <div class="tm-ai-memory__edit-actions">
                                                 <button type="button"
                                                         class="tm-ai-memory__save"
@@ -232,13 +289,16 @@
                                     @if (_enabled && !editing)
                                     {
                                         <div class="tm-ai-memory__actions">
-                                            <button type="button"
-                                                    class="tm-ai-memory__action"
-                                                    data-testid="@TestId("memory-item-edit")"
-                                                    aria-label="@RowActionLabel("TmMemoryPanel_EditLabel", item)"
-                                                    disabled="@busy"
-                                                    @ref="_editButtons[item.Id]"
-                                                    @onclick="() => BeginEditAsync(item)">@Loc["TmMemoryPanel_Edit"]</button>
+                                            @if (CanEdit)
+                                            {
+                                                <button type="button"
+                                                        class="tm-ai-memory__action"
+                                                        data-testid="@TestId("memory-item-edit")"
+                                                        aria-label="@RowActionLabel("TmMemoryPanel_EditLabel", item)"
+                                                        disabled="@busy"
+                                                        @ref="_editButtons[item.Id]"
+                                                        @onclick="() => BeginEditAsync(item)">@Loc["TmMemoryPanel_Edit"]</button>
+                                            }
 
                                             @if (item.IsPendingReview)
                                             {
@@ -289,15 +349,23 @@
         </div>
     }
 
-    @if (_pendingForget is not null)
+    @if (_undoQueue.Count > 0)
     {
         <div class="tm-ai-memory__undo" data-testid="@TestId("memory-undo")">
-            <span class="tm-ai-memory__undo-text" data-testid="@TestId("memory-undo-text")">@UndoText</span>
-            <button type="button"
-                    class="tm-ai-memory__undo-action"
-                    data-testid="@TestId("memory-undo-action")"
-                    @onclick="UndoForgetAsync">@Loc["TmMemoryPanel_UndoAction"]</button>
-            <span class="tm-ai-memory__undo-timer" data-testid="@TestId("memory-undo-timer")">@UndoTimerText</span>
+            @foreach (var entry in _undoQueue)
+            {
+                <div class="tm-ai-memory__undo-row"
+                     data-testid="@TestId("memory-undo-row")"
+                     data-item-id="@entry.Item.Id">
+                    <span class="tm-ai-memory__undo-text" data-testid="@TestId("memory-undo-text")">@UndoText(entry.Item)</span>
+                    <button type="button"
+                            class="tm-ai-memory__undo-action"
+                            data-testid="@TestId("memory-undo-action")"
+                            aria-label="@UndoLabel(entry.Item)"
+                            @onclick="() => UndoForgetAsync(entry.Item.Id)">@Loc["TmMemoryPanel_UndoAction"]</button>
+                    <span class="tm-ai-memory__undo-timer" data-testid="@TestId("memory-undo-timer")">@UndoTimerText(entry)</span>
+                </div>
+            }
         </div>
     }
 

@@ -136,6 +136,7 @@
   "notes": [
     "The dial is a real role=\"slider\": aria-valuenow carries the invariant grade and aria-valuetext carries its localized label, so a screen reader hears \"Ask when risky\" instead of \"1\".",
     "ArrowRight/ArrowUp and ArrowLeft/ArrowDown move one grade, Home and End jump to the ends of what is ALLOWED, and a key past an end changes nothing (nothing is announced).",
+    "Those six keys are ALSO the page's scroll keys, so the package's tm-autonomy-dial.js module preventDefaults them on the focused slider (it never stops propagation, so the component still receives the event). Without JavaScript every key still moves the dial — only the page may scroll along with it.",
     "The two native step buttons sit BESIDE the slider and are the pointer alternative (WCAG 2.5.7); they disable themselves at the ends.",
     "MaxAllowed still renders the stops above the ceiling, marked unavailable, and prints a localized explanation instead of silently refusing the key.",
     "ConfirmAbove holds a change in a group whose message names the grade; the focus moves to the confirm button, Escape cancels and the focus returns to the slider (WCAG 2.4.3).",

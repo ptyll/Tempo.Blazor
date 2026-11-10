@@ -1,0 +1,11 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "description": "Which parts of a memory a reader may change in TmMemoryPanel's inline editor, as a flags set. The set is the host's permission, not a suggestion: a field whose flag is missing is neither rendered nor reported, so a store that owns the category (a taxonomy an agent classifies into) can still let the reader fix the text. Text is the default, which is exactly the pre-2.11.0 editor; Category and Source add their field beside it and report through OnEditItem; None removes the Edit action entirely.",
+  "packageId": "Tempo.Blazor.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/MemoryEditableFields.cs",
+  "documentationStatus": "documented",
+  "itemName": "MemoryEditableFields",
+  "usageExample": "<TmMemoryPanel Items=\"_items\" EditableFields=\"MemoryEditableFields.Text | MemoryEditableFields.Category\" OnEditItem=\"OnEditItem\" />"
+}

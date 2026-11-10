@@ -496,6 +496,11 @@ beside the stops. A change above `ConfirmAbove` is confirmed before it raises `V
 the list and `OnForget` is raised only when the window closes, so an undone removal never reaches the host. A row's edit,
 pause, resume and review are separate callbacks, and `MemoryBulkActionRequest` batches a selection.
 
+Three opt-in knobs shape that surface without changing the defaults: `UndoMode="MemoryUndoMode.Queue"` keeps one undo row
+and one countdown per pending removal (bounded by `TmMemoryPanel.MaxVisibleUndoRows`), `FilterPresentation` swaps the
+five-segment status filter for a real select on a narrow card, and `EditableFields` + `OnEditItem(MemoryEdit)` open the
+category or the source beside the text. See [memory-panel.md](memory-panel.md).
+
 ### `TmDelegateBoard` — which agent takes which task
 
 ```razor

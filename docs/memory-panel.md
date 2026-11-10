@@ -87,6 +87,29 @@ draft closes without reporting a second time, and opening another row's editor d
 save. The committed text is shown immediately (the panel keeps its own copy) and `OnEdit` reports the new instance; the
 focus returns to that row's Edit button, so the reader does not fall back to the top of the page (WCAG 2.4.3).
 
+#### Editing more than the text (`EditableFields` / `OnEditItem`)
+
+`EditableFields` is the host's permission, not a suggestion: `Text` (the default) is exactly the editor above, `Category`
+and `Source` add their own labelled `<input>` beside the textarea (Enter commits from them too, Escape rolls the whole
+draft back), and `None` removes the Edit action entirely.
+
+A commit reports ONE `MemoryEdit`:
+
+```csharp
+public sealed record MemoryEdit(
+    string Id,
+    string Text,
+    string? Category = null,
+    string? Source = null,
+    MemoryEditableFields Fields = MemoryEditableFields.Text);
+```
+
+`Fields` names what actually MOVED (a combination of `Text` / `Category` / `Source`), so the host applies just that field
+instead of diffing its own store, and a commit that moved nothing closes without a callback. A field whose flag is missing
+is never rendered and never reported, so a store that owns the category can still let the reader fix the text. `OnEdit`
+(the text-only callback) stays unchanged and fires when the panel has no `OnEditItem` delegate — the two never fire for
+the same commit.
+
 ### Forgetting, with an undo window
 
 `Forget` removes the row at once. With `ForgetMode="UndoWindow"` (the default) the host is told only when the window
@@ -102,6 +125,21 @@ injected `TimeProvider`, so a test controls it without sleeping):
   memory.
 
 `ForgetMode="Immediate"` reports `OnForget` at once and offers no undo.
+
+#### A queue of windows (`UndoMode`)
+
+`UndoMode="MemoryUndoMode.Queue"` replaces that single window with ONE window per pending removal: every removal keeps
+its own countdown (each on the injected `TimeProvider`), its own undo row (`[data-testid='memory-undo-row']`, carrying
+`data-item-id`) and its own **Undo** button, so a reader can take back the middle item of three. The windows close in the
+order they were opened. The ids INSIDE a row (`memory-undo-text`, `memory-undo-action`, `memory-undo-timer`) repeat once
+per row, so a test addresses one row through its `[data-item-id]`.
+
+The stack is bounded by `TmMemoryPanel.MaxVisibleUndoRows` (5): a sixth removal reports the OLDEST pending one
+immediately instead of pushing a row off the screen — a removal nobody can see and nobody was told about would be lost.
+Disposing the panel reports EVERY pending removal, not only the newest.
+
+`UndoMode="MemoryUndoMode.Single"` (the default) keeps the pre-2.11.0 rule above: one window at a time, and a second
+removal reports the first one at once. `MemoryUndoMode` is the two-value enum; an unknown value falls back to `Single`.
 
 ### Review
 
@@ -120,6 +158,23 @@ SOURCE (case-insensitively) and hides the groups that end up empty. The status f
 Both are two-way (`@bind-FilterText`, `@bind-StatusFilter`) and both are a VIEW: they never report anything to the host.
 Each change is announced ONCE ("Showing {n} of {total} memories." — a plural family). An empty panel says "No memory yet.";
 a filter with no hits says "No memory matches the search or the filter." — two honest, different sentences.
+
+### The filter on a narrow card (`FilterPresentation`)
+
+Five segments do not fit a 375 px card: the core `TmSegmentedControl` answers a narrow container by scrolling its own
+tray, which is usable but reads as clipped exactly where the filter is the only way to narrow the list. The panel
+therefore renders TWO surfaces — the tray and a real `TmSelect` — and `FilterPresentation` decides which one a width gets:
+
+| Value | What renders |
+|---|---|
+| `Auto` (default) | both; a container query on the panel's OWN box (`@container tm-memory (width < 640px)`, i.e. `TmBreakpoints.Sm`) hides the tray and shows the select on a narrow card |
+| `Segmented` | the tray only, at every width |
+| `Select` | the select only, at every width |
+
+The switch is a container query, never a viewport media query: the same panel is wide in a dashboard column and narrow
+inside a sheet on the very same screen. Both surfaces feed the SAME two-way `StatusFilter`, carry the same five labels and
+slugs, and both are a VIEW. The root publishes the mode as `data-filter="auto|segmented|select"`, so a test or a host can
+assert it without reaching into the DOM.
 
 ## Bulk actions
 
@@ -147,13 +202,17 @@ announces it, and leaves the row untouched — a failed request changes nothing,
 - Groups are real disclosures with native buttons; checkboxes are native `<input type="checkbox">` (Space is the
   browser's own activation, never emulated).
 - Enter commits an edit and Escape rolls it back; the focus moves into the saved row (or back to the Edit button on cancel), so it never falls to the document (WCAG 2.4.3).
+- Undo moves the focus to the RESTORED row: the button the reader pressed left the DOM with its undo row, so the row that replaces it takes the focus (WCAG 2.4.3).
 - ONE polite live region announces every change — including a failure — and an identical sentence is re-announced through
   an invisible marker. There is no second region: the visible error text is the announcement.
-- The undo bar's countdown is a live-updated text (not an animation) and the bar itself never steals the focus.
+- The undo bar's countdown is a live-updated text (not an animation); the stack itself never takes the focus, and an undo
+  hands it to the restored row.
 - `(pointer: coarse)` raises every button, the search field and even the checkboxes to the 44 px `--tm-touch-target`.
 - `forced-colors` hands the borders to `CanvasText`, the notes to `CanvasText` and every focus ring to a 3 px `Highlight`
   outline.
-- The partial declares no transition and no animation: every state is also text.
+- The only movement in the partial is a QUEUED undo row arriving (`.tm-ai-memory__undo-row` slides a few pixels), and
+  `@media (prefers-reduced-motion: reduce)` removes it; every state is also text and every countdown is a live-updated
+  text, not an animation.
 
 ## CSS
 
@@ -162,15 +221,16 @@ announces it, and leaves the row untouched — a failed request changes nothing,
 `__group-title`, `__group-toggle`, `__group-chevron`, `__group-name`, `__group-count`, `__group-select`, `__list`,
 `__item`, `__select`, `__body`, `__text`, `__edit-box`, `__edit-actions`, `__save`, `__cancel`, `__meta`, `__status`,
 `__status-icon`, `__status-text`, `__confidence`, `__source`, `__updated`, `__actions`, `__action`,
-`__action--danger`, `__busy`, `__empty`, `__error`, `__undo`, `__undo-text`, `__undo-action`, `__undo-timer` — tokens
-only. A status modifier SETS `--tm-memory-status-ink` / `-fill` / `-border` and the base chip READS them; a forgotten row
+`__action--danger`, `__busy`, `__empty`, `__error`, `__undo`, `__undo-row`, `__undo-text`, `__undo-action`,
+`__undo-timer`, `__filter-segmented`, `__filter-select`, `__edit-field`, `__edit-label`, `__edit-input` — tokens only. A status modifier SETS `--tm-memory-status-ink` / `-fill` / `-border` and the base chip READS them; a forgotten row
 keeps `text-decoration: line-through` as a second, non-colour cue. Guarded by `AiMarkdownViewCssTests` and
 `TmMemoryPanelCssTests`.
 
 ## Localization
 
 `TmMemoryPanel_*` (title, switch label and hint, the off note, the search label, its placeholder and the filter label, the five filter words, the
-four status words and the unknown fallback, the uncategorized group name, the confidence / source / learned / updated
+four status words and the unknown fallback, the filter's status name and the category / source field labels, the
+uncategorized group name, the confidence / source / learned / updated
 formats, the edit / save / cancel / pause / resume / forget / approve / reject labels, the busy note, both empty states,
 the selection labels, the bulk bar and its four actions, the undo sentence, action and countdown, the plural "showing"
 family, the failure sentence, and the announcements including the three bulk plural families) in English, Czech, Slovak
@@ -182,9 +242,19 @@ The `memory-panel` UI role (synonyms in both languages) plus the `TmMemoryPanel`
 `filter`) and its declarative stencil, which draws the heading, the switch, the filter chip, a category header with its
 count and one row per supplied memory with its status rail and chip, plus the row action hint.
 
+**Stencil check (plan 7ba95ed6, Fáze 5):** `MemoryUndoMode`, `MemoryFilterPresentation` and `MemoryEditableFields` add no
+stencil surface. They change BEHAVIOUR (how many undo rows the runtime keeps, which control a measured width shows, which
+fields the editor offers) and none of them moves a pixel of the static sketch the designer draws: the stencil still draws
+ONE filter chip and one row action hint, which is exactly what those three knobs leave on the page. The wireframe citizen
+of this state is the existing `memory-panel` role — `BuiltInUiRoleVocabularySource`, `BuiltInComponentSchemas` and
+`TempoNativeRendererDefinitions.RenderMemoryPanel` — so the check is documented here instead of adding schema props no
+renderer would draw (the same rule as the kanban collapsed-column check).
+
 ## Demo
 
 `/ai-agents` → the Memory section: six host memories across three categories, one paused, one the agent proposed and one
-already forgotten. The PAGE is the store — every callback is applied to the page's own list (a replacement INSTANCE, which
+already forgotten. The section runs with `UndoMode="MemoryUndoMode.Queue"` and
+`EditableFields="MemoryEditableFields.Text | MemoryEditableFields.Category"`, so both new behaviours are reachable by hand:
+remove two memories and two undo rows stay, and the editor carries the category beside the text. The PAGE is the store — every callback is applied to the page's own list (a replacement INSTANCE, which
 is what makes the panel drop its local copy) — and the page's log line names what it received, so an undone removal is
 visibly never reported.

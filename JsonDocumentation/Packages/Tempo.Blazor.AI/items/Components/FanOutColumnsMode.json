@@ -1,0 +1,11 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "description": "How a TmFanOutGrid decides how many tiles sit on one grid row. The default Fixed reads the host's Columns parameter (pure CSS plus one inline knob, no measurement); Auto measures the component's own container through TmLayoutObserver and derives the count from MinTileWidth, so a phone never scrolls the grid sideways and the C# window math can never diverge from the rendered columns.",
+  "packageId": "Tempo.Blazor.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/FanOutColumnsMode.cs",
+  "documentationStatus": "documented",
+  "itemName": "FanOutColumnsMode",
+  "usageExample": "<TmFanOutGrid Attempts=\"_attempts\" ColumnsMode=\"FanOutColumnsMode.Auto\" MinTileWidth=\"260\" />"
+}

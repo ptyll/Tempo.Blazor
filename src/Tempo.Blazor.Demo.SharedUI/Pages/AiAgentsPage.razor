@@ -343,12 +343,14 @@
                    EnabledChanged="OnMemoryEnabledChanged"
                    FilterText="@_memoryFilter"
                    FilterTextChanged="OnMemoryFilterChanged"
-                   OnEdit="OnMemoryEdited"
+                   OnEditItem="OnMemoryFieldEdited"
                    OnPause="OnMemoryPaused"
                    OnResume="OnMemoryResumed"
                    OnForget="OnMemoryForgotten"
                    OnReview="OnMemoryReviewed"
                    OnBulkAction="OnMemoryBulk"
+                   UndoMode="MemoryUndoMode.Queue"
+                   EditableFields="MemoryEditableFields.Text | MemoryEditableFields.Category"
                    UndoWindow="TimeSpan.FromSeconds(10)"
                    Title="@Loc["TmAiAgentsDemo_MemoryTitle"]"
                    Culture="@CultureInfo.CurrentCulture"
@@ -1086,11 +1088,30 @@
         return Task.CompletedTask;
     }
 
-    private Task OnMemoryEdited(MemoryItem item)
+    /// <summary>
+    /// Applies a field-aware edit: the demo host allows the TEXT and the CATEGORY, so a reader can move a memory to
+    /// another group. <see cref="MemoryEdit.Fields"/> names what moved — the page applies exactly that and logs the fact.
+    /// </summary>
+    private Task OnMemoryFieldEdited(MemoryEdit edit)
     {
-        Replace(item);
+        var item = _memories.FirstOrDefault(memory => memory.Id == edit.Id);
+        if (item is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        Replace(item with
+        {
+            Text = edit.Fields.HasFlag(MemoryEditableFields.Text) ? edit.Text : item.Text,
+            Category = edit.Fields.HasFlag(MemoryEditableFields.Category)
+                ? edit.Category ?? string.Empty
+                : item.Category,
+        });
+
         _memoryLogKey = "TmMemoryPanel_Edit";
-        _memoryLogValue = item.Text;
+        _memoryLogValue = edit.Fields.HasFlag(MemoryEditableFields.Category)
+            ? edit.Category
+            : edit.Text;
         return Task.CompletedTask;
     }
 

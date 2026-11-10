@@ -3469,13 +3469,14 @@
       "usageExample": "var chain = new[]\n{\n    new FallbackChainEntry(\"gpt-4o\", \"GPT-4o\"),\n    FallbackChainEntry.FromModel(new AiModelInfo(\"gpt-4o-mini\", \"GPT-4o mini\"))!,\n};"
     },
     {
+      "itemName": "FallbackChainRenameArgs",
       "kind": "Record",
       "category": "AI",
       "namespace": "Tempo.Blazor.AI.Models",
-      "description": "The payload of a committed rename in the fallback chain editor: which model the reader renamed and the new label they typed. The host applies it to its own persistence — the component never writes back to the host's catalogue.",
+      "description": "The payload of a committed rename in the fallback chain editor (TmFallbackChain.OnRename): which model the reader renamed and the label they typed. The host applies it to its own persistence — the component never writes back to the host's catalogue, and an empty draft rolls back instead of producing a payload.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/FallbackChainRenameArgs.cs",
-      "documentationStatus": "generated",
+      "documentationStatus": "merged",
       "members": [
         {
           "name": "ModelId",
@@ -3490,7 +3491,7 @@
           "description": "The label the reader committed. The host owns what it means for its own persistence."
         }
       ],
-      "itemName": "FallbackChainRenameArgs"
+      "usageExample": "<TmFallbackChain Entries=\"_entries\" AllowRename=\"true\" OnRename=\"OnRename\" />\n\n@code {\n    private Task OnRename(FallbackChainRenameArgs args)\n    {\n        _entries = [.. _entries.Select(entry => entry.ModelId == args.ModelId\n            ? entry with { DisplayName = args.NewLabel }\n            : entry)];\n        return Task.CompletedTask;\n    }\n}"
     },
     {
       "itemName": "FallbackResolutionPolicy",
@@ -44985,9 +44986,9 @@
   "libraryExamples": [],
   "summary": {
     "itemCount": 1708,
-    "manualItemCount": 1707,
+    "manualItemCount": 1708,
     "generatedItemCount": 1692,
-    "generatedOnlyItemCount": 1,
+    "generatedOnlyItemCount": 0,
     "componentCount": 0,
     "publicApiTypeCount": 1692
   }

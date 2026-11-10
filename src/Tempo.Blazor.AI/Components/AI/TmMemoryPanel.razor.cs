@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Tempo.Blazor.AI.Models;
 using Tempo.Blazor.Components.Inputs;
 using Tempo.Blazor.Localization;
+using Tempo.Blazor.Models;
 
 namespace Tempo.Blazor.Components.AI;
 
@@ -28,6 +29,13 @@ namespace Tempo.Blazor.Components.AI;
 /// </summary>
 public partial class TmMemoryPanel : TmComponentBase, IAsyncDisposable
 {
+    /// <summary>
+    /// How many undo rows the queue shows at once (<see cref="MemoryUndoMode.Queue"/>). The stack is bounded by the
+    /// number of rows a reader can still reach: past this bound the OLDEST pending removal is reported to the host
+    /// immediately, because a removal nobody can see and nobody was told about would be lost.
+    /// </summary>
+    public const int MaxVisibleUndoRows = 5;
+
     private readonly string _id = $"tm-ai-memory-{Guid.NewGuid():n}"[..22];
     private readonly Dictionary<string, MemoryItem> _overrides = new(StringComparer.Ordinal);
     private readonly Dictionary<string, MemoryItem> _hostSeen = new(StringComparer.Ordinal);
@@ -36,6 +44,7 @@ public partial class TmMemoryPanel : TmComponentBase, IAsyncDisposable
     private readonly HashSet<string> _removed = new(StringComparer.Ordinal);
     private readonly HashSet<string> _busy = new(StringComparer.Ordinal);
     private readonly HashSet<string> _selected = new(StringComparer.Ordinal);
+    private readonly List<PendingRemoval> _undoQueue = [];
 
     private List<MemoryItem> _items = [];
 
@@ -57,15 +66,14 @@ public partial class TmMemoryPanel : TmComponentBase, IAsyncDisposable
 
     private string? _editingId;
     private string _draft = string.Empty;
+    private string _draftCategory = string.Empty;
+    private string _draftSource = string.Empty;
     private ElementReference _editBox;
+    private ElementReference _editCategory;
+    private ElementReference _editSource;
     private bool _focusEditBoxAfterRender;
     private string? _pendingEditButtonId;
     private string? _pendingRowFocusId;
-
-    private MemoryItem? _pendingForget;
-    private DateTimeOffset _pendingForgetExpiresAt;
-    private int _undoSecondsLeft;
-    private ITimer? _forgetTimer;
 
     private bool _bulkBusy;
     private string? _error;
@@ -75,6 +83,25 @@ public partial class TmMemoryPanel : TmComponentBase, IAsyncDisposable
     private bool _disposed;
 
     [Inject] private IServiceProvider ServiceProvider { get; set; } = default!;
+
+    /// <summary>
+    /// One pending removal: the memory, its own deadline, its own countdown and its own clock timer, so two removals in a
+    /// row are two independent promises instead of one shared window.
+    /// </summary>
+    private sealed class PendingRemoval
+    {
+        /// <summary>The memory the reader removed.</summary>
+        public required MemoryItem Item { get; init; }
+
+        /// <summary>When this particular window closes, on the injected clock.</summary>
+        public required DateTimeOffset ExpiresAt { get; init; }
+
+        /// <summary>The whole seconds still shown in this row's countdown.</summary>
+        public int SecondsLeft { get; set; }
+
+        /// <summary>The clock timer that drives this row's countdown, owned by this row alone.</summary>
+        public ITimer? Timer { get; set; }
+    }
 
     // ── Parameters ───────────────────────────────────────────────────────────
 
@@ -142,6 +169,37 @@ public partial class TmMemoryPanel : TmComponentBase, IAsyncDisposable
     [Parameter] public TimeSpan UndoWindow { get; set; } = TimeSpan.FromSeconds(5);
 
     /// <summary>
+    /// How many removals may stay undoable at once. Default <see cref="MemoryUndoMode.Single"/> — the pre-2.11.0 rule, so
+    /// a second Forget reports the first removal at once. <see cref="MemoryUndoMode.Queue"/> keeps one undo row and one
+    /// countdown per pending removal, up to <see cref="MaxVisibleUndoRows"/>. An unknown value falls back to
+    /// <see cref="MemoryUndoMode.Single"/>.
+    /// </summary>
+    [Parameter] public MemoryUndoMode UndoMode { get; set; }
+
+    /// <summary>
+    /// How the status filter is presented. Default <see cref="MemoryFilterPresentation.Auto"/>, which renders the
+    /// five-segment tray on a wide card and a real select on a narrow one (a container query on the panel's own box, never
+    /// the viewport). An unknown value falls back to <see cref="MemoryFilterPresentation.Auto"/>.
+    /// </summary>
+    [Parameter] public MemoryFilterPresentation FilterPresentation { get; set; }
+
+    /// <summary>
+    /// Which parts of a memory the inline editor may change. Default <see cref="MemoryEditableFields.Text"/> — exactly the
+    /// pre-2.11.0 editor. Adding <see cref="MemoryEditableFields.Category"/> or
+    /// <see cref="MemoryEditableFields.Source"/> renders that field beside the text and reports it through
+    /// <see cref="OnEditItem"/>; <see cref="MemoryEditableFields.None"/> removes the Edit action entirely.
+    /// </summary>
+    [Parameter] public MemoryEditableFields EditableFields { get; set; } = MemoryEditableFields.Text;
+
+    /// <summary>
+    /// Fires with the ONE record describing a committed edit: the id, the values the reader left and the set of fields
+    /// that actually moved. Preferred over <see cref="OnEdit"/> as soon as more than the text is editable, because a host
+    /// then applies just what changed instead of diffing its own store. When it has a delegate,
+    /// <see cref="OnEdit"/> is not invoked by the same commit.
+    /// </summary>
+    [Parameter] public EventCallback<MemoryEdit> OnEditItem { get; set; }
+
+    /// <summary>
     /// Fires with the edited memory (the same id and the new text) when the reader commits an inline edit. The host applies
     /// the change; the panel shows its own copy of the new text until the host supplies a new instance.
     /// </summary>
@@ -205,6 +263,15 @@ public partial class TmMemoryPanel : TmComponentBase, IAsyncDisposable
     /// <summary>How many memories the reader has selected.</summary>
     public int SelectedCount => _selected.Count;
 
+    /// <summary>How many removals are still undoable right now (at most <see cref="MaxVisibleUndoRows"/>).</summary>
+    public int PendingRemovalCount => _undoQueue.Count;
+
+    /// <summary>
+    /// A SNAPSHOT of the memories that are still undoable, oldest first. The list is built on every read, so it never
+    /// exposes the panel's own queue and a later undo or expiry cannot mutate a list a caller is holding.
+    /// </summary>
+    public IReadOnlyList<MemoryItem> PendingRemovals => [.. _undoQueue.Select(entry => entry.Item)];
+
     /// <summary>Whether a callback is in flight (a row action or a bulk action).</summary>
     public bool IsBusy => _busy.Count > 0 || _bulkBusy;
 
@@ -228,6 +295,79 @@ public partial class TmMemoryPanel : TmComponentBase, IAsyncDisposable
         => MemoryPresentation.IsKnownForgetMode(ForgetMode) ? ForgetMode : MemoryForgetMode.UndoWindow;
 
     private bool OffersUndo => EffectiveForgetMode == MemoryForgetMode.UndoWindow && UndoWindow > TimeSpan.Zero;
+
+    /// <summary>The undo rule in force: an unknown value falls back to the single window a host already knows.</summary>
+    private MemoryUndoMode EffectiveUndoMode
+        => UndoMode == MemoryUndoMode.Queue ? MemoryUndoMode.Queue : MemoryUndoMode.Single;
+
+    private string UndoModeSlug => EffectiveUndoMode == MemoryUndoMode.Queue ? "queue" : "single";
+
+    /// <summary>The filter presentation in force: an unknown value falls back to the responsive default.</summary>
+    private MemoryFilterPresentation EffectiveFilterPresentation => FilterPresentation switch
+    {
+        MemoryFilterPresentation.Segmented => MemoryFilterPresentation.Segmented,
+        MemoryFilterPresentation.Select => MemoryFilterPresentation.Select,
+        _ => MemoryFilterPresentation.Auto,
+    };
+
+    private string FilterPresentationSlug => EffectiveFilterPresentation switch
+    {
+        MemoryFilterPresentation.Segmented => "segmented",
+        MemoryFilterPresentation.Select => "select",
+        _ => "auto",
+    };
+
+    /// <summary>
+    /// In <see cref="MemoryFilterPresentation.Auto"/> BOTH surfaces render and the container query picks one: a surface
+    /// that is not in the DOM can never be shown, and the width the query reads is only known to the browser.
+    /// </summary>
+    private bool ShowsSegmentedFilter
+        => EffectiveFilterPresentation is MemoryFilterPresentation.Auto or MemoryFilterPresentation.Segmented;
+
+    private bool ShowsSelectFilter
+        => EffectiveFilterPresentation is MemoryFilterPresentation.Auto or MemoryFilterPresentation.Select;
+
+    /// <summary>The editable fields in force: unknown bits are dropped, because they can name nothing the editor renders.</summary>
+    private MemoryEditableFields EffectiveEditableFields => EditableFields & MemoryEditableFields.All;
+
+    private bool CanEdit => EffectiveEditableFields != MemoryEditableFields.None;
+
+    private bool CanEditText => EffectiveEditableFields.HasFlag(MemoryEditableFields.Text);
+
+    private bool CanEditCategory => EffectiveEditableFields.HasFlag(MemoryEditableFields.Category);
+
+    private bool CanEditSource => EffectiveEditableFields.HasFlag(MemoryEditableFields.Source);
+
+    private string EditableFieldsSlug
+    {
+        get
+        {
+            var fields = EffectiveEditableFields;
+            if (fields == MemoryEditableFields.None)
+            {
+                return "none";
+            }
+
+            // Stable order (text, category, source) so a host and a test can name the same value.
+            var names = new List<string>(3);
+            if (fields.HasFlag(MemoryEditableFields.Text))
+            {
+                names.Add("text");
+            }
+
+            if (fields.HasFlag(MemoryEditableFields.Category))
+            {
+                names.Add("category");
+            }
+
+            if (fields.HasFlag(MemoryEditableFields.Source))
+            {
+                names.Add("source");
+            }
+
+            return string.Join(' ', names);
+        }
+    }
 
     private IReadOnlyList<MemoryItem> VisibleItems
     {
@@ -283,12 +423,25 @@ public partial class TmMemoryPanel : TmComponentBase, IAsyncDisposable
             }),
         ];
 
-    private string UndoText => _pendingForget is null
-        ? string.Empty
-        : Loc["TmMemoryPanel_UndoText", Shorten(_pendingForget.Text)];
+    /// <summary>
+    /// The same five choices as the tray, in the shape the core select wants: the narrow container shows a real
+    /// <c>&lt;select&gt;</c> instead of a tray that has to scroll, and both feed the SAME two-way filter.
+    /// </summary>
+    private IReadOnlyList<SelectOption<string>> FilterSelectOptions
+        =>
+        [
+            .. Enum.GetValues<MemoryStatusFilter>().Select(filter => new SelectOption<string>(
+                MemoryPresentation.FilterSlug(filter),
+                Loc[MemoryPresentation.FilterLabelKey(filter)])),
+        ];
 
-    private string UndoTimerText => Loc["TmMemoryPanel_UndoSeconds",
-        Math.Max(_undoSecondsLeft, 0).ToString(FormatCulture)];
+    private string UndoText(MemoryItem item) => Loc["TmMemoryPanel_UndoText", Shorten(item.Text)];
+
+    private string UndoLabel(MemoryItem item)
+        => Loc["TmMemoryPanel_ActionOn", Loc["TmMemoryPanel_UndoAction"], Shorten(item.Text)];
+
+    private string UndoTimerText(PendingRemoval entry)
+        => Loc["TmMemoryPanel_UndoSeconds", Math.Max(entry.SecondsLeft, 0).ToString(FormatCulture)];
 
     private string RootClass
     {
@@ -350,7 +503,18 @@ public partial class TmMemoryPanel : TmComponentBase, IAsyncDisposable
         {
             _focusEditBoxAfterRender = false;
 
+            // The editor may carry one field or three: the first one it rendered is where the reader's typing goes.
             if (await TryFocusAsync(_editBox))
+            {
+                return;
+            }
+
+            if (await TryFocusAsync(_editCategory))
+            {
+                return;
+            }
+
+            if (await TryFocusAsync(_editSource))
             {
                 return;
             }
@@ -380,28 +544,37 @@ public partial class TmMemoryPanel : TmComponentBase, IAsyncDisposable
     }
 
     /// <summary>
-    /// Disposes the panel: the undo countdown is stopped AND a removal the reader confirmed inside that window is reported
-    /// to the host, because the browser the window was offered in is going away.
+    /// Disposes the panel: every undo countdown is stopped AND every removal the reader confirmed inside its window is
+    /// reported to the host, because the browser the windows were offered in is going away — in
+    /// <see cref="MemoryUndoMode.Queue"/> that is every pending removal, not just the newest one.
     /// <para>
     /// Disposing happens when the page navigates or the circuit ends, so nothing may render and nothing may throw: the
-    /// removal is awaited WITHOUT the busy state and the announcement (both would call <c>StateHasChanged</c> on a
+    /// removals are awaited WITHOUT the busy state and the announcement (both would call <c>StateHasChanged</c> on a
     /// component that is already gone), the callback is invoked directly and a disconnected circuit is swallowed.
-    /// <see cref="UndoForgetAsync"/> still wins when it ran first — a restored memory has no pending removal left.
+    /// <see cref="UndoForgetAsync(string)"/> still wins when it ran first — a restored memory has no pending removal left.
     /// </para>
     /// </summary>
-    /// <returns>A task that completes once the pending removal (if any) has been reported.</returns>
+    /// <returns>A task that completes once the pending removals (if any) have been reported.</returns>
     public async ValueTask DisposeAsync()
     {
-        // Take the pending removal BEFORE the window closes: CloseUndoWindow clears it and stops the timer, so the
-        // countdown can never report the same memory a second time while the callback below is in flight.
-        var pending = _pendingForget;
-        CloseUndoWindow();
-
-        if (pending is not null && OnForget.HasDelegate)
+        // Take the pending removals BEFORE the windows close: CloseUndoWindow removes them from the queue and stops their
+        // timers, so a countdown can never report the same memory a second time while the callbacks below are in flight.
+        var pending = PendingRemovals;
+        foreach (var entry in _undoQueue.ToArray())
         {
+            CloseUndoWindow(entry);
+        }
+
+        foreach (var item in pending)
+        {
+            if (!OnForget.HasDelegate)
+            {
+                continue;
+            }
+
             try
             {
-                await OnForget.InvokeAsync(pending);
+                await OnForget.InvokeAsync(item);
             }
             catch (Exception exception) when (exception is Microsoft.JSInterop.JSDisconnectedException
                 or ObjectDisposedException
@@ -598,135 +771,6 @@ public partial class TmMemoryPanel : TmComponentBase, IAsyncDisposable
 
     private void ClearSelection() => _selected.Clear();
 
-    // ── Inline editing ───────────────────────────────────────────────────────
-
-    private Task BeginEditAsync(MemoryItem item)
-    {
-        if (!_enabled || _editingId == item.Id)
-        {
-            return Task.CompletedTask;
-        }
-
-        // Only ONE row edits at a time: opening another draft discards the previous one, which is never a save.
-        _editingId = item.Id;
-        _draft = item.Text;
-        _focusEditBoxAfterRender = true;
-        StateHasChanged();
-        return Task.CompletedTask;
-    }
-
-    private Task OnDraftInputAsync(ChangeEventArgs args)
-    {
-        _draft = args.Value?.ToString() ?? string.Empty;
-        return Task.CompletedTask;
-    }
-
-    private async Task OnEditKeyDownAsync(KeyboardEventArgs args)
-    {
-        switch (args.Key)
-        {
-            case "Enter" when !args.ShiftKey:
-                await CommitEditAsync();
-                break;
-            case "Escape":
-                CancelEdit();
-                break;
-        }
-    }
-
-    /// <summary>Commits the draft: an unchanged text closes the editor without reporting a second time.</summary>
-    /// <returns>A task that completes when the change has been reported to the host.</returns>
-    public async Task CommitEditAsync()
-    {
-        if (_editingId is not { } itemId)
-        {
-            return;
-        }
-
-        var item = _items.FirstOrDefault(candidate => candidate.Id == itemId);
-        var text = _draft;
-
-        // A SAVE does not queue the Edit button as the focus target: the saved row takes the focus (see CloseEditor).
-        CloseEditor(itemId, returnFocusToEditButton: false);
-
-        if (item is null || string.Equals(item.Text, text, StringComparison.Ordinal))
-        {
-            StateHasChanged();
-            return;
-        }
-
-        var edited = item with { Text = text };
-
-        // The save runs its OWN busy/error cycle instead of the shared row-action plumbing: a commit that happens while
-        // another request holds the row must still be attempted (the reader pressed Enter on their own draft), and only a
-        // real FAILURE reopens the editor.
-        _busy.Add(itemId);
-        _error = null;
-        StateHasChanged();
-
-        var saved = false;
-        try
-        {
-            if (OnEdit.HasDelegate)
-            {
-                await OnEdit.InvokeAsync(edited);
-            }
-
-            _overrides[itemId] = edited;
-            MergeItems();
-            Announce(Loc["TmMemoryPanel_AnnounceEdited"]);
-            _pendingRowFocusId = itemId;
-            saved = true;
-        }
-        catch (Exception exception)
-        {
-            Fail(exception);
-        }
-        finally
-        {
-            _busy.Remove(itemId);
-            StateHasChanged();
-        }
-
-        if (!saved)
-        {
-            // A failed save must not throw the reader's work away: the draft comes back in the editor, with the error
-            // already printed beside the row.
-            _editingId = itemId;
-            _draft = text;
-            _focusEditBoxAfterRender = true;
-            StateHasChanged();
-        }
-    }
-
-    /// <summary>Closes the editor without reporting anything and hands the focus back to the Edit button.</summary>
-    public void CancelEdit()
-    {
-        if (_editingId is not { } itemId)
-        {
-            return;
-        }
-
-        CloseEditor(itemId);
-        StateHasChanged();
-    }
-
-    /// <summary>
-    /// Closes the editor. A CANCEL queues the row's Edit button as the focus target; a SAVE queues the ROW instead, because
-    /// the browser still has the Enter key sequence in flight and would ACTIVATE a button that takes the focus before the
-    /// keypress is dispatched — the click would reopen the editor the reader just closed.
-    /// </summary>
-    private void CloseEditor(string itemId, bool returnFocusToEditButton = true)
-    {
-        _editingId = null;
-        _draft = string.Empty;
-
-        if (returnFocusToEditButton)
-        {
-            _pendingEditButtonId = itemId;
-        }
-    }
-
     // ── Pause, resume, review, forget ────────────────────────────────────────
 
     private Task PauseAsync(MemoryItem item) => RunItemActionAsync(
@@ -820,68 +864,110 @@ public partial class TmMemoryPanel : TmComponentBase, IAsyncDisposable
 
     private async Task StartUndoWindowAsync(MemoryItem item)
     {
-        // One window at a time: opening a new one reports the previous removal immediately, so nothing is lost silently.
-        if (_pendingForget is { } previous)
+        if (EffectiveUndoMode == MemoryUndoMode.Queue)
         {
-            CloseUndoWindow();
-            await ReportForgetAsync(previous);
+            // A stack cannot grow past the rows a reader can still reach: the OLDEST pending removal is reported NOW
+            // instead of sliding off the screen, because a removal nobody can see and nobody was told about is lost.
+            while (_undoQueue.Count >= MaxVisibleUndoRows)
+            {
+                var oldest = _undoQueue[0];
+                CloseUndoWindow(oldest);
+                await ReportForgetAsync(oldest.Item);
+            }
+        }
+        else
+        {
+            // One window at a time: opening a new one reports the previous removal immediately, so nothing is lost.
+            var previous = _undoQueue.ToArray();
+            foreach (var entry in previous)
+            {
+                CloseUndoWindow(entry);
+            }
+
+            foreach (var entry in previous)
+            {
+                await ReportForgetAsync(entry.Item);
+            }
         }
 
-        _pendingForget = item;
-        _undoSecondsLeft = Math.Max((int)Math.Ceiling(UndoWindow.TotalSeconds), 1);
-        _pendingForgetExpiresAt = _clock.GetUtcNow() + UndoWindow;
+        var window = new PendingRemoval
+        {
+            Item = item,
+            ExpiresAt = _clock.GetUtcNow() + UndoWindow,
+            SecondsLeft = Math.Max((int)Math.Ceiling(UndoWindow.TotalSeconds), 1),
+        };
 
-        _forgetTimer?.Dispose();
-        _forgetTimer = _clock.CreateTimer(
-            _ => _ = InvokeAsync(OnUndoTickAsync),
+        window.Timer = _clock.CreateTimer(
+            _ => _ = InvokeAsync(() => OnUndoTickAsync(window)),
             null,
             TimeSpan.FromSeconds(1),
             TimeSpan.FromSeconds(1));
+
+        _undoQueue.Add(window);
     }
 
-    private async Task OnUndoTickAsync()
+    /// <summary>
+    /// One row's countdown: its own timer updates its own seconds and reports its own removal when it expires, so the
+    /// windows close in the order they were opened.
+    /// </summary>
+    private async Task OnUndoTickAsync(PendingRemoval entry)
     {
-        if (_disposed || _pendingForget is null)
+        if (_disposed || !_undoQueue.Contains(entry))
         {
             return;
         }
 
-        var remaining = _pendingForgetExpiresAt - _clock.GetUtcNow();
+        var remaining = entry.ExpiresAt - _clock.GetUtcNow();
         if (remaining <= TimeSpan.Zero)
         {
-            var forgotten = _pendingForget;
-            CloseUndoWindow();
-            await ReportForgetAsync(forgotten);
+            CloseUndoWindow(entry);
+            StateHasChanged();
+            await ReportForgetAsync(entry.Item);
             return;
         }
 
-        _undoSecondsLeft = Math.Max((int)Math.Ceiling(remaining.TotalSeconds), 0);
+        entry.SecondsLeft = Math.Max((int)Math.Ceiling(remaining.TotalSeconds), 0);
         StateHasChanged();
     }
 
-    /// <summary>Restores a memory the reader just removed, within the undo window.</summary>
+    /// <summary>Restores the most recently removed memory that is still undoable.</summary>
     /// <returns>A task that completes when the row is back.</returns>
     public Task UndoForgetAsync()
+        => _undoQueue.Count == 0 ? Task.CompletedTask : UndoForgetAsync(_undoQueue[^1].Item.Id);
+
+    /// <summary>
+    /// Restores ONE memory the reader removed, by the id its undo row carries — never merely the newest one, because a
+    /// queue puts several rows in front of the reader.
+    /// </summary>
+    /// <param name="itemId">The id of the removed memory whose row the reader pressed.</param>
+    /// <returns>A task that completes when the row is back (or the id was no longer pending).</returns>
+    public Task UndoForgetAsync(string itemId)
     {
-        if (_pendingForget is not { } item)
+        var entry = _undoQueue.FirstOrDefault(candidate => string.Equals(candidate.Item.Id, itemId, StringComparison.Ordinal));
+        if (entry is null)
         {
             return Task.CompletedTask;
         }
 
-        CloseUndoWindow();
-        _removed.Remove(item.Id);
+        CloseUndoWindow(entry);
+        _removed.Remove(entry.Item.Id);
         MergeItems();
+
+        // The button that had the focus left the DOM with its row, so the focus would drop to <body> and a keyboard
+        // reader with several queued rows would lose their place. The RESTORED row takes it instead (WCAG 2.4.3).
+        _pendingRowFocusId = entry.Item.Id;
         Announce(Loc["TmMemoryPanel_AnnounceRestored"]);
         StateHasChanged();
         return Task.CompletedTask;
     }
 
-    private void CloseUndoWindow()
+    /// <summary>Closes ONE window: its timer stops, its row leaves the stack and its removal is no longer offered.</summary>
+    private void CloseUndoWindow(PendingRemoval entry)
     {
-        _forgetTimer?.Dispose();
-        _forgetTimer = null;
-        _pendingForget = null;
-        _undoSecondsLeft = 0;
+        entry.Timer?.Dispose();
+        entry.Timer = null;
+        entry.SecondsLeft = 0;
+        _undoQueue.Remove(entry);
     }
 
     // ── Bulk actions ─────────────────────────────────────────────────────────

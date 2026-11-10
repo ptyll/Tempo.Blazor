@@ -1,0 +1,11 @@
+{
+  "kind": "Record",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "description": "One committed edit of a memory: the id, the values the reader left in TmMemoryPanel's editor and the set of fields that actually MOVED. A host applies only what changed instead of diffing two snapshots of its own store, and it can refuse a field it owns — Fields is a subset of the panel's EditableFields, never a superset. Reported through OnEditItem; the legacy text-only OnEdit callback keeps working exactly as before for a host that has not opted into the extra fields.",
+  "packageId": "Tempo.Blazor.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/MemoryEdit.cs",
+  "documentationStatus": "documented",
+  "itemName": "MemoryEdit",
+  "usageExample": "<TmMemoryPanel Items=\"_items\"\n               EditableFields=\"MemoryEditableFields.All\"\n               OnEditItem=\"edit => ApplyAsync(edit.Id, edit.Fields, edit.Text, edit.Category, edit.Source)\" />"
+}

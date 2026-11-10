@@ -113,7 +113,7 @@ npm run test:email-templates   # EmailTemplates: tm-email-save-shortcut.js (Ctrl
 npm run test:pdf-viewer        # PdfViewer: pdf-viewer-size.mjs + pdf-viewer-render.mjs (RenderTask bookkeeping)
 npm run test:wireframe         # Wireframe: wireframe-designer.js pointer/export tests + wireframe-gestures.mjs
 npm run test:spreadsheet       # Spreadsheet: canvas palette (tokens), SP1 density and header-highlight helpers in a vm sandbox
-npm run test:ai                # Tempo.Blazor.AI: ai-conversation.js (own-scroll suppression, gesture/scrollend release, detach cleanup) + ai-composer.js (Enter/IME guard, combobox suppression, autosize clamp, caret placement, speech wrapper, keyboard-inset tracker)
+npm run test:ai                # Tempo.Blazor.AI: ai-conversation.js (own-scroll suppression, gesture/scrollend release, detach cleanup) + ai-composer.js (Enter/IME guard, combobox suppression, autosize clamp, caret placement, speech wrapper, keyboard-inset tracker) + tm-autonomy-dial.js (arrow/Home/End preventDefault, idempotent attach/detach)
 ```
 
 ### Package Creation

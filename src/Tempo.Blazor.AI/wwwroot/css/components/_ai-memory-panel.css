@@ -6,12 +6,24 @@
    block); the package's shared token gate is AiMarkdownViewCssTests and the component's own gate is
    TmMemoryPanelCssTests.
 
-   Nothing in this file animates or transitions: every state is a WORD plus an icon and a tone, and a
-   state that only moves is a state a reader can miss. A remembered fact disappears at once because
-   the undo window, not an animation, is what makes the removal safe.
+   The ONLY movement in this file is a queued undo row appearing at the bottom of the stack (a slide
+   of a few pixels that says "this is the newest promise"), and the reduced-motion block at the end
+   removes it. Every state is still a WORD plus an icon and a tone: a state that only moves is a state
+   a reader can miss, and a remembered fact disappears at once because the undo window, not an
+   animation, is what makes the removal safe.
+
+   The status filter is two surfaces (a five-segment tray and a real select). `.tm-ai-memory` is a
+   named inline-size container and the query at the bottom of this file decides which one a narrow
+   card shows, because the core TmSegmentedControl answers a narrow container by scrolling its own
+   tray — usable, but clipped exactly where the filter is the only way to narrow the list.
    ═══════════════════════════════════════════════════════════════════════════════════════════════ */
 
 .tm-ai-memory {
+    /* The container the filter query reads: the card's OWN box, never the viewport, because the same
+       panel is wide in a dashboard column and narrow inside a sheet on the very same screen. */
+    container-type: inline-size;
+    container-name: tm-memory;
+
     /* A host lays this card out in a grid or a flex row: without this the card's automatic minimum
        width grows to its content and the PAGE scrolls sideways instead of the card. */
     min-inline-size: 0;
@@ -112,6 +124,18 @@
 .tm-ai-memory__filter {
     flex: 0 1 auto;
     min-inline-size: 0;
+}
+
+/* The two filter surfaces. In Auto BOTH render and the container query below picks one, so the
+   resting state is "the tray is visible, the select is not" — a mode-gated rule keeps a host that
+   pinned Segmented from silently losing its filter. */
+.tm-ai-memory__filter-segmented,
+.tm-ai-memory__filter-select {
+    min-inline-size: 0;
+}
+
+.tm-ai-memory[data-filter="auto"] .tm-ai-memory__filter-select {
+    display: none;
 }
 
 /* ── The bulk bar ────────────────────────────────────────────────────────────────────────── */
@@ -344,6 +368,38 @@
     outline-offset: var(--tm-space-1);
 }
 
+/* The category / source fields an EditableFields host opted into: the visible label stays a real
+   label above the input (the same words the control's aria-label carries), so a reader never has to
+   remember what an empty box is for. */
+.tm-ai-memory__edit-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    min-inline-size: 0;
+}
+
+.tm-ai-memory__edit-label {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-ai-memory__edit-input {
+    inline-size: 100%;
+    min-inline-size: 0;
+    block-size: var(--tm-input-height-md);
+    padding-inline: var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-border-color-control);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    font: inherit;
+}
+
+.tm-ai-memory__edit-input:focus-visible {
+    outline: var(--tm-border-width) solid var(--tm-border-color-focus);
+    outline-offset: var(--tm-space-1);
+}
+
 .tm-ai-memory__edit-actions {
     display: flex;
     flex-wrap: wrap;
@@ -508,7 +564,15 @@
     overflow-wrap: anywhere;
 }
 
+/* The undo stack: one row per pending removal (the Single mode owns exactly one). The container is
+   the STACK — it carries the rhythm and the gap — and each row is the bar the reader acts on. */
 .tm-ai-memory__undo {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+}
+
+.tm-ai-memory__undo-row {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -517,6 +581,22 @@
     border: var(--tm-border-width) solid var(--tm-border-color-strong);
     border-radius: var(--tm-radius-control);
     background-color: var(--tm-bg-surface-secondary);
+
+    /* The newest promise slides in by a few pixels. The reader has just pressed Forget, so the row
+       arriving says which removal the stack just took on; reduced motion removes it entirely. */
+    animation: tm-ai-memory-undo-in var(--tm-transition-fast) ease-out;
+}
+
+@keyframes tm-ai-memory-undo-in {
+    from {
+        opacity: 0;
+        transform: translateY(calc(var(--tm-space-1) * -1));
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
 }
 
 .tm-ai-memory__undo-text {
@@ -569,6 +649,35 @@
     }
 }
 
+/* ── A narrow card shows the filter as a select instead of a scrolling tray ────────────────
+   The query reads the PANEL's own box (`.tm-ai-memory` is the named container), never the viewport:
+   the same panel is wide in a dashboard column and narrow inside a sheet on the same screen. The
+   rules are gated on data-filter="auto" so a host that pinned Segmented or Select keeps its choice at
+   every width.
+   640px is the shared mobile breakpoint (TmBreakpoints.Sm) and has to stay a literal: a container query
+   condition cannot read a custom property, so this one number is not a token. */
+@container tm-memory (width < 640px) {
+    .tm-ai-memory[data-filter="auto"] .tm-ai-memory__filter {
+        flex: 1 1 100%;
+    }
+
+    .tm-ai-memory[data-filter="auto"] .tm-ai-memory__filter-segmented {
+        display: none;
+    }
+
+    .tm-ai-memory[data-filter="auto"] .tm-ai-memory__filter-select {
+        display: block;
+    }
+}
+
+/* ── Reduced motion: the newest undo row arrives without the slide ───────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+    .tm-ai-memory__undo-row {
+        animation: none;
+    }
+}
+
 /* ── Forced colors: the system palette owns every colour ─────────────────────────────────── */
 
 @media (forced-colors: active) {
@@ -576,6 +685,7 @@
     .tm-ai-memory__bulk-action:focus-visible,
     .tm-ai-memory__group-toggle:focus-visible,
     .tm-ai-memory__edit-box:focus-visible,
+    .tm-ai-memory__edit-input:focus-visible,
     .tm-ai-memory__search:focus-visible,
     .tm-ai-memory__undo-action:focus-visible,
     .tm-ai-memory__save:focus-visible,
@@ -587,8 +697,9 @@
 
     .tm-ai-memory__item,
     .tm-ai-memory__status,
-    .tm-ai-memory__undo,
-    .tm-ai-memory__group-head {
+    .tm-ai-memory__undo-row,
+    .tm-ai-memory__group-head,
+    .tm-ai-memory__edit-input {
         border-color: CanvasText;
     }
 

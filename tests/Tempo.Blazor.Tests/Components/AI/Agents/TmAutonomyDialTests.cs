@@ -1,5 +1,6 @@
 using Bunit;
 using FluentAssertions;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.AI.Models;
 using Tempo.Blazor.Components.AI;
@@ -90,6 +91,14 @@ public class TmAutonomyDialTests : LocalizationTestBase
 
     private static string ValueText(IRenderedComponent<TmAutonomyDial> cut)
         => cut.Find("[data-testid='autonomy-dial-track']").GetAttribute("aria-valuetext") ?? string.Empty;
+
+    /// <summary>
+    /// Re-renders the SAME instance with the given parameters, the way a host's parent component does (bUnit 2 removed
+    /// <c>SetParametersAndRender</c>; a partial view leaves every other parameter alone).
+    /// </summary>
+    private static Task UpdateAsync(IRenderedComponent<TmAutonomyDial> cut, params (string Name, object? Value)[] values)
+        => cut.InvokeAsync(() => cut.Instance.SetParametersAsync(ParameterView.FromDictionary(
+            values.ToDictionary(value => value.Name, value => value.Value))));
 
     // ── The stops ────────────────────────────────────────────────────────────
 
@@ -637,6 +646,106 @@ public class TmAutonomyDialTests : LocalizationTestBase
 
         cut.Find("[data-testid='autonomy-announcement']").TextContent.Replace("\u200B", string.Empty)
             .Should().Be(first, "the same sentence is re-announced through an invisible marker");
+    }
+
+    // ── The scroll guard (plan 7ba95ed6, Fáze 5) ─────────────────────────────
+
+    /// <summary>
+    /// The four arrows and Home/End are the dial's OWN keys, so the browser must not also scroll the page with them.
+    /// Blazor cannot express that (its <c>@onkeydown:preventDefault</c> is unconditional per element), so the component
+    /// imports the package's tiny ES module and hands it the slider. This test runs the runtime in STRICT mode, so an
+    /// unexpected interop call fails the render instead of silently passing.
+    /// </summary>
+    [Fact]
+    public void TheSlider_HandsItsScrollGuardToTheModule()
+    {
+        JSInterop.Mode = JSRuntimeMode.Strict;
+        var module = JSInterop.SetupModule("./_content/Tempo.Blazor.AI/js/tm-autonomy-dial.js");
+        module.SetupVoid("attachDialKeys", _ => true).SetVoidResult();
+
+        var cut = RenderDial(value: 1);
+
+        var attach = module.Invocations.Single(invocation => invocation.Identifier == "attachDialKeys");
+        attach.Arguments.Should().ContainSingle("the module needs the slider and nothing else");
+        attach.Arguments[0].Should().BeOfType<ElementReference>("the guard is armed on the rendered slider");
+        cut.Instance.EffectiveValue.Should().Be(1, "the guard changes no value by itself");
+    }
+
+    /// <summary>
+    /// A render that keeps the SAME slider must not stack listeners: the guard is attached once per element, and the
+    /// component remembers which element it already guarded.
+    /// </summary>
+    [Fact]
+    public async Task ARenderThatKeepsTheSlider_DoesNotAttachASecondGuard()
+    {
+        JSInterop.Mode = JSRuntimeMode.Strict;
+        var module = JSInterop.SetupModule("./_content/Tempo.Blazor.AI/js/tm-autonomy-dial.js");
+        module.SetupVoid("attachDialKeys", _ => true).SetVoidResult();
+
+        var cut = RenderDial(value: 1);
+
+        await UpdateAsync(cut, (nameof(TmAutonomyDial.Class), "extra"));
+        await UpdateAsync(cut, (nameof(TmAutonomyDial.Value), 2));
+
+        module.Invocations.Count(invocation => invocation.Identifier == "attachDialKeys")
+            .Should().Be(1, "one listener per slider: a second attach would preventDefault twice");
+    }
+
+    /// <summary>
+    /// Leaving the page releases the guard, so a detached slider cannot keep a listener alive.
+    /// </summary>
+    [Fact]
+    public async Task DisposingTheDial_ReleasesTheGuard()
+    {
+        JSInterop.Mode = JSRuntimeMode.Strict;
+        var module = JSInterop.SetupModule("./_content/Tempo.Blazor.AI/js/tm-autonomy-dial.js");
+        module.SetupVoid("attachDialKeys", _ => true).SetVoidResult();
+        module.SetupVoid("detachDialKeys", _ => true).SetVoidResult();
+
+        RenderDial(value: 1);
+
+        await DisposeComponentsAsync();
+
+        module.Invocations.Count(invocation => invocation.Identifier == "detachDialKeys")
+            .Should().Be(1, "the slider's keydown listener is released with the component");
+    }
+
+    /// <summary>
+    /// Where JavaScript is unavailable (prerender, bUnit loose mode, a disconnected circuit) the dial still WORKS: the
+    /// keys are handled by Blazor, only the scroll guard is missing. Nothing may surface as an unhandled exception.
+    /// </summary>
+    [Fact]
+    public void WithoutJavaScript_TheKeysStillMoveTheDial()
+    {
+        var cut = RenderDial(value: 0);
+
+        Press(cut, "ArrowUp");
+        ValueNow(cut).Should().Be("1");
+
+        Press(cut, "Home");
+        ValueNow(cut).Should().Be("0");
+    }
+
+    /// <summary>The segmented presentation renders no slider, so it has no scroll guard to attach.</summary>
+    [Fact]
+    public void TheSegmentedPresentation_AttachesNoGuard()
+    {
+        JSInterop.Mode = JSRuntimeMode.Strict;
+        var module = JSInterop.SetupModule("./_content/Tempo.Blazor.AI/js/tm-autonomy-dial.js");
+        module.SetupVoid("attachDialKeys", _ => true).SetVoidResult();
+
+        // The radio group is the core segmented control, which measures its tray through its own module.
+        var segmented = JSInterop.SetupModule("./_content/Tempo.Blazor/Components/Inputs/TmSegmentedControl.razor.js");
+        segmented.Mode = JSRuntimeMode.Loose;
+        segmented.SetupVoid("place", _ => true).SetVoidResult();
+        segmented.SetupVoid("focusOption", _ => true).SetVoidResult();
+        segmented.SetupVoid("release", _ => true).SetVoidResult();
+
+        var cut = RenderDial(presentation: AutonomyDialPresentation.Segmented);
+
+        cut.FindAll("[data-testid='autonomy-dial-track']").Should().BeEmpty("a radio group is not a slider");
+        module.Invocations.Should().NotContain(invocation => invocation.Identifier == "attachDialKeys",
+            "a radio group carries no role=slider and no key of its own");
     }
 
     /// <summary>

@@ -393,7 +393,7 @@
 }
 
 .tm-ai-fallback__editor-rename:hover {
-    background-color: var(--tm-bg-hover);
+    background-color: var(--tm-color-surface-hover);
 }
 
 .tm-ai-fallback__editor-rename:focus-visible {

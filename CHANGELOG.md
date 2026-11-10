@@ -217,6 +217,49 @@
   `PulseDuration` continues to be written inline as `--tm-agent-graph-pulse-duration` (single source
   of truth, unchanged).
 
+### Added — AI agent surfaces: `TmAutonomyDial` keys and `TmMemoryPanel` filter / undo / fields (plan 7ba95ed6, Fáze 5)
+
+- **`TmAutonomyDial` no longer scrolls the page.** The four arrows and Home/End are both the dial's keys and the
+  browser's scroll keys, and Blazor's `@onkeydown:preventDefault` is unconditional per element. The package now ships
+  `_content/Tempo.Blazor.AI/js/tm-autonomy-dial.js` (imported through `IJSObjectReference`, no `<script>`, no eval): it
+  installs ONE idempotent `keydown` listener on the rendered slider, calls `preventDefault` for exactly those six keys and
+  never `stopPropagation`, so the component's own keyboard model still receives the event. The guard is released on
+  disposal, and every interop call is swallowed where JavaScript is unavailable — the dial keeps every key, only the page
+  may scroll. Node tests: `npm run test:ai` (`__tests__/tm-autonomy-dial.test.mjs`).
+- **`TmMemoryPanel` filter presentation.** New `FilterPresentation` (`MemoryFilterPresentation`: `Auto` (default) |
+  `Segmented` | `Select`). `Auto` renders the five-segment tray AND a real `TmSelect` and lets a container query on the
+  panel's own box (`@container tm-memory (width < 640px)`) show the select on a narrow card — the tray no longer has to
+  scroll itself into a clipped strip on a 375 px phone. Both surfaces feed the same two-way `StatusFilter`. The root
+  publishes `data-filter="auto|segmented|select"`.
+- **`TmMemoryPanel` undo queue.** New `UndoMode` (`MemoryUndoMode`: `Single` (default, the pre-2.11.0 rule) | `Queue`).
+  `Queue` keeps one undo window PER pending removal — its own countdown on the injected `TimeProvider`, its own undo row
+  (`[data-testid='memory-undo-row']` with `data-item-id`) and its own Undo button, closing in the order they were opened.
+  The stack is bounded by the new public `TmMemoryPanel.MaxVisibleUndoRows` (5): past that bound the OLDEST pending removal
+  is reported immediately instead of dropping off the screen, and disposing the panel reports every pending removal. New
+  public `PendingRemovalCount` / `PendingRemovals` and an `UndoForgetAsync(string itemId)` overload (the parameterless
+  `UndoForgetAsync()` restores the newest). The root publishes all three knobs as state attributes — `data-undo-mode`,
+  `data-filter` and `data-editable` — so a host or a test can assert the effective mode without reading the DOM. An undo
+  moves the focus to the RESTORED row (the button the reader pressed left the DOM with its undo row), so a keyboard
+  reader never loses their place (WCAG 2.4.3).
+- **`TmMemoryPanel` field editing.** New `EditableFields` (`MemoryEditableFields` flags: `Text` (default) | `Category` |
+  `Source`, plus `None` and `All`) and `OnEditItem` reporting ONE `MemoryEdit(Id, Text, Category, Source, Fields)` where
+  `Fields` names what actually MOVED — a host applies just that instead of diffing its own store, and a field the host does
+  not allow is neither rendered nor reported. Enter commits from the new single-line fields too, Escape rolls the whole
+  draft back, and `OnEdit` keeps its text-only contract (it is not invoked for a commit the `OnEditItem` host took).
+- **Docs, overlays and demo.** [docs/memory-panel.md](docs/memory-panel.md) and [docs/autonomy-dial.md](docs/autonomy-dial.md)
+  carry the new contracts and the "stencil check" note (no stencil change: all three memory knobs are runtime behaviour and
+  the dial guard adds no `[Parameter]`). The JSON documentation overlays gained `MemoryEdit`, `MemoryEditableFields`,
+  `MemoryFilterPresentation`, `MemoryUndoMode` (plus the two `TmFanOutGrid` enums and `FallbackChainRenameArgs`, which had
+  been left generated-only), so `validate --fail-on-drift` is clean again. The demo `/ai-agents` memory section runs
+  `UndoMode="MemoryUndoMode.Queue"` with `EditableFields="Text | Category"`.
+- **Tests.** New bUnit facts in `TmAutonomyDialTests` (strict-JS-interop attach/detach/idempotency, the no-JS fallback, the
+  segmented presentation attaching nothing) and `TmMemoryPanelTests` (the three presentations + the select feeding the
+  filter, the queue's two rows and ordered expiry on a `FakeTimeProvider`, an undo of the MIDDLE row with the focus handed
+  to the restored row, the visible-limit overflow, disposal reporting every pending removal, and the field-aware
+  `MemoryEdit` paths); `TmMemoryPanelCssTests`
+  guards the container query and the one reduced-away animation. E2E: `AiAgentsE2ETests` gained the no-scroll keyboard
+  case, two queued undo rows and a category edit at 375 px / 1440 px.
+
 ### Breaking changes and migration
 
 **No source-breaking change.** Every new member is additive or a default interface member; every new component is new. The behavior changes below are the complete list a 2.10.0 consumer can notice, with before/after:
@@ -249,6 +292,10 @@
 | `TmQRCode` default markup | `<svg … >`, one `<rect>` per dark run, inline background style | `<svg role="img" aria-label … ><title>…</title><rect …/><g class="tm-qr-code__modules" fill="#000000">…</g></svg>` — the same rects, wrapped in one group | None; `svg rect` still matches every module, a selector that assumed modules are `svg > rect` must target `.tm-qr-code__modules rect` |
 | `TmQRCode` SVG sizing | `.tm-qr-code svg { max-width: 100% }` was scoped and never matched the injected SVG | The rule is `::deep` and applies: a code wider than its container shrinks instead of overflowing | None at the API level; a host that relied on the overflow sets an explicit width |
 | `TmQRCode` SVG download | Did not exist | Opt-in `ShowDownload` (localized `<a download>` with a `data:` URL) plus the public `GetSvg()` / `GetStandaloneSvg()` | None — opt-in; the demo shows both |
+| `TmMemoryPanel` undo bar markup | `.tm-ai-memory__undo` WAS the bar (text + Undo + countdown) | `.tm-ai-memory__undo` is the STACK and every removal is its own `.tm-ai-memory__undo-row` (`data-testid="memory-undo-row"`, `data-item-id`) holding `memory-undo-text` / `memory-undo-action` / `memory-undo-timer` | None for behaviour: in the default `UndoMode="Single"` there is exactly one row, so a selector on `.tm-ai-memory__undo-timer` / `[data-testid='memory-undo-action']` still matches (the first row). A selector that styled `.tm-ai-memory__undo` as a BAR must move its border/padding to `.tm-ai-memory__undo-row` — the container now only stacks |
+| `TmMemoryPanel` root container | The card was a plain flex column that sized from its content | The card declares `container-type: inline-size` + `container-name: tm-memory` (that is what the filter query reads) | None in a block/grid/flex STRETCH context (the normal case). A host that made the card shrink-to-fit (a float, an inline-block, a `width: auto` flex item that relied on the content's intrinsic width) must give it an explicit width — inline-size containment makes the card independent of its contents by design |
+| `TmMemoryPanel` status filter | One control: the five-segment tray | Two surfaces under `[data-testid='memory-status-filter']`: `…-segmented` (the tray) and `…-select` (a real `<select>`, shown on a narrow card) | None for behaviour — both feed the same `@bind-StatusFilter`. A test or host selector that clicked the first control inside `memory-status-filter` keeps working on a wide card; on a narrow one the tray is `display: none` (not focusable), so target the visible surface explicitly or pin `FilterPresentation` |
+| `TmMemoryPanel` `OnEdit` with `OnEditItem` bound | `OnEdit` fired for every committed text edit | A bound `OnEditItem` owns the commit (it carries the changed-field set), so `OnEdit` does not fire for the same edit; without `OnEditItem` nothing changes | None unless both are bound: keep `OnEdit` alone (pre-2.11.0), or move the host to `OnEditItem` and read `edit.Text` |
 
 
 ### Release preparation

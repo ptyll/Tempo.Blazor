@@ -1,0 +1,11 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "description": "How a TmMemoryPanel keeps the removals a reader may still take back. Single (the default) is the pre-2.11.0 rule: ONE undo window exists at a time, so a second Forget reports the first removal immediately. Queue keeps one window PER pending removal — each with its own countdown on the injected TimeProvider and its own undo row — so a reader who removes three memories in a row can still take back any of them. The stack is bounded by TmMemoryPanel.MaxVisibleUndoRows: past that bound the OLDEST pending removal is reported immediately rather than dropped off the screen, because a removal nobody can see and nobody was told about would be lost.",
+  "packageId": "Tempo.Blazor.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/MemoryUndoMode.cs",
+  "documentationStatus": "documented",
+  "itemName": "MemoryUndoMode",
+  "usageExample": "<TmMemoryPanel Items=\"_items\" UndoMode=\"MemoryUndoMode.Queue\" OnForget=\"OnForget\" />"
+}

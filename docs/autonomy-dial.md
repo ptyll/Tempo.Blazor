@@ -62,9 +62,31 @@ ascending — ArrowRight always means "more autonomy". A stop the host left unla
 - The heading names the slider (`aria-labelledby`) when `ShowTitle` is true; without a title the slider carries the
   localized `Autonomy level` name. The current stop's description is the slider's `aria-describedby`.
 
+### The six keys are also the page's keys (`tm-autonomy-dial.js`)
+
+`ArrowUp` / `ArrowDown` / `ArrowLeft` / `ArrowRight` / `Home` / `End` are the dial's own keys AND the browser's scroll
+keys. Blazor cannot express "prevent the default for these six and nothing else": `@onkeydown:preventDefault` is
+unconditional per element, so it would also swallow Tab, Escape and every other key the surface must keep.
+
+The package therefore ships a tiny ES module, `_content/Tempo.Blazor.AI/js/tm-autonomy-dial.js`, imported through
+`IJSObjectReference` (no `<script>` tag, no eval):
+
+- `attachDialKeys(slider)` installs ONE `keydown` listener on the rendered slider, idempotently (a re-render that hands it
+  the same element adds nothing, so `preventDefault` cannot run twice);
+- the listener calls `preventDefault` for the four arrows and Home/End only, and never `stopPropagation` — Blazor still
+  receives the very same event, so the component's keyboard model is untouched and the guard changes no value by itself;
+- `detachDialKeys(slider)` releases it, and the component releases the guard when it is disposed;
+- every interop call is guarded: where JavaScript is unavailable (prerender, a test double, a disconnected circuit) every
+  key still moves the dial — only the page may scroll along with it. Nothing surfaces as a throw into the render loop.
+
+The module is covered by node tests (`npm run test:ai`) for the key set, the idempotent attach, the detach and the
+no-DOM cases.
+
+---
+
 `Presentation="Segmented"` swaps the slider for a `TmSegmentedControl` radio group in which every grade is its own
 target. The radio group brings its own arrow/Home/End model, and a grade above the ceiling renders **disabled** so the
-limit is visible in the control itself.
+limit is visible in the control itself. The segmented presentation renders no slider, so it attaches no scroll guard.
 
 ## The ceiling
 
@@ -134,6 +156,12 @@ The `autonomy-dial` UI role (synonyms in both languages) plus the `TmAutonomyDia
 `maxAllowed`, `presentation`, `locks`) and its declarative stencil, which draws the heading, the presentation chip, the
 track with its fill, one dot and label per level (a stop above the ceiling is drawn in the warning tone), the ceiling
 line and one enforced limit per supplied lock with its "enforced by" line.
+
+**Stencil check (plan 7ba95ed6, Fáze 5):** the scroll guard adds no `[Parameter]` and changes nothing a designer draws —
+the stencil still draws the same track, stops and ceiling, because the guard is a browser behaviour of the RUNTIME slider
+(and the wireframe sketch has no keyboard at all). The wireframe citizen of this state stays the existing `autonomy-dial`
+role (`BuiltInUiRoleVocabularySource`, `BuiltInComponentSchemas`,
+`TempoNativeRendererDefinitions.RenderAutonomyDial`), so the check is recorded here rather than as a new schema prop.
 
 ## Demo
 

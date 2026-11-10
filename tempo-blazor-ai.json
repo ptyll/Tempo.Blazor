@@ -1966,6 +1966,7 @@
       "notes": [
         "The dial is a real role=\"slider\": aria-valuenow carries the invariant grade and aria-valuetext carries its localized label, so a screen reader hears \"Ask when risky\" instead of \"1\".",
         "ArrowRight/ArrowUp and ArrowLeft/ArrowDown move one grade, Home and End jump to the ends of what is ALLOWED, and a key past an end changes nothing (nothing is announced).",
+        "Those six keys are ALSO the page's scroll keys, so the package's tm-autonomy-dial.js module preventDefaults them on the focused slider (it never stops propagation, so the component still receives the event). Without JavaScript every key still moves the dial — only the page may scroll along with it.",
         "The two native step buttons sit BESIDE the slider and are the pointer alternative (WCAG 2.5.7); they disable themselves at the ends.",
         "MaxAllowed still renders the stops above the ceiling, marked unavailable, and prints a localized explanation instead of silently refusing the key.",
         "ConfirmAbove holds a change in a group whose message names the grade; the focus moves to the confirm button, Escape cancels and the focus returns to the slider (WCAG 2.4.3).",
@@ -2841,7 +2842,7 @@
       "kind": "Component",
       "category": "AI",
       "namespace": "Tempo.Blazor.Components.AI",
-      "description": "What an agent remembers: the stored facts grouped by category, a master switch, an inline edit, pause and resume, a removal that can be undone, the review of what the agent proposed, a search and a status filter, and bulk actions over a selection. The surface renders the snapshot it is given and keeps its own copy of what it reported, so the reader sees an edit, a pause or a removal before the host's round-trip — and a host that re-renders the SAME switch or filter value cannot undo the reader's pick. A failed callback prints a localized error and changes nothing; a slow one puts the row in a busy state and disables its actions instead of letting a second press double the request. Accessibility: every state is a WORD plus an icon (the tone is the third, redundant cue), a group is a real disclosure whose native button keeps the focus, an edit commits on Enter and rolls back on Escape with the focus handed back into the saved row (a focused button would be activated again by the remaining Enter key sequence), every target reaches the 44 px touch size on a coarse pointer, and the surface owns exactly ONE polite live region — the error text is visible next to the rows and is announced through that same region, never through a second one.",
+      "description": "What an agent remembers: the stored facts grouped by category, a master switch, an inline edit, pause and resume, a removal that can be undone, the review of what the agent proposed, a search and a status filter, and bulk actions over a selection. The surface renders the snapshot it is given and keeps its own copy of what it reported, so the reader sees an edit, a pause or a removal before the host's round-trip — and a host that re-renders the SAME switch or filter value cannot undo the reader's pick. A failed callback prints a localized error and changes nothing; a slow one puts the row in a busy state and disables its actions instead of letting a second press double the request. Accessibility: every state is a WORD plus an icon (the tone is the third, redundant cue), a group is a real disclosure whose native button keeps the focus, an edit commits on Enter and rolls back on Escape with the focus handed back into the saved row (a focused button would be activated again by the remaining Enter key sequence), every target reaches the 44 px touch size on a coarse pointer, and the surface owns exactly ONE polite live region — the error text is visible next to the rows and is announced through that same region, never through a second one. The status filter is TWO surfaces — the five-segment tray and a real select — and Auto (the default) renders both and lets a container query on the panel's own box swap them, because a tray that has to scroll reads as clipped on a 375 px card. UndoMode=Queue keeps one undo row and one countdown per pending removal (bounded by MaxVisibleUndoRows, past which the OLDEST removal is reported immediately), and EditableFields opts into editing the category or the source beside the text, reported as ONE MemoryEdit naming the fields that moved.",
       "packageId": "Tempo.Blazor.AI",
       "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmMemoryPanel.razor",
       "documentationStatus": "merged",
@@ -2874,6 +2875,13 @@
           "description": "The culture that formats the confidence, the timestamps and the undo countdown. Null (the default) means the current culture at render time."
         },
         {
+          "name": "EditableFields",
+          "type": "MemoryEditableFields",
+          "isRequired": false,
+          "default": "MemoryEditableFields.Text",
+          "description": "Which parts of a memory the inline editor may change. Default Text — exactly the pre-2.11.0 editor. Adding Category or Source renders that field beside the text and reports it through OnEditItem; None removes the Edit action entirely."
+        },
+        {
           "name": "Enabled",
           "type": "bool",
           "isRequired": false,
@@ -2885,6 +2893,12 @@
           "type": "EventCallback<bool>",
           "isRequired": false,
           "description": "Fires with the new switch state."
+        },
+        {
+          "name": "FilterPresentation",
+          "type": "MemoryFilterPresentation",
+          "isRequired": true,
+          "description": "How the status filter is presented. Default Auto, which renders the five-segment tray on a wide card and a real select on a narrow one (a container query on the panel's own box, never the viewport). Segmented and Select pin one presentation at every width."
         },
         {
           "name": "FilterText",
@@ -2928,6 +2942,12 @@
           "type": "EventCallback<MemoryItem>",
           "isRequired": false,
           "description": "Fires with the edited memory (the same id and the new text) when the reader commits an inline edit. The host applies the change; the panel shows its own copy of the new text until the host supplies a new instance."
+        },
+        {
+          "name": "OnEditItem",
+          "type": "EventCallback<MemoryEdit>",
+          "isRequired": false,
+          "description": "Fires with the ONE record describing a committed edit: the id, the values the reader left and the set of fields that actually moved. Preferred over OnEdit as soon as more than the text is editable; when it has a delegate, OnEdit is not invoked by the same commit."
         },
         {
           "name": "OnForget",
@@ -2992,6 +3012,12 @@
           "description": "The heading above the surface. Null renders the localized default (\"Memory\")."
         },
         {
+          "name": "UndoMode",
+          "type": "MemoryUndoMode",
+          "isRequired": true,
+          "description": "How many removals may stay undoable at once. Default Single — the pre-2.11.0 rule, so a second Forget reports the first removal at once. Queue keeps one undo row and one countdown per pending removal, up to MaxVisibleUndoRows; past that bound the OLDEST pending removal is reported immediately."
+        },
+        {
           "name": "UndoWindow",
           "type": "TimeSpan",
           "isRequired": false,
@@ -3048,7 +3074,13 @@
         "tm-ai-memory__undo",
         "tm-ai-memory__undo-text",
         "tm-ai-memory__undo-action",
-        "tm-ai-memory__undo-timer"
+        "tm-ai-memory__undo-timer",
+        "tm-ai-memory__filter-segmented",
+        "tm-ai-memory__filter-select",
+        "tm-ai-memory__edit-field",
+        "tm-ai-memory__edit-label",
+        "tm-ai-memory__edit-input",
+        "tm-ai-memory__undo-row"
       ],
       "examples": [
         {
@@ -3067,11 +3099,14 @@
       "notes": [
         "The panel keeps its own copy of what it reported, so an edit, a pause or a removal is visible before the host round-trip; a NEW instance of the same memory from the host replaces that copy.",
         "A removal is final only when the undo window closes (ForgetMode=UndoWindow): Undo puts the row back and the host is never told, and a zero-length window behaves like Immediate.",
-        "One undo window at a time: opening a second one reports the previous removal immediately, so nothing is lost silently.",
+        "One undo window at a time by default: opening a second one reports the previous removal immediately, so nothing is lost silently. UndoMode=Queue instead keeps one row and one countdown per pending removal (each on the injected TimeProvider), bounded by MaxVisibleUndoRows — a seventh removal reports the OLDEST pending one rather than dropping it off the screen.",
         "A bulk action is ONE request through OnBulkAction with a COPY of the selection; a bulk removal does not fire OnForget per row, and a selection the filter hides is pruned.",
         "A callback that throws prints a localized error next to the rows, announces it through the same live region and changes nothing; a slow one disables the row actions with a \"Saving…\" note.",
         "Enter commits an edit and Escape rolls it back; the focus moves into the saved row and back to the Edit button on a cancel (WCAG 2.4.3).",
-        "Every status is a WORD plus an icon, a group is a real disclosure on a native button, and the partial animates nothing."
+        "Every status is a WORD plus an icon, a group is a real disclosure on a native button, and the partial animates nothing.",
+        "The editor changes only the fields EditableFields allows: a field the host owns is never rendered and never reported, and an unchanged commit closes without a callback.",
+        "A narrow card (a container query on the panel's own box, TmBreakpoints.Sm) swaps the segmented tray for a real select that feeds the SAME two-way StatusFilter; a pinned FilterPresentation keeps its surface at every width.",
+        "Every status is a WORD plus an icon, a group is a real disclosure on a native button, and the only movement in the partial is a queued undo row arriving — which prefers-reduced-motion removes."
       ]
     },
     {
@@ -4235,24 +4270,26 @@
       "usageExample": "<TmFallbackChain Attempts=\"_attempts\" @bind-ViewMode=\"_view\" />\n\n@code {\n    private FallbackChainViewMode _view = FallbackChainViewMode.Flow;\n}"
     },
     {
+      "itemName": "FanOutColumnsMode",
       "kind": "Enum",
       "category": "Components",
       "namespace": "Tempo.Blazor.Components.AI",
       "description": "How a TmFanOutGrid decides how many tiles sit on one grid row. The default Fixed reads the host's Columns parameter (pure CSS plus one inline knob, no measurement); Auto measures the component's own container through TmLayoutObserver and derives the count from MinTileWidth, so a phone never scrolls the grid sideways and the C# window math can never diverge from the rendered columns.",
       "packageId": "Tempo.Blazor.AI",
       "sourcePath": "src/Tempo.Blazor.AI/Components/AI/FanOutColumnsMode.cs",
-      "documentationStatus": "generated",
-      "itemName": "FanOutColumnsMode"
+      "documentationStatus": "merged",
+      "usageExample": "<TmFanOutGrid Attempts=\"_attempts\" ColumnsMode=\"FanOutColumnsMode.Auto\" MinTileWidth=\"260\" />"
     },
     {
+      "itemName": "FanOutDetailPresentation",
       "kind": "Enum",
       "category": "Components",
       "namespace": "Tempo.Blazor.Components.AI",
       "description": "Where a TmFanOutGrid renders the detail of the focused (or hovered) tile. The default Inline keeps the detail as a region below the grid (the historical behaviour); Popover anchors the same content to the tile in an overlay panel that closes on Escape and hands the focus back — the better shape for a narrow, measured grid.",
       "packageId": "Tempo.Blazor.AI",
       "sourcePath": "src/Tempo.Blazor.AI/Components/AI/FanOutDetailPresentation.cs",
-      "documentationStatus": "generated",
-      "itemName": "FanOutDetailPresentation"
+      "documentationStatus": "merged",
+      "usageExample": "<TmFanOutGrid Attempts=\"_attempts\" DetailPresentation=\"FanOutDetailPresentation.Popover\" />"
     },
     {
       "itemName": "FanOutFilter",
@@ -4278,6 +4315,71 @@
       "usageExample": "<TmAgentHandoff Steps=\"_steps\" Orientation=\"HandoffOrientation.Horizontal\" />"
     },
     {
+      "itemName": "MemoryEdit",
+      "kind": "Record",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.AI",
+      "description": "One committed edit of a memory: the id, the values the reader left in TmMemoryPanel's editor and the set of fields that actually MOVED. A host applies only what changed instead of diffing two snapshots of its own store, and it can refuse a field it owns — Fields is a subset of the panel's EditableFields, never a superset. Reported through OnEditItem; the legacy text-only OnEdit callback keeps working exactly as before for a host that has not opted into the extra fields.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Components/AI/MemoryEdit.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Category",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The category as the reader left it, or the unchanged one when the field was not editable."
+        },
+        {
+          "name": "Fields",
+          "kind": "Property",
+          "type": "MemoryEditableFields",
+          "description": "Which of the three fields the edit actually changed."
+        },
+        {
+          "name": "Id",
+          "kind": "Property",
+          "type": "string",
+          "description": "The id of the edited memory — the only identity the host needs to find its own row."
+        },
+        {
+          "name": "Source",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The source as the reader left it, or the unchanged one when the field was not editable."
+        },
+        {
+          "name": "Text",
+          "kind": "Property",
+          "type": "string",
+          "description": "The fact as the reader left it in the editor."
+        }
+      ],
+      "usageExample": "<TmMemoryPanel Items=\"_items\"\n               EditableFields=\"MemoryEditableFields.All\"\n               OnEditItem=\"edit => ApplyAsync(edit.Id, edit.Fields, edit.Text, edit.Category, edit.Source)\" />"
+    },
+    {
+      "itemName": "MemoryEditableFields",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.AI",
+      "description": "Which parts of a memory a reader may change in TmMemoryPanel's inline editor, as a flags set. The set is the host's permission, not a suggestion: a field whose flag is missing is neither rendered nor reported, so a store that owns the category (a taxonomy an agent classifies into) can still let the reader fix the text. Text is the default, which is exactly the pre-2.11.0 editor; Category and Source add their field beside it and report through OnEditItem; None removes the Edit action entirely.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Components/AI/MemoryEditableFields.cs",
+      "documentationStatus": "merged",
+      "usageExample": "<TmMemoryPanel Items=\"_items\" EditableFields=\"MemoryEditableFields.Text | MemoryEditableFields.Category\" OnEditItem=\"OnEditItem\" />"
+    },
+    {
+      "itemName": "MemoryFilterPresentation",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.AI",
+      "description": "How a TmMemoryPanel presents its status filter. Auto (the default) renders BOTH surfaces and lets a container query on the panel's own box decide which one is visible: the five-segment tray on a wide card, and a real TmSelect on a narrow one (a 375 px phone card), because a segmented tray that has to scroll reads as clipped exactly where it is the only way to narrow the list. Segmented and Select pin one presentation at every width. The switch is a container query, never the viewport: the same panel is wide in a dashboard column and narrow inside a sheet on the very same screen.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Components/AI/MemoryFilterPresentation.cs",
+      "documentationStatus": "merged",
+      "usageExample": "<TmMemoryPanel Items=\"_items\" FilterPresentation=\"MemoryFilterPresentation.Select\" />"
+    },
+    {
       "itemName": "MemoryForgetMode",
       "kind": "Enum",
       "category": "Components",
@@ -4298,6 +4400,17 @@
       "sourcePath": "src/Tempo.Blazor.AI/Components/AI/MemoryStatusFilter.cs",
       "documentationStatus": "merged",
       "usageExample": "<TmMemoryPanel Items=\"_items\" @bind-StatusFilter=\"_filter\" />"
+    },
+    {
+      "itemName": "MemoryUndoMode",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.AI",
+      "description": "How a TmMemoryPanel keeps the removals a reader may still take back. Single (the default) is the pre-2.11.0 rule: ONE undo window exists at a time, so a second Forget reports the first removal immediately. Queue keeps one window PER pending removal — each with its own countdown on the injected TimeProvider and its own undo row — so a reader who removes three memories in a row can still take back any of them. The stack is bounded by TmMemoryPanel.MaxVisibleUndoRows: past that bound the OLDEST pending removal is reported immediately rather than dropped off the screen, because a removal nobody can see and nobody was told about would be lost.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Components/AI/MemoryUndoMode.cs",
+      "documentationStatus": "merged",
+      "usageExample": "<TmMemoryPanel Items=\"_items\" UndoMode=\"MemoryUndoMode.Queue\" OnForget=\"OnForget\" />"
     },
     {
       "itemName": "RunViewMode",
@@ -4625,6 +4738,10 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor.AI/wwwroot/js/tm-autonomy-dial.js",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor.AI/wwwroot/js/__tests__/ai-composer.test.mjs",
       "kind": "JavaScript"
     },
@@ -4647,14 +4764,18 @@
     {
       "path": "src/Tempo.Blazor.AI/wwwroot/js/__tests__/tm-agent-run-tree.test.mjs",
       "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor.AI/wwwroot/js/__tests__/tm-autonomy-dial.test.mjs",
+      "kind": "JavaScript"
     }
   ],
   "summary": {
-    "itemCount": 52,
-    "manualItemCount": 50,
-    "generatedItemCount": 52,
-    "generatedOnlyItemCount": 2,
+    "itemCount": 56,
+    "manualItemCount": 56,
+    "generatedItemCount": 56,
+    "generatedOnlyItemCount": 0,
     "componentCount": 28,
-    "publicApiTypeCount": 24
+    "publicApiTypeCount": 28
   }
 }

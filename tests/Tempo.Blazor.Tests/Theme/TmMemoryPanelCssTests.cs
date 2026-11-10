@@ -9,8 +9,9 @@ namespace Tempo.Blazor.Tests.Theme;
 /// this guard proves the memory surface's own share of it: the partial is imported by the package entry stylesheet, every
 /// class the markup emits has a rule, a status is a knob a row modifier SETS and the base rule READS (so colour is never
 /// the only carrier and source order cannot decide a state), the native buttons and the edit box carry real focus rings,
-/// a coarse pointer reaches the 44 px target, the forced-colors block hands the palette back to the system, and the
-/// partial animates nothing at all.
+/// a coarse pointer reaches the 44 px target, the forced-colors block hands the palette back to the system, the ONE
+/// animated subject (a queued undo row arriving) is reduced away, and a narrow card swaps the scrolling segmented tray
+/// for a real select through a container query on the panel's own box.
 /// </para>
 /// </summary>
 public sealed class TmMemoryPanelCssTests
@@ -27,6 +28,8 @@ public sealed class TmMemoryPanelCssTests
         "tm-ai-memory__toolbar",
         "tm-ai-memory__search",
         "tm-ai-memory__filter",
+        "tm-ai-memory__filter-segmented",
+        "tm-ai-memory__filter-select",
         "tm-ai-memory__bulk",
         "tm-ai-memory__bulk-count",
         "tm-ai-memory__bulk-actions",
@@ -49,6 +52,9 @@ public sealed class TmMemoryPanelCssTests
         "tm-ai-memory__text",
         "tm-ai-memory__edit",
         "tm-ai-memory__edit-box",
+        "tm-ai-memory__edit-field",
+        "tm-ai-memory__edit-label",
+        "tm-ai-memory__edit-input",
         "tm-ai-memory__edit-actions",
         "tm-ai-memory__save",
         "tm-ai-memory__cancel",
@@ -64,6 +70,7 @@ public sealed class TmMemoryPanelCssTests
         "tm-ai-memory__busy",
         "tm-ai-memory__empty",
         "tm-ai-memory__undo",
+        "tm-ai-memory__undo-row",
         "tm-ai-memory__undo-text",
         "tm-ai-memory__undo-action",
         "tm-ai-memory__undo-timer",
@@ -165,15 +172,50 @@ public sealed class TmMemoryPanelCssTests
             "the resting borders collapse under high contrast, so they keep a system colour");
     }
 
+    /// <summary>
+    /// The only movement in the file is a queued undo row arriving (the reader has just pressed Forget, so the row that
+    /// appears has to say WHICH removal the stack took on). It is declared once, and the reduced-motion block removes it —
+    /// every state is still a word plus an icon.
+    /// </summary>
     [Fact]
-    public void ThePartialAnimatesNothing_BecauseEveryStateIsAlsoText()
+    public void TheOneAnimatedSubject_IsTheQueuedUndoRow_AndReducedMotionRemovesIt()
     {
         var css = MemoryCss();
 
-        css.Should().NotContain("@keyframes");
-        css.Should().NotContain("animation:");
+        css.Should().Contain("animation: tm-ai-memory-undo-in",
+            "the newest undo row slides in by a few pixels");
+        css.Should().Contain(".tm-ai-memory__undo-row", "the slide belongs to the row, not to the stack");
+        css.Should().Contain("@media (prefers-reduced-motion: reduce)");
+        css.Should().Contain("animation: none",
+            "a reader who asked for less motion gets the row without the slide");
+
+        var declarations = System.Text.RegularExpressions.Regex
+            .Matches(css, @"(?m)^\s*animation(-name)?\s*:")
+            .Select(match => match.Value.Trim().TrimEnd(':'))
+            .ToArray();
+        declarations.Should().Equal(["animation", "animation"],
+            "one subject: the declaration itself plus the reduced counterpart, and no second decoration");
         css.Should().NotContain("transition:",
             "a transition is movement too: either it is honest and reduced, or it is not there");
+    }
+
+    /// <summary>
+    /// A 375 px card cannot hold five segments: the core tray answers a narrow container by scrolling itself, which reads
+    /// as clipped. The swap is a container query on the PANEL's own box (never the viewport), and the mode gate keeps a
+    /// host that pinned one presentation from losing its filter.
+    /// </summary>
+    [Fact]
+    public void ANarrowCard_SwapsTheTrayForASelect_OnItsOwnContainer()
+    {
+        var css = MemoryCss();
+
+        css.Should().Contain("container-type: inline-size");
+        css.Should().Contain("container-name: tm-memory");
+        css.Should().Contain("@container tm-memory (width < 640px)",
+            "the query reads the card, matching TmBreakpoints.Sm");
+        css.Should().Contain(".tm-ai-memory[data-filter=\"auto\"] .tm-ai-memory__filter-segmented");
+        css.Should().Contain(".tm-ai-memory[data-filter=\"auto\"] .tm-ai-memory__filter-select",
+            "only the Auto mode swaps: a pinned presentation must survive every width");
     }
 
     [Fact]

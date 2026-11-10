@@ -1,5 +1,6 @@
 @namespace Tempo.Blazor.Components.AI
 @inherits Tempo.Blazor.Components.TmComponentBase
+@implements IAsyncDisposable
 @using System.Globalization
 @using Tempo.Blazor.AI.Models
 @using Tempo.Blazor.Components.Icons
@@ -9,6 +10,11 @@
    and End reach the ends of what the ALLOWED range offers, and the two native step buttons are the pointer alternative
    (WCAG 2.5.7) — they sit BESIDE the slider, never inside it, so the slider owns no interactive descendants. The
    segmented presentation swaps the slider for a radio group in which every grade is its own target.
+
+   The four arrows and Home/End also belong to the PAGE (they scroll it), and Blazor can only preventDefault
+   unconditionally per element — so the package's tm-autonomy-dial.js module owns the conditional part and swallows the
+   browser default for exactly those six keys on the focused slider. Without JavaScript the dial keeps every key it
+   handles; only the page may scroll along with it.
 
    The stops above a ceiling still render, marked unavailable, and a line under the track says why: a control that simply
    refuses a key without a word reads as broken. The limits section lists what somebody else enforces, with its source and

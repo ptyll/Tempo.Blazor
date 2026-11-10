@@ -1,0 +1,11 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "description": "Where a TmFanOutGrid renders the detail of the focused (or hovered) tile. The default Inline keeps the detail as a region below the grid (the historical behaviour); Popover anchors the same content to the tile in an overlay panel that closes on Escape and hands the focus back — the better shape for a narrow, measured grid.",
+  "packageId": "Tempo.Blazor.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/FanOutDetailPresentation.cs",
+  "documentationStatus": "documented",
+  "itemName": "FanOutDetailPresentation",
+  "usageExample": "<TmFanOutGrid Attempts=\"_attempts\" DetailPresentation=\"FanOutDetailPresentation.Popover\" />"
+}
