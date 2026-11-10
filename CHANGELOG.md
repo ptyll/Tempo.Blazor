@@ -224,20 +224,34 @@
   (carry-forward c59bf3f1: DI rendering screenshots for 3 DI corpus files + no-DI + partial-DI +
   collapsed plane at 1440/390 in light/dark, `#blazor-error-ui` hidden and PNG > 2 KB per shot);
   JSON documentation overlays regenerated and `validate --fail-on-drift` clean.
-+- **Phase 5 review hardening (findings 1–10).** Demo corpus samples load through an absolute
-+  `NavigationManager.ToAbsoluteUri` URL (the Server/InteractiveAuto `HttpClient` targets the API;
-+  the Server host maps the `.bpmn` content type so its static web assets actually serve)
-+  with a Server-host `?bpmn=` E2E; the 24 DI rendering shots + the loss-report shot are committed
-+  evidence in `__screenshots__/modeling-bpmn-di/`. Export merges tool plugins first-wins by
-+  `NamespaceUri` (explicit options before the DI fallback) so dialect payloads never double-write.
-+  `modeling_import_bpmn` validates `name` at 200 characters, reports malformed XML as
-+  `validation_failed`, and saves each document independently — a failure returns the exact
-+  partial progress (`saved`/`failedAt`/`failed`). The demo BPMN controls hide only below 768 px
-+  (localized mobile hint otherwise), the loss table carries a localized caption, `scope="col"`,
-+  the xmlPath in its own column and localized severities, the status line is an always-rendered
-+  `role="status"` element and both dialogs restore focus to the Import BPMN trigger; oversized
-+  files get a localized message. The `otp-input` role is unambiguously `TmOtpInput`'s again
-+  (`TmMaskedTextBox` keeps only `masked-input`).
+- **Phase 5 review hardening (findings 1–10).** Demo corpus samples load through an absolute
+  `NavigationManager.ToAbsoluteUri` URL (the Server/InteractiveAuto `HttpClient` targets the API;
+  the Server host maps the `.bpmn` content type so its static web assets actually serve)
+  with a Server-host `?bpmn=` E2E; the 24 DI rendering shots + the loss-report shot are committed
+  evidence in `__screenshots__/modeling-bpmn-di/`. Export merges tool plugins first-wins by
+  `NamespaceUri` (explicit options before the DI fallback) so dialect payloads never double-write.
+  `modeling_import_bpmn` validates `name` at 200 characters, reports malformed XML as
+  `validation_failed`, and saves each document independently — a failure returns the exact
+  partial progress (`saved`/`failedAt`/`failed`). The demo BPMN controls hide only below 768 px
+  (localized mobile hint otherwise), the loss table carries a localized caption, `scope="col"`,
+  the xmlPath in its own column and localized severities, the status line is an always-rendered
+  `role="status"` element and both dialogs restore focus to the Import BPMN trigger; oversized
+  files get a localized message. The `otp-input` role is unambiguously `TmOtpInput`'s again
+  (`TmMaskedTextBox` keeps only `masked-input`).
+- **Phase 6 — documentation and release preparation.** The design document became the
+  user guide [docs/modeling-bpmn-xml.md](docs/modeling-bpmn-xml.md): installation and DI
+  registration, import/export examples, the options/limits table, the loss-report contract,
+  host and tool extension points, the MCP tools, security notes (safe XML settings, input
+  limits), the opt-in XSD validation (`TM_BPMN_XSD_DIR`) and the `bpmn-moddle` interop
+  check. The package README ([src/Tempo.Blazor.Modeling.BpmnXml/README.md](src/Tempo.Blazor.Modeling.BpmnXml/README.md))
+  is packed into the nupkg; AGENTS.md and COMPONENTS.md index the package. Release prep per
+  repo conventions: `2.11.0` version set in the csproj, `eng/nuget-packages.txt` lists the
+  project, `ReleaseContractTests`/`ProvenanceComparisonTests` cover the announcement, local
+  `dotnet pack -c Release` verified (dependencies: `Tempo.Blazor.Abstractions` + the
+  TFM-matched `Microsoft.Extensions.DependencyInjection.Abstractions` only, README + XML
+  docs + symbols in the package) and a clean console-host smoke test (no Blazor) imports
+  the whole corpus, exports and round-trips it. No tag/publish — the release waits for the
+  owner's confirmation together with the full BPMN authoring plan.
 - **Phase 2 review hardening (all 10 findings):** O(n) import backed by per-model id sets and a
   global element index (200 000 flat tasks import in seconds under the default limits —
   `MaxElements` default raised to 500 000); the bounded reader never disposes the caller's stream

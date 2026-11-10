@@ -93,8 +93,9 @@ public class TempoPackFormControlsRenderTests
     [Fact]
     public void FormControlTypeList_CoversCompleteSchemaCategories()
     {
-        FormControlTypes.Should().HaveCount(45);
-        FormControlTypes.Should().Contain(["TmButton", "TmTextInput", "TmQueryInput", "TmDecimalInput", "TmDatePicker", "TmTagPicker", "TmDropdownItem"]);
+        // 46: the OTP plan (4ebadc60) added TmOtpInput to the Inputs category.
+        FormControlTypes.Should().HaveCount(46);
+        FormControlTypes.Should().Contain(["TmButton", "TmTextInput", "TmQueryInput", "TmDecimalInput", "TmDatePicker", "TmTagPicker", "TmDropdownItem", "TmOtpInput"]);
     }
 
     [Fact]

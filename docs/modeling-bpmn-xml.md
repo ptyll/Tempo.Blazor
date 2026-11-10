@@ -1,60 +1,240 @@
-# Headless převodník BPMN 2.0 XML — návrh API, mapování a korpus
+# BPMN 2.0 XML konvertor — uživatelská příručka
 
-> Stav: schváleno — MODELING-BPMN-XML-API (phase 1 plánu `6fca9139-c871-41c4-c06e-08df38c30cbd`).
-> Konzument: PromptHelper UC-PRC-017 (import/export BPMN 2.0 XML), nepřímo UC-PRC-018 a UC-PRC-026.
-> Rozhodnutí DEC-PRC-001 body 10 a 12 (PH app `3c052519-a811-4c7e-b2de-d47088082b86`).
-
-## 1. Cíle a ne-cíle
+> Balíček: `Tempo.Blazor.Modeling.BpmnXml` (headless, multi-target net8.0/net9.0/net10.0).
+> Rozhodnutí: MODELING-BPMN-XML-API (plán `6fca9139-c871-41c4-c06e-08df38c30cbd`).
+> Konzument: PromptHelper UC-PRC-017 (import/export BPMN 2.0 XML), nepřímo UC-PRC-018 a UC-PRC-026;
+> rozhodnutí DEC-PRC-001 body 10 a 12 (PH app `3c052519-a811-4c7e-b2de-d47088082b86`).
+> Verze: 2.11.0 (vydává se společně s plánem „Plné BPMN authoring").
 
 Převodník **BPMN 2.0 XML ⇄ `ModelingModelDto`** je **headless** (žádná závislost na
-Blazor / Razor / JS interop), aby ho PromptHelper API mohlo použít na serveru.
-Deterministický: stejný vstup ⇒ stejný výstup (stabilní ID, pořadí, serializace).
-Nic se nezahazuje tiše: každá nepodporovaná nebo aproximovaná konstrukce končí v
-reportu ztrát s umístěním v souboru.
+Blazor / Razor / ASP.NET / JS interop) — jediná závislost je `Tempo.Blazor.Abstractions`,
+takže ho lze použít v konzolových aplikacích, worker službách, ASP.NET Core API i MCP
+serverech. Je **deterministický** (stejný vstup ⇒ stejný výstup: stabilní ID z BPMN id,
+invariant-culture čísla, LF konce řádků, žádný BOM) a **nikdy tiše nezahazuje obsah**:
+každá nepodporovaná nebo aproximovaná konstrukce končí v reportu ztrát s umístěním
+v souboru.
 
 Ne-cíle: rendering, UI, BPMN execution/simulace, editace diagramu.
 
-## 2. Re-verifikovaný stav repozitáře (2026-11)
+## 1. Instalace a registrace
 
-- **Cílový model**: `src/Tempo.Blazor.Abstractions/Modeling/ModelingDtos.cs` —
-  `ModelingModelDto` (`Elements`, `Relationships`, `Views`, `Issues`, `Metadata`),
-  `ModelingElementDto` (`SemanticType`, `ParentId` hierarchie, `Properties` jako
-  `Dictionary<string, JsonElement>`, `SourceId`/`SourceType`/`SourcePath`),
-  `ModelingRelationshipDto`, `ModelingViewDto` (`Nodes` s X/Y/Width/Height/
-  `ParentNodeId`, `Connections` s `Waypoints`), `ModelingIssueDto`.
-  `Tempo.Blazor.Abstractions` má nulové UI závislosti — vhodný jediný závislost převodníku.
-- **Sémantický katalog**: `BpmnModelingCatalog` v `src/Tempo.Blazor.Modeling/Components/
-  Modeling/BuiltInModelingProfiles.cs:1749` (internal) — elementy: `Task`, `UserTask`,
-  `ServiceTask`, `SendTask`, `ReceiveTask`, `ScriptTask`, `BusinessRuleTask`, `ManualTask`,
-  `SubProcess`, `EventSubProcess`, `CallActivity`, `StartEvent`, `EndEvent`,
-  `IntermediateCatchEvent`, `IntermediateThrowEvent`, `BoundaryEvent`, `ExclusiveGateway`,
-  `ParallelGateway`, `InclusiveGateway`, `ComplexGateway`, `EventBasedGateway`, `Pool`,
-  `Lane`, `DataObject`, `DataStore`, `Group`, `TextAnnotation`. Vazby: `SequenceFlow`,
-  `ConditionalFlow`, `DefaultFlow`, `MessageFlow`, `Association`, `DataInputAssociation`,
-  `DataOutputAssociation`. Notace klíč `bpmn2` (`BuiltInModelingProfiles`).
-  Převodník duplikuje tyto názvy jako vlastní konstanty (nechce závislost na internal typu);
-  test ověří, že se katalog nerozjel (parity test).
-- **Vzory**: `RdlReportImporter` (XDocument + namespace-agnostic local-name match,
-  výsledek s diagnostikami, malformed XML ⇒ error výsledek, ne throw) a
-  `Tempo.Blazor.DocumentFormats` (bezpečné `XmlReaderSettings`, importer/exporter
-  dvojice). Převodník kopíruje jejich styl: `BpmnImportResult`/`BpmnExportResult`
-  s issues, žádné výjimky za běžných chyb stavu vstupu.
-- **Auto-layout**: `ModelingLayoutArranger` (Tempo.Blazor.Modeling) je deterministický
-  čistě C# band-arrangement pro pool/lane + rankování flow uzlů, ale je `internal` a vázaný
-  na `Tempo.Blazor.Components.Diagram.Models`. Dagre layout běží v prohlížeči (JS) —
-  headless nedostupný. **Rozhodnutí**: převodník implementuje vlastní headless
-  `BpmnAutoLayout` (fáze 3) podle stejné konvence (flush lane pásy, rank = nejdelší cesta
-  od startu, declaration-order tie-break, `ceil(sqrt(n))` grid pro nezávislé uzly).
+```bash
+dotnet add package Tempo.Blazor.Modeling.BpmnXml
+```
 
-## 3. Umístění a balíčky
+**Dependency injection** (registruje importer, exporter i built-in tool pluginy):
 
-Nový balíček **`Tempo.Blazor.Modeling.BpmnXml`** (multi-target net8.0/net9.0/net10.0,
-jako ostatní), jediná závislost `Tempo.Blazor.Abstractions`. Namespace
-`Tempo.Blazor.Modeling.BpmnXml`. Žádný ASP.NET, Blazor, JS interop.
-DI: `services.AddTempoBpmnXml()` registruje `IBpmnXmlImporter`/`IBpmnXmlExporter`
-+ tool pluginy (fáze 5 rozšíří o MCP nástroje).
+```csharp
+builder.Services.AddTempoBpmnXml();
 
-## 4. Mapovací tabulka BPMN 2.0 XML → sémantické typy
+public class MyService(IBpmnXmlImporter importer, IBpmnXmlExporter exporter) { … }
+```
+
+**Bez DI** — parameterless konstruktory zůstávají bez pluginů; pluginy lze předat explicitně:
+
+```csharp
+var importer = new BpmnXmlImporter(BpmnBuiltInToolExtensions.All);
+var exporter = new BpmnXmlExporter();
+```
+
+DI-resolvené importer/exporter používají registrované pluginy automaticky (explicitně
+naplněný `ToolExtensions` v options vždy vyhraje; sloučený seznam se de-duplikuje
+podle `NamespaceUri`, first-wins).
+
+## 2. Import
+
+```csharp
+var importer = new BpmnXmlImporter();
+
+// ze streamu (nemusí být seekable — čte se s bounded bufferem):
+BpmnImportResult result = importer.Import(stream, new BpmnImportOptions
+{
+    ModelSplit = BpmnModelSplit.PerProcess,   // výchozí; SingleWithPools = jeden model
+    ImportBpmndi = true,                       // výchozí; false = pozice ignorovány, auto-layout
+    MaxInputBytes = 10 * 1024 * 1024,          // výchozí
+    MaxDepth = 256,                            // výchozí
+    MaxElements = 500_000,                     // výchozí
+});
+
+// nebo z řetězce:
+BpmnImportResult result = importer.Import(xml);
+
+if (result.HasErrors)
+{
+    // result.ErrorMessage — importer NIKDY nehází výjimku pro špatný vstup
+    return;
+}
+
+IReadOnlyList<ModelingModelDto> models = result.Models;
+```
+
+- `PerProcess` (výchozí): každý `process` participantu ⇒ jeden `ModelingModelDto`;
+  cross-model `messageFlow` jsou vazbami s `Properties["externalModelRef"]`.
+- `SingleWithPools`: jeden model, pooly jako kořenové elementy.
+- Výsledek nese `Losses` (report ztrát, viz §5), `Warnings` a modely s `Issues`
+  kategorie `bpmn-import` (strukturální validace: dangling flow endpointy, zlomené
+  boundary attachmenty, start/end-event flow pravidla, duplicitní id).
+
+## 3. Export
+
+```csharp
+var exporter = new BpmnXmlExporter();
+
+// jeden model, nebo více modelů ⇒ JEDEN <definitions> s <collaboration>
+// (pooly ⇒ participanti, cross-model messageFlowy ⇒ <messageFlow>):
+BpmnExportResult exported = exporter.Export(models, new BpmnExportOptions
+{
+    Profile = BpmnExportProfile.Standard,          // výchozí; viz níže
+    HostExtensionNamespace = "https://tempo.blazor/schemas/bpmn-extensions",
+    HostExtensionPrefix = "tempo",
+    EmitBpmndi = true,                              // výchozí
+    TargetNamespace = null,                         // výchozí; vlastní targetNamespace
+    // ToolExtensions — export hooky pluginů (DI fallback jako u importeru)
+    // ExtensionNamespaces — prefix → URI mapa pro cizí atributové property
+});
+
+if (exported.Success)
+{
+    string xml = exported.Xml!;        // deterministic: LF, no BOM, invariant numbers
+}
+// exported.Losses — prvky modelu bez BPMN obdoby (viz §5)
+```
+
+**Profily:**
+
+- `Standard` (výchozí): píše jen nativní BPMN; vše, co BPMN nemá (host property mimo
+  catch-all, `Tags`/`Governance`, …) se objeví v `Losses`.
+- `WithHostExtensions`: každou ne-native property serializuje do
+  `<extensionElements><tempo:properties><tempo:property name="key" value="JSON"/>…`
+  pod host namespace (deterministický JSON: neindentovaný, seřazené klíče). Import
+  extensionElements v host namespace vrací zpět do `Properties` — **round-trip bez ztráty**.
+  Namespace `https://tempo.blazor/schemas/bpmn-extensions` je sdílený se schématem
+  vlastností plánu „Plné BPMN authoring" — neměnit.
+
+## 4. Options a limity
+
+Import (`BpmnImportOptions`) | Výchozí | Význam
+---|---|---
+`ModelSplit` | `PerProcess` | Rozdělení collaboration na modely
+`ImportBpmndi` | `true` | Import BPMNDI do Views; `false` = auto-layout
+`MaxInputBytes` | 10 MiB | Bound čtení vstupu (stream nemusí být seekable)
+`MaxDepth` | 256 | Maximální hloubka zanoření
+`MaxElements` | 500 000 | Maximální počet elementů
+`ToolExtensions` | `[]` | Tool pluginy (DI fallback first-wins de-dup)
+
+Export (`BpmnExportOptions`) | Výchozí | Význam
+---|---|---
+`Profile` | `Standard` | `Standard`/`WithHostExtensions`
+`HostExtensionNamespace`/`HostExtensionPrefix` | `https://tempo.blazor/schemas/bpmn-extensions` / `tempo` | Host extension namespace
+`EmitBpmndi` | `true` | Zápis BPMNDI (jeden plane na distinct view id)
+`TargetNamespace` | `null` | Vlastní `targetNamespace` kořene
+`ToolExtensions` | `[]` | Export hooky pluginů
+`ExtensionNamespaces` | Camunda/Signavio/Bizagi pre-seed | Prefix → URI pro cizí atributové property; neznámé prefixy ⇒ deterministicky `urn:tempo-blazor:bpmn:{prefix}` s Info loss
+
+Výkon: import je O(n) (200 000 flat tasků do sekund pod výchozími limity); export
+5000 tasků + 5000 flowů < 2 s; auto-layout O(V+E) iterativní (100k chain < 5 s).
+
+## 5. Report ztrát
+
+Povinné pravidlo: **nic se nezahazuje tiše.**
+
+- Import: `BpmnImportResult.Losses` — `BpmnImportLoss { elementId?, xmlPath, construct,
+  reason, severity }`, severity `Loss`/`Approximated`/`Info`; mirror jako `bpmn-import`
+  issues na vlastnícím modelu.
+- Export: `BpmnExportResult.Losses` — `BpmnExportLoss { elementId?, construct, reason,
+  severity }`.
+- Neznámé extension namespace: obsah zachován verbatim pod
+  `Properties["foreignExtensions"][ns]` (XML string) + loss záznam.
+
+Typické import lossy: choreografie/conversation konstrukce, `multiInstance`/`standard`
+loop characteristics, ad-hoc ordering, transaction compensation detaily, nepoužité
+globální definice, `BPMNLabelStyle` fontové definice, `di:extension` payloady.
+Typické export lossy (`Standard` profil): host property, `Tags`/`Governance`,
+nevalidní NCName property klíče, eventDefinition bez typu.
+
+## 6. Extenze
+
+### 6.1 Host extension namespace
+
+Profil `WithHostExtensions` píše/čte properties pod host namespace (viz §3). Import
+vrací neznámé extensionElements v host namespace zpět do `Properties` (round-trip).
+
+### 6.2 Tool pluginy (`IBpmnToolExtension`)
+
+```csharp
+public interface IBpmnToolExtension
+{
+    string NamespaceUri { get; }                    // namespace, který plugin vlastní
+    bool OwnsAttributeExport => false;              // true = plugin serializuje sám (payload shape)
+    void OnImportElement(BpmnToolImportContext context);   // extensionElements → Properties
+    void OnExportElement(BpmnToolExportContext context);   // Properties → extensionElements
+}
+```
+
+Built-in pluginy (`BpmnBuiltInToolExtensions.All`, registruje `AddTempoBpmnXml()`):
+
+- **Camunda** (`http://camunda.org/schema/1.0/bpmn`): `assignee`/`candidateGroups`/
+  `candidateUsers`/`formKey`/`dueDate`/`versionTag`/`delegateExpression` ⇒ `camunda:*`
+  property klíče; `camunda:documentation` ⇒ Description; ostatní payloady (listenery,
+  konektory, input/output) verbatim pod `camundaExtensions` — loss-free re-export.
+- **Signavio** (`http://www.signavio.com`): `signavioMetaData` ⇒ `signavio:*` klíče;
+  diagram meta-data ⇒ `signavio:*` property modelu. `OwnsAttributeExport = true`.
+- **Bizagi** (`http://www.bizagi.com/schemas/2010/Bizagi`): `BizagiProperty` name/value
+  ⇒ `bizagi:*` klíče. `OwnsAttributeExport = true`.
+
+Neznámé namespace ⇒ loss „unrecognized extension namespace" + verbatim obsah pod
+`foreignExtensions` — nic se nezahazuje.
+
+## 7. MCP nástroje
+
+Balíček `Tempo.Blazor.Mcp` (nástroje `modeling_import_bpmn` / `modeling_export_bpmn`)
+používá tento převodník; popisný katalog včetně shape odpovědí je
+[docs/modeling-mcp-tools.md](docs/modeling-mcp-tools.md) §`modeling_import_bpmn` /
+§`modeling_export_bpmn`:
+
+- `modeling_import_bpmn` — import BPMN XML (max 2M znaků) ⇒ modely + plný loss report;
+  volitelný `save=true` persistuje každý model přes document provider (nezávisle,
+  s přesným partial progress `saved`/`failedAt`/`failed`); malformed XML ⇒
+  `validation_failed`.
+- `modeling_export_bpmn` — export uloženého modelu (`modelId`; volitelně `profile`, `emitBpmndi`, `targetNamespace`) ⇒ XML + export loss report;
+  profily `Standard`/`WithHostExtensions`. Write klasifikace: `modeling_import_bpmn`
+  s `save=true` je write nástroj.
+
+## 8. Bezpečnost
+
+- **Bezpečné XML je výchozí**: `XmlReaderSettings { DtdProcessing = Prohibit,
+  XmlResolver = null }` — DTD/entity se nezpracovávají vůbec (XXE a billion laughs
+  testy jsou povinné: `BpmnXmlImporterSecurityTests`, adversarial fixture složka
+  `tests/Tempo.Blazor.Tests/Modeling/BpmnCorpus/Hostile/`).
+- **Limity** (`MaxInputBytes`/`MaxDepth`/`MaxElements`) se vynucují bounded čtením —
+  stream nemusí být seekable; bounded reader nikdy nedisposeuje cizí stream a ctí
+  cancellation.
+- **Nikdy nehází výjimky** za běžných chyb vstupu: malformed XML ⇒ `HasErrors` +
+  `ErrorMessage` (s číslem řádky). Neočekávané selhání load/build ⇒ generický
+  `HasErrors` výsledek.
+- HTTP caller může (nemusí) bufferovat body s vlastním capem před `Import(Stream)`.
+- Balíček nemá žádný IO, síť ani proces — čistá transformace dat v paměti.
+
+## 9. Interoperabilita a XSD (opt-in)
+
+- **`npm run test:bpmn-interop`** — povinná kontrola interoperability: `bpmn-moddle`
+  fromXML nad všemi export goldeny (`tests/Tempo.Blazor.Tests/Modeling/BpmnCorpus/Expected/*.export.bpmn`),
+  zero warnings, root `bpmn:Definitions`. Ověřuje, že export čtou i jiné nástroje
+  (bpmn.io/Camunda Modeler stack).
+- **XSD validace (opt-in)** — test se spustí jen když proměnná `TM_BPMN_XSD_DIR`
+  ukazuje na BPMN 2.0.2 XSD soubory (licence XSD pro bundling není ověřená, proto
+  nejsou v repu); bez proměnné se test přeskočí.
+- Ruční vizuální kontrola: otevřít např. `simple-process.export.bpmn` a
+  `collaboration-3-pools.export.bpmn` z `Expected/` v bpmn.io nebo Camunda Modeler.
+
+## 10. Mapovací tabulka BPMN 2.0 XML → sémantické typy
+
+Cílový model: `src/Tempo.Blazor.Abstractions/Modeling/ModelingDtos.cs` —
+`ModelingModelDto` (`Elements`, `Relationships`, `Views`, `Issues`, `Metadata`),
+`ModelingElementDto` (`SemanticType`, `ParentId` hierarchie, `Properties` jako
+`Dictionary<string, JsonElement>`, `SourceId`/`SourceType`/`SourcePath`),
+`ModelingRelationshipDto`, `ModelingViewDto` (`Nodes` s X/Y/Width/Height/
+`ParentNodeId`, `Connections` s `Waypoints`), `ModelingIssueDto`. Notace klíč `bpmn2`.
 
 Element/attribut XML | SemanticType / chování
 ---|---
@@ -90,26 +270,63 @@ Nepodporované konstrukce (vždy loss záznam, žádný throw): `choreographyTas
 `subChoreography`, `callChoreography`, `conversation`, `subConversation`,
 `callConversation`, `conversationLink`, `transaction` compensation detaily
 (samotné `compensateEventDefinition` na boundary/end události importujeme: marker +
-Properties + Association na `isForCompensation` úkol — viz řádky výše),
-`multiInstanceLoopCharacteristics`,
-`standardLoopCharacteristics`,
-globální definice `message`/`signal`/`error`/`escalation` **se zachovávají** (id + name +
-případný kód) v Metadata/Properties modelu, aby export mohl obnovit `<definitions>`
-kořen i po čistém import→export cyklu; definice deklarované ale nikde nepoužité ⇒ info-loss
-"definition declared but unused", `correlationSubscription`,
+Properties + Association na `isForCompensation` úkol), `multiInstanceLoopCharacteristics`,
+`standardLoopCharacteristics`, globální definice `message`/`signal`/`error`/`escalation`
+**se zachovávají** (id + name + případný kód) v Metadata/Properties modelu, aby export
+mohl obnovit `<definitions>` kořen i po čistém import→export cyklu; definice deklarované
+ale nikde nepoužité ⇒ info-loss "definition declared but unused", `correlationSubscription`,
 `globalConversation`, `partnerEntity/Role`, `monitoring`, `auditing`, IO specifikace
-(`ioSpecification dataInput`/`dataOutput` jako endpointy asociací resolvujeme na
-ohraničující aktivitu; samotná deklarace bez vazby ⇒ loss), `resourceRole`, `category`/`categoryValue`
-samotné (skupiny importujeme, kategorie do Properties), `rendering`, DI `style`;
-`BPMNLabelStyle` fontové definice a `di:extension` payloady (reference `labelStyle`
-se jako `bpmndi:labelStyle` property zachovává — viz §5.4).
+(samotná deklarace bez vazby ⇒ loss), `resourceRole`, `category`/`categoryValue`
+samotné, `rendering`, DI `style`; `BPMNLabelStyle` fontové definice a `di:extension`
+payloady (reference `labelStyle` se jako `bpmndi:labelStyle` property zachovává).
 Saxová pravidla: chybějící povinný atribut (např. `sourceRef`) ⇒ loss + uzel/vazba
 i tak importován, pokud je srozumitelný.
 
 Každý loss záznam: `{ elementId?, xmlPath, construct, reason, severity }` (severity
 Loss/Approximated/Info — mapuje se na `ModelingIssueDto` kategorií `bpmn-import`).
 
-## 5. Veřejné API (schváleno — MODELING-BPMN-XML-API)
+## 11. BPMNDI, auto-layout a export detailů
+
+- **Waypointy view connections = plná absolutní DI polyline včetně koncových bodů**;
+  import ji ukládá i na vazbu do `Properties["bpmndi:waypoints"]` +
+  `Properties["bpmndi:planeId"]`, aby ji export napsal zpět beze ztráty.
+- **Connection do view jen když jsou oba konce uzly tohoto view** — cross-model
+  `messageFlow` nese geometrii na vazbě; generátor nikdy nehlásí missing-end issue
+  pro importované view.
+- **Auto-layout (`BpmnAutoLayout.Layout`) nechává waypointy prázdné** — generátor hranu
+  sám trasuje. Částečný DI fill syntetizuje alespoň koncové body (`Route` přes DI pozice).
+- **Částečný DI fill elementů:** každý chybějící element doplní jen view, které drží jeho
+  **nejbližšího sémantického předka** (fallback `Views[0]`), s offsetem pod DI bounds —
+  žádný překryv a žádný duplicitní `ElementId` napříč view. Model bez plane dostane
+  úplný auto-layout view s varováním.
+- **DI flagy a labely:** atributy BPMNShape/BPMNEdge ⇒ `bpmndi:*` property;
+  `BPMNLabel` bounds ⇒ `bpmndi:labelBounds`; `labelStyle` reference ⇒ `bpmndi:labelStyle`.
+  `BPMNLabelStyle` definice a `di:extension` payloady ⇒ loss report.
+- **Auto-layout konvence:** O(V+E) (iterativní Kahnův topologický sort, žádná rekurze —
+  50k reverz deklarovaný chain neoverflowuje); rank = nejdelší cesta od startu přes
+  non-back hrany; vrstvy centrovány na nejvyšší vrstvu (chain = jedna horizontální linka);
+  **boundary event sedí ve sloupci hostitelské aktivity na samostatném řádku** (weight-0
+  hrana do její vrstvy); pooly = horizontální pásy s flush lane pásy uvnitř.
+- **Multi-model export** píše JEDEN dokument: každý model ⇒ `<process>`, pooly ⇒
+  participanti, cross-model messageFlowy ⇒ `<messageFlow>` v `<collaboration>`;
+  prázdná `<collaboration/>` se neemituje nikdy. View geometry = jeden `BPMNPlane` na
+  distinct view id; auto-layouted connections se syntetizují koncové body.
+- **Schéma-validní výstup:** kořen deklaruje `xmlns:xsi`; výrazy nesou
+  `xsi:type="tFormalExpression"`; `<process>` vždy nese `isExecutable`; `definitions`
+  nese `exporter="Tempo.Blazor"` + `exporterVersion`; flow nodes nesou Camunda-style
+  `<incoming>`/`<outgoing>`; per každý `dataObjectRef` se syntetizuje jeden
+  `<dataObject id name isCollection>`; DI id `{id}_di` (kolize ⇒ `{id}_di_1`).
+- **Robustnost exportu** (nikdy nehází pro špatný modelový obsah): nevalidní NCName
+  property klíče ⇒ loss; invalid XML 1.0 znaky ⇒ strip + `Approximated` loss;
+  eventDefinition bez/ s neznámým typem ⇒ loss. Duplicitní id elementů napříč modely
+  ⇒ první výskyt (sdílená instance není duplicita); duplicitní id vazby ⇒ loss.
+  Prefixy generované z URI jsou stabilní FNV-1a hashe; rezervované prefixy
+  (`bpmndi`/`dc`/`di`/`xsi`/`xml`/host) se nikdy nezastíní — kolize ⇒ `{prefix}_1`
+  s Info loss. `Tags`/`Governance` (element) a tagy vazeb: `WithHostExtensions` ⇒ host
+  payload, `Standard` ⇒ loss. Root extensionElements v host namespace obnovují
+  model-level properties.
+
+## 12. Veřejné API (schváleno — MODELING-BPMN-XML-API)
 
 ```csharp
 namespace Tempo.Blazor.Modeling.BpmnXml;
@@ -123,14 +340,13 @@ public interface IBpmnXmlImporter
 public interface IBpmnXmlExporter
 {
     BpmnExportResult Export(ModelingModelDto model, BpmnExportOptions? options = null, CancellationToken ct = default);
-    // fáze 4: více modelů (PerProcess import) ⇒ JEDEN dokument s collaboration
     BpmnExportResult Export(IReadOnlyList<ModelingModelDto> models, BpmnExportOptions? options = null, CancellationToken ct = default);
 }
 
 public sealed class BpmnImportOptions
 {
     public BpmnModelSplit ModelSplit { get; set; } = BpmnModelSplit.PerProcess; // PerProcess | SingleWithPools
-    public bool ImportBpmndi { get; set; } = true;        // false = pozice ignorovány (auto-layout fáze 3)
+    public bool ImportBpmndi { get; set; } = true;        // false = pozice ignorovány (auto-layout)
     public long MaxInputBytes { get; set; } = 10 * 1024 * 1024;
     public int MaxDepth { get; set; } = 256;
     public int MaxElements { get; set; } = 500_000;
@@ -155,17 +371,17 @@ public sealed class BpmnExportOptions
     public string HostExtensionPrefix { get; set; } = "tempo";
     public bool EmitBpmndi { get; set; } = true;
     public string? TargetNamespace { get; set; }
-    public IList<IBpmnToolExtension> ToolExtensions { get; } = []; // export hooky pluginů (fáze 4)
+    public IList<IBpmnToolExtension> ToolExtensions { get; } = []; // export hooky pluginů
     // prefix → URI mapa pro cizí atributové property (camunda:assignee, …); neznámé prefixy se
-    // deklarují deterministicky jako urn:tempo-blazor:bpmn:{prefix} s Info loss (fáze 4)
+    // deklarují deterministicky jako urn:tempo-blazor:bpmn:{prefix} s Info loss
     public IDictionary<string, string> ExtensionNamespaces { get; }
 }
 
 public enum BpmnExportProfile { Standard, WithHostExtensions }
 
-public enum BpmnExportLossSeverity { Loss, Approximated, Info } // fáze 4
+public enum BpmnExportLossSeverity { Loss, Approximated, Info }
 
-public sealed class BpmnExportLoss // fáze 4: jeden záznam loss reportu
+public sealed class BpmnExportLoss
 {
     public string? ElementId { get; init; }   // id elementu/vazby, když konstrukt nese
     public required string Construct { get; init; }  // Property | Tags | Governance | Namespace | …
@@ -184,141 +400,40 @@ public sealed class BpmnExportResult
 
 Rozhodnutí v návrhu:
 
-1. **ModelSplit** — `PerProcess` (výchozí): každý `process` participantu ⇒ jeden
-   `ModelingModelDto`, Pool je elementem modelu, messageFlowy vazbami mezi modely
-   (výsledek `Models[i].Relationships` obsahují vazby, jejichž druhá strana patří jinému
-   modelu, s `Properties["externalModelRef"]`). `SingleWithPools`: jeden model, pooly
-   jako kořenové elementy.
-2. **Bezpečnost** — `XmlReaderSettings { DtdProcessing = Prohibit, XmlResolver = null }`,
-   limity z options; porušení ⇒ `HasErrors` (povinné testy XXE + billion laughs ve fázi 2).
-3. **Determinism** — ID zůstávají BPMN id; pro vygenerovaná ID deterministický sklon
-   (`{type}_{stableHash}` z cesty); pořadí elementů = pořadí v XML; export řadí
-   definice dle prvního výskytu. Golden testy round-trip ve fázích 2–4.
-4. **Views** — import BPMNDI ⇒ jeden View na každý `BPMNPlane` (více diagramů =
-   více Views, `Notation="bpmn2"`); Nodes nesou X/Y/W/H, connections Waypoints.
-   `ParentNodeId` pro uzly vnořené do shape kontejneru (pool/lane/subprocess dle DI isExpanded).
-5. **Stream API** — pro ASP.NET Core volající: `Import(Stream)` je sync wrapper, který
-   sám čte s bounded buffer; HTTP caller může (nemusí) bufferovat body
-   (`await Request.Body.CopyToAsync` s capem `MaxInputBytes`). Limit `MaxInputBytes` je
-   vynucen bounded čtením, **ne** přes `Stream.Length` (stream nemusí být seekable).
+1. **Determinismus** — ID zůstávají BPMN id; pro vygenerovaná ID deterministický sklon
+   (`{type}_{stableHash}` z cesty); pořadí elementů = pořadí v XML; export řadí definice
+   dle prvního výskytu. Golden testy round-trip (import→export→import ≅ model;
+   export(import(export(x))) byte-identické).
+2. **Stream API** — `Import(Stream)` je sync wrapper čtoucí s bounded buffer; limit
+   `MaxInputBytes` je vynucen bounded čtením, **ne** přes `Stream.Length`.
+3. **Views** — import BPMNDI ⇒ jeden View na každý `BPMNPlane` (více diagramů = více
+   Views, `Notation="bpmn2"`); Nodes nesou X/Y/W/H, connections Waypoints, `ParentNodeId`
+   pro uzly vnořené do shape kontejneru (pool/lane/subprocess dle DI isExpanded).
 
-### 5.4 View waypointy, generované pozice a DI lossy (fáze 3)
+## 13. Testovací korpus a testování
 
-- **Waypointy view connections = plná absolutní DI polyline včetně koncových bodů**
-  tak, jak je BPMNEdge nese. Import ji zároveň ukládá na vazbu do
-  `Properties["bpmndi:waypoints"]` + `Properties["bpmndi:planeId"]`, aby ji export (fáze 4)
-  mohl napsat zpět beze ztráty.
-- **Connection se do view přidá jen když jsou oba konce uzly tohoto view.** Cross-model
-  `messageFlow` tedy neleze do žádného per-model view (končí v cizím modelu) — jeho
-  geometrie přežije v `bpmndi:waypoints` na vazbě. Generátor diagramu pak nikdy nehlásí
-  missing-end issue pro importované view.
-- **Auto-layout (`BpmnAutoLayout.Layout`) nechává waypointy prázdné** — generátor hranu
-  sám trasuje. Částečný DI fill (chybějící hrany) syntetizuje alespoň koncové body
-  (`Route` přes DI pozice uzlů).
-- **Částečný DI fill elementů:** každý chybějící element doplní jen view, které drží jeho
-  **nejblížšího sémantického předka** (fallback `Views[0]`), s vertikálním offsetem
-  pod DI bounding box view (`maxY + gap`) — žádný překryv s uloženou DI geometrií a
-  žádný duplicitní `ElementId` napříč view. Model, který nezachytí žádná plane, dostane
-  úplný auto-layout view s varováním.
-- **DI flagy a labely:** atributy BPMNShape i BPMNEdge (`isExpanded`, `isHorizontal`,
-  `isMarkerVisible`, `messageVisibleKind`, `sourceElement`/`targetElement`, …) se
-  ukládají jako `bpmndi:*` property elementu/vazby; `BPMNLabel` bounds jako
-  `bpmndi:labelBounds` a odkaz `labelStyle` jako `bpmndi:labelStyle`. Definice
-  `BPMNLabelStyle` (fonty) a `di:extension` payloady se do modelu nepřenášejí — jsou
-  hlášeny v loss reportu.
-- **Auto-layout konvence:** `O(V+E)` (Kahnův topologický sort iterativně, žádná
-  rekurze — 50k reverz deklarovaný chain neoverflowuje); rank = nejdelší cesta od startu
-  přes non-back hrany (zpětné hrany cyklů se ignorují); vrstvy se centrují na
-  nejvyšší vrstvu, takže čistý chain je jedna horizontální linka; **boundary event sedí
-  ve sloupci hostitelské aktivity na samostatném řádku** (weight-0 hrana do její vrstvy);
-  pooly jsou horizontální pásy s flush lane pásy uvnitř.
+`tests/Tempo.Blazor.Tests/Modeling/BpmnCorpus/` — 23 hand-authored fixtur (MIT, viz
+README složky) imitujících dialektů reálných nástrojů (Camunda Modeler, Signavio,
+Bizagi, bpmn.io): jednoduchý proces, collaboration se 3 pooly a messageFlow, vnořené
+lanes, všechny brány, všechny události s eventDefinitions, boundary events (incl.
+transaction+cancel), event subprocess, callActivity, datové objekty, model bez BPMNDI,
+Camunda/Signavio/Bizagi export, textAnnotation/association/group, soubor záměrně
+nepodporovaných konstrukcí, prefixed-qnames dialekt, subprocess vnořený 3 úrovně,
+collapsed subprocess s vlastním druhým BPMNDiagram/BPMNPlane, black-box participant,
+`multiple`/`parallelMultiple` události, bpmn.io-style `ioSpecification`/`<property>` a
+`partial-bpmndi.bpmn` (DI pokrývá jen část uzlů/hran). Podadresář `Hostile/` — XXE,
+billion laughs, malformed XML, wrong root, size/depth/element-count sondy.
 
-### 5.5 Export a round-trip (fáze 4)
-
-- **Multi-model overload.** `Export(IReadOnlyList<ModelingModelDto>)` (additive vedle
-  schváleného single-model API; rozhodnutí MODELING-BPMN-XML-API je uzavřené moderátorem)
-  píše JEDEN dokument: každý model ⇒ `<process>`, pooly ⇒ participanti, cross-model
-  messageFlowy ⇒ `<messageFlow>` v `<collaboration>`. Prázdná `<collaboration/>` se
-  neemituje nikdy.
-- **Schéma-validní výstup.** Kořen deklaruje `xmlns:xsi`; `conditionExpression`,
-  `timeDuration`/`timeDate`/`timeCycle`, conditional `condition` a `completionCondition`
-  nesou `xsi:type="tFormalExpression"`. `<process>` vždy nese `isExecutable` (výchozí
-  `"false"`; atributy procesu jako `camunda:versionTag` import catch-all uchovává v
-  `Model.Properties` a export je píše zpět). `definitions` nese
-  `exporter="Tempo.Blazor"` + `exporterVersion` (assembly informational version bez
-  commit hashe — jinak by golden testy rotovaly každým commitem). textAnnotation píše
-  tělo do `<text>` child (import čte `<text>` s fallbackem na direct text). Flow nodes
-  nesou Camunda-style `<incoming>`/`<outgoing>`. Plane s participant/message-flow DI
-  referencuje collaboration. Per každý `dataObjectRef` se syntetizuje jeden
-  `<dataObject id name isCollection>`. `incoming`/`outgoing` wiring, `{id}_di` DI id
-  (kolize ⇒ `{id}_di_1`).
-- **Robustnost.** Export nikdy nehodí pro špatný modelový obsah: nevalidní NCName
-  property klíče ⇒ loss; invalid XML 1.0 znaky ⇒ strip + `Approximated` loss;
-  eventDefinition bez/ s neznámým typem ⇒ loss (žádné tiché terminate). Duplicitní id
-  elementů napříč modely exportuje první výskyt (sdílená instance není duplicita);
-  duplicitní id vazby ⇒ loss. Prefixy generované z URI jsou stabilní FNV-1a hashe
-  (`BpmnImportInternals.StableId`), rezervované prefixy (`bpmndi`/`dc`/`di`/`xsi`/`xml`/
-  host) se nikdy nezastíní — kolize se přejmenují deterministicky na `{prefix}_1` s Info
-  loss; opakované xmlns deklarace uvnitř `foreignExtensions` payloadů se stripují.
-  `Tags`/`Governance` (element) a tagy vazeb jedou v `WithHostExtensions` profilu do
-  host payloadu (import je vrací do typovaných DTO polí), v `Standard` profilu ⇒ loss.
-- **Výkon.** Děti a vazby se před-indexují podle parent/source/target — export
-  5000 tasků + 5000 flowů trvá < 2 s.
-- **Root-extension import.** `extensionElements` na `definitions` v host namespace
-  obnovují model-level properties (dříve ignorováno).
-- **Interoperabilita.** `npm run test:bpmn-interop` (`bpmn-moddle` fromXML nad všemi
-  export goldeny, zero warnings, `bpmn:Definitions` root) a opt-in XSD validační test
-  (`TM_BPMN_XSD_DIR` ukazuje na BPMN 2.0.2 XSD soubory; bez proměnné se test přeskočí).
-
-## 6. Extenze (host + nástroje)
-
-- **Host namespace**: při `Profile=WithHostExtensions` se `Properties` prvku/vazby
-  serializují do
-  `<extensionElements><tempo:properties><tempo:property name="key" value="JSON"/></tempo:properties></extensionElements>`.
-  JSON je deterministický (`JsonSerializerOptions { WriteIndented=false }`, klíče
-  seřazené — canonicalizace přes `JsonNode` sort). Při importu se neznámé
-  extensionElements v host namespace vrací zpět do `Properties` (round-trip).
-  Namespace `https://tempo.blazor/schemas/bpmn-extensions` **musí sedět** se schématem
-  vlastností z navazujícího plánu „Plné BPMN authoring" (sdílený change set).
-- **Tool pluginy**: `IBpmnToolExtension { string NamespaceUri; void OnImportElement(...); void OnExportElement(...); }`.
-  Registrované built-in: **Camunda** (`http://camunda.org/schema/1.0/bpmn` —
-  `assignee`/`candidateGroups`/`candidateUsers`/`formKey`/`dueDate`/`versionTag`/
-  `delegateExpression` ⇒ Properties klíče `camunda:*`; `camunda:documentation` ⇒
-  Description; ostatní `extensionElements` ⇒ Properties `camundaExtensions` jako XML string),
-  **Signavio** (`http://www.signavio.com` — `signavioMetaData/@metaKey/@metaValue` ⇒
-  Properties `signavio:{key}`; diagram meta-data ⇒ Metadata/Properties modelu),
-  **Bizagi** (`http://www.bizagi.com/schemas/2010/Bizagi` — `BizagiProperty/@name/@value`
-  ⇒ Properties `bizagi:{name}`; atributy `Bizagi:property` ⇒ Properties `bizagi:property`).
-  Neznámé namespace ⇒ loss záznam "unrecognized extension namespace", obsah zachován
-  jako `Properties["foreignExtensions"][ns]` (XML string) — nic se nezahazuje.
-
-## 7. Testovací korpus
-
-`tests/Tempo.Blazor.Tests/Modeling/BpmnCorpus/` — 21 hand-authored fixtur (MIT, viz
-README složky) imitujících dialektů reálných nástrojů: jednoduchý proces, collaboration
-se 3 pooly a messageFlow, vnořené lanes, všechny brány, všechny události s eventDefinitions,
-boundary events (incl. transaction+cancel), event subprocess, callActivity, datové objekty,
-model bez BPMNDI, Camunda/Signavio/Bizagi export, textAnnotation/association/group,
-textAnnotation v standardní formě (`<text>` child),
-soubor záměrně nepodporovaných konstrukcí (incl. top-level `adHocSubProcess` a kompenzace),
-prefixed-qnames dialekt (`bpmn2:` + `tns:` QName refy), subprocess vnořený 3 úrovně,
-collapsed subprocess s vlastním druhým BPMNDiagram/BPMNPlane, black-box participant
-bez `processRef`, `multiple`/`parallelMultiple` události se dvěma eventDefinitiony
-a bpmn.io-style `ioSpecification`/`<property>`. Podadresář `Hostile/` je vyhrazen pro
-fázi 2 (XXE, billion laughs, oversized streamy) a záměrně leží mimo `ExpectedCorpusFiles`.
 Guard testy: `BpmnCorpusTests` (well-formed, bezpečný parse, unikátní NCName id,
-dangling reference guard vč. element-text referencí s odstraněným QName prefixem,
-BPMNDI presence, parity konstant proti `BpmnModelingCatalog` přes InternalsVisibleTo).
-Složka `Expected/` nese vedle import goldenů (`*.import.json`) i export goldeny
-(`*.export.bpmn`) — ty procházejí kromě byte-identického srovnání i `bpmn-moddle`
-interop parse (`npm run test:bpmn-interop`, zero warnings, `bpmn:Definitions` root).
+dangling reference guard vč. element-text referencí, BPMNDI presence, parity konstant
+proti `BpmnModelingCatalog`). Složka `Expected/` nese import goldeny (`*.import.json`)
+i export goldeny (`*.export.bpmn`) — regenerace `TEMPO_REGENERATE_BPMN_IMPORT_GOLDEN=1` /
+`TEMPO_REGENERATE_BPMN_EXPORT_GOLDEN=1`.
 
-## 8. Fázování (připomínka)
-
-- Fáze 2: bezpečný parser + import sémantiky + loss report (TDD golden testy na korpusu;
-  Hostile/ fixturny pro XXE/billion-laughs/limity; parity konstant je už teď hlídána
-  `BpmnCorpusTests.Converter_semantic_type_constants_match_BpmnModelingCatalog`).
-- Fáze 3: BPMNDI import do Views + headless `BpmnAutoLayout` pro modely bez DI.
-- Fáze 4: export + round-trip (import(export(x)) ≅ x pro korpus bez lossů).
-- Fáze 5: tool pluginy, MCP nástroje (`Tempo.Blazor.Mcp/Modeling`), demo.
-- Fáze 6: docs, CHANGELOG, JSON doc overlay pokud přibyde komponenta (zatím ne).
+Relevantní sady: `BpmnXmlImporterSecurityTests`, `BpmnXmlImporterTests`,
+`BpmnImportGoldenTests`, `BpmnViewImportTests`, `BpmnAutoLayoutTests`,
+`BpmnViewRenderTests`, `BpmnXmlExporterTests`, `BpmnExportGoldenTests`,
+`BpmnRoundTripTests`, `BpmnToolExtensionTests`, `BpmnPackageBoundaryTests`
+(headless boundary: jen `Tempo.Blazor.Abstractions`, žádný UI/server stack v uzávěru),
+`ModelingBpmnToolsTests` (MCP), E2E `ModelingBpmnXmlConverterE2ETests` /
+`ModelingBpmnDiRenderingE2ETests` / `ModelingBpmnServerE2ETests`.
