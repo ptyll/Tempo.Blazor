@@ -21,6 +21,12 @@
       "description": "Raised when the rendered mode changes. The initial value is not a change, except that an Auto observer which inherits a non-Desktop resolution from a cascading parent reports it once so late-mounted consumers adopt it. Never pair LayoutMode with this callback: it reports the resolved mode, and a two-way bind would pin that mode."
     },
     {
+      "name": "ContainerWidthChanged",
+      "type": "EventCallback<double>",
+      "isRequired": false,
+      "description": "Opt-in report of the root's own content width in CSS pixels, rounded and only when the rounded value changes — resizes within one mode still move a measured column count. Auto with this delegate set asks layout-observer.js for the width report; a forced mode or an observer without the delegate never imports the script. Consumers that derive layout from the width (TmFanOutGrid ColumnsMode Auto) read the SAME number the stylesheet lays out in."
+    },
+    {
       "name": "LayoutContent",
       "type": "RenderFragment<TmLayoutContext>?",
       "isRequired": false,

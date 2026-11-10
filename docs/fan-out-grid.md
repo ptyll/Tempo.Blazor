@@ -56,7 +56,10 @@ instead of claiming the run was free.
 | `Tasks` | `IReadOnlyList<FanOutTask>?` | `null` | The units of work, in the host's order. Null or empty renders the localized empty state. |
 | `Title` / `ShowTitle` / `HeadingLevel` | `string?` / `bool` / `int` | `null` / `true` / `3` | The heading; the level is clamped to 2–6. |
 | `ShowSummary` | `bool` | `true` | The roll-up line (finished / running / failed, the task count, the cost, the estimate). |
-| `Columns` | `int` | `4` | Tiles per row, clamped to 1–8. **The layout authority**: the C# window and the stylesheet read the same number (written inline as `--tm-fan-out-columns`). |
+| `Columns` | `int` | `4` | Tiles per row, clamped to 1–8. **The layout authority in `Fixed` mode**: the C# window and the stylesheet read the same number (written inline as `--tm-fan-out-columns`). In `Auto` mode it is the fallback before the first measurement arrives. |
+| `ColumnsMode` | `FanOutColumnsMode` | `Fixed` | `Fixed` (default) decides the grid outright — pure CSS plus the inline knob, no measurement. `Auto` measures the grid's own box through the shared `TmLayoutObserver` and fits as many tiles of `MinTileWidth` as the width allows: **one measured number** drives the inline knob, the `aria-colcount` and the C# window math, so a phone never scrolls the grid sideways. |
+| `MinTileWidth` | `int` | `144` | The width one tile needs in `Auto`, in CSS px (values below 96 read as 96). Also written inline as `--tm-fan-out-tile-min-inline-size`, so a host can restyle the tile without a CSS override. |
+| `DetailPresentation` | `FanOutDetailPresentation` | `Inline` | `Inline` (default) keeps the detail as a region below the grid. `Popover` anchors the **same content** to the focused tile in an overlay panel: Escape closes it and hands the focus back to the tile; an outside pointer closes it without pulling focus — the better shape for a narrow, measured grid, where an in-flow detail would push the tiles out of sight. |
 | `Compact` | `bool` | `false` | A tighter tile that keeps the label, the state word and the attempt badge and drops the countdown and the worker line. |
 | `ShowFilter` | `bool` | `true` | The state filter bar. |
 | `Filter` / `FilterChanged` | `FanOutFilter` | `All` | The state filter, two-way bound (`@bind-Filter`). |
@@ -109,6 +112,14 @@ hold. Both are native buttons, both announce their request through the surface's
 changes the task: the host owns the data and re-renders. The card's title is a heading ONE level below the surface
 heading (capped at h6), so a host that renders the surface at h2 never gets a skipped level.
 
+### The elapsed read-out
+
+An active task that started **without an estimate** never goes silent about time: the tile's time line, its aria-label
+and the detail's Elapsed row paint the localized plural read-out ("running for 2 min", "běží 2 min") — whole minutes,
+clamped to at least one, so a task 30 s in reads "1 min". A task WITH an estimate keeps its countdown, a queued task
+paints nothing, and the repaint ticker arms for the elapsed read-out exactly like it does for a countdown: the host
+needs no round-trip to keep it fresh.
+
 ## Accessibility
 
 - **State is three carriers**: an icon, a localized WORD and a tone. Colour is never the only one (WCAG 1.4.1), and
@@ -133,7 +144,9 @@ Classes: `.tm-ai-fan-out`, `--compact`, `__header`, `__title`, `__summary`, `__s
 `__tile-initials`, `__tile-text`, `__tile-label`, `__tile-meta`, `__tile-state`, `__tile-state-icon`,
 `__tile-state-text`, `__tile-eta`, `__tile-worker`, `__badge`, `__detail`, `__detail-head`, `__detail-title`,
 `__detail-state`, `__detail-state-icon`, `__detail-state-text`, `__detail-facts`, `__detail-error`,
-`__detail-actions`, `__action`, `__action--danger`.
+`__detail-actions`, `__action`, `__action--danger`, `__detail-host` (the inline region wrapper), `__detail-popover`
+(the anchored panel body) and `__measure` (the `Auto`-mode measuring wrapper — a plain box the shared observer reads,
+it never changes the grid's layout).
 
 Tokens only (no colour literal, no raw palette step, no `[data-theme]` block). The knobs are declared on the root —
 `--tm-fan-out-columns` (written inline from `Columns`), `--tm-fan-out-gap`, `--tm-fan-out-tile-min-inline-size`,
@@ -145,6 +158,6 @@ from the shared palette token (`var(--tm-agent-color-{0..7})`), so the eight slo
 
 ## Wireframe
 
-The palette ships the `fan-out-grid` UI role, the `TmFanOutGrid` schema (`title`, `tasks`, `columns`, `filter`,
-`compact`) and a declarative stencil that draws the summary line, the filter chips, one tile per supplied task with its
-attempt badge, and the detail card with its Retry / Cancel actions.
+The palette ships the `fan-out-grid` UI role, the `TmFanOutGrid` schema (`title`, `tasks`, `columns`, `columnsMode`,
+`minTileWidth`, `detailPresentation`, `filter`, `compact`) and a declarative stencil that draws the summary line, the
+filter chips, one tile per supplied task with its attempt badge, and the detail card with its Retry / Cancel actions.

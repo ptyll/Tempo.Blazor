@@ -25220,6 +25220,12 @@
               "description": "Extra CSS classes appended to the root."
             },
             {
+              "name": "ContainerWidthChanged",
+              "type": "EventCallback<double>",
+              "isRequired": false,
+              "description": "Opt-in report of the root's own content width in CSS pixels, rounded and only when the rounded value changes — resizes within one mode still move a measured column count. Auto with this delegate set asks layout-observer.js for the width report; a forced mode or an observer without the delegate never imports the script. Consumers that derive layout from the width (TmFanOutGrid ColumnsMode Auto) read the SAME number the stylesheet lays out in."
+            },
+            {
               "name": "InitialMode",
               "type": "TmLayoutMode",
               "isRequired": false,
@@ -36311,6 +36317,10 @@
           "kind": "JavaScript"
         },
         {
+          "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-animated-number.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-color-gradient.test.mjs",
           "kind": "JavaScript"
         },
@@ -41264,7 +41274,14 @@
               "type": "int",
               "isRequired": false,
               "default": "DefaultColumns",
-              "description": "How many tiles sit on one grid row, clamped to 1–8. Default 4. The value is also written onto the root as --tm-fan-out-columns, so the stylesheet lays the rows out with the same number the C# window uses."
+              "description": "How many tiles sit on one grid row, clamped to 1–8. Default 4. The value is also written onto the root as --tm-fan-out-columns, so the stylesheet lays the rows out with the same number the C# window uses. In ColumnsMode Auto the value is the FALLBACK before the first measurement arrives."
+            },
+            {
+              "name": "ColumnsMode",
+              "type": "FanOutColumnsMode",
+              "isRequired": false,
+              "default": "FanOutColumnsMode.Fixed",
+              "description": "Whether Columns decides the grid outright (Fixed, the default — pure CSS plus the inline knob, no measurement) or the component measures its own grid through TmLayoutObserver and fits as many tiles of MinTileWidth as the width allows (Auto). The measured number drives BOTH the inline knob and the C# window math, so the rendered rows can never diverge from what a screen reader counts."
             },
             {
               "name": "Compact",
@@ -41285,6 +41302,13 @@
               "description": "The culture that formats the costs and the clock times. Null (the default) means the current culture at render time. The countdowns are clock-style (m:ss) on purpose and are not localized."
             },
             {
+              "name": "DetailPresentation",
+              "type": "FanOutDetailPresentation",
+              "isRequired": false,
+              "default": "FanOutDetailPresentation.Inline",
+              "description": "Where the detail of the focused (or hovered) tile renders: Inline (the default) keeps it as a region below the grid; Popover anchors the same content to the tile in an overlay panel that closes on Escape and hands the focus back — the better shape for a narrow, measured grid, where an in-flow detail would push the tiles out of sight."
+            },
+            {
               "name": "Filter",
               "type": "FanOutFilter",
               "isRequired": false,
@@ -41303,6 +41327,13 @@
               "isRequired": false,
               "default": "3",
               "description": "The heading level of the rendered title, clamped to 2–6. Default 3."
+            },
+            {
+              "name": "MinTileWidth",
+              "type": "int",
+              "isRequired": false,
+              "default": "144",
+              "description": "The width one tile needs in ColumnsMode Auto, in CSS pixels; the measured grid fits as many tiles of this width (plus the gap) as it allows, clamped to 1–8. Default 144 — the px equivalent of the stylesheet's --tm-fan-out-tile-min-inline-size (9 rem at a 16 px root). Values below 96 px are read as 96 px. The value is also written onto the root as --tm-fan-out-tile-min-inline-size, so a host can restyle the tile without a CSS override."
             },
             {
               "name": "OnCancel",
@@ -41411,7 +41442,10 @@
             "tm-ai-fan-out__detail-error",
             "tm-ai-fan-out__detail-actions",
             "tm-ai-fan-out__action",
-            "tm-ai-fan-out__action--danger"
+            "tm-ai-fan-out__action--danger",
+            "tm-ai-fan-out__detail-host",
+            "tm-ai-fan-out__detail-popover",
+            "tm-ai-fan-out__measure"
           ],
           "examples": [
             {
@@ -41426,7 +41460,10 @@
           "notes": [
             "The surface renders the snapshot it is given; it never polls, fetches or mutates a task.",
             "The injected TimeProvider drives the countdown and the repaint ticker: a test with a fake clock closes a second without sleeping, and a finished fan-out arms no timer.",
-            "Columns is the layout authority: the C# window and the stylesheet read the same number, so a host that needs fewer tiles on a phone binds Columns rather than relying on a container query.",
+            "Columns is the layout authority in Fixed mode: the C# window and the stylesheet read the same number, so a host that needs fewer tiles on a phone binds Columns rather than relying on a container query.",
+            "ColumnsMode Auto measures the grid's own box through the shared TmLayoutObserver and fits as many tiles of MinTileWidth as the width allows: ONE measured number drives the inline knob, the aria-colcount and the window math, so a phone never scrolls the grid sideways. Before the first measurement the clamped Columns stands.",
+            "DetailPresentation Popover anchors the same detail content to the focused tile in an overlay panel: Escape closes it and hands the focus back to the tile; an outside pointer closes it without pulling focus.",
+            "An active task that started without an estimate paints the elapsed read-out (\"running for 2 min\") on the tile, in the aria-label and in the detail — the ticker arms for it, so the read-out repaints every second without a host round-trip.",
             "One polite live region announces a filter change, a moved focus and a retry or cancel request; the tiles themselves are native buttons with one roving tab stop."
           ]
         },
@@ -42878,6 +42915,26 @@
           "usageExample": "<TmFallbackChain Attempts=\"_attempts\" @bind-ViewMode=\"_view\" />\n\n@code {\n    private FallbackChainViewMode _view = FallbackChainViewMode.Flow;\n}"
         },
         {
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.AI",
+          "description": "How a TmFanOutGrid decides how many tiles sit on one grid row. The default Fixed reads the host's Columns parameter (pure CSS plus one inline knob, no measurement); Auto measures the component's own container through TmLayoutObserver and derives the count from MinTileWidth, so a phone never scrolls the grid sideways and the C# window math can never diverge from the rendered columns.",
+          "packageId": "Tempo.Blazor.AI",
+          "sourcePath": "src/Tempo.Blazor.AI/Components/AI/FanOutColumnsMode.cs",
+          "documentationStatus": "generated",
+          "itemName": "FanOutColumnsMode"
+        },
+        {
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.AI",
+          "description": "Where a TmFanOutGrid renders the detail of the focused (or hovered) tile. The default Inline keeps the detail as a region below the grid (the historical behaviour); Popover anchors the same content to the tile in an overlay panel that closes on Escape and hands the focus back — the better shape for a narrow, measured grid.",
+          "packageId": "Tempo.Blazor.AI",
+          "sourcePath": "src/Tempo.Blazor.AI/Components/AI/FanOutDetailPresentation.cs",
+          "documentationStatus": "generated",
+          "itemName": "FanOutDetailPresentation"
+        },
+        {
           "itemName": "FanOutFilter",
           "kind": "Enum",
           "category": "Components",
@@ -43273,12 +43330,12 @@
         }
       ],
       "summary": {
-        "itemCount": 50,
+        "itemCount": 52,
         "manualItemCount": 50,
-        "generatedItemCount": 50,
-        "generatedOnlyItemCount": 0,
+        "generatedItemCount": 52,
+        "generatedOnlyItemCount": 2,
         "componentCount": 28,
-        "publicApiTypeCount": 22
+        "publicApiTypeCount": 24
       }
     },
     {
@@ -146627,10 +146684,10 @@
   ],
   "summary": {
     "packageCount": 29,
-    "itemCount": 3713,
+    "itemCount": 3715,
     "manualItemCount": 3713,
-    "generatedOnlyItemCount": 0,
+    "generatedOnlyItemCount": 2,
     "componentCount": 565,
-    "publicApiTypeCount": 3096
+    "publicApiTypeCount": 3098
   }
 }

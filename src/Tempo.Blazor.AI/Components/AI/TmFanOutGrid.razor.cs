@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.JSInterop;
 using Tempo.Blazor.AI.Formatting;
 using Tempo.Blazor.AI.Models;
+using Tempo.Blazor.Localization;
 
 namespace Tempo.Blazor.Components.AI;
 
@@ -46,6 +47,13 @@ public partial class TmFanOutGrid : TmComponentBase, IDisposable
     /// <summary>The window size used when a host does not set one.</summary>
     private const int DefaultVisibleTaskLimit = 60;
 
+    /// <summary>The gap between two tiles the C# column math accounts for: <c>--tm-fan-out-gap</c> resolves to
+    /// <c>--tm-space-2</c> (8 px at the default 16 px root).</summary>
+    private const double TileGapPx = 8;
+
+    /// <summary>The smallest tile width a host can set: below this a tile stops reading as a tile.</summary>
+    private const int MinAllowedTileWidth = 96;
+
     private readonly string _id = $"tm-ai-fan-out-{Guid.NewGuid():n}"[..26];
 
     [Inject] private IServiceProvider ServiceProvider { get; set; } = default!;
@@ -68,6 +76,8 @@ public partial class TmFanOutGrid : TmComponentBase, IDisposable
     private string? _detailTaskId;
     private bool _tileHadFocus;
     private string? _pendingFocusTaskId;
+    private double? _measuredWidth;
+    private bool _popoverOpen;
     private readonly Dictionary<string, TileHandle> _handles = new(StringComparer.Ordinal);
     private string _announcement = string.Empty;
     private bool _announcementMarker;
@@ -102,8 +112,35 @@ public partial class TmFanOutGrid : TmComponentBase, IDisposable
     /// <summary>
     /// How many tiles sit on one grid row, clamped to 1–8. Default 4. The value is also written onto the root as
     /// <c>--tm-fan-out-columns</c>, so the stylesheet lays the rows out with the same number the C# window uses.
+    /// In <see cref="FanOutColumnsMode.Auto"/> the value is the FALLBACK before the first measurement arrives.
     /// </summary>
     [Parameter] public int Columns { get; set; } = DefaultColumns;
+
+    /// <summary>
+    /// Whether <see cref="Columns"/> decides the grid outright (<see cref="FanOutColumnsMode.Fixed"/>, the default —
+    /// pure CSS plus the inline knob, no measurement) or the component measures its own container through
+    /// <c>TmLayoutObserver</c> and fits as many tiles of <see cref="MinTileWidth"/> as the width allows
+    /// (<see cref="FanOutColumnsMode.Auto"/>). The measured number drives BOTH the inline knob and the C# window
+    /// math, so the rendered rows can never diverge from what a screen reader counts.
+    /// </summary>
+    [Parameter] public FanOutColumnsMode ColumnsMode { get; set; } = FanOutColumnsMode.Fixed;
+
+    /// <summary>
+    /// The width one tile needs in <see cref="FanOutColumnsMode.Auto"/>, in CSS pixels; the measured container fits
+    /// as many tiles of this width (plus the gap) as it allows, clamped to 1–<c>8</c>. Default 144 — the px
+    /// equivalent of the stylesheet's <c>--tm-fan-out-tile-min-inline-size</c> (9 rem at a 16 px root). Values
+    /// below 96 px are read as 96 px. In <see cref="FanOutColumnsMode.Fixed"/> the value is still written onto the
+    /// root as <c>--tm-fan-out-tile-min-inline-size</c>, so a host can restyle the tile without a CSS override.
+    /// </summary>
+    [Parameter] public int MinTileWidth { get; set; } = 144;
+
+    /// <summary>
+    /// Where the detail of the focused (or hovered) tile renders: <see cref="FanOutDetailPresentation.Inline"/>
+    /// (the default) keeps it as a region below the grid; <see cref="FanOutDetailPresentation.Popover"/> anchors the
+    /// same content to the tile in an overlay panel that closes on Escape and hands the focus back — the better
+    /// shape for a narrow, measured grid, where an in-flow detail would push the tiles out of sight.
+    /// </summary>
+    [Parameter] public FanOutDetailPresentation DetailPresentation { get; set; } = FanOutDetailPresentation.Inline;
 
     /// <summary>
     /// Whether the compact presentation is used: a tile keeps its label, its state word and its attempt badge and drops
@@ -183,6 +220,15 @@ public partial class TmFanOutGrid : TmComponentBase, IDisposable
         ? _visible.FirstOrDefault(task => string.Equals(task.Id, id, StringComparison.Ordinal))
         : null;
 
+    /// <summary>
+    /// The tile the open detail anchors to in <see cref="FanOutDetailPresentation.Popover"/> mode: the element
+    /// reference of the tile that owns the detail, or an empty reference while no detail is open.
+    /// </summary>
+    private ElementReference DetailAnchor
+        => _detailTaskId is { } id && _handles.TryGetValue(id, out var handle)
+            ? handle.Ref
+            : default;
+
     /// <summary>The effective heading level, clamped into the range a sectioning element allows.</summary>
     public int EffectiveHeadingLevel => Math.Clamp(HeadingLevel, 2, 6);
 
@@ -195,7 +241,39 @@ public partial class TmFanOutGrid : TmComponentBase, IDisposable
     /// <summary>The heading text: the host's <see cref="Title"/> or the localized default.</summary>
     public string HeadingText => string.IsNullOrWhiteSpace(Title) ? Loc["TmFanOutGrid_Title"] : Title!;
 
-    private int EffectiveColumns => Math.Clamp(Columns, 1, MaxColumns);
+    /// <summary>
+    /// The column count the grid renders with: the host's <see cref="Columns"/> clamped to 1–8 in
+    /// <see cref="FanOutColumnsMode.Fixed"/>, or — in <see cref="FanOutColumnsMode.Auto"/> — the count derived from
+    /// the LAST measured container width (until the first measurement arrives, the clamped <see cref="Columns"/>
+    /// stands). ONE number drives the inline stylesheet knob, the <c>aria-colcount</c> and the C# window math.
+    /// </summary>
+    private int EffectiveColumns
+    {
+        get
+        {
+            if (ColumnsMode == FanOutColumnsMode.Auto && _measuredWidth is { } width)
+            {
+                return DeriveColumns(width);
+            }
+
+            return Math.Clamp(Columns, 1, MaxColumns);
+        }
+    }
+
+    /// <summary>
+    /// Fits as many tiles of <see cref="EffectiveTileWidth"/> (plus the gap) into the measured grid width as the
+    /// width allows, clamped to 1–<see cref="MaxColumns"/>. The measurement is the grid body's own content box —
+    /// the observer wraps the grid, so no chrome is subtracted — and the gap matches
+    /// <c>--tm-fan-out-gap</c>.
+    /// </summary>
+    private int DeriveColumns(double measuredWidth)
+    {
+        var tile = EffectiveTileWidth + TileGapPx;
+        return Math.Clamp((int)Math.Floor((measuredWidth + TileGapPx) / tile), 1, MaxColumns);
+    }
+
+    /// <summary><see cref="MinTileWidth"/> clamped into the range a tile still reads as a tile at.</summary>
+    private int EffectiveTileWidth => Math.Max(MinAllowedTileWidth, MinTileWidth);
 
     private string RootClass => string.IsNullOrWhiteSpace(Class)
         ? "tm-ai-fan-out" + (Compact ? " tm-ai-fan-out--compact" : string.Empty)
@@ -281,6 +359,16 @@ public partial class TmFanOutGrid : TmComponentBase, IDisposable
             ? []
             : [.. Tasks.Where(task => task is not null)];
 
+        if (DetailPresentation != FanOutDetailPresentation.Popover)
+        {
+            _popoverOpen = false;
+        }
+
+        if (ColumnsMode != FanOutColumnsMode.Auto)
+        {
+            _measuredWidth = null;
+        }
+
         Recompute();
     }
 
@@ -320,8 +408,26 @@ public partial class TmFanOutGrid : TmComponentBase, IDisposable
 
     // ── View computation ─────────────────────────────────────────────────────
 
-    /// <summary>Whether the countdown is live: an active task carries an estimate worth repainting every second.</summary>
-    private bool NeedsTicking => !_disposed && _summary.HasEstimate;
+    /// <summary>
+    /// Whether the live read-outs tick: an active task carries an estimate worth a countdown, OR an active task
+    /// started without an estimate and paints the elapsed read-out that has to repaint every second.
+    /// </summary>
+    private bool NeedsTicking => !_disposed
+        && (_summary.HasEstimate || _visible.Any(task => ElapsedMinutesOf(task) is not null));
+
+    /// <summary>
+    /// The elapsed whole minutes an ACTIVE task has been running, clamped to at least one — a task 30 s in reads
+    /// "1 min", not "0 min". Null when the task is not running with a start time: a queued task never started and
+    /// a finished task keeps its recorded times untouched.
+    /// </summary>
+    private int? ElapsedMinutesOf(FanOutTask task)
+        => task.IsActive && task.StartedAt is { } started
+            ? Math.Max(1, (int)(_now - started).TotalMinutes)
+            : null;
+
+    /// <summary>The localized elapsed read-out ("running for 2 min"), or null when there is nothing to count.</summary>
+    private string? RunningForOf(FanOutTask task)
+        => ElapsedMinutesOf(task) is { } minutes ? Loc.Plural("TmFanOutGrid_RunningFor", minutes) : null;
 
     private TimeProvider ResolveClock()
         => TimeProvider
@@ -386,6 +492,7 @@ public partial class TmFanOutGrid : TmComponentBase, IDisposable
         if (_detailTaskId is { } detail && IndexOf(detail) < 0)
         {
             _detailTaskId = null;
+            _popoverOpen = false;
         }
     }
 
@@ -586,6 +693,10 @@ public partial class TmFanOutGrid : TmComponentBase, IDisposable
             : null;
     }
 
+    /// <summary>
+    /// The tile's time line: "Overdue" past an estimate, the countdown to one, or — for an active task that
+    /// started without an estimate — the elapsed read-out, so a running task is never silent about time.
+    /// </summary>
     private string? EtaOf(FanOutTask task)
     {
         if (task.IsOverdueAt(_now))
@@ -593,7 +704,12 @@ public partial class TmFanOutGrid : TmComponentBase, IDisposable
             return Loc["TmFanOutGrid_Overdue"];
         }
 
-        return task.RemainingAt(_now) is { } remaining ? AiClockFormatter.FormatClock(remaining) : null;
+        if (task.RemainingAt(_now) is { } remaining)
+        {
+            return AiClockFormatter.FormatClock(remaining);
+        }
+
+        return RunningForOf(task);
     }
 
     private string TileTitle(FanOutTask task)
@@ -630,6 +746,10 @@ public partial class TmFanOutGrid : TmComponentBase, IDisposable
         else if (task.RemainingAt(_now) is { } remaining)
         {
             parts.Add(Loc["TmFanOutGrid_TileEndsIn", AiClockFormatter.FormatClock(remaining)]);
+        }
+        else if (RunningForOf(task) is { } runningFor)
+        {
+            parts.Add(runningFor);
         }
 
         if (task.HasWorker)
@@ -738,11 +858,21 @@ public partial class TmFanOutGrid : TmComponentBase, IDisposable
 
         if (IsActive(taskId) && string.Equals(_detailTaskId, taskId, StringComparison.Ordinal))
         {
+            // Refocusing the tile that already owns the detail (after an Escape dismissal, or when
+            // the hover moved the detail away and the reader came back) re-opens the popover: the
+            // detail ids never changed, only the panel's open state did.
+            if (DetailPresentation == FanOutDetailPresentation.Popover && !_popoverOpen)
+            {
+                _popoverOpen = true;
+                _ = InvokeAsync(StateHasChanged);
+            }
+
             return;
         }
 
         _activeTaskId = taskId;
         _detailTaskId = taskId;
+        _popoverOpen = DetailPresentation == FanOutDetailPresentation.Popover;
         _ = InvokeAsync(() =>
         {
             Recompute();
@@ -758,6 +888,15 @@ public partial class TmFanOutGrid : TmComponentBase, IDisposable
         }
 
         _detailTaskId = taskId;
+
+        // Hover only moves the detail read-out; it never opens the anchored popover overlay
+        // (WCAG 1.4.13: content on hover must be dismissable and hoverable). Only focus,
+        // click/pin and the refocus path open it.
+        if (DetailPresentation != FanOutDetailPresentation.Popover)
+        {
+            _popoverOpen = false;
+        }
+
         _ = InvokeAsync(StateHasChanged);
     }
 
@@ -766,6 +905,45 @@ public partial class TmFanOutGrid : TmComponentBase, IDisposable
         _tileHadFocus = true;
         _activeTaskId = taskId;
         _detailTaskId = taskId;
+        _popoverOpen = DetailPresentation == FanOutDetailPresentation.Popover;
+    }
+
+    /// <summary>
+    /// The overlay panel's dismissal hook (Escape and the outside pointer run through it). Escape hands the focus
+    /// back to the tile that owned the detail — a keyboard reader must land where they were; an outside pointer
+    /// deliberately does not, because pulling focus back would undo the click the reader just made.
+    /// </summary>
+    /// <param name="reason"><c>escape</c>, <c>outside</c> or another dismissal reason the overlay reports.</param>
+    private async Task OnDetailDismissedAsync(string reason)
+    {
+        _popoverOpen = false;
+
+        if (reason == "escape" && _detailTaskId is { } id)
+        {
+            _tileHadFocus = true;
+            _pendingFocusTaskId = id;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    /// <summary>
+    /// Records a container measurement from the nested <c>TmLayoutObserver</c> (<see cref="FanOutColumnsMode.Auto"/>)
+    /// and repaints: the derived column count drives the inline knob, the <c>aria-colcount</c> and the window math
+    /// with the ONE measured number.
+    /// </summary>
+    private Task OnContainerWidthAsync(double width)
+    {
+        if (ColumnsMode != FanOutColumnsMode.Auto || _measuredWidth == width)
+        {
+            return Task.CompletedTask;
+        }
+
+        _measuredWidth = width;
+        return InvokeAsync(() =>
+        {
+            Recompute();
+            StateHasChanged();
+        });
     }
 
     // ── Actions ──────────────────────────────────────────────────────────────

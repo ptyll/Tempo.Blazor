@@ -81,10 +81,23 @@ export function classifyWidth(widthPx, breakpoints) {
 
 function report(entry, widthPx) {
     const mode = classifyWidth(widthPx, entry.breakpoints);
-    if (mode === entry.mode) return;
-    entry.mode = mode;
-    // The circuit may already be gone. A rejected invoke must not surface as an unhandled rejection.
-    entry.dotnet.invokeMethodAsync('OnLayoutModeChanged', mode).catch(() => {});
+    if (mode !== entry.mode) {
+        entry.mode = mode;
+        // The circuit may already be gone. A rejected invoke must not surface as an unhandled rejection.
+        entry.dotnet.invokeMethodAsync('OnLayoutModeChanged', mode).catch(() => {});
+    }
+
+    // An opt-in raw-width report for owners that derive geometry from the container (a measured
+    // column count): a resize INSIDE one mode can still change the derived number, so this fires on
+    // every delivered width, not only on a mode change. Rounded to whole pixels so sub-pixel
+    // oscillation (scrollbar appear/disappear) cannot re-render the owner each frame.
+    if (entry.reportWidth) {
+        const rounded = Math.round(widthPx);
+        if (rounded !== entry.width) {
+            entry.width = rounded;
+            entry.dotnet.invokeMethodAsync('OnContainerWidthChanged', rounded).catch(() => {});
+        }
+    }
 }
 
 function sharedObserver() {
@@ -116,7 +129,7 @@ function sharedObserver() {
  * @param {HTMLElement} element The component root.
  * @param {{ invokeMethodAsync: Function }} dotnet A DotNetObjectReference.
  * @param {string} id The registration key. Re-observing the same id releases the previous observer.
- * @param {{ initialWidth?: number, breakpoints: { sm: number, md: number, lg: number } }} options The TmBreakpoints values, and a width already measured by the caller.
+ * @param {{ initialWidth?: number, breakpoints: { sm: number, md: number, lg: number }, reportWidth?: boolean }} options The TmBreakpoints values, a width already measured by the caller, and whether every resize should also report the raw width through <c>OnContainerWidthChanged</c>.
  */
 export function observe(element, dotnet, id, options) {
     if (!element) {
@@ -125,11 +138,13 @@ export function observe(element, dotnet, id, options) {
     disconnect(id);
 
     const entry = {
-        element, dotnet, id, mode: null, breakpoints: options?.breakpoints,
+        element, dotnet, id, mode: null, width: null, breakpoints: options?.breakpoints,
         // A viewport-scope observer classifies the window, not its own box: a fixed probe (or a
         // root whose box the ResizeObserver does not re-deliver) keeps the last mode across a
         // Playwright 390 → 1440 flip, and every menu pinned to that scope stays a clipped sheet.
         measureWindow: options?.measureWindow === true,
+        // Opt-in raw-width report; false keeps every existing consumer on the mode-only contract.
+        reportWidth: options?.reportWidth === true,
     };
     tracked.set(element, entry);
     attachPointer(entry);

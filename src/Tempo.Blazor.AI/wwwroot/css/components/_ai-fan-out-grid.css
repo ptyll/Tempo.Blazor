@@ -20,6 +20,8 @@
        from its Columns parameter, so the C# window and the stylesheet read ONE number; the declaration
        below is only the fallback for a host that loads the partial without the component. */
     --tm-fan-out-columns: 4;
+    /* The C# TileGapPx constant (TmFanOutGrid.razor.cs) mirrors this token's pixel value:
+       if a host overrides the gap, the Auto column count drifts from the CSS by the same delta. */
     --tm-fan-out-gap: var(--tm-space-2);
     --tm-fan-out-tile-min-inline-size: 9rem;
     --tm-fan-out-tile-fill: var(--tm-bg-surface);
@@ -384,6 +386,32 @@
     display: flex;
     flex-wrap: wrap;
     gap: var(--tm-space-2);
+}
+
+/* The popover presentation anchors the SAME detail content to the tile: the panel body gets the
+   surface the inline region paints (the overlay panel base is transparent on purpose — every
+   consumer brings its own chrome) and a readable width, never wider than the grid that opened it. */
+.tm-ai-fan-out__detail-popover {
+    inline-size: max(18rem, min(24rem, 100%));
+    max-inline-size: calc(100vw - 2 * var(--tm-space-4));
+    padding: var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+    background-color: var(--tm-bg-surface);
+    box-shadow: var(--tm-shadow-popover);
+}
+
+.tm-ai-fan-out__detail-popover .tm-ai-fan-out__detail {
+    border: none;
+    background-color: transparent;
+    padding: var(--tm-space-1);
+}
+
+/* The measuring wrapper the Auto column mode wraps the grid body in: it only exists to give the
+   shared layout observer a box, so it never changes the grid's own layout. */
+.tm-ai-fan-out__measure {
+    display: block;
+    min-inline-size: 0;
 }
 
 .tm-ai-fan-out__action {

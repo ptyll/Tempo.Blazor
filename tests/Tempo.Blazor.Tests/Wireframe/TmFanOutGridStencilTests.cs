@@ -13,7 +13,8 @@ namespace Tempo.Blazor.Tests.Wireframe;
 /// </summary>
 public sealed class TmFanOutGridStencilTests
 {
-    private static readonly string[] FanOutProps = ["title", "tasks", "columns", "filter", "compact"];
+    private static readonly string[] FanOutProps =
+        ["title", "tasks", "columns", "columnsMode", "minTileWidth", "detailPresentation", "filter", "compact"];
 
     [Fact]
     public void BuiltInSchema_ListsTheGrid_WithItsRoleAndProps()

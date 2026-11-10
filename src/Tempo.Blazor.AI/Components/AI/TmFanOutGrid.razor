@@ -3,6 +3,8 @@
 @using System.Globalization
 @using Tempo.Blazor.AI.Models
 @using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Layout
+@using Tempo.Blazor.Components.Overlay
 
 @* An orchestrator splitting one job across N workers: a tile per unit of work with its state, its attempts and its
    countdown, a summary above the grid that says how much finished, what it cost and when the whole fan-out should be
@@ -19,8 +21,10 @@
          data-testid="@RootTestId("fan-out")"
          data-filter="@FilterSlug"
          data-columns="@EffectiveColumns.ToString(CultureInfo.InvariantCulture)"
+         data-columns-mode="@(ColumnsMode == FanOutColumnsMode.Auto ? "auto" : null)"
+         data-detail="@(DetailPresentation == FanOutDetailPresentation.Popover ? "popover" : null)"
          data-compact="@(Compact ? "true" : null)"
-         style="--tm-fan-out-columns: @EffectiveColumns.ToString(CultureInfo.InvariantCulture)"
+         style="--tm-fan-out-columns: @EffectiveColumns.ToString(CultureInfo.InvariantCulture); --tm-fan-out-tile-min-inline-size: @EffectiveTileWidth.ToString(CultureInfo.InvariantCulture)px"
          @attributes="AdditionalAttributes">
 
     <div class="tm-ai-fan-out__header">
@@ -109,78 +113,20 @@
     }
     else
     {
-        <div class="tm-ai-fan-out__grid"
-             role="grid"
-             aria-label="@Loc["TmFanOutGrid_GridLabel"]"
-             aria-describedby="@InstructionsId"
-             aria-rowcount="@RowCount.ToString(CultureInfo.InvariantCulture)"
-             aria-colcount="@EffectiveColumns.ToString(CultureInfo.InvariantCulture)"
-             data-testid="@TestId("fan-out-grid-body")">
-            @foreach (var row in Rows)
-            {
-                <div class="tm-ai-fan-out__row"
-                     role="row"
-                     aria-rowindex="@row.Index.ToString(CultureInfo.InvariantCulture)"
-                     data-testid="@TestId("fan-out-row")"
-                     @key="row.Index">
-                    @foreach (var cell in row.Cells)
-                    {
-                        var task = cell.Task;
-                        var handle = HandleFor(task.Id);
-                        <div class="tm-ai-fan-out__cell"
-                             role="gridcell"
-                             aria-colindex="@cell.Column.ToString(CultureInfo.InvariantCulture)"
-                             data-testid="@TestId("fan-out-cell")">
-                            @* A native button per tile: native Enter/Space activation (no emulation), a real focus
-                               ring and a 44 px coarse target, with the roving tabindex making the whole grid ONE tab
-                               stop. *@
-                            <button type="button"
-                                    class="@TileClass(task)"
-                                    tabindex="@(IsActive(task.Id) ? "0" : "-1")"
-                                    aria-label="@TileAriaLabel(task)"
-                                    title="@TileTitle(task)"
-                                    data-task-id="@task.Id"
-                                    data-status="@AgentStatusPresentation.Tone(task.Status)"
-                                    data-testid="@TestId("fan-out-tile")"
-                                    @ref="handle.Ref"
-                                    @onclick="() => OnTilePinnedAsync(task.Id)"
-                                    @onfocus="() => OnTileFocused(task.Id)"
-                                    @onmouseover="() => OnTileHovered(task.Id)"
-                                    @onkeydown="args => OnTileKeyDownAsync(task, args)">
-                                <span class="tm-ai-fan-out__tile-avatar"
-                                      style="@AvatarStyle(task)"
-                                      aria-hidden="true">
-                                    <span class="tm-ai-fan-out__tile-initials">@task.Initials</span>
-                                </span>
-                                <span class="tm-ai-fan-out__tile-text">
-                                    <span class="tm-ai-fan-out__tile-label">@TileLabel(task)</span>
-                                    <span class="tm-ai-fan-out__tile-meta">
-                                        <span class="tm-ai-fan-out__tile-state">
-                                            <span class="tm-ai-fan-out__tile-state-icon" aria-hidden="true">
-                                                <TmIcon Name="@AgentStatusPresentation.Icon(task.Status)" Size="IconSize.Xs" />
-                                            </span>
-                                            <span class="tm-ai-fan-out__tile-state-text">@AgentStatusPresentation.Text(Loc, task.Status)</span>
-                                        </span>
-                                        @if (BadgeText(task) is { } badge)
-                                        {
-                                            <span class="tm-ai-fan-out__badge">@badge</span>
-                                        }
-                                        @if (!Compact && EtaOf(task) is { } eta)
-                                        {
-                                            <span class="tm-ai-fan-out__tile-eta">@eta</span>
-                                        }
-                                        @if (!Compact && task.HasWorker)
-                                        {
-                                            <span class="tm-ai-fan-out__tile-worker">@task.WorkerName</span>
-                                        }
-                                    </span>
-                                </span>
-                            </button>
-                        </div>
-                    }
-                </div>
-            }
-        </div>
+        @* In Auto mode the grid measures its own width through the shared layout observer: the measured number
+           drives the inline knob, the aria-colcount and the C# window math with ONE value, so a phone never
+           scrolls the grid sideways. The observer wraps the grid body itself — the box the columns lay out in. *@
+        if (ColumnsMode == FanOutColumnsMode.Auto)
+        {
+            <TmLayoutObserver class="tm-ai-fan-out__measure"
+                              ContainerWidthChanged="OnContainerWidthAsync">
+                <LayoutContent>@GridBody</LayoutContent>
+            </TmLayoutObserver>
+        }
+        else
+        {
+            @GridBody
+        }
 
         @if (IsWindowed)
         {
@@ -195,72 +141,33 @@
 
     @if (DetailTask is { } detail)
     {
-        <div class="tm-ai-fan-out__detail"
-             role="region"
-             aria-label="@Loc["TmFanOutGrid_Detail"]"
-             data-testid="@TestId("fan-out-detail")"
-             data-task-id="@detail.Id">
-            <div class="tm-ai-fan-out__detail-head">
-                @DetailTitle(detail)
-                <span class="tm-ai-fan-out__detail-state" data-status="@AgentStatusPresentation.Tone(detail.Status)">
-                    <span class="tm-ai-fan-out__detail-state-icon" aria-hidden="true">
-                        <TmIcon Name="@AgentStatusPresentation.Icon(detail.Status)" Size="IconSize.Sm" />
-                    </span>
-                    <span class="tm-ai-fan-out__detail-state-text">@AgentStatusPresentation.Text(Loc, detail.Status)</span>
-                </span>
+        @* Inline is the historical region below the grid; Popover anchors the same content to the tile in an
+           overlay panel (Escape closes it and hands the focus back). The content is ONE fragment either way. *@
+        if (DetailPresentation == FanOutDetailPresentation.Popover)
+        {
+            <TmOverlayPanel Anchor="DetailAnchor"
+                            IsOpen="_popoverOpen"
+                            Placement="OverlayPlacement.Bottom"
+                            Align="OverlayAlign.Start"
+                            Offset="8"
+                            Role="dialog"
+                            AriaLabel="@Loc["TmFanOutGrid_Detail"]"
+                            OnDismissed="OnDetailDismissedAsync"
+                            Class="tm-ai-fan-out__detail-popover">
+                <div data-testid="@TestId("fan-out-detail")"
+                     data-task-id="@detail.Id">@DetailContent(detail)</div>
+            </TmOverlayPanel>
+        }
+        else
+        {
+            <div class="tm-ai-fan-out__detail-host"
+                 role="region"
+                 aria-label="@Loc["TmFanOutGrid_Detail"]"
+                 data-testid="@TestId("fan-out-detail")"
+                 data-task-id="@detail.Id">
+                @DetailContent(detail)
             </div>
-
-            <dl class="tm-ai-fan-out__detail-facts">
-                @if (detail.HasWorker)
-                {
-                    <dt>@Loc["TmFanOutGrid_DetailWorker"]</dt>
-                    <dd data-testid="@TestId("fan-out-detail-worker")">@detail.WorkerName</dd>
-                }
-                <dt>@Loc["TmFanOutGrid_DetailAttempt"]</dt>
-                <dd data-testid="@TestId("fan-out-detail-attempt")">@AttemptText(detail)</dd>
-                @if (detail.StartedAt is { } started)
-                {
-                    <dt>@Loc["TmFanOutGrid_DetailStarted"]</dt>
-                    <dd data-testid="@TestId("fan-out-detail-started")">@TimeText(started)</dd>
-                }
-                @if (detail.EstimatedEndAt is { } ends && detail.IsActive)
-                {
-                    <dt>@Loc["TmFanOutGrid_DetailEnds"]</dt>
-                    <dd data-testid="@TestId("fan-out-detail-ends")">@TimeText(ends)</dd>
-                }
-                @if (detail.HasCost)
-                {
-                    <dt>@Loc["TmFanOutGrid_DetailCost"]</dt>
-                    <dd data-testid="@TestId("fan-out-detail-cost")">@FormatCost(detail.CostMicroUnits!.Value)</dd>
-                }
-                @if (detail.HasError)
-                {
-                    <dt>@Loc["TmFanOutGrid_DetailError"]</dt>
-                    <dd class="tm-ai-fan-out__detail-error"
-                        data-testid="@TestId("fan-out-detail-error")">@detail.Error</dd>
-                }
-            </dl>
-
-            @if (detail.CanRetry || detail.CanCancel)
-            {
-                <div class="tm-ai-fan-out__detail-actions">
-                    @if (detail.CanRetry)
-                    {
-                        <button type="button"
-                                class="tm-ai-fan-out__action"
-                                data-testid="@TestId("fan-out-detail-retry")"
-                                @onclick="() => RetryAsync(detail)">@Loc["TmFanOutGrid_Retry"]</button>
-                    }
-                    @if (detail.CanCancel)
-                    {
-                        <button type="button"
-                                class="tm-ai-fan-out__action tm-ai-fan-out__action--danger"
-                                data-testid="@TestId("fan-out-detail-cancel")"
-                                @onclick="() => CancelAsync(detail)">@Loc["TmFanOutGrid_Cancel"]</button>
-                    }
-                </div>
-            }
-        </div>
+        }
     }
 
     <div class="tm-sr-only"
@@ -281,6 +188,156 @@
         builder.AddContent(4, HeadingText);
         builder.CloseElement();
     };
+
+    /// <summary>
+    /// The APG grid body. A fragment (not inline markup) so the Auto column mode can wrap it in the
+    /// measuring <c>TmLayoutObserver</c> without duplicating the tiles: the measured width is the box
+    /// the columns actually lay out in.
+    /// </summary>
+    private RenderFragment GridBody => @<div class="tm-ai-fan-out__grid"
+                                             role="grid"
+                                             aria-label="@Loc["TmFanOutGrid_GridLabel"]"
+                                             aria-describedby="@InstructionsId"
+                                             aria-rowcount="@RowCount.ToString(CultureInfo.InvariantCulture)"
+                                             aria-colcount="@EffectiveColumns.ToString(CultureInfo.InvariantCulture)"
+                                             data-testid="@TestId("fan-out-grid-body")">
+        @foreach (var row in Rows)
+        {
+            <div class="tm-ai-fan-out__row"
+                 role="row"
+                 aria-rowindex="@row.Index.ToString(CultureInfo.InvariantCulture)"
+                 data-testid="@TestId("fan-out-row")"
+                 @key="row.Index">
+                @foreach (var cell in row.Cells)
+                {
+                    var task = cell.Task;
+                    var handle = HandleFor(task.Id);
+                    <div class="tm-ai-fan-out__cell"
+                         role="gridcell"
+                         aria-colindex="@cell.Column.ToString(CultureInfo.InvariantCulture)"
+                         data-testid="@TestId("fan-out-cell")">
+                        @* A native button per tile: native Enter/Space activation (no emulation), a real focus
+                           ring and a 44 px coarse target, with the roving tabindex making the whole grid ONE tab
+                           stop. *@
+                        <button type="button"
+                                class="@TileClass(task)"
+                                tabindex="@(IsActive(task.Id) ? "0" : "-1")"
+                                aria-label="@TileAriaLabel(task)"
+                                title="@TileTitle(task)"
+                                data-task-id="@task.Id"
+                                data-status="@AgentStatusPresentation.Tone(task.Status)"
+                                data-testid="@TestId("fan-out-tile")"
+                                @ref="handle.Ref"
+                                @onclick="() => OnTilePinnedAsync(task.Id)"
+                                @onfocus="() => OnTileFocused(task.Id)"
+                                @onmouseover="() => OnTileHovered(task.Id)"
+                                @onkeydown="args => OnTileKeyDownAsync(task, args)">
+                            <span class="tm-ai-fan-out__tile-avatar"
+                                  style="@AvatarStyle(task)"
+                                  aria-hidden="true">
+                                <span class="tm-ai-fan-out__tile-initials">@task.Initials</span>
+                            </span>
+                            <span class="tm-ai-fan-out__tile-text">
+                                <span class="tm-ai-fan-out__tile-label">@TileLabel(task)</span>
+                                <span class="tm-ai-fan-out__tile-meta">
+                                    <span class="tm-ai-fan-out__tile-state">
+                                        <span class="tm-ai-fan-out__tile-state-icon" aria-hidden="true">
+                                            <TmIcon Name="@AgentStatusPresentation.Icon(task.Status)" Size="IconSize.Xs" />
+                                        </span>
+                                        <span class="tm-ai-fan-out__tile-state-text">@AgentStatusPresentation.Text(Loc, task.Status)</span>
+                                    </span>
+                                    @if (BadgeText(task) is { } badge)
+                                    {
+                                        <span class="tm-ai-fan-out__badge">@badge</span>
+                                    }
+                                    @if (!Compact && EtaOf(task) is { } eta)
+                                    {
+                                        <span class="tm-ai-fan-out__tile-eta">@eta</span>
+                                    }
+                                    @if (!Compact && task.HasWorker)
+                                    {
+                                        <span class="tm-ai-fan-out__tile-worker">@task.WorkerName</span>
+                                    }
+                                </span>
+                            </span>
+                        </button>
+                    </div>
+                }
+            </div>
+        }
+    </div>;
+
+    /// <summary>
+    /// The detail card's content — ONE fragment the inline region and the anchored popover render
+    /// identically (worker, attempt, times, cost, error, actions).
+    /// </summary>
+    private RenderFragment<FanOutTask> DetailContent => detail => @<div class="tm-ai-fan-out__detail">
+        <div class="tm-ai-fan-out__detail-head">
+            @DetailTitle(detail)
+            <span class="tm-ai-fan-out__detail-state" data-status="@AgentStatusPresentation.Tone(detail.Status)">
+                <span class="tm-ai-fan-out__detail-state-icon" aria-hidden="true">
+                    <TmIcon Name="@AgentStatusPresentation.Icon(detail.Status)" Size="IconSize.Sm" />
+                </span>
+                <span class="tm-ai-fan-out__detail-state-text">@AgentStatusPresentation.Text(Loc, detail.Status)</span>
+            </span>
+        </div>
+
+        <dl class="tm-ai-fan-out__detail-facts">
+            @if (detail.HasWorker)
+            {
+                <dt>@Loc["TmFanOutGrid_DetailWorker"]</dt>
+                <dd data-testid="@TestId("fan-out-detail-worker")">@detail.WorkerName</dd>
+            }
+            <dt>@Loc["TmFanOutGrid_DetailAttempt"]</dt>
+            <dd data-testid="@TestId("fan-out-detail-attempt")">@AttemptText(detail)</dd>
+            @if (detail.StartedAt is { } started)
+            {
+                <dt>@Loc["TmFanOutGrid_DetailStarted"]</dt>
+                <dd data-testid="@TestId("fan-out-detail-started")">@TimeText(started)</dd>
+            }
+            @if (detail.EstimatedEndAt is { } ends && detail.IsActive)
+            {
+                <dt>@Loc["TmFanOutGrid_DetailEnds"]</dt>
+                <dd data-testid="@TestId("fan-out-detail-ends")">@TimeText(ends)</dd>
+            }
+            else if (RunningForOf(detail) is { } runningFor)
+            {
+                <dt>@Loc["TmFanOutGrid_DetailElapsed"]</dt>
+                <dd data-testid="@TestId("fan-out-detail-elapsed")">@runningFor</dd>
+            }
+            @if (detail.HasCost)
+            {
+                <dt>@Loc["TmFanOutGrid_DetailCost"]</dt>
+                <dd data-testid="@TestId("fan-out-detail-cost")">@FormatCost(detail.CostMicroUnits!.Value)</dd>
+            }
+            @if (detail.HasError)
+            {
+                <dt>@Loc["TmFanOutGrid_DetailError"]</dt>
+                <dd class="tm-ai-fan-out__detail-error"
+                    data-testid="@TestId("fan-out-detail-error")">@detail.Error</dd>
+            }
+        </dl>
+
+        @if (detail.CanRetry || detail.CanCancel)
+        {
+            <div class="tm-ai-fan-out__detail-actions">
+                @if (detail.CanRetry)
+                {
+                    <button type="button"
+                            class="tm-ai-fan-out__action"
+                            data-testid="@TestId("fan-out-detail-retry")"
+                            @onclick="() => RetryAsync(detail)">@Loc["TmFanOutGrid_Retry"]</button>
+                }
+                @if (detail.CanCancel)
+                {
+                    <button type="button"
+                            class="tm-ai-fan-out__action tm-ai-fan-out__action--danger"
+                            data-testid="@TestId("fan-out-detail-cancel")"
+                            @onclick="() => CancelAsync(detail)">@Loc["TmFanOutGrid_Cancel"]</button>
+                }
+            </div>
+        }
+    </div>;
 
     /// <summary>
     /// The detail card's title, built at <see cref="DetailHeadingLevel"/> — one level below the surface heading and

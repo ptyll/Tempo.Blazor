@@ -172,6 +172,27 @@
   pack control count guard follows the main-merge schema (46).
 - `MoveNodesCommand` gained an internal timestamp ctor for tests; the public surface is unchanged.
 
+### Added — `TmFanOutGrid` measured columns, popover detail and the elapsed read-out (plan 7ba95ed6, phase FZE-3)
+
+- **`ColumnsMode` (`FanOutColumnsMode.Fixed` default | `Auto`) and `MinTileWidth` (CSS px, default 144).**
+  In `Auto` the grid measures its own box through the shared `TmLayoutObserver` (which gained an
+  opt-in `ContainerWidthChanged` width report, additive for its 12+ existing consumers) and fits as
+  many tiles of `MinTileWidth` as the width allows, clamped to 1–8. ONE measured number drives the
+  inline `--tm-fan-out-columns` knob, the `aria-colcount` and the C# window math, so a phone never
+  scrolls the grid sideways and a screen reader always counts what is rendered. `Fixed` (the
+  default) renders no observer and imports no JS; before the first measurement the clamped
+  `Columns` stands. `MinTileWidth` is also written inline as `--tm-fan-out-tile-min-inline-size`.
+- **`DetailPresentation` (`FanOutDetailPresentation.Inline` default | `Popover`).** `Popover` anchors
+  the SAME detail content (worker, attempt, times, cost, error, Retry/Cancel) to the focused tile in
+  an overlay panel: Escape closes it and hands the focus back to the tile; an outside pointer closes
+  it without pulling focus.
+- **The elapsed read-out.** An active task that started without an estimate paints the localized
+  plural read-out ("running for 2 min", "běží 2 min") on the tile, in its aria-label and in the
+  detail's new Elapsed row — whole minutes clamped to at least one. A task WITH an estimate keeps its
+  countdown; the repaint ticker arms for the elapsed read-out exactly like it does for a countdown.
+- The `/ai-agents` and `/ai-agent-visualizations` demo fan-outs opt into `ColumnsMode.Auto`; the
+  wireframe schema and stencil props grow `columnsMode`, `minTileWidth` and `detailPresentation`;
+  `docs/fan-out-grid.md` and the JSON documentation overlays carry the new contract.
 
 ### Breaking changes and migration
 

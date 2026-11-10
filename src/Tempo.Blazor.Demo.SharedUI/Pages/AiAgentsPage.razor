@@ -1,4 +1,4 @@
-﻿@page "/ai-agents"
+@page "/ai-agents"
 @implements IDisposable
 @using System.Globalization
 @using Tempo.Blazor.Abstractions.Models.Approvals
@@ -201,6 +201,7 @@
     <TmFanOutGrid Tasks="_fanOutTasks"
                   @bind-Filter="_fanOutFilter"
                   Title="@Loc["TmAiAgentsDemo_FanOutTitle"]"
+                  ColumnsMode="FanOutColumnsMode.Auto"
                   TimeProvider="_clock"
                   Culture="@CultureInfo.CurrentCulture"
                   CostFormatter="FormatCost"

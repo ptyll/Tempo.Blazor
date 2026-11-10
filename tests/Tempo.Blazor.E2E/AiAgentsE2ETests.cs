@@ -1,4 +1,4 @@
-﻿using Microsoft.Playwright;
+using Microsoft.Playwright;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Tempo.Blazor.E2E;
@@ -1152,6 +1152,98 @@ public partial class AiAgentsE2ETests : AiAgentsE2EBase
         await ShootAsync(phone, "ai-agents-monitor-phone-375");
         await ScrollToSection(phone, ContextSection);
         await ShootAsync(phone, "ai-agents-context-phone-375");
+    }
+
+    /// <summary>
+    /// FZE-3 — the fan-out opts into <c>ColumnsMode.Auto</c>: at 375 px the grid measures its own box and renders
+    /// FEWER columns than the 1440 px fallback, and the page never scrolls sideways. The measured number is the
+    /// single source for the stylesheet and the window math, so what a reader sees is what the aria-colcount says.
+    /// </summary>
+    [TestMethod]
+    public async Task TheFanOutMeasuresItsOwnColumns_OnAPhone_NeverScrollingSideways()
+    {
+        var phone = await OpenAsync(375, 812, coarsePointer: true);
+        await StartRunUntilFailureAsync(phone);
+        await ScrollToSection(phone, FanOutSection);
+
+        var grid = phone.Locator("[data-testid='ai-agents-fan-out']");
+        await grid.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+
+        var phoneColumns = int.Parse(
+            (await grid.GetAttributeAsync("data-columns")) ?? "0");
+        phoneColumns.Should().BeLessThan(4,
+            "a 375 px box fits fewer tiles than the 4-column fallback");
+
+        var noSidewaysScroll = await phone.EvaluateAsync<bool>(
+            "() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1");
+        noSidewaysScroll.Should().BeTrue("the measured grid never overflows the page sideways");
+
+        await ShootAsync(phone, "ai-agents-fan-out-phone-375-auto-columns");
+
+        var desktop = await OpenAsync();
+        await StartRunUntilFailureAsync(desktop);
+        await ScrollToSection(desktop, FanOutSection);
+        var desktopGrid = desktop.Locator("[data-testid='ai-agents-fan-out']");
+        var desktopColumns = int.Parse(
+            (await desktopGrid.GetAttributeAsync("data-columns")) ?? "0");
+        desktopColumns.Should().BeGreaterThan(phoneColumns,
+            "the same grid measures wider on a desktop viewport");
+        await ShootAsync(desktop, "ai-agents-fan-out-desktop-auto-columns");
+    }
+
+    /// <summary>
+    /// FZE-3 — the visualizations page hosts the fan-out with <c>DetailPresentation.Popover</c>: focusing a tile
+    /// opens the anchored detail, Escape closes it and hands the focus back to the tile, and the in-flow detail
+    /// region never exists.
+    /// </summary>
+    [TestMethod]
+    public async Task TheVisualizationsFanOutPresentsTheDetailInAPopover_EscapeReturnsFocus()
+    {
+        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = 1280, Height = 900 },
+            Locale = "en-US",
+            IgnoreHTTPSErrors = true,
+        });
+        RegisterContext(context);
+        var page = await context.NewPageAsync();
+        await GotoAppReadyAsync(page, $"{BaseUrl}/ai-agent-visualizations");
+        await page.WaitForSelectorAsync("[data-testid='ai-viz-fan-out'] [data-testid='fan-out-tile']",
+            new PageWaitForSelectorOptions { Timeout = 30000 });
+
+        var grid = page.Locator("[data-testid='ai-viz-fan-out']");
+        Assert.AreEqual(0, await page.Locator("[data-testid='fan-out-detail']").CountAsync(),
+            "the popover presentation renders no in-flow detail region");
+
+        var tile = grid.Locator("[data-testid='fan-out-tile']").First;
+        await tile.FocusAsync();
+        await page.WaitForSelectorAsync("[data-testid='fan-out-detail']",
+            new PageWaitForSelectorOptions { Timeout = 10000 });
+        await page.WaitForTimeoutAsync(400);
+        // The shared ShootAsync blurs the active element (and moves the mouse) before the shot; a blur
+        // dismisses the popover, so the open-panel screenshots frame the viewport directly.
+        await page.ScreenshotAsync(new PageScreenshotOptions
+        {
+            Path = Path.Combine(ShotDir, "ai-viz-fan-out-popover-light.png"),
+        });
+
+        await page.Keyboard.PressAsync("Escape");
+        await page.WaitForTimeoutAsync(400);
+        Assert.AreEqual(0, await page.Locator("[data-testid='fan-out-detail']").CountAsync(),
+            "Escape closes the popover");
+        Assert.AreEqual("button", await page.EvaluateAsync<string>(
+            "() => document.activeElement?.tagName?.toLowerCase() ?? ''"),
+            "the focus returns to the tile button that owned the detail");
+
+        await ToggleThemeAsync(page);
+        await tile.FocusAsync();
+        await page.WaitForSelectorAsync("[data-testid='fan-out-detail']",
+            new PageWaitForSelectorOptions { Timeout = 10000 });
+        await page.WaitForTimeoutAsync(400);
+        await page.ScreenshotAsync(new PageScreenshotOptions
+        {
+            Path = Path.Combine(ShotDir, "ai-viz-fan-out-popover-dark.png"),
+        });
     }
 }
 

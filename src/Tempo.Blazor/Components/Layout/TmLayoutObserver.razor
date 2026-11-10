@@ -67,6 +67,15 @@
     /// </summary>
     [Parameter] public EventCallback<TmLayoutMode> ResolvedLayoutChanged { get; set; }
 
+    /// <summary>
+    /// Raised with the container's width in CSS pixels on every observed resize whose rounded width
+    /// changed — including resizes inside one layout mode, which <see cref="ResolvedLayoutChanged"/>
+    /// deliberately does not report. Opt-in: nothing is reported (and the script stays on the
+    /// mode-only contract) until a consumer sets this callback. Owners that derive geometry from the
+    /// container (a measured column count) use this; mode-only consumers keep the cheaper path.
+    /// </summary>
+    [Parameter] public EventCallback<double> ContainerWidthChanged { get; set; }
+
     /// <summary>Content that receives the resolved layout; use instead of ChildContent when the owner must branch its own markup.</summary>
     [Parameter] public RenderFragment<TmLayoutContext>? LayoutContent { get; set; }
 
@@ -233,6 +242,9 @@
         // across a viewport flip (a fixed probe, or a root the ResizeObserver does not re-deliver),
         // which pins every menu that reads this scope to the stale mode.
         measureWindow = IsViewportScope,
+        // The raw-width report is an opt-in addition: a consumer without ContainerWidthChanged keeps
+        // the mode-only contract (and the script skips the extra invoke on every resize).
+        reportWidth = ContainerWidthChanged.HasDelegate,
     };
 
     /// <summary>
@@ -277,6 +289,23 @@
             await ResolvedLayoutChanged.InvokeAsync(resolved);
             StateHasChanged();
         });
+    }
+
+    /// <summary>
+    /// Called by layout-observer.js on every observed resize whose rounded width changed, but only
+    /// when <see cref="ContainerWidthChanged"/> has a delegate. An unchanged width is ignored, and a
+    /// resize inside one layout mode still fires — the mode callback deliberately does not.
+    /// </summary>
+    /// <param name="width">The container's width in CSS pixels.</param>
+    [JSInvokable]
+    public Task OnContainerWidthChanged(double width)
+    {
+        if (!ContainerWidthChanged.HasDelegate || !double.IsFinite(width) || width < 0)
+        {
+            return Task.CompletedTask;
+        }
+
+        return InvokeAsync(() => ContainerWidthChanged.InvokeAsync(width));
     }
 
     /// <inheritdoc />

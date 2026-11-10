@@ -150,6 +150,8 @@
         <TmFanOutGrid Tasks="Tasks"
                       @bind-Filter="_fanOutFilter"
                       Title="@Loc["TmAiAgentsDemo_FanOutTitle"]"
+                      ColumnsMode="FanOutColumnsMode.Auto"
+                      DetailPresentation="FanOutDetailPresentation.Popover"
                       TimeProvider="Clock"
                       Culture="@CultureInfo.CurrentCulture"
                       OnRetry="RetryTask"

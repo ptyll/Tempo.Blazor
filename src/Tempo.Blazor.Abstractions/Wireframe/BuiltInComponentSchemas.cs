@@ -1,4 +1,4 @@
-﻿using Tempo.Blazor.Components.Wireframe.Models;
+using Tempo.Blazor.Components.Wireframe.Models;
 
 namespace Tempo.Blazor.Components.Wireframe;
 
@@ -1474,6 +1474,11 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("title",   "Title",   PropType.String, "Fan-out", cat: "Content"),
                 P("tasks",   "Tasks",   PropType.StringList, new[] { "Region A", "Region B", "Region C", "Region D" }, cat: "Content"),
                 P("columns", "Columns", PropType.Int, 4, cat: "Layout"),
+                P("columnsMode", "Columns Mode", PropType.Enum, "fixed", cat: "Layout",
+                    opts: ["fixed", "auto"]),
+                P("minTileWidth", "Min Tile Width", PropType.Int, 144, cat: "Layout"),
+                P("detailPresentation", "Detail Presentation", PropType.Enum, "inline", cat: "Behavior",
+                    opts: ["inline", "popover"]),
                 P("filter",  "Filter",  PropType.Enum,   "all", cat: "Behavior",
                     opts: ["all", "queued", "running", "approval", "succeeded", "failed", "cancelled"]),
                 P("compact", "Compact", PropType.Bool,   false, cat: "Appearance"),
