@@ -105,6 +105,53 @@ public abstract class AnalyticsKitE2EBase : PlaywrightTestBase
         => page.Locator("[data-testid='analytics-kit-breakdown'] .tm-breakdown-card__row")
             .EvaluateAllAsync<string[]>("rows => rows.map(row => row.getAttribute('data-part-id'))");
 
+    /// <summary>
+    /// Plan 7ba95ed6 phase 8 — the comparison chart is NAMED by its section heading through the additive
+    /// <c>TmChart.AriaLabel</c>, and the <c>&lt;figure aria-labelledby&gt;</c> wrapper it used to need is
+    /// gone. The accessible name now lives on the <c>role="img"</c> SVG itself, which is the single node
+    /// both a reader and axe resolve; the default type-based text alternative ("Line chart") stays for
+    /// every chart whose host passes nothing.
+    /// </summary>
+    [TestMethod]
+    public async Task Chart_IsNamedByItsHeading_ThroughTheAriaLabelParameter()
+    {
+        var page = await OpenAsync();
+
+        var svg = ChartSvg(page);
+        var heading = (await page.Locator("[data-testid='analytics-kit-chart'] h2").TextContentAsync())!.Trim();
+        Assert.IsFalse(string.IsNullOrWhiteSpace(heading), "the section carries a visible heading to name the plot");
+        Assert.AreEqual(heading, await svg.GetAttributeAsync("aria-label"),
+            "the plot's accessible name is the section heading, passed through TmChart.AriaLabel");
+        Assert.AreEqual("img", await svg.GetAttributeAsync("role"));
+
+        Assert.AreEqual(0, await page.Locator("[data-testid='analytics-kit-chart'] figure").CountAsync(),
+            "the figure wrapper that only existed to name the plot is gone");
+        Assert.AreEqual(0, await page.Locator("[data-testid='analytics-kit-chart'] [aria-labelledby]").CountAsync(),
+            "nothing needs aria-labelledby once the SVG names itself");
+
+        // The accessible name resolves the way a screen reader sees it — through the SVG's own aria-label,
+        // which axe validates as a real image alternative (not through a wrapper it cannot describe).
+        await page.AddScriptTagAsync(new PageAddScriptTagOptions
+        {
+            Url = "https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.2/axe.min.js"
+        });
+        var violations = await page.EvaluateAsync<string[]>(
+            """
+            async (selector) => {
+                const host = document.querySelector(selector);
+                const result = await axe.run(host, {
+                    runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa'] },
+                    resultTypes: ['violations']
+                });
+                return result.violations
+                    .filter(v => v.impact === 'critical' || v.impact === 'serious')
+                    .map(v => `${v.impact}: ${v.id} - ${v.help} (${v.nodes.map(n => n.target.join(' ')).slice(0, 4).join('; ')})`);
+            }
+            """,
+            "[data-testid='analytics-kit-chart']");
+        Assert.AreEqual(0, violations.Length, "axe [analytics-kit-chart]: " + string.Join(" | ", violations));
+    }
+
     [TestMethod]
     public async Task Chart_ArrowKeysWalkTheBuckets_WithOneLiveRegion()
     {

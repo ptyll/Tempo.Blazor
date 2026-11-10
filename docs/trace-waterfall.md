@@ -117,6 +117,30 @@ one track per metric column) can easily exceed a 360–390 px container, so:
 - the overflow is contained by the grid (`min-inline-size: 0; overflow: auto`), so the page itself never
   scrolls sideways on a phone.
 
+### Containment: a clipped rowgroup must not inflate the page
+
+The grid additionally declares `contain: layout paint`. That is not decoration — it is what keeps the
+CLIPPED rows out of the document's own scrollable overflow. Measured in Chromium with the generated
+152-span demo run inside the default 420 px scrollport, without containment:
+
+| Measurement | Before the containment rule |
+|---|---|
+| `document.documentElement.scrollHeight` | 5024 px |
+| `document.body.scrollHeight` | 1016 px |
+| `window.scrollTo(0, 4000)` | stays at 0 |
+
+With `contain: layout paint` the two scroll heights agree (the browser lane asserts
+`documentElement.scrollHeight <= body.scrollHeight + 16`), so a full-page capture is the page and not
+the page plus four thousand pixels of nothing.
+
+The void was unreachable for a reader but real for anything that measures the document: a Playwright
+`FullPage` capture shot ~4000 px of blank page. `layout` stops the overflowing content from propagating
+its box outward and `paint` clips it to the scroll owner; `size` is deliberately **absent**, because the
+grid takes its size from its host, never from its rows (containing its size would collapse it).
+`TraceWaterfallContainmentCssTests` guards the declaration and the committed bundle, and
+`TraceWaterfallPageE2ETests.FullPageScreenshot_HasNoBlankTail` proves the behaviour in a real browser by
+measuring both scroll heights and the PNG's own pixel height.
+
 A `@container tm-trace-waterfall (width < 640px)` query tightens the track sizes through the
 `--tm-trace-waterfall-name-width`, `--tm-trace-waterfall-timeline-width`,
 `--tm-trace-waterfall-duration-width` and `--tm-trace-waterfall-metric-width` knobs. The component's inline

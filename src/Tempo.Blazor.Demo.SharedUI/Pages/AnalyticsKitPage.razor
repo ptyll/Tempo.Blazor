@@ -139,18 +139,23 @@
 </div>
 
 @* One tab stop, arrow keys walk the buckets, the card lists both series — the comparison is read as a
-   line pair rather than from two separate charts. The plot sits in a FIGURE named by the section's own
-   heading: its SVG only says "Line chart", so the heading is what tells a reader WHICH line chart. *@
+   line pair rather than from two separate charts. The plot NAMES ITSELF through TmChart.AriaLabel with the
+   section's own heading: its default text alternative only says "Line chart", so the heading is what tells
+   a reader WHICH line chart. No <figure aria-labelledby> wrapper — the accessible name belongs to the
+   role="img" SVG, which is the single source a reader and axe both see (decision
+   FZE9-CHART-NAMED-BY-A-FIGURE-NOT-A-NEW-PARAMETER, superseded by phase 8 of plan 7ba95ed6: the chart
+   is now named via a new AriaLabel parameter). *@
 <section class="demo-section mb-8" data-testid="analytics-kit-chart">
-    <h2 id="analytics-kit-chart-title" class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmAnalyticsKitDemo_ChartTitle"]</h2>
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmAnalyticsKitDemo_ChartTitle"]</h2>
     <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmAnalyticsKitDemo_ChartHint"]</p>
-    <figure class="showcase-card m-0" aria-labelledby="analytics-kit-chart-title">
+    <div class="showcase-card">
         <TmChart Type="ChartType.Line"
                  Data="_chartData"
                  Height="320px"
                  TooltipMode="ChartTooltipMode.Index"
-                 InteractiveLegend="true" />
-    </figure>
+                 InteractiveLegend="true"
+                 AriaLabel="@Loc["TmAnalyticsKitDemo_ChartTitle"]" />
+    </div>
 </section>
 
 <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">

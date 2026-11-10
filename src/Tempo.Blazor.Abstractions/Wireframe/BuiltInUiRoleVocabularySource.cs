@@ -116,6 +116,8 @@ public sealed class BuiltInUiRoleVocabularySource : IUiRoleVocabularySource
         R("navigation-bar", "Navigation bar", "Provides top-level page or app navigation.", "navbar", "top navigation", "navigacni lista", "TmNavbar", "TmTopBar"),
         R("sidebar", "Sidebar", "Provides side navigation or supporting panels.", "side nav", "bocni panel", "TmSidebar"),
         R("drawer", "Drawer", "Slides in a temporary side panel.", "slide panel", "vysuvny panel", "TmDrawer"),
+        R("app-shell", "App shell", "Frames a whole application: navigation, top bar, content and the phone presentation of the navigation.", "app shell", "application shell", "app frame", "application frame", "aplikacni ramec", "TmAppShell"),
+        R("user-menu", "User menu", "Opens the signed-in account's menu: the profile card, host entries, the theme switch and sign-out.", "user menu", "account menu", "profile menu", "uzivatelske menu", "TmUserMenu"),
         R("section", "Section", "Groups page content under a logical section.", "content section", "sekce", "TmSection"),
         R("command-palette", "Command palette", "Searches and runs commands.", "quick command", "paleta prikazu", "TmCommandPalette"),
         R("keyboard-shortcuts", "Keyboard shortcuts", "Displays available keyboard commands.", "shortcuts help", "klavesove zkratky", "TmKeyboardShortcutsHelp"),

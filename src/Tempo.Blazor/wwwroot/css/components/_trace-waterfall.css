@@ -122,6 +122,14 @@
   min-inline-size: 0;
   max-block-size: var(--tm-trace-waterfall-max-height);
   overflow: auto;
+  /* CONTAINMENT, not decoration. Without it Chromium reports the CLIPPED rows in the ROOT scroller as
+     well: a 152-row trace inside this 420 px scrollport pushed documentElement.scrollHeight to 5024 px
+     against a 1016 px body, and window.scrollTo(0, 4000) stayed at 0 — a void no reader can reach but
+     anything measuring the document sees (a Playwright FullPage capture shots it as thousands of blank
+     pixels). `layout` stops the overflowing content from propagating its box outward and `paint` clips
+     it here; `size` is deliberately absent, because the grid takes its size from its host, never from
+     its rows. Behaviour check: TraceWaterfallPageE2ETests.FullPageScreenshot_HasNoBlankTail. */
+  contain: layout paint;
 }
 
 /* A wide container puts the selected span's detail BESIDE the grid; a narrow one keeps it BELOW, in

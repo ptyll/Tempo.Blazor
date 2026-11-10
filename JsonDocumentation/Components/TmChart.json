@@ -65,6 +65,12 @@
       "isRequired": false
     },
     {
+      "name": "AriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Accessible name of the plot, set as the SVG's aria-label. Null (default) keeps the localized text alternative built from Type (\"Line chart\"), so a page with one chart needs nothing and a page with several can name each one without wrapping the component in a <figure aria-labelledby>. A blank value is treated as absent."
+    },
+    {
       "name": "InteractiveLegend",
       "type": "bool",
       "isRequired": false,

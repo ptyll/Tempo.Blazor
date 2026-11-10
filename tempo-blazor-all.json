@@ -4319,6 +4319,12 @@
               "description": "Area charts only: optional 0–1 opacity override for solid area fills. Null keeps the light/dark --tm-chart-area-fill-opacity design token; gradient areas retain their stop-based opacity."
             },
             {
+              "name": "AriaLabel",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Accessible name of the plot, set as the SVG's aria-label. Null (default) keeps the localized text alternative built from Type (\"Line chart\"), so a page with one chart needs nothing and a page with several can name each one without wrapping the component in a <figure aria-labelledby>. A blank value is treated as absent."
+            },
+            {
               "name": "Class",
               "type": "string?",
               "isRequired": false

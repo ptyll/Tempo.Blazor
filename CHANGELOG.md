@@ -353,6 +353,54 @@
   `CollapsedDirectories`, `CollapsedDirectoriesChanged`, `Presentation`, the new CSS classes and
   `ConflictRadarPresentation.json`, and `validate --fail-on-drift` is clean.
 
+### Added — `TmChart.AriaLabel`, waterfall containment and the missing wireframe stencils (plan 7ba95ed6, Fáze 8)
+
+- **`TmChart.AriaLabel` (additive).** The plot's accessible name can now come from the host instead of
+  the generic type-based text alternative. `AriaLabel` (`string?`, default `null`) is written as the
+  `role="img"` SVG's `aria-label`; `null` — and a blank value, because `aria-label=""` would ERASE the
+  name — keeps today's localized `"{0} chart"` text byte for byte. `/analytics-kit` now passes its
+  section heading and the `<figure aria-labelledby>` wrapper is gone: the name lives on the node a
+  reader and axe both resolve, rather than on a wrapper that only existed to carry it (decision
+  `FZE9-CHART-NAMED-BY-A-FIGURE-NOT-A-NEW-PARAMETER`, revised by this phase).
+- **`TmTraceWaterfall` scroll owner is a containment context.** `.tm-trace-waterfall__grid` now
+  declares `contain: layout paint` (not `size` — the grid takes its size from its host, never from its
+  rows). Without it Chromium reported the CLIPPED rowgroup in the root scroller as well: a 152-row
+  trace inside the 420 px scrollport pushed `documentElement.scrollHeight` to 5024 px against a
+  1016 px body, so a full-page capture was ~4000 px of blank page and `window.scrollTo(0, 4000)`
+  stayed at 0. Nothing about the painted grid changes; only its overflow stops escaping. The committed
+  `tempo-blazor.bundled.css` carries the rule.
+- **Wireframe stencils: `TmAppShell` and `TmUserMenu` are now part of the vocabulary.** Both had a
+  component and neither had a stencil, so a designer could sketch a top bar, a sidebar and a bottom bar
+  as three unrelated boxes but not the FRAME that composes them — nor the account menu every frame
+  carries. `TmAppShell` (role `app-shell`, container, `variant` / `mobileNav` / `title` / `navItems` /
+  `showSidebar` / `sidebarCollapsed` / `showWorkArea` / `workAreaWidth`) sketches the top bar with its
+  hamburger or the phone bottom bar, the docked navigation column (narrowed, not dropped, when
+  collapsed) and the opt-in work-area sheet; `TmUserMenu` (role `user-menu`, `userName` / `userEmail` /
+  `showUserName` / `profileCompletion` / `open` / `items` / `showThemeToggle`) sketches the closed
+  trigger and, when open, the profile card, the completion hint, the host entries and the theme row.
+  `TmBottomNavigation` and `TmSidePanel` — which the phone presentation composes — were already in the
+  pack and the schema, and are now covered by the same registry tests.
+- **`TmMultiSelect` stencil draws the OPEN combobox.** Two new schema/pack props in ONE change:
+  `showCreateRow` (the opt-in "Create" row as the last entry of the popup) and `highlight` (the typed
+  term marked inside the matching option, the label split into a bold primary run and the rest), plus
+  `open` for the plain option list. All three default to `false`, so the closed field sketch is
+  unchanged. `TempoPackFormControlsRenderTests` still pins the prop order and the form-control count.
+- **Two new UI roles.** `app-shell` (`TmAppShell`) and `user-menu` (`TmUserMenu`) joined the baseline
+  vocabulary with English/Czech synonyms; the bound in `UiRoleVocabularyTests` moved 157 → 159.
+- **Tests.** bUnit: `TmChartAriaLabelTests` (default/override/blank + the `role="img"` contract),
+  `TraceWaterfallContainmentCssTests` (the containment declaration, the single scroll owner and the
+  bundle carrying it), `TmAppShellStencilTests`, `TmUserMenuStencilTests` and
+  `TmMultiSelectStencilTests` (schema ↔ pack parity, roles, and the drawn conditional states).
+  E2E: `AnalyticsKitE2ETests.Chart_IsNamedByItsHeading_ThroughTheAriaLabelParameter` (the name resolves
+  to the heading, no wrapper, scoped axe clean),
+  `TraceWaterfallPageE2ETests.FullPageScreenshot_HasNoBlankTail` (measured scroll heights + the PNG's
+  own pixel height) and `WireframeStencilGalleryPhase8E2ETests` (the palette entry, the default canvas
+  render and the conditional states of the five stencils this phase touches — `TmAppShell`,
+  `TmUserMenu`, `TmMultiSelect`, `TmBottomNavigation` and `TmSidePanel` — captured in the RUNNING
+  editor).
+- **Docs and JSON documentation.** The `TmChart` overlay documents `AriaLabel`; the bundles are
+  regenerated and `validate --fail-on-drift` is clean.
+
 ### Breaking changes and migration
 
 **No source-breaking change.** Every new member is additive or a default interface member; every new component is new. The behavior changes below are the complete list a 2.10.0 consumer can notice, with before/after:

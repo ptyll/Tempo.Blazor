@@ -207,21 +207,32 @@ public class AnalyticsKitPageTests : DemoPageLocalizationTestBase
         chart.QuerySelector("svg[aria-keyshortcuts]").Should().NotBeNull("the arrow keys are advertised");
     }
 
+    /// <summary>
+    /// Plan 7ba95ed6 phase 8 (revising decision FZE9-CHART-NAMED-BY-A-FIGURE-NOT-A-NEW-PARAMETER): the
+    /// plot is named by its section heading through <c>TmChart.AriaLabel</c>, on the <c>role="img"</c> SVG
+    /// itself — the node a reader announces and axe validates. The <c>&lt;figure aria-labelledby&gt;</c>
+    /// wrapper that only existed to carry the name is gone.
+    /// </summary>
     [Fact]
-    public void Chart_IsNamedByItsVisibleHeading()
+    public void Chart_IsNamedByItsVisibleHeading_ThroughTheAriaLabelParameter()
     {
         var cut = Render<AnalyticsKitPage>();
         var loc = Services.GetRequiredService<ITmLocalizer>();
 
-        var figure = cut.Find("[data-testid='analytics-kit-chart'] figure");
-        var labelledBy = figure.GetAttribute("aria-labelledby");
+        var section = cut.Find("[data-testid='analytics-kit-chart']");
+        var svg = section.QuerySelector("svg[role='img']");
 
-        labelledBy.Should().NotBeNullOrWhiteSpace(
-            "a screen reader has to meet the chart's own heading, not a generic graphic");
-        cut.Find($"#{labelledBy}").TextContent.Trim().Should().Be(loc["TmAnalyticsKitDemo_ChartTitle"],
-            "the figure is named by the visible h2 of the section");
-        figure.QuerySelector("svg[role='img']")!.GetAttribute("aria-label").Should().NotBeNullOrWhiteSpace(
-            "the SVG keeps its own text alternative as well");
+        svg.Should().NotBeNull("the plot is the graphic a screen reader meets");
+        svg!.GetAttribute("aria-label").Should().Be(loc["TmAnalyticsKitDemo_ChartTitle"],
+            "TmChart.AriaLabel carries the section's own visible heading, so the reader learns WHICH chart");
+        section.TextContent.Should().Contain(loc["TmAnalyticsKitDemo_ChartTitle"],
+            "and the name is the visible heading, not a hidden duplicate");
+
+        section.QuerySelector("figure").Should().BeNull(
+            "the figure wrapper that only carried the accessible name is gone");
+        svg.Closest("figure").Should().BeNull();
+        section.QuerySelector("[aria-labelledby]").Should().BeNull(
+            "nothing needs aria-labelledby now that the SVG names itself");
     }
 
     [Fact]

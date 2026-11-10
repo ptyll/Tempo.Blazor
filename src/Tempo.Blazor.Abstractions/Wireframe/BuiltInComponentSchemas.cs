@@ -202,6 +202,8 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmNavigationGuard"] = ["navigation-guard"],
             ["TmScrollSpyNav"] = ["scroll-spy-nav"],
             ["TmMenu"] = ["menu"],
+            ["TmAppShell"] = ["app-shell"],
+            ["TmUserMenu"] = ["user-menu"],
             ["TmTopBar"] = ["navigation-bar"],
             ["TmSidebar"] = ["sidebar"],
             ["TmDrawer"] = ["drawer"],
@@ -710,6 +712,9 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("placeholder", "Placeholder", PropType.String, "Select items...", cat: "Content"),
                 P("required",    "Required",    PropType.Bool,   false,            cat: "Behavior"),
                 P("disabled",    "Disabled",    PropType.Bool,   false,            cat: "Behavior"),
+                P("open",        "Open",        PropType.Bool,   false,            cat: "State"),
+                P("showCreateRow", "Show Create Row", PropType.Bool, false,        cat: "State"),
+                P("highlight",   "Highlight Match", PropType.Bool, false,          cat: "State"),
             ]
         };
 
@@ -2105,6 +2110,43 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
 
     private static IEnumerable<WireframeComponentSchema> Layout()
     {
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmAppShell", Category = "Layout", DisplayName = "App Shell",
+            DefaultWidth = 900, DefaultHeight = 520,
+            IsContainer = true,
+            Props =
+            [
+                P("variant",          "Variant",           PropType.Enum,   "Inset",  cat: "Appearance",
+                    opts: ["Inset", "Flat"]),
+                P("mobileNav",        "Mobile Navigation", PropType.Enum,   "Drawer", cat: "Appearance",
+                    opts: ["Drawer", "BottomNavigation"]),
+                P("title",            "Title",             PropType.String, "Dashboard", cat: "Content"),
+                P("navItems",         "Navigation Items",  PropType.StringList, new[] { "Overview", "Projects", "Reports" }, cat: "Content"),
+                P("showSidebar",      "Show Sidebar",      PropType.Bool,   true,     cat: "Appearance"),
+                P("sidebarCollapsed", "Sidebar Collapsed", PropType.Bool,   false,    cat: "State"),
+                P("showWorkArea",     "Show Work Area",    PropType.Bool,   false,    cat: "State"),
+                P("workAreaWidth",    "Work Area Width",   PropType.Int,    420,      cat: "Appearance"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmUserMenu", Category = "Layout", DisplayName = "User Menu",
+            DefaultWidth = 240, DefaultHeight = 44,
+            Props =
+            [
+                P("userName",          "User Name",          PropType.String, "Jane Cooper", cat: "Content"),
+                P("userEmail",         "User Email",         PropType.String, "jane@acme.io", cat: "Content"),
+                P("showUserName",      "Show User Name",     PropType.Bool,   true,  cat: "Appearance"),
+                P("profileCompletion", "Profile Completion", PropType.Int,    60,    cat: "State"),
+                P("open",              "Open",               PropType.Bool,   false, cat: "State"),
+                P("items",             "Items",              PropType.StringList,
+                    new[] { "Profile", "Settings", "Billing" }, cat: "Content"),
+                P("showThemeToggle",   "Show Theme Toggle",  PropType.Bool,   false, cat: "Appearance"),
+            ]
+        };
+
         yield return new WireframeComponentSchema
         {
             Type = "TmTopBar", Category = "Layout", DisplayName = "Top Bar",

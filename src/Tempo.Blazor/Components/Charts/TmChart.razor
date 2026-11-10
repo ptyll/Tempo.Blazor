@@ -143,6 +143,14 @@
     [Parameter] public string? Class { get; set; }
 
     /// <summary>
+    /// Accessible name of the plot, set as the SVG's <c>aria-label</c>. Null (default) keeps the
+    /// localized text alternative built from <see cref="Type"/> ("Line chart"), so a page that shows
+    /// one chart needs nothing and a page that shows several can name each of them without wrapping
+    /// the component in a <c>&lt;figure aria-labelledby&gt;</c>. A blank value is treated as absent.
+    /// </summary>
+    [Parameter] public string? AriaLabel { get; set; }
+
+    /// <summary>
     /// When true, legend items become buttons that toggle the visibility of their series
     /// (multi-dataset legend) or single value (per-value legend). The component owns the
     /// hidden state; <see cref="OnSeriesToggle"/> reports each change. Default false keeps
@@ -209,8 +217,12 @@
               && (Data.Labels.Length > 0 || Data.TimePoints is { Length: > 0 });
 
     // The type name stays as the data says it ("StackedBar"); only the noun is localized, so English
-    // output is byte-identical to the pre-2.9.1 hardcoded string.
-    private string ChartAriaLabel => string.Format(CultureInfo.CurrentCulture, Loc["TmChart_AriaLabel"], Type);
+    // output is byte-identical to the pre-2.9.1 hardcoded string. A host-supplied AriaLabel wins, and a
+    // blank one is treated as absent: `aria-label=""` would erase the accessible name altogether.
+    private string ChartAriaLabel => string.IsNullOrWhiteSpace(AriaLabel)
+        ? string.Format(CultureInfo.CurrentCulture, Loc["TmChart_AriaLabel"], Type)
+        : AriaLabel;
+
     private record LegendItem(string Label, string Color);
 
     // Hidden legend-item indices (meaning depends on per-value vs per-dataset legend).

@@ -221,6 +221,77 @@ public abstract class TraceWaterfallPageE2EBase : PlaywrightTestBase
         Assert.AreEqual(0, violations.Length, "axe: " + string.Join(" | ", violations));
     }
 
+    /// <summary>
+    /// Plan 7ba95ed6 phase 8 — a FULL-PAGE capture of the long trace has no blank tail.
+    /// <para>
+    /// With 152 rows inside the waterfall's 420 px scrollport, Chromium used to report the CLIPPED
+    /// rowgroup in the root scroller as well: <c>documentElement.scrollHeight</c> came back at 5024 px
+    /// against a 1016 px body, so a Playwright <c>FullPage</c> shot captured ~4000 px of empty page
+    /// (and <c>window.scrollTo(0, 4000)</c> stayed at 0, i.e. no reader could ever reach it). The
+    /// containment rule on the scroll owner (<c>contain: layout paint</c> in
+    /// <c>_trace-waterfall.css</c>) makes the clipped content stop contributing to the viewport's
+    /// scrollable overflow.
+    /// </para>
+    /// <para>
+    /// The assertion is measured, not eyeballed: the two scroll heights must agree within a few pixels,
+    /// and the committed PNG's own pixel height must match that document height — a screenshot taller
+    /// than the document is exactly the blank tail this guards.
+    /// </para>
+    /// </summary>
+    [TestMethod]
+    public async Task FullPageScreenshot_HasNoBlankTail()
+    {
+        var page = await OpenAsync(1440, 1000);
+        await ScrollToWaterfallAsync(page);
+
+        var heights = await page.EvaluateAsync<int[]>(
+            """
+            () => {
+                const grid = document.querySelector("[data-testid='trace-page-waterfall'] [role='treegrid']");
+                return [
+                    document.documentElement.scrollHeight,
+                    document.body.scrollHeight,
+                    grid ? grid.scrollHeight : 0,
+                    grid ? grid.clientHeight : 0
+                ];
+            }
+            """);
+
+        var documentHeight = heights[0];
+        var bodyHeight = heights[1];
+        var gridScrollHeight = heights[2];
+        var gridClientHeight = heights[3];
+
+        Assert.IsTrue(gridScrollHeight > gridClientHeight + 200,
+            $"the grid really does clip a tall rowgroup (scrollHeight {gridScrollHeight} vs clientHeight {gridClientHeight}), " +
+            "otherwise this test proves nothing about containment");
+
+        Assert.IsTrue(documentHeight <= bodyHeight + 16,
+            $"the clipped rowgroup must not inflate the root scroller (documentElement {documentHeight} px vs body {bodyHeight} px)");
+
+        var path = Path.Combine(ShotDir, "trace-waterfall-page-fullpage-1440.png");
+        await page.ScreenshotAsync(new PageScreenshotOptions { Path = path, FullPage = true });
+        Assert.IsTrue(File.Exists(path), "the full-page capture lands on disk");
+
+        var (width, height) = ReadPngSize(path);
+        Assert.IsTrue(height <= bodyHeight + 16,
+            $"the capture is no taller than the document ({height} px vs {bodyHeight} px) — a taller PNG is the blank tail");
+        Assert.IsTrue(height >= 600, $"the capture is a real page, not a stub ({width}x{height})");
+    }
+
+    /// <summary>Reads the pixel size out of a PNG's IHDR chunk (bytes 16–23), so the check needs no image library.</summary>
+    private static (int Width, int Height) ReadPngSize(string path)
+    {
+        var header = new byte[24];
+        using var stream = File.OpenRead(path);
+        var read = stream.Read(header, 0, header.Length);
+        Assert.AreEqual(24, read, "a PNG starts with its 8-byte signature and the 25-byte IHDR length/type/width/height");
+        return (ReadBigEndian(header, 16), ReadBigEndian(header, 20));
+    }
+
+    private static int ReadBigEndian(byte[] buffer, int offset)
+        => (buffer[offset] << 24) | (buffer[offset + 1] << 16) | (buffer[offset + 2] << 8) | buffer[offset + 3];
+
     [TestMethod]
     public async Task VisualSweep_LightAndDark_DesktopAndPhone()
     {
