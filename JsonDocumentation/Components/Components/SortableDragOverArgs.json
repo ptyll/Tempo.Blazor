@@ -1,0 +1,36 @@
+{
+  "kind": "Class",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.DataDisplay",
+  "description": "Describes where a drag that is STILL RUNNING would land: the row at FromIndex of the list identified by FromListId is over the list identified by ToListId. Raised on the SOURCE list through OnDragOver only when the list opted in with TrackDragOver=\"true\", and throttled by the module: the first change of the gesture arrives at once, a change inside the throttle window arrives once when the window closes (the latest list wins), and an unchanged list is never repeated. ToListId equals FromListId while the row hangs over its own list (which is how a host learns WHICH row is being dragged), and is null once the gesture ends or is cancelled — that is the resting state, so a projection painted during the drag can be taken back. This is a PREVIEW, not a move: the component never changes its own list here, and the ONE committed move still arrives through OnTransfer (or OnReorder) on release.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/SortableDragOverArgs.cs",
+  "documentationStatus": "documented",
+  "members": [
+    {
+      "name": "FromIndex",
+      "kind": "Property",
+      "type": "int",
+      "description": "The zero-based index of the dragged row in the source list's items."
+    },
+    {
+      "name": "FromListId",
+      "kind": "Property",
+      "type": "string?",
+      "description": "The ListId of the list the dragged row belongs to."
+    },
+    {
+      "name": "ToListId",
+      "kind": "Property",
+      "type": "string?",
+      "description": "The ListId of the list the row is currently over. Null when the gesture ended or was cancelled (the resting state), and equal to FromListId while the row is back over its own list."
+    }
+  ],
+  "itemName": "SortableDragOverArgs",
+  "usageExample": "<TmSortableList TItem=\"Card\"\n                Items=\"_cards\"\n                Group=\"board\"\n                ListId=\"backlog\"\n                AllowLocalReorder=\"false\"\n                TrackDragOver=\"true\"\n                OnDragOver=\"OnDragOver\"\n                OnTransfer=\"OnTransfer\" />",
+  "notes": [
+    "Raised on the SOURCE list (the component that owns the dragged row), once per CHANGED hovered list, plus one resting report (ToListId null) when the gesture ends or is cancelled.",
+    "Throttled by the module: the leading change is reported at once and a change inside the throttle window is reported once when the window closes, so a host renders a few times per gesture rather than once per pointer frame.",
+    "A PREVIEW only: nothing is applied and nothing is announced. The ONE committed move still arrives through OnTransfer on release, and the host owns whether the drop is accepted."
+  ]
+}

@@ -9156,6 +9156,42 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "SortableDragOverArgs",
+          "kind": "Class",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.DataDisplay",
+          "description": "Describes where a drag that is STILL RUNNING would land: the row at FromIndex of the list identified by FromListId is over the list identified by ToListId. Raised on the SOURCE list through OnDragOver only when the list opted in with TrackDragOver=\"true\", and throttled by the module: the first change of the gesture arrives at once, a change inside the throttle window arrives once when the window closes (the latest list wins), and an unchanged list is never repeated. ToListId equals FromListId while the row hangs over its own list (which is how a host learns WHICH row is being dragged), and is null once the gesture ends or is cancelled — that is the resting state, so a projection painted during the drag can be taken back. This is a PREVIEW, not a move: the component never changes its own list here, and the ONE committed move still arrives through OnTransfer (or OnReorder) on release.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/SortableDragOverArgs.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "FromIndex",
+              "kind": "Property",
+              "type": "int",
+              "description": "The zero-based index of the dragged row in the source list's items."
+            },
+            {
+              "name": "FromListId",
+              "kind": "Property",
+              "type": "string?",
+              "description": "The ListId of the list the dragged row belongs to."
+            },
+            {
+              "name": "ToListId",
+              "kind": "Property",
+              "type": "string?",
+              "description": "The ListId of the list the row is currently over. Null when the gesture ended or was cancelled (the resting state), and equal to FromListId while the row is back over its own list."
+            }
+          ],
+          "usageExample": "<TmSortableList TItem=\"Card\"\n                Items=\"_cards\"\n                Group=\"board\"\n                ListId=\"backlog\"\n                AllowLocalReorder=\"false\"\n                TrackDragOver=\"true\"\n                OnDragOver=\"OnDragOver\"\n                OnTransfer=\"OnTransfer\" />",
+          "notes": [
+            "Raised on the SOURCE list (the component that owns the dragged row), once per CHANGED hovered list, plus one resting report (ToListId null) when the gesture ends or is cancelled.",
+            "Throttled by the module: the leading change is reported at once and a change inside the throttle window is reported once when the window closes, so a host renders a few times per gesture rather than once per pointer frame.",
+            "A PREVIEW only: nothing is applied and nothing is announced. The ONE committed move still arrives through OnTransfer on release, and the host owns whether the drop is accepted."
+          ]
+        },
+        {
           "itemName": "SortableHandleMode",
           "kind": "Enum",
           "category": "Components",
@@ -12599,7 +12635,7 @@
           "kind": "Component",
           "category": "Data Display",
           "namespace": "Tempo.Blazor.Components.DataDisplay",
-          "description": "A generic list whose rows the reader can reorder: by pointer (through the shared pointer-drag helper), by keyboard, or from a per-row move menu that is the tap alternative WCAG 2.5.7 requires. The component never mutates the host's list — every committed move raises OnReorder with the indexes of the host's own Items, and the next render shows the order the host reports. While a keyboard move is in progress the rows are painted in the PENDING order, so the row visibly travels before it is committed; Escape or a release without a change paints the host's order again. Accessible model: role=list of role=listitem rows, each naming itself a localized \"sortable item\" and pointing at the hidden keyboard instructions; the row is the single focus stop of its pair (the decorative handle is tabindex=-1 + aria-hidden), Enter/Space grabs it, the arrows move it, Enter/Space drops it, Escape cancels, Tab cancels and leaves the list (never a keyboard trap), Alt+arrow moves one position without grabbing, and ONE polite live region narrates every step. Controls inside ItemTemplate keep their own keys.",
+          "description": "A generic list whose rows the reader can reorder: by pointer (through the shared pointer-drag helper), by keyboard, or from a per-row move menu that is the tap alternative WCAG 2.5.7 requires. The component never mutates the host's list — every committed move raises OnReorder with the indexes of the host's own Items, and the next render shows the order the host reports. While a keyboard move is in progress the rows are painted in the PENDING order, so the row visibly travels before it is committed; Escape or a release without a change paints the host's order again. A list can also join a cross-list drag GROUP: a row dragged out of one member and dropped over another is reported as a transfer, and an opted-in member reports the list a LIVE drag would land in (TrackDragOver/OnDragOver) so a host can project the drop before it happens. Accessible model: role=list of role=listitem rows, each naming itself a localized \"sortable item\" and pointing at the hidden keyboard instructions; the row is the single focus stop of its pair (the decorative handle is tabindex=-1 + aria-hidden), Enter/Space grabs it, the arrows move it, Enter/Space drops it, Escape cancels, Tab cancels and leaves the list (never a keyboard trap), Alt+arrow moves one position without grabbing, and ONE polite live region narrates every step. Controls inside ItemTemplate keep their own keys.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/TmSortableList.razor",
           "documentationStatus": "merged",
@@ -12689,6 +12725,12 @@
               "description": "How the host recognises THIS list inside its Group — the value reported as SortableTransferArgs.ToListId when a row is dropped here, and as SortableTransferArgs.FromListId when one of this list's rows leaves. Null falls back to the component's own instance key, which is stable for the lifetime of the instance but meaningless to a host, so a group of lists a host has to tell apart should always set it."
             },
             {
+              "name": "OnDragOver",
+              "type": "EventCallback<SortableDragOverArgs>",
+              "isRequired": false,
+              "description": "Raised (throttled, only with TrackDragOver on) while a row of THIS list is dragged: once per list the pointer moves over, and once more when the gesture ends or is cancelled with a null SortableDragOverArgs.ToListId (the resting state). Never raised for a list that did not opt in. The host paints whatever preview it wants and clears it on the resting report; the component changes nothing by itself, and the ONE committed move still arrives through OnTransfer (or OnReorder) on release."
+            },
+            {
               "name": "OnReorder",
               "type": "EventCallback<SortableReorderArgs>",
               "isRequired": false,
@@ -12706,6 +12748,13 @@
               "isRequired": false,
               "default": "true",
               "description": "Renders the per-row move menu (Move up / Move down / Move to top / Move to bottom) that is the tap and mouse alternative to dragging. Set false only when the rows already offer their own reorder commands — a list without the menu and without a pointer has no way to reorder at all."
+            },
+            {
+              "name": "TrackDragOver",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the list reports the list a dragged row would currently land in, through OnDragOver. Default false: the pointer drag reports its ONE commit on release and nothing else, which is what every consumer did before this parameter existed. A host that paints a PREVIEW of the drop (a board that projects \"this card would land here\" into the column under the pointer) opts in. The report is throttled by the module and never replaces the commit: nothing is applied until OnTransfer (or OnReorder) fires on release.",
+              "default": "false"
             },
             {
               "name": "DataTestId",
@@ -12766,7 +12815,8 @@
             "One reorder at a time: while a row is grabbed it owns the keyboard — the module stops the default action of the reorder keys on the row itself, Tab cancels the grab and moves the focus out, and Escape cancels the move, so a grab is never a keyboard trap (WCAG 2.1.2).",
             "The pointer path rides the shared pointer-drag.js and pointer-gesture.js helpers — the module owns only the list geometry and the single commit, never a second gesture implementation.",
             "Reduced motion suppresses the row transition in animations.css, so a reader who asked for less motion sees the rows snap instead of slide.",
-            "A transfer is reported ONCE, on the SOURCE list, and the component announces nothing for it: only the host knows whether the drop was accepted and what the move is called. A transfer-only list (AllowLocalReorder=false) therefore renders no live region of its own, so a grouped surface keeps ONE polite region."
+            "A transfer is reported ONCE, on the SOURCE list, and the component announces nothing for it: only the host knows whether the drop was accepted and what the move is called. A transfer-only list (AllowLocalReorder=false) therefore renders no live region of its own, so a grouped surface keeps ONE polite region.",
+            "The OPT-IN drag-over report (TrackDragOver/OnDragOver) is a PREVIEW, not a move: the component applies nothing and announces nothing while the gesture runs, and the host owns whatever it paints. The module throttles it (leading report at once, trailing report for the last hovered list) and de-duplicates it, so a host that only re-renders on a CHANGED target renders a few times per gesture rather than once per pointer frame."
           ]
         },
         {
@@ -36390,12 +36440,12 @@
         }
       ],
       "summary": {
-        "itemCount": 455,
-        "manualItemCount": 455,
-        "generatedItemCount": 447,
+        "itemCount": 456,
+        "manualItemCount": 456,
+        "generatedItemCount": 448,
         "generatedOnlyItemCount": 0,
         "componentCount": 237,
-        "publicApiTypeCount": 210
+        "publicApiTypeCount": 211
       }
     },
     {
@@ -43435,6 +43485,10 @@
           "kind": "JavaScript"
         },
         {
+          "path": "src/Tempo.Blazor.AI/wwwroot/js/tm-scheduled-runs.js",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor.AI/wwwroot/js/__tests__/ai-composer.test.mjs",
           "kind": "JavaScript"
         },
@@ -43460,6 +43514,10 @@
         },
         {
           "path": "src/Tempo.Blazor.AI/wwwroot/js/__tests__/tm-autonomy-dial.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor.AI/wwwroot/js/__tests__/tm-scheduled-runs.test.mjs",
           "kind": "JavaScript"
         }
       ],
@@ -146843,10 +146901,10 @@
   ],
   "summary": {
     "packageCount": 29,
-    "itemCount": 3720,
-    "manualItemCount": 3720,
+    "itemCount": 3721,
+    "manualItemCount": 3721,
     "generatedOnlyItemCount": 0,
     "componentCount": 565,
-    "publicApiTypeCount": 3103
+    "publicApiTypeCount": 3104
   }
 }

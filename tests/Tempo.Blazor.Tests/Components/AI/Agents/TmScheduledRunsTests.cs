@@ -450,7 +450,7 @@ public class TmScheduledRunsTests : LocalizationTestBase
         raised.Should().BeNull("the surface never reports a placement the plan did not make");
         cut.Find("[data-window-id='w-free'] [data-testid='runs-run'][data-run-id='r1']").Should().NotBeNull(
             "the run stays where it was");
-        cut.Find("[data-testid='runs-notice']").TextContent.Trim().Should().Contain("not moved");
+        cut.Find("[data-testid='runs-notice']").TextContent.Trim().Should().Contain("Not moved");
         Announcement(cut).Should().Be(cut.Find("[data-testid='runs-notice']").TextContent.Trim(),
             "the refusal is announced through the same one region");
     }
@@ -509,6 +509,211 @@ public class TmScheduledRunsTests : LocalizationTestBase
         cut.FindAll("[data-testid='runs-window-list']").Select(list => list.GetAttribute("data-list-id"))
             .Should().Equal("w-mon-am", "w-mon-pm", "w-tue-am");
         cut.FindAll(".tm-sortable-list__item").Should().OnlyContain(item => item.GetAttribute("tabindex") == null);
+    }
+
+    // ---------- moving a run with the keyboard (plan 7ba95ed6, Fáze 6) ----------
+
+    /// <summary>The documented key set of a run row — the value <c>aria-keyshortcuts</c> must carry.</summary>
+    private const string MoveKeys = "Alt+ArrowLeft Alt+ArrowRight Alt+ArrowUp Alt+ArrowDown";
+
+    /// <summary>
+    /// Drives the one entry point the package module calls (<c>OnRunMoveStep</c>): the module owns the chord
+    /// (Alt + arrow, and the browser's Back/Forward suppression) and hands .NET the run id plus the accepted key, so the
+    /// component's own contract starts here.
+    /// </summary>
+    private static Task MoveKey(IRenderedComponent<TmScheduledRuns> cut, string runId, string key)
+        => cut.InvokeAsync(() => cut.Instance.OnRunMoveStepAsync(runId, key));
+
+    [Fact]
+    public void TheModuleInvokable_IsReachableUnderTheNameTheModuleCalls()
+    {
+        var method = typeof(TmScheduledRuns).GetMethod(nameof(TmScheduledRuns.OnRunMoveStepAsync));
+
+        method.Should().NotBeNull();
+        var attribute = method!.GetCustomAttributes(typeof(Microsoft.JSInterop.JSInvokableAttribute), inherit: false)
+            .Cast<Microsoft.JSInterop.JSInvokableAttribute>()
+            .Should().ContainSingle().Subject;
+        attribute.Identifier.Should().Be("OnRunMoveStep",
+            "tm-scheduled-runs.js invokes exactly this name, and Blazor never strips an Async suffix");
+    }
+
+    [Fact]
+    public void ARunRowAdvertisesTheMoveKeys_AndKeepsTheMenu()
+    {
+        var cut = RenderRuns();
+
+        var row = cut.Find("[data-testid='runs-run'][data-run-id='r1']");
+        row.GetAttribute("aria-keyshortcuts").Should().Be(MoveKeys,
+            "the shortcut is announced on the row it moves, in the ARIA key-shortcut grammar");
+        row.GetAttribute("data-tm-run-move-keys").Should().NotBeNull(
+            "the module's Alt+arrow guard needs to find the row that owns the keys");
+        row.QuerySelector(".tm-context-menu__trigger").Should().NotBeNull(
+            "the menu stays the alternative that lists every window");
+    }
+
+    [Fact]
+    public async Task AltArrowRightMovesTheRunToTheNextWindow()
+    {
+        ScheduledRunMoveRequest? raised = null;
+        var cut = RenderRuns(p => p.Add(c => c.OnMove, Capture(request => raised = request)));
+
+        await MoveKey(cut, "r1", "ArrowRight");
+        cut.WaitForAssertion(() => raised.Should().NotBeNull());
+
+        raised!.Run.Id.Should().Be("r1");
+        raised.From!.Id.Should().Be("w-mon-am");
+        raised.To.Id.Should().Be("w-mon-pm");
+        cut.Find("[data-window-id='w-mon-pm'] [data-testid='runs-run'][data-run-id='r1']").Should().NotBeNull(
+            "the run visibly sits in the next window");
+        Announcement(cut).Should().Contain("moved to", "every keyboard move is announced");
+    }
+
+    [Fact]
+    public async Task AltArrowLeftMovesTheRunToThePreviousWindow()
+    {
+        ScheduledRunMoveRequest? raised = null;
+        var cut = RenderRuns(p => p.Add(c => c.OnMove, Capture(request => raised = request)));
+
+        // r1 starts in the first window, so move it forward first and then step back with the keyboard.
+        await cut.InvokeAsync(() => cut.Instance.OnTransferAsync(
+            new SortableTransferArgs("w-mon-am", 0, "w-mon-pm", 0, SortableReorderSource.Pointer)));
+        raised = null;
+
+        await MoveKey(cut, "r1", "ArrowLeft");
+        cut.WaitForAssertion(() => raised.Should().NotBeNull());
+
+        raised!.From!.Id.Should().Be("w-mon-pm");
+        raised.To.Id.Should().Be("w-mon-am");
+    }
+
+    [Fact]
+    public async Task AltArrowLeftOnTheFirstWindowAnnouncesTheBoundary_AndMovesNothing()
+    {
+        ScheduledRunMoveRequest? raised = null;
+        var cut = RenderRuns(p => p.Add(c => c.OnMove, Capture(request => raised = request)));
+
+        await MoveKey(cut, "r1", "ArrowLeft");
+
+        raised.Should().BeNull("there is no window before the first one");
+        Announcement(cut).Should().Be("Nightly export is already in the first window.");
+        cut.Find("[data-window-id='w-mon-am'] [data-testid='runs-run'][data-run-id='r1']").Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task AltArrowRightOnTheLastWindowAnnouncesTheBoundary_AndMovesNothing()
+    {
+        ScheduledRunMoveRequest? raised = null;
+        var cut = RenderRuns(
+            p => p.Add(c => c.OnMove, Capture(request => raised = request)),
+            windows: [Window("w-mon-am", 0, 9, capacity: 4)],
+            runs: [Run("r1", "Nightly export", 2)]);
+
+        await MoveKey(cut, "r1", "ArrowRight");
+
+        raised.Should().BeNull();
+        Announcement(cut).Should().Be("Nightly export is already in the last window.");
+    }
+
+    [Fact]
+    public async Task AltArrowDownMovesTheRunToTheNextDay_AndUpBackAgain()
+    {
+        ScheduledRunMoveRequest? raised = null;
+        var cut = RenderRuns(p => p.Add(c => c.OnMove, Capture(request => raised = request)));
+
+        await MoveKey(cut, "r1", "ArrowDown");
+        cut.WaitForAssertion(() => raised.Should().NotBeNull());
+        raised!.To.Id.Should().Be("w-tue-am", "the next day is entered at its FIRST window");
+        cut.Find("[data-window-id='w-tue-am'] [data-testid='runs-run'][data-run-id='r1']").Should().NotBeNull();
+
+        raised = null;
+        await MoveKey(cut, "r1", "ArrowUp");
+        cut.WaitForAssertion(() => raised.Should().NotBeNull());
+        raised!.To.Day.Should().Be(new DateOnly(2026, 11, 9), "the previous day is a Monday");
+    }
+
+    [Fact]
+    public async Task AltArrowUpOnTheFirstDayAnnouncesTheBoundary_AndMovesNothing()
+    {
+        ScheduledRunMoveRequest? raised = null;
+        var cut = RenderRuns(p => p.Add(c => c.OnMove, Capture(request => raised = request)));
+
+        await MoveKey(cut, "r1", "ArrowUp");
+
+        raised.Should().BeNull();
+        Announcement(cut).Should().Be("Nightly export is already on the first day.");
+    }
+
+    [Fact]
+    public async Task AltArrowDownOnTheLastDayAnnouncesTheBoundary_AndMovesNothing()
+    {
+        ScheduledRunMoveRequest? raised = null;
+        var cut = RenderRuns(
+            p => p.Add(c => c.OnMove, Capture(request => raised = request)),
+            windows: [Window("w-mon-am", 0, 9, capacity: 4)],
+            runs: [Run("r1", "Nightly export", 2)]);
+
+        await MoveKey(cut, "r1", "ArrowDown");
+
+        raised.Should().BeNull();
+        Announcement(cut).Should().Be("Nightly export is already on the last day.");
+    }
+
+    [Fact]
+    public async Task AltArrowRightIntoAFullWindowIsRefusedWithANoticeAndAnnouncement()
+    {
+        ScheduledRunMoveRequest? raised = null;
+        var cut = RenderRuns(
+            p => p.Add(c => c.OnMove, Capture(request => raised = request)),
+            windows:
+            [
+                Window("w-mon-am", 0, 9, capacity: 4),
+                Window("w-full", 0, 13, capacity: 2, used: 2),
+            ],
+            runs: [Run("r1", "Nightly export", 2)]);
+
+        await MoveKey(cut, "r1", "ArrowRight");
+
+        raised.Should().BeNull("the surface never reports a placement the plan did not make");
+        cut.Find("[data-window-id='w-mon-am'] [data-testid='runs-run'][data-run-id='r1']").Should().NotBeNull(
+            "the run stays where it was");
+        var notice = cut.Find("[data-testid='runs-notice']").TextContent.Trim();
+        notice.Should().Contain("Not moved");
+        Announcement(cut).Should().Be(notice, "the refusal is announced through the same one region");
+    }
+
+    [Fact]
+    public async Task AKeyOrRunTheSurfaceDoesNotOwnChangesNothing()
+    {
+        ScheduledRunMoveRequest? raised = null;
+        var cut = RenderRuns(p => p.Add(c => c.OnMove, Capture(request => raised = request)));
+
+        // The module already filters the modifiers and the four arrows; the component maps exactly those four keys and
+        // ignores a key or a run id it does not know (a stale row, a renamed run).
+        await MoveKey(cut, "r1", "PageDown");
+        await MoveKey(cut, "r1", "Enter");
+        await MoveKey(cut, "ghost", "ArrowRight");
+        await MoveKey(cut, "r1", "");
+
+        raised.Should().BeNull("only the documented Alt+arrow chord moves a run");
+        Announcement(cut).Should().BeEmpty("a key the surface does not own says nothing");
+    }
+
+    [Fact]
+    public async Task TheTableRowOffersTheSameKeyboardMove()
+    {
+        ScheduledRunMoveRequest? raised = null;
+        var cut = RenderRuns(p => p.Add(c => c.OnMove, Capture(request => raised = request)));
+
+        await cut.InvokeAsync(() => cut.Instance.OnViewChangedAsync(RunViewMode.Table));
+
+        var row = cut.Find($"[data-testid='runs-table-row'][data-run-id='r1']");
+        row.GetAttribute("aria-keyshortcuts").Should().Be(MoveKeys);
+        row.GetAttribute("data-tm-run-move-keys").Should().NotBeNull(
+            "the module finds the row by this attribute in the table presentation too");
+
+        await MoveKey(cut, "r1", "ArrowRight");
+        cut.WaitForAssertion(() => raised.Should().NotBeNull());
+        raised!.To.Id.Should().Be("w-mon-pm", "the table is as operable as the board");
     }
 
     // ---------- accessibility and localization ----------

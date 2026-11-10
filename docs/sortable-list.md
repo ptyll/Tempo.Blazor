@@ -51,9 +51,12 @@ snaps back.
 | `ShowMoveMenu` | `bool` | `true` | The per-row move menu — the tap/mouse alternative to dragging. |
 | `AriaLabel` | `string?` | `null` | The list's accessible name; null is the localized "Sortable list". |
 | `Class` | `string?` | `null` | Extra root CSS classes. |
+| `TrackDragOver` | `bool` | `false` | Opt in to the LIVE drag-over report (below). Default keeps the pre-existing behaviour: the pointer drag reports its ONE commit on release and nothing else. |
+| `OnDragOver` | `EventCallback<SortableDragOverArgs>` | — | Raised (throttled) while a row of this list is dragged: the list it would land in, and `ToListId == null` for the resting state when the gesture ends or is cancelled. |
 
 Models: `SortableReorderArgs` (`FromIndex`, `ToIndex`, `Source`), `SortableReorderSource`
-(`Pointer` | `Keyboard` | `Menu`), `SortableHandleMode` (`Handle` | `WholeItem`).
+(`Pointer` | `Keyboard` | `Menu`), `SortableHandleMode` (`Handle` | `WholeItem`),
+`SortableDragOverArgs` (`FromListId`, `FromIndex`, `ToListId`).
 
 `OnSortableReorderCommitted(int fromIndex, int toIndex)` is the `[JSInvokable]` the pointer module calls;
 it is public only because JS must reach it, and it runs the same commit path as the keyboard side.
@@ -220,11 +223,45 @@ polite live region for the whole board, and the transfer-only lists contribute n
 **What the host does.** It removes the row from its own source collection, inserts it into the target one and re-renders.
 The component never moves an item by itself — the same rule as `OnReorder`.
 
+## Painting the drop BEFORE it happens (`TrackDragOver`, `OnDragOver`)
+
+A board that can say "this card would land *here*" while the pointer is still moving needs to know which list the row is
+over — the module owns the gesture, so only it can tell .NET. `TrackDragOver="true"` opts a list into that report:
+
+```razor
+<TmSortableList TItem="Card" Items="PlannerCards"
+                Group="board" ListId="planner"
+                AllowLocalReorder="false"
+                TrackDragOver="true"
+                OnDragOver="OnDragOver" />
+```
+
+* The report is raised **on the SOURCE list** — the one that owns the dragged row — with
+  `SortableDragOverArgs(FromListId, FromIndex, ToListId)`. `ToListId` equals `FromListId` while the row is still over its own
+  list (that first report is how a host learns *which* row is being dragged), names the target once the pointer crosses into
+  another member of the group, and is **`null`** when the gesture ends or is cancelled — the **resting state** a host needs
+  in order to take its projection back. A refused drop therefore never leaves a stale preview behind.
+* **Throttled and de-duplicated.** The module reports the first change at once (the projection must not lag the pointer), a
+  change inside the throttle window (100 ms) once when the window closes — the latest list wins — and an unchanged list
+  never. A host that only re-renders on a changed target renders a handful of times per gesture instead of once per frame.
+* **A preview, not a move.** Nothing is applied and nothing is announced while the gesture runs: the ONE commit still arrives
+  through `OnTransfer` on release, and the host still owns the announcement. The default (`TrackDragOver="false"`) keeps the
+  module's behaviour byte-for-byte for every other consumer, so no existing board, plan or kanban had to change.
+* A host that clears its projection only on the resting report is correct even for a drop OUTSIDE every list: a pointer that
+  leaves every list keeps the last one it was over (the module never invents a target from the gap between two columns), and
+  the gesture's end reports the resting state — the report is emitted before the ONE commit invocation, so the host's
+  projection is already gone when the move is applied.
+* The module's own drop mark (`tm-sortable-list--drop-target`) is unchanged — it names the LIST; a host is free to paint the
+  COLUMN (the delegate board does: `data-drag-over`) so its header, its frame and the projection move together.
+* Node tests pin the throttle (leading report, trailing report with the latest list, de-duplication, cancel → resting) and the
+  opt-in (a list without `dragOver` never reports): `tm-sortable.test.mjs`.
+
 ## Testing
 
 * bUnit: `tests/Tempo.Blazor.Tests/DataDisplay/TmSortableListTests.cs` (ARIA, keyboard incl. the `Tab`
   release and the template-content fence, menu, disabled, keying and duplicate keys, the label fallback,
-  live region, localization, and the cross-list transfer contract) and `SortableListPageTests.cs` (the `/sortable-list` demo page walk).
+  live region, localization, the cross-list transfer contract and the opt-in drag-over report) and
+  `SortableListPageTests.cs` (the `/sortable-list` demo page walk).
 * Node: `src/Tempo.Blazor/wwwroot/js/__tests__/tm-sortable.test.mjs` (`npm run test:overlay`).
 * Playwright: `tests/Tempo.Blazor.E2E/SortableListE2ETests.cs` — keyboard, pointer drag, the row menu,
   Escape rollback, the inset focus ring, reduced motion, dark theme, a 390 px phone and a scoped axe scan.

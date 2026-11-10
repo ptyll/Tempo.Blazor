@@ -4742,6 +4742,10 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor.AI/wwwroot/js/tm-scheduled-runs.js",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor.AI/wwwroot/js/__tests__/ai-composer.test.mjs",
       "kind": "JavaScript"
     },
@@ -4767,6 +4771,10 @@
     },
     {
       "path": "src/Tempo.Blazor.AI/wwwroot/js/__tests__/tm-autonomy-dial.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor.AI/wwwroot/js/__tests__/tm-scheduled-runs.test.mjs",
       "kind": "JavaScript"
     }
   ],

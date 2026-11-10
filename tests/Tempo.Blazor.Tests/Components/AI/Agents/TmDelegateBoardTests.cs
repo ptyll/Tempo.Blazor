@@ -518,6 +518,152 @@ public class TmDelegateBoardTests : LocalizationTestBase
         cut.FindAll(".tm-sortable-list__move").Should().BeEmpty();
     }
 
+    // ---------- the LIVE drag-over projection (plan 7ba95ed6, Fáze 6) ----------
+
+    [Fact]
+    public void TheListsOptIntoTheDragOverReport()
+    {
+        var cut = RenderBoard();
+
+        var lists = cut.FindComponents<TmSortableList<DelegateTask>>();
+        lists.Should().HaveCount(4, "the backlog and one list per agent");
+        lists.Should().OnlyContain(list => list.Instance.TrackDragOver,
+            "a board that projects the landing column needs the module's opt-in report on every column");
+    }
+
+    [Fact]
+    public void TheTargetColumnProjectsTheDraggedCardDuringTheDrag()
+    {
+        var cut = RenderBoard(agents: [AgentColumn("planner", "Planner", busyUntil: Ten.AddHours(1))]);
+
+        cut.InvokeAsync(() => cut.Instance.OnDragOverAsync(
+            new SortableDragOverArgs("backlog", 0, "planner")));
+
+        cut.Instance.IsDragging.Should().BeTrue("the board knows a gesture is running");
+        cut.Instance.DraggedTask!.Id.Should().Be("t1");
+
+        var column = Column(cut, "planner");
+        column.GetAttribute("data-drag-over").Should().Be("true",
+            "the column the card would land in says so while the gesture is still running");
+        var preview = column.QuerySelector("[data-testid='delegate-agent-preview']")!;
+        preview.GetAttribute("data-state").Should().Be("preview");
+        preview.GetAttribute("data-estimate").Should().Be("true");
+        preview.TextContent.Trim().Should().Be(
+            "Occupied until " + Ten.AddHours(1).AddMinutes(30).ToString("t") + " with the card being moved",
+            "the 30-minute estimate of the dragged task is projected onto the target");
+    }
+
+    [Fact]
+    public void TheSourceColumnShowsItsOwnLoad_WithoutTheDraggedCard()
+    {
+        var cut = RenderBoard(
+            agents:
+            [
+                AgentColumn("planner", "Planner"),
+                AgentColumn("writer", "Writer", busyUntil: Ten.AddHours(1)),
+            ]);
+
+        // The reader points at the writer's card, so the writer projects it; then the SAME card is dragged away.
+        FocusCard(cut, "t3");
+        HoverColumn(cut, "writer");
+        Column(cut, "writer").QuerySelector("[data-testid='delegate-agent-preview']")!.TextContent.Trim()
+            .Should().Be("Occupied until " + Ten.AddHours(1).AddMinutes(45).ToString("t") + " with this task");
+
+        cut.InvokeAsync(() => cut.Instance.OnDragOverAsync(
+            new SortableDragOverArgs("writer", 0, "planner")));
+
+        var source = Column(cut, "writer");
+        source.GetAttribute("data-drag-over").Should().Be("false", "the source column is not a drop target");
+        var sourcePreview = source.QuerySelector("[data-testid='delegate-agent-preview']")!;
+        sourcePreview.GetAttribute("data-state").Should().Be("busy");
+        sourcePreview.TextContent.Trim().Should().Be(
+            "Occupied until " + Ten.AddHours(1).ToString("t"),
+            "the lifted card is no longer part of the source column's projection");
+        Column(cut, "planner").GetAttribute("data-drag-over").Should().Be("true");
+    }
+
+    [Fact]
+    public void AFullColumnIsMarkedAsTheTarget_ButClaimsNothingItCannotTake()
+    {
+        var cut = RenderBoard(
+            agents:
+            [
+                AgentColumn("planner", "Planner", slots: 1, active: 1),
+                AgentColumn("writer", "Writer"),
+            ]);
+
+        cut.InvokeAsync(() => cut.Instance.OnDragOverAsync(
+            new SortableDragOverArgs("writer", 0, "planner")));
+
+        var column = Column(cut, "planner");
+        column.GetAttribute("data-drag-over").Should().Be("true");
+        column.GetAttribute("data-full").Should().Be("true");
+        column.QuerySelector("[data-testid='delegate-agent-preview']")!.TextContent.Trim()
+            .Should().Be("Free now", "a full column cannot promise a time for a card it will refuse");
+        column.QuerySelector(".tm-ai-delegate__full-text")!.TextContent.Trim().Should().Be("Full");
+    }
+
+    [Fact]
+    public void ABusyFullColumnKeepsItsOwnSentence_InsteadOfTheDragProjection()
+    {
+        var cut = RenderBoard(
+            agents:
+            [
+                AgentColumn("planner", "Planner", slots: 1, active: 1, busyUntil: Ten.AddHours(1)),
+                AgentColumn("writer", "Writer"),
+            ]);
+
+        cut.InvokeAsync(() => cut.Instance.OnDragOverAsync(
+            new SortableDragOverArgs("writer", 0, "planner")));
+
+        var preview = Column(cut, "planner").QuerySelector("[data-testid='delegate-agent-preview']")!;
+        preview.TextContent.Trim().Should().Be(
+            "Occupied until " + Ten.AddHours(1).ToString("t"),
+            "a full column never borrows the dragged card's estimate, not even when it is busy");
+        preview.GetAttribute("data-state").Should().Be("busy");
+    }
+
+    [Fact]
+    public void ACancelledDragReturnsEveryColumnToItsRestingProjection()
+    {
+        var cut = RenderBoard(
+            agents:
+            [
+                AgentColumn("planner", "Planner"),
+                AgentColumn("writer", "Writer", busyUntil: Ten.AddHours(1)),
+            ]);
+
+        FocusCard(cut, "t3");
+        HoverColumn(cut, "writer");
+        cut.InvokeAsync(() => cut.Instance.OnDragOverAsync(
+            new SortableDragOverArgs("writer", 0, "planner")));
+
+        // Escape / pointercancel: the module reports the resting state with no target and no source.
+        cut.InvokeAsync(() => cut.Instance.OnDragOverAsync(new SortableDragOverArgs(null, -1, null)));
+
+        Column(cut, "planner").GetAttribute("data-drag-over").Should().Be("false");
+        Column(cut, "writer").GetAttribute("data-drag-over").Should().Be("false");
+        var preview = Column(cut, "writer").QuerySelector("[data-testid='delegate-agent-preview']")!;
+        preview.GetAttribute("data-state").Should().Be("preview",
+            "the focus/hover projection is back: the cancelled gesture changed nothing");
+        preview.TextContent.Trim().Should().Be(
+            "Occupied until " + Ten.AddHours(1).AddMinutes(45).ToString("t") + " with this task");
+    }
+
+    [Fact]
+    public void ADragOverTheBacklogMarksItWithoutProjectingAColumn()
+    {
+        var cut = RenderBoard();
+
+        cut.InvokeAsync(() => cut.Instance.OnDragOverAsync(
+            new SortableDragOverArgs("writer", 0, "backlog")));
+
+        Column(cut, "backlog").GetAttribute("data-drag-over").Should().Be("true");
+        Column(cut, "planner").GetAttribute("data-drag-over").Should().Be("false");
+        Column(cut, "writer").GetAttribute("data-drag-over").Should().Be("false",
+            "the source column keeps its own load while its card hangs over the backlog");
+    }
+
     // ---------- the automatic pass ----------
 
     [Fact]

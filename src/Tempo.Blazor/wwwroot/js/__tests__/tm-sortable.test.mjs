@@ -6,6 +6,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
     attachSortable,
+    createDragOverThrottle,
     detachSortable,
     optionsFor,
     resolveContainerIndex,
@@ -88,6 +89,132 @@ test('resolveContainerIndex: the first list whose rect holds the pointer wins, e
     assert.equal(resolveContainerIndex(rects, 10, 900), -1);
     assert.equal(resolveContainerIndex([], 10, 10), -1);
     assert.equal(resolveContainerIndex(null, 10, 10), -1);
+});
+
+// ── the OPT-IN drag-over report: a throttled, de-duplicated "which list would it land in" ────
+
+/**
+ * A deterministic clock and timer queue: `+now()+setTimeout+clearTimeout` are the three seams the
+ * throttle takes, so the whole leading/trailing decision is tested without a real timer.
+ */
+function fakeClock(start = 0) {
+    let time = start;
+    let sequence = 0;
+    const timers = [];
+    return {
+        now: () => time,
+        setTimeout: (fn, ms) => {
+            const id = ++sequence;
+            timers.push({ id, at: time + ms, fn });
+            return id;
+        },
+        clearTimeout: (id) => {
+            const index = timers.findIndex(timer => timer.id === id);
+            if (index >= 0) timers.splice(index, 1);
+        },
+        advance(ms) {
+            time += ms;
+            for (const timer of [...timers]) {
+                if (timer.at > time) continue;
+                timers.splice(timers.indexOf(timer), 1);
+                timer.fn();
+            }
+        },
+        pending: () => timers.length,
+    };
+}
+
+function throttleOf(throttleMs = 100) {
+    const clock = fakeClock();
+    const reported = [];
+    const throttle = createDragOverThrottle((value) => reported.push(value), {
+        throttleMs,
+        now: clock.now,
+        setTimeout: clock.setTimeout,
+        clearTimeout: clock.clearTimeout,
+    });
+    return { clock, reported, throttle };
+}
+
+test('createDragOverThrottle: the FIRST hovered list is reported at once', () => {
+    const { reported, throttle } = throttleOf();
+
+    throttle.notify('backlog');
+
+    assert.deepEqual(reported, ['backlog'], 'a drag must project into the target without waiting');
+});
+
+test('createDragOverThrottle: the same list is never reported twice', () => {
+    const { reported, throttle } = throttleOf();
+
+    throttle.notify('backlog');
+    throttle.notify('backlog');
+    throttle.notify('backlog');
+
+    assert.deepEqual(reported, ['backlog'], 'the module notifies on every pointer frame');
+});
+
+test('createDragOverThrottle: a change inside the window is reported ONCE when the window closes', () => {
+    const { clock, reported, throttle } = throttleOf();
+
+    throttle.notify('backlog');
+    clock.advance(10);
+    throttle.notify('planner');
+    throttle.notify('writer');
+
+    assert.deepEqual(reported, ['backlog'], 'inside the throttle window nothing else reaches .NET');
+    assert.equal(clock.pending(), 1, 'exactly one trailing report is scheduled');
+
+    clock.advance(90);
+
+    assert.deepEqual(reported, ['backlog', 'writer'], 'the LATEST hovered list wins the trailing report');
+    assert.equal(clock.pending(), 0);
+});
+
+test('createDragOverThrottle: a change back to the reported list schedules nothing to say', () => {
+    const { clock, reported, throttle } = throttleOf();
+
+    throttle.notify('backlog');
+    clock.advance(10);
+    throttle.notify('planner');
+    throttle.notify('backlog');
+
+    clock.advance(100);
+
+    assert.deepEqual(reported, ['backlog'], 'the net state never changed, so the drag-over stays silent');
+    assert.equal(clock.pending(), 0);
+});
+
+test('createDragOverThrottle: cancel drops the pending report and reports the resting state', () => {
+    const { clock, reported, throttle } = throttleOf();
+
+    throttle.notify('backlog');
+    clock.advance(10);
+    throttle.notify('planner');
+
+    throttle.cancel();
+
+    assert.deepEqual(reported, ['backlog', null],
+        'a cancelled drag tells .NET there is no target, so the projection returns to rest');
+    assert.equal(clock.pending(), 0, 'the scheduled report is dropped, never delivered after the cancel');
+
+    throttle.cancel();
+    assert.deepEqual(reported, ['backlog', null], 'a second cancel reports nothing');
+});
+
+test('createDragOverThrottle: a notify after a cancel reports at once again', () => {
+    const { clock, reported, throttle } = throttleOf();
+
+    throttle.notify('backlog');
+    clock.advance(10);
+    throttle.notify('planner');
+    throttle.cancel();
+    reported.length = 0;
+
+    clock.advance(5);
+    throttle.notify('writer');
+
+    assert.deepEqual(reported, ['writer'], 'a new gesture is not held back by the previous window');
 });
 
 // ── the grabbed-row key guard: arrows are stopped, Tab and template controls are not ─────────
@@ -510,6 +637,65 @@ test('attachSortable: a standalone list never transfers — a drop outside it st
         'without a shared group the pointer can only reorder the list it started in');
     assert.equal(second.root.classList.contains('tm-sortable-list--drop-target'), false,
         'a list outside the group is never marked');
+});
+
+// ── the opt-in drag-over callback of a real group ─────────────────────────────────────────
+
+/** The same group as {@link installGroup}, with the drag-over report opted in (throttle off for determinism). */
+function installGroupTracking() {
+    const first = stageAt({ left: 0, id: 'backlog' });
+    const second = stageAt({ left: 400, id: 'agent-1' });
+    installDocument();
+    installFrames();
+    const calls = [];
+    const dotnet = { invokeMethodAsync: (...args) => { calls.push(args); return Promise.resolve(); } };
+    const options = { group: 'board', dragOver: true, dragOverThrottleMs: 0 };
+    attachSortable(first.root, dotnet, 'list-a', 'handle', { ...options, listId: 'backlog' });
+    attachSortable(second.root, dotnet, 'list-b', 'handle', { ...options, listId: 'agent-1' });
+    return { first, second, calls };
+}
+
+const dragOverCalls = (calls) => calls.filter(call => call[0] === 'OnSortableDragOver');
+
+test('attachSortable: a list that does not opt in never reports a drag-over', () => {
+    const { first, calls } = installGroup();
+
+    first.root.dispatch('pointerdown', press(first.rows[0].handle));
+    first.root.dispatch('pointermove', move({ x: 420, y: 120 }));
+    first.root.dispatch('pointerup', up({ x: 420, y: 120 }));
+
+    assert.deepEqual(dragOverCalls(calls), [],
+        'the drag-over report is opt-in: no other consumer of this module changes behaviour');
+    assert.deepEqual(calls, [['OnSortableTransferCommitted', 'agent-1', 0, 3]], 'the commit is unchanged');
+});
+
+test('attachSortable: with dragOver the hovered list is reported, and the resting state on release', () => {
+    const { first, calls } = installGroupTracking();
+
+    first.root.dispatch('pointerdown', press(first.rows[0].handle));
+    first.root.dispatch('pointermove', move({ x: 12, y: 20 }));
+    assert.deepEqual(dragOverCalls(calls), [['OnSortableDragOver', 'backlog', 'backlog', 0]],
+        'the source list itself is reported, so the host learns WHICH row is being dragged');
+
+    first.root.dispatch('pointermove', move({ x: 420, y: 120 }));
+    assert.deepEqual(dragOverCalls(calls).at(-1), ['OnSortableDragOver', 'agent-1', 'backlog', 0],
+        'the list the row would land in is named with the source it came from');
+
+    first.root.dispatch('pointerup', up({ x: 420, y: 120 }));
+    assert.deepEqual(dragOverCalls(calls).at(-1), ['OnSortableDragOver', null, 'backlog', 0],
+        'the release returns every column to its resting projection');
+});
+
+test('attachSortable: a cancelled drag-over reports the resting state and transfers nothing', () => {
+    const { first, calls } = installGroupTracking();
+
+    first.root.dispatch('pointerdown', press(first.rows[0].handle));
+    first.root.dispatch('pointermove', move({ x: 420, y: 120 }));
+    first.root.dispatch('pointercancel', { pointerId: 1 });
+
+    assert.deepEqual(dragOverCalls(calls).at(-1), ['OnSortableDragOver', null, 'backlog', 0],
+        'Escape / pointercancel return the projection to rest');
+    assert.deepEqual(calls.filter(call => call[0] === 'OnSortableTransferCommitted'), []);
 });
 
 // ── auto-scroll and lifecycle ──────────────────────────────────────────────────────────────

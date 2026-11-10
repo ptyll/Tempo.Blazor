@@ -224,6 +224,17 @@ public sealed class TmOverlayPanelDialogNamingTests : LocalizationTestBase
                 cut.Find(".tm-data-table-cards-toolbar__filter").Click();
                 return cut.Find("[role='dialog']");
             },
+            // TmFanOutGrid (plan 7ba95ed6, Fáze 3): the task detail is a dialog-role popover named by its localized
+            // title. The Inline presentation draws the same detail in flow and renders NO dialog, so the popover is
+            // the site the sweep opens.
+            ["TmFanOutGrid"] = () =>
+            {
+                var cut = Render<TmFanOutGrid>(p => p
+                    .Add(c => c.Tasks, [new FanOutTask("naming-sweep", "Draft")])
+                    .Add(c => c.DetailPresentation, FanOutDetailPresentation.Popover));
+                cut.Find("[data-testid='fan-out-tile']").Click();
+                return cut.Find("[role='dialog']");
+            },
             // TmFacetFilter (plan ff043b2e, Fáze 4): the filter surface is a dialog-role popover named
             // by its visible heading (AriaLabelledBy -> the panel title). The phone band composes the
             // core drawer sheet instead, so the popover presentation is the site the sweep opens.

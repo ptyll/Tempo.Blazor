@@ -158,6 +158,29 @@ public partial class TmSortableList<TItem> : TmComponentBase, IAsyncDisposable
     [Parameter] public EventCallback<SortableTransferArgs> OnTransfer { get; set; }
 
     /// <summary>
+    /// Whether the list reports the list a dragged row would currently land in, through <see cref="OnDragOver"/>.
+    /// Default <c>false</c>: the pointer drag reports its ONE commit on release and nothing else, which is what every
+    /// consumer did before this parameter existed.
+    /// <para>
+    /// A host that paints a PREVIEW of the drop (a board that projects "this card would land here" into the column under
+    /// the pointer) opts in. The report is throttled by the module and never replaces the commit: nothing is applied
+    /// until <see cref="OnTransfer"/> (or <see cref="OnReorder"/>) fires on release.
+    /// </para>
+    /// </summary>
+    [Parameter] public bool TrackDragOver { get; set; }
+
+    /// <summary>
+    /// Raised (throttled, only with <see cref="TrackDragOver"/> on) while a row of THIS list is dragged: once per list
+    /// the pointer moves over, and once more when the gesture ends or is cancelled with a null
+    /// <see cref="SortableDragOverArgs.ToListId"/> (the resting state). Never raised for a list that did not opt in.
+    /// <para>
+    /// The host paints whatever preview it wants and clears it on the resting report; the component changes nothing by
+    /// itself. A host that only re-renders on a CHANGED target keeps the throttle's contract intact.
+    /// </para>
+    /// </summary>
+    [Parameter] public EventCallback<SortableDragOverArgs> OnDragOver { get; set; }
+
+    /// <summary>
     /// Whether the reader may reorder the rows INSIDE this list. Default <c>true</c>. A host that only wants
     /// transfers between lists (a board whose column order means nothing) sets <c>false</c>: the keyboard
     /// grab/drop model and the per-row move menu are then not offered at all — a row that could be moved
@@ -682,6 +705,31 @@ public partial class TmSortableList<TItem> : TmComponentBase, IAsyncDisposable
         await InvokeAsync(StateHasChanged);
     }
 
+    /// <summary>
+    /// The throttled PREVIEW report of a live drag: the row at <paramref name="fromIndex"/> of this list is over
+    /// <paramref name="toListId"/>, or the gesture is over (<paramref name="toListId"/> null). Called from JS; not meant
+    /// to be called by hosts. Nothing is applied and nothing is announced — the host owns the preview, and the ONE
+    /// commit still arrives through <see cref="OnSortableTransferCommitted"/> on release.
+    /// </summary>
+    /// <param name="toListId">The list the row is over, or null for the resting state.</param>
+    /// <param name="fromListId">The list the dragged row belongs to (this list's id, echoed by the module).</param>
+    /// <param name="fromIndex">The index the row started at, in this list's items.</param>
+    [JSInvokable]
+    public async Task OnSortableDragOver(string? toListId, string? fromListId, int fromIndex)
+    {
+        if (!TrackDragOver || !OnDragOver.HasDelegate)
+        {
+            // A list that did not opt in (or a host that binds no handler) hears nothing: the pointer drag reports
+            // the ONE commit only, exactly as before TrackDragOver existed.
+            return;
+        }
+
+        var source = string.IsNullOrWhiteSpace(fromListId) ? EffectiveListId : fromListId!;
+        // The receiver of an EventCallback is marked for render by the callback itself, so the host's preview paints
+        // without this component changing anything (and without a redundant re-render of the list on every change).
+        await OnDragOver.InvokeAsync(new SortableDragOverArgs(source, fromIndex, toListId));
+    }
+
     // ---------- rendering helpers ----------
 
     private void Rebuild()
@@ -822,9 +870,12 @@ public partial class TmSortableList<TItem> : TmComponentBase, IAsyncDisposable
         // so a column that detaches while it has no rows could never receive the first card of a board.
         var group = string.IsNullOrWhiteSpace(Group) ? string.Empty : Group!;
         var grouped = group.Length > 0;
+        // The drag-over opt-in is part of the signature: a list that starts or stops reporting a live preview must
+        // re-attach, or the module would keep the options of the previous render.
         string? signature = Disabled || (IsEmpty && !grouped)
             ? null
-            : (IsWholeItem ? "whole-item" : "handle") + "|" + group + "|" + EffectiveListId;
+            : (IsWholeItem ? "whole-item" : "handle") + "|" + group + "|" + EffectiveListId
+                + (TrackDragOver ? "|drag-over" : string.Empty);
         if (signature == _attachedSignature)
         {
             return;
@@ -845,7 +896,7 @@ public partial class TmSortableList<TItem> : TmComponentBase, IAsyncDisposable
         _dotnetRef ??= DotNetObjectReference.Create(this);
         _interop ??= new SortableListInterop(JSRuntime);
         var handleMode = IsWholeItem ? "whole-item" : "handle";
-        await _interop.AttachAsync(_registrationId, _listRef, _dotnetRef, handleMode, group, EffectiveListId);
+        await _interop.AttachAsync(_registrationId, _listRef, _dotnetRef, handleMode, group, EffectiveListId, TrackDragOver);
     }
 
     /// <summary>Releases the JS registration and the .NET reference of this list.</summary>

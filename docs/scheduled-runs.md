@@ -84,11 +84,44 @@ A run with more than one slice also carries "Part 1 of 2", so a split run is rec
 
 **Pointer.** The drag is the shared `tm-sortable.js` over `pointer-drag.js`, driven through `TmSortableList`'s
 `Group`/`ListId`/`OnTransfer`: each window is a transfer-only list, so nothing announces an order inside a window.
+`Alt`+arrow is the keyboard step (below) and the menu is the tap/keyboard alternative.
 
 **Keyboard and tap.** Every run's move menu lists **every** window, with the current one named "(current)" and disabled.
 Its trigger paints the `MoreVertical` glyph (`data-icon="more-vertical"`), not a second drag grip: the row already carries
 the shared sortable handle, and two identical grips that do different things make a reader grab the wrong one. An empty run
 window is still a drop target (its sortable registration is kept while it has no rows) and accepts a run at slot `0`.
+
+### The one-step move chord (`Alt` + arrow)
+
+Beside the menu (which lists every window and therefore never needs to be learned), a focused run row moves one step with
+the chord the core `TmSortableList` already uses for its one-step move:
+
+| Chord | What it does |
+|---|---|
+| `Alt+ArrowLeft` / `Alt+ArrowRight` | Moves the run to the previous / next window in the surface's own time order. |
+| `Alt+ArrowUp` / `Alt+ArrowDown` | Moves the run to the FIRST window of the previous / next day. |
+
+* The documented key set is published on the row as `aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight Alt+ArrowUp
+  Alt+ArrowDown"` (board rows and table rows alike) and named in the visible instructions, so a reader can discover it;
+  the menu remains the alternative that needs no key knowledge, and the pointer drag remains the third path.
+* Two things make the chord impossible to do purely in Blazor: `Alt+ArrowLeft` / `Alt+ArrowRight` is ALSO the browser's
+  Back/Forward shortcut (and `@onkeydown:preventDefault` is unconditional per element, so it would swallow `Tab`), and the
+  element a reader actually focuses inside a run row is the move menu's trigger, whose content carries
+  `@onkeydown:stopPropagation` — Blazor never dispatches that key to the row. The package module
+  `_content/Tempo.Blazor.AI/js/tm-scheduled-runs.js` therefore wraps the **shared core helper** `attachKeyboardMove`
+  (`_content/Tempo.Blazor/js/pointer-drag.js`) on the surface root: a NATIVE listener there still sees the event (the
+  browser bubbles it through the root before Blazor's document-level dispatch). The helper cancels exactly the chord on the
+  row that declares `data-tm-run-move-keys`, calls `preventDefault`, never `stopPropagation`; the module resolves that row's
+  `data-run-id` and reports ONE `OnRunMoveStep(runId, key)` to the component. No second keyboard implementation, no model in
+  the browser. Without JavaScript the chord does nothing — the menu still lists every window, so nothing depends on it.
+* Each move goes through the SAME commit as a drop (`MoveToWindowAsync`), so it is announced through the one polite live
+  region and a target with no room is REFUSED exactly like a drop (the run stays put, the notice line and the region say
+  why). The surface still reports `OnMove` once.
+* An end of the range is **announced instead of silently ignored**: "… is already in the first / last window" and "… is
+  already on the first / last day". A run the plan did not place has no anchor, so `Alt+ArrowRight` enters at the first
+  window and `Alt+ArrowLeft` has nowhere to go.
+* `Alt+Shift+Arrow`, `Ctrl+Alt+Arrow` and a plain arrow are left alone — a plain arrow keeps scrolling the page, and the
+  chord never steals a key another control owns.
 
 A move is applied to the reader's own overlay, the plan is rebuilt, and the surface then checks what really happened: if
 the target window has no room for even the first slice, the move is **refused** — the run stays where it was, and both the
@@ -102,8 +135,8 @@ snapshot cannot undo the reader's move and a host that accepted it is never foug
 
 - One `role="group"` per presentation, described by the visible keyboard instructions.
 - Every state is a word plus an icon (status, full, overloaded); the table is the text alternative.
-- ONE polite live region announces a committed move and a refusal; an identical sentence is re-announced through an
-  invisible marker.
+- ONE polite live region announces a committed move, a refusal and the boundary of the keyboard range; an identical
+  sentence is re-announced through an invisible marker.
 - The window lists render no live region of their own.
 - Run rows are plain `listitem`s of a transfer-only list: no `aria-roledescription`, no per-row instructions and no tab
   stop — the window list keeps the instructions and the move menu is the keyboard path.
@@ -125,10 +158,18 @@ The `scheduled-runs` UI role, the `TmScheduledRuns` schema (`title`, `runs`, `wi
 declarative stencil (the day heading, the window cards with their capacity bar, the free/overloaded line and the run
 rows) ship in the built-in pack.
 
+**Wireframe check (Fáze 6): no stencil change.** The move chord is a runtime keyboard path over the existing
+`scheduled-runs` role and adds no `[Parameter]`, no view and no element a wireframe would draw, so the schema, the
+stencil and `TmScheduledRunsStencilTests` are unchanged (the documented key set lives on the rendered row's
+`aria-keyshortcuts`).
+
 ## Tests
 
 - `RunWindowTests` — the models: the exclusive end, the clamped capacity, the overload, the preference, the move request.
+- Node: `src/Tempo.Blazor.AI/wwwroot/js/__tests__/tm-scheduled-runs.test.mjs` (`npm run test:ai`) — the chord's key/modifier
+  filter and the run-id resolution.
 - `RunWindowPlannerTests` — the strategy: order, split, gap filling, unplaced units, preferred windows, slice times.
 - `TmScheduledRunsTests` — bUnit: the day groups, the capacity and the bar, the split, the views and their switching, the
-  table, the move and its refusal, the overlay, the single live region, localization.
+  table, the move and its refusal, the keyboard chord (both directions, the day step, the range boundaries, a full target,
+  the "other modifier does nothing" rule and the table row), the overlay, the single live region, localization.
 - `TmScheduledRunsCssTests`, `TmScheduledRunsStencilTests`.

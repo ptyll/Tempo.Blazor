@@ -62,6 +62,9 @@ lists (`AllowLocalReorder="false"`), because the order of cards inside a column 
 reorders nothing would announce a change the host ignores. While a card is over another column, that column carries
 `tm-sortable-list--drop-target`.
 
+Every column also opts into the module's **live drag-over report** (`TrackDragOver="true"` + `OnDragOver`), so the board
+knows WHICH card is being dragged and WHERE it would land *before* the release (see below).
+
 **Keyboard and tap.** Every card carries an **Assign** menu (a `TmContextMenu` whose trigger is the tab stop): one item
 per agent, plus "Move back to the backlog" for an assigned card. A full agent is named as full — "Planner (full)" — and
 its item is disabled, so the refusal is explained *before* it happens. This menu is the only keyboard path, which is why
@@ -82,12 +85,34 @@ project, so the column keeps saying "Free now".
 
 The preview follows **focus as well as hover** (a preview that needs a mouse is not available to everybody), and the
 column carries `data-preview="true"` plus a `data-state` of `free` / `busy` / `preview` so a host (or a test) never has
-to parse the sentence.
+to parse the sentence. During a **drag** the target column projects instead (see "The live landing preview" below).
 
 A **leave is deferred** (150 ms, `TmDelegateBoard.PreviewLeaveGrace`): `focusout` bubbles from every card, so stepping from
 one card to the next inside the same column fires a leave immediately followed by an enter. Clearing on the leave would
 blink the projection off and on, so the clear waits for a grace window that the next enter (or a newer leave) cancels — the
 preview is only dropped when the reader really left the column.
+
+## The live landing preview (while a card is being dragged)
+
+The resting preview needs the pointer (or focus) on a card; a **drag** has neither, so the board listens to the module's
+throttled drag-over report instead (`SortableDragOverArgs(FromListId, FromIndex, ToListId)`, raised on the source column):
+
+* The first report (`ToListId == FromListId`) tells the board which card left which column.
+* A report naming ANOTHER column makes that column the target: it carries `data-drag-over="true"`, its border turns to the
+  primary token and its availability line projects the dragged card's estimate — "Occupied until 14:50 with the card being
+  moved" (`TmDelegateBoard_DragUntil`) with `data-state="preview"` and `data-estimate="true"`.
+* Every OTHER column — the **source** included — falls back to its own resting load, so the source column shows its
+  projection **without** the lifted card instead of claiming a time that includes work which is leaving.
+* A **full** target is still marked (`data-drag-over="true"` + the danger edge, drawn **dashed** so the refusal is a shape
+  and not only a colour) but projects nothing: the board never promises a time for a card it is going to refuse, and the
+  column keeps its "Full" word.
+* A drag over the **backlog** marks the backlog (`data-drag-over="true"`) and projects no column.
+* The gesture's end is a **resting report** (`ToListId == null`), whether the drop was committed, refused, escaped or
+  cancelled by `pointercancel` — every column returns to its own state and a focus/hover preview the reader had before the
+  drag comes back. Nothing is announced during a drag: the ONE committed move still speaks through the single live region.
+
+`data-drag-over` is the stable hook (a host or a test never parses the sentence); `TmDelegateBoard.IsDragging`,
+`DraggedTask` and `IsDragTarget(agent)` are the internal decisions behind it.
 
 ## The overlay: the reader's move versus the host's data
 
@@ -104,7 +129,8 @@ A task assigned to an agent the board does not show stays in the backlog, so not
 
 - Every state is a **word** plus an icon: capacity, "Full", the priority grade, the availability line.
 - ONE polite live region announces every committed move and every refusal; an identical sentence is re-announced through
-  an invisible marker (a live region announces a mutation, not a repeat).
+  an invisible marker (a live region announces a mutation, not a repeat). A live drag speaks through the same region only
+  when it ENDS (a committed move or a refusal), never once per hovered column.
 - The transfer-only lists render **no** live region of their own, so a board has exactly one.
 - A card is a plain `listitem`: the columns are transfer-only, so no `aria-roledescription`, no per-row instructions and
   no tab stop are offered (the column keeps the instructions). The Assign menu is the keyboard path, and its trigger paints
@@ -129,11 +155,17 @@ The `delegate-board` UI role, the `TmDelegateBoard` schema (`title`, `tasks`, `a
 declarative stencil (the backlog, the agent columns with their capacity line, the full column and the Assign action)
 ship in the built-in pack.
 
+**Wireframe check (Fáze 6): no stencil change.** The live landing preview is a runtime STATE of the existing
+`delegate-board` role (the `data-drag-over` frame plus the target column's availability line), not a new component, a new
+parameter or a new view — a wireframe shows the resting board, exactly as it did before this phase, so
+`TmDelegateBoardStencilTests` and the `delegate-board` schema are unchanged.
+
 ## Tests
 
 - `DelegateTaskTests` — the models: identity, the estimate and priority rules, capacity, the stale `BusyUntil`, the move
   request.
 - `DelegateAutoAssignerTests` — the strategy: candidates, order, the pass, the backlog order, the projection.
 - `TmDelegateBoardTests` — bUnit: the columns, the card states, capacity and the full column, the preview, the menu,
-  the transfer and the refusal, the automatic pass, the overlay, the single live region, localization.
+  the transfer and the refusal, the live drag-over projection (target, source, full target, backlog, cancel), the
+  automatic pass, the overlay, the single live region, localization.
 - `TmDelegateBoardCssTests`, `TmDelegateBoardStencilTests`.

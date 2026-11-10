@@ -130,6 +130,22 @@
     border-color: var(--tm-color-warning);
 }
 
+/* The column a dragged card would land in RIGHT NOW. The shared module already marks the list
+   (tm-sortable-list--drop-target); this rule names the COLUMN, so the frame, the header projection and the
+   drop mark change together. It sits AFTER the full state on purpose: a transient target beats the resting
+   warning edge, and a FULL target keeps the danger tone because the drop is going to be refused. */
+.tm-ai-delegate__column[data-drag-over='true'] {
+    border-color: var(--tm-color-primary);
+    box-shadow: 0 0 0 var(--tm-border-width) var(--tm-color-primary);
+}
+
+.tm-ai-delegate__column[data-drag-over='true'][data-full='true'] {
+    border-color: var(--tm-color-danger);
+    /* The refusal is never colour alone: a dashed frame says "not here" without relying on the tone. */
+    border-style: dashed;
+    box-shadow: 0 0 0 var(--tm-border-width) var(--tm-color-danger);
+}
+
 .tm-ai-delegate__column-head {
     display: flex;
     flex-direction: column;
@@ -365,6 +381,14 @@
     .tm-ai-delegate__full,
     .tm-ai-delegate__availability {
         color: CanvasText;
+    }
+
+    /* The live drop target is a frame that has to survive high contrast: a box-shadow is dropped there, so the
+       target keeps a real system-coloured outline instead. */
+    .tm-ai-delegate__column[data-drag-over='true'] {
+        border-color: Highlight;
+        outline: 2px solid Highlight;
+        outline-offset: calc(-1 * var(--tm-border-width));
     }
 
     .tm-ai-delegate__assign:focus-within,

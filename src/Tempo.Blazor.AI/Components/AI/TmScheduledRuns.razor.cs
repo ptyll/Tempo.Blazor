@@ -1,5 +1,7 @@
+using System.ComponentModel;
 using System.Globalization;
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 using Tempo.Blazor.AI.Models;
 using Tempo.Blazor.Components.DataDisplay;
 using Tempo.Blazor.Components.Inputs;
@@ -30,8 +32,18 @@ namespace Tempo.Blazor.Components.AI;
 /// the surface owns exactly ONE polite live region.
 /// </para>
 /// </summary>
-public partial class TmScheduledRuns : TmComponentBase
+public partial class TmScheduledRuns : TmComponentBase, IAsyncDisposable
 {
+    /// <summary>
+    /// The key set that moves a run without dragging (WCAG 2.5.7), in the ARIA <c>aria-keyshortcuts</c> grammar:
+    /// <c>Alt+ArrowLeft</c> / <c>Alt+ArrowRight</c> move the run to the previous / next window and
+    /// <c>Alt+ArrowUp</c> / <c>Alt+ArrowDown</c> to the previous / next day. The same Alt+arrow convention
+    /// <c>TmSortableList</c> uses for its one-step move; the chord itself is recognised by the package module
+    /// <c>tm-scheduled-runs.js</c>, which wraps the shared core <c>attachKeyboardMove</c> helper (that is also what keeps
+    /// the browser's Back/Forward history shortcut out of it).
+    /// </summary>
+    internal const string MoveShortcuts = "Alt+ArrowLeft Alt+ArrowRight Alt+ArrowUp Alt+ArrowDown";
+
     private readonly string _id = $"tm-ai-runs-{Guid.NewGuid():n}"[..21];
 
     private readonly Dictionary<string, ScheduledRun> _movedRuns = new(StringComparer.Ordinal);
@@ -55,6 +67,12 @@ public partial class TmScheduledRuns : TmComponentBase
     private string _announcement = string.Empty;
     private string _notice = string.Empty;
     private bool _announcementMarker;
+
+    [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
+
+    private ElementReference _rootRef;
+    private ScheduledRunsInterop? _interop;
+    private DotNetObjectReference<TmScheduledRuns>? _self;
 
     // ── Parameters ───────────────────────────────────────────────────────────
 
@@ -209,6 +227,34 @@ public partial class TmScheduledRuns : TmComponentBase
 
         PruneMoves();
         Rebuild();
+    }
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // The Alt+arrow chord is also the browser's Back/Forward shortcut and sits behind a menu-trigger key fence, so
+        // Blazor cannot own it. The package module (over the shared core helper) suppresses exactly that chord on the
+        // rows below and reports one step back; without JavaScript the menu still lists every window, so the chord is
+        // only ever the shortcut, never the only path.
+        if (firstRender)
+        {
+            _interop ??= new ScheduledRunsInterop(JSRuntime);
+            _self ??= DotNetObjectReference.Create(this);
+            await _interop.AttachAsync(_rootRef, _self);
+        }
+    }
+
+    /// <summary>Releases the shared keyboard guard of the surface.</summary>
+    public async ValueTask DisposeAsync()
+    {
+        if (_interop is not null)
+        {
+            await _interop.DisposeAsync();
+            _interop = null;
+        }
+
+        _self?.Dispose();
+        _self = null;
     }
 
     private static bool IsKnownView(RunViewMode view)
@@ -422,6 +468,151 @@ public partial class TmScheduledRuns : TmComponentBase
         Rebuild();
         StateHasChanged();
         await SelectedDayChanged.InvokeAsync(day);
+    }
+
+    // ── Moving a run with the keyboard (WCAG 2.5.7) ─────────────────────────
+
+    /// <summary>
+    /// The documented Alt+arrow chord on a run row: previous / next window, and previous / next day. The chord is a
+    /// ONE-STEP move of the focused run — it is not a grab mode, so the menu (which lists every window) stays the
+    /// alternative that never depends on knowing the key set.
+    /// <para>
+    /// A key past an end of the range changes nothing and is ANNOUNCED, so a reader who reaches the edge learns why the
+    /// run did not move; a move into a window with no room goes through the same commit as a drop, so it is REFUSED with
+    /// the same notice and announcement. The module attached in <see cref="OnAfterRenderAsync"/> owns the chord (the
+    /// key set, the modifiers and the browser's Back/Forward shortcut); this method owns what a key MEANS.
+    /// </para>
+    /// <para>
+    /// Called from JS; not meant to be called by hosts.
+    /// </para>
+    /// </summary>
+    /// <param name="runId">The run id of the focused row (resolved by the module from <c>data-run-id</c>).</param>
+    /// <param name="key">The <c>KeyboardEvent.key</c> the module accepted.</param>
+    /// <returns>A task that completes when the move (or the boundary announcement) is done.</returns>
+    // The identifier is explicit: Blazor resolves a JS-side invocation by the EXACT name (it never strips an "Async"
+    // suffix), and the package module calls `OnRunMoveStep`.
+    [JSInvokable("OnRunMoveStep")]
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public async Task OnRunMoveStepAsync(string? runId, string? key)
+    {
+        ScheduledRun? run = null;
+        foreach (var candidate in _runsView)
+        {
+            if (string.Equals(candidate.Id, runId, StringComparison.Ordinal))
+            {
+                run = candidate;
+                break;
+            }
+        }
+
+        if (run is null || string.IsNullOrWhiteSpace(key))
+        {
+            return;
+        }
+
+        // The module already filtered the chord (Alt only, no Ctrl/Meta/Shift); the mapping below is the ONE place
+        // that decides what each key means, so a future key joins here and nowhere else.
+        var windowStep = key switch
+        {
+            "ArrowLeft" => -1,
+            "ArrowRight" => 1,
+            _ => 0,
+        };
+        var dayStep = key switch
+        {
+            "ArrowUp" => -1,
+            "ArrowDown" => 1,
+            _ => 0,
+        };
+
+        if (windowStep == 0 && dayStep == 0)
+        {
+            return;
+        }
+
+        var target = windowStep != 0 ? NeighbourWindow(run, windowStep) : NeighbourDayWindow(run, dayStep);
+        if (target is null)
+        {
+            var backward = windowStep < 0 || dayStep < 0;
+            Announce(windowStep != 0
+                ? Loc[backward ? "TmScheduledRuns_ShortcutFirstWindow" : "TmScheduledRuns_ShortcutLastWindow",
+                    TitleOf(run)]
+                : Loc[backward ? "TmScheduledRuns_ShortcutFirstDay" : "TmScheduledRuns_ShortcutLastDay",
+                    TitleOf(run)]);
+            _notice = string.Empty;
+            StateHasChanged();
+            return;
+        }
+
+        await MoveToWindowAsync(run, target);
+    }
+
+    /// <summary>
+    /// The window one step before or after the run's own in the surface's time order. A run the plan did not place has
+    /// no anchor, so a FORWARD step enters at the first window and a BACKWARD step has nowhere to go.
+    /// </summary>
+    /// <param name="run">The run being moved.</param>
+    /// <param name="direction">−1 for the previous window, +1 for the next.</param>
+    /// <returns>The neighbouring window, or null at the end of the range.</returns>
+    internal RunWindow? NeighbourWindow(ScheduledRun run, int direction)
+    {
+        if (_windowList.Count == 0 || Math.Sign(direction) == 0)
+        {
+            return null;
+        }
+
+        var current = IndexOfWindow(PlanOf(run.Id)?.FirstWindow?.Id);
+        var index = current < 0 ? (direction > 0 ? 0 : -1) : current + Math.Sign(direction);
+        return index >= 0 && index < _windowList.Count ? _windowList[index] : null;
+    }
+
+    /// <summary>
+    /// The FIRST window of the day one step before or after the run's own day, so "next day" always enters the new day
+    /// at its start instead of guessing an ordinal window the next day may not have.
+    /// </summary>
+    /// <param name="run">The run being moved.</param>
+    /// <param name="direction">−1 for the previous day, +1 for the next.</param>
+    /// <returns>The first window of that day, or null at the end of the range.</returns>
+    internal RunWindow? NeighbourDayWindow(ScheduledRun run, int direction)
+    {
+        if (_windowList.Count == 0 || Math.Sign(direction) == 0)
+        {
+            return null;
+        }
+
+        var days = _windowList.Select(window => window.Day).Distinct().OrderBy(day => day).ToList();
+        var anchor = PlanOf(run.Id)?.FirstWindow?.Day ?? CurrentDay ?? days[0];
+        var index = days.IndexOf(anchor);
+        if (index < 0)
+        {
+            index = direction > 0 ? -1 : days.Count;
+        }
+
+        var target = index + Math.Sign(direction);
+        if (target < 0 || target >= days.Count)
+        {
+            return null;
+        }
+
+        return _windowList.First(window => window.Day == days[target]);
+    }
+
+    private int IndexOfWindow(string? windowId)
+    {
+        if (string.IsNullOrWhiteSpace(windowId))
+        {
+            return -1;
+        }
+
+        for (var index = 0; index < _windowList.Count; index++)
+        {
+            if (string.Equals(_windowList[index].Id, windowId, StringComparison.Ordinal))
+            {
+                return index;
+            }
+        }
+
+        return -1;
     }
 
     /// <summary>

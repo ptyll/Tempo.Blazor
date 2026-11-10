@@ -131,6 +131,20 @@ public sealed class TmDelegateBoardCssTests
     }
 
     [Fact]
+    public void AFullDragTarget_IsRefusedWithoutColourAlone()
+    {
+        const string selector = ".tm-ai-delegate__column[data-drag-over='true'][data-full='true']";
+        var css = BoardCss();
+        var start = css.IndexOf(selector, StringComparison.Ordinal);
+        start.Should().BeGreaterThanOrEqualTo(0, "a full target is still marked, so the reader learns why the drop was refused");
+
+        var end = css.IndexOf('}', start);
+        end.Should().BeGreaterThan(start);
+        css[start..end].Should().Contain("border-style: dashed",
+            "the refusal must carry a cue that does not depend on colour (WCAG 1.4.1)");
+    }
+
+    [Fact]
     public void TheAssignMenu_CarriesARealFocusRing()
     {
         var css = BoardCss();

@@ -260,6 +260,50 @@
   guards the container query and the one reduced-away animation. E2E: `AiAgentsE2ETests` gained the no-scroll keyboard
   case, two queued undo rows and a category edit at 375 px / 1440 px.
 
+### Added — live drop preview and a keyboard move chord (plan 7ba95ed6, Fáze 6)
+
+- **`TmSortableList` gained the opt-in LIVE drag-over report.** New `TrackDragOver` (`bool`, default `false`) and
+  `OnDragOver(EventCallback<SortableDragOverArgs>)` plus the public `SortableDragOverArgs(FromListId, FromIndex,
+  ToListId)`, raised on the SOURCE list while a row is dragged: `ToListId` names the list the row would land in, equals
+  `FromListId` while it is still over its own list (that first report is how a host learns WHICH row is being dragged), and
+  is `null` once the gesture ends or is cancelled — the RESTING state, so a projection painted during the drag can be taken
+  back. The `tm-sortable.js` module gained a public `createDragOverThrottle` (leading report at once, one trailing report with
+  the latest list inside the 100 ms window, de-duplication, `cancel()` → resting) and reports only when the list opts in
+  (`options.dragOver`), so every existing consumer behaves byte-for-byte as before. The report is a PREVIEW: nothing is
+  applied and nothing is announced while the gesture runs, and the ONE commit still arrives through `OnTransfer` on release.
+  Node tests: `tm-sortable.test.mjs` (throttle, trailing latest-wins, de-duplication, cancel, opt-in, resting report).
+- **`TmDelegateBoard` projects the landing while a card is dragged.** Every column opts into the report, so the target column
+  carries `data-drag-over="true"`, turns its frame to the primary token and projects the dragged card's estimate into its
+  availability line ("Occupied until 14:50 with the card being moved", `data-state="preview"`). Every other column — the
+  **source** included — falls back to its own resting load, so the source shows its projection WITHOUT the lifted card; a
+  **full** target is still marked (with the danger edge) but promises nothing, and a drag over the **backlog** marks the
+  backlog and projects no column. Escape / `pointercancel` / a refused drop return every column to its own state through the
+  resting report.
+- **`TmScheduledRuns` moves a run with `Alt` + arrow.** Focusing a run row's menu trigger and pressing `Alt+ArrowLeft` /
+  `Alt+ArrowRight` moves the run to the previous / next window in the surface's time order; `Alt+ArrowUp` / `Alt+ArrowDown`
+  move it to the FIRST window of the previous / next day. The key set is published on every run row (board and table) as
+  `aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight Alt+ArrowUp Alt+ArrowDown"` and named in the visible instructions; the
+  move menu stays the alternative that needs no key knowledge and the pointer drag the third path. Each move runs the SAME
+  commit as a drop (so it is announced through the one polite live region and a window with no room is refused exactly like a
+  drop), and an end of the range is announced instead of silently ignored ("… is already in the first / last window", "… is
+  already on the first / last day"). `Alt+ArrowLeft/Right` is also the browser's Back/Forward shortcut, and the focus a reader actually has inside a run row is
+  the move menu's trigger whose content fences Blazor's key dispatch — so the chord lives in the package module
+  `_content/Tempo.Blazor.AI/js/tm-scheduled-runs.js`, which wraps the SHARED core helper `attachKeyboardMove` from
+  `_content/Tempo.Blazor/js/pointer-drag.js` (through `ScheduledRunsInterop`): it cancels exactly that chord on the row that
+  declares `data-tm-run-move-keys`, never stops propagation, resolves the focused row's `data-run-id` and reports ONE
+  `OnRunMoveStep(runId, key)` back — no second keyboard implementation, no second drag and no model in the browser.
+- **Docs, overlays and demo.** [docs/sortable-list.md](docs/sortable-list.md) gained the `TrackDragOver` contract and the
+  throttle; [docs/delegate-board.md](docs/delegate-board.md) "The live landing preview"; [docs/scheduled-runs.md](docs/scheduled-runs.md)
+  the key table and the guard. The JSON documentation overlay gained `SortableDragOverArgs` and the two `TmSortableList`
+  parameters, and `validate --fail-on-drift` is clean. The demo `/ai-agents` needs no change: the board and the week of runs
+  already carry the real data the new interactions walk.
+- **Tests.** New bUnit facts in `TmDelegateBoardTests` (the opt-in wiring, the target projection, the source column dropping
+  the lifted card, a full target claiming nothing, the cancel/resting report and the backlog target) and
+  `TmScheduledRunsTests` (the advertised key set, both window directions, the day step and back, all four range boundaries,
+  a full target, the "other modifier does nothing" rule and the table row); `tm-sortable.test.mjs` gained the throttle and
+  opt-in specimens. E2E: `AiAgentsE2ETests` drags a card between columns with the live projection (and onto the full column),
+  cancels a drag with Escape and moves a run with the chord in both themes and at 375 px.
+
 ### Breaking changes and migration
 
 **No source-breaking change.** Every new member is additive or a default interface member; every new component is new. The behavior changes below are the complete list a 2.10.0 consumer can notice, with before/after:
@@ -296,6 +340,8 @@
 | `TmMemoryPanel` root container | The card was a plain flex column that sized from its content | The card declares `container-type: inline-size` + `container-name: tm-memory` (that is what the filter query reads) | None in a block/grid/flex STRETCH context (the normal case). A host that made the card shrink-to-fit (a float, an inline-block, a `width: auto` flex item that relied on the content's intrinsic width) must give it an explicit width — inline-size containment makes the card independent of its contents by design |
 | `TmMemoryPanel` status filter | One control: the five-segment tray | Two surfaces under `[data-testid='memory-status-filter']`: `…-segmented` (the tray) and `…-select` (a real `<select>`, shown on a narrow card) | None for behaviour — both feed the same `@bind-StatusFilter`. A test or host selector that clicked the first control inside `memory-status-filter` keeps working on a wide card; on a narrow one the tray is `display: none` (not focusable), so target the visible surface explicitly or pin `FilterPresentation` |
 | `TmMemoryPanel` `OnEdit` with `OnEditItem` bound | `OnEdit` fired for every committed text edit | A bound `OnEditItem` owns the commit (it carries the changed-field set), so `OnEdit` does not fire for the same edit; without `OnEditItem` nothing changes | None unless both are bound: keep `OnEdit` alone (pre-2.11.0), or move the host to `OnEditItem` and read `edit.Text` |
+| `TmScheduledRuns` run rows (`Alt` + arrow) | The chord did nothing in the surface — and `Alt+ArrowLeft` / `Alt+ArrowRight` ran the browser's Back/Forward history navigation | The chord moves the focused run one window (←/→) or one day (↑/↓), is announced through the live region and is advertised in `aria-keyshortcuts`; the browser's history shortcut is suppressed on a row that declares `data-tm-run-move-keys` (the shared `attachKeyboardMove` helper, no `stopPropagation`) | None: the surface takes no key another control owns (`Alt+Shift`, `Ctrl+Alt`, plain arrows and every other key are untouched), and a host handler on the same row still receives the event. A host that documented the old, inert behaviour must update its copy |
+| `TmDelegateBoard` column markup | A column exposed `data-column` / `data-agent-id` / `data-full` / `data-preview` | Adds `data-drag-over="true\|false"` on the backlog and every agent column, and the target column's availability line projects the dragged card while the gesture runs | None — additive state attributes; a selector that matches `.tm-ai-delegate__column` is unaffected |
 
 
 ### Release preparation

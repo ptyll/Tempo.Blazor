@@ -17,7 +17,8 @@
    Moving a run is the shared tm-sortable drag over pointer-drag.js through TmSortableList's group support (the windows
    are the lists), and every row's menu lists every window — the keyboard and tap alternative (WCAG 2.5.7). ONE polite
    live region announces a committed move. *@
-<section class="@RootClass"
+<section @ref="_rootRef"
+         class="@RootClass"
          data-testid="@RootTestId("scheduled-runs")"
          data-view="@ViewSlug(_view)"
          data-windows="@Invariant(WindowViews.Count)"
@@ -103,7 +104,9 @@
                             data-testid="@TestId("runs-table-row")"
                             data-run-id="@entry.Plan.Run.Id"
                             data-window-id="@(entry.Segment?.Window.Id)"
-                            data-status="@StatusSlug(entry.Plan.Run.Status)">
+                            data-status="@StatusSlug(entry.Plan.Run.Status)"
+                            aria-keyshortcuts="@MoveShortcuts"
+                            data-tm-run-move-keys>
                             <th scope="row" class="tm-ai-runs__cell tm-ai-runs__cell--run" data-testid="@TestId("runs-run-title")">
                                 <span class="tm-ai-runs__run-dot" aria-hidden="true" style="--tm-runs-run-color: var(@RunColorToken(entry.Plan.Run))"></span>
                                 @TitleOf(entry.Plan.Run)
@@ -265,6 +268,11 @@
         builder.AddAttribute(sequence++, "data-testid", TestId("runs-run"));
         builder.AddAttribute(sequence++, "data-run-id", entry.Plan.Run.Id);
         builder.AddAttribute(sequence++, "data-status", StatusSlug(entry.Plan.Run.Status));
+        // The documented move keys. The row is where they are announced; the pointer/menu stay the alternatives.
+        builder.AddAttribute(sequence++, "aria-keyshortcuts", MoveShortcuts);
+        // The chord itself is owned by the package module (the browser's Back/Forward shortcut and the menu's
+        // key fence both live below Blazor's view); this attribute is how the module finds the row it belongs to.
+        builder.AddAttribute(sequence++, "data-tm-run-move-keys", true);
 
         builder.OpenElement(sequence++, "span");
         builder.AddAttribute(sequence++, "class", "tm-ai-runs__run-dot");

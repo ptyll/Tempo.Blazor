@@ -43,6 +43,13 @@ const GRABBED_ATTR = 'data-grabbed';
 const WHOLE_ITEM_LONG_PRESS_MS = 400;
 
 /**
+ * How long the OPT-IN drag-over report of a group is throttled (ms). A pointer crosses a column boundary once, so the
+ * LEADING report is what the reader sees; the window only matters for a pointer that sweeps across several lists in one
+ * gesture, where the TRAILING report names the list it finally rests over instead of flooding .NET with every frame.
+ */
+const DEFAULT_DRAG_OVER_THROTTLE_MS = 100;
+
+/**
  * The keys a GRABBED row owns on keydown. Tab is deliberately absent: the browser must still move the
  * focus out of the row, or the grab becomes the keyboard trap WCAG 2.1.2 forbids — so Tab cancels the
  * grab in Blazor and its default action is left alone.
@@ -141,6 +148,89 @@ export function resolveContainerIndex(rects, x, y) {
 
 const registrations = new Map();
 
+/**
+ * The throttled reporter behind the OPT-IN drag-over callback. It exists so a board can project "this card would land
+ * here" into the column the pointer is over WHILE the gesture is still running, without .NET hearing about every
+ * pointer frame: the first change of the gesture is reported at once (the projection must not lag behind the pointer),
+ * a change inside the window is reported once when the window closes (the latest list wins), and an unchanged value is
+ * never repeated. `cancel()` drops a pending report and tells the caller the drag is over.
+ *
+ * Every seam (clock, timers) is injectable, so the whole leading/trailing decision is node-tested without a real timer.
+ * @param {(value: any) => void} report receives the throttled value
+ * @param {{throttleMs?: number, now?: () => number, setTimeout?: Function, clearTimeout?: Function}} [options]
+ * @returns {{notify: (value: any) => void, cancel: () => void}} the reporter
+ */
+export function createDragOverThrottle(report, options = {}) {
+    const throttleMs = Number.isFinite(options.throttleMs) && options.throttleMs >= 0
+        ? options.throttleMs
+        : DEFAULT_DRAG_OVER_THROTTLE_MS;
+    const now = typeof options.now === 'function' ? options.now : () => performance.now();
+    const setTimer = typeof options.setTimeout === 'function'
+        ? options.setTimeout
+        : (fn, ms) => setTimeout(fn, ms);
+    const clearTimer = typeof options.clearTimeout === 'function'
+        ? options.clearTimeout
+        : (id) => clearTimeout(id);
+
+    let lastReported;
+    let lastEmit = -Infinity;
+    let pending;
+    let timer = null;
+
+    function emit(value) {
+        lastReported = value;
+        lastEmit = now();
+        report(value);
+    }
+
+    function flush() {
+        timer = null;
+        if (pending === undefined) return;
+        const value = pending;
+        pending = undefined;
+        if (value !== lastReported) emit(value);
+    }
+
+    return {
+        /**
+         * Reports the current value unless the caller already knows it (or it is already the pending one).
+         * @param {any} value the hovered list id (or null for the resting state)
+         */
+        notify(value) {
+            const current = pending !== undefined ? pending : lastReported;
+            if (value === current) return;
+
+            const elapsed = now() - lastEmit;
+            if (timer === null && elapsed >= throttleMs) {
+                emit(value);
+                return;
+            }
+
+            pending = value;
+            if (timer === null) {
+                timer = setTimer(flush, Math.max(0, throttleMs - elapsed));
+            }
+        },
+        /**
+         * Ends the gesture: a pending report is dropped (it is stale) and the caller is told there is no target any
+         * more, so a projection painted during the drag returns to rest. A gesture that never reported anything says
+         * nothing (a board that only tracks drag-overs must not hear about a press that never became a drag).
+         */
+        cancel() {
+            if (timer !== null) {
+                clearTimer(timer);
+                timer = null;
+            }
+
+            const reported = lastReported !== undefined && lastReported !== null;
+            pending = undefined;
+            lastReported = undefined;
+            lastEmit = -Infinity;
+            if (reported) report(null);
+        },
+    };
+}
+
 function readBoxes(root, grip) {
     const rows = [...root.querySelectorAll(ITEM_SELECTOR)];
     return rows.map((row) => {
@@ -187,8 +277,10 @@ function clearInlineStyles(entries) {
  *        inside a group, OnSortableTransferCommitted(toListId, from, insertIndex)
  * @param {string} id registration key (one per component instance)
  * @param {string} handleMode 'handle' or 'whole-item'
- * @param {{group?: string, listId?: string}|null} [options] cross-list membership: lists that pass the
- *        same non-empty group accept each other's rows
+ * @param {{group?: string, listId?: string, dragOver?: boolean, dragOverThrottleMs?: number}|null} [options] cross-list
+ *        membership: lists that pass the same non-empty group accept each other's rows. `dragOver: true` opts IN to the
+ *        throttled `OnSortableDragOver(toListId, fromListId, fromIndex)` report (default off, so no other consumer of
+ *        this module changes), whose trailing call carries `null` as the target when the gesture ends or is cancelled.
  */
 export function attachSortable(root, dotnet, id, handleMode, options = null) {
     if (!root || typeof root.querySelectorAll !== 'function') return;
@@ -197,6 +289,16 @@ export function attachSortable(root, dotnet, id, handleMode, options = null) {
     const group = typeof options?.group === 'string' ? options.group : '';
     const listId = typeof options?.listId === 'string' ? options.listId : id;
     const { gripSelector, longPressMs } = optionsFor(handleMode);
+    // The source of the gesture as .NET needs to hear it. It survives finish() long enough for the resting report.
+    let dragSource = null;
+    const dragOver = options?.dragOver === true
+        ? createDragOverThrottle((toListId) => {
+            const source = dragSource;
+            if (!source) return;
+            dotnet?.invokeMethodAsync('OnSortableDragOver', toListId ?? null, source.listId, source.fromIndex)
+                ?.catch?.(() => {});
+        }, { throttleMs: options?.dragOverThrottleMs })
+        : null;
     let boxes = [];
     let active = null;
     const scroller = createAutoScroller(root, {
@@ -327,6 +429,9 @@ export function attachSortable(root, dotnet, id, handleMode, options = null) {
         }
 
         highlight(foreign ? container : null);
+        // The OPT-IN report: the list the row would land in — the source list counts, because that is how the host
+        // learns WHICH row is being dragged. Only a change costs an invocation (the throttle de-duplicates).
+        if (dragOver) dragOver.notify(container ? container.listId : null);
     }
 
     /** Marks the list the row would land in, so a pointer drag says where it is about to drop. */
@@ -371,6 +476,7 @@ export function attachSortable(root, dotnet, id, handleMode, options = null) {
             const sourceIndex = Math.max(0, list.findIndex(entry => entry.root === root));
             const container = list[sourceIndex];
             if (container) container.boxes = boxes;
+            dragSource = { listId, fromIndex };
             active = {
                 from: fromIndex,
                 to: fromIndex,
@@ -432,6 +538,10 @@ export function attachSortable(root, dotnet, id, handleMode, options = null) {
         active = null;
         boxes = [];
         scroller.stop();
+        // The gesture is over: a pending drag-over report is stale and `.NET` is told there is no target any more, so
+        // a projection painted into a column returns to its resting state (a REFUSED drop must not leave it behind).
+        dragOver?.cancel();
+        dragSource = null;
     }
 
     // The page-scroll guard of a grabbed row. It lives here (not in a render-time

@@ -59,6 +59,7 @@
 
         <section class="tm-ai-delegate__column tm-ai-delegate__column--backlog"
                  data-column="backlog"
+                 data-drag-over="@(IsBacklogDragTarget ? "true" : "false")"
                  aria-labelledby="@BacklogTitleId">
             <header class="tm-ai-delegate__column-head">
                 @BacklogTitle
@@ -73,10 +74,12 @@
                             ListId="@BacklogListId"
                             AllowLocalReorder="false"
                             ShowMoveMenu="false"
+                            TrackDragOver="true"
                             AriaLabel="@Loc["TmDelegateBoard_BacklogTitle"]"
                             KeySelector="TaskKey"
                             ItemLabelSelector="TaskLabel"
                             OnTransfer="OnTransferAsync"
+                            OnDragOver="OnDragOverAsync"
                             DataTestId="@TestId("delegate-backlog-list")">
                 <ItemTemplate Context="task">
                     @TaskRow(task, null)
@@ -98,6 +101,7 @@
                      data-agent-id="@agent.Id"
                      data-full="@(agent.IsFull ? "true" : "false")"
                      data-preview="@(_previewAgentId == agent.Id ? "true" : "false")"
+                     data-drag-over="@(IsDragTarget(agent) ? "true" : "false")"
                      aria-labelledby="@ColumnTitleId(agent)"
                      @onmouseenter="() => OnAgentPreviewEnter(agent)"
                      @onmouseleave="() => OnAgentPreviewLeaveAsync(agent)"
@@ -134,10 +138,12 @@
                                 ListId="@agent.Id"
                                 AllowLocalReorder="false"
                                 ShowMoveMenu="false"
+                                TrackDragOver="true"
                                 AriaLabel="@AgentListLabel(agent)"
                                 KeySelector="TaskKey"
                                 ItemLabelSelector="TaskLabel"
                                 OnTransfer="OnTransferAsync"
+                                OnDragOver="OnDragOverAsync"
                                 DataTestId="@TestId("delegate-agent-list")">
                     <ItemTemplate Context="task">
                         @TaskRow(task, agent)

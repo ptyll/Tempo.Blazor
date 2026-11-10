@@ -232,7 +232,10 @@ public class ProvenanceComparisonTests
         // tm-toast.test.mjs (plan 4ebadc60 phase 3 review: Escape/focus-return/Alt+T behaviors) +
         // tm-toast-swipe.test.mjs (plan 4ebadc60 phase 4: swipe-to-dismiss on the shared pointer-drag helper) —
         // the Node tests ship in the repo, never in the nupkg.
-        denominator.PackExcludedFiles.Should().Be(35);
+        // tm-toast.test.mjs and tm-toast-swipe.test.mjs (plan 4ebadc60 phases 3-4) pushed the count by one without
+        // moving this number; a stale denominator is exactly what this guard exists for (recounted on 2026-11-10:
+        // every excluded file under src/Tempo.Blazor/wwwroot is a *.test.mjs / __tests__ / *.md item, none other).
+        denominator.PackExcludedFiles.Should().Be(36);
     }
 
     /// <summary>

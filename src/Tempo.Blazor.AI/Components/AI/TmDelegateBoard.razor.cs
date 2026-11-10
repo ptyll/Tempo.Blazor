@@ -64,6 +64,14 @@ public partial class TmDelegateBoard : TmComponentBase, IDisposable
 
     private string? _previewAgentId;
     private string? _previewTaskId;
+
+    // The LIVE drag (opt-in through TmSortableList.TrackDragOver): which card is being dragged, where it came from
+    // and the one column it would land in. Null while no gesture is running. The lifted card itself is resolved once
+    // per report (and once per rebuild) instead of on every read: the projection asks for it once per column.
+    private DelegateTask? _dragTask;
+    private string? _dragTaskId;
+    private string? _dragSourceListId;
+    private string? _dragTargetListId;
     // The grace window a column's preview survives after focus/pointer leaves it: a focus move between two
     // cards of the SAME column fires focusout then focusin, and clearing on the first one blinks the preview.
     private CancellationTokenSource? _previewLeaveCts;
@@ -325,6 +333,27 @@ public partial class TmDelegateBoard : TmComponentBase, IDisposable
         return [];
     }
 
+    /// <summary>The board's card with the supplied id, or null when this board does not show it.</summary>
+    /// <param name="taskId">The id to look for.</param>
+    /// <returns>The card, or null.</returns>
+    private DelegateTask? FindTask(string? taskId)
+    {
+        if (string.IsNullOrEmpty(taskId))
+        {
+            return null;
+        }
+
+        foreach (var task in _tasksView)
+        {
+            if (string.Equals(task.Id, taskId, StringComparison.Ordinal))
+            {
+                return task;
+            }
+        }
+
+        return null;
+    }
+
     /// <summary>
     /// Copies the host's parameters into the view the rest of the component reads. It runs BEFORE the overlay is pruned,
     /// because pruning compares the overlay's remembered instance with the one the host supplies NOW — against the
@@ -368,6 +397,13 @@ public partial class TmDelegateBoard : TmComponentBase, IDisposable
         _columns = [.. _agentsView.Select(agent => new DelegateColumnView(
             agent,
             assigned.TryGetValue(agent.Id, out var tasks) ? tasks : []))];
+
+        // A live drag keeps pointing at the host's CURRENT instance of the card: a host that re-supplies it must not
+        // have the preview project stale data (the id is the same, so the gesture itself continues).
+        if (_dragTaskId is not null)
+        {
+            _dragTask = FindTask(_dragTaskId);
+        }
     }
 
     /// <summary>
@@ -402,6 +438,12 @@ public partial class TmDelegateBoard : TmComponentBase, IDisposable
         var live = new HashSet<string>(tasks.Select(task => task.Id), StringComparer.Ordinal);
         _autoHandled.RemoveWhere(id => !live.Contains(id));
         _readerBacklog.RemoveWhere(id => !live.Contains(id));
+        if (_dragTaskId is not null && !live.Contains(_dragTaskId))
+        {
+            // The host dropped the card that was being dragged: a preview for a task that no longer exists would
+            // project a lie, so the gesture's state goes with it.
+            ClearDrag();
+        }
     }
 
     // ── Interaction: the menu and the automatic pass ─────────────────────────
@@ -602,6 +644,104 @@ public partial class TmDelegateBoard : TmComponentBase, IDisposable
         StateHasChanged();
     }
 
+    // ── The live drag-over preview (the module reports, the board projects) ──
+
+    /// <summary>Whether a pointer drag of one of the board's cards is running right now.</summary>
+    internal bool IsDragging => _dragTaskId is not null;
+
+    /// <summary>The card the reader is dragging, or null when no gesture is running.</summary>
+    internal DelegateTask? DraggedTask => _dragTask;
+
+    /// <summary>Whether this column is the one the dragged card would land in right now.</summary>
+    /// <param name="agent">The column's agent.</param>
+    /// <returns>True for exactly one column while a drag is live.</returns>
+    internal bool IsDragTarget(DelegateAgent agent)
+        => _dragTaskId is not null
+            && string.Equals(_dragTargetListId, agent.Id, StringComparison.Ordinal)
+            && !string.Equals(_dragSourceListId, agent.Id, StringComparison.Ordinal);
+
+    /// <summary>Whether the dragged card currently hangs over the backlog (the "give it back" target).</summary>
+    internal bool IsBacklogDragTarget
+        => _dragTaskId is not null
+            && string.Equals(_dragTargetListId, BacklogListId, StringComparison.Ordinal)
+            && !string.Equals(_dragSourceListId, BacklogListId, StringComparison.Ordinal);
+
+    /// <summary>
+    /// The throttled drag-over report of the shared module (one per changed hovered list, plus the resting report when
+    /// the gesture ends or is cancelled). The board does not move anything here: it only records which card is being
+    /// dragged and which column it would land in, so the columns can project the landing BEFORE the commit.
+    /// </summary>
+    /// <param name="args">What the module reported.</param>
+    /// <returns>A task that completes when the preview state is up to date.</returns>
+    internal Task OnDragOverAsync(SortableDragOverArgs args)
+    {
+        if (args is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        if (args.ToListId is null)
+        {
+            // Resting: release, Escape, pointercancel or a detached gesture. Every column goes back to its own
+            // projection (including the focus/hover preview the reader had before the drag started).
+            if (_dragTaskId is null && _dragTargetListId is null && _dragSourceListId is null)
+            {
+                return Task.CompletedTask;
+            }
+
+            ClearDrag();
+            StateHasChanged();
+            return Task.CompletedTask;
+        }
+
+        var task = TaskAt(args.FromListId, args.FromIndex);
+        if (task is null)
+        {
+            ClearDrag();
+            StateHasChanged();
+            return Task.CompletedTask;
+        }
+
+        if (string.Equals(_dragTaskId, task.Id, StringComparison.Ordinal)
+            && string.Equals(_dragSourceListId, args.FromListId, StringComparison.Ordinal)
+            && string.Equals(_dragTargetListId, args.ToListId, StringComparison.Ordinal))
+        {
+            return Task.CompletedTask;
+        }
+
+        _dragTask = task;
+        _dragTaskId = task.Id;
+        _dragSourceListId = args.FromListId;
+        _dragTargetListId = args.ToListId;
+        _notice = string.Empty;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    /// <summary>The card at one index of a column of the drag group (the backlog addressed by its own list id).</summary>
+    /// <param name="listId">The list id the module reported.</param>
+    /// <param name="index">The index inside that list's items.</param>
+    /// <returns>The card, or null when the report names something this board does not show.</returns>
+    private DelegateTask? TaskAt(string? listId, int index)
+    {
+        if (index < 0)
+        {
+            return null;
+        }
+
+        var columnId = string.Equals(listId, BacklogListId, StringComparison.Ordinal) ? null : listId;
+        var tasks = TasksOf(columnId);
+        return index < tasks.Count ? tasks[index] : null;
+    }
+
+    private void ClearDrag()
+    {
+        _dragTask = null;
+        _dragTaskId = null;
+        _dragSourceListId = null;
+        _dragTargetListId = null;
+    }
+
     // ── The occupied-until preview (focus OR hover, never hover alone) ───────
 
     /// <summary>
@@ -701,28 +841,21 @@ public partial class TmDelegateBoard : TmComponentBase, IDisposable
     /// <returns>The projection.</returns>
     internal DelegateOccupancyProjection PreviewFor(DelegateAgent agent)
     {
+        if (DraggedTask is { } dragged)
+        {
+            // A live drag points at exactly ONE column: the one the card would land in. Every other column — the
+            // SOURCE included — falls back to its own resting load, so the source shows its projection WITHOUT the
+            // lifted card, and a FULL column never promises a time for a card it is going to refuse.
+            var projected = IsDragTarget(agent) && !agent.IsFull ? dragged : null;
+            return DelegatePresentation.Project(agent, projected, _now);
+        }
+
         var task = string.Equals(_previewAgentId, agent.Id, StringComparison.Ordinal) ? PreviewTask() : null;
         return DelegatePresentation.Project(agent, task, _now);
     }
 
     /// <summary>The task the reader last pointed at, or null.</summary>
-    internal DelegateTask? PreviewTask()
-    {
-        if (_previewTaskId is null)
-        {
-            return null;
-        }
-
-        foreach (var task in AllTasks)
-        {
-            if (string.Equals(task.Id, _previewTaskId, StringComparison.Ordinal))
-            {
-                return task;
-            }
-        }
-
-        return null;
-    }
+    internal DelegateTask? PreviewTask() => FindTask(_previewTaskId);
 
     /// <summary>The stable state slug of a column's availability line.</summary>
     /// <param name="agent">The column's agent.</param>
@@ -730,7 +863,9 @@ public partial class TmDelegateBoard : TmComponentBase, IDisposable
     internal string PreviewState(DelegateAgent agent)
     {
         var projection = PreviewFor(agent);
-        if (projection.UsesEstimate && string.Equals(_previewAgentId, agent.Id, StringComparison.Ordinal))
+        var pointsAtATask = IsDragTarget(agent)
+            || (DraggedTask is null && string.Equals(_previewAgentId, agent.Id, StringComparison.Ordinal));
+        if (projection.UsesEstimate && pointsAtATask)
         {
             return "preview";
         }
@@ -753,7 +888,15 @@ public partial class TmDelegateBoard : TmComponentBase, IDisposable
         }
 
         var time = DelegatePresentation.TimeText(projection.Until, CultureInfo.CurrentCulture);
-        return projection.UsesEstimate && string.Equals(_previewAgentId, agent.Id, StringComparison.Ordinal)
+        // The drag wording belongs to a column the card can actually LAND in: a full target keeps its own load
+        // sentence, because claiming a projected end time for a card it will refuse is a lie.
+        if (IsDragTarget(agent) && !agent.IsFull)
+        {
+            return Loc["TmDelegateBoard_DragUntil", time];
+        }
+
+        return projection.UsesEstimate && DraggedTask is null
+            && string.Equals(_previewAgentId, agent.Id, StringComparison.Ordinal)
             ? Loc["TmDelegateBoard_PreviewUntil", time]
             : Loc["TmDelegateBoard_OccupiedUntil", time];
     }
