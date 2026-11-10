@@ -4,6 +4,7 @@
 @using Tempo.Blazor.AI.Models
 @using Tempo.Blazor.Components.Icons
 @using Tempo.Blazor.Components.Inputs
+@using Tempo.Blazor.Components.Layout
 
 @* The agents' branches as one file × agent grid.
 
@@ -15,18 +16,26 @@
    group per file, so the browser's arrow keys apply) and the merge action stays disabled until every conflict is
    decided.
 
-   The whole grid is a NATIVE <table> with no explicit ARIA roles: a header cell per agent (name and branch), a
+   ONE model, TWO presentations and exactly ONE of them in the DOM: the table for a container wide enough to scroll it
+   and a card per file with the agents' changes stacked under it once the container is narrower than the shared mobile
+   breakpoint (ConflictRadarPresentation.Auto, measured by TmLayoutObserver on the surface's OWN box — a 375 px phone
+   and a narrow panel inside a wide page both get the cards). A second, CSS-hidden copy would double every radio group
+   and make a screen reader read two tables.
+
+   The table is a NATIVE <table> with no explicit ARIA roles: a header cell per agent (name and branch), a
    <th scope="rowgroup"> per directory and a <th scope="row"> per file, plus a resolution row whose cell names that
    header through `headers`. The roles a table already carries (row/columnheader/rowheader/cell) are NOT re-declared,
    because `role="grid"` on a table with no roving tabindex and no arrow-key model makes NVDA/JAWS switch to focus
-   mode, swallow the table reading commands and expect keys this surface does not handle. Exactly ONE polite live
-   region announces a resolution, a merge, the filter and a collapsed directory. *@
+   mode, swallow the table reading commands and expect keys this surface does not handle. aria-rowcount/aria-colcount
+   ARE declared, and they are computed from the same filtered, collapsed view the markup paints. Exactly ONE polite
+   live region announces a resolution, a merge, a filter change and a collapsed directory. *@
 <section class="@RootClass"
          data-testid="@RootTestId("conflict-radar")"
          data-conflicts="@Count(Matrix.ConflictCount)"
          data-agents="@Count(Matrix.ColumnCount)"
          data-rows="@Count(Matrix.RowCount)"
          data-conflict-only="@(_conflictOnly ? "true" : "false")"
+         data-presentation="@PresentationSlug"
          @attributes="AdditionalAttributes">
 
     <div class="tm-ai-radar__header">
@@ -73,172 +82,281 @@
     }
     else
     {
-        <div class="tm-ai-radar__grid-wrap" data-testid="@TestId("radar-grid-wrap")">
-            <table class="tm-ai-radar__grid"
-                   aria-label="@EffectiveLabel"
-                   aria-describedby="@InstructionsId"
-                   data-testid="@TestId("conflict-radar-grid")">
-                <thead>
-                    <tr class="tm-ai-radar__head-row">
-                        <th scope="col" class="tm-ai-radar__cell tm-ai-radar__cell--file">
-                            <span class="tm-sr-only">@Loc["TmConflictRadar_FileColumn"]</span>
-                        </th>
-                        @foreach (var column in Matrix.Columns)
-                        {
-                            <th scope="col"
-                                class="tm-ai-radar__cell tm-ai-radar__cell--agent"
-                                data-testid="@TestId("radar-agent-header")"
-                                data-agent-id="@column.Agent.Id">
-                                <TmAgentBadge Agent="column.Agent"
-                                              Size="AgentBadgeSize.Sm"
-                                              ShowStatus="false" />
-                                <span class="tm-ai-radar__branch" data-testid="@TestId("radar-branch")">
-                                    @BranchText(column)
-                                </span>
-                            </th>
-                        }
-                    </tr>
-                </thead>
-
-                @foreach (var directory in Directories)
+        @* The surface measures ITS OWN container (LayoutContent is not used: the body is the same markup either way)
+           and switches between the two presentations when the width crosses the shared mobile breakpoint. *@
+        <TmLayoutObserver Class="tm-ai-radar__measure" ContainerWidthChanged="OnContainerWidthAsync">
+            <ChildContent>
+                @if (ShowCards)
                 {
-                    var group = directory;
-                    <tbody class="tm-ai-radar__group"
-                           data-testid="@TestId("radar-directory")"
-                           data-directory="@group.Directory"
-                           data-collapsed="@(group.Collapsed ? "true" : "false")">
-                        <tr class="tm-ai-radar__directory-row">
-                            @* scope="rowgroup" heads the FILE ROWS below it (a column group would be wrong here),
-                               and no role is declared so the header keeps its native semantics. *@
-                            <th scope="rowgroup"
-                                colspan="@Count(Matrix.ColumnCount + 1)"
-                                class="tm-ai-radar__directory-cell">
-                                <button type="button"
-                                        class="tm-ai-radar__directory-toggle"
-                                        data-testid="@TestId("radar-directory-toggle")"
-                                        aria-expanded="@(group.Collapsed ? "false" : "true")"
-                                        @onclick="() => ToggleDirectory(group.Directory)">
-                                    <span class="tm-ai-radar__directory-icon" aria-hidden="true">
-                                        <TmIcon Name="@(group.Collapsed ? IconNames.ChevronRight : IconNames.ChevronDown)"
-                                                Size="IconSize.Sm" />
-                                    </span>
-                                    <span class="tm-ai-radar__directory-name">@DirectoryName(group.Directory)</span>
-                                    <span class="tm-ai-radar__directory-meta">@DirectoryMeta(group)</span>
-                                </button>
-                            </th>
-                        </tr>
-
-                        @if (!group.Collapsed)
+                    <div class="tm-ai-radar__cards" data-testid="@TestId("radar-cards")">
+                        @foreach (var directory in Directories)
                         {
-                            @foreach (var row in group.Rows)
-                            {
-                                var entry = row;
-                                var conflicting = entry.IsConflict;
-                                <tr class="@(conflicting ? "tm-ai-radar__row tm-ai-radar__row--conflict" : "tm-ai-radar__row")"
-                                    data-testid="@TestId("radar-row")"
-                                    data-path="@entry.Path"
-                                    data-conflict="@(conflicting ? "true" : "false")">
-                                    <th scope="row"
-                                        id="@RowHeaderId(entry)"
-                                        class="tm-ai-radar__cell tm-ai-radar__cell--file"
-                                        data-testid="@TestId("radar-file")">
-                                        <span class="tm-ai-radar__file-name">@entry.FileName</span>
-                                        @if (!string.Equals(entry.Path, entry.FileName, StringComparison.Ordinal))
-                                        {
-                                            @* A file at the repository root would print its own name twice. *@
-                                            <span class="tm-ai-radar__file-path">@entry.Path</span>
-                                        }
-                                        @if (conflicting)
-                                        {
-                                            <span class="tm-ai-radar__conflict" data-testid="@TestId("radar-row-conflict")">
-                                                <span class="tm-ai-radar__conflict-icon" aria-hidden="true">
-                                                    <TmIcon Name="@IconNames.AlertTriangle" Size="IconSize.Xs" />
-                                                </span>
-                                                <span class="tm-ai-radar__conflict-text">@Loc["TmConflictRadar_Conflict"]</span>
-                                            </span>
-                                        }
-                                    </th>
+                            var group = directory;
+                            <section class="tm-ai-radar__card-group"
+                                     data-testid="@TestId("radar-card-directory")"
+                                     data-directory="@group.Directory"
+                                     data-collapsed="@(group.Collapsed ? "true" : "false")">
+                                @DirectoryToggle(group)
 
-                                    @foreach (var cell in entry.Cells)
-                                    {
-                                        var change = cell;
-                                        <td class="tm-ai-radar__cell tm-ai-radar__cell--change"
-                                            data-testid="@TestId("radar-cell")"
-                                            data-agent-id="@(change?.Agent.Id)"
-                                            data-kind="@(change is null ? "none" : KindSlug(change.Kind))">
-                                            @if (change is null)
-                                            {
-                                                <span class="tm-ai-radar__none">
-                                                    <span class="tm-ai-radar__none-mark" aria-hidden="true">—</span>
-                                                    <span class="tm-sr-only">@Loc["TmConflictRadar_NoChange"]</span>
-                                                </span>
-                                            }
-                                            else
-                                            {
-                                                <span class="tm-ai-radar__change tm-ai-radar__change--@KindSlug(change.Kind)">
-                                                    <span class="tm-ai-radar__change-icon"
-                                                          data-testid="@TestId("radar-cell-icon")"
-                                                          aria-hidden="true">
-                                                        <TmIcon Name="@KindIcon(change.Kind)" Size="IconSize.Xs" />
-                                                    </span>
-                                                    <span class="tm-ai-radar__change-kind">@KindText(change.Kind)</span>
-                                                    @if (change.IsRename && change.PreviousPath is { } previous)
+                                @if (!group.Collapsed)
+                                {
+                                    <ul class="tm-ai-radar__card-list">
+                                        @foreach (var row in group.Rows)
+                                        {
+                                            var entry = row;
+                                            var conflicting = entry.IsConflict;
+                                            <li class="@(conflicting ? "tm-ai-radar__card tm-ai-radar__card--conflict" : "tm-ai-radar__card")"
+                                                data-testid="@TestId("radar-card")"
+                                                data-path="@entry.Path"
+                                                data-conflict="@(conflicting ? "true" : "false")">
+                                                <p class="tm-ai-radar__card-file">
+                                                    <span class="tm-ai-radar__file-name">@entry.FileName</span>
+                                                    @if (!string.Equals(entry.Path, entry.FileName, StringComparison.Ordinal))
                                                     {
-                                                        <span class="tm-ai-radar__change-from">
-                                                            @Loc["TmConflictRadar_RenamedFrom", previous]
+                                                        @* A file at the repository root would print its own name twice. *@
+                                                        <span class="tm-ai-radar__file-path">@entry.Path</span>
+                                                    }
+                                                    @if (conflicting)
+                                                    {
+                                                        <span class="tm-ai-radar__conflict" data-testid="@TestId("radar-row-conflict")">
+                                                            <span class="tm-ai-radar__conflict-icon" aria-hidden="true">
+                                                                <TmIcon Name="@IconNames.AlertTriangle" Size="IconSize.Xs" />
+                                                            </span>
+                                                            <span class="tm-ai-radar__conflict-text">@Loc["TmConflictRadar_Conflict"]</span>
                                                         </span>
                                                     }
-                                                </span>
-                                            }
-                                        </td>
+                                                </p>
+
+                                                @* The changes hang UNDER the file: one line per agent that touched it. An
+                                                   agent that did not touch the file is silent here (the table needs its
+                                                   empty cell to keep the columns aligned; a card does not). *@
+                                                <ul class="tm-ai-radar__card-changes">
+                                                    @foreach (var cell in entry.Cells)
+                                                    {
+                                                        @if (cell is { } change)
+                                                        {
+                                                            <li class="tm-ai-radar__card-change"
+                                                                data-testid="@TestId("radar-card-change")"
+                                                                data-agent-id="@change.Agent.Id"
+                                                                data-kind="@KindSlug(change.Kind)">
+                                                                <TmAgentBadge Agent="change.Agent"
+                                                                              Size="AgentBadgeSize.Sm"
+                                                                              ShowStatus="false" />
+                                                                <span class="tm-ai-radar__change tm-ai-radar__change--@KindSlug(change.Kind)">
+                                                                    <span class="tm-ai-radar__change-icon" aria-hidden="true">
+                                                                        <TmIcon Name="@KindIcon(change.Kind)" Size="IconSize.Xs" />
+                                                                    </span>
+                                                                    <span class="tm-ai-radar__change-kind">@KindText(change.Kind)</span>
+                                                                    @if (change.IsRename && change.PreviousPath is { } previous)
+                                                                    {
+                                                                        <span class="tm-ai-radar__change-from">
+                                                                            @Loc["TmConflictRadar_RenamedFrom", previous]
+                                                                        </span>
+                                                                    }
+                                                                </span>
+                                                            </li>
+                                                        }
+                                                    }
+                                                </ul>
+
+                                                @if (conflicting)
+                                                {
+                                                    @SideChoice(entry)
+                                                }
+                                            </li>
+                                        }
+                                    </ul>
+                                }
+                            </section>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="tm-ai-radar__grid-wrap" data-testid="@TestId("radar-grid-wrap")">
+                        <table class="tm-ai-radar__grid"
+                               aria-label="@EffectiveLabel"
+                               aria-describedby="@InstructionsId"
+                               aria-rowcount="@Count(RenderedRowCount)"
+                               aria-colcount="@Count(RenderedColumnCount)"
+                               data-testid="@TestId("conflict-radar-grid")">
+                            <thead>
+                                <tr class="tm-ai-radar__head-row">
+                                    <th scope="col" class="tm-ai-radar__cell tm-ai-radar__cell--file">
+                                        <span class="tm-sr-only">@Loc["TmConflictRadar_FileColumn"]</span>
+                                    </th>
+                                    @foreach (var column in Matrix.Columns)
+                                    {
+                                        <th scope="col"
+                                            class="tm-ai-radar__cell tm-ai-radar__cell--agent"
+                                            data-testid="@TestId("radar-agent-header")"
+                                            data-agent-id="@column.Agent.Id">
+                                            <TmAgentBadge Agent="column.Agent"
+                                                          Size="AgentBadgeSize.Sm"
+                                                          ShowStatus="false" />
+                                            <span class="tm-ai-radar__branch" data-testid="@TestId("radar-branch")">
+                                                @BranchText(column)
+                                            </span>
+                                        </th>
                                     }
                                 </tr>
+                            </thead>
 
-                                @if (conflicting)
-                                {
-                                    <tr class="tm-ai-radar__row tm-ai-radar__row--resolution">
-                                        @* An anonymous row would be read as unrelated to the file above it: the
-                                           cell names that file's row header through `headers`. *@
-                                        <td class="tm-ai-radar__resolution-cell"
-                                            headers="@RowHeaderId(entry)"
-                                            colspan="@Count(Matrix.ColumnCount + 1)">
-                                            <div class="tm-ai-radar__sides"
-                                                 role="radiogroup"
-                                                 aria-label="@ResolveLabel(entry)"
-                                                 @key="(entry.Path, RadioVersion)">
-                                                @foreach (var side in entry.Changed)
-                                                {
-                                                    var option = side;
-                                                    <label class="tm-ai-radar__side">
-                                                        <input type="radio"
-                                                               class="tm-ai-radar__side-input"
-                                                               name="@RadioGroupName(entry)"
-                                                               data-side="@option.Agent.Id"
-                                                               checked="@IsAgentSide(entry, option.Agent.Id)"
-                                                               @onchange="() => OnSideChosenAsync(entry, ConflictResolutionKind.Agent, option.Agent.Id)" />
-                                                        <span class="tm-ai-radar__side-text">@AgentName(option.Agent)</span>
-                                                    </label>
-                                                }
-                                                <label class="tm-ai-radar__side">
-                                                    <input type="radio"
-                                                           class="tm-ai-radar__side-input"
-                                                           name="@RadioGroupName(entry)"
-                                                           data-side="manual"
-                                                           checked="@IsManualSide(entry)"
-                                                           @onchange="() => OnSideChosenAsync(entry, ConflictResolutionKind.Manual, null)" />
-                                                    <span class="tm-ai-radar__side-text">@Loc["TmConflictRadar_ManualSide"]</span>
-                                                </label>
-                                            </div>
-                                        </td>
+                            @foreach (var directory in Directories)
+                            {
+                                var group = directory;
+                                <tbody class="tm-ai-radar__group"
+                                       data-testid="@TestId("radar-directory")"
+                                       data-directory="@group.Directory"
+                                       data-collapsed="@(group.Collapsed ? "true" : "false")">
+                                    <tr class="tm-ai-radar__directory-row">
+                                        @* scope="rowgroup" heads the FILE ROWS below it (a column group would be wrong
+                                           here), and no role is declared so the header keeps its native semantics. *@
+                                        <th scope="rowgroup"
+                                            colspan="@Count(Matrix.ColumnCount + 1)"
+                                            class="tm-ai-radar__directory-cell">
+                                            @DirectoryToggle(group)
+                                        </th>
                                     </tr>
-                                }
+
+                                    @if (!group.Collapsed)
+                                    {
+                                        @foreach (var row in group.Rows)
+                                        {
+                                            var entry = row;
+                                            var conflicting = entry.IsConflict;
+                                            <tr class="@(conflicting ? "tm-ai-radar__row tm-ai-radar__row--conflict" : "tm-ai-radar__row")"
+                                                data-testid="@TestId("radar-row")"
+                                                data-path="@entry.Path"
+                                                data-conflict="@(conflicting ? "true" : "false")">
+                                                <th scope="row"
+                                                    id="@RowHeaderId(entry)"
+                                                    class="tm-ai-radar__cell tm-ai-radar__cell--file"
+                                                    data-testid="@TestId("radar-file")">
+                                                    <span class="tm-ai-radar__file-name">@entry.FileName</span>
+                                                    @if (!string.Equals(entry.Path, entry.FileName, StringComparison.Ordinal))
+                                                    {
+                                                        @* A file at the repository root would print its own name twice. *@
+                                                        <span class="tm-ai-radar__file-path">@entry.Path</span>
+                                                    }
+                                                    @if (conflicting)
+                                                    {
+                                                        <span class="tm-ai-radar__conflict" data-testid="@TestId("radar-row-conflict")">
+                                                            <span class="tm-ai-radar__conflict-icon" aria-hidden="true">
+                                                                <TmIcon Name="@IconNames.AlertTriangle" Size="IconSize.Xs" />
+                                                            </span>
+                                                            <span class="tm-ai-radar__conflict-text">@Loc["TmConflictRadar_Conflict"]</span>
+                                                        </span>
+                                                    }
+                                                </th>
+
+                                                @foreach (var cell in entry.Cells)
+                                                {
+                                                    var change = cell;
+                                                    <td class="tm-ai-radar__cell tm-ai-radar__cell--change"
+                                                        data-testid="@TestId("radar-cell")"
+                                                        data-agent-id="@(change?.Agent.Id)"
+                                                        data-kind="@(change is null ? "none" : KindSlug(change.Kind))">
+                                                        @if (change is null)
+                                                        {
+                                                            <span class="tm-ai-radar__none">
+                                                                <span class="tm-ai-radar__none-mark" aria-hidden="true">—</span>
+                                                                <span class="tm-sr-only">@Loc["TmConflictRadar_NoChange"]</span>
+                                                            </span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="tm-ai-radar__change tm-ai-radar__change--@KindSlug(change.Kind)">
+                                                                <span class="tm-ai-radar__change-icon"
+                                                                      data-testid="@TestId("radar-cell-icon")"
+                                                                      aria-hidden="true">
+                                                                    <TmIcon Name="@KindIcon(change.Kind)" Size="IconSize.Xs" />
+                                                                </span>
+                                                                <span class="tm-ai-radar__change-kind">@KindText(change.Kind)</span>
+                                                                @if (change.IsRename && change.PreviousPath is { } previous)
+                                                                {
+                                                                    <span class="tm-ai-radar__change-from">
+                                                                        @Loc["TmConflictRadar_RenamedFrom", previous]
+                                                                    </span>
+                                                                }
+                                                            </span>
+                                                        }
+                                                    </td>
+                                                }
+                                            </tr>
+
+                                            @if (conflicting)
+                                            {
+                                                <tr class="tm-ai-radar__row tm-ai-radar__row--resolution">
+                                                    @* An anonymous row would be read as unrelated to the file above it: the
+                                                       cell names that file's row header through `headers`. *@
+                                                    <td class="tm-ai-radar__resolution-cell"
+                                                        headers="@RowHeaderId(entry)"
+                                                        colspan="@Count(Matrix.ColumnCount + 1)">
+                                                        @SideChoice(entry)
+                                                    </td>
+                                                </tr>
+                                            }
+                                        }
+                                    }
+                                </tbody>
                             }
-                        }
-                    </tbody>
+                        </table>
+                    </div>
                 }
-            </table>
-        </div>
+            </ChildContent>
+        </TmLayoutObserver>
     }
 
     <p class="tm-sr-only" aria-live="polite" data-testid="@TestId("radar-announcement")">@_announcement</p>
 </section>
+
+@code {
+    /// <summary>
+    /// One directory group's fold control, shared by the table's row-group header and the card group. It is a NATIVE
+    /// button (Enter and Space activate it for free) that names its state through <c>aria-expanded</c>.
+    /// </summary>
+    private RenderFragment DirectoryToggle(ConflictMatrixDirectoryView group) => @<button type="button"
+            class="tm-ai-radar__directory-toggle"
+            data-testid="@TestId("radar-directory-toggle")"
+            aria-expanded="@(group.Collapsed ? "false" : "true")"
+            @onclick="() => ToggleDirectoryAsync(group.Directory)">
+        <span class="tm-ai-radar__directory-icon" aria-hidden="true">
+            <TmIcon Name="@(group.Collapsed ? IconNames.ChevronRight : IconNames.ChevronDown)" Size="IconSize.Sm" />
+        </span>
+        <span class="tm-ai-radar__directory-name">@DirectoryName(group.Directory)</span>
+        <span class="tm-ai-radar__directory-meta">@DirectoryMeta(group)</span>
+    </button>;
+
+    /// <summary>
+    /// One conflicting file's side choice — a NATIVE radio group per file (the browser's own arrow keys apply and each
+    /// file is its own group), shared by the table's resolution row and the card.
+    /// </summary>
+    private RenderFragment SideChoice(ConflictMatrixRow entry) => @<div class="tm-ai-radar__sides"
+             role="radiogroup"
+             aria-label="@ResolveLabel(entry)"
+             @key="(entry.Path, RadioVersion)">
+        @foreach (var side in entry.Changed)
+        {
+            var option = side;
+            <label class="tm-ai-radar__side">
+                <input type="radio"
+                       class="tm-ai-radar__side-input"
+                       name="@RadioGroupName(entry)"
+                       data-side="@option.Agent.Id"
+                       checked="@IsAgentSide(entry, option.Agent.Id)"
+                       @onchange="() => OnSideChosenAsync(entry, ConflictResolutionKind.Agent, option.Agent.Id)" />
+                <span class="tm-ai-radar__side-text">@AgentName(option.Agent)</span>
+            </label>
+        }
+        <label class="tm-ai-radar__side">
+            <input type="radio"
+                   class="tm-ai-radar__side-input"
+                   name="@RadioGroupName(entry)"
+                   data-side="manual"
+                   checked="@IsManualSide(entry)"
+                   @onchange="() => OnSideChosenAsync(entry, ConflictResolutionKind.Manual, null)" />
+            <span class="tm-ai-radar__side-text">@Loc["TmConflictRadar_ManualSide"]</span>
+        </label>
+    </div>;
+}

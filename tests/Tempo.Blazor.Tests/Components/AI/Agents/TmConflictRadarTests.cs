@@ -84,8 +84,10 @@ public class TmConflictRadarTests : LocalizationTestBase
         table.HasAttribute("role").Should().BeFalse(
             "a native table already exposes table semantics; role=grid would promise a roving arrow-key model this " +
             "surface does not implement, so NVDA/JAWS would swallow the table reading commands");
-        table.HasAttribute("aria-rowcount").Should().BeFalse("the row count changes with the filter and the collapsed directories");
-        table.HasAttribute("aria-colcount").Should().BeFalse();
+        table.GetAttribute("aria-rowcount").Should().Be("10",
+            "the count is COMPUTED from the same filtered, collapsed view the markup paints, so it cannot go stale " +
+            "with the filter or a folded directory");
+        table.GetAttribute("aria-colcount").Should().Be("4", "the file column plus one column per agent");
 
         foreach (var role in new[] { "grid", "rowgroup", "row", "gridcell", "columnheader", "rowheader" })
         {

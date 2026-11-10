@@ -49,7 +49,6 @@ public partial class AiAgentVisualizationsPage
     private IReadOnlyList<AiModelInfo> _models = [];
     private IReadOnlyList<AutonomyLevel> _autonomyLevels = [];
     private IReadOnlyList<AutonomyLock> _autonomyLocks = [];
-    private IReadOnlyList<PresenceMarker> _presenceMarkers = [];
     private IReadOnlyList<MemoryItem> _memories = [];
     private bool _memoryEnabled = true;
     private string _memoryFilter = string.Empty;
@@ -74,6 +73,7 @@ public partial class AiAgentVisualizationsPage
 
     private IReadOnlyList<AgentBranchChanges> _branches = [];
     private IReadOnlyList<ConflictResolution> _resolutions = [];
+    private IReadOnlySet<string> _collapsedDirectories = new HashSet<string>(StringComparer.Ordinal);
     private ConflictMergeRequest? _merge;
     private bool _conflictOnly;
 
@@ -106,9 +106,6 @@ public partial class AiAgentVisualizationsPage
 
     /// <summary>The limits an administrator enforces.</summary>
     private IReadOnlyList<AutonomyLock> AutonomyLocks => _autonomyLocks;
-
-    /// <summary>The presence cursors over the page's own document.</summary>
-    private IReadOnlyList<PresenceMarker> Markers => _presenceMarkers;
 
     /// <summary>The submitted body of a draft, rendered through the attempts' content slot.</summary>
     private static string AttemptBody(string attemptId) => AiAgentVisualizationsSamples.AttemptBody(attemptId);
@@ -170,15 +167,6 @@ public partial class AiAgentVisualizationsPage
         _ => Loc["TmDelegateBoard_PriorityUnknown"],
     };
 
-    /// <summary>The word of a presence activity.</summary>
-    private string ActivityText(PresenceActivity activity) => activity switch
-    {
-        PresenceActivity.Typing => Loc["TmAgentPresenceOverlay_ActivityTyping"],
-        PresenceActivity.Editing => Loc["TmAgentPresenceOverlay_ActivityEditing"],
-        PresenceActivity.Commenting => Loc["TmAgentPresenceOverlay_ActivityCommenting"],
-        _ => Loc["TmAgentPresenceOverlay_ActivityViewing"],
-    };
-
     /// <summary>The word of a change on a branch.</summary>
     private string ChangeText(ChangeKind kind) => kind switch
     {
@@ -195,9 +183,6 @@ public partial class AiAgentVisualizationsPage
     /// <summary>An agent's role, or an empty line for an agent the run does not know.</summary>
     private string AgentRole(string agentId)
         => _agents.FirstOrDefault(agent => string.Equals(agent.Id, agentId, StringComparison.Ordinal))?.Role ?? string.Empty;
-
-    /// <summary>The anchor a marker sits on, in reading order.</summary>
-    private static string AnchorLabel(string? anchorId) => anchorId ?? string.Empty;
 
     /// <summary>A workspace path without its repository prefix, so a table cell stays readable.</summary>
     private static string ShortPath(string path)
@@ -524,6 +509,5 @@ public partial class AiAgentVisualizationsPage
         _windows = AiAgentVisualizationsSamples.RunWindows(now);
         _runs = AiAgentVisualizationsSamples.ScheduledRuns();
         _branches = AiAgentVisualizationsSamples.Branches();
-        _presenceMarkers = AiAgentVisualizationsSamples.PresenceMarkers();
     }
 }

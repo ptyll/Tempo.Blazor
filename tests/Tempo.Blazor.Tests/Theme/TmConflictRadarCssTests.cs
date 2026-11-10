@@ -30,6 +30,7 @@ public sealed class TmConflictRadarCssTests
         "tm-ai-radar__instructions",
         "tm-ai-radar__merge-hint",
         "tm-ai-radar__empty",
+        "tm-ai-radar__measure",
         "tm-ai-radar__grid-wrap",
         "tm-ai-radar__grid",
         "tm-ai-radar__head-row",
@@ -68,6 +69,14 @@ public sealed class TmConflictRadarCssTests
         "tm-ai-radar__side",
         "tm-ai-radar__side-input",
         "tm-ai-radar__side-text",
+        "tm-ai-radar__cards",
+        "tm-ai-radar__card-group",
+        "tm-ai-radar__card-list",
+        "tm-ai-radar__card",
+        "tm-ai-radar__card--conflict",
+        "tm-ai-radar__card-file",
+        "tm-ai-radar__card-changes",
+        "tm-ai-radar__card-change",
     ];
 
     private static string RadarCss()
@@ -262,5 +271,46 @@ public sealed class TmConflictRadarCssTests
             "the file column stays readable while the agents scroll past it");
         css.Should().Contain("position: relative",
             "the wrapper is the containing block of the sr-only spans, so a wide table cannot park them on the page");
+    }
+
+    [Fact]
+    public void TheScrolledGridHintsAtTheHiddenColumn_WithAPureCssShadow()
+    {
+        var css = RadarCss();
+
+        css.Should().Contain("--tm-radar-shadow-ink:",
+            "the shadow's ink is a declared knob, and it fades a token rather than a colour literal");
+        css.Should().Contain("no-repeat local",
+            "the cover gradients ride WITH the content, so the shadow disappears once that edge is reached");
+        css.Should().Contain("no-repeat scroll",
+            "the edge shadows stay pinned to the viewport of the scroller");
+        css.Should().Contain("radial-gradient(farthest-side at 100% 50%",
+            "a plain overflow clip gives a phone reader no hint that another agent column exists");
+    }
+
+    [Fact]
+    public void TheNarrowPresentationIsAListOfCards_NotATableWithHiddenColumns()
+    {
+        var css = RadarCss();
+
+        css.Should().Contain(".tm-ai-radar__cards");
+        css.Should().Contain(".tm-ai-radar__card-list");
+        css.Should().Contain(".tm-ai-radar__card-changes",
+            "the agents' changes hang UNDER the file, which is the whole point of the narrow presentation");
+        ThemeCss.RuleDeclarations(css, ".tm-ai-radar__card-list").Should().Contain("list-style: none",
+            "the list semantics stay in the markup; the bullets do not");
+        ThemeCss.RuleDeclarations(css, ".tm-ai-radar__card--conflict").Should().Contain(
+            "border-inline-start: var(--tm-space-0-5) solid var(--tm-color-danger)",
+            "a conflicting card keeps the table's solid edge, so the conflict is not a tint alone — and the edge is "
+            + "LOGICAL, so a mirrored writing mode puts it on the inline start instead of a physical left side");
+    }
+
+    [Fact]
+    public void TheForcedColorsBlock_DropsThePaintOnlyShadow()
+    {
+        var block = Block(RadarCss(), "@media (forced-colors: active)");
+
+        block.Should().Contain("background: none",
+            "a translucent fade cannot be expressed in the system palette, so it is dropped instead of faked");
     }
 }

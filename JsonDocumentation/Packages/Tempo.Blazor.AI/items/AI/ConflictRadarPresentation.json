@@ -1,0 +1,25 @@
+{
+  "itemName": "ConflictRadarPresentation",
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "description": "How TmConflictRadar presents the agents' branches: the file × agent table, a card per changed file, or — the default — whichever fits the surface's own container. Both presentations are painted from the SAME computed ConflictMatrix (same rows, same conflicts, same decisions, same merge gate) and exactly one of them is in the DOM, so a second hidden copy can never double a radio group or make a screen reader read two tables. A phone gets the cards because a 375 px reader cannot see a table's second agent column without dragging a scroller; a wide container keeps the table and its scroll shadow.",
+  "packageId": "Tempo.Blazor.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/ConflictRadarPresentation.cs",
+  "documentationStatus": "documented",
+  "members": [
+    {
+      "name": "Auto",
+      "description": "The table while the surface's own container is at least TmBreakpoints.Sm (640 px) wide, and a card per file below it. The container is measured (TmLayoutObserver), not the viewport, so the phone presentation also reaches a narrow panel inside a wide page; before the first measurement the table is the safe answer because it degrades to a scroller."
+    },
+    {
+      "name": "Grid",
+      "description": "The file × agent table whatever the container measures. A table wider than its wrapper scrolls inside the wrapper (with a scroll shadow), never the page."
+    },
+    {
+      "name": "Cards",
+      "description": "A card per changed file with the agents' changes stacked under it, whatever the container measures."
+    }
+  ],
+  "usageExample": "<TmConflictRadar Agents=\"_branches\" Presentation=\"ConflictRadarPresentation.Cards\" />"
+}

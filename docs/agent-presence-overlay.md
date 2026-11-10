@@ -44,7 +44,8 @@ Derived: `HasAnchor`, `HasPoint`, `HasLabel`, and the `Normalize(fraction)` help
 Each marker carries `data-presence-marker`, `data-presence-anchor` (when anchored), `data-agent-id`, `data-activity` (the
 stable slug) and an inline `--tm-presence-color: var(--tm-agent-color-N)` from the shared palette, so the same agent has
 the same colour here as in the lanes or the graph. The label names the agent and the activity; the cursor is a decorative
-SVG pointer.
+SVG pointer. The module then adds `data-presence-placed`, and — when the label needs it — `data-presence-place="start"`
+and/or `data-presence-stack="below|above"`.
 
 ## The measurement (the package's ES module)
 
@@ -59,12 +60,34 @@ eval):
 - the work is throttled (a rAF plus an 80 ms minimum interval), so a burst of mutations costs one measurement;
 - a marker whose anchor disappeared is HIDDEN (the stylesheet reveals `[data-presence-placed="true"]` only) instead of
   being left at a stale position;
-- a marker whose label would run past the content's inline end is MIRRORED (`data-presence-flip="true"`): the marker's
-  inline end lands on the measured point and its label grows back INTO the content, so a cursor near the edge never
-  widens the page. The layer also clips as a last guard, because a decorative layer must never move the page under the
-  reader;
+- it also writes `--tm-presence-h` (the anchor's measured block size), which is what a STACKED label needs to start
+  below the anchored line box;
 - `detach()` disconnects every observer, removes every listener and cancels a pending measurement; the component calls
   it from `DisposeAsync`.
+
+### Label placement (`resolveLabelPlacement`)
+
+The module MEASURES the label (its own box, not a guess) and decides where the label belongs, in this order:
+
+1. **beside the point, to the inline end** (`data-presence-place` absent) — while `x + width + 8 px` still fits the
+   content box, which is the common case and never covers a line;
+2. **under the anchored line** (`data-presence-stack="below"`), then **above it** (`data-presence-stack="above"`) —
+   `--tm-presence-h` starts the stacked label at the bottom edge of the anchor's line box, so it clears the very words it
+   points at. This is where a phone lands: at 375 px the end of a full line has no room for a label, and the old
+   "mirror onto the other side" put the label straight over the last words of the paragraph;
+3. **mirrored beside the point** (`data-presence-place="start"`) — the LAST resort, used only when no vertical room is
+   left either;
+4. beside the point again, clipped by the layer — the honest answer when nothing fits. The roster carries the same
+   presence as text, so no information is only visual.
+
+The pair is written as two attributes (`place` for the inline side, `stack` for the block side, so a stacked label is
+still pinned to the side of the point that has room), and only when the answer CHANGES: a re-measure that lands in the
+same place touches no DOM.
+
+Both answers are **logical**. The stylesheet turns them into `inset-inline-end: calc(100% - var(--tm-presence-x))`,
+`inset-block-start: calc(var(--tm-presence-y) + var(--tm-presence-h))`, `inset-block-end: calc(100% - var(--tm-presence-y))`
+and `flex-direction: row-reverse` — there is no `translateX(-100%)` (a physical left shift) and no `left`/`right`
+anywhere, so a right-to-left host mirrors the right way without a second code path.
 
 A **point** marker needs no JavaScript at all: the component paints its own fractions, so the layer still works where
 the module cannot be imported (prerender, a disconnected circuit, a host without the static assets).
@@ -88,13 +111,22 @@ motion source only.
   in the host's order) because a live region that read every change would be noise; an unchanged state is never
   re-announced;
 - `(pointer: coarse)` raises the roster row to the 44 px `--tm-touch-target`;
-- a mirrored label sits on the other side of its point; on a phone the label can then overlap the words just before the
-  anchor — the roster (and one live region) carry the same presence as text, so nothing is only visual;
+- a label never covers the text of the paragraph it points at: it stays beside the point while there is room and is
+  STACKED under (or above) the anchored line otherwise — the roster (and one live region) still carry the same presence
+  as text, so nothing is only visual;
 - `forced-colors: active` hands the cursor and the labels to `CanvasText`/`Canvas`/`Highlight` with
   `forced-color-adjust: none`, so the system palette is the source.
 
 Guarded by `AiMarkdownViewCssTests` and `TmAgentPresenceOverlayCssTests`; the module's behaviour is pinned by
 `npm run test:ai` (`tm-agent-presence.test.mjs`).
+
+## Demo
+
+`/ai-agents` shows three cursors over a static paragraph set. `/ai-agent-visualizations` shows LIVE cursors: the section's
+own child component (`AiAgentPresenceLiveSurface`) owns a marker stream and its paint gate, so pressing "Play cursors"
+moves the cursors while the page's own simulated run stays paused and its counters stay at zero — a tick repaints the
+section and nothing else. That section renders with `AnnounceChanges="false"` (the page owns the one live region) and
+offers its table alternative over the same snapshot.
 
 ## Adopting an existing collaboration feed
 

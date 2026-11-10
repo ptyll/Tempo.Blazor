@@ -515,29 +515,6 @@ internal static class AiAgentVisualizationsSamples
         "docs/autonomy-dial.md",
     ];
 
-    /// <summary>
-    /// The four cursors the presence section shows, one per agent of the run: each is anchored to a paragraph of the
-    /// page's own document (so it survives a reflow) and carries a distinct activity, so the layer, the labels and the
-    /// roster all have something to say.
-    /// </summary>
-    internal static IReadOnlyList<PresenceMarker> PresenceMarkers()
-    {
-        var anchors = DocumentAnchors();
-        var activities = new[]
-        {
-            PresenceActivity.Editing, PresenceActivity.Commenting, PresenceActivity.Viewing, PresenceActivity.Typing,
-        };
-
-        return
-        [
-            .. Agents().Select((agent, index) => new PresenceMarker($"presence-{agent.Id}", agent)
-            {
-                AnchorId = anchors[index % anchors.Count],
-                Activity = activities[index % activities.Length],
-            }),
-        ];
-    }
-
     /// <summary>The demo document's blocks the presence cursors anchor to, in reading order.</summary>
     internal static IReadOnlyList<string> DocumentAnchors() =>
         ["plan-lead", "plan-goal", "plan-risk", "plan-close"];

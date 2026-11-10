@@ -1,5 +1,6 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Components;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.AI.Models;
 using Tempo.Blazor.Components.Icons;
 using Tempo.Blazor.Localization;
@@ -46,11 +47,13 @@ public partial class TmConflictRadar : TmComponentBase
     private ConflictMatrix _matrix = ConflictMatrix.Empty;
 
     private IReadOnlyList<ConflictResolution>? _lastResolutions;
-    private IReadOnlyList<AgentBranchChanges>? _lastAgents;
+    private IReadOnlySet<string>? _lastCollapsed;
 
     private bool _conflictOnly;
     private bool _lastConflictOnly;
     private bool _conflictOnlySeeded;
+
+    private double? _measuredWidth;
 
     private int _radioVersion;
 
@@ -91,6 +94,25 @@ public partial class TmConflictRadar : TmComponentBase
     /// <summary>Fires with the new filter state.</summary>
     [Parameter] public EventCallback<bool> ConflictOnlyChanged { get; set; }
 
+    /// <summary>
+    /// How the branches are presented: the file × agent table, a card per file, or
+    /// <see cref="ConflictRadarPresentation.Auto"/> (the default) which picks the table while the surface's own
+    /// container is at least <c>TmBreakpoints.Sm</c> wide and the cards below it. The container is measured through
+    /// <c>TmLayoutObserver</c>, so the phone presentation also reaches a narrow panel inside a wide page.
+    /// </summary>
+    [Parameter] public ConflictRadarPresentation Presentation { get; set; } = ConflictRadarPresentation.Auto;
+
+    /// <summary>
+    /// The directories whose file rows are hidden, two-way bound with <see cref="CollapsedDirectoriesChanged"/>
+    /// (<c>@bind-CollapsedDirectories</c>). Null means every directory is open. The reader's own folds win until the
+    /// host MOVES the parameter (a new <see cref="IReadOnlySet{T}"/> instance replaces them); a directory that no
+    /// longer exists in <see cref="Agents"/> is dropped from the settled set.
+    /// </summary>
+    [Parameter] public IReadOnlySet<string>? CollapsedDirectories { get; set; }
+
+    /// <summary>Fires with the settled set of collapsed directories whenever the reader folds or unfolds one.</summary>
+    [Parameter] public EventCallback<IReadOnlySet<string>> CollapsedDirectoriesChanged { get; set; }
+
     /// <summary>The heading above the grid. Null renders the localized default ("Conflict radar").</summary>
     [Parameter] public string? Title { get; set; }
 
@@ -119,6 +141,74 @@ public partial class TmConflictRadar : TmComponentBase
 
     /// <summary>The filter state being shown.</summary>
     internal bool IsConflictOnly => _conflictOnly;
+
+    /// <summary>The presentation actually rendered: the host's pin, or the measurement against the mobile breakpoint.</summary>
+    internal ConflictRadarPresentation EffectivePresentation
+        => ResolvePresentation(Presentation, _measuredWidth);
+
+    /// <summary>Whether the card presentation is the one on screen.</summary>
+    internal bool ShowCards => EffectivePresentation == ConflictRadarPresentation.Cards;
+
+    /// <summary>The stable slug of the rendered presentation, used as the root's <c>data-presentation</c> hook.</summary>
+    internal string PresentationSlug => ShowCards ? "cards" : "grid";
+
+    /// <summary>
+    /// How many rows the table actually renders: the header row, one row per visible directory group, one row per
+    /// visible file and one more row per conflicting file (its side choice). The number is COMPUTED from the same
+    /// filtered, collapsed view the markup paints, so <c>aria-rowcount</c> can never disagree with the DOM.
+    /// </summary>
+    internal int RenderedRowCount
+    {
+        get
+        {
+            var count = 1; // the header row
+            foreach (var group in _directories)
+            {
+                count += 1; // the directory row
+                if (group.Collapsed)
+                {
+                    continue;
+                }
+
+                count += group.Rows.Count + group.Rows.Count(row => row.IsConflict);
+            }
+
+            return count;
+        }
+    }
+
+    /// <summary>
+    /// How many columns the table actually renders: the file column plus one per agent with something to show.
+    /// </summary>
+    internal int RenderedColumnCount => _matrix.ColumnCount + 1;
+
+    /// <summary>
+    /// Settles a pin against a measured container width. A pinned presentation always wins; an
+    /// <see cref="ConflictRadarPresentation.Auto"/> one is the table until a measurement says the container is narrower
+    /// than <see cref="TmBreakpoints.Sm"/> — before the first measurement (static render, prerender, bUnit) the table
+    /// is the safe answer, because it degrades to a scroller rather than to a card list nobody asked for.
+    /// </summary>
+    /// <param name="pinned">The host's <see cref="Presentation"/>.</param>
+    /// <param name="width">The measured container width in CSS pixels, or null.</param>
+    /// <returns>The presentation to render.</returns>
+    internal static ConflictRadarPresentation ResolvePresentation(ConflictRadarPresentation pinned, double? width)
+    {
+        if (pinned != ConflictRadarPresentation.Auto)
+        {
+            return pinned;
+        }
+
+        // TmBreakpoints.Classify rejects a non-finite or negative width by design; a degenerate measurement (0 from a
+        // hidden container) is "not measured yet", not a phone.
+        if (width is not { } measured || !double.IsFinite(measured) || measured <= 0)
+        {
+            return ConflictRadarPresentation.Grid;
+        }
+
+        return TmBreakpoints.Classify(measured) == TmLayoutMode.Mobile
+            ? ConflictRadarPresentation.Cards
+            : ConflictRadarPresentation.Grid;
+    }
 
     /// <summary>How many conflicts still wait for a decision.</summary>
     internal int UnresolvedCount => _matrix.Unresolved(_decisions.Values).Count;
@@ -181,6 +271,20 @@ public partial class TmConflictRadar : TmComponentBase
     {
         _branches = Agents is null ? [] : [.. Agents.Where(branch => branch is not null)];
 
+        // The matrix comes FIRST: the collapse set is settled against the directories the branches actually produce.
+        _matrix = new ConflictMatrix(_branches);
+        _conflictPositions.Clear();
+        for (var index = 0; index < _matrix.Conflicts.Count; index++)
+        {
+            _conflictPositions[_matrix.Conflicts[index].Path] = index;
+        }
+
+        _rowPositions.Clear();
+        for (var index = 0; index < _matrix.Rows.Count; index++)
+        {
+            _rowPositions[_matrix.Rows[index].Path] = index;
+        }
+
         // Settle the reader's decisions against the host's list: a MOVED parameter (a new instance) is the host
         // speaking, so it replaces the picks; a same-instance re-render cannot undo them.
         if (!ReferenceEquals(Resolutions, _lastResolutions))
@@ -208,17 +312,22 @@ public partial class TmConflictRadar : TmComponentBase
             _conflictOnly = ConflictOnly;
         }
 
-        _matrix = new ConflictMatrix(_branches);
-        _conflictPositions.Clear();
-        for (var index = 0; index < _matrix.Conflicts.Count; index++)
+        // The fold set follows the same contract as the decisions: a NEW instance is the host speaking, a re-render of
+        // the same instance is not. The set is COPIED, so a reader's fold can never mutate the host's own collection.
+        if (!ReferenceEquals(CollapsedDirectories, _lastCollapsed))
         {
-            _conflictPositions[_matrix.Conflicts[index].Path] = index;
-        }
-
-        _rowPositions.Clear();
-        for (var index = 0; index < _matrix.Rows.Count; index++)
-        {
-            _rowPositions[_matrix.Rows[index].Path] = index;
+            _lastCollapsed = CollapsedDirectories;
+            _collapsed.Clear();
+            if (CollapsedDirectories is not null)
+            {
+                foreach (var directory in CollapsedDirectories)
+                {
+                    if (directory is not null)
+                    {
+                        _collapsed.Add(directory);
+                    }
+                }
+            }
         }
 
         PruneCollapsed();
@@ -293,9 +402,10 @@ public partial class TmConflictRadar : TmComponentBase
         await ConflictOnlyChanged.InvokeAsync(onlyConflicts);
     }
 
-    /// <summary>Collapses or expands one directory group.</summary>
+    /// <summary>Collapses or expands one directory group and reports the settled set to the host.</summary>
     /// <param name="directory">The directory (an empty string is the repository root).</param>
-    internal void ToggleDirectory(string directory)
+    /// <returns>A task that completes when the host's callback returned.</returns>
+    internal async Task ToggleDirectoryAsync(string directory)
     {
         var name = DirectoryName(directory);
         if (!_collapsed.Remove(directory))
@@ -309,12 +419,42 @@ public partial class TmConflictRadar : TmComponentBase
         }
 
         RebuildDirectories();
+        StateHasChanged();
+        await CollapsedDirectoriesChanged.InvokeAsync(CollapsedSnapshot());
     }
 
     /// <summary>Whether a directory group is collapsed.</summary>
     /// <param name="directory">The directory to test.</param>
     /// <returns>Whether its rows are hidden.</returns>
     internal bool IsCollapsed(string directory) => _collapsed.Contains(directory);
+
+    /// <summary>
+    /// The settled collapse set as the ordered, immutable snapshot the component reports — a fresh instance every
+    /// time, so a host that echoes it back reads as the host speaking and can never alias the component's state.
+    /// </summary>
+    /// <returns>The collapsed directories, ordinal-ordered.</returns>
+    internal IReadOnlySet<string> CollapsedSnapshot()
+        => new HashSet<string>(_collapsed.OrderBy(directory => directory, StringComparer.Ordinal), StringComparer.Ordinal);
+
+    /// <summary>
+    /// Records the container width the nested <c>TmLayoutObserver</c> reported (an
+    /// <see cref="ConflictRadarPresentation.Auto"/> surface only) and repaints when it changes the presentation.
+    /// </summary>
+    /// <param name="width">The measured inline size in CSS pixels.</param>
+    /// <returns>A task that completes when the repaint was queued.</returns>
+    internal Task OnContainerWidthAsync(double width)
+    {
+        if (Presentation != ConflictRadarPresentation.Auto
+            || !double.IsFinite(width)
+            || width <= 0
+            || _measuredWidth == width)
+        {
+            return Task.CompletedTask;
+        }
+
+        _measuredWidth = width;
+        return InvokeAsync(StateHasChanged);
+    }
 
     /// <summary>Records the reader's side for one conflicting file and reports the full decision list.</summary>
     /// <param name="row">The conflicting row being decided.</param>

@@ -304,6 +304,55 @@
   opt-in specimens. E2E: `AiAgentsE2ETests` drags a card between columns with the live projection (and onto the full column),
   cancels a drag with Escape and moves a run with the chord in both themes and at 375 px.
 
+### Added — `TmConflictRadar` phone presentation and `TmAgentPresenceOverlay` measured label placement (plan 7ba95ed6, Fáze 7)
+
+- **`TmConflictRadar` — two presentations, one model.** New `ConflictRadarPresentation` (`Auto` default, `Grid`, `Cards`)
+  and the `Presentation` parameter. `Auto` measures the surface's OWN container through `TmLayoutObserver` (not the
+  viewport) and draws the file × agent table at ≥ `TmBreakpoints.Sm` (640 px) and a card per changed file below it; a
+  375 px phone therefore reads the changes instead of discovering a second agent column by dragging a horizontal
+  scroller. Exactly ONE presentation is in the DOM (a hidden second copy would double every radio group and make a
+  screen reader read two tables), both are painted from the same computed `ConflictMatrix` (a test asserts the same
+  path/agent/kind triples), the root states the settled choice as `data-presentation="grid|cards"`, and before the first
+  measurement the table is the safe answer. Every card keeps the conflict badge, the changes stacked under the file, the
+  native radio group per conflict and the ONE live region.
+- **`TmConflictRadar` — honest `aria-rowcount` / `aria-colcount`.** Both are now declared and COMPUTED from the same
+  filtered, collapsed view the markup paints (header row + one per visible directory + one per visible file + one per
+  conflicting file; file column + one per agent), so the announced size cannot go stale with the filter or a fold. The
+  card presentation declares neither, because it renders no table.
+- **`TmConflictRadar` — the fold set is the host's.** `CollapsedDirectories` / `CollapsedDirectoriesChanged`
+  (`IReadOnlySet<string>`, `@bind-CollapsedDirectories`). The reader's folds win until the host MOVES the parameter (a
+  new set instance replaces them); a directory the branches no longer produce is dropped from the settled set; the
+  reported set is always a fresh instance, so a host can echo it back without aliasing the component's state.
+- **`TmConflictRadar` — a scroll shadow on the wide grid.** The wrapper paints a pure-CSS shadow (two `local` cover
+  gradients riding with the content and two `scroll`-attached edge shadows), so a table wider than its wrapper reads as
+  "more to the inline end". No scroll listener, no motion, and `forced-colors` drops it (`background: none`).
+- **`TmAgentPresenceOverlay` — the label is MEASURED and placed.** The module measures the label and picks: beside the
+  point while it fits → UNDER the anchored line (the anchor's block size is published as `--tm-presence-h`) → above it →
+  mirrored beside the point only as the last resort. A phone no longer gets a mirrored label over the last words of the
+  paragraph it points at. The answer is written as `data-presence-place` (`start` = mirrored along the INLINE axis) and
+  `data-presence-stack` (`below` / `above`), only when it changes, and the stylesheet turns it into
+  `inset-inline-*` / `inset-block-*` / `flex-direction: row-reverse` — physical `translateX(-100%)` is gone.
+- **Demo `/ai-agent-visualizations`.** The presence section moved into its own child component
+  (`AiAgentPresenceLiveSurface`): it owns a marker stream (its own `AiAgentRunSimulator`) and a paint gate, so "Play
+  cursors" moves the cursors while the page's run stays paused and its counters stay at zero — a tick repaints the
+  section and nothing else. The section renders `AnnounceChanges="false"` (the page owns the one live region) and keeps
+  its table alternative over the same snapshot. The conflict section now binds `@bind-CollapsedDirectories`, so a fold
+  survives the section's round trip through its table presentation.
+- **Tests.** bUnit: `TmConflictRadarPhonePresentationTests` (13 facts: the measured and pinned presentation, the same
+  model behind both presentations, the counts following the filter and a fold, the two-way collapse and its re-seed
+  contract), `AiAgentPresenceLiveSurfaceTests` (7 facts: the section's own stream, the roster, no second live region,
+  the table over the live snapshot), the updated `TmConflictRadarTests` / `TmConflictRadarCssTests` /
+  `TmAgentPresenceOverlayCssTests`. Node: `tm-agent-presence.test.mjs` now pins `resolveLabelPlacement` (the priority
+  order, the degenerate measurements) and `applyPlacement` (touches only what changed). E2E:
+  `AiAgentVisualizationsPhoneE2ETests` measures the real geometry — cards stacked under their file at 375 px with no
+  overflow anywhere, the desktop table's honest counts and its scroll hint, a fold surviving the round trip, the label
+  never covering the text lines of the paragraph it points at, and the live cursors moving while the page stays paused.
+- **Docs and JSON documentation.** [docs/conflict-radar.md](docs/conflict-radar.md),
+  [docs/agent-presence-overlay.md](docs/agent-presence-overlay.md) and
+  [docs/ai-agent-visualizations.md](docs/ai-agent-visualizations.md) carry the new contracts; the overlays gained
+  `CollapsedDirectories`, `CollapsedDirectoriesChanged`, `Presentation`, the new CSS classes and
+  `ConflictRadarPresentation.json`, and `validate --fail-on-drift` is clean.
+
 ### Breaking changes and migration
 
 **No source-breaking change.** Every new member is additive or a default interface member; every new component is new. The behavior changes below are the complete list a 2.10.0 consumer can notice, with before/after:
@@ -341,6 +390,10 @@
 | `TmMemoryPanel` status filter | One control: the five-segment tray | Two surfaces under `[data-testid='memory-status-filter']`: `…-segmented` (the tray) and `…-select` (a real `<select>`, shown on a narrow card) | None for behaviour — both feed the same `@bind-StatusFilter`. A test or host selector that clicked the first control inside `memory-status-filter` keeps working on a wide card; on a narrow one the tray is `display: none` (not focusable), so target the visible surface explicitly or pin `FilterPresentation` |
 | `TmMemoryPanel` `OnEdit` with `OnEditItem` bound | `OnEdit` fired for every committed text edit | A bound `OnEditItem` owns the commit (it carries the changed-field set), so `OnEdit` does not fire for the same edit; without `OnEditItem` nothing changes | None unless both are bound: keep `OnEdit` alone (pre-2.11.0), or move the host to `OnEditItem` and read `edit.Text` |
 | `TmScheduledRuns` run rows (`Alt` + arrow) | The chord did nothing in the surface — and `Alt+ArrowLeft` / `Alt+ArrowRight` ran the browser's Back/Forward history navigation | The chord moves the focused run one window (←/→) or one day (↑/↓), is announced through the live region and is advertised in `aria-keyshortcuts`; the browser's history shortcut is suppressed on a row that declares `data-tm-run-move-keys` (the shared `attachKeyboardMove` helper, no `stopPropagation`) | None: the surface takes no key another control owns (`Alt+Shift`, `Ctrl+Alt`, plain arrows and every other key are untouched), and a host handler on the same row still receives the event. A host that documented the old, inert behaviour must update its copy |
+| `TmConflictRadar` document count | `aria-rowcount` / `aria-colcount` omitted (the counts change with the filter and the folds) | Both declared and computed from the same filtered, collapsed view the markup paints | None for a reader; a host that scanned the table's ARIA now sees the true size. A selector that expected the table on a phone must target the card list (`[data-testid='radar-card']`) or pin `Presentation="Grid"` |
+| `TmConflictRadar` narrow-container markup | One table, scrolled horizontally inside its wrapper | Below 640 px of the surface's own container: one card per changed file (`[data-testid='radar-card']`, the agents' changes under it) and NO table. Wide containers keep the table | None for a host that reads the component's events (`Resolutions`, `OnMerge`) — the radio groups and the merge gate are the same. A host CSS rule scoped to `.tm-ai-radar__grid` must also cover `.tm-ai-radar__card*`, or pin `Presentation="Grid"` |
+| `TmAgentPresenceOverlay` placement attributes | `data-presence-flip="true"` + `transform: translateX(-100%)` on a mirrored marker | `data-presence-place="start"` (mirrored along the inline axis) and/or `data-presence-stack="below|above"` (stacked against the anchored line), with logical `inset-inline-*` / `inset-block-*` rules and no `translateX` | None for a host that only feeds `Markers`. A host CSS rule that matched `[data-presence-flip="true"]` must match `[data-presence-place="start"]` / `[data-presence-stack]`; a host that positioned the label itself should drop its override — the measured placement now avoids covering the anchored text |
+| `TmAgentPresenceOverlay` label position on a phone | Mirrored onto the other side of the point, often over the last words of the anchored paragraph | Beside the point → under the anchored line → above it → mirrored last | None at the API level; the label MOVES (that is the fix). The roster and the live region still carry the same presence as text |
 | `TmDelegateBoard` column markup | A column exposed `data-column` / `data-agent-id` / `data-full` / `data-preview` | Adds `data-drag-over="true\|false"` on the backlog and every agent column, and the target column's availability line projects the dragged card while the gesture runs | None — additive state attributes; a selector that matches `.tm-ai-delegate__column` is unaffected |
 
 

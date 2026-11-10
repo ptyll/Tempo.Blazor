@@ -83,7 +83,25 @@ them too — plus the accepted decision for each conflict.
 | `Resolutions` / `ResolutionsChanged` | The reader's decisions, two-way (`@bind-Resolutions`). Null means nothing is decided yet, so the merge stays unavailable. The reader's pick wins until the host supplies a **new list instance**; a host that echoes the same instance cannot undo it. |
 | `OnMerge` | `EventCallback<ConflictMergeRequest>` — raised once per committed merge. The surface changes nothing itself. |
 | `ConflictOnly` / `ConflictOnlyChanged` | The "Only conflicts" filter, two-way. Default `false`. The summary keeps reporting the WHOLE picture, so a reader knows what the filter hid. |
+| `CollapsedDirectories` / `CollapsedDirectoriesChanged` | The folded directory groups, two-way (`@bind-CollapsedDirectories`), as an `IReadOnlySet<string>` (`""` is the repository root). The default is `null` = everything open. The reader's folds win until the host supplies a **new set instance** (a re-render of the same instance cannot undo them); a directory the branches no longer produce is dropped from the settled set, and the set the surface reports is always a fresh instance, so a host can echo it back without aliasing the component's state. |
+| `Presentation` | `ConflictRadarPresentation`: `Auto` (default), `Grid` or `Cards`. `Auto` measures the surface's OWN container through `TmLayoutObserver` and draws the table at `>= TmBreakpoints.Sm` (640 px) and one card per file below it; `Grid` and `Cards` pin the presentation whatever the container measures. |
 | `Title`, `ShowTitle`, `HeadingLevel`, `AriaLabel`, `Class`, `AdditionalAttributes` | The usual chrome. The heading is composed at the requested level (clamped 2–6), because Razor cannot build a dynamic element name. |
+
+**Two presentations, one model.** The same `ConflictMatrix` — the same rows, the same conflicts, the same decisions, the
+same merge gate — is painted either as the file × agent table or as one card per changed file with the agents' changes
+stacked UNDER it. Exactly ONE of them is in the DOM: a second, CSS-hidden copy would double every radio group, make a
+screen reader read two tables and leave a 375 px phone dragging a horizontal scroller to discover the second agent
+column. The switch is a *measured* one (`TmLayoutObserver` reports the inline size of the surface's own box, so the phone
+presentation also reaches a narrow panel inside a wide page), and before the first measurement — static SSR, prerender,
+bUnit — the table is the safe answer: it degrades to a scroller rather than to a card list nobody asked for. The root
+carries the settled choice as `data-presentation="grid|cards"`, so a host or a test never has to guess.
+
+**The cards** are a real list (`ul > li` per directory group, `ul > li` per file), so a reader hears how many changed
+files a folder holds. A card names the file (name and path), carries the "Conflict" badge and the danger frame when the
+file is contested, lists only the agents that actually changed it (an empty cell exists in the table to keep the columns
+aligned; a card does not need one) and grows the same native radio group per conflicting file. Every test id of the
+grid (`radar-row` / `radar-cell`) has a card counterpart (`radar-card` / `radar-card-change`), and a test asserts the two
+presentations report the same path/agent/kind triples.
 
 **The table** is a NATIVE `<table>` and declares no ARIA role: a header cell per agent (its `TmAgentBadge` and its
 branch, `scope="col"`), a `<th scope="rowgroup">` per directory group and a `<th scope="row">` per file. The file column
@@ -93,10 +111,12 @@ is sticky, so it stays readable while many agents scroll past it. Each cell rend
 "Conflict" badge with an icon and the danger tone; the tone is the second cue and the word is the first.
 
 **No `role="grid"`.** The roles a table already carries (`row` / `columnheader` / `rowheader` / `cell`) are not
-re-declared, and neither are `aria-rowcount` / `aria-colcount` (the counts change with the filter and the collapsed
-directories). A `role="grid"` table with no roving tabindex and no arrow-key handling makes NVDA/JAWS switch to focus
+re-declared. A `role="grid"` table with no roving tabindex and no arrow-key handling makes NVDA/JAWS switch to focus
 mode, swallow the table reading commands and expect keys the surface does not answer; the native table semantics are
-what a reader's table navigation needs. A conflicting file's side choice is a separate row, so its cell names the file's
+what a reader's table navigation needs. `aria-rowcount` / `aria-colcount` ARE declared, and they are **computed from the
+same filtered, collapsed view the markup paints** (header row + one per visible directory + one per visible file + one per
+conflicting file; file column + one per agent), so the announced size can never go stale with the filter or a fold. The
+card presentation declares neither, because it renders no table. A conflicting file's side choice is a separate row, so its cell names the file's
 row header through `headers` — an anonymous row would be read as unrelated to the file above it.
 
 **The side choice** is one native radio group per conflicting file (its options are the agents that really changed the
@@ -108,8 +128,15 @@ checked mark in the browser.
 an accepted decision, and it is ready immediately when the agents do not conflict at all. A merge with no files at all
 is disabled, because merging nothing is not an action.
 
-**Directories** collapse and expand from a native button in their group header, which states its state with
-`aria-expanded` and its counts in words ("2 files · 1 conflict").
+**Directories** collapse and expand from a native button in their group header (in both presentations), which states
+its state with `aria-expanded` and its counts in words ("2 files · 1 conflict"). The fold set is the HOST's when it binds
+`CollapsedDirectories`: the same component re-created after the section switched to another presentation comes back with
+the folders the reader left folded, which is what a persisted model needs.
+
+**The scrolled table** hints at the column it hides: the wrapper paints a pure-CSS scroll shadow (two `local` cover
+gradients riding with the content and two `scroll`-attached edge shadows), so a table wider than its wrapper reads as
+"there is more to the inline end" instead of as a truncated grid. Nothing listens to the scroll in JavaScript, the
+shadow is `forced-colors`-neutral (`background: none`), and it adds no motion.
 
 ## Accessibility
 
@@ -127,12 +154,24 @@ is disabled, because merging nothing is not an action.
 - focus rings are real outlines (`--tm-border-color-focus`) on the merge action, the directory buttons and the radios;
 - the table does **not** declare `role="grid"` and does not implement a roving tabindex: every interactive cell is a
   native control, and a grid role would take the arrow keys those controls need. Reading order is the table's;
+- the card presentation is a LIST, not a table with hidden columns: at 375 px the reader sees the file and the agents'
+  changes under it without horizontal scrolling, and the container (not the viewport) decides;
 - the side-choice labels are 24 px tall with a `--tm-space-2` row gap, so a wrapped row keeps the WCAG 2.5.8 spacing
   exemption;
 
 The stylesheet (`wwwroot/css/components/_ai-conflict-radar.css`) declares no transition and no animation — a row that
 slid in would be motion without information, and a conflict has to be readable in a screenshot. Guarded by
 `AiMarkdownViewCssTests` and `TmConflictRadarCssTests`; every class the markup emits has a rule.
+
+## Wireframe citizen (checked, unchanged)
+
+The surface keeps its `conflict-radar` UI role, its declarative stencil and its schema (`title`, `agents`, `files`,
+`conflicts`, `resolved`, `conflictsOnly`). The new `Presentation` is a MEASURED view state of that same role — exactly like
+the kanban board's collapsed column is a state rather than a new role — so the sketch keeps drawing the role picture (the
+file × agent grid at the stencil's 720 px default, with the conflict word and the merge action) and no new schema prop,
+renderer or stencil is added. `CollapsedDirectories` is reader state (a persisted fold), not a design-time property, which
+is why it is not a schema prop either; the surface's `conflictsOnly` sketch prop already covers the "filtered" picture.
+Guarded by `TmConflictRadarStencilTests`.
 
 ## Localization
 
@@ -146,3 +185,8 @@ format, the file/conflict count plural families, both empty states and the annou
 `/ai-agents` renders three agents on three branches over the same repository (two paths changed by two agents each, one
 by a third pair) and is the STORE of the reader's decisions: the page echoes the reported list back and turns the merge
 request into a log line, because the demo has no repository.
+
+`/ai-agent-visualizations` renders 25 changed files across three branches (four of them conflicts) and binds BOTH pieces
+of reader state the surface persists — `@bind-Resolutions` and `@bind-CollapsedDirectories` — so switching the section to
+its table presentation and back proves the folds live in the page's model. The section is the reference for both
+presentations: a 1440 px shot shows the table and its scroll shadow, a 375 px shot the card list.

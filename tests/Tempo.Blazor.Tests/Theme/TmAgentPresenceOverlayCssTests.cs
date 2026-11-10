@@ -103,15 +103,34 @@ public sealed class TmAgentPresenceOverlayCssTests
     }
 
     [Fact]
-    public void ALabelNearTheInlineEnd_IsMirroredInsteadOfWideningThePage()
+    public void ALabelNearTheInlineEnd_IsMirroredLogicallyInsteadOfWideningThePage()
     {
         var css = PresenceCss();
 
-        css.Should().Contain(".tm-ai-presence__marker[data-presence-flip=\"true\"]");
-        css.Should().Contain("transform: translateX(-100%)",
-            "the mirrored marker's inline end sits on the measured point");
+        css.Should().Contain(".tm-ai-presence__marker[data-presence-place=\"start\"]");
+        css.Should().Contain("inset-inline-end: calc(100% - var(--tm-presence-x))",
+            "the mirrored marker's INLINE end sits on the measured point — a logical inset, not a physical translate");
         css.Should().Contain("overflow: clip",
             "the layer is the last guard: it can never widen the page, even before the measurement lands");
+        css.Should().NotContain("translateX",
+            "a physical left shift would mirror the wrong way in a right-to-left host");
+    }
+
+    [Fact]
+    public void ALabelWithNoRoomEitherSide_IsStackedAgainstTheAnchoredLine()
+    {
+        var css = PresenceCss();
+
+        css.Should().Contain("--tm-presence-h: 0px",
+            "the anchor's block size is a DECLARED runtime knob, so a stacked label starts below the line box");
+        css.Should().Contain(".tm-ai-presence__marker[data-presence-stack=\"below\"]");
+        css.Should().Contain(
+            "inset-block-start: calc(var(--tm-presence-y) + var(--tm-presence-h) + var(--tm-space-2))",
+            "under the anchored line (clearing the line box's leading) — the placement that stops the label covering "
+            + "the words it points at");
+        css.Should().Contain(".tm-ai-presence__marker[data-presence-stack=\"above\"]");
+        css.Should().Contain("inset-block-end: calc(100% - var(--tm-presence-y) + var(--tm-space-2))",
+            "above the point, on the same logical block axis, clearing the line box's leading");
     }
 
     [Fact]

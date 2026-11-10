@@ -8,18 +8,20 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
     ANCHOR_ATTRIBUTE,
-    FLIP_ATTRIBUTE,
+    HEIGHT_PROPERTY,
     MARKER_ATTRIBUTE,
     PLACED_ATTRIBUTE,
+    PLACE_ATTRIBUTE,
+    STACK_ATTRIBUTE,
     X_PROPERTY,
     Y_PROPERTY,
     anchorSelector,
+    applyPlacement,
     attachPresence,
-    flipMarker,
     offsetValue,
     placeMarker,
     resolveAnchorPosition,
-    shouldFlip,
+    resolveLabelPlacement,
 } from '../tm-agent-presence.js';
 
 /** A stand-in for an element's inline style. */
@@ -202,7 +204,8 @@ test('resolveAnchorPosition subtracts the content box and keeps the anchor top-l
         { left: 20, top: 40, width: 400, height: 300 },
         { left: 120, top: 90, width: 10, height: 10 });
 
-    assert.deepEqual(position, { x: 100, y: 50 });
+    assert.deepEqual(position, { x: 100, y: 50, width: 10, height: 10 },
+        'the anchor box travels with the offsets: the label placement needs its block size');
 });
 
 test('resolveAnchorPosition refuses a box it cannot trust', () => {
@@ -235,6 +238,14 @@ test('placeMarker writes both knobs and marks the marker placed', () => {
     assert.equal(marker.getAttribute(PLACED_ATTRIBUTE), 'true');
 });
 
+test('placeMarker carries the anchor block size for a stacked label', () => {
+    const marker = fakeMarker('m1');
+
+    placeMarker(marker, { x: 10, y: 4, width: 12, height: 18 });
+    assert.equal(marker.style.props[HEIGHT_PROPERTY], '18px',
+        'a label placed UNDER the anchor line must clear the line box, so the module publishes its height');
+});
+
 test('placeMarker refuses a missing marker or position', () => {
     const marker = fakeMarker('m1');
 
@@ -244,43 +255,119 @@ test('placeMarker refuses a missing marker or position', () => {
     assert.equal(marker.getAttribute(PLACED_ATTRIBUTE), null);
 });
 
-test('shouldFlip mirrors a label that would run past the content edge', () => {
-    assert.equal(shouldFlip({ x: 40 }, 120, 400), false, 'plenty of room to the right');
-    assert.equal(shouldFlip({ x: 300 }, 120, 400), true, 'label would end past the content');
-    assert.equal(shouldFlip({ x: 270 }, 120, 400, 16), true, 'the gutter is part of the test');
-    assert.equal(shouldFlip({ x: 270 }, 120, 400, 0), false, 'without a gutter it just fits');
-    assert.equal(shouldFlip(null, 120, 400), false);
-    assert.equal(shouldFlip({ x: 300 }, Number.NaN, 400), false);
-    assert.equal(shouldFlip({ x: 300 }, 120, 0), false);
+test('resolveLabelPlacement keeps the label beside its point while there is room', () => {
+    const placement = resolveLabelPlacement({
+        x: 40, y: 40, width: 120, height: 24, contentWidth: 400, contentHeight: 300, anchorHeight: 16,
+    });
+
+    assert.deepEqual(placement, { place: 'end', stack: 'none' }, 'plenty of room to the inline end');
 });
 
-test('flipMarker writes the attribute only when the answer changes', () => {
+test('resolveLabelPlacement puts the label UNDER the anchor line instead of over the text', () => {
+    // A 375 px phone: the anchor sits at the end of a full line, so neither side of the point has room for the label.
+    const placement = resolveLabelPlacement({
+        x: 300, y: 60, width: 60, height: 24, contentWidth: 343, contentHeight: 700, anchorHeight: 20,
+    });
+
+    assert.deepEqual(placement, { place: 'start', stack: 'below' },
+        'the mirrored label used to cover the last words of the very paragraph it is anchored to');
+});
+
+test('resolveLabelPlacement falls back to above the point when below has no room', () => {
+    const placement = resolveLabelPlacement({
+        x: 300, y: 40, width: 60, height: 24, contentWidth: 343, contentHeight: 90, anchorHeight: 20,
+    });
+
+    assert.deepEqual(placement, { place: 'start', stack: 'above' });
+});
+
+test('resolveLabelPlacement mirrors only when no vertical room is left either', () => {
+    const placement = resolveLabelPlacement({
+        x: 300, y: 10, width: 60, height: 80, contentWidth: 343, contentHeight: 110, anchorHeight: 20,
+    });
+
+    assert.deepEqual(placement, { place: 'start', stack: 'none' },
+        'the mirror is the last resort, never the second try');
+});
+
+test('resolveLabelPlacement stacks a label that has no room on either side', () => {
+    const placement = resolveLabelPlacement({
+        x: 150, y: 200, width: 400, height: 24, contentWidth: 343, contentHeight: 700, anchorHeight: 20,
+    });
+
+    assert.deepEqual(placement, { place: 'end', stack: 'below' },
+        'a label wider than the container still goes under the point, on the side with more room');
+});
+
+test('resolveLabelPlacement refuses to guess from a degenerate measurement', () => {
+    const beside = { place: 'end', stack: 'none' };
+
+    assert.deepEqual(resolveLabelPlacement(null), beside);
+    assert.deepEqual(resolveLabelPlacement({}), beside);
+    assert.deepEqual(resolveLabelPlacement({
+        x: Number.NaN, y: 1, width: 10, height: 10, contentWidth: 100, contentHeight: 100,
+    }), beside);
+    assert.deepEqual(resolveLabelPlacement({
+        x: 1, y: 1, width: 0, height: 10, contentWidth: 100, contentHeight: 100,
+    }), beside);
+    assert.deepEqual(resolveLabelPlacement({
+        x: 1, y: 1, width: 10, height: 10, contentWidth: 0, contentHeight: 100,
+    }), beside);
+});
+
+test('applyPlacement writes only the attribute that changed', () => {
     const marker = fakeMarker('m1');
+    const writes = [];
+    const originalSet = marker.setAttribute.bind(marker);
+    const originalRemove = marker.removeAttribute.bind(marker);
+    marker.setAttribute = (name, value) => { writes.push(['set', name, value]); originalSet(name, value); };
+    marker.removeAttribute = name => { writes.push(['remove', name]); originalRemove(name); };
 
-    flipMarker(marker, true);
-    assert.equal(marker.getAttribute(FLIP_ATTRIBUTE), 'true');
-    marker.attrs.reads = 0;
-    flipMarker(marker, true);
-    assert.equal(marker.getAttribute(FLIP_ATTRIBUTE), 'true');
+    applyPlacement(marker, { place: 'start', stack: 'below' });
+    assert.equal(marker.getAttribute(PLACE_ATTRIBUTE), 'start');
+    assert.equal(marker.getAttribute(STACK_ATTRIBUTE), 'below');
+    assert.equal(writes.length, 2);
 
-    flipMarker(marker, false);
-    assert.equal(marker.getAttribute(FLIP_ATTRIBUTE), null);
-    flipMarker(null, true);
+    writes.length = 0;
+    applyPlacement(marker, { place: 'start', stack: 'below' });
+    assert.deepEqual(writes, [], 'a re-measure that lands in the same place touches no DOM');
+
+    applyPlacement(marker, { place: 'end', stack: 'none' });
+    assert.equal(marker.getAttribute(PLACE_ATTRIBUTE), null);
+    assert.equal(marker.getAttribute(STACK_ATTRIBUTE), null);
+
+    applyPlacement(null, { place: 'start' });
     assert.ok(true, 'a missing marker is tolerated');
 });
 
-test('a marker near the content edge is mirrored by the measurement', () => {
+test('a label with no room at either side is stacked under the anchor line', () => {
     const win = fakeWindow();
     const content = fakeContent(
         { left: 0, top: 0, width: 300, height: 200 },
-        { 'block-a': new FakeElement({ rect: { left: 250, top: 20 } }) });
+        { 'block-a': new FakeElement({ rect: { left: 250, top: 20, width: 4, height: 18 } }) });
     const marker = fakeMarker('m1', 'block-a');
-    marker.getBoundingClientRect = () => ({ width: 140 });
+    marker.getBoundingClientRect = () => ({ width: 140, height: 24 });
 
     attachPresence(fakeRoot([marker]), content, { window: win.window });
 
-    assert.equal(marker.getAttribute(FLIP_ATTRIBUTE), 'true',
-        'a label starting at 250 px in a 300 px box would widen the page');
+    assert.equal(marker.getAttribute(STACK_ATTRIBUTE), 'below',
+        'a label starting at 250 px in a 300 px box would widen the page — and a mirrored one would cover the text');
+    assert.equal(marker.getAttribute(PLACE_ATTRIBUTE), 'start', 'under the line it is pinned to the inline start');
+    assert.equal(marker.style.props[HEIGHT_PROPERTY], '18px');
+});
+
+test('a label that fits the inline end keeps the beside placement', () => {
+    const win = fakeWindow();
+    const content = fakeContent(
+        { left: 0, top: 0, width: 400, height: 300 },
+        { 'block-a': new FakeElement({ rect: { left: 20, top: 20, width: 4, height: 18 } }) });
+    const marker = fakeMarker('m1', 'block-a');
+    marker.getBoundingClientRect = () => ({ width: 120, height: 24 });
+
+    attachPresence(fakeRoot([marker]), content, { window: win.window });
+
+    assert.equal(marker.getAttribute(PLACE_ATTRIBUTE), null);
+    assert.equal(marker.getAttribute(STACK_ATTRIBUTE), null);
 });
 
 test('attachPresence places every anchored marker relative to the content', () => {

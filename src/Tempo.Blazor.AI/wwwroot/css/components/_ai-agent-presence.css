@@ -13,6 +13,11 @@
    into a jump (the module never animates, so this is the only motion source). A marker that has an
    anchor stays INVISIBLE until the module placed it, so a cursor never sits at the content's origin
    pretending its element is there.
+
+   Placement is LOGICAL, never physical: the module measures the label and publishes `data-presence-place`
+   (`start` = mirrored along the INLINE axis) and `data-presence-stack` (`below` / `above` = stacked against
+   the anchored line). Every rule here reads `inset-inline-*` / `inset-block-*` and `flex-direction`, so no
+   consumer's writing direction is assumed.
    ═══════════════════════════════════════════════════════════════════════════════════════════════ */
 
 .tm-ai-presence {
@@ -27,6 +32,8 @@
     --tm-presence-color: var(--tm-color-primary);
     --tm-presence-x: 0%;
     --tm-presence-y: 0%;
+    /* The anchor's measured block size: a label stacked UNDER the anchor line starts below the line box. */
+    --tm-presence-h: 0px;
     --tm-presence-ink: var(--tm-text-inverse);
     --tm-presence-label-bg: var(--tm-color-primary);
     --tm-presence-roster-bg: var(--tm-bg-surface-secondary);
@@ -64,7 +71,9 @@
     max-inline-size: 14rem;
     transition:
         inset-inline-start 160ms ease,
+        inset-inline-end 160ms ease,
         inset-block-start 160ms ease,
+        inset-block-end 160ms ease,
         opacity 120ms ease;
 }
 
@@ -78,11 +87,30 @@
     transition: none;
 }
 
-/* Near the content's inline end the module mirrors the marker: its label then grows INTO the content (left of the
-   pointer) instead of running off the edge. Mirrored, the cursor stays right-most, on the measured point. */
-.tm-ai-presence__marker[data-presence-flip="true"] {
+/* Near the content's inline end the module MIRRORS the marker: its inline end sits on the measured point, so the label
+   grows INTO the content instead of running off the edge and widening the page. The cursor stays on the point.
+   `row-reverse` follows the INLINE axis, so the label ends up on the reading-start side in either direction — there is
+   no `translateX(-100%)` (a physical left shift) anywhere. */
+.tm-ai-presence__marker[data-presence-place="start"] {
+    inset-inline-start: auto;
+    inset-inline-end: calc(100% - var(--tm-presence-x));
     flex-direction: row-reverse;
-    transform: translateX(-100%);
+}
+
+/* With no room on either side of the point the module STACKS the label against the anchored line instead of covering
+   the words it points at: under the line box first, above the point when there is no room below. The pair combines with
+   the mirror rule, so a stacked label is pinned to the side of the point that has room.
+
+   `--tm-presence-h` is the anchor's measured block size, which for an inline span is the GLYPH box — the line box adds
+   its leading around it. The extra `--tm-space-2` is therefore not decoration: it is what clears that leading (and the
+   marker's own -2 px tip margin), so a stacked label starts below the whole line instead of in its lower leading. */
+.tm-ai-presence__marker[data-presence-stack="below"] {
+    inset-block-start: calc(var(--tm-presence-y) + var(--tm-presence-h) + var(--tm-space-2));
+}
+
+.tm-ai-presence__marker[data-presence-stack="above"] {
+    inset-block-start: auto;
+    inset-block-end: calc(100% - var(--tm-presence-y) + var(--tm-space-2));
 }
 
 .tm-ai-presence__cursor {

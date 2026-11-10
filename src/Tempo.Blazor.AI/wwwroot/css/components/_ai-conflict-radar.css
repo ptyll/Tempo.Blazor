@@ -25,6 +25,8 @@
     --tm-radar-conflict-border: var(--tm-color-danger-soft-border);
     --tm-radar-change-ink: var(--tm-text-secondary);
     --tm-radar-none-ink: var(--tm-text-muted);
+    /* The scroll shadow of the wide grid: a translucent ink the two edge gradients fade out of. */
+    --tm-radar-shadow-ink: color-mix(in srgb, var(--tm-text-primary) 16%, transparent);
 
     display: flex;
     flex-direction: column;
@@ -38,6 +40,14 @@
     font-size: var(--tm-font-size-sm);
     line-height: var(--tm-line-height-normal);
 }
+
+/* The measuring wrapper a TmLayoutObserver contributes in the Auto presentation. It is a plain block in
+   the radar's column flow (it replaces the body it wraps, so it adds no gap) and it must be able to
+   shrink, or a wide table would push the page instead of the wrapper's own scroller. */
+.tm-ai-radar__measure {
+    min-inline-size: 0;
+}
+
 
 /* ── Header, summary, filter and the merge action ─────────────────────────────────────────── */
 
@@ -147,6 +157,16 @@
        of an empty cell). Without this they resolve against the PAGE and park at the far end of the wide table, which
        widens the page by their offset — a scroller can only contain the overflow it actually contains. */
     position: relative;
+
+    /* The scroll SHADOW: a table wider than its wrapper is scrolled, and a plain overflow clip gives the reader no
+       hint that there is more to the inline end. Two `local` gradients ride with the content and cover the two
+       `scroll`-attached edge shadows once that edge is reached, so the shadow is visible exactly while there is
+       something hidden in that direction — no JavaScript, no scroll listener, and it works in both directions. */
+    background:
+        linear-gradient(to right, var(--tm-bg-surface) 40%, transparent) left center / var(--tm-space-6) 100% no-repeat local,
+        linear-gradient(to left, var(--tm-bg-surface) 40%, transparent) right center / var(--tm-space-6) 100% no-repeat local,
+        radial-gradient(farthest-side at 0 50%, var(--tm-radar-shadow-ink), transparent) left center / var(--tm-space-3) 100% no-repeat scroll,
+        radial-gradient(farthest-side at 100% 50%, var(--tm-radar-shadow-ink), transparent) right center / var(--tm-space-3) 100% no-repeat scroll;
 }
 
 .tm-ai-radar__grid {
@@ -357,6 +377,105 @@
     font-size: var(--tm-font-size-base);
 }
 
+/* ── The card presentation (a narrow container) ──────────────────────────────────────────── */
+
+/* One card per changed file with the agents' changes stacked UNDER it. It is the same computed model as the
+   table, painted for a container too narrow to scroll a file × agent grid (a 375 px phone, a narrow panel), so
+   the reader never has to discover a hidden column by dragging a scroller sideways. */
+
+.tm-ai-radar__cards {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    min-inline-size: 0;
+}
+
+.tm-ai-radar__card-group {
+    display: flex;
+    flex-direction: column;
+    min-inline-size: 0;
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    overflow: hidden;
+}
+
+/* The group's fold control keeps the table's look (a full-width row) inside the card frame. */
+.tm-ai-radar__card-group .tm-ai-radar__directory-toggle {
+    background-color: var(--tm-bg-surface-secondary);
+}
+
+.tm-ai-radar__card-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    margin: 0;
+    padding: var(--tm-space-2);
+    list-style: none;
+}
+
+.tm-ai-radar__card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-bg-surface);
+    min-inline-size: 0;
+}
+
+/* A conflict keeps the table's two cues: the tint AND the "Conflict" word (which the markup always renders).
+   The edge is a LOGICAL border, so it lands on the inline start in either direction; a physical inset shadow
+   would point at the wrong side under a mirrored writing mode. */
+.tm-ai-radar__card--conflict {
+    border-color: var(--tm-radar-conflict-border);
+    background-color: var(--tm-radar-conflict-fill);
+    border-inline-start: var(--tm-space-0-5) solid var(--tm-color-danger);
+}
+
+.tm-ai-radar__card-file {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-0-5);
+    margin: 0;
+    min-inline-size: 0;
+}
+
+.tm-ai-radar__card--conflict .tm-ai-radar__file-name {
+    color: var(--tm-radar-conflict-ink);
+}
+
+.tm-ai-radar__card-changes {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+/* One agent's change: who, then what. The row wraps instead of narrowing the file column. */
+.tm-ai-radar__card-change {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-1) var(--tm-space-2);
+    min-inline-size: 0;
+    color: var(--tm-text-primary);
+    font-size: var(--tm-font-size-xs);
+}
+
+/* On a card the change reads on ONE line next to the agent ("Retriever · + Added"): the table stacks the icon over
+   the word because a column is narrow, but a card row has the whole width and a stacked pair reads as two facts. */
+.tm-ai-radar__card-change .tm-ai-radar__change {
+    flex: 0 1 auto;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-1);
+    min-inline-size: 0;
+}
+
 /* ── The side choice of one conflicting file ─────────────────────────────────────────────── */
 
 .tm-ai-radar__row--resolution .tm-ai-radar__resolution-cell {
@@ -401,6 +520,12 @@
     overflow-wrap: anywhere;
 }
 
+/* A conflicting card carries its side choice inside its own frame, above the card's bottom edge. */
+.tm-ai-radar__card .tm-ai-radar__sides {
+    padding-block-start: var(--tm-space-1);
+    border-block-start: var(--tm-border-width) solid var(--tm-border-color);
+}
+
 /* A coarse pointer grows the LABELS (and the merge/directory buttons), not the radio glyph: the whole
    label is the target and the radio still looks like a radio. */
 @media (pointer: coarse) {
@@ -430,6 +555,24 @@
         color: CanvasText;
     }
 
+    /* The scroll shadow is a paint-only hint (the scroller itself stays); the system palette cannot express a
+       translucent fade, so it is dropped rather than faked with a design-system colour. */
+    .tm-ai-radar__grid-wrap {
+        background: none;
+    }
+
+    .tm-ai-radar__card-group,
+    .tm-ai-radar__card {
+        border-color: CanvasText;
+        background-color: Canvas;
+        color: CanvasText;
+    }
+
+    .tm-ai-radar__card--conflict {
+        border-color: CanvasText;
+        background-color: Canvas;
+    }
+
     .tm-ai-radar__row {
         color: CanvasText;
     }
@@ -440,6 +583,7 @@
     }
 
     .tm-ai-radar__row--conflict .tm-ai-radar__file-name,
+    .tm-ai-radar__card--conflict .tm-ai-radar__file-name,
     .tm-ai-radar__conflict,
     .tm-ai-radar__change--added .tm-ai-radar__change-kind,
     .tm-ai-radar__change--deleted .tm-ai-radar__change-kind,

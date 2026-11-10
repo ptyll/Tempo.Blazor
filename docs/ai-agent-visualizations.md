@@ -94,8 +94,8 @@ WASM is single-threaded, which is why the browser lanes never saw this; the `AiA
 | Memory | `TmMemoryPanel` | Twenty facts in four categories, an inline edit, pause/resume, a review decision, and forget with an undo window. |
 | Delegate board | `TmDelegateBoard` | Eight tasks, three agents, the Assign menu, the automatic pass and the refusal of a full agent. |
 | Scheduled runs | `TmScheduledRuns` | A week of runs over six windows, the capacity bar, the overload, and a move by drag or by menu. |
-| Conflict radar | `TmConflictRadar` | Three agents over twenty-five files with **four** real conflicts; the merge waits for the last decision. |
-| Presence overlay | `TmAgentPresenceOverlay` | Four cursors over the page's own document, each anchored to a paragraph through `data-presence-anchor` and each carrying a distinct activity. The cursors are the sample's, not the generator's: the presence section is one of the ten surfaces a tick must not repaint. |
+| Conflict radar | `TmConflictRadar` | Three agents over twenty-five files with **four** real conflicts; the merge waits for the last decision. The page binds BOTH pieces of reader state the surface can persist (`@bind-Resolutions`, `@bind-CollapsedDirectories`), so a fold survives the section's round trip through its table presentation, and the presentation itself is measured: the 1440 px page gets the table (with its scroll shadow), a 375 px one a card per file with the agents' changes under it. |
+| Presence overlay | `TmAgentPresenceOverlay` | LIVE: `AiAgentPresenceLiveSurface` owns a marker stream (its own simulator) and a 200 ms paint gate, so four cursors follow the simulated run — anchors and activities move — while the page's own run stays paused and its counters stay at zero. A tick repaints the section and nothing else, which is why the section can afford to be live at all. It renders `AnnounceChanges="false"` (the page owns the one live region; a region reading a simulated cursor around would drown it) and keeps its table alternative over the same snapshot. The document's risk paragraph justifies its LAST line, so that anchor sits at the content's inline end and the label is stacked under the line — the placement edge case is on screen, next to three labels that stay beside their point. |
 
 ## Accessibility contract
 
@@ -106,7 +106,8 @@ Every graphical surface has a text or table alternative a keyboard reaches, and 
   Table switch, and the scheduled runs have Week / Day / Table.
 - **The page adds a table presentation** for the fan-out grid (forty rows), the parallel attempts (three rows), the
   memory panel (twenty rows), the delegate board (eight rows), the conflict radar (every change plus the four
-  decisions) and the presence roster (four rows). Switching replaces the graphical surface instead of hiding it, so the
+  decisions) and the presence roster (four rows) — the last one inside the presence section's own child component, which
+  keeps the live snapshot and therefore re-renders without the page. Switching replaces the graphical surface instead of hiding it, so the
   same data is never in the accessibility tree twice. Each switch is a plain action **button**: its label names the
   presentation the next press shows ("Show the table view" ↔ "Show the visual view") and it deliberately carries **no
   `aria-pressed`**, because a changing name and a pressed state would tell a screen reader two contradictory things
@@ -124,7 +125,10 @@ Every graphical surface has a text or table alternative a keyboard reaches, and 
 - **Reduced motion** is honoured by the components (the presence cursor jumps instead of travelling), and the page adds
   no animation of its own.
 - **Coarse pointers** get a 44 px target on the page's own action buttons, and every section stays inside a 375 px
-  phone without widening the page.
+  phone without widening the page. The conflict section is the one that changes SHAPE there: a card per file (never a
+  table scrolled sideways), every one of them inside the container, and the presence section's cursor labels are
+  measured so a label sits beside its point while there is room and is stacked under the anchored line otherwise — it
+  never covers the words it points at.
 
 ## How the page is tested
 
@@ -135,6 +139,14 @@ Every graphical surface has a text or table alternative a keyboard reaches, and 
   stale tick after `Dispose`).
 - **Playwright on the WASM host** (`AiAgentVisualizationsE2ETests`): the same paths in a real browser, including the
   cross-list pointer drag on the delegate board, followed by a scoped axe scan of every section.
+- **The narrow-container lane** (`AiAgentVisualizationsPhoneE2ETests`) measures GEOMETRY: the 375 px cards stack the
+  agents' changes under their file and nothing overflows the surface, the section or the page; the desktop table's
+  declared row count is the number of rows it renders and its wrapper paints the scroll shadow; a folded directory
+  survives the section's switch to the table and back; a presence label stays inside the content box and clear of every
+  text line of the paragraph it points at (at 375 px at least one cursor is STACKED, because a full line leaves no room
+  beside it); and the live cursors move while the page's run stays paused at zero events. Its shots land in the same
+  folder (`ai-viz-conflict-cards-phone-375`, `ai-viz-conflict-folded-*`, `ai-viz-presence-labels-*`,
+  `ai-viz-presence-live-*`).
 - **The Server smoke** renders the page and runs the same scoped axe scans.
 - **The visual sweep** (`AiAgentVisualizationsVisualE2ETests`) shoots every section at 1440 px in light and dark, the
   phone sweep at 375 px with the width and coarse-target assertions, the table alternatives on the phone, and the

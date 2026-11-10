@@ -363,82 +363,27 @@
     }
     else
     {
+        @* The host owns BOTH pieces of reader state the radar can persist: the decisions and the folded directories.
+           Switching this section to its table presentation unmounts the radar, so a fold that survives the round
+           trip is proof the state lives in the page's own model, not inside the component. *@
         <TmConflictRadar Agents="_branches"
                          Resolutions="_resolutions"
                          ResolutionsChanged="OnResolutionsChanged"
                          OnMerge="OnMerge"
                          @bind-ConflictOnly="_conflictOnly"
+                         @bind-CollapsedDirectories="_collapsedDirectories"
                          Title="@Loc["TmAiAgentsDemo_ConflictTitle"]"
                          DataTestId="ai-viz-conflict" />
     }
 </section>
 
 @* ---------------------------------------------------------------------------------------------------------
-   Where the collaborators are. The page renders the document itself and its paragraphs carry the anchors; the
-   overlay measures them. The roster is the text alternative the page offers for the cursors. *@
+   Where the collaborators are, LIVE. The section's own child component owns the marker stream (its own simulator and
+   its own paint gate), so a moving cursor repaints this section and nothing else; the page's Play/Pause drives the
+   main run, and the section has its own so a reader can watch the cursors without starting the whole run. *@
 <section class="demo-section mb-8" data-testid="ai-viz-presence-section">
     <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmAiAgentsDemo_PresenceTitle"]</h2>
     <p class="text-sm text-slate-600 dark:text-slate-400 mb-2">@Loc["TmAiAgentVizDemo_PresenceHint"]</p>
 
-    <div class="mb-3">
-        <TmButton Variant="ButtonVariant.Secondary"
-                  Class="min-h-11"
-                  Size="ButtonSize.Sm"
-                  data-testid="ai-viz-presence-view"
-                  OnClick="@(() => ToggleTextView("presence"))">@TextViewLabel("presence")</TmButton>
-    </div>
-
-    @if (IsTextView("presence"))
-    {
-        <div data-testid="ai-viz-presence-table">
-            <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">@Loc["TmAiAgentVizDemo_TableHelp"]</p>
-            <table class="w-full text-left text-sm">
-                <caption class="mb-2 text-left text-sm text-slate-600 dark:text-slate-400">@Loc["TmAiAgentVizDemo_PresenceTableCaption"]</caption>
-                <thead>
-                    <tr>
-                        <th scope="col" class="py-1">@Loc["TmAiAgentVizDemo_ColAgent"]</th>
-                        <th scope="col" class="py-1">@Loc["TmAiAgentVizDemo_ColRole"]</th>
-                        <th scope="col" class="py-1">@Loc["TmAiAgentVizDemo_ColActivity"]</th>
-                        <th scope="col" class="py-1">@Loc["TmAiAgentVizDemo_ColAnchor"]</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var marker in Markers)
-                    {
-                        <tr data-testid="ai-viz-presence-row" data-agent-id="@marker.Agent.Id">
-                            <th scope="row" class="py-1 font-normal">@marker.Agent.Name</th>
-                            <td class="py-1">@marker.Agent.Role</td>
-                            <td class="py-1">@ActivityText(marker.Activity)</td>
-                            <td class="py-1">@AnchorLabel(marker.AnchorId)</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    }
-    else
-    {
-        <TmAgentPresenceOverlay Markers="Markers"
-                                ShowRoster="true"
-                                RosterLabel="@Loc["TmAgentPresenceOverlay_RosterTitle"]"
-                                DataTestId="ai-viz-presence">
-            <div class="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900">
-                <h3 class="mb-3 text-base font-semibold text-slate-900 dark:text-white">
-                    @Loc["TmAiAgentVizDemo_PresenceDocumentTitle"]
-                </h3>
-                <p class="mb-3 text-sm text-slate-700 dark:text-slate-300">
-                    @Loc["TmAiAgentVizDemo_PresenceDocumentLead"]<span data-presence-anchor="plan-lead"></span>
-                </p>
-                <p class="mb-3 text-sm text-slate-700 dark:text-slate-300">
-                    @Loc["TmAiAgentVizDemo_PresenceDocumentGoal"]<span data-presence-anchor="plan-goal"></span>
-                </p>
-                <p class="mb-3 text-sm text-slate-700 dark:text-slate-300">
-                    @Loc["TmAiAgentVizDemo_PresenceDocumentRisk"]<span data-presence-anchor="plan-risk"></span>
-                </p>
-                <p class="text-sm text-slate-700 dark:text-slate-300">
-                    @Loc["TmAiAgentVizDemo_PresenceDocumentClose"]<span data-presence-anchor="plan-close"></span>
-                </p>
-            </div>
-        </TmAgentPresenceOverlay>
-    }
+    <AiAgentPresenceLiveSurface />
 </section>

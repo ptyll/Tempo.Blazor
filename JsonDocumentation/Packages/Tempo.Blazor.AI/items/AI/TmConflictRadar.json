@@ -1,8 +1,8 @@
-﻿{
+{
   "itemName": "TmConflictRadar",
   "kind": "Component",
   "category": "AI",
-  "description": "The agents' branches as one grid: a row per changed file, a column per agent, a cell wherever that agent changed that file — and a row that more than one agent claimed called out as a conflict the reader has to settle. The table is COMPUTED, never drawn by hand: ConflictMatrix decides which paths exist, which of them are conflicts, their order and their directory groups, so the picture and the counts in the summary cannot disagree. Conflicting rows come first, a directory follows the row order rather than the other way round, and every cell names the change with an icon AND a word (Modified, Deleted, was src/Old.cs) instead of a colour. A conflicting file carries its own side choice — one agent's version, or \"merge it by hand\" — bound two-way through Resolutions. The merge action stays DISABLED until every conflict is decided, and its hint states how many are still open, so a reader is never left guessing why the button does nothing. The reader's decisions survive a host that re-renders the same list and are replaced only when the host MOVES the parameter. Accessibility: the surface is a NATIVE table and declares no grid role — a header per agent (its name and branch), a th scope=rowgroup per directory, a th scope=row per file and a resolution cell that names that row header through headers. A grid role without a roving tabindex would make a screen reader switch to focus mode and expect arrow keys the surface does not handle. The side choice is a NATIVE radio group per file, so the browser's own arrow-key behaviour applies and each file is its own group. Directories expand and collapse through the table's native buttons, and the surface owns exactly ONE polite live region that announces a resolution, a merge, a filter change and a collapsed directory.",
+  "description": "The agents' branches as one grid: a row per changed file, a column per agent, a cell wherever that agent changed that file — and a row that more than one agent claimed called out as a conflict the reader has to settle. The table is COMPUTED, never drawn by hand: ConflictMatrix decides which paths exist, which of them are conflicts, their order and their directory groups, so the picture and the counts in the summary cannot disagree. Conflicting rows come first, a directory follows the row order rather than the other way round, and every cell names the change with an icon AND a word (Modified, Deleted, was src/Old.cs) instead of a colour. ONE model has TWO presentations and exactly one of them is in the DOM: the file × agent table for a container wide enough to scroll it, and a card per changed file with the agents' changes stacked under it once the surface's own container is narrower than TmBreakpoints.Sm (presentation Auto, the default; Presentation pins either one). A conflicting file carries its own side choice — one agent's version, or \"merge it by hand\" — bound two-way through Resolutions, and its folded directory is bound two-way through CollapsedDirectories. The merge action stays DISABLED until every conflict is decided, and its hint states how many are still open, so a reader is never left guessing why the button does nothing. The reader's decisions and folds survive a host that re-renders the same instances and are replaced only when the host MOVES the parameter. Accessibility: the table is a NATIVE table and declares no grid role — a header per agent (its name and branch), a th scope=rowgroup per directory, a th scope=row per file and a resolution cell that names that row header through headers; aria-rowcount/aria-colcount are computed from the same filtered, collapsed view the markup paints. A grid role without a roving tabindex would make a screen reader switch to focus mode and expect arrow keys the surface does not handle. The card presentation is a real list (a card per file, the agents' changes under it) so a phone reader never has to drag a horizontal scroller to reach the second agent column. The side choice is a NATIVE radio group per file, so the browser's own arrow-key behaviour applies and each file is its own group. Directories expand and collapse through native buttons, and the surface owns exactly ONE polite live region that announces a resolution, a merge, a filter change and a collapsed directory.",
   "packageId": "Tempo.Blazor.AI",
   "namespace": "Tempo.Blazor.Components.AI",
   "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmConflictRadar.razor",
@@ -30,6 +30,18 @@
       "description": "Additional CSS class(es) for the root element."
     },
     {
+      "name": "CollapsedDirectories",
+      "type": "IReadOnlySet<string>?",
+      "isRequired": false,
+      "description": "The directories whose file rows are hidden, two-way bound with CollapsedDirectoriesChanged (@bind-CollapsedDirectories). Null means every directory is open. The reader's own folds win until the host MOVES the parameter (a new IReadOnlySet instance replaces them); a directory that no longer exists in Agents is dropped from the settled set."
+    },
+    {
+      "name": "CollapsedDirectoriesChanged",
+      "type": "EventCallback<IReadOnlySet<string>>",
+      "isRequired": false,
+      "description": "Fires with the settled set of collapsed directories whenever the reader folds or unfolds one."
+    },
+    {
       "name": "ConflictOnly",
       "type": "bool",
       "isRequired": false,
@@ -53,6 +65,13 @@
       "type": "EventCallback<ConflictMergeRequest>",
       "isRequired": false,
       "description": "Raised once per committed merge, with every file the merge touches and the accepted decision for each conflict. The surface changes nothing itself: the host applies the merge in its own repository and re-renders."
+    },
+    {
+      "name": "Presentation",
+      "type": "ConflictRadarPresentation",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "How the branches are presented: the file × agent table, a card per file, or Auto (the default) which picks the table while the surface's own container is at least TmBreakpoints.Sm wide and the cards below it. The container is measured through TmLayoutObserver, so the phone presentation also reaches a narrow panel inside a wide page."
     },
     {
       "name": "Resolutions",
@@ -131,7 +150,16 @@
     "tm-ai-radar__sides",
     "tm-ai-radar__side",
     "tm-ai-radar__side-input",
-    "tm-ai-radar__side-text"
+    "tm-ai-radar__side-text",
+    "tm-ai-radar__measure",
+    "tm-ai-radar__cards",
+    "tm-ai-radar__card-group",
+    "tm-ai-radar__card-list",
+    "tm-ai-radar__card",
+    "tm-ai-radar__card--conflict",
+    "tm-ai-radar__card-file",
+    "tm-ai-radar__card-changes",
+    "tm-ai-radar__card-change"
   ],
   "examples": [
     {
@@ -148,6 +176,16 @@
       "title": "Reading the merge",
       "code": "private Task OnMerge(ConflictMergeRequest request)\n{\n    foreach (var resolution in request.Resolutions)\n    {\n        // apply the reader's side for resolution.Path\n    }\n}",
       "description": "The request carries every file the merge touches plus the accepted decision for each conflict — the surface itself changes nothing."
+    },
+    {
+      "title": "The phone presentation",
+      "code": "<TmConflictRadar Agents=\"_branches\"\n                 @bind-Resolutions=\"_resolutions\"\n                 @bind-CollapsedDirectories=\"_folded\"\n                 OnMerge=\"OnMerge\" />",
+      "description": "Auto measures the surface's own container: a 375 px host gets one card per file with the agents' changes under it, a wide one the table. Both are the same computed matrix and exactly one of them is in the DOM."
+    },
+    {
+      "title": "Pinning the presentation",
+      "code": "<TmConflictRadar Agents=\"_branches\" Presentation=\"ConflictRadarPresentation.Grid\" />",
+      "description": "A host that wants the table on every width pins Grid (it then scrolls inside its own wrapper, with a scroll shadow); Cards pins the phone presentation everywhere."
     }
   ],
   "notes": [
@@ -155,8 +193,11 @@
     "The conflict is judged on the path an agent leaves the file at: a rename's previous path is shown in the cell (\"was src/Old.cs\") but does not create a second row.",
     "Rows are ordered conflicts first and then by path, and the directory groups follow that row order, so \"group by directory\" and \"conflicts on top\" never fight each other.",
     "The side choice is a NATIVE radio group per file: the browser's own arrow keys apply, each file is its own group, and the radios are re-mounted when the host replaces the decision list so a host-driven revert cannot leave a stale checked mark.",
-    "The table declares NO role=grid and no explicit row/columnheader/rowheader/cell roles: the native table semantics are what a screen reader's table navigation needs, and aria-rowcount/aria-colcount are omitted because the counts change with the filter and the collapsed directories. A conflict's side-choice row names the file row header through its headers attribute instead of reading as an anonymous row.",
+    "The table declares NO role=grid and no explicit row/columnheader/rowheader/cell roles: the native table semantics are what a screen reader's table navigation needs. aria-rowcount/aria-colcount ARE declared and are COMPUTED from the same filtered, collapsed view the markup paints (header row + one per visible directory + one per visible file + one per conflicting file), so the announced size cannot go stale with the filter or a fold; the card presentation declares neither because it renders no table. A conflict's side-choice row names the file row header through its headers attribute instead of reading as an anonymous row.",
     "Merge is DISABLED (and states how many conflicts are open) until every conflict is decided; a merge with no conflicts at all is ready immediately.",
-    "The surface owns exactly ONE polite live region: a resolution, a merge, a filter change and a collapsed directory are announced there, and an identical sentence is never repeated."
+    "The surface owns exactly ONE polite live region: a resolution, a merge, a filter change and a collapsed directory are announced there, and an identical sentence is never repeated.",
+    "The card presentation is a real list (a ul per directory group, a li per file) that lists only the agents that changed the file — a card needs no empty cell to keep columns aligned. A test asserts the two presentations report the same path/agent/kind triples, so they cannot drift into two models.",
+    "The fold set is the host's when it binds CollapsedDirectories: the same component re-created after the host switched to another surface comes back with the folders the reader left folded. The set the component reports is always a fresh instance, so a host can echo it back without aliasing the component's state.",
+    "The settlable presentation is the surface's OWN container width (TmLayoutObserver), not the viewport: a 375 px phone and a narrow panel inside a 1440 px page both get the cards. The root states the settled choice as data-presentation=grid|cards."
   ]
 }
