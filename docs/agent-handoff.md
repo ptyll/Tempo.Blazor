@@ -93,6 +93,13 @@ An empty list says so ("Nothing was passed on." / "Nothing was lost.") instead o
 are the reason to look at a chain at all; an empty list closes them all. The component reports the expanded ids in CHAIN
 order, so a host that stores the value keeps a stable list.
 
+Internally the expanded and focus state is keyed by **position** (1-based), not by `Id`: two steps that share one `Id`
+(bad host data) still expand and focus independently. When the host inserts or removes a step while keeping the same
+`ExpandedStepIds` reference, each expanded position is remapped by the step id it held before, so the expanded state
+follows the step and not the raw position. A duplicate `Id` logs a warning through the optionally injected
+`ILoggerFactory` — logged once per duplicate streak, not on every parameter set — the component keeps rendering, but
+the host should supply distinct ids.
+
 ### The loss summary
 
 Below the chain sits ONE sentence: `Lost across the chain: {labels}` when anything was lost, and

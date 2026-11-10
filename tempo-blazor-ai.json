@@ -2396,6 +2396,13 @@
       ],
       "parameters": [
         {
+          "name": "AllowRename",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the editor offers an inline rename of a chain entry's label. Default false — a host that never bound OnRename sees no rename button. The rename commits on Enter and rolls back on Escape; the host owns persistence.",
+          "default": "false"
+        },
+        {
           "name": "Attempts",
           "type": "IReadOnlyList<FallbackAttempt>?",
           "isRequired": false,
@@ -2444,6 +2451,12 @@
           "isRequired": false,
           "default": "FallbackChainMode.View",
           "description": "Whether the surface reports the run or edits the chain. Default View. The host owns this switch (it is not two-way): the component never changes it on its own."
+        },
+        {
+          "name": "OnRename",
+          "type": "EventCallback<FallbackChainRenameArgs>",
+          "isRequired": false,
+          "description": "Fires with the committed rename (FallbackChainRenameArgs carrying the model id and the new label) when the reader commits an inline edit with Enter. Escape rolls back without raising this callback. The component updates its own working copy so the row shows the new label at once; the host applies the change to its own persistence."
         },
         {
           "name": "Policy",

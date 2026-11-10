@@ -41089,6 +41089,13 @@
           ],
           "parameters": [
             {
+              "name": "AllowRename",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the editor offers an inline rename of a chain entry's label. Default false — a host that never bound OnRename sees no rename button. The rename commits on Enter and rolls back on Escape; the host owns persistence.",
+              "default": "false"
+            },
+            {
               "name": "Attempts",
               "type": "IReadOnlyList<FallbackAttempt>?",
               "isRequired": false,
@@ -41137,6 +41144,12 @@
               "isRequired": false,
               "default": "FallbackChainMode.View",
               "description": "Whether the surface reports the run or edits the chain. Default View. The host owns this switch (it is not two-way): the component never changes it on its own."
+            },
+            {
+              "name": "OnRename",
+              "type": "EventCallback<FallbackChainRenameArgs>",
+              "isRequired": false,
+              "description": "Fires with the committed rename (FallbackChainRenameArgs carrying the model id and the new label) when the reader commits an inline edit with Enter. Escape rolls back without raising this callback. The component updates its own working copy so the row shows the new label at once; the host applies the change to its own persistence."
             },
             {
               "name": "Policy",
@@ -88173,6 +88186,30 @@
           "usageExample": "var chain = new[]\n{\n    new FallbackChainEntry(\"gpt-4o\", \"GPT-4o\"),\n    FallbackChainEntry.FromModel(new AiModelInfo(\"gpt-4o-mini\", \"GPT-4o mini\"))!,\n};"
         },
         {
+          "kind": "Record",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "The payload of a committed rename in the fallback chain editor: which model the reader renamed and the new label they typed. The host applies it to its own persistence — the component never writes back to the host's catalogue.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/FallbackChainRenameArgs.cs",
+          "documentationStatus": "generated",
+          "members": [
+            {
+              "name": "ModelId",
+              "kind": "Property",
+              "type": "string",
+              "description": "Stable identity of the model in the chain. Matches ModelId."
+            },
+            {
+              "name": "NewLabel",
+              "kind": "Property",
+              "type": "string",
+              "description": "The label the reader committed. The host owns what it means for its own persistence."
+            }
+          ],
+          "itemName": "FallbackChainRenameArgs"
+        },
+        {
           "itemName": "FallbackResolutionPolicy",
           "kind": "Enum",
           "category": "AI",
@@ -129664,12 +129701,12 @@
       ],
       "libraryExamples": [],
       "summary": {
-        "itemCount": 1707,
+        "itemCount": 1708,
         "manualItemCount": 1707,
-        "generatedItemCount": 1691,
-        "generatedOnlyItemCount": 0,
+        "generatedItemCount": 1692,
+        "generatedOnlyItemCount": 1,
         "componentCount": 0,
-        "publicApiTypeCount": 1691
+        "publicApiTypeCount": 1692
       }
     },
     {
@@ -146684,10 +146721,10 @@
   ],
   "summary": {
     "packageCount": 29,
-    "itemCount": 3715,
+    "itemCount": 3716,
     "manualItemCount": 3713,
-    "generatedOnlyItemCount": 2,
+    "generatedOnlyItemCount": 3,
     "componentCount": 565,
-    "publicApiTypeCount": 3098
+    "publicApiTypeCount": 3099
   }
 }

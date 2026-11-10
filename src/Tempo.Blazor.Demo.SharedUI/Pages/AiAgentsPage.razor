@@ -289,6 +289,8 @@
                      AvailableModels="_models"
                      Policy="_fallbackPolicy"
                      PolicyChanged="OnFallbackPolicyChanged"
+                     AllowRename="true"
+                     OnRename="OnFallbackRenamed"
                      Title="@Loc["TmAiAgentsDemo_FallbackTitle"]"
                      Culture="@CultureInfo.CurrentCulture"
                      DataTestId="ai-agents-fallback" />
@@ -894,6 +896,37 @@
     private Task OnFallbackChainChanged(IReadOnlyList<FallbackChainEntry> chain)
     {
         _fallbackChain = chain;
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// The page applies a committed rename to its own chain copy, so the new label survives a re-render. The
+    /// component already updated its working copy; this is the host-side persistence the rename contract expects.
+    /// </summary>
+    private Task OnFallbackRenamed(FallbackChainRenameArgs args)
+    {
+        var chain = FallbackChain;
+        var index = -1;
+        for (var i = 0; i < chain.Count; i++)
+        {
+            if (string.Equals(chain[i].ModelId, args.ModelId, StringComparison.Ordinal))
+            {
+                index = i;
+                break;
+            }
+        }
+
+        if (index >= 0)
+        {
+            var updated = new List<FallbackChainEntry>(chain.Count);
+            for (var i = 0; i < chain.Count; i++)
+            {
+                updated.Add(i == index ? chain[i] with { Label = args.NewLabel } : chain[i]);
+            }
+
+            _fallbackChain = updated;
+        }
+
         return Task.CompletedTask;
     }
 

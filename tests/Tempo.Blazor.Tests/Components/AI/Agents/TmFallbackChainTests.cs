@@ -85,7 +85,9 @@ public class TmFallbackChainTests : LocalizationTestBase
         bool showTitle = true,
         int headingLevel = 3,
         string? title = null,
-        CultureInfo? culture = null)
+        CultureInfo? culture = null,
+        bool allowRename = false,
+        Action<FallbackChainRenameArgs>? onRename = null)
     {
         _viewMode = null;
         _chain = null;
@@ -110,6 +112,16 @@ public class TmFallbackChainTests : LocalizationTestBase
                 _chain = next;
                 _chainChangeCount++;
             });
+
+            if (allowRename)
+            {
+                parameters.Add(component => component.AllowRename, true);
+            }
+
+            if (onRename is not null)
+            {
+                parameters.Add(component => component.OnRename, onRename);
+            }
 
             if (chain is not null)
             {
@@ -814,5 +826,214 @@ public class TmFallbackChainTests : LocalizationTestBase
         cut.FindAll("[aria-live]").Should().HaveCount(2,
             "the shared sortable list narrates a REORDER in its own region; this surface announces an add and a "
             + "remove, so the two regions never speak about the same event");
+    }
+
+    // ── Rename (AllowRename + OnRename) ──────────────────────────────────────
+
+    [Fact]
+    public void TheEditorWithoutAllowRename_RendersNoRenameControl()
+    {
+        var cut = RenderChain(mode: FallbackChainMode.Edit);
+
+        cut.FindAll("[data-testid='fallback-chain-editor-rename']").Should().BeEmpty(
+            "rename is opt-in: a host that never bound OnRename sees no rename button");
+    }
+
+    [Fact]
+    public void TheEditorWithAllowRename_RendersARenameButtonPerRow()
+    {
+        var cut = RenderChain(mode: FallbackChainMode.Edit, allowRename: true);
+
+        cut.FindAll("[data-testid='fallback-chain-editor-rename']").Should().HaveCount(3,
+            "one rename button per chain row");
+    }
+
+    [Fact]
+    public void RenameButton_ActivatesAnInlineEditor_WithTheCurrentLabel()
+    {
+        var cut = RenderChain(mode: FallbackChainMode.Edit, allowRename: true);
+
+        cut.FindAll("[data-testid='fallback-chain-editor-rename']")[0].Click();
+
+        var input = cut.Find("[data-testid='fallback-chain-editor-rename-input']");
+        input.GetAttribute("value").Should().Be("GPT-4o",
+            "the draft starts from the entry's current display name");
+    }
+
+    [Fact]
+    public void RenameEnter_CommitsTheDraft_AndRaisesOnRename()
+    {
+        FallbackChainRenameArgs? reported = null;
+        var cut = RenderChain(
+            mode: FallbackChainMode.Edit,
+            allowRename: true,
+            onRename: args => reported = args);
+
+        cut.FindAll("[data-testid='fallback-chain-editor-rename']")[0].Click();
+        var input = cut.Find("[data-testid='fallback-chain-editor-rename-input']");
+        input.Input("GPT-4o turbo");
+        input.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+
+        reported.Should().NotBeNull("Enter commits the rename");
+        reported!.ModelId.Should().Be("gpt-4o");
+        reported.NewLabel.Should().Be("GPT-4o turbo");
+    }
+
+    [Fact]
+    public void RenameEscape_RollsBackTheDraft_AndRaisesNothing()
+    {
+        FallbackChainRenameArgs? reported = null;
+        var cut = RenderChain(
+            mode: FallbackChainMode.Edit,
+            allowRename: true,
+            onRename: args => reported = args);
+
+        cut.FindAll("[data-testid='fallback-chain-editor-rename']")[0].Click();
+        var input = cut.Find("[data-testid='fallback-chain-editor-rename-input']");
+        input.Input("discarded");
+        input.KeyDown(new KeyboardEventArgs { Key = "Escape" });
+
+        reported.Should().BeNull("Escape rolls back without reporting");
+        cut.FindAll("[data-testid='fallback-chain-editor-rename-input']").Should().BeEmpty(
+            "the inline editor closed");
+    }
+
+    [Fact]
+    public void RenameCommit_UpdatesTheRowLabel_InTheWorkingChain()
+    {
+        var cut = RenderChain(mode: FallbackChainMode.Edit, allowRename: true);
+
+        cut.FindAll("[data-testid='fallback-chain-editor-rename']")[0].Click();
+        var input = cut.Find("[data-testid='fallback-chain-editor-rename-input']");
+        input.Input("GPT-4o turbo");
+        input.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+
+        cut.FindAll("[data-testid='fallback-chain-editor-row']")[0]
+            .QuerySelector(".tm-ai-fallback__editor-row-label")!.TextContent.Should().Be("GPT-4o turbo");
+    }
+
+    [Fact]
+    public void RenameEnter_HandsFocusBackToTheRenameButton_OfTheSameRow()
+    {
+        var cut = RenderChain(mode: FallbackChainMode.Edit, allowRename: true);
+
+        cut.FindAll("[data-testid='fallback-chain-editor-rename']")[0].Click();
+
+        // The editor opening focuses the input: that is the baseline the hand-back must exceed.
+        var focusCountAfterOpen = FocusCalls().Count;
+
+        var input = cut.Find("[data-testid='fallback-chain-editor-rename-input']");
+        input.Input("GPT-4o turbo");
+        input.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+
+        // The focus hand-back is deferred by ~50 ms so the Enter keyup cannot re-activate the button,
+        // so the assertion needs a longer window than the default. The second focus call must target a
+        // DIFFERENT element than the input (the rename button that replaced it).
+        cut.WaitForAssertion(() =>
+        {
+            FocusCalls().Count.Should().BeGreaterThan(focusCountAfterOpen,
+                "a second focus call hands the focus back after the editor closes");
+        }, TimeSpan.FromSeconds(2));
+    }
+
+    [Fact]
+    public void RenameEscape_HandsFocusBackToTheRenameButton_OfTheSameRow()
+    {
+        var cut = RenderChain(mode: FallbackChainMode.Edit, allowRename: true);
+
+        cut.FindAll("[data-testid='fallback-chain-editor-rename']")[1].Click();
+
+        var focusCountAfterOpen = FocusCalls().Count;
+
+        var input = cut.Find("[data-testid='fallback-chain-editor-rename-input']");
+        input.Input("discarded");
+        input.KeyDown(new KeyboardEventArgs { Key = "Escape" });
+
+        cut.WaitForAssertion(() =>
+        {
+            FocusCalls().Count.Should().BeGreaterThan(focusCountAfterOpen,
+                "a second focus call hands the focus back after the editor closes");
+        }, TimeSpan.FromSeconds(2));
+    }
+
+    [Fact]
+    public void RenameFocusOut_CommitsTheDraft_LikeEnterDoes()
+    {
+        FallbackChainRenameArgs? reported = null;
+        var cut = RenderChain(
+            mode: FallbackChainMode.Edit,
+            allowRename: true,
+            onRename: args => reported = args);
+
+        cut.FindAll("[data-testid='fallback-chain-editor-rename']")[0].Click();
+        var input = cut.Find("[data-testid='fallback-chain-editor-rename-input']");
+        input.Input("GPT-4o turbo");
+        input.FocusOut();
+
+        reported.Should().NotBeNull("leaving the field commits the rename, like the memory panel's inline edit");
+        reported!.ModelId.Should().Be("gpt-4o");
+        reported.NewLabel.Should().Be("GPT-4o turbo");
+    }
+
+    [Fact]
+    public void RenameEnter_WithAWhitespaceDraft_KeepsTheOriginalDisplayName()
+    {
+        FallbackChainRenameArgs? reported = null;
+        var cut = RenderChain(
+            mode: FallbackChainMode.Edit,
+            allowRename: true,
+            onRename: args => reported = args);
+
+        cut.FindAll("[data-testid='fallback-chain-editor-rename']")[0].Click();
+        var input = cut.Find("[data-testid='fallback-chain-editor-rename-input']");
+        input.Input("   ");
+        input.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+
+        reported.Should().BeNull("a whitespace-only draft is thrown away, not committed");
+        cut.FindAll("[data-testid='fallback-chain-editor-row']")[0]
+            .QuerySelector(".tm-ai-fallback__editor-row-label")!.TextContent.Should().Be("GPT-4o",
+                "the original label stays when the draft is empty or only spaces");
+    }
+
+    [Fact]
+    public void RenameEnter_ThenHostSuppliesADifferentLabelForTheSameModel_HostLabelWins()
+    {
+        // The reader renames a model; then the host re-renders with a Chain whose label for that model is
+        // DIFFERENT from both the original and the rename — the host has moved on, so the override must not
+        // shadow the new value.
+        var initialChain = new List<FallbackChainEntry>
+        {
+            new("gpt-4o", "GPT-4o"),
+            new("claude-3-5", "Claude 3.5 Sonnet"),
+        };
+        var cut = RenderChain(
+            mode: FallbackChainMode.Edit,
+            allowRename: true,
+            chain: initialChain);
+
+        cut.FindAll("[data-testid='fallback-chain-editor-rename']")[0].Click();
+        var input = cut.Find("[data-testid='fallback-chain-editor-rename-input']");
+        input.Input("GPT-4o turbo");
+        input.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+
+        cut.FindAll("[data-testid='fallback-chain-editor-row']")[0]
+            .QuerySelector(".tm-ai-fallback__editor-row-label")!.TextContent.Should().Be("GPT-4o turbo");
+
+        // The host catches up by renaming the model itself to a THIRD value: the override has served its
+        // purpose and the host's new label must be shown.
+        var hostUpdated = new List<FallbackChainEntry>
+        {
+            new("gpt-4o", "GPT-4o (latest)"),
+            new("claude-3-5", "Claude 3.5 Sonnet"),
+        };
+        cut.InvokeAsync(() => cut.Instance.SetParametersAsync(ParameterView.FromDictionary(
+            new Dictionary<string, object?>
+            {
+                [nameof(TmFallbackChain.Chain)] = hostUpdated,
+            }))).Wait();
+
+        cut.FindAll("[data-testid='fallback-chain-editor-row']")[0]
+            .QuerySelector(".tm-ai-fallback__editor-row-label")!.TextContent.Should().Be("GPT-4o (latest)",
+                "the host's label wins once it no longer matches the rename's original");
     }
 }

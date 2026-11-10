@@ -194,6 +194,29 @@
   wireframe schema and stencil props grow `columnsMode`, `minTileWidth` and `detailPresentation`;
   `docs/fan-out-grid.md` and the JSON documentation overlays carry the new contract.
 
+### Added — `TmAgentHandoff`, `TmFallbackChain` and `TmAgentGraph` hardening (plan 7ba95ed6, phase FZE-4)
+
+- **`TmAgentHandoff` duplicate-id resilience.** Two steps that share one `Id` (bad host data) no longer
+  share their expand/focus state: the internal state is keyed by **position** (1-based), so each step
+  expands and focuses independently. Expanded positions are remapped when the step count changes, and
+  the duplicate-id warning is logged once per duplicate streak. A duplicate `Id` logs a warning through
+  the optionally injected `ILoggerFactory` — the component keeps rendering, but the host should supply
+  distinct ids. The `ExpandedStepIds` parameter contract is unchanged (still id-based, reported in
+  chain order).
+- **`TmFallbackChain` inline rename.** Opt-in `AllowRename="true"` renders a Rename button per editor
+  row; the inline editor commits on Enter and rolls back on Escape, exactly like the memory panel's
+  inline edit; moving focus away (focusout) commits like Enter, and closing the editor hands focus
+  back to the row's Rename button (WCAG 2.4.3). The coarse-pointer layout gives the rename button and
+  input a touch-target minimum height. A committed rename raises `OnRename(FallbackChainRenameArgs)`
+  carrying the `ModelId` and the new label, and updates the working copy so the row shows the new
+  label at once — the host owns persistence. An unchanged or empty draft closes the editor without
+  reporting.
+- **`TmAgentGraph` layout performance.** The topological pass now uses a sorted ready-set (O(log V) per
+  node instead of the O(V) scan) and the barycenter sweeps sort in place, so a 200-node / 500-edge
+  graph builds in well under 50 ms — the WASM page stays interactive at the documented scale.
+  `PulseDuration` continues to be written inline as `--tm-agent-graph-pulse-duration` (single source
+  of truth, unchanged).
+
 ### Breaking changes and migration
 
 **No source-breaking change.** Every new member is additive or a default interface member; every new component is new. The behavior changes below are the complete list a 2.10.0 consumer can notice, with before/after:

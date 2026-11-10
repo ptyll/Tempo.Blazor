@@ -588,4 +588,48 @@ public class AgentGraphLayoutTests
         Text(layout.Find("planner")!.CenterX).Should().Be(
             Text(Placement(layout, "planner").X + (AgentGraphLayout.NodeWidthPx / 2)));
     }
+
+    // ── Performance fact ─────────────────────────────────────────────────────
+
+    [Fact]
+    public void ALargeGraph_BuildsUnder50Milliseconds()
+    {
+        var random = new Random(42);
+        var nodes = new List<AgentGraphNode>(200);
+        var edges = new List<AgentGraphEdge>(500);
+
+        for (var index = 0; index < 200; index++)
+        {
+            var kind = (index % 4) switch
+            {
+                0 => AgentGraphNodeKind.Human,
+                1 => AgentGraphNodeKind.Agent,
+                2 => AgentGraphNodeKind.Resource,
+                _ => AgentGraphNodeKind.Tool,
+            };
+            nodes.Add(Node("n" + index, kind, group: index % 10 == 0 ? "Group" + (index / 10) : null));
+        }
+
+        for (var index = 0; index < 500; index++)
+        {
+            var from = random.Next(200);
+            var to = random.Next(200);
+            edges.Add(Edge("e" + index, "n" + from, "n" + to, calls: random.Next(1, 100)));
+        }
+
+        var snapshot = Snapshot(nodes, edges);
+
+        // Warm-up: the first build pays the JIT cost; the perf fact measures the steady state.
+        Build(snapshot);
+
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        var layout = Build(snapshot);
+        stopwatch.Stop();
+
+        layout.Nodes.Should().HaveCount(200);
+        layout.Edges.Should().HaveCount(500);
+
+        stopwatch.ElapsedMilliseconds.Should().BeLessThan(50,
+            "200 nodes / 500 edges must build in under 50 ms so the WASM page stays interactive");
+    }
 }

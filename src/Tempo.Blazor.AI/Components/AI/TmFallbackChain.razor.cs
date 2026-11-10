@@ -1,5 +1,6 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.AI.Models;
 using Tempo.Blazor.Components.DataDisplay;
 using Tempo.Blazor.Components.Inputs;
@@ -46,12 +47,28 @@ public partial class TmFallbackChain : TmComponentBase
     private string _announcement = string.Empty;
     private bool _announcementMarker;
 
+    // Inline rename state: which row edits and the draft the reader typed. Only ONE row edits at a time.
+    private string? _renamingModelId;
+    private string _renameDraft = string.Empty;
+    private bool _focusRenameInputAfterRender;
+    private string? _focusRenameButtonFor;
+    private readonly Dictionary<string, ElementReference> _renameButtons = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Labels the reader renamed in this session, keyed by model id. Applied on every resync so a host re-render with
+    /// the same <see cref="Chain"/> reference does not revert the reader's rename before the host had a chance to
+    /// persist it. The override holds the original label too: once the host's label catches up (matches the rename)
+    /// or moves on (a different label), the entry is dropped so a stale rename never sits on top of the host's data.
+    /// </summary>
+    private readonly Dictionary<string, (string OriginalLabel, string Label)> _renamedLabels = new(StringComparer.Ordinal);
+
     // The editor's focus hand-back (WCAG 2.4.3): a control that removes or disables itself must not drop the
     // reader's focus onto the document body. The target is resolved on the click and consumed after the render,
     // because the element that has to receive it only exists once the new markup is patched.
     private TmSortableList<FallbackChainEntry>? _sortable;
     private ElementReference _addSelect;
     private ElementReference _editorHint;
+    private ElementReference _renameInput;
     private EditorFocus? _pendingEditorFocus;
 
     /// <summary>Where the editor hands the focus back to after an edit that removed the focused control.</summary>
@@ -137,6 +154,21 @@ public partial class TmFallbackChain : TmComponentBase
 
     /// <summary>The heading level of the rendered title, clamped to 2–6. Default 3.</summary>
     [Parameter] public int HeadingLevel { get; set; } = 3;
+
+    /// <summary>
+    /// Whether the editor offers an inline rename of a chain entry's label. Default <c>false</c> — a host that never
+    /// bound <see cref="OnRename"/> sees no rename button. The rename commits on Enter and rolls back on Escape, exactly
+    /// like the memory panel's inline edit; the host owns persistence.
+    /// </summary>
+    [Parameter] public bool AllowRename { get; set; }
+
+    /// <summary>
+    /// Fires with the committed rename (<see cref="FallbackChainRenameArgs"/> carrying the model id and the new label)
+    /// when the reader commits an inline edit with Enter. Escape rolls back without raising this callback. The component
+    /// updates its own working copy so the row shows the new label at once; the host applies the change to its own
+    /// persistence.
+    /// </summary>
+    [Parameter] public EventCallback<FallbackChainRenameArgs> OnRename { get; set; }
 
     /// <summary>
     /// The culture that formats the latencies and the attempt times. Null (the default) means the current culture at
@@ -253,11 +285,86 @@ public partial class TmFallbackChain : TmComponentBase
 
         SeedChain();
         RefreshAddable();
+        PruneRenameState();
+    }
+
+    /// <summary>
+    /// Drops the rename bookkeeping for models that are no longer in the chain: a rename button reference or a
+    /// remembered override for a model that left the chain would only leak memory and could shadow the label if the
+    /// model ever comes back with a different host-supplied name.
+    /// </summary>
+    private void PruneRenameState()
+    {
+        PruneKeysNotInChain(_renameButtons);
+        PruneKeysNotInChain(_renamedLabels);
+    }
+
+    private void PruneKeysNotInChain<TValue>(Dictionary<string, TValue> dictionary)
+    {
+        if (dictionary.Count == 0)
+        {
+            return;
+        }
+
+        List<string>? stale = null;
+        foreach (var key in dictionary.Keys)
+        {
+            if (_chain.All(entry => !string.Equals(entry.ModelId, key, StringComparison.Ordinal)))
+            {
+                (stale ??= []).Add(key);
+            }
+        }
+
+        if (stale is null)
+        {
+            return;
+        }
+
+        foreach (var key in stale)
+        {
+            dictionary.Remove(key);
+        }
     }
 
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // The rename input takes the focus as soon as it exists: the reader pressed a button and expects to type.
+        if (_focusRenameInputAfterRender)
+        {
+            _focusRenameInputAfterRender = false;
+            if (_renameInput.Id is not null)
+            {
+                try
+                {
+                    await _renameInput.FocusAsync();
+                }
+                catch (Exception exception) when (exception is Microsoft.JSInterop.JSException
+                    or Microsoft.JSInterop.JSDisconnectedException
+                    or InvalidOperationException or NotSupportedException or ObjectDisposedException or ArgumentException)
+                {
+                    // No JavaScript, or the element is already gone: the input is still reachable with Tab.
+                }
+            }
+        }
+
+        // The rename editor closed (Enter committed or Escape cancelled): the input is gone, so the focus would fall
+        // onto the document body (WCAG 2.4.3). It is handed back to the rename button of the same row instead.
+        // The hand-back yields once so the browser finishes the key event that closed the editor: focusing the
+        // button synchronously inside the Enter keydown would make the browser fire the button's click on the
+        // keyup (Enter activates a focused button), re-opening the editor.
+        if (_focusRenameButtonFor is { } renameTarget)
+        {
+            _focusRenameButtonFor = null;
+            if (_renameButtons.TryGetValue(renameTarget, out var renameButton))
+            {
+                // Yield so the Enter keyup that committed the rename does not activate the newly focused button
+                // and reopen the editor.
+                await Task.Yield();
+                await TryFocusAsync(renameButton);
+            }
+        }
+
         // The focus move happens AFTER the paint: the control that has to receive it is created (or enabled) by this
         // very render, and a browser only focuses an element once it is patched.
         if (_pendingEditorFocus is not { } pending)
@@ -314,19 +421,41 @@ public partial class TmFallbackChain : TmComponentBase
 
     /// <summary>
     /// Copies the host's list, dropping nulls and duplicate model ids: a chain is a sequence of DISTINCT models, and two
-    /// rows with one key would break the sortable list's keyed diff.
+    /// rows with one key would break the sortable list's keyed diff. Labels the reader renamed in this session are
+    /// applied over the host's values, so a host re-render with the same reference does not revert a committed rename —
+    /// but only while the host's label still matches the one the rename started from. Once the host catches up (its
+    /// label equals the rename) or moves on (a different label arrives), the override is dropped so a stale rename never
+    /// sits on top of the host's data.
     /// </summary>
-    private static List<FallbackChainEntry> Normalize(IEnumerable<FallbackChainEntry> entries)
+    private List<FallbackChainEntry> Normalize(IEnumerable<FallbackChainEntry> entries)
     {
         var seen = new HashSet<string>(StringComparer.Ordinal);
         var chain = new List<FallbackChainEntry>();
 
         foreach (var entry in entries)
         {
-            if (entry is not null && seen.Add(entry.ModelId))
+            if (entry is null || !seen.Add(entry.ModelId))
+            {
+                continue;
+            }
+
+            if (!_renamedLabels.TryGetValue(entry.ModelId, out var renamed))
             {
                 chain.Add(entry);
+                continue;
             }
+
+            if (string.Equals(entry.DisplayName, renamed.Label, StringComparison.Ordinal)
+                || !string.Equals(entry.DisplayName, renamed.OriginalLabel, StringComparison.Ordinal))
+            {
+                // The host caught up (its label now equals the rename) or moved on (a different label arrived):
+                // either way the override has served its purpose and must not shadow the host's value any longer.
+                _renamedLabels.Remove(entry.ModelId);
+                chain.Add(entry);
+                continue;
+            }
+
+            chain.Add(entry with { Label = renamed.Label });
         }
 
         return chain;
@@ -349,6 +478,119 @@ public partial class TmFallbackChain : TmComponentBase
         {
             _selectedModelId = _addable.Count > 0 ? _addable[0].Id : null;
         }
+    }
+
+    // ── Inline rename ────────────────────────────────────────────────────────
+
+    private bool IsRenaming(string modelId)
+        => string.Equals(_renamingModelId, modelId, StringComparison.Ordinal);
+
+    private void BeginRename(FallbackChainEntry entry)
+    {
+        if (!AllowRename || IsRenaming(entry.ModelId))
+        {
+            return;
+        }
+
+        _renamingModelId = entry.ModelId;
+        _renameDraft = entry.DisplayName;
+        _focusRenameInputAfterRender = true;
+        StateHasChanged();
+    }
+
+    private Task OnRenameInputAsync(ChangeEventArgs args)
+    {
+        _renameDraft = args.Value?.ToString() ?? string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private async Task OnRenameKeyDownAsync(KeyboardEventArgs args)
+    {
+        switch (args.Key)
+        {
+            case "Enter" when !args.ShiftKey:
+                await CommitRenameAsync();
+                break;
+            case "Escape":
+                CancelRename();
+                break;
+        }
+    }
+
+    /// <summary>Commits the draft: an unchanged or empty label closes the editor without reporting.</summary>
+    private async Task CommitRenameAsync()
+    {
+        if (_renamingModelId is not { } modelId)
+        {
+            return;
+        }
+
+        var entry = _chain.FirstOrDefault(candidate =>
+            string.Equals(candidate.ModelId, modelId, StringComparison.Ordinal));
+        var draft = _renameDraft.Trim();
+
+        CloseRenameEditor();
+
+        if (entry is null || string.IsNullOrWhiteSpace(draft)
+            || string.Equals(entry.DisplayName, draft, StringComparison.Ordinal))
+        {
+            StateHasChanged();
+            return;
+        }
+
+        var index = _chain.IndexOf(entry);
+        if (index >= 0)
+        {
+            _chain[index] = entry with { Label = draft };
+        }
+
+        // Remember the rename so a host re-render with the same Chain reference does not revert it before the host
+        // persists the change. The original label is stored alongside so Normalize can tell when the host has caught
+        // up (its label now equals the rename) or moved on (a different label arrived) and drop the override.
+        _renamedLabels[modelId] = (OriginalLabel: entry.DisplayName, Label: draft);
+
+        if (OnRename.HasDelegate)
+        {
+            await OnRename.InvokeAsync(new FallbackChainRenameArgs(modelId, draft));
+        }
+
+        Announce(Loc["TmFallbackChain_Renamed", draft]);
+        StateHasChanged();
+    }
+
+    /// <summary>Closes the editor without reporting anything.</summary>
+    private void CancelRename()
+    {
+        if (_renamingModelId is null)
+        {
+            return;
+        }
+
+        CloseRenameEditor();
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Leaving the rename input (Tab, click elsewhere) commits the draft, exactly like the memory panel's inline edit:
+    /// a half-typed label must not stay half-edited. The commit is idempotent — <see cref="CommitRenameAsync"/> returns
+    /// early when the editor is already closed (Enter then blur, or double blur).
+    /// </summary>
+    /// <returns>A task that completes when the change has been reported to the host.</returns>
+    private async Task OnRenameFocusOutAsync()
+    {
+        if (_renamingModelId is not null)
+        {
+            await CommitRenameAsync();
+        }
+    }
+
+    private void CloseRenameEditor()
+    {
+        // The input is about to disappear: remember which row was being renamed so the focus can be handed back to
+        // that row's rename button once the editor closes (WCAG 2.4.3).
+        _focusRenameButtonFor = _renamingModelId;
+        _renamingModelId = null;
+        _renameDraft = string.Empty;
     }
 
     // ── Editing ──────────────────────────────────────────────────────────────

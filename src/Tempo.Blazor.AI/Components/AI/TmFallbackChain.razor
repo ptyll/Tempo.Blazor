@@ -77,8 +77,33 @@
                             <span class="tm-ai-fallback__editor-row"
                                   data-testid="@TestId("fallback-chain-editor-row")"
                                   data-model-id="@entry.ModelId">
-                                <span class="tm-ai-fallback__editor-row-label">@entry.DisplayName</span>
+                                @if (IsRenaming(entry.ModelId))
+                                {
+                                    <input type="text"
+                                           class="tm-ai-fallback__editor-rename-input"
+                                           data-testid="@TestId("fallback-chain-editor-rename-input")"
+                                           aria-label="@Loc["TmFallbackChain_RenameLabel", entry.DisplayName]"
+                                           value="@_renameDraft"
+                                           @ref="_renameInput"
+                                           @oninput="OnRenameInputAsync"
+                                           @onkeydown="OnRenameKeyDownAsync"
+                                           @onkeydown:stopPropagation="true"
+                                           @onfocusout="OnRenameFocusOutAsync" />
+                                }
+                                else
+                                {
+                                    <span class="tm-ai-fallback__editor-row-label">@entry.DisplayName</span>
+                                }
                                 <span class="tm-ai-fallback__editor-row-id">@entry.ModelId</span>
+                                @if (AllowRename && !IsRenaming(entry.ModelId))
+                                {
+                                    <button type="button"
+                                            class="tm-ai-fallback__editor-rename"
+                                            aria-label="@Loc["TmFallbackChain_RenameNamed", entry.DisplayName]"
+                                            data-testid="@TestId("fallback-chain-editor-rename")"
+                                            @ref="_renameButtons[entry.ModelId]"
+                                            @onclick="() => BeginRename(entry)">@Loc["TmFallbackChain_Rename"]</button>
+                                }
                                 <button type="button"
                                         class="tm-ai-fallback__editor-remove"
                                         aria-label="@Loc["TmFallbackChain_RemoveNamed", entry.DisplayName]"

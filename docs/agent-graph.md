@@ -88,6 +88,9 @@ every paint depends on.
 - **A host may pin a node.** `NodePositions` maps a node id to an `AgentGraphPosition`; a pinned node keeps its exact
   coordinate, is flagged `data-pinned` and the canvas grows so its box is never cut off. Everything else is still laid
   out around it.
+- **The layout stays interactive at 200 nodes / 500 edges.** The topological pass uses a sorted ready-set (O(log V) per
+  node) and the barycenter sweeps sort in place, so a 200-node / 500-edge graph builds in well under 50 ms — the page
+  stays responsive in WASM.
 
 ## The component
 

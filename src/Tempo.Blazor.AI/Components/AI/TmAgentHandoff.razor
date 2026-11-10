@@ -118,9 +118,9 @@
             {
                 var step = _steps[index];
                 var position = index + 1;
-                var expanded = IsExpanded(step.Id);
+                var expanded = IsExpanded(position);
                 var detailId = DetailIdOf(position);
-                var handle = HandleFor(step.Id);
+                var handle = HandleFor(position);
                 var last = index == _steps.Count - 1;
 
                 <li class="tm-ai-handoff__step tm-ai-handoff__step--@HandoffPresentation.StatusTone(step.Status)"
@@ -184,8 +184,8 @@
                             aria-label="@Loc["TmAgentHandoff_DetailsNamed", StepName(position)]"
                             data-testid="@TestId("agent-handoff-step-toggle")"
                             @ref="handle.Ref"
-                            @onfocus="() => OnToggleFocused(step.Id)"
-                            @onclick="() => ToggleAsync(step)">
+                            @onfocus="() => OnToggleFocused(position)"
+                            @onclick="() => ToggleAsync(position)">
                         <span class="tm-ai-handoff__toggle-text">@Loc["TmAgentHandoff_Details"]</span>
                         <span class="tm-ai-handoff__toggle-icon" aria-hidden="true">
                             <TmIcon Name="@(expanded ? IconNames.ChevronUp : IconNames.ChevronDown)" Size="IconSize.Xs" />

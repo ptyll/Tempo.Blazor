@@ -4,6 +4,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Tempo.Blazor.AI.Models;
 using Tempo.Blazor.Components.AI;
 using Tempo.Blazor.Components.Inputs;
@@ -50,7 +51,7 @@ public class TmAgentHandoffTests : LocalizationTestBase
             ToAgent = withAgents ? new AgentRef("Matcher", "t-" + id) { ColorIndex = 4 } : null,
             FromAgentId = withAgents ? null : "w-from",
             ToAgentId = withAgents ? null : "w-to",
-            At = Ten.AddMinutes(int.Parse(id.TrimStart('s'), CultureInfo.InvariantCulture)),
+            At = Ten.AddMinutes(1),
             Status = status,
             PassedItems = passed ?? [Item("the task statement"), Item("invoice schema", HandoffItemKind.Artifact)],
             LostItems = lost ?? [],
@@ -625,5 +626,109 @@ public class TmAgentHandoffTests : LocalizationTestBase
         cut.FindAll("[aria-live]").Should().HaveCount(1);
         cut.Find("[aria-live]").GetAttribute("aria-live").Should().Be("polite");
         cut.Find("[aria-live]").GetAttribute("role").Should().Be("status");
+    }
+
+    // ── Duplicate step ids ───────────────────────────────────────────────────
+
+    [Fact]
+    public void DuplicateStepIds_ExpandIndependently_BecauseStateIsKeyedByPosition()
+    {
+        var steps = new List<HandoffStep>
+        {
+            Step("dup", HandoffStatus.Completed),
+            Step("dup", HandoffStatus.Accepted),
+        };
+
+        var cut = RenderHandoff(steps: steps, expanded: []);
+
+        // Both steps start collapsed (the host pinned an empty expanded list).
+        cut.FindAll("[data-testid='agent-handoff-step-detail']").Should().BeEmpty();
+
+        // Expand the FIRST step.
+        var toggles = cut.FindAll("[data-testid='agent-handoff-step-toggle']");
+        toggles.Count.Should().Be(2);
+        toggles[0].Click();
+
+        // Only the first step's detail opens — the duplicate id does not share state.
+        cut.FindAll("[data-testid='agent-handoff-step-detail']").Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void DuplicateStepIds_FocusIsTrackedPerPosition()
+    {
+        var steps = new List<HandoffStep>
+        {
+            Step("dup", HandoffStatus.Completed),
+            Step("dup", HandoffStatus.Accepted),
+        };
+
+        var cut = RenderHandoff(steps: steps, expanded: []);
+
+        // Focus the second toggle, then remove the first step: the focus must land on the step
+        // that took the removed one's place (the second duplicate, now at position 1).
+        var toggles = cut.FindAll("[data-testid='agent-handoff-step-toggle']");
+        toggles[1].Focus();
+        cut.Render(parameters =>
+        {
+            parameters.Add(component => component.Steps, new List<HandoffStep> { Step("dup", HandoffStatus.Accepted) });
+            parameters.Add(component => component.ExpandedStepIds, []);
+        });
+
+        JSInterop.Invocations[FocusInvocation].Should().NotBeEmpty(
+            "the focus moved to the surviving step's toggle");
+    }
+
+    [Fact]
+    public void DuplicateStepIds_LogAWarning_InsteadOfThrowing()
+    {
+        var factory = new RecordingLoggerFactory();
+        Services.AddSingleton<ILoggerFactory>(factory);
+
+        var steps = new List<HandoffStep>
+        {
+            Step("dup", HandoffStatus.Completed),
+            Step("dup", HandoffStatus.Accepted),
+        };
+
+        var cut = RenderHandoff(steps: steps);
+
+        cut.FindAll("[data-testid='agent-handoff-step']").Should().HaveCount(2,
+            "duplicate ids render both steps instead of crashing");
+
+        factory.Entries.Should().Contain(
+            entry => entry.Level == LogLevel.Warning
+                     && entry.Message.Contains("duplicate", StringComparison.OrdinalIgnoreCase),
+            "a duplicate id is a host data bug and must be logged as a warning");
+    }
+
+    /// <summary>Captures log entries so a test can assert the warning a duplicate id raises.</summary>
+    private sealed class RecordingLoggerFactory : ILoggerFactory
+    {
+        public readonly List<(LogLevel Level, string Message)> Entries = [];
+
+        public ILogger CreateLogger(string categoryName) => new RecordingLogger(Entries);
+
+        public void AddProvider(ILoggerProvider provider)
+        {
+        }
+
+        public void Dispose()
+        {
+        }
+
+        private sealed class RecordingLogger(List<(LogLevel Level, string Message)> entries) : ILogger
+        {
+            public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+            public bool IsEnabled(LogLevel logLevel) => true;
+
+            public void Log<TState>(
+                LogLevel logLevel,
+                EventId eventId,
+                TState state,
+                Exception? exception,
+                Func<TState, Exception?, string> formatter) =>
+                entries.Add((logLevel, formatter(state, exception)));
+        }
     }
 }

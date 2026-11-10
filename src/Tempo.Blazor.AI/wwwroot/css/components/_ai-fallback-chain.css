@@ -380,6 +380,47 @@
     outline-offset: 2px;
 }
 
+.tm-ai-fallback__editor-rename {
+    min-block-size: var(--tm-input-height-xs);
+    padding: 0 var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-medium);
+    cursor: pointer;
+}
+
+.tm-ai-fallback__editor-rename:hover {
+    background-color: var(--tm-bg-hover);
+}
+
+.tm-ai-fallback__editor-rename:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+}
+
+.tm-ai-fallback__editor-rename-input {
+    min-block-size: var(--tm-input-height-xs);
+    /* The fixed inline-size could otherwise overflow a narrow flex row on a 320px screen. */
+    min-inline-size: 0;
+    padding: 0 var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-border-color-focus);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-medium);
+    inline-size: 12rem;
+    max-inline-size: 100%;
+}
+
+.tm-ai-fallback__editor-rename-input:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+}
+
 .tm-ai-fallback__editor-add {
     display: flex;
     flex-wrap: wrap;
@@ -508,6 +549,11 @@
 @media (pointer: coarse) {
     .tm-ai-fallback__editor-remove,
     .tm-ai-fallback__editor-add-button {
+        min-block-size: var(--tm-touch-target);
+    }
+
+    .tm-ai-fallback__editor-rename,
+    .tm-ai-fallback__editor-rename-input {
         min-block-size: var(--tm-touch-target);
     }
 

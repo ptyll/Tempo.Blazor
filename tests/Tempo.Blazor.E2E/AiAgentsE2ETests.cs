@@ -723,6 +723,67 @@ public partial class AiAgentsE2ETests : AiAgentsE2EBase
     }
 
     /// <summary>
+    /// The fallback chain editor's inline rename: the Rename button opens an editor pre-filled with the current label,
+    /// Enter commits the new label and the page records it, Escape rolls back without reporting. The keyboard is the
+    /// only input — no pointer involved.
+    /// </summary>
+    [TestMethod]
+    public async Task TheFallbackChainEditor_RenamesByKeyboard()
+    {
+        var page = await OpenAsync();
+        await ScrollToSection(page, FallbackSection);
+
+        await page.Locator("[data-testid='ai-agents-fallback-mode'] button").Nth(1).ClickAsync();
+        await page.WaitForSelectorAsync("[data-testid='ai-agents-fallback'] [data-testid='fallback-chain-editor-row']",
+            new PageWaitForSelectorOptions { Timeout = 10000 });
+
+        // Rename the first row: click Rename, type a new label, commit with Enter.
+        var fallback = page.Locator("[data-testid='ai-agents-fallback']");
+        await fallback.Locator("[data-testid='fallback-chain-editor-rename']").First.ClickAsync();
+        var input = fallback.Locator("[data-testid='fallback-chain-editor-rename-input']");
+        await input.WaitForAsync(new LocatorWaitForOptions { Timeout = 10000 });
+        await input.ClickAsync();
+        await input.FillAsync("Atlas Large v2");
+        await page.Keyboard.PressAsync("Enter");
+        await page.WaitForTimeoutAsync(400);
+
+        // The row shows the new label.
+        var firstRowLabel = await fallback.Locator("[data-testid='fallback-chain-editor-row']")
+            .First.Locator(".tm-ai-fallback__editor-row-label").TextContentAsync();
+        Assert.AreEqual("Atlas Large v2", firstRowLabel?.Trim(),
+            "the committed rename updates the row label");
+
+        // WCAG 2.4.3: the focus returns to the rename button of the same row, not to the document body.
+        var activeElementTestId = await page.EvaluateAsync<string>(
+            "() => document.activeElement?.getAttribute('data-testid') ?? document.activeElement?.tagName ?? 'none'");
+        Assert.AreEqual("fallback-chain-editor-rename", activeElementTestId,
+            "after Enter the focus lands on the rename button of the renamed row");
+
+        // Rename the second row, then Escape: the draft is discarded.
+        await fallback.Locator("[data-testid='fallback-chain-editor-rename']").Nth(1).ClickAsync();
+        var input2 = fallback.Locator("[data-testid='fallback-chain-editor-rename-input']");
+        await input2.WaitForAsync(new LocatorWaitForOptions { Timeout = 10000 });
+        await input2.ClickAsync();
+        await input2.FillAsync("discarded");
+        await input2.PressAsync("Escape");
+        await page.WaitForTimeoutAsync(300);
+
+        var secondRowLabel = await fallback.Locator("[data-testid='fallback-chain-editor-row']")
+            .Nth(1).Locator(".tm-ai-fallback__editor-row-label").TextContentAsync();
+        Assert.AreNotEqual("discarded", secondRowLabel?.Trim(),
+            "Escape rolls back the rename without applying it");
+
+        // WCAG 2.4.3: Escape also hands the focus back to the rename button of the same row.
+        var activeElementTestIdAfterEscape = await page.EvaluateAsync<string>(
+            "() => document.activeElement?.getAttribute('data-testid') ?? document.activeElement?.tagName ?? 'none'");
+        Assert.AreEqual("fallback-chain-editor-rename", activeElementTestIdAfterEscape,
+            "after Escape the focus lands on the rename button of the row that was being edited");
+
+        await ShootAsync(page, "ai-agents-fallback-rename-light-1440");
+        await AssertNoSeriousAxeViolationsAsync(page, "ai-agents-fallback-section");
+    }
+
+    /// <summary>
     /// The autonomy dial is a real slider in the browser: the arrows step it, a grade at the threshold opens the
     /// confirmation, Escape drops the change AND leaves the focus on the slider, and only the confirmed one reaches the
     /// page. The plan's ceiling still shows the grade it does not allow, with the tenant's locks beside it.

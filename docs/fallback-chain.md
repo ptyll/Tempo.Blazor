@@ -79,6 +79,13 @@ never changes it on its own), so a page can offer "Run | Edit chain" without the
   control disables itself and explains why ("Every available model is already in the chain." / "No models are available
   to add.").
 - **Remove** — a labelled button per row.
+- **Rename** — opt-in via `AllowRename="true"`. A labelled button per row opens an inline editor pre-filled with the
+  entry's current display name; Enter commits the new label and raises `OnRename(FallbackChainRenameArgs)` carrying the
+  `ModelId` and the new label, Escape rolls back without raising anything, and leaving the field (Tab, click elsewhere)
+  commits the draft exactly like Enter — the row never stays half-edited. When the editor closes the focus is handed
+  back to the rename button of the same row (WCAG 2.4.3), so a keyboard or screen-reader reader keeps their place.
+  The component updates its working copy so the row shows the new label at once; the host owns persistence. An unchanged
+  or empty draft closes the editor without reporting — no spurious callback for a no-op edit.
 - **Policy** — a segmented radio group (`TmSegmentedControl`, `Pin` | `Fallback` | `Auto`) bound with
   `@bind-Policy`. Its group label is an INSTRUCTION ("Choose how the chain resolves"), not the run view's noun phrase
   (`TmFallbackChain_PolicyEditLabel` vs `TmFallbackChain_PolicyLabel`): the same words twice would make the editor read
@@ -107,7 +114,8 @@ unique key).
   focus move is not narrated, because the reader is placed on the thing the message names.
 - Every number on the run view — the position and the latency — follows the bound `Culture`, never the machine's
   `CultureInfo.CurrentCulture`, so a Czech page cannot print `1.5 s` beside a Czech clock.
-- `(pointer: coarse)` raises the remove button, the add button and the model select to the 44 px `--tm-touch-target`.
+- `(pointer: coarse)` raises the remove button, the rename button, the rename input, the add button and the model
+  select to the 44 px `--tm-touch-target`.
 - `forced-colors` hands the borders to `CanvasText`, the fills to `Canvas` and every focus ring to a 3 px `Highlight`
   outline.
 - The partial declares no transition and no animation.
@@ -119,7 +127,7 @@ unique key).
 `__node-state`, `__node-state-icon`, `__node-state-text`, `__node-reason`, `__node-reason-label`, `__node-reason-text`,
 `__node-facts`, `__arrow`, `__answer-arrow`, `__answer`, `__answer-icon`, `__answer-text`, `__answer-label`,
 `__answer-model`, `__editor`, `__editor-hint`, `__editor-empty`, `__editor-list`, `__editor-row`,
-`__editor-row-label`, `__editor-row-id`, `__editor-remove`, `__editor-add`, `__editor-add-label`, `__editor-select`,
+`__editor-row-label`, `__editor-row-id`, `__editor-rename`, `__editor-rename-input`, `__editor-remove`, `__editor-add`, `__editor-add-label`, `__editor-select`,
 `__editor-add-button`, `__editor-note`, `__editor-policy`, `__table`, `__empty` — tokens only. A node modifier SETS
 `--tm-fallback-node-tone` while the base rule READS it; the chip's ink and fill are knobs
 (`--tm-fallback-status-*`), and so are the arrow ink, its size and the Answer card. Guarded by
@@ -131,8 +139,8 @@ unique key).
 both sentences, the reason and latency labels, the millisecond/second formats, the time label and the "not recorded" /
 "not measured" cells, the policy label, the view labels, the table caption and columns, the editor label, hint, list
 label, the edit-mode policy instruction label, the empty-chain sentence, the add/remove labels and their
-announcements, and both no-model notes), `TmFallbackStatus_*` and `TmFallbackPolicy_*` in English, Czech, Slovak and
-French.
+announcements, the rename button and its named form, the rename-input label and the renamed announcement, and both
+no-model notes), `TmFallbackStatus_*` and `TmFallbackPolicy_*` in English, Czech, Slovak and French.
 
 ## Wireframe
 
