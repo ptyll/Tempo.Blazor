@@ -10,6 +10,13 @@
     <p class="text-slate-600 dark:text-slate-400">@Loc["TmTraceWaterfallDemo_PageDescription"]</p>
 </div>
 
+@* Plan 7ba95ed6 phase 9: this page is the ASSEMBLED SCENARIO (one generated agent run), while
+   /data-display documents the component knob by knob — the waterfall's own section there links back here. *@
+<DemoCrossLinks LabelKey="TmDemo_ComponentReference"
+                Links="DemoCrossLinkSets.DataDisplayReference"
+                DataTestId="trace-page-component-reference"
+                Class="mb-8" />
+
 @* One agent run of ~150 spans: the treegrid is the single scroll owner, the detail panel sits beside it on a
    wide container and below it on a narrow one, and the live toggle keeps the running bars growing through the
    component's own TimeProvider-driven ticker. *@

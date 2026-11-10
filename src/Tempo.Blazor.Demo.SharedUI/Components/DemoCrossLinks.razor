@@ -1,0 +1,33 @@
+@namespace Tempo.Blazor.Demo.SharedUI.Components
+@inject ITmLocalizer Loc
+
+@* The one cross-link row of the demo (plan 7ba95ed6, Fáze 9). A REFERENCE page says which assembled
+   scenario its section lives in, a SCENARIO page says which references its components are documented
+   on — one localized label and the demo nav titles as anchor text, so a reader who found the target in
+   the navigation meets the same wording here. The hrefs are RELATIVE (they follow the demo's
+   <base href>); the links ride the demo's Tailwind vocabulary, the same primary scale the navigation
+   itself uses, so both themes and the indigo skin recolour them. *@
+<p class="demo-cross-links flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm text-slate-600 dark:text-slate-400 @Class"
+   data-testid="@DataTestId"
+   data-cross-links="@LabelKey">
+    <span class="demo-cross-links__label font-medium text-slate-700 dark:text-slate-300">@Loc[LabelKey]</span>
+    @foreach (var link in Links)
+    {
+        <a class="demo-cross-links__link text-primary-600 dark:text-primary-400 underline underline-offset-2 rounded hover:text-primary-700 dark:hover:text-primary-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:focus-visible:outline-primary-400"
+           href="@link.Href">@Loc[link.LabelKey]</a>
+    }
+</p>
+
+@code {
+    /// <summary>The demo resource key of the row's label ("Component reference" or "Full scenario").</summary>
+    [Parameter, EditorRequired] public string LabelKey { get; set; } = string.Empty;
+
+    /// <summary>The links the row renders, in reading order.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<DemoCrossLink> Links { get; set; } = [];
+
+    /// <summary>Extra CSS classes for the row (typically a margin utility).</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>The row's test id; hosts pass a page-specific one so a spec can target its own row.</summary>
+    [Parameter] public string DataTestId { get; set; } = "demo-cross-links";
+}

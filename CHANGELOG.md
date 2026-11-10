@@ -401,6 +401,50 @@
 - **Docs and JSON documentation.** The `TmChart` overlay documents `AriaLabel`; the bundles are
   regenerated and `validate --fail-on-drift` is clean.
 
+### Demo — reference ↔ scenario cross-links and the modeling full-bleed fix (plan 7ba95ed6, Fáze 9)
+
+- **A demo page now says where its other half lives.** The demo splits into COMPONENT-LEVEL REFERENCES —
+  `/data-display` (the whole data-display vocabulary knob by knob) and `/forms` (the input vocabulary) —
+  and ASSEMBLED SCENARIOS — `/analytics-kit` (one reporting screen over a deterministic order history) and
+  `/trace-waterfall` (one generated agent run). The sections do NOT move (the plan's decision: neither page
+  duplicates the other 1:1), so the pages cross-link instead. `/analytics-kit` gained a
+  **Component reference** row naming *Data Display*, *Charts* and *Form Inputs*; `/trace-waterfall` names
+  *Data Display*; and the reference sections name the scenario they are assembled into: the KPI, change-summary,
+  breakdown, facet, usage and segmented sections of `/data-display` and the match-highlight section of
+  `/forms` carry a **Full scenario** row to `/analytics-kit`, while `/data-display`'s waterfall section links
+  to `/trace-waterfall`. This closes the carry-forwards that had parked the interim KPI/facet/trace/usage/
+  segmented sections on the reference pages: those pages stay the reference, and the assembled pages now say
+  so in both directions.
+  - **One localized label, nav titles as anchor text.** The two labels are `TmDemo_ComponentReference` /
+    `TmDemo_FullScenario` in English, Czech, Slovak and French; the anchor text is the target page's demo
+    NAVIGATION title (`TmDemo_ReferenceDataDisplay`, `…Charts`, `…Forms`, `TmDemo_ScenarioAnalyticsKit`,
+    `…TraceWaterfall`), spelled identically in every language because the demo navigation itself is not
+    localized — a reader who found the page in the nav meets the same words on the link (7 new demo keys in
+    the four demo resource tables).
+  - **One shared row, relative hrefs.** Demo-only building blocks `DemoCrossLinks` (the row),
+    `DemoCrossLink` (href + label key) and `DemoCrossLinkSets` (the four sets the pages render) live in
+    `Tempo.Blazor.Demo.SharedUI/Components`; every href is RELATIVE, so the demo's `<base href>` resolves it
+    and a host under a sub-path keeps working. The row exposes `data-cross-links="<label key>"`, the label
+    carries `.demo-cross-links__label`, and each page passes its own `DataTestId`, so specs never key off
+    translated text.
+- **`/modeling-editor`'s full-bleed override no longer uses the viewport width unit.** The
+  `@media (min-width: 1024px)` block that collapses the demo shell for the editor set
+  `width: 100vw !important; max-width: 100vw !important` on the main column; `100vw` INCLUDES the vertical
+  scrollbar, so on a desktop browser the page could grow a ~15 px horizontal scrollbar (WCAG 1.4.10 reflow).
+  It now mirrors `/app-shell`'s long-standing fix — `width: auto !important; max-width: none !important` —
+  which is enough because the main column is already the growing flex item (`flex-1`) of the shell row, so
+  `auto` fills exactly the shell width, scrollbar excluded. The library breakpoints and the editor's own
+  layout are untouched; only the demo page's override changed, and it carries a source guard.
+- **Tests.** bUnit: `DemoCrossLinksPhase9Tests` renders the shared row, pins the three-and-one anchor sets,
+  the nav title behind every anchor, the four-language translations and the seven back-link rows on
+  `/data-display`, plus a source guard for the `/forms` section (the page hosts a FluentValidation form and
+  no bUnit suite renders it); `ModelingDemoPageHookTests.Full_bleed_override_never_uses_the_viewport_width_unit`
+  strips the block's comments and fails on `100vw` or a missing `width: auto !important`. E2E (WASM):
+  `DemoCrossLinksPhase9E2ETests` drives the reference → scenario → reference round trips in a real browser
+  and captures the modeling workspace at 1440×760 and 1024×768 (touch), asserting the document scroller's
+  `scrollWidth` never exceeds its `clientWidth` while a vertical scrollbar IS present — the exact condition
+  the viewport unit broke.
+
 ### Breaking changes and migration
 
 **No source-breaking change.** Every new member is additive or a default interface member; every new component is new. The behavior changes below are the complete list a 2.10.0 consumer can notice, with before/after:

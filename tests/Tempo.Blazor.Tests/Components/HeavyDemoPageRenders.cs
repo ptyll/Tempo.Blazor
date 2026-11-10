@@ -3,8 +3,10 @@ using Xunit;
 namespace Tempo.Blazor.Tests.Components;
 
 /// <summary>
-/// The collection the two phase-9 DEMO PAGE suites share: <c>AnalyticsKitPageTests</c> (a 720-order reporting
-/// page with six projections per render) and <c>TraceWaterfallPageTests</c> (a 152-row treegrid per render).
+/// The collection the DEMO PAGE suites share: <c>AnalyticsKitPageTests</c> (a 720-order reporting page with
+/// six projections per render), <c>TraceWaterfallPageTests</c> (a 152-row treegrid per render) and
+/// <c>DemoCrossLinksPhase9Tests</c> (which renders both of those pages AND <c>/data-display</c> to pin the
+/// reference ↔ scenario cross-links).
 /// </summary>
 /// <remarks>
 /// <para>
@@ -23,6 +25,6 @@ namespace Tempo.Blazor.Tests.Components;
 [CollectionDefinition(Name, DisableParallelization = true)]
 public sealed class HeavyDemoPageRenders
 {
-    /// <summary>The collection name the two suites reference.</summary>
+    /// <summary>The collection name the demo-page suites reference.</summary>
     public const string Name = "Heavy demo page renders";
 }

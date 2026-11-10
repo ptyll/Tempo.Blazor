@@ -59,6 +59,22 @@ public sealed class ModelingDemoPageHookTests
     }
 
     [Fact]
+    public void Full_bleed_override_never_uses_the_viewport_width_unit()
+    {
+        // Comments are stripped first: the block explains WHY the viewport unit is avoided, and that
+        // explanation has to keep naming it.
+        var style = Regex.Replace(StyleBlock(PageSource()), @"/\*.*?\*/", string.Empty, RegexOptions.Singleline);
+
+        style.Should().NotContain("100vw",
+            "100vw includes the vertical scrollbar width, so the full-bleed page grew a ~15px horizontal " +
+            "scrollbar on a desktop browser at 1440px (WCAG 1.4.10 reflow)");
+        style.Should().Contain("width: auto !important",
+            "auto lets the flex item fill the shell's own width, which already excludes the scrollbar");
+        style.Should().Contain("max-width: none !important",
+            "the content cap lifts so the editor gets the whole shell width");
+    }
+
+    [Fact]
     public void Demo_layout_carries_the_stable_shell_hooks()
     {
         var layout = LayoutSource();

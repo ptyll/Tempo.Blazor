@@ -73,6 +73,12 @@
         <TmStatCard Title="Open tickets" Value="42" Delta="0" ComparisonLabel="vs. last week" Icon="activity" />
         <TmStatCard Title="Uptime" Value="99.9%" IsLoading="true" />
     </div>
+    @* Plan 7ba95ed6 phase 9: this is the COMPONENT-LEVEL REFERENCE — the section links to the
+       assembled scenario the component is used in, and that scenario links back here. *@
+    <DemoCrossLinks LabelKey="TmDemo_FullScenario"
+                    Links="DemoCrossLinkSets.AnalyticsKitScenario"
+                    DataTestId="data-display-kpi-scenario"
+                    Class="mt-3" />
 </section>
 
 <!-- Whole-card targets: Href renders an <a>, OnClick a <button> — one native focus stop. -->
@@ -130,6 +136,10 @@
                          IsLoading="true" />
         </div>
     </div>
+    <DemoCrossLinks LabelKey="TmDemo_FullScenario"
+                    Links="DemoCrossLinkSets.AnalyticsKitScenario"
+                    DataTestId="data-display-trend-scenario"
+                    Class="mt-3" />
 </section>
 
 <!-- Breakdown card: the period switch drives the host data, so the rows re-order and the FLIP
@@ -149,6 +159,10 @@
                          Parts="@BreakdownParts"
                          Total="12000" />
     </div>
+    <DemoCrossLinks LabelKey="TmDemo_FullScenario"
+                    Links="DemoCrossLinkSets.AnalyticsKitScenario"
+                    DataTestId="data-display-breakdown-scenario"
+                    Class="mt-3" />
 </section>
 
 
@@ -179,6 +193,10 @@
                            ResultCount="@FacetResultCount" />
         </div>
     </div>
+    <DemoCrossLinks LabelKey="TmDemo_FullScenario"
+                    Links="DemoCrossLinkSets.AnalyticsKitScenario"
+                    DataTestId="data-display-facet-scenario"
+                    Class="mt-3" />
 </section>
 
 
@@ -224,6 +242,10 @@
             </DetailTemplate>
         </TmTraceWaterfall>
     </div>
+    <DemoCrossLinks LabelKey="TmDemo_FullScenario"
+                    Links="DemoCrossLinkSets.TraceWaterfallScenario"
+                    DataTestId="data-display-trace-scenario"
+                    Class="mt-3" />
 </section>
 
 <!-- Usage meter: how much of a monthly credit quota is gone. The buttons walk the meter through
@@ -272,6 +294,10 @@
                           Unit="@Loc["TmDataDisplayDemo_UsageMeterUnit"]" />
         </div>
     </div>
+    <DemoCrossLinks LabelKey="TmDemo_FullScenario"
+                    Links="DemoCrossLinkSets.AnalyticsKitScenario"
+                    DataTestId="data-display-usage-scenario"
+                    Class="mt-3" />
 </section>
 
 <!-- Cards -->
@@ -548,6 +574,10 @@
             </div>
         </div>
     </div>
+    <DemoCrossLinks LabelKey="TmDemo_FullScenario"
+                    Links="DemoCrossLinkSets.AnalyticsKitScenario"
+                    DataTestId="data-display-segmented-scenario"
+                    Class="mt-3" />
 </section>
 
 @code {

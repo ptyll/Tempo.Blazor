@@ -278,6 +278,13 @@
                                   Placeholder="Select technologies..." />
         </div>
     </div>
+    @* Plan 7ba95ed6 phase 9: /forms is the COMPONENT-LEVEL REFERENCE for the input vocabulary, so the
+       section names the assembled scenario it participates in (/analytics-kit drives its period picker
+       and its segmented trays) and that page links back here. *@
+    <DemoCrossLinks LabelKey="TmDemo_FullScenario"
+                    Links="DemoCrossLinkSets.AnalyticsKitScenario"
+                    DataTestId="forms-match-highlight-scenario"
+                    Class="mt-3" />
 </section>
 
 <!-- Checkboxes & Toggles -->

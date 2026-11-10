@@ -11,6 +11,16 @@
     <p class="text-slate-600 dark:text-slate-400">@Loc["TmAnalyticsKitDemo_PageDescription"]</p>
 </div>
 
+@* Plan 7ba95ed6 phase 9: this page is the ASSEMBLED SCENARIO, not the component documentation. It names
+   the three component-level references its components are documented on (/data-display for the KPI, trend,
+   breakdown, facet, usage and segmented sections, /charts for the plot, /forms for the input vocabulary)
+   and each of those sections links BACK here, so neither page has to duplicate the other. The label is one
+   localized string; the anchor text is the demo nav title. *@
+<DemoCrossLinks LabelKey="TmDemo_ComponentReference"
+                Links="DemoCrossLinkSets.ComponentReference"
+                DataTestId="analytics-kit-component-reference"
+                Class="mb-8" />
+
 @* Reporting period (TmDateRangePicker with a comparison window) and the chart granularity tray. Both
    drive every number below: the KPIs, the trend rows, the chart and the breakdown all read the SAME
    two windows, so a reader never compares figures measured over different spans. *@

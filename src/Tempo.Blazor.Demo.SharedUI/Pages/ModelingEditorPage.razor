@@ -23,11 +23,16 @@
    E2E and the tablet baselines need that band reachable. The library breakpoints are untouched.
    Phase 15b: the collapse targets the STABLE data-demo-shell attributes on the demo layout
    (aside/main/page-body) instead of Tailwind utility class names, and the index link rides
-   --tm-text-link so the theme recolours it without a hex fallback. *@
+   --tm-text-link so the theme recolours it without a hex fallback.
+   Plan 7ba95ed6 phase 9: the main column widens to width: auto, never to the viewport unit. 100vw
+   INCLUDES the vertical scrollbar, so on a desktop browser the full-bleed page grew a ~15px
+   horizontal scrollbar (WCAG 1.4.10 reflow). The main element is already a growing flex item
+   (flex-1) inside the shell row, so auto fills exactly the shell's own width, which excludes the
+   scrollbar — the same fix /app-shell carries, with the same source guard. *@
 <style>
     @@media (min-width: 1024px) {
         .demo-shell:has(.modeling-demo-page) [data-demo-shell="sidebar"] { display: none !important; }
-        .demo-shell:has(.modeling-demo-page) [data-demo-shell="main"] { margin-left: 0 !important; width: 100vw !important; max-width: 100vw !important; }
+        .demo-shell:has(.modeling-demo-page) [data-demo-shell="main"] { margin-left: 0 !important; width: auto !important; max-width: none !important; }
         .demo-shell:has(.modeling-demo-page) [data-demo-shell="page-body"] { max-width: none !important; }
     }
     .modeling-demo-page__index-link { display: none; }
