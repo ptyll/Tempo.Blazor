@@ -15,7 +15,7 @@ namespace Tempo.Blazor.E2E;
 /// <item>a 375 px card shows the status filter as a real select instead of the five-segment tray.</item>
 /// </list>
 /// </summary>
-public partial class AiAgentsE2ETests
+public abstract partial class AiAgentsE2EBase : PlaywrightTestBase
 {
     /// <summary>
     /// The four arrows (and Home/End) are the dial's own keys. The module preventDefaults them on the focused slider —
@@ -139,11 +139,7 @@ public partial class AiAgentsE2ETests
         await page.Locator(units + " [data-testid='memory-item-edit']").ClickAsync();
         var category = page.Locator(units + " [data-testid='memory-item-edit-category']");
         await category.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
-        await category.ClickAsync();
-        await page.Keyboard.PressAsync("Control+A");
-        await page.Keyboard.TypeAsync("People");
-        await page.WaitForTimeoutAsync(200);
-        Assert.AreEqual("People", await category.InputValueAsync(), "the field carries the draft the reader typed");
+        await TypeIntoBoundFieldAsync(page, category, "People");
         await page.Keyboard.PressAsync("Enter");
         await page.WaitForFunctionAsync(
             "() => document.querySelector(\"[data-testid='ai-agents-memory'] [data-item-id='mem-units']\")?.dataset.category === 'People'",

@@ -2,6 +2,7 @@ using System.Globalization;
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
 using Tempo.Blazor.AI.Models;
@@ -394,6 +395,48 @@ public class TmAgentLanesTests : LocalizationTestBase
         cut.Instance.Layout.WidthPx.Should().BeApproximately(usable, 1,
             "fit puts the whole run inside the room the reader has");
         _pixelsPerHour.Should().NotBeNull("the reader's new scale is reported to the host once");
+    }
+
+    /// <summary>
+    /// Plan 7ba95ed6, Fáze 10 — the measured half of "fit to width" in STRICT interop mode, so a call the component makes
+    /// that the test did not declare fails the render instead of passing silently. The package's own module path is
+    /// asserted (never a core helper), the scrollport is handed over as an <see cref="ElementReference"/> exactly once,
+    /// and the measured room is PROJECTED onto the run: the block width ends up equal to the room minus the sticky agent
+    /// column. That projection is what the Server and InteractiveAuto browser lanes later read back from the DOM, and
+    /// the reason it is pinned here is that a circuit round trip cannot prove which number the component used.
+    /// </summary>
+    [Fact]
+    public void FitToWidth_MeasuresTheScrollportThroughThePackageModule_AndProjectsTheRoom()
+    {
+        JSInterop.Mode = JSRuntimeMode.Strict;
+        var module = JSInterop.SetupModule("./_content/Tempo.Blazor.AI/js/tm-agent-lanes.js");
+        // The gesture handle is a JS OBJECT, so it gets its own module handler (bUnit refuses a bare
+        // Setup<IJSObjectReference>) and its detach is declared or strict mode fails the assertion at dispose.
+        var handle = module.SetupModule("attachLanesZoom", _ => true);
+        handle.SetupVoid("detach", _ => true).SetVoidResult();
+        module.Setup<double>("measureWidth", _ => true).SetResult(1000);
+
+        // The Visual | Table switch is the core segmented control, which measures its own tray through its module.
+        var segmented = JSInterop.SetupModule("./_content/Tempo.Blazor/Components/Inputs/TmSegmentedControl.razor.js");
+        segmented.Mode = JSRuntimeMode.Loose;
+        segmented.SetupVoid("place", _ => true).SetVoidResult();
+        segmented.SetupVoid("focusOption", _ => true).SetVoidResult();
+        segmented.SetupVoid("release", _ => true).SetVoidResult();
+
+        var cut = RenderLanes(pixelsPerHour: 600);
+
+        cut.Find("[data-testid='agent-lanes-zoom-fit']").Click();
+
+        var measure = module.Invocations.Single(invocation => invocation.Identifier == "measureWidth");
+        measure.Arguments.Should().ContainSingle("the module needs the scrollport and nothing else");
+        measure.Arguments[0].Should().BeOfType<ElementReference>("the scrollport is measured where the reader reads");
+        ((ElementReference)measure.Arguments[0]!).Id.Should().NotBeNullOrEmpty("the reference must point at a real element");
+
+        cut.Instance.Layout.WidthPx.Should().BeApproximately(1000 - 176, 1,
+            "the projection is the measured room minus the sticky agent column");
+        cut.Find("[data-testid='agent-lanes-zoom-value']").TextContent.Trim()
+            .Should().NotBe("100 %", "the fit really changed the scale the reader sees");
+        _pixelsPerHour.Should().NotBeNull("and the one final scale is reported to the host");
     }
 
     [Fact]

@@ -4,16 +4,21 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Tempo.Blazor.E2E;
 
 /// <summary>
-/// Plan 3e96f6d8 phase 7 — the PAGE-WIDE specs of the <c>/ai-agents</c> scenario: the 375 px layout, the scoped axe scan
-/// of every section, the selected graph in both themes, the light/dark visual sweep and the <c>/ai-agent-visualizations</c>
-/// captures.
+/// Plan 3e96f6d8 phase 7 — the VISUAL and page-wide reference specs of the <c>/ai-agents</c> scenario. They are shot on
+/// the WASM lane only: they are the design reference (light/dark, 375 px, the fan-out's measured columns and the
+/// visualizations page's popover), not a cross-lane behaviour walk — the keyboard and focus walks that every lane must
+/// prove live in <see cref="AiAgentsE2EBase"/> and are inherited by the Server and InteractiveAuto subclasses.
 /// <para>
-/// The class, its base and every test name are shared with the main scenario file (one partial per concern), so each file
+/// The class, its base and every test name are shared with the scenario file (one partial per concern), so each file
 /// stays inside the repository's 1200-line source ceiling (N270/F13).
 /// </para>
 /// </summary>
-public partial class AiAgentsE2ETests
+public sealed partial class AiAgentsE2ETests
 {
+    /// <summary>
+    /// The 375 px layout: every section of the scenario stays inside the phone (no sideways scroll), the plan's Run
+    /// action keeps the 44 px coarse-pointer target, and the plan and prompt sections are shot as the phone reference.
+    /// </summary>
     [TestMethod]
     public async Task ThePhoneKeepsThePageInside375Px()
     {
@@ -46,22 +51,6 @@ public partial class AiAgentsE2ETests
         await ShootAsync(page, "ai-agents-plan-phone-375");
         await ScrollToSection(page, PromptsSection);
         await ShootAsync(page, "ai-agents-prompts-phone-375");
-    }
-
-    [TestMethod]
-    public async Task ScopedAxeScan_HasNoCriticalOrSeriousViolations()
-    {
-        var page = await OpenAsync();
-
-        await AssertNoSeriousAxeViolationsAsync(page,
-            "ai-agents-plan-section", "ai-agents-tree-section", "ai-agents-lanes-section",
-            "ai-agents-graph-section", "ai-agents-fan-out-section", "ai-agents-attempts-section",
-            "ai-agents-handoff-section", "ai-agents-fallback-section",
-            "ai-agents-autonomy-section", "ai-agents-memory-section",
-            "ai-agents-delegate-section", "ai-agents-runs-section",
-            "ai-agents-conflict-section", "ai-agents-presence-section",
-            "ai-agents-monitor-section", "ai-agents-models-section",
-            "ai-agents-context-section", "ai-agents-prompts-section");
     }
 
     /// <summary>

@@ -137,8 +137,11 @@ Every graphical surface has a text or table alternative a keyboard reaches, and 
   conflict and merging; the lanes and graph selections; the dial's keys; the six view switches' absence of
   `aria-pressed`; and the simulator's thread safety (concurrent `Step`, `Reset` and `Retry`, a throwing subscriber, a
   stale tick after `Dispose`).
-- **Playwright on the WASM host** (`AiAgentVisualizationsE2ETests`): the same paths in a real browser, including the
-  cross-list pointer drag on the delegate board, followed by a scoped axe scan of every section.
+- **Playwright on ALL THREE lanes** (`AiAgentVisualizationsE2EBase`, inherited by `AiAgentVisualizationsE2ETests` on
+  WASM, `AiAgentVisualizationsServerE2ETests` on a Blazor Server circuit and `AiAgentVisualizationsInteractiveAutoE2ETests`
+  on the InteractiveAuto host): the same paths in a real browser, including the cross-list pointer drag on the delegate
+  board and the ten-second undo window, followed by a scoped axe scan of every section. The walk lives ONCE in the base,
+  so a circuit or interop regression on one host fails that lane instead of hiding behind a green WASM run.
 - **The narrow-container lane** (`AiAgentVisualizationsPhoneE2ETests`) measures GEOMETRY: the 375 px cards stack the
   agents' changes under their file and nothing overflows the surface, the section or the page; the desktop table's
   declared row count is the number of rows it renders and its wrapper paints the scroll shadow; a folded directory
@@ -147,10 +150,14 @@ Every graphical surface has a text or table alternative a keyboard reaches, and 
   beside it); and the live cursors move while the page's run stays paused at zero events. Its shots land in the same
   folder (`ai-viz-conflict-cards-phone-375`, `ai-viz-conflict-folded-*`, `ai-viz-presence-labels-*`,
   `ai-viz-presence-live-*`).
-- **The Server smoke** renders the page and runs the same scoped axe scans.
+- **The WASM-only references** are the screenshots and the phone geometry: those are a design reference, not a lane
+  contract, so they stay on the WASM host.
 - **The visual sweep** (`AiAgentVisualizationsVisualE2ETests`) shoots every section at 1440 px in light and dark, the
   phone sweep at 375 px with the width and coarse-target assertions, the table alternatives on the phone, and the
   reduced-motion presentation. Reference screenshots land in
   `tests/Tempo.Blazor.E2E/TestResults/ai-agent-visualizations`.
-- **The performance lane** runs the two-minute budget spec described above; it is excluded from the full E2E lane by its
-  `Performance` category.
+- **The performance lane** runs the two-minute budget spec described above on BOTH hosts: the WASM measurement
+  (`AiAgentVisualizationsPerformanceE2ETests`, the inherited budget) and the Server measurement
+  (`AiAgentVisualizationsServerPerformanceE2ETests`, the same budget plus a per-second shape check — a circuit that
+  folded ticks into one burst after a round trip fails it while the ten-second total still looks right). Both are
+  excluded from the full E2E lane by their `Performance` category.

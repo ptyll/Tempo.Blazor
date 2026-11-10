@@ -228,9 +228,11 @@
         <ContentTemplate Context="attempt">
             @* The attempt's SUBMITTED body is host data, exactly like the votes' rationales: the component never
                localizes it and only places it inside the attempt's own column. *@
-            @* The demo's global `pre` rule paints a dark block, so the SUBMITTED body keeps the light ink that
-               block expects (a slate-700 body on slate-800 was unreadable and failed the contrast scan). *@
-            <pre class="text-xs text-slate-100 whitespace-pre-wrap mb-0"
+            @* The body paints its own dark block instead of leaning on the WASM demo's global `pre` rule: this page
+               runs on all three hosts now (plan 7ba95ed6, Fáze 10) and the Server / InteractiveAuto shells never load
+               that rule, which left light ink on a white page and failed the contrast scan there. The classes match
+               the rule the WASM lane has always painted (1rem padding, 0.5rem radius, slate-800). *@
+            <pre class="text-xs text-slate-100 whitespace-pre-wrap mb-0 rounded-lg bg-slate-800 p-4"
                  data-testid="ai-agents-attempt-body"
                  data-attempt-id="@attempt.Id">@AiAgentsPageSamples.AttemptBody(attempt.Id)</pre>
         </ContentTemplate>

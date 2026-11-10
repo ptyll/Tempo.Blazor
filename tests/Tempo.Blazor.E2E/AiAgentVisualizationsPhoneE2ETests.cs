@@ -8,7 +8,8 @@ namespace Tempo.Blazor.E2E;
 /// presentation (a phone gets a card per file instead of a file × agent table scrolled sideways) and the presence
 /// overlay's measured label placement (a cursor label never covers the sentence it points at).
 /// <para>
-/// The specs read GEOMETRY, not classes: the cards are stacked (an agent's change sits below its file), nothing
+/// The specs read GEOMETRY, not classes (WASM-only: a phone layout is the design reference, not a lane contract — the
+/// keyboard and pointer walks every lane must prove live in <see cref="AiAgentVisualizationsE2EBase"/>): the cards are stacked (an agent's change sits below its file), nothing
 /// overflows the surface or the page at 375 px, a mirrored/stacked label stays inside the content box and clear of the
 /// anchored paragraph's own text lines, and a folded directory survives the section's round trip through its table
 /// presentation because the page — not the component — owns that state. The live presence cursors are driven until the
@@ -17,7 +18,7 @@ namespace Tempo.Blazor.E2E;
 /// </summary>
 [TestClass]
 [TestCategory("WASM")]
-public class AiAgentVisualizationsPhoneE2ETests : AiAgentVisualizationsE2EBase
+public sealed class AiAgentVisualizationsPhoneE2ETests : AiAgentVisualizationsPageBase
 {
     protected override string BaseUrl =>
         Environment.GetEnvironmentVariable("TM_E2E_WASM_URL") ?? "https://localhost:7106";

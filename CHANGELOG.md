@@ -445,6 +445,43 @@
   `scrollWidth` never exceeds its `clientWidth` while a vertical scrollbar IS present — the exact condition
   the viewport unit broke.
 
+### Tests — the two AI demo pages run on the WASM, Server AND InteractiveAuto lanes (plan 7ba95ed6, Fáze 10)
+
+- **No production (package) behavior change; the `/ai-agents` demo's attempt body now paints its own dark block so it
+  passes contrast on Server/InteractiveAuto.** This phase closes the recorded lane gap: every keyboard and focus walk of
+  the AI visualizations was verified on the WASM demo only, so a Server-circuit or InteractiveAuto interop regression
+  could not fail a test. The specs are now lane-agnostic by construction.
+- **`AiAgentsE2EBase` holds the whole `/ai-agents` scenario** (the plan reorder by keyboard and grip, the failing run
+  with its Retry and the real approval, the treegrid walk, the model pick, the lanes' selection + table switch, the
+  graph's arrow walk, the fan-out's roving keys and `Ctrl+End`, the attempts' radio + confirmation, the handoff Details,
+  the fallback chain and its editor's rename/grab/move/drop, the dial's keys with the Escape confirmation, the memory
+  panel's inline edit and undo queue, the delegate board's Assign menu and pointer-drag preview, the scheduled runs'
+  Alt+arrow chord, the conflict radar settled from the native radio group, the presence overlay's measurement, the
+  prompt library and the context variants) and is inherited by `AiAgentsE2ETests` (WASM), `AiAgentsServerE2ETests` and
+  `AiAgentsInteractiveAutoE2ETests`. The former `AiAgentsServerSmokeE2ETests` is gone: its render/run walk and axe scan
+  are now part of the inherited scenario, so the Server lane proves the same contract instead of a smoke sample. One
+  partial per concern (`.FollowUps.cs`, `.DelegationAndConflict.cs`, `.PageWide.cs`) keeps every file inside the
+  1200-line ceiling; the WASM-only visual references (light/dark sweep, 375 px layout, selected-graph shots, the fan-out's
+  measured columns and the visualizations popover) live in `AiAgentsE2ETests.Visual.cs` because a screenshot is a design
+  reference, not a lane contract.
+- **`AiAgentVisualizationsPageBase` (helpers) + `AiAgentVisualizationsE2EBase` (behaviour + one scoped axe scan of all 13
+  sections)** do the same for `/ai-agent-visualizations`, inherited by `AiAgentVisualizationsE2ETests` (WASM),
+  `AiAgentVisualizationsServerE2ETests` and `AiAgentVisualizationsInteractiveAutoE2ETests`. The screenshots, the phone
+  geometry and the two-minute budget derive from the helper base instead, so they keep running once per lane that needs
+  them; the former `AiAgentVisualizationsServerSmokeE2ETests` is folded into the inherited behaviour + scan.
+- **`TmAgentLanes.FitToViewAsync` has a STRICT JS-interop projection test.**
+  `FitToWidth_MeasuresTheScrollportThroughThePackageModule_AndProjectsTheRoom` runs bUnit's `JSRuntimeMode.Strict`, so an
+  undeclared interop call fails the render: it pins the package's own `tm-agent-lanes.js` module path, `measureWidth`
+  invoked exactly once with the scrollport as an `ElementReference`, the projection (measured room minus the sticky
+  agent column = the block width), the changed zoom read-out and the one reported scale. The same measured path is
+  exercised in a real browser by the lanes' `zoom-fit` assertion on the Server and InteractiveAuto lanes.
+- **The two-minute budget runs on the Server host too.** `AiAgentVisualizationsPerformanceE2EBase` carries the original
+  WASM budget (ten events per second per ten-second window, a press answered in under three seconds after two minutes,
+  a flat JS heap) and `AiAgentVisualizationsServerPerformanceE2ETests` adds the circuit-specific shape check: the
+  stream is sampled once per second and must be SPREAD across every second (each one-second delta inside 3–25 events)
+  instead of arriving in one lump after a round trip, with the speed switch and the pause still answered mid-stream
+  within three seconds. Both classes stay in the `Performance` category (idle-machine budgets).
+
 ### Breaking changes and migration
 
 **No source-breaking change.** Every new member is additive or a default interface member; every new component is new. The behavior changes below are the complete list a 2.10.0 consumer can notice, with before/after:

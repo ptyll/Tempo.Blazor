@@ -12,7 +12,7 @@ namespace Tempo.Blazor.E2E;
 /// ceiling (N270/F13) — the class, its base and every test name are unchanged.
 /// </para>
 /// </summary>
-public partial class AiAgentsE2ETests
+public abstract partial class AiAgentsE2EBase : PlaywrightTestBase
 {
     [TestMethod]
     public async Task TheDelegateBoardAssignsAndRefuses_AndThePageOwnsTheTasks()

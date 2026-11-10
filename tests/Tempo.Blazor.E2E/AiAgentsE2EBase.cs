@@ -11,8 +11,15 @@ namespace Tempo.Blazor.E2E;
 /// with the APG tree keys, the model picker carries the pick AND its effort, the prompt library fills a template
 /// and hands the assembled prompt to the page, and a scoped axe scan of every section finds no critical or
 /// serious violation. Reference screenshots (light, dark, phone) land in <c>TestResults/ai-agents</c>.
+/// <para>
+/// Plan 7ba95ed6, Fáze 10 — the scenario is LANE-AGNOSTIC: every walk lives here and is inherited by the WASM, Server and
+/// InteractiveAuto subclasses in <c>AiAgentsE2ELanes.cs</c>. The class is one partial per concern
+/// (<c>.FollowUps.cs</c>, <c>.DelegationAndConflict.cs</c>, <c>.PageWide.cs</c>) so each file stays inside the
+/// repository's 1200-line source ceiling; the WASM-only visual reference specs live in
+/// <c>AiAgentsE2ETests.Visual.cs</c> because a screenshot is a design reference, not a lane contract.
+/// </para>
 /// </summary>
-public abstract class AiAgentsE2EBase : PlaywrightTestBase
+public abstract partial class AiAgentsE2EBase : PlaywrightTestBase
 {
     protected const string PlanSection = "[data-testid='ai-agents-plan-section']";
     protected const string TreeSection = "[data-testid='ai-agents-tree-section']";
@@ -76,6 +83,37 @@ public abstract class AiAgentsE2EBase : PlaywrightTestBase
     protected static async Task<string> TextAsync(IPage page, string rootTestId, string testId)
         => ((await page.Locator($"[data-testid='{rootTestId}'] [data-testid='{testId}']").TextContentAsync())
             ?? string.Empty).Trim();
+
+    /// <summary>
+    /// Types a whole draft into a Blazor-bound field, lane-safely. A WASM render happens in the same tick as the key, so a
+    /// bulk <c>TypeAsync</c> is enough there; a Server circuit re-renders the input after every round-tripped keystroke,
+    /// and a character typed while that render is in flight is simply dropped (the observed failure was "Tm uite" for
+    /// "Tempo Suite"). Each character is therefore typed with a small delay, the resolved value is POLLED until it matches,
+    /// and a draft the DOM came back from in any other shape is retried from a cleared field.
+    /// </summary>
+    protected static async Task TypeIntoBoundFieldAsync(IPage page, ILocator field, string text)
+    {
+        for (var attempt = 1; attempt <= 3; attempt++)
+        {
+            await field.ClickAsync();
+            await page.Keyboard.PressAsync("Control+A");
+            await page.Keyboard.PressAsync("Backspace");
+            await field.PressSequentiallyAsync(text, new LocatorPressSequentiallyOptions { Delay = 25 });
+
+            for (var poll = 0; poll < 30; poll++)
+            {
+                if (await field.InputValueAsync() == text)
+                {
+                    return;
+                }
+
+                await page.WaitForTimeoutAsync(100);
+            }
+        }
+
+        Assert.AreEqual(text, await field.InputValueAsync(),
+            "the bound field carries the whole draft the reader typed (a partially applied draft is the Server-lane race)");
+    }
 
     protected async Task<IPage> OpenAsync(int width = 1440, int height = 1100, bool coarsePointer = false,
         bool reduceMotion = false)
@@ -181,15 +219,6 @@ public abstract class AiAgentsE2EBase : PlaywrightTestBase
             Assert.AreEqual(0, violations.Length, $"axe [{testId}]: " + string.Join(" | ", violations));
         }
     }
-}
-
-/// <summary>The WASM lane (the demo default): the whole scenario.</summary>
-[TestClass]
-[TestCategory("WASM")]
-public partial class AiAgentsE2ETests : AiAgentsE2EBase
-{
-    protected override string BaseUrl =>
-        Environment.GetEnvironmentVariable("TM_E2E_WASM_URL") ?? "https://localhost:7106";
 
     [TestMethod]
     public async Task AStepReordersByKeyboardAndByItsGrip()
@@ -881,12 +910,7 @@ public partial class AiAgentsE2ETests : AiAgentsE2EBase
         await page.Locator(units + " [data-testid='memory-item-edit']").ClickAsync();
         var box = page.Locator(units + " [data-testid='memory-item-edit-box']");
         await box.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
-        await box.ClickAsync();
-        await page.Keyboard.PressAsync("Control+A");
-        await page.Keyboard.TypeAsync("Prefers metric units only.");
-        await page.WaitForTimeoutAsync(250);
-        Assert.AreEqual("Prefers metric units only.", await box.InputValueAsync(),
-            "the textarea carries the draft the reader typed");
+        await TypeIntoBoundFieldAsync(page, box, "Prefers metric units only.");
         await page.Keyboard.PressAsync("Enter");
         await page.WaitForTimeoutAsync(300);
         await ShootAsync(page, "ai-agents-memory-edit-light-1440");
@@ -980,10 +1004,7 @@ public partial class AiAgentsE2ETests : AiAgentsE2EBase
         // A Blazor-bound input must be driven by real key/input events (FillAsync does not reach @oninput).
         var product = page.Locator("[data-testid='ai-agents-prompts'] "
                                    + "[data-testid='prompt-library-variable'][data-variable='product']");
-        await product.ClickAsync();
-        await page.Keyboard.PressAsync("Control+A");
-        await page.Keyboard.TypeAsync("Tempo Suite");
-        await page.WaitForTimeoutAsync(300);
+        await TypeIntoBoundFieldAsync(page, product, "Tempo Suite");
 
         await page.Locator("[data-testid='ai-agents-prompts'] [data-testid='prompt-library-use']").ClickAsync();
         await page.WaitForSelectorAsync("[data-testid='ai-agents-used-prompt']", new PageWaitForSelectorOptions
@@ -1020,41 +1041,5 @@ public partial class AiAgentsE2ETests : AiAgentsE2EBase
         Assert.AreEqual("Compacted the optional sections.", await TextAsync(page, "ai-agents-context-log"));
 
         await ShootAsync(page, "ai-agents-context-light-1440");
-    }
-}
-
-/// <summary>The Server lane smoke: the same page renders its scenario on the Server host.</summary>
-[TestClass]
-[TestCategory("Server")]
-public class AiAgentsServerSmokeE2ETests : AiAgentsE2EBase
-{
-    protected override string BaseUrl => "https://localhost:7107";
-
-    [TestMethod]
-    public async Task ThePageRenders_AndTheRunFailsAndRetriesOnTheServerHost()
-    {
-        var page = await OpenAsync();
-
-        Assert.AreEqual("The plan is waiting for you to start it.",
-            await TextAsync(page, "ai-agents-run-state"));
-
-        await StartRunUntilFailureAsync(page);
-        StringAssert.Contains(await TextAsync(page, "ai-agents-run-state"), "failed");
-        Assert.AreEqual(1, await RunningPlan(page).Locator("[data-testid='agent-plan-step-retry']").CountAsync());
-    }
-
-    [TestMethod]
-    public async Task TheSectionsPassAScopedAxeScan_OnTheServerHost()
-    {
-        var page = await OpenAsync();
-
-        await AssertNoSeriousAxeViolationsAsync(page,
-            "ai-agents-plan-section", "ai-agents-tree-section", "ai-agents-lanes-section",
-            "ai-agents-fan-out-section", "ai-agents-attempts-section",
-            "ai-agents-handoff-section", "ai-agents-fallback-section",
-            "ai-agents-autonomy-section", "ai-agents-memory-section",
-            "ai-agents-delegate-section", "ai-agents-runs-section",
-            "ai-agents-conflict-section", "ai-agents-presence-section",
-            "ai-agents-monitor-section", "ai-agents-context-section", "ai-agents-prompts-section");
     }
 }
