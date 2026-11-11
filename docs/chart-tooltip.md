@@ -76,10 +76,33 @@ absent from both the card and the announcement.
 Values inside the card and the announcement are formatted with the **current culture**; SVG
 coordinates stay invariant.
 
+### The demo fixtures the browser guard reads
+
+`/charts` renders three index-mode cards in the `charts-demo-index-tooltip` section, and their shape
+is the point, not decoration:
+
+| Card | Shape | What it proves |
+|------|-------|----------------|
+| `charts-demo-index-default` | Line, 2 series, 6 months | the default card: a zone per category, one row per series, one live region |
+| `charts-demo-index-custom` | StackedBar, 2 series, `TooltipIndexTemplate` | a host template keeps the card, the placement and the total |
+| `charts-demo-index-many` | Line, **7 series**, 6 months, own `AriaLabel` | the >5-series path |
+
+The third card exists because the overlay defect the review found is invisible below six series: the
+old card gave each dot a growing sequence band, and from the sixth series on a dot took the sequence
+number of the hover-**zones** group. Blazor then treated the appearing dot as a replacement of the
+group, the zone under the pointer was detached, and the browser never delivered the `mouseout` that
+closes the card. A two-series demo can never fail that way. The browser lanes assert it on the real
+seven-series chart
+(`TmChartIndexTooltipE2EBase.IndexTooltip_SevenSeries_ListsEveryRow_AndKeepsItsHoverZoneConnected`):
+the card lists seven rows with seven swatches, the hover zone is still `isConnected` while the card
+is open, and leaving the plot clears both the card and `data-index-ordinal`.
+
 ## TmChart: the chart's accessible name
 
 The `aria-label` of the SVG comes from `TmChart_AriaLabel` (`"{0} chart"` in English, so the English
-output is byte-identical to the pre-2.9.1 hardcoded string), formatted with the chart type.
+output is byte-identical to the pre-2.9.1 hardcoded string), formatted with the chart type. A host
+whose chart carries a name of its own passes `AriaLabel` (the seven-series demo card does), and it
+wins over the generic text alternative instead of wrapping the chart in a `<figure>`.
 
 ## TmSparkline: text alternative and tooltip
 

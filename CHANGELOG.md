@@ -643,6 +643,32 @@
   suite (464/464) and the whole wireframe/stencil bUnit set (`~Wireframe`, `~Stencil`, `~UiRoleVocabulary`,
   `~TempoPack`) 2030/2030 green.
 
+### Demo — fixtures that make the two browser guards reachable (plan 7ba95ed6, Fáze 17)
+
+- **`/charts` gains a SEVEN-series index-tooltip card** (`charts-demo-index-many`, `CreateManySeriesIndexData()`):
+  Line, 7 series, 6 months, `TooltipMode=ChartTooltipMode.Index` and its own `AriaLabel`, with the seven series
+  names and the accessible name in all four demo languages. The two existing cards carry two series each, so the
+  browser lanes could never reach the >5-series path where the old overlay's dot band collided with the hover-zone
+  group and Blazor replaced the zone under the pointer (the phase-11 pinning bug). `TmChartIndexTooltipE2EBase`
+  gains `IndexTooltip_SevenSeries_ListsEveryRow_AndKeepsItsHoverZoneConnected`: seven rows with seven swatches,
+  the hovered zone still `isConnected` while the card is open, and leaving the plot clearing the card and
+  `data-index-ordinal` — inherited by the WASM, Server AND InteractiveAuto lanes.
+- **`/ai-agents` gains a fan-out dataset switch** (`TmSegmentedControl`, `data-testid="ai-agents-fan-out-size"`:
+  Live / 0 / 1 / 200). `Live` stays the page's own eighteen-unit run; the three fixtures come from the new
+  `AiAgentVisualizationsSamples.FanOutFixture(count, now)` as FROZEN snapshots — the live sample is not re-derived
+  while one is shown (the localized banner says the live fan-out is paused, and it sits in a polite live region, so
+  a screen reader hears which dataset is on screen), picking `Live` again rebuilds it from the page clock, and the
+  fixture units carry no estimate so nothing counts down. Switching repaints the fan-out only. This closes the
+  FZE-3 carry-forward: `AiAgentsE2EBase.FanOutFixtures.cs` walks 0 (empty state), 1 (one tile plus its detail), 200
+  (a bounded window whose sr-only line declares "of 200" — `aria-rowcount` counts rows — and `Ctrl+End` onto the
+  last unit) and the 200-unit fixture on a 375 px phone without lateral scroll, on all three lanes (the base is
+  lane-agnostic).
+- **Docs.** [docs/chart-tooltip.md](docs/chart-tooltip.md) and [docs/fan-out-grid.md](docs/fan-out-grid.md) name
+  the fixtures and say WHY the shape (series count, unit count) is what the guard reads.
+- **Verification.** `ChartsPageIndexTooltipSectionTests` + `AiAgentsPageTests` (filtered bUnit) green;
+  `TmChartIndexTooltipE2ETests`/`...ServerE2ETests`/`...InteractiveAutoE2ETests` and
+  `AiAgents*E2ETests` (three lanes) green for the new facts.
+
 ### Breaking changes and migration
 
 **No source-breaking change.** Every new member is additive or a default interface member; every new component is new. The behavior changes below are the complete list a 2.10.0 consumer can notice, with before/after:

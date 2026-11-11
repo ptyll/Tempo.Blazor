@@ -178,6 +178,63 @@ internal static class AiAgentVisualizationsSamples
     }
 
     /// <summary>
+    /// A deterministic fan-out FIXTURE of exactly <paramref name="count"/> units (plan 7ba95ed6, Fáze 17). The
+    /// <c>/ai-agents</c> page's dataset switch uses it to reach the three shapes a browser guard needs — 0 units
+    /// (the empty state), 1 unit (one tile and its detail) and 200 units (the windowed grid) — instead of a
+    /// per-visit coincidence of the live sample.
+    /// </summary>
+    /// <remarks>
+    /// A fixture is a FROZEN snapshot: it is built once from the caller's <paramref name="now"/> and never
+    /// re-derived, so the live run's clock is effectively paused behind it and a screenshot or a row-count
+    /// assertion cannot drift under the reader. No unit carries an estimate, so nothing counts down; the running
+    /// units paint the elapsed read-out, which stays truthful for a frozen start point.
+    /// </remarks>
+    internal static IReadOnlyList<FanOutTask> FanOutFixture(int count, DateTimeOffset now)
+    {
+        if (count <= 0)
+        {
+            return [];
+        }
+
+        var workers = Workers();
+        var tasks = new List<FanOutTask>(count);
+
+        for (var index = 0; index < count; index++)
+        {
+            // A repeating three-state pattern over the whole list: the LAST unit is always a succeeded one, so the
+            // windowed 200-unit fixture proves the focus can reach the end of the list whichever window it mounts.
+            var status = (index % 10) switch
+            {
+                8 => AgentActivityStatus.Running,
+                9 => AgentActivityStatus.Failed,
+                _ => AgentActivityStatus.Succeeded,
+            };
+            if (index == count - 1)
+            {
+                status = AgentActivityStatus.Succeeded;
+            }
+
+            var started = (DateTimeOffset?)now.AddMinutes(-2);
+
+            tasks.Add(new FanOutTask($"fixture-{index + 1:000}", $"Fixture batch {index + 1:000}")
+            {
+                Status = status,
+                Worker = workers[index % workers.Count],
+                Attempt = status == AgentActivityStatus.Failed ? 2 : 1,
+                MaxAttempts = 3,
+                StartedAt = started,
+                EstimatedEndAt = null,
+                CostMicroUnits = status == AgentActivityStatus.Succeeded ? 40_000 + (index * 250) : null,
+                Error = status == AgentActivityStatus.Failed
+                    ? "Provider rate limit — the fixture keeps the unit failed"
+                    : null,
+            });
+        }
+
+        return tasks;
+    }
+
+    /// <summary>
     /// The parallel attempts of one task: three drafts scored by the same grader. Draft B carries the highest score
     /// and two approvals, so it is the best attempt — the page still records only what the reader confirms.
     /// </summary>

@@ -63,8 +63,47 @@ public class ChartsPageIndexTooltipSectionTests : DemoPageLocalizationTestBase
             var text = heading.TextContent.Trim();
             text.Should().BeOneOf(
                 Localizer["TmChartDemo_IndexTooltipDefault"].Trim(),
-                Localizer["TmChartDemo_IndexTooltipCustom"].Trim());
+                Localizer["TmChartDemo_IndexTooltipCustom"].Trim(),
+                Localizer["TmChartDemo_IndexManyTitle"].Trim());
         }
+    }
+
+    /// <summary>
+    /// Plan 7ba95ed6, Fáze 17 — the SEVEN-series fixture of the index tooltip. The two-series cards above
+    /// never reach the path the review found broken: a chart with more series than the two the demo had
+    /// collided its overlay sequence bands once the dot band passed the zones group, which replaced the
+    /// hover zone under the pointer. The browser lanes can only assert that DOM identity through a chart
+    /// that really has seven series, so the page renders one.
+    /// </summary>
+    [Fact]
+    public void IndexTooltipSection_SevenSeriesCard_RendersTheManySeriesFixture()
+    {
+        var cut = Render<ChartsPage>();
+
+        var many = cut.Find("[data-testid='charts-demo-index-many']");
+        var chart = many.QuerySelector(".tm-chart")!;
+
+        chart.QuerySelectorAll(".tm-chart__index-zone").Length.Should().Be(6, "one zone per month");
+        chart.QuerySelectorAll(".tm-chart__legend-item").Length.Should().Be(7, "seven series, one legend row each");
+        chart.QuerySelector("svg")!.GetAttribute("aria-label")
+            .Should().Be(Localizer["TmChartDemo_IndexManyAriaLabel"],
+                "the demo names its own chart instead of leaning on the generic text alternative");
+
+        // The card lists EVERY series at the index — seven rows, each with its own swatch. bUnit rebuilds its DOM
+        // from the render tree on every render, so the chart is re-found after the hover instead of reusing the
+        // element captured before it (the same rule the TmChart index-tooltip suite documents).
+        cut.FindAll("[data-testid='charts-demo-index-many'] .tm-chart__index-zone")[2].MouseOver();
+
+        var hovered = cut.Find("[data-testid='charts-demo-index-many'] .tm-chart");
+        hovered.QuerySelectorAll(".tm-chart__tooltip-series").Length.Should().Be(7);
+        hovered.QuerySelectorAll(".tm-chart__tooltip-series .tm-chart__tooltip-dot").Length.Should().Be(7);
+
+        // Every series label is the page's own localized content, never a raw key.
+        var labels = hovered.QuerySelectorAll(".tm-chart__tooltip-series-label")
+            .Select(label => label.TextContent.Trim())
+            .ToArray();
+        labels.Should().OnlyContain(label => !label.StartsWith("TmChartDemo_", StringComparison.Ordinal));
+        labels.Should().OnlyHaveUniqueItems("seven distinguishable series need seven distinct names");
     }
 
     [Fact]

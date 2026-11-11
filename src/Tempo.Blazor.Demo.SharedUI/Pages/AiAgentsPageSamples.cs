@@ -485,6 +485,20 @@ internal static class AiAgentsPageSamples
     }
 
     /// <summary>
+    /// The fan-out the reader picked in the section's dataset switch (plan 7ba95ed6, Fáze 17). <see cref="FanOutDataSet.Live"/>
+    /// derives the page's own eighteen units from the demo clock; the three fixtures come from the shared sample
+    /// builder as FROZEN snapshots — the live sample is not re-derived while a fixture is shown, so the 0 / 1 / 200
+    /// shapes stay put under a browser guard — and picking Live again re-derives it from the current time.
+    /// </summary>
+    internal static IReadOnlyList<FanOutTask> FanOutTasksFor(FanOutDataSet dataset, DateTimeOffset now) => dataset switch
+    {
+        FanOutDataSet.Zero => AiAgentVisualizationsSamples.FanOutFixture(0, now),
+        FanOutDataSet.One => AiAgentVisualizationsSamples.FanOutFixture(1, now),
+        FanOutDataSet.TwoHundred => AiAgentVisualizationsSamples.FanOutFixture(200, now),
+        _ => FanOutTasks(now),
+    };
+
+    /// <summary>
     /// The parallel attempts of the <c>/ai-agents</c> demo: three drafts at the same task, scored and voted on. Draft B
     /// carries the highest score and two approvals, so it is the best attempt; the page still records only what the
     /// reader confirms.

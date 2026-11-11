@@ -78,7 +78,7 @@ nothing is active the estimate says "Finished"; a fan-out with no estimates says
 
 ## The grid
 
-The grid is an APG **grid**: `role="grid"` with `aria-rowcount` (the filtered total), `aria-colcount` (`Columns`),
+The grid is an APG **grid**: `role="grid"` with `aria-rowcount` (the filtered total of ROWS), `aria-colcount` (`Columns`),
 a `role="row"` per mounted row carrying its REAL `aria-rowindex`, and a `role="gridcell"` per tile carrying its
 `aria-colindex`. Every tile is a **native `<button>`** inside its cell, named by its label first (WCAG 2.5.3), then its
 state, its attempt, its countdown, its worker, its cost and its error, joined into one sentence.
@@ -102,6 +102,28 @@ Above `VisibleTaskLimit` tiles the grid mounts a **window of whole rows** centre
 `aria-rowcount` keeps declaring the filtered total and every mounted row keeps its real `aria-rowindex`. An sr-only line
 reports which slice is mounted, so a screen reader never miscounts the grid. The window follows the focus: `Ctrl+End` on
 300 tasks mounts the last rows and focuses the last tile.
+
+### The demo fixtures a browser guard reads
+
+`/ai-agents` renders a `TmFanOutGrid` over eighteen units, and eighteen is exactly why the windowed path (and the
+empty state, and a one-tile grid) could not be reached from an E2E spec. The section therefore carries a
+**dataset switch** — a `TmSegmentedControl` named `ai-agents-fan-out-size` — offering `Live` and three fixtures:
+
+| Dataset | Units | What it makes observable |
+|---------|-------|--------------------------|
+| `Live` (default) | 18 | the page's own run: a failing unit whose Retry is the page's handler, a live countdown |
+| `Zero` | 0 | the localized empty state, no tile at all |
+| `One` | 1 | a single tile, its detail and the summary of a one-task fan-out |
+| `TwoHundred` | 200 | more units than `VisibleTaskLimit` → a mounted window while the sr-only line still declares "of 200", and `Ctrl+End` landing on the last unit |
+
+A fixture is a **frozen snapshot** (`AiAgentVisualizationsSamples.FanOutFixture(count, now)`): the page does not
+re-derive the live sample while one is shown — "the live fan-out is paused", and the localized banner above the grid
+says so, inside a polite live region so a screen reader hears the dataset change — and picking `Live` again rebuilds
+the run from the page's clock. Fixture units carry no estimate, so nothing
+counts down and a screenshot or a row-count assertion cannot drift under the reader; the running ones paint the
+elapsed read-out instead. The switch is the page's own state and stays inside the section: one pick is ONE page
+render, a decision the reader made in another section (a confirmed attempt winner, for example) survives it, and no
+other section is re-seeded — which is what makes the fixtures usable as a browser guard instead of a page reset.
 
 ### The detail and the actions
 

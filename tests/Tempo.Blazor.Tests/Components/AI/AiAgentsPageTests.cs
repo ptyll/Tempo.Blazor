@@ -554,6 +554,120 @@ public class AiAgentsPageTests : DemoPageLocalizationTestBase
         }, TimeSpan.FromSeconds(10));
     }
 
+    /// <summary>The page's own fan-out DATASET switch, clicked the way a reader clicks it.</summary>
+    private static void SelectFanOutDataset(IRenderedComponent<AiAgentsPage> cut, string dataset)
+        => cut.Find($"[data-testid='ai-agents-fan-out-size'] .tm-segmented__option[data-value='{dataset}']").Click();
+
+    /// <summary>
+    /// Plan 7ba95ed6, Fáze 17 — the fan-out DATASET switch that makes the 0 / 1 / 200 shapes reachable in a browser.
+    /// The page owns the list, so the switch is the page's own state: Live is the eighteen-unit run the other facts
+    /// walk, and the three fixtures are frozen snapshots (the live sample is not re-derived behind the reader).
+    /// </summary>
+    [Fact]
+    public void TheFanOutDatasetSwitch_ShowsTheZeroOneAndTwoHundredFixtures()
+    {
+        var cut = RenderPage();
+
+        cut.FindAll("[data-testid='ai-agents-fan-out'] [data-testid='fan-out-tile']").Should().HaveCount(18,
+            "the page opens on the LIVE run");
+        cut.FindAll("[data-testid='ai-agents-fan-out-size'] .tm-segmented__option").Should().HaveCount(4,
+            "Live / 0 / 1 / 200");
+
+        // 0 units: the localized empty state, no tile at all.
+        SelectFanOutDataset(cut, "Zero");
+        cut.WaitForAssertion(() =>
+        {
+            cut.FindAll("[data-testid='ai-agents-fan-out'] [data-testid='fan-out-tile']").Should().BeEmpty();
+            cut.Find("[data-testid='ai-agents-fan-out'] [data-testid='fan-out-empty']").TextContent.Trim()
+                .Should().Be("No fan-out tasks to show yet.");
+        }, TimeSpan.FromSeconds(10));
+
+        // 1 unit: exactly one tile, and the detail follows the tile the reader pinned.
+        SelectFanOutDataset(cut, "One");
+        cut.WaitForAssertion(
+            () => cut.FindAll("[data-testid='ai-agents-fan-out'] [data-testid='fan-out-tile']")
+                .Should().ContainSingle(),
+            TimeSpan.FromSeconds(10));
+        cut.InvokeAsync(() => cut.Find("[data-testid='ai-agents-fan-out'] [data-testid='fan-out-tile']").Click());
+        cut.WaitForAssertion(
+            () => cut.FindAll("[data-testid='ai-agents-fan-out'] [data-testid='fan-out-detail']")
+                .Should().ContainSingle(),
+            TimeSpan.FromSeconds(10));
+
+        // 200 units: a bounded window of whole rows, the honest declared total, and Ctrl+End reaching the last unit.
+        SelectFanOutDataset(cut, "TwoHundred");
+        cut.WaitForAssertion(() =>
+        {
+            var mounted = cut.FindAll("[data-testid='ai-agents-fan-out'] [data-testid='fan-out-tile']").Count;
+            mounted.Should().BeGreaterThan(0).And.BeLessThan(200,
+                "a 200-unit fan-out mounts a window of whole rows");
+
+            // The sr-only window line declares the filtered TOTAL (aria-rowcount counts rows, not units), so a
+            // screen reader — and this test — can tell a window of 60 from a list of 60.
+            cut.Find("[data-testid='ai-agents-fan-out'] [data-testid='fan-out-window']").TextContent
+                .Should().Contain("of 200", "the mounted window still declares all 200 units");
+        }, TimeSpan.FromSeconds(10));
+
+        cut.InvokeAsync(() => cut.Find("[data-testid='ai-agents-fan-out'] [data-testid='fan-out-tile']")
+            .KeyDown(new KeyboardEventArgs { Key = "End", CtrlKey = true }));
+        cut.WaitForAssertion(() =>
+            cut.FindAll("[data-testid='ai-agents-fan-out'] [data-testid='fan-out-tile'][tabindex='0']")
+                .Should().ContainSingle()
+                .Which.GetAttribute("data-task-id").Should().Be("fixture-200",
+                    "Ctrl+End mounts and roves to the last unit"),
+            TimeSpan.FromSeconds(10));
+
+        // Back to Live: the page's own eighteen-unit run returns.
+        SelectFanOutDataset(cut, "Live");
+        cut.WaitForAssertion(
+            () => cut.FindAll("[data-testid='ai-agents-fan-out'] [data-testid='fan-out-tile']").Should().HaveCount(18),
+            TimeSpan.FromSeconds(10));
+    }
+
+    /// <summary>
+    /// The dataset switch touches the FAN-OUT and nothing else. "Render isolation" is measured where bUnit can
+    /// actually observe it: one switch is ONE page render (a re-seed would cascade), and the state a reader set in
+    /// another section — the winner they confirmed in the attempts, plus that section's markup — survives the
+    /// switch unchanged. (bUnit rebuilds its DOM from the render tree on every render, so node identity across two
+    /// renders is not observable; the child components are free to repaint with their own unchanged parameters.)
+    /// </summary>
+    [Fact]
+    public void TheFanOutDatasetSwitch_LeavesEveryOtherSectionUntouched()
+    {
+        var cut = RenderPage();
+
+        // A decision the reader made OUTSIDE the fan-out: the attempts confirm a winner two-step.
+        cut.InvokeAsync(() => cut.Find(
+            "[data-testid='ai-agents-attempts'] [data-testid='parallel-attempt-radio'][data-attempt-id='draft-a']")
+            .Change(true));
+        cut.InvokeAsync(() => cut.Find(
+            "[data-testid='ai-agents-attempts'] [data-testid='parallel-attempts-confirm-yes']").Click());
+        cut.WaitForAssertion(
+            () => Text(cut, "ai-agents-attempts-log").Should().Be("The page accepted Draft A as the result."),
+            TimeSpan.FromSeconds(10));
+
+        var attemptsBefore = Text(cut, "ai-agents-attempts-log");
+        var promptsBefore = Text(cut, "ai-agents-prompts-hint");
+        var pageRenders = cut.RenderCount;
+
+        SelectFanOutDataset(cut, "TwoHundred");
+
+        cut.WaitForAssertion(
+            () => cut.Find("[data-testid='ai-agents-fan-out'] [data-testid='fan-out-window']").TextContent
+                .Should().Contain("of 200"),
+            TimeSpan.FromSeconds(10));
+
+        cut.RenderCount.Should().Be(pageRenders + 1,
+            "one switch is ONE page render — a page-wide re-seed would cascade");
+        Text(cut, "ai-agents-attempts-log").Should().Be(attemptsBefore,
+            "the attempts keep the winner the reader confirmed");
+        cut.Find("[data-testid='ai-agents-attempts'] [data-testid='parallel-attempt'][data-selected='true']")
+            .GetAttribute("data-attempt-id").Should().Be("draft-a",
+                "the confirmed winner is still the selected attempt after a fan-out fixture");
+        Text(cut, "ai-agents-prompts-hint").Should().Be(promptsBefore,
+            "the prompt library is not re-seeded by a fan-out fixture");
+    }
+
     /// <summary>
     /// The attempts section compares three drafts and the page records ONLY the winner the component reports after the
     /// reader confirmed it — the two-step choice is what keeps a stray arrow key from replacing a result.

@@ -513,6 +513,18 @@
                 </TooltipIndexTemplate>
             </TmChart>
         </div>
+        @* Plan 7ba95ed6, Fáze 17 — SEVEN series. The two cards above never reach the path the review found
+           broken: with more series than the two the demo used to carry, the index overlay's dot band could
+           collide with the hover-zone group and Blazor then REPLACED the zone the pointer was resting on, so
+           the browser never delivered the mouseout that clears the card. A browser guard can only prove the
+           zone survives when the page really renders a chart this wide — and the chart names itself, because
+           seven series in one plot are no longer a generic "Line chart". *@
+        <div class="showcase-card lg:col-span-2" data-testid="charts-demo-index-many">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">@Loc["TmChartDemo_IndexManyTitle"]</h3>
+            <TmChart Type="ChartType.Line" Data="IndexTooltipManyData" Height="320px"
+                     TooltipMode="ChartTooltipMode.Index" InteractiveLegend="true"
+                     AriaLabel="@Loc["TmChartDemo_IndexManyAriaLabel"]" />
+        </div>
     </div>
 </section>
 
@@ -575,6 +587,62 @@
         get => _indexTooltipData;
     }
 
+    /// <summary>
+    /// The SEVEN-series fixture of the index tooltip (plan 7ba95ed6, Fáze 17). A field with a getter for the same
+    /// reason as <see cref="IndexTooltipData"/>: TmChart resets its tooltip/legend state when the Data INSTANCE
+    /// changes, so a property that allocates on every access would wipe the crosshair on any parent re-render.
+    /// </summary>
+    private ChartData _indexTooltipManyData = default!;
+
+    private ChartData IndexTooltipManyData
+    {
+        get => _indexTooltipManyData;
+    }
+
+    /// <summary>
+    /// Seven series over the same six months. The count is the point: six series is where the old index overlay's
+    /// dot band ran into the hover-zone group's sequence number, so the seventh dot replaced the zone under the
+    /// pointer. One colour per series keeps the legend and the card's seven swatches distinguishable.
+    /// </summary>
+    private ChartData CreateManySeriesIndexData()
+    {
+        string[] labels =
+        [
+            Loc["TmChartDemo_IndexManyFilings"],
+            Loc["TmChartDemo_IndexManyRulings"],
+            Loc["TmChartDemo_IndexManyAppeals"],
+            Loc["TmChartDemo_IndexManyMotions"],
+            Loc["TmChartDemo_IndexManyHearings"],
+            Loc["TmChartDemo_IndexManyNotices"],
+            Loc["TmChartDemo_IndexManySettlements"]
+        ];
+        string[] colors = ["#2563eb", "#16a34a", "#dc2626", "#d97706", "#7c3aed", "#db2777", "#0891b2"];
+        double[][] values =
+        [
+            [320, 410, 385, 470, 520, 495],
+            [180, 240, 205, 260, 300, 285],
+            [95, 120, 140, 130, 165, 175],
+            [60, 75, 70, 90, 85, 110],
+            [45, 50, 65, 60, 70, 80],
+            [30, 35, 28, 40, 38, 42],
+            [15, 20, 18, 25, 22, 30]
+        ];
+
+        return new ChartData
+        {
+            Labels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+            Datasets =
+            [
+                .. labels.Select((label, index) => new ChartDataset
+                {
+                    Label = label,
+                    Values = values[index],
+                    Color = colors[index]
+                })
+            ]
+        };
+    }
+
     private ChartData CreateIndexTooltipData() => new()
     {
         Labels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
@@ -619,6 +687,7 @@
     protected override void OnInitialized()
     {
         _indexTooltipData = CreateIndexTooltipData();
+        _indexTooltipManyData = CreateManySeriesIndexData();
         _sankeyCashFlowData = CreateSankeyData(useCustomColors: false);
         _sankeyCustomColorsData = CreateSankeyData(useCustomColors: true);
     }

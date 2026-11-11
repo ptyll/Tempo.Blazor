@@ -191,10 +191,31 @@
 
 @* ---------------------------------------------------------------------------------------------------------
    The same run SPLIT: eighteen units of work across four workers. The page owns the task list, so the Retry a
-   reader asks for in a tile's detail is the page's own handler re-queuing the unit — not a decoration. *@
+   reader asks for in a tile's detail is the page's own handler re-queuing the unit — not a decoration.
+   The dataset switch (plan 7ba95ed6, Fáze 17) swaps in the frozen 0 / 1 / 200 fixtures a browser guard needs;
+   Live is the run above, and a fixture keeps the live sample paused until Live is picked again. *@
 <section class="demo-section mb-8" data-testid="ai-agents-fan-out-section">
     <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmAiAgentsDemo_FanOutTitle"]</h2>
     <p class="text-sm text-slate-600 dark:text-slate-400 mb-2">@Loc["TmAiAgentsDemo_FanOutHint"]</p>
+    <div class="flex flex-wrap items-center gap-3 mb-3">
+        <TmSegmentedControl TValue="FanOutDataSet"
+                            Size="SegmentedControlSize.Sm"
+                            Label="@Loc["TmAiAgentsDemo_FanOutSizeLabel"]"
+                            DataTestId="ai-agents-fan-out-size"
+                            Options="FanOutDataSetOptions"
+                            Value="_fanOutDataSet"
+                            ValueChanged="OnFanOutDataSetChanged" />
+        @* The wrapper is ALWAYS present so screen-reader users hear the banner when the dataset changes; the
+           switch itself is a radio group and would otherwise report the choice with no hint that the grid
+           behind it froze. It stays last in the row, so an empty wrapper changes no layout. *@
+        <div role="status" aria-live="polite" aria-atomic="true">
+            @if (_fanOutDataSet != FanOutDataSet.Live)
+            {
+                <p class="text-sm text-slate-700 dark:text-slate-300 mb-0"
+                   data-testid="ai-agents-fan-out-fixture-note">@FanOutFixtureNote</p>
+            }
+        </div>
+    </div>
     <p class="text-sm text-slate-700 dark:text-slate-300 mb-3"
        data-testid="ai-agents-fan-out-log">@FanOutLogText</p>
 
@@ -603,6 +624,7 @@
     private string? _graphNodeId;
     private IReadOnlyList<FanOutTask> _fanOutTasks = [];
     private FanOutFilter _fanOutFilter = FanOutFilter.All;
+    private FanOutDataSet _fanOutDataSet = FanOutDataSet.Live;
     private string? _fanOutRetriedId;
     private IReadOnlyList<ParallelAttempt> _attempts = [];
     private IReadOnlyList<HandoffStep> _handoffSteps = [];
@@ -682,7 +704,7 @@
         _lanes = AiAgentsPageSamples.LanesSnapshot(Key, _clock.GetUtcNow());
         _graph = AiAgentsPageSamples.GraphSnapshot(Key, _clock.GetUtcNow());
         _graphSequence = _graph.Sequence;
-        _fanOutTasks = AiAgentsPageSamples.FanOutTasks(_clock.GetUtcNow());
+        _fanOutTasks = AiAgentsPageSamples.FanOutTasksFor(_fanOutDataSet, _clock.GetUtcNow());
         _attempts = AiAgentsPageSamples.Attempts();
         _handoffSteps = AiAgentsPageSamples.HandoffSteps(_clock.GetUtcNow());
         _fallbackAttempts = AiAgentsPageSamples.FallbackAttempts(_clock.GetUtcNow());
@@ -815,6 +837,51 @@
     private string AttemptLogText => _attemptChosenId is { } id
         ? Loc["TmAiAgentsDemo_ParallelChosen", AttemptLabel(id)]
         : Loc["TmAiAgentsDemo_ParallelNothingChosen"];
+
+    /// <summary>
+    /// The four datasets the fan-out switch offers (plan 7ba95ed6, Fáze 17): the page's live run and the three frozen
+    /// fixtures a browser guard needs. The labels are localized and built on every read, so switching the demo's
+    /// language mid-session re-localizes them together with the fixture banner.
+    /// </summary>
+    private IReadOnlyList<SegmentedOption<FanOutDataSet>> FanOutDataSetOptions =>
+    [
+        new() { Label = Loc["TmAiAgentsDemo_FanOutSizeLive"], Value = FanOutDataSet.Live },
+        new() { Label = Loc["TmAiAgentsDemo_FanOutSizeZero"], Value = FanOutDataSet.Zero },
+        new() { Label = Loc["TmAiAgentsDemo_FanOutSizeOne"], Value = FanOutDataSet.One },
+        new() { Label = Loc["TmAiAgentsDemo_FanOutSizeTwoHundred"], Value = FanOutDataSet.TwoHundred },
+    ];
+
+    /// <summary>
+    /// The fixture banner: which frozen dataset is on screen and that the live sample is paused behind it. Derived from
+    /// the state key rather than stored as text, so switching the demo's language re-localizes it.
+    /// </summary>
+    private string FanOutFixtureNote => Loc["TmAiAgentsDemo_FanOutFixtureNote", FanOutDataSetLabel(_fanOutDataSet)];
+
+    private string FanOutDataSetLabel(FanOutDataSet dataset) => dataset switch
+    {
+        FanOutDataSet.Zero => Loc["TmAiAgentsDemo_FanOutSizeZero"],
+        FanOutDataSet.One => Loc["TmAiAgentsDemo_FanOutSizeOne"],
+        FanOutDataSet.TwoHundred => Loc["TmAiAgentsDemo_FanOutSizeTwoHundred"],
+        _ => Loc["TmAiAgentsDemo_FanOutSizeLive"],
+    };
+
+    /// <summary>
+    /// The page owns the fan-out dataset. A fixture REPLACES the whole list with a frozen snapshot and the live sample
+    /// is not re-derived while one is shown; picking Live again rebuilds it from the page's clock, so the live run a
+    /// reader left is not frozen stale behind a fixture. The retry log belongs to the dataset it was recorded in and
+    /// is cleared, because its task id is no longer in the list.
+    /// </summary>
+    private void OnFanOutDataSetChanged(FanOutDataSet dataset)
+    {
+        if (_fanOutDataSet == dataset)
+        {
+            return;
+        }
+
+        _fanOutDataSet = dataset;
+        _fanOutRetriedId = null;
+        _fanOutTasks = AiAgentsPageSamples.FanOutTasksFor(dataset, _clock.GetUtcNow());
+    }
 
     /// <summary>A unit of work's label, or the localized fallback when the host left it empty.</summary>
     private string FanOutLabel(FanOutTask task)

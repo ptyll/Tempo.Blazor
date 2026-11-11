@@ -63,6 +63,10 @@ public abstract class TmChartIndexTooltipE2EBase : PlaywrightTestBase
     private static ILocator CustomChart(IPage page)
         => page.Locator($"{IndexSection} [data-testid='charts-demo-index-custom'] .tm-chart");
 
+    /// <summary>The SEVEN-series fixture (plan 7ba95ed6, Fáze 17) — the only card wide enough to exercise the many-series overlay.</summary>
+    private static ILocator ManyChart(IPage page)
+        => page.Locator($"{IndexSection} [data-testid='charts-demo-index-many'] .tm-chart");
+
     /// <summary>
     /// Moves the real mouse onto a zone and waits until the chart reports that index. A single
     /// teleporting <c>Mouse.MoveAsync</c> is not enough in this harness — measured, Chromium delivers
@@ -71,7 +75,11 @@ public abstract class TmChartIndexTooltipE2EBase : PlaywrightTestBase
     /// until the state follows. The assertion still demands the final state, so a chart that ignored
     /// a legitimate hover fails here.
     /// </summary>
-    private static async Task HoverZoneAsync(IPage page, ILocator chart, int ordinal)
+    private static async Task HoverZoneAsync(
+        IPage page,
+        ILocator chart,
+        int ordinal,
+        string chartTestId = "charts-demo-index-default")
     {
         var zone = chart.Locator(".tm-chart__index-zone").Nth(ordinal);
         await zone.ScrollIntoViewIfNeededAsync();
@@ -94,14 +102,15 @@ public abstract class TmChartIndexTooltipE2EBase : PlaywrightTestBase
         var hit = await page.EvaluateAsync<string>(
             """
             () => {
-                const zones = document.querySelectorAll("[data-testid='charts-demo-index-default'] .tm-chart__index-zone");
+                const zones = document.querySelectorAll("[data-testid='%CHARTID%'] .tm-chart__index-zone");
                 const el = zones[%ORDINAL%];
                 if (!el) return 'no zone';
                 const b = el.getBoundingClientRect();
                 const at = document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2);
                 return (at ? at.tagName + '|' + (at.getAttribute('class') ?? '') : 'null');
             }
-            """.Replace("%ORDINAL%", expected, StringComparison.Ordinal));
+            """.Replace("%ORDINAL%", expected, StringComparison.Ordinal)
+                .Replace("%CHARTID%", chartTestId, StringComparison.Ordinal));
         Assert.Fail($"zone {ordinal} never became the active index (reported "
                     + $"'{await chart.GetAttributeAsync("data-index-ordinal")}', hit under the pointer: {hit})");
     }
@@ -276,6 +285,53 @@ public abstract class TmChartIndexTooltipE2EBase : PlaywrightTestBase
         await Assertions.Expect(total).ToContainTextAsync(
             "650", new LocatorAssertionsToContainTextOptions { Timeout = 5000 });
         StringAssert.Contains(await total.TextContentAsync() ?? string.Empty, "Total");
+    }
+
+    /// <summary>
+    /// Plan 7ba95ed6, Fáze 17 — the SEVEN-series card. The two-series cards above can never reach the defect the
+    /// review found: the old overlay gave each dot a growing sequence band, and from the sixth series on a dot took
+    /// the band of the hover-zone group — Blazor then treated the appearing dot as a REPLACEMENT of the group, the
+    /// zone under the pointer was detached and the browser delivered no <c>mouseout</c>, so the card stayed pinned
+    /// after the pointer left. This fact asserts exactly that DOM identity on a real seven-series chart: the zone
+    /// the pointer rests on is the SAME node while the card is open, the card lists all seven rows, and leaving the
+    /// plot clears it.
+    /// </summary>
+    [TestMethod]
+    public async Task IndexTooltip_SevenSeries_ListsEveryRow_AndKeepsItsHoverZoneConnected()
+    {
+        var page = await OpenAsync();
+        var chart = ManyChart(page);
+
+        await chart.ScrollIntoViewIfNeededAsync();
+        Assert.AreEqual(6, await chart.Locator(".tm-chart__index-zone").CountAsync(), "one zone per month");
+        Assert.AreEqual(7, await chart.Locator(".tm-chart__legend-item").CountAsync(), "seven series in the plot");
+
+        var zone = await chart.Locator(".tm-chart__index-zone").Nth(3).ElementHandleAsync();
+        Assert.IsNotNull(zone, "the fourth month has a hover zone");
+
+        await HoverZoneAsync(page, chart, 3, "charts-demo-index-many");
+
+        var card = chart.Locator(".tm-chart__tooltip--index");
+        await Assertions.Expect(card).ToHaveCountAsync(
+            1, new LocatorAssertionsToHaveCountOptions { Timeout = 5000 });
+
+        Assert.AreEqual(7, await card.Locator(".tm-chart__tooltip-series").CountAsync(),
+            "the card reads EVERY series at the index, not the first few");
+        Assert.AreEqual(7, await card.Locator(".tm-chart__tooltip-series .tm-chart__tooltip-dot").CountAsync(),
+            "each of the seven rows keeps its own series swatch");
+        StringAssert.Contains(await card.TextContentAsync() ?? string.Empty, "Apr");
+
+        Assert.IsTrue(await zone!.EvaluateAsync<bool>("el => el.isConnected"),
+            "showing the card must not replace the hover zone it was hovering — the many-series overlay bug");
+
+        await ShootAsync(page, "charts-index-tooltip-many-series-light-1440", keepPointer: true);
+
+        // Leaving the plot still delivers its mouseout: the zone the pointer rested on is still in the document.
+        await page.Mouse.MoveAsync(5, 5);
+        await Assertions.Expect(card).ToHaveCountAsync(
+            0, new LocatorAssertionsToHaveCountOptions { Timeout = 5000 });
+        Assert.AreEqual("-1", await chart.GetAttributeAsync("data-index-ordinal"),
+            "the chart reports that nothing is highlighted any more");
     }
 
     [TestMethod]
