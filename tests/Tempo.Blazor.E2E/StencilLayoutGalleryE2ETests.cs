@@ -85,11 +85,14 @@ public class StencilLayoutGalleryE2ETests : WasmTestBase
         StencilComponent component,
         WireframeElement element)
     {
-        builder.AddMarkupContent(10, $"<g transform='translate({WireframeSvg.F(x)},{WireframeSvg.F(y)})'>");
-        builder.AddMarkupContent(11, WireframeSvg.Text(title, 0, -22, 12, WireframeSvg.ColorText, fontWeight: "600"));
-        builder.AddMarkupContent(12, WireframeSvg.Rect(-8, -8, element.W + 16, element.H + 16, "#ffffff", "#e5e7eb", 6));
+        // FZE-1: scene containers must be REAL elements — a split AddMarkupContent("<g …>") pair
+        // auto-closes per-frame in the browser and collapses the gallery layout.
+        builder.OpenElement(10, "g");
+        builder.AddAttribute(11, "transform", $"translate({WireframeSvg.F(x)},{WireframeSvg.F(y)})");
+        builder.AddMarkupContent(12, WireframeSvg.Text(title, 0, -22, 12, WireframeSvg.ColorText, fontWeight: "600"));
+        builder.AddMarkupContent(13, WireframeSvg.Rect(-8, -8, element.W + 16, element.H + 16, "#ffffff", "#e5e7eb", 6));
         StencilPackRenderer.Render(component, element, StencilTokenScope.Empty, builder);
-        builder.AddMarkupContent(13, "</g>");
+        builder.CloseElement();
     }
 
     private static StencilComponent Component(

@@ -66,7 +66,10 @@ public class StencilCompositionE2ETests : WasmTestBase
                 builder.AddAttribute(3, "width", "520");
                 builder.AddAttribute(4, "height", "260");
                 builder.AddMarkupContent(5, "<rect x='0' y='0' width='520' height='260' fill='#f8fafc'></rect>");
-                builder.AddMarkupContent(6, "<g transform='translate(80,40)'>");
+                // FZE-1: a container must be a REAL element — a split AddMarkupContent("<g …>") pair
+                // auto-closes per-frame in the browser and collapses the composition.
+                builder.OpenElement(6, "g");
+                builder.AddAttribute(7, "transform", "translate(80,40)");
                 StencilPackRenderer.Render(
                     component,
                     element,
@@ -77,7 +80,7 @@ public class StencilCompositionE2ETests : WasmTestBase
                         [pack.Namespace] = pack
                     }),
                     logger: null);
-                builder.AddMarkupContent(7, "</g>");
+                builder.CloseElement();
                 builder.CloseElement();
             };
 

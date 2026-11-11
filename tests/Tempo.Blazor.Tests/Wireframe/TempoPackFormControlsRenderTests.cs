@@ -155,7 +155,7 @@ public class TempoPackFormControlsRenderTests
             ("options", new[] { "One", "Two" }));
 
         svg.Should().Contain(">One<");
-        svg.Should().Contain("transform='translate(0,24)'");
+        svg.Should().MatchRegex(@"transform=['""]translate\(0,24\)['""]");
         svg.Should().Contain("x='28'");
     }
 
