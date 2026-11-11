@@ -572,6 +572,44 @@
   and 2.3 s real sleep — it runs the production 200 ms window on the fake clock, so no real waiting
   and no loaded-CI race remains.
 
+### Fixed — test suite stability: the wireframe mobile flake and the E2E fixed delays (plan 7ba95ed6, Fáze 15)
+
+- **No production behavior change.** Two carry-forwards of the same "timing instead of state" class: one bUnit test that
+  failed only in a full run, and eight E2E bases that slept before reading a render-driven value.
+- `TmWireframeEditorMobileTests.Mobile_MoreMenu_DevicePreset_ResizesTheCanvasPage_Undoable` (the single failure of the
+  FZE-10 full run, 21 482 passed / 1 failed) no longer clicks a still-disabled toolbar button. After the device preset
+  the test waits for the document state AND for the Undo button to be rendered enabled (`WaitForElement` with
+  `:not([disabled])`), then waits for the undone page size — bUnit's `Click` on a `disabled` element is a silent no-op,
+  so under full-suite load the undo never ran and the assertion read the resized width.
+- **Eight lane-agnostic E2E bases were converted from `WaitForTimeoutAsync` to state waits** (`SortableList`,
+  `ContextUsage`, `UsageMeter`, `SegmentedControl`, `TraceWaterfall`, `TraceWaterfallPage`, `AnalyticsKit`,
+  `DataDisplayKpi` — 76 fixed delays in total, 74 removed and 2 kept on purpose, `FacetFilter` had been converted in
+  phase 11 and is the reference):
+  `Expect(...).ToHaveAttributeAsync` / `ToHaveCountAsync` / `ToHaveTextAsync` / `ToBeCheckedAsync` /
+  `ToBeFocusedAsync` / `Not.ToHaveCountAsync` on the value the next line reads, a `WaitForFunctionAsync` on the reported
+  number (zoom window label, result count, breakdown ranking, the header tracking a sideways scroll), and
+  `WaitForLayoutToSettleAsync` for geometry and screenshots (fonts loaded, no CSS transition running, identical boxes
+  across three frames). A theme switch waits for the demo shell's own `data-theme` / `dark` signature and the finished
+  `transition-colors` fade, so a computed colour is never read mid-repaint.
+- **Two delays are deliberately kept and commented** because the window IS the behaviour under test: the keyboard walk's
+  "the focus must NOT move" check, and the per-step pointer input of a drag (each step must reach the module as its own
+  event). [docs/e2e-test-lanes.md](docs/e2e-test-lanes.md) lists every converted base plus those two exceptions.
+- **Four bUnit suites that a full run kept failing now run in exclusive collections, with no assertion changed.**
+  FZE-15's own full runs (21 497 facts, ~7 min, twelve parallel test threads on a shared host) surfaced a *different*
+  rotating set each time, all of them passing in isolation:
+  `AiAgentsPageTests.TheRunTreeHasThreeSubAgents_…` and `…TheFanOutGridRetriesAFailedUnit_…` (an
+  `UnknownEventHandlerIdException` when an async handler's continuation re-rendered between bUnit finding a row and
+  dispatching its key), `DataTableDemoPageTests.RedesignSection_TogglingAppearance_…` (a `WaitForAssertion` that timed
+  out after 91 renders) and the two wall-clock budgets `BpmnXmlImporterTests.Import_of_200k_flat_tasks_…` (13 s against
+  a 10 s guard) and `AgentGraphLayoutTests.ALargeGraph_BuildsUnder50Milliseconds` (56 ms against 50 ms). The two
+  whole-demo-page suites join `HeavyDemoPageRenders` (the FZE-1/FZE-9 tool for a page-render suite whose wait is
+  starved), and the two budget facts join the new `WallClockBudgets` collection
+  (`[CollectionDefinition(DisableParallelization = true)]`): a product budget must not be loosened until it passes under
+  load, so it runs where the stopwatch measures the code and not a queue — the bUnit counterpart of
+  DEC-TEMPO-PERF-LANE-BUDGETS. Both budgets keep their product values.
+- **Verification.** `dotnet test tests/Tempo.Blazor.Tests -f net10.0` 3× consecutively green (21 496 passed / 0 failed /
+  1 skipped each), and the affected specs on all three lanes (WASM, Server, InteractiveAuto) twice (243 tests per pass).
+
 ### Breaking changes and migration
 
 **No source-breaking change.** Every new member is additive or a default interface member; every new component is new. The behavior changes below are the complete list a 2.10.0 consumer can notice, with before/after:

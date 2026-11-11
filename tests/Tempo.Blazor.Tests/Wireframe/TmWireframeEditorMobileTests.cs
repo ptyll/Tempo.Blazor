@@ -168,8 +168,14 @@ public class TmWireframeEditorMobileTests : LocalizationTestBase
         cut.WaitForAssertion(() => page.Width.Should().Be(1280));
         page.Height.Should().Be(800);
 
-        cut.Find("[data-testid='wd-mobile-tools'] button[aria-label^='Undo']").Click();
-        page.Width.Should().Be(390, "the device preset goes through the undoable ResizeCanvasCommand");
+        // Wait for the RENDER, not just the document state: the history buttons are rendered disabled until the
+        // resize is on the stack, and a click on a disabled button is a silent no-op — under full-suite load the
+        // render had not flushed yet, so the Undo never ran and the width assertion below read 1280 (FZE-15).
+        var undo = cut.WaitForElement("[data-testid='wd-mobile-tools'] button[aria-label^='Undo']:not([disabled])");
+        undo.Click();
+
+        cut.WaitForAssertion(() => page.Width.Should().Be(390, "the device preset goes through the undoable ResizeCanvasCommand"));
+        page.Height.Should().Be(844, "the undo restores the height the preset replaced as well");
     }
 
     [Fact]

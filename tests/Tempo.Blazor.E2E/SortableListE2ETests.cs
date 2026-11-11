@@ -49,6 +49,14 @@ public abstract class SortableListE2EBase : PlaywrightTestBase
 
     private static ILocator LastMove(IPage page) => page.Locator("[data-testid='sortable-last-move']");
 
+    /// <summary>The list's one polite live region.</summary>
+    private static ILocator Status(IPage page) => List(page).Locator("[role='status']");
+
+    /// <summary>The demo shell's own theme signature (<c>data-theme</c> + the Tailwind <c>dark</c> class).</summary>
+    private static Task<string?> ShellThemeAsync(IPage page)
+        => page.EvaluateAsync<string?>(
+            "() => { const shell = document.querySelector('.demo-shell'); return shell ? `${shell.getAttribute('data-theme')}|${shell.classList.contains('dark')}` : null; }");
+
     private async Task<IPage> OpenAsync(int width = 1440, int height = 1000, bool reduceMotion = false,
         bool coarsePointer = false)
     {
@@ -71,7 +79,12 @@ public abstract class SortableListE2EBase : PlaywrightTestBase
         await page.WaitForSelectorAsync(
             $"{SectionSelector} [data-testid='sortable-basic'] [role='list']",
             new PageWaitForSelectorOptions { Timeout = 30000 });
-        await page.WaitForTimeoutAsync(400);
+        // The demo's own data, not a pause: four rows are on the page and the layout has settled (fonts loaded,
+        // no transition running), so the first geometry read is of the finished list rather than of a reflow.
+        await Assertions.Expect(Rows(page)).ToHaveCountAsync(4, new LocatorAssertionsToHaveCountOptions { Timeout = 30000 });
+        // No page-wide "the layout settled" gate here on purpose: right after a cold load the demo's Tailwind/CDN
+        // paint is still in flight, and a global quiescence wait at that moment waits for something the page is not
+        // obliged to reach. Geometry tests frame their own section and settle it (see ShootAsync / PhoneWidth).
         return page;
     }
 
@@ -119,28 +132,31 @@ public abstract class SortableListE2EBase : PlaywrightTestBase
         var row = Rows(page).First;
         await row.FocusAsync();
         await page.Keyboard.PressAsync("Enter");
-        await page.WaitForTimeoutAsync(150);
 
-        Assert.AreEqual("true", await Rows(page).First.GetAttributeAsync("data-grabbed"));
-        StringAssert.Contains(
-            await List(page).Locator("[role='status']").TextContentAsync() ?? string.Empty,
-            "Draft the outline picked up");
+        await Assertions.Expect(Rows(page).First).ToHaveAttributeAsync(
+            "data-grabbed", "true", new LocatorAssertionsToHaveAttributeOptions { Timeout = 5000 });
+        await Assertions.Expect(Status(page)).ToContainTextAsync(
+            "Draft the outline picked up", new LocatorAssertionsToContainTextOptions { Timeout = 5000 });
 
         await page.Keyboard.PressAsync("ArrowDown");
-        await page.WaitForTimeoutAsync(150);
-        StringAssert.Contains(
-            await List(page).Locator("[role='status']").TextContentAsync() ?? string.Empty,
-            "moved to position 2 of 4");
+        await Assertions.Expect(Status(page)).ToContainTextAsync(
+            "moved to position 2 of 4", new LocatorAssertionsToContainTextOptions { Timeout = 5000 });
 
         await page.Keyboard.PressAsync("Enter");
-        await page.WaitForTimeoutAsync(300);
+
+        // The commit is what mutates the host's order, so wait for the reported source and the reordered row
+        // instead of sleeping past the round trip (this is a SignalR hop on the Server and InteractiveAuto lanes).
+        await Assertions.Expect(LastMove(page)).ToHaveAttributeAsync(
+            "data-source", "Keyboard", new LocatorAssertionsToHaveAttributeOptions { Timeout = 5000 });
+        await Assertions.Expect(page.Locator("[data-testid='sortable-order-item']").First).ToHaveTextAsync(
+            "Confirm the sources", new LocatorAssertionsToHaveTextOptions { Timeout = 5000 });
 
         var order = await OrderAsync(page);
         Assert.AreEqual("Confirm the sources", order[0]);
         Assert.AreEqual("Draft the outline", order[1]);
-        Assert.AreEqual("Keyboard", await LastMove(page).GetAttributeAsync("data-source"));
         StringAssert.Contains(await LastMove(page).TextContentAsync() ?? string.Empty, "position 1 → position 2");
-        Assert.AreEqual("false", await Rows(page).First.GetAttributeAsync("data-grabbed"));
+        await Assertions.Expect(Rows(page).First).ToHaveAttributeAsync(
+            "data-grabbed", "false", new LocatorAssertionsToHaveAttributeOptions { Timeout = 5000 });
     }
 
     [TestMethod]
@@ -151,15 +167,20 @@ public abstract class SortableListE2EBase : PlaywrightTestBase
         var row = Rows(page).First;
         await row.FocusAsync();
         await page.Keyboard.PressAsync("Enter");
+        await Assertions.Expect(Rows(page).First).ToHaveAttributeAsync(
+            "data-grabbed", "true", new LocatorAssertionsToHaveAttributeOptions { Timeout = 5000 });
         await page.Keyboard.PressAsync("ArrowDown");
-        await page.WaitForTimeoutAsync(150);
+        await Assertions.Expect(Status(page)).ToContainTextAsync(
+            "moved to position 2 of 4", new LocatorAssertionsToContainTextOptions { Timeout = 5000 });
+
         await page.Keyboard.PressAsync("Escape");
-        await page.WaitForTimeoutAsync(200);
+        // "Move cancelled" is appended by the rollback itself, so this is the state the assertions below read:
+        // LastMove already reads "none" BEFORE the grab, so it could never prove the Escape was handled.
+        await Assertions.Expect(Status(page)).ToContainTextAsync(
+            "Move cancelled", new LocatorAssertionsToContainTextOptions { Timeout = 5000 });
 
         Assert.AreEqual("Draft the outline", (await OrderAsync(page))[0], "the host's order is untouched");
         Assert.AreEqual("none", await LastMove(page).GetAttributeAsync("data-source"));
-        StringAssert.Contains(
-            await List(page).Locator("[role='status']").TextContentAsync() ?? string.Empty, "Move cancelled");
     }
 
     [TestMethod]
@@ -170,27 +191,28 @@ public abstract class SortableListE2EBase : PlaywrightTestBase
         var row = Rows(page).First;
         await row.FocusAsync();
         await page.Keyboard.PressAsync("Enter");
-        await page.WaitForTimeoutAsync(150);
-        Assert.AreEqual("true", await Rows(page).First.GetAttributeAsync("data-grabbed"));
+        await Assertions.Expect(Rows(page).First).ToHaveAttributeAsync(
+            "data-grabbed", "true", new LocatorAssertionsToHaveAttributeOptions { Timeout = 5000 });
 
         await page.Keyboard.PressAsync("ArrowDown");
-        await page.WaitForTimeoutAsync(150);
-        Assert.AreEqual(1, await List(page).Locator("[data-grabbed='true']").CountAsync(),
-            "the grabbed row is painted in the pending order");
+        await Assertions.Expect(Status(page)).ToContainTextAsync(
+            "moved to position 2 of 4", new LocatorAssertionsToContainTextOptions { Timeout = 5000 });
+        await Assertions.Expect(List(page).Locator("[data-grabbed='true']")).ToHaveCountAsync(
+            1, new LocatorAssertionsToHaveCountOptions { Timeout = 5000 });
 
         await page.Keyboard.PressAsync("Tab");
-        await page.WaitForTimeoutAsync(250);
+        // One grabbed row before the Tab, zero after it: the count is the render-driven state this asserts.
+        await Assertions.Expect(List(page).Locator("[data-grabbed='true']")).ToHaveCountAsync(
+            0, new LocatorAssertionsToHaveCountOptions { Timeout = 5000 });
 
-        Assert.AreEqual(0, await List(page).Locator("[data-grabbed='true']").CountAsync(),
-            "Tab cancels the grab instead of being swallowed by the row");
         Assert.AreEqual("Draft the outline", (await OrderAsync(page))[0], "the pending order is rolled back");
         StringAssert.Contains(
-            await List(page).Locator("[role='status']").TextContentAsync() ?? string.Empty, "Move cancelled");
+            await Status(page).TextContentAsync() ?? string.Empty, "Move cancelled");
 
         // And the browser's own Tab ran: the focus is no longer on the grabbed row. A swallowed Tab here
         // would be the keyboard trap WCAG 2.1.2 forbids.
-        var focusedIsRow = await Rows(page).First.EvaluateAsync<bool>("el => document.activeElement === el");
-        Assert.IsFalse(focusedIsRow, "Tab must move the focus out of the row");
+        await Assertions.Expect(Rows(page).First).Not.ToBeFocusedAsync(
+            new LocatorAssertionsToBeFocusedOptions { Timeout = 5000 });
     }
 
     [TestMethod]
@@ -212,7 +234,9 @@ public abstract class SortableListE2EBase : PlaywrightTestBase
 
         await page.Mouse.MoveAsync(startX, startY);
         await page.Mouse.DownAsync();
-        // Several steps: the module needs a 4 px threshold, and every step re-hit-tests the landing slot.
+        // Several steps: the module needs a 4 px threshold, and every step re-hit-tests the landing slot. The
+        // per-step pause is PART OF THE GESTURE (each move has to be a separate pointer event the module can
+        // hit-test), not a wait for a render — so it stays.
         for (var step = 1; step <= 8; step++)
         {
             await page.Mouse.MoveAsync(startX, (float)(startY + (endY - startY) * step / 8.0));
@@ -220,12 +244,16 @@ public abstract class SortableListE2EBase : PlaywrightTestBase
         }
 
         await page.Mouse.UpAsync();
-        await page.WaitForTimeoutAsync(400);
+
+        // The drop commits the move to the host's own order, so wait for the reported source and the new order.
+        await Assertions.Expect(LastMove(page)).ToHaveAttributeAsync(
+            "data-source", "Pointer", new LocatorAssertionsToHaveAttributeOptions { Timeout = 5000 });
+        await Assertions.Expect(page.Locator("[data-testid='sortable-order-item']").Nth(2)).ToHaveTextAsync(
+            "Draft the outline", new LocatorAssertionsToHaveTextOptions { Timeout = 5000 });
 
         var order = await OrderAsync(page);
         Assert.AreEqual("Confirm the sources", order[0], "the dragged row left the first slot");
         Assert.AreEqual("Draft the outline", order[2], "and landed where the pointer dropped it");
-        Assert.AreEqual("Pointer", await LastMove(page).GetAttributeAsync("data-source"));
 
         // The module must restore every inline style it painted, or a later render would show stale offsets.
         var transforms = await Rows(page).EvaluateAllAsync<string[]>(
@@ -242,11 +270,14 @@ public abstract class SortableListE2EBase : PlaywrightTestBase
         await page.WaitForSelectorAsync("[role='menu'] [role='menuitem']");
         await page.Locator("[role='menu'] [role='menuitem']", new PageLocatorOptions { HasTextString = "Move to bottom" })
             .ClickAsync();
-        await page.WaitForTimeoutAsync(400);
+
+        await Assertions.Expect(LastMove(page)).ToHaveAttributeAsync(
+            "data-source", "Menu", new LocatorAssertionsToHaveAttributeOptions { Timeout = 5000 });
+        await Assertions.Expect(page.Locator("[data-testid='sortable-order-item']").Nth(3)).ToHaveTextAsync(
+            "Draft the outline", new LocatorAssertionsToHaveTextOptions { Timeout = 5000 });
 
         var order = await OrderAsync(page);
         Assert.AreEqual("Draft the outline", order[3], "the menu moved the row to the end");
-        Assert.AreEqual("Menu", await LastMove(page).GetAttributeAsync("data-source"));
     }
 
     [TestMethod]
@@ -280,7 +311,8 @@ public abstract class SortableListE2EBase : PlaywrightTestBase
 
         await Rows(page).First.FocusAsync();
         await page.Keyboard.PressAsync("Enter");
-        await page.WaitForTimeoutAsync(150);
+        await Assertions.Expect(Rows(page).First).ToHaveAttributeAsync(
+            "data-grabbed", "true", new LocatorAssertionsToHaveAttributeOptions { Timeout = 5000 });
 
         var outline = await Rows(page).First.EvaluateAsync<string>(
             """
@@ -318,9 +350,21 @@ public abstract class SortableListE2EBase : PlaywrightTestBase
 
         // The demo's OWN toggle: it flips the shell's `dark` class AND the `data-theme` attribute, so the
         // whole frame repaints (setting data-theme alone leaves the demo's Tailwind `dark:` variants
-        // behind and the row text unreadable — a fake dark mode proves nothing).
+        // behind and the row text unreadable — a fake dark mode proves nothing). The wait is on the shell's
+        // own theme signature plus the finished colour transition, never on a fixed pause: a computed
+        // background read mid-fade is a colour nobody ever sees.
+        var before = await ShellThemeAsync(page);
         await page.Locator("[data-testid='theme-toggle']:visible").First.ClickAsync();
-        await page.WaitForTimeoutAsync(600);
+        await page.WaitForFunctionAsync(
+            """
+            (before) => {
+                const shell = document.querySelector('.demo-shell');
+                return !!shell && `${shell.getAttribute('data-theme')}|${shell.classList.contains('dark')}` !== before;
+            }
+            """,
+            before,
+            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForLayoutToSettleAsync(page, SectionSelector);
 
         var dark = await Rows(page).First.EvaluateAsync<string>("el => getComputedStyle(el).backgroundColor");
         Assert.AreEqual("rgb(30, 41, 59)", dark, "the dark theme re-points --tm-bg-surface (#1e293b)");
@@ -333,6 +377,10 @@ public abstract class SortableListE2EBase : PlaywrightTestBase
     public async Task PhoneWidth_KeepsTheListInsideTheViewport()
     {
         var page = await OpenAsync(width: 390, height: 844, coarsePointer: true);
+        await Section(page).ScrollIntoViewIfNeededAsync();
+        // Geometry is read below: frame the section and wait for the real frames (fonts settled, no transition
+        // running, a stable box) instead of a guessed interval.
+        await WaitForLayoutToSettleAsync(page, SectionSelector);
 
         var overflow = await page.EvaluateAsync<double>(
             "() => document.documentElement.scrollWidth - window.innerWidth");
@@ -387,12 +435,13 @@ public abstract class SortableListE2EBase : PlaywrightTestBase
     private async Task ShootAsync(IPage page, string name)
     {
         // Scroll the section into view BEFORE the shot: a viewport screenshot of the top of the page
-        // would prove nothing about this component.
+        // would prove nothing about this component. The settle waits on the real frames (fonts loaded,
+        // no CSS transition running, the section's box stable) instead of a fixed pause.
         await Section(page).ScrollIntoViewIfNeededAsync();
-        await page.WaitForTimeoutAsync(400);
         await page.Mouse.MoveAsync(0, 0);
         await page.EvaluateAsync(
             "() => document.activeElement instanceof HTMLElement && document.activeElement.blur()");
+        await WaitForLayoutToSettleAsync(page, SectionSelector);
         await page.ScreenshotAsync(new PageScreenshotOptions
         {
             Path = Path.Combine(ShotDir, $"{name}.png"),

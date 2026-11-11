@@ -57,7 +57,8 @@ public abstract class SegmentedControlE2EBase : PlaywrightTestBase
         var page = await context.NewPageAsync();
         await GotoAppReadyAsync(page, $"{BaseUrl}{path}");
         await page.WaitForSelectorAsync(waitFor, new PageWaitForSelectorOptions { Timeout = 30000 });
-        await page.WaitForTimeoutAsync(400);
+        // The section's own first paint (the selector above); a page-wide settle is left to the tests that read
+        // geometry, and they frame their section first — right after a cold load the page is still re-laying out.
         return page;
     }
 
@@ -110,6 +111,8 @@ public abstract class SegmentedControlE2EBase : PlaywrightTestBase
 
         await page.Keyboard.PressAsync("ArrowRight");
         await page.Keyboard.PressAsync("End");
+        await Assertions.Expect(tabs.Nth(1)).ToHaveAttributeAsync(
+            "aria-selected", "true", new LocatorAssertionsToHaveAttributeOptions { Timeout = 5000 });
         Assert.AreEqual("true", await tabs.Nth(1).GetAttributeAsync("aria-selected"),
             "End lands on the last ENABLED tab, not on the disabled one");
     }
@@ -131,6 +134,7 @@ public abstract class SegmentedControlE2EBase : PlaywrightTestBase
         Assert.AreEqual(1d, geometry[1], "and it is actually painted");
 
         // It follows the selection: the strip must sit over the segment it marks.
+        await WaitForLayoutToSettleAsync(page, "[data-testid='segmented-period']");
         var selected = track.Locator("[aria-checked='true']");
         var strip = track.Locator(".tm-segmented__indicator");
         var selectedBox = await selected.BoundingBoxAsync();
@@ -258,6 +262,8 @@ public abstract class SegmentedControlE2EBase : PlaywrightTestBase
     public async Task Phone_KeepsBothSectionsInsideTheViewport()
     {
         var page = await OpenAsync(width: 390, height: 844);
+        await Section(page).ScrollIntoViewIfNeededAsync();
+        await WaitForLayoutToSettleAsync(page, "[data-testid='segmented-control-section']");
 
         var section = await Section(page).BoundingBoxAsync();
         Assert.IsNotNull(section);
@@ -287,7 +293,19 @@ public abstract class SegmentedControlE2EBase : PlaywrightTestBase
                 document.querySelectorAll('[data-theme]').forEach(el => el.setAttribute('data-theme', 'dark'));
             }
             """);
-        await page.WaitForTimeoutAsync(400);
+
+        // Wait for the tray's computed colour to actually leave the light value (and for the colour
+        // transition to finish) — a fixed pause could read the token mid-repaint.
+        await page.WaitForFunctionAsync(
+            """
+            (light) => {
+                const tray = document.querySelector("[data-testid='segmented-period'] .tm-segmented__track");
+                return !!tray && getComputedStyle(tray).backgroundColor !== light;
+            }
+            """,
+            light,
+            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForLayoutToSettleAsync(page, "[data-testid='segmented-control-section']");
 
         var dark = await track.EvaluateAsync<string>("el => getComputedStyle(el).backgroundColor");
         Assert.AreNotEqual(light, dark, "the tray re-painted for the dark theme");
@@ -333,19 +351,23 @@ public abstract class SegmentedControlE2EBase : PlaywrightTestBase
     {
         // The data-display page is long, so a viewport screenshot would frame the badges at the top instead
         // of the trays — scroll the section into view BEFORE the shot.
+        var framed = "[data-testid='segmented-control-section']";
         if (await Section(page).CountAsync() > 0)
         {
             await Section(page).ScrollIntoViewIfNeededAsync();
         }
         else
         {
-            await page.Locator("[data-testid='combobox-highlight-section']").ScrollIntoViewIfNeededAsync();
+            framed = "[data-testid='combobox-highlight-section']";
+            await page.Locator(framed).ScrollIntoViewIfNeededAsync();
         }
 
-        await page.WaitForTimeoutAsync(400);
         await page.Mouse.MoveAsync(0, 0);
         await page.EvaluateAsync(
             "() => document.activeElement instanceof HTMLElement && document.activeElement.blur()");
+        // The settle reads the real frames (fonts loaded, no CSS transition running, the framed section's box
+        // stable) instead of pausing for a guessed interval.
+        await WaitForLayoutToSettleAsync(page, framed);
         await page.ScreenshotAsync(new PageScreenshotOptions
         {
             Path = Path.Combine(ShotDir, $"{name}.png"),

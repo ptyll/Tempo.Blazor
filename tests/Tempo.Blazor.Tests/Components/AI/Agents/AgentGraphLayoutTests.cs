@@ -16,6 +16,12 @@ namespace Tempo.Blazor.Tests.Components.AI.Agents;
 /// every paint.
 /// </para>
 /// </summary>
+/// <remarks>
+/// The suite contains a WALL-CLOCK budget fact (200 nodes / 500 edges under 50 ms), so it belongs to the exclusive
+/// <see cref="WallClockBudgets"/> collection: under the parallel suite that stopwatch measured the queue, not the
+/// layout (56 ms in the loaded FZE-15 run, 20–30 ms alone). The budget keeps its product value.
+/// </remarks>
+[Collection(WallClockBudgets.Name)]
 public class AgentGraphLayoutTests
 {
     private static AgentGraphNode Node(

@@ -17,6 +17,16 @@ namespace Tempo.Blazor.Tests.Components.AI;
 /// approval, reorder a step by keyboard, walk the run tree, pick a model and its effort, drop a context entry,
 /// compact and use a prompt template — so a page that only renders the components cannot pass.
 /// </summary>
+/// <remarks>
+/// The suite shares <see cref="Tempo.Blazor.Tests.Components.HeavyDemoPageRenders"/>: every fact renders the WHOLE
+/// page (the plan, the run tree, the fan-out grid, the delegate board, the scheduler, the radar) and several walk
+/// an async handler whose continuation renders again. Under full-suite parallel load that continuation can land
+/// between bUnit finding a row and dispatching its key, which turned into an
+/// <c>UnknownEventHandlerIdException</c> on two facts in the FZE-10 and FZE-15 full runs (they pass in isolation and
+/// with their own class). Serializing the heavy page renders is the documented tool for exactly that
+/// (FZE-1/FZE-9): the CPU interference that reorders the continuation disappears, the assertions do not change.
+/// </remarks>
+[Collection(HeavyDemoPageRenders.Name)]
 public class AiAgentsPageTests : DemoPageLocalizationTestBase
 {
     public AiAgentsPageTests()

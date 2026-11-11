@@ -51,7 +51,14 @@ public abstract class TraceWaterfallPageE2EBase : PlaywrightTestBase
         await page.WaitForSelectorAsync(
             "[data-testid='trace-page-waterfall'] [role='treegrid']",
             new PageWaitForSelectorOptions { Timeout = 60000 });
-        await page.WaitForTimeoutAsync(400);
+        // The generated run's own row set, not a pause: the page renders ~150 spans and every test here reads
+        // either that set or the grid's geometry (which also needs the settled layout).
+        await page.WaitForFunctionAsync(
+            "() => document.querySelectorAll(\"[data-testid='trace-page-waterfall'] [role='row'][data-span-id]\").length >= 140",
+            null,
+            new PageWaitForFunctionOptions { Timeout = 60000 });
+        // No page-wide settle right after a cold load: the tests that read geometry (and the screenshots) frame
+        // the waterfall first and settle it there.
         return page;
     }
 
@@ -93,16 +100,19 @@ public abstract class TraceWaterfallPageE2EBase : PlaywrightTestBase
         var before = await Grid(page).Locator("[role='row'][data-span-id]").CountAsync();
 
         await Row(page, "sub-agent").Locator(".tm-trace-waterfall__toggle").ClickAsync();
-        await page.WaitForTimeoutAsync(400);
+
+        // The disclosure's own aria-expanded (and the row set it hides) IS the collapsed state — a click is a
+        // circuit round trip on the Server and InteractiveAuto lanes.
+        await Assertions.Expect(Row(page, "sub-agent")).ToHaveAttributeAsync(
+            "aria-expanded", "false", new LocatorAssertionsToHaveAttributeOptions { Timeout = 15000 });
         var collapsed = await Grid(page).Locator("[role='row'][data-span-id]").CountAsync();
         Assert.IsTrue(collapsed < before, $"collapsing the sub-agent hides its children ({collapsed} of {before})");
-        Assert.AreEqual("false", await Row(page, "sub-agent").GetAttributeAsync("aria-expanded"));
 
         await Row(page, "sub-agent").Locator(".tm-trace-waterfall__toggle").ClickAsync();
-        await page.WaitForTimeoutAsync(400);
-        Assert.AreEqual(before, await Grid(page).Locator("[role='row'][data-span-id]").CountAsync(),
-            "expanding it brings the subtree back");
-        Assert.AreEqual("true", await Row(page, "sub-agent").GetAttributeAsync("aria-expanded"));
+        await Assertions.Expect(Row(page, "sub-agent")).ToHaveAttributeAsync(
+            "aria-expanded", "true", new LocatorAssertionsToHaveAttributeOptions { Timeout = 15000 });
+        await Assertions.Expect(Grid(page).Locator("[role='row'][data-span-id]")).ToHaveCountAsync(
+            before, new LocatorAssertionsToHaveCountOptions { Timeout = 15000 });
     }
 
     [TestMethod]
@@ -114,25 +124,41 @@ public abstract class TraceWaterfallPageE2EBase : PlaywrightTestBase
         var tabbable = await Grid(page).Locator("[role='row'][tabindex='0']").CountAsync();
         Assert.AreEqual(1, tabbable, "exactly one row is in the tab order");
 
+        var startId = await Grid(page).Locator("[role='row'][tabindex='0']").GetAttributeAsync("data-span-id");
         await Grid(page).Locator("[role='row'][tabindex='0']").FocusAsync();
         await page.Keyboard.PressAsync("ArrowDown");
-        await page.WaitForTimeoutAsync(300);
+
+        // The roving tabindex moves with the key, so "the focused row is a different one" is the state to wait
+        // for instead of sleeping past the round trip.
+        await page.WaitForFunctionAsync(
+            """
+            (start) => {
+                const active = document.activeElement;
+                const id = active && active.getAttribute('data-span-id');
+                return !!id && id !== start;
+            }
+            """,
+            startId,
+            new PageWaitForFunctionOptions { Timeout = 15000 });
 
         var activeId = await page.EvaluateAsync<string>(
             "() => (document.activeElement && document.activeElement.getAttribute('data-span-id')) || ''");
         Assert.IsFalse(string.IsNullOrEmpty(activeId), "ArrowDown moved the focus onto another row");
 
         await page.Keyboard.PressAsync("Enter");
-        await page.WaitForTimeoutAsync(500);
-        Assert.AreEqual(activeId, await Detail(page).GetAttributeAsync("data-span-id"),
-            "Enter selects the row and the detail panel follows it");
-        Assert.AreEqual("true", await Row(page, activeId).GetAttributeAsync("aria-selected"));
+        await Assertions.Expect(Detail(page)).ToHaveAttributeAsync(
+            "data-span-id", activeId, new LocatorAssertionsToHaveAttributeOptions { Timeout = 15000 });
+        await Assertions.Expect(Row(page, activeId)).ToHaveAttributeAsync(
+            "aria-selected", "true", new LocatorAssertionsToHaveAttributeOptions { Timeout = 15000 });
 
-        // Collapsing and expanding from the keyboard keeps the row focused.
+        // Collapsing and expanding from the keyboard keeps the row focused. This is a NEGATIVE assertion ("the
+        // focus must NOT move"), so it needs a window in which a move would have shown up: the pause is the
+        // behaviour under test, not a stand-in for a state.
         await page.Keyboard.PressAsync("ArrowLeft");
         await page.WaitForTimeoutAsync(300);
         Assert.AreEqual(activeId, await page.EvaluateAsync<string>(
-            "() => (document.activeElement && document.activeElement.getAttribute('data-span-id')) || ''"));
+            "() => (document.activeElement && document.activeElement.getAttribute('data-span-id')) || ''"),
+            "a keyboard collapse keeps the row focused");
     }
 
     [TestMethod]
@@ -143,14 +169,18 @@ public abstract class TraceWaterfallPageE2EBase : PlaywrightTestBase
         var before = (await window.TextContentAsync())!.Trim();
 
         await page.GetByTestId("trace-zoom-in").ClickAsync();
-        await page.WaitForTimeoutAsync(400);
+
+        // The reported window label is exactly what the assertion compares, so wait for it to move (and back).
+        await Assertions.Expect(window).Not.ToHaveTextAsync(
+            before, new LocatorAssertionsToHaveTextOptions { Timeout = 15000 });
         var zoomed = (await window.TextContentAsync())!.Trim();
         Assert.AreNotEqual(before, zoomed, "zooming in narrows the reported window");
         Assert.IsFalse(await page.GetByTestId("trace-zoom-reset").IsDisabledAsync(),
             "the reset action is available once the axis is zoomed");
 
         await page.GetByTestId("trace-zoom-reset").ClickAsync();
-        await page.WaitForTimeoutAsync(400);
+        await Assertions.Expect(window).ToHaveTextAsync(
+            before, new LocatorAssertionsToHaveTextOptions { Timeout = 15000 });
         Assert.AreEqual(before, (await window.TextContentAsync())!.Trim(), "reset restores the whole trace");
     }
 
@@ -162,26 +192,28 @@ public abstract class TraceWaterfallPageE2EBase : PlaywrightTestBase
         Assert.AreEqual("false", await page.GetByTestId("trace-page-live-state").GetAttributeAsync("data-live"));
 
         await page.GetByTestId("trace-page-live").ClickAsync();
-        await page.WaitForTimeoutAsync(800);
 
-        Assert.AreEqual("true", await page.GetByTestId("trace-page-live-state").GetAttributeAsync("data-live"));
+        // The live state the toggle publishes is the state the assertions read; the running span then has to
+        // appear in the republished run.
+        await Assertions.Expect(page.GetByTestId("trace-page-live-state")).ToHaveAttributeAsync(
+            "data-live", "true", new LocatorAssertionsToHaveAttributeOptions { Timeout = 15000 });
         await page.WaitForSelectorAsync(
             "[data-testid='trace-page-waterfall'] [role='row'][data-span-id='answer'] .tm-trace-waterfall__status--running",
-            new PageWaitForSelectorOptions { Timeout = 10000 });
+            new PageWaitForSelectorOptions { Timeout = 15000 });
         Assert.AreEqual("Stop live trace", (await page.GetByTestId("trace-page-live").TextContentAsync())!.Trim());
 
         await page.GetByTestId("trace-page-live").ClickAsync();
-        await page.WaitForTimeoutAsync(600);
-        Assert.AreEqual("false", await page.GetByTestId("trace-page-live-state").GetAttributeAsync("data-live"));
-        Assert.AreEqual(0,
-            await Row(page, "answer").Locator(".tm-trace-waterfall__status--running").CountAsync(),
-            "stopping the run puts the finished trace back");
+        await Assertions.Expect(page.GetByTestId("trace-page-live-state")).ToHaveAttributeAsync(
+            "data-live", "false", new LocatorAssertionsToHaveAttributeOptions { Timeout = 15000 });
+        await Assertions.Expect(Row(page, "answer").Locator(".tm-trace-waterfall__status--running")).ToHaveCountAsync(
+            0, new LocatorAssertionsToHaveCountOptions { Timeout = 15000 });
     }
 
     [TestMethod]
     public async Task PhoneBand_KeepsTheHorizontalScrollInsideTheGrid()
     {
         var page = await OpenAsync(375, 812, touch: true);
+        await ScrollToWaterfallAsync(page);
 
         var pageWidth = await page.EvaluateAsync<int>("() => document.documentElement.scrollWidth");
         Assert.IsTrue(pageWidth <= 376, $"the page itself does not scroll sideways (scrollWidth {pageWidth})");
@@ -315,23 +347,39 @@ public abstract class TraceWaterfallPageE2EBase : PlaywrightTestBase
     private static async Task ScrollToWaterfallAsync(IPage page)
     {
         await page.GetByTestId("trace-page-waterfall").ScrollIntoViewIfNeededAsync();
-        await page.WaitForTimeoutAsync(400);
+        // A smooth scroll is an animation: the settle waits for the scroll position and the boxes to stop
+        // moving, so a geometry read (or a screenshot) is of the framed state.
+        await WaitForLayoutToSettleAsync(page, "[data-testid='trace-page-waterfall']");
     }
 
     /// <summary>Switches the demo's own theme (the header toggle), so the whole frame repaints, not just a section.</summary>
     private static async Task ToggleThemeAsync(IPage page)
     {
         // The demo renders TWO toggles (the phone header and the sidebar footer); only one is visible per band.
+        var before = await page.EvaluateAsync<string?>(
+            "() => { const shell = document.querySelector('.demo-shell'); return shell ? `${shell.getAttribute('data-theme')}|${shell.classList.contains('dark')}` : null; }");
         await page.Locator("[data-testid='theme-toggle']:visible").First.ClickAsync();
-        await page.WaitForTimeoutAsync(600);
+        // The shell's own theme signature plus the finished colour transition — a fixed pause could screenshot
+        // the frame mid-repaint.
+        await page.WaitForFunctionAsync(
+            """
+            (before) => {
+                const shell = document.querySelector('.demo-shell');
+                return !!shell && `${shell.getAttribute('data-theme')}|${shell.classList.contains('dark')}` !== before;
+            }
+            """,
+            before,
+            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForLayoutToSettleAsync(page, ".demo-shell");
     }
 
     private async Task ShootAsync(IPage page, string name)
     {
-        await page.WaitForTimeoutAsync(300);
         await page.Mouse.MoveAsync(0, 0);
         await page.EvaluateAsync(
             "() => document.activeElement instanceof HTMLElement && document.activeElement.blur()");
+        // The settle reads the real frames instead of pausing for a guessed interval.
+        await WaitForLayoutToSettleAsync(page, "[data-testid='trace-page-waterfall']");
         await page.ScreenshotAsync(new PageScreenshotOptions
         {
             Path = Path.Combine(ShotDir, $"{name}.png"),

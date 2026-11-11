@@ -63,7 +63,11 @@ public abstract class ContextUsageE2EBase : PlaywrightTestBase
         await page.WaitForSelectorAsync(
             $"{Basic} [data-testid='context-usage-meter']",
             new PageWaitForSelectorOptions { Timeout = 30000 });
-        await page.WaitForTimeoutAsync(400);
+        // The panel's own data on screen, not a pause: every test in this base reads the meter's state, so the
+        // first read must be of the finished render (and the layout settled for the geometry ones).
+        await Assertions.Expect(page.Locator("[data-testid='context-usage-readout']")).ToContainTextAsync(
+            "14,000 of 16,000 tokens", new LocatorAssertionsToContainTextOptions { Timeout = 30000 });
+        // No page-wide settle right after a cold load: the phone test frames its own section and settles it.
         return page;
     }
 
@@ -175,17 +179,14 @@ public abstract class ContextUsageE2EBase : PlaywrightTestBase
 
         // The grid cell at index 20 is inside the Files span of the budget.
         await page.Locator($"{Grid} [data-testid='context-usage-cell']").Nth(20).HoverAsync();
-        await page.WaitForTimeoutAsync(150);
-        Assert.IsTrue(
-            await page.Locator($"{Grid} tr.tm-context-usage__row[data-section-key='files']")
-                .GetAttributeAsync("class") is { } rowClass && rowClass.Contains("--highlight"),
-            "hovering a cell highlights its legend row");
+        await Assertions.Expect(page.Locator($"{Grid} tr.tm-context-usage__row[data-section-key='files']")).ToHaveClassAsync(
+            new System.Text.RegularExpressions.Regex("tm-context-usage__row--highlight"),
+            new LocatorAssertionsToHaveClassOptions { Timeout = 5000 });
 
         await page.Locator($"{Grid} tr.tm-context-usage__row[data-section-key='tools'] .tm-context-usage__toggle").FocusAsync();
-        await page.WaitForTimeoutAsync(150);
-        Assert.IsTrue(
-            await page.Locator($"{Grid} .tm-context-usage__cell--highlight[data-section-key='tools']").CountAsync() > 0,
-            "focusing a legend row highlights its cells, so the highlight has a keyboard path");
+        // The focus path paints the cells of the focused row, so the count of highlighted cells is the state.
+        await Assertions.Expect(page.Locator($"{Grid} .tm-context-usage__cell--highlight[data-section-key='tools']"))
+            .Not.ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 5000 });
     }
 
     [TestMethod]
@@ -232,7 +233,12 @@ public abstract class ContextUsageE2EBase : PlaywrightTestBase
             "() => document.querySelectorAll(\"[data-testid='context-usage-basic'] tr.tm-context-usage__row[data-section-key='files']\").length === 0",
             null,
             new PageWaitForFunctionOptions { Timeout = 15000 });
-        await page.WaitForTimeoutAsync(200);
+        // The pressed button AND the section's disclosure left the DOM with the removal, so the hand-off to the
+        // panel root is itself the state to wait for — a fixed pause read the focus before it moved.
+        await page.WaitForFunctionAsync(
+            "() => !!document.activeElement && document.activeElement.getAttribute('data-testid') === 'context-usage-basic'",
+            null,
+            new PageWaitForFunctionOptions { Timeout = 5000 });
 
         var focusedTestId = await page.EvaluateAsync<string?>(
             "() => document.activeElement && document.activeElement.getAttribute('data-testid')");
@@ -277,7 +283,7 @@ public abstract class ContextUsageE2EBase : PlaywrightTestBase
         var page = await OpenAsync(375, 812, coarsePointer: true);
 
         await page.Locator(BasicSection).ScrollIntoViewIfNeededAsync();
-        await page.WaitForTimeoutAsync(300);
+        await WaitForLayoutToSettleAsync(page, BasicSection);
 
         var overflow = await page.EvaluateAsync<bool>(
             "() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1");
@@ -338,44 +344,59 @@ public abstract class ContextUsageE2EBase : PlaywrightTestBase
     {
         var page = await OpenAsync();
         await page.Locator(BasicSection).ScrollIntoViewIfNeededAsync();
-        await ShootAsync(page, "context-usage-basic-light-1440");
+        await ShootAsync(page, "context-usage-basic-light-1440", BasicSection);
 
         await page.Locator(VariantsSection).ScrollIntoViewIfNeededAsync();
-        await ShootAsync(page, "context-usage-variants-light-1440");
+        await ShootAsync(page, "context-usage-variants-light-1440", VariantsSection);
 
         await page.Locator(EdgeSection).ScrollIntoViewIfNeededAsync();
-        await ShootAsync(page, "context-usage-edge-light-1440");
+        await ShootAsync(page, "context-usage-edge-light-1440", EdgeSection);
 
         await ToggleThemeAsync(page);
         await page.Locator(BasicSection).ScrollIntoViewIfNeededAsync();
-        await ShootAsync(page, "context-usage-basic-dark-1440");
+        await ShootAsync(page, "context-usage-basic-dark-1440", BasicSection);
         await page.Locator(EdgeSection).ScrollIntoViewIfNeededAsync();
-        await ShootAsync(page, "context-usage-edge-dark-1440");
+        await ShootAsync(page, "context-usage-edge-dark-1440", EdgeSection);
 
         var phone = await OpenAsync(375, 812, coarsePointer: true);
         await phone.Locator(BasicSection).ScrollIntoViewIfNeededAsync();
-        await ShootAsync(phone, "context-usage-basic-light-375");
+        await ShootAsync(phone, "context-usage-basic-light-375", BasicSection);
         await Row(phone, "files").Locator(".tm-context-usage__toggle").TapAsync();
         await phone.WaitForSelectorAsync($"{Basic} tr.tm-context-usage__detail");
-        await ShootAsync(phone, "context-usage-expanded-light-375");
+        await ShootAsync(phone, "context-usage-expanded-light-375", BasicSection);
         await ToggleThemeAsync(phone);
-        await ShootAsync(phone, "context-usage-expanded-dark-375");
+        await ShootAsync(phone, "context-usage-expanded-dark-375", BasicSection);
     }
 
-    /// <summary>Switches the demo's own theme (the header toggle), so the whole frame repaints.</summary>
+    /// <summary>
+    /// Switches the demo's own theme (the header toggle), so the whole frame repaints. The wait is on the
+    /// shell's own theme signature plus the finished colour transition — a fixed pause read the card's
+    /// background mid-fade, i.e. a colour no reader ever sees.
+    /// </summary>
     private static async Task ToggleThemeAsync(IPage page)
     {
+        var before = await page.EvaluateAsync<string?>(
+            "() => { const shell = document.querySelector('.demo-shell'); return shell ? `${shell.getAttribute('data-theme')}|${shell.classList.contains('dark')}` : null; }");
         await page.Locator("[data-testid='theme-toggle']:visible").First.ClickAsync();
-        await page.WaitForTimeoutAsync(600);
+        await page.WaitForFunctionAsync(
+            """
+            (before) => {
+                const shell = document.querySelector('.demo-shell');
+                return !!shell && `${shell.getAttribute('data-theme')}|${shell.classList.contains('dark')}` !== before;
+            }
+            """,
+            before,
+            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForLayoutToSettleAsync(page, ".demo-shell");
     }
 
-    /// <summary>Frames the section that is being reviewed, in the viewport.</summary>
-    private async Task ShootAsync(IPage page, string name)
+    /// <summary>Frames the section that is being reviewed, in the viewport, once its layout has settled.</summary>
+    private async Task ShootAsync(IPage page, string name, string selector)
     {
-        await page.WaitForTimeoutAsync(300);
         await page.Mouse.MoveAsync(0, 0);
         await page.EvaluateAsync(
             "() => document.activeElement instanceof HTMLElement && document.activeElement.blur()");
+        await WaitForLayoutToSettleAsync(page, selector);
         await page.ScreenshotAsync(new PageScreenshotOptions
         {
             Path = Path.Combine(ShotDir, $"{name}.png"),

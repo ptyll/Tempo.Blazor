@@ -59,7 +59,9 @@ public abstract class UsageMeterE2EBase : PlaywrightTestBase
         await page.WaitForSelectorAsync(
             "[data-testid='usage-meter-section'] [role='meter']",
             new PageWaitForSelectorOptions { Timeout = 30000 });
-        await page.WaitForTimeoutAsync(400);
+        // The meter's own value contract on screen, not a pause: every test in this base reads that state.
+        await Assertions.Expect(FullMeter(page).Locator("[role='meter']")).ToHaveAttributeAsync(
+            "aria-valuenow", "8200", new LocatorAssertionsToHaveAttributeOptions { Timeout = 30000 });
         return page;
     }
 
@@ -141,15 +143,19 @@ public abstract class UsageMeterE2EBase : PlaywrightTestBase
         var page = await OpenAsync();
 
         await Section(page).Locator("[data-testid='usage-meter-add']").ClickAsync();
-        await page.WaitForTimeoutAsync(200);
+
+        // The amount IS the state the next assertion reads (8 200 + 1 500 = 9 700, still under the limit), so
+        // the wait is on the meter's own aria-valuenow rather than on a pause after the click.
+        await Assertions.Expect(FullMeter(page).Locator("[role='meter']")).ToHaveAttributeAsync(
+            "aria-valuenow", "9700", new LocatorAssertionsToHaveAttributeOptions { Timeout = 5000 });
         Assert.AreEqual("warning", await FullMeter(page).GetAttributeAsync("data-state"),
             "8 200 + 1 500 is 9 700 — still under the limit");
 
         await Section(page).Locator("[data-testid='usage-meter-add']").ClickAsync();
-        await page.WaitForTimeoutAsync(300);
+        await Assertions.Expect(FullMeter(page)).ToHaveAttributeAsync(
+            "data-state", "critical", new LocatorAssertionsToHaveAttributeOptions { Timeout = 5000 });
 
         var meter = FullMeter(page);
-        Assert.AreEqual("critical", await meter.GetAttributeAsync("data-state"));
         Assert.AreEqual("true", await meter.GetAttributeAsync("data-over-limit"));
 
         var track = meter.Locator("[role='meter']");
@@ -175,13 +181,15 @@ public abstract class UsageMeterE2EBase : PlaywrightTestBase
 
         await Section(page).Locator("[data-testid='usage-meter-add']").ClickAsync();
         await Section(page).Locator("[data-testid='usage-meter-add']").ClickAsync();
-        await page.WaitForTimeoutAsync(200);
+        await Assertions.Expect(FullMeter(page)).ToHaveAttributeAsync(
+            "data-state", "critical", new LocatorAssertionsToHaveAttributeOptions { Timeout = 5000 });
+
         await Section(page).Locator("[data-testid='usage-meter-reset']").ClickAsync();
-        await page.WaitForTimeoutAsync(300);
+        await Assertions.Expect(FullMeter(page).Locator("[role='meter']")).ToHaveAttributeAsync(
+            "aria-valuenow", "8200", new LocatorAssertionsToHaveAttributeOptions { Timeout = 5000 });
 
         var meter = FullMeter(page);
         Assert.AreEqual("warning", await meter.GetAttributeAsync("data-state"));
-        Assert.AreEqual("8200", await meter.Locator("[role='meter']").GetAttributeAsync("aria-valuenow"));
         Assert.AreEqual(0, await meter.Locator(".tm-usage-meter__row--other").CountAsync());
         Assert.IsNull(await meter.GetAttributeAsync("data-over-limit"));
     }
@@ -217,7 +225,21 @@ public abstract class UsageMeterE2EBase : PlaywrightTestBase
     {
         var page = await OpenAsync();
         await page.EmulateMediaAsync(new PageEmulateMediaOptions { ForcedColors = ForcedColors.Active });
-        await page.WaitForTimeoutAsync(200);
+
+        // Wait for the emulated media to be live and the track to have re-resolved its border, i.e. for the
+        // exact property the assertion below reads, instead of pausing after EmulateMediaAsync.
+        await page.WaitForFunctionAsync(
+            """
+            () => {
+                if (!matchMedia('(forced-colors: active)').matches) return false;
+                const track = document.querySelector("[data-testid='usage-meter-section'] [role='meter']");
+                if (!track) return false;
+                const style = getComputedStyle(track);
+                return parseFloat(style.borderTopWidth) > 0 && style.borderTopStyle !== 'none';
+            }
+            """,
+            null,
+            new PageWaitForFunctionOptions { Timeout = 10000 });
 
         var border = await page.EvaluateAsync<string>(
             """
@@ -262,6 +284,10 @@ public abstract class UsageMeterE2EBase : PlaywrightTestBase
     public async Task PhoneWidth_KeepsTheMeterInsideTheViewport()
     {
         var page = await OpenAsync(width: 390, height: 844);
+        await Section(page).ScrollIntoViewIfNeededAsync();
+        // Geometry is read below, so wait for the real frames (fonts settled, no transition running, a stable
+        // box) rather than for a guessed interval.
+        await WaitForLayoutToSettleAsync(page, "[data-testid='usage-meter-section']");
 
         var overflow = await page.EvaluateAsync<double>(
             "() => document.documentElement.scrollWidth - window.innerWidth");
@@ -296,7 +322,9 @@ public abstract class UsageMeterE2EBase : PlaywrightTestBase
             "() => document.querySelector('.demo-shell')?.getAttribute('data-theme') === 'dark'",
             null,
             new PageWaitForFunctionOptions { Timeout = 10000 });
-        await page.WaitForTimeoutAsync(400);
+        // The shell carries `transition-colors`, so the card's computed background is only the dark token once
+        // the transition has finished — waiting on that beats sleeping past it.
+        await WaitForLayoutToSettleAsync(page, "[data-testid='usage-meter-section']");
         Assert.IsTrue(
             (await page.Locator(".demo-shell").First.GetAttributeAsync("class") ?? string.Empty)
                 .Split(' ').Contains("dark"),
@@ -342,12 +370,13 @@ public abstract class UsageMeterE2EBase : PlaywrightTestBase
     private async Task ShootAsync(IPage page, string name)
     {
         // The data-display page is long, so a viewport screenshot would frame the badges at the top
-        // instead of the meter — scroll the section into view BEFORE the shot.
+        // instead of the meter — scroll the section into view BEFORE the shot, then wait for the real frames
+        // (fonts loaded, no CSS transition running, the section's box stable) instead of a fixed pause.
         await Section(page).ScrollIntoViewIfNeededAsync();
-        await page.WaitForTimeoutAsync(400);
         await page.Mouse.MoveAsync(0, 0);
         await page.EvaluateAsync(
             "() => document.activeElement instanceof HTMLElement && document.activeElement.blur()");
+        await WaitForLayoutToSettleAsync(page, "[data-testid='usage-meter-section']");
         await page.ScreenshotAsync(new PageScreenshotOptions
         {
             Path = Path.Combine(ShotDir, $"{name}.png"),

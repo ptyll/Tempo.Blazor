@@ -13,6 +13,12 @@ namespace Tempo.Blazor.Tests.Modeling;
 /// Full normalized output of every corpus fixture is pinned separately by
 /// <c>BpmnImportGoldenTests</c>.
 /// </summary>
+/// <remarks>
+/// The suite contains one WALL-CLOCK budget fact (a 200 000-task import under 10 s), so it belongs to the exclusive
+/// <see cref="WallClockBudgets"/> collection: under the parallel suite that stopwatch measured the queue, not the
+/// importer (13 s in the loaded FZE-15 run, ~2 s alone). The budget keeps its product value.
+/// </remarks>
+[Collection(WallClockBudgets.Name)]
 public sealed class BpmnXmlImporterTests
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };

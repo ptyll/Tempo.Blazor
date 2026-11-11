@@ -61,7 +61,8 @@ public abstract class AnalyticsKitE2EBase : PlaywrightTestBase
         await page.WaitForSelectorAsync(
             "[data-testid='analytics-kit-chart'] .tm-chart__index-zone",
             new PageWaitForSelectorOptions { Timeout = 60000 });
-        await page.WaitForTimeoutAsync(400);
+        // The two selectors above are the page's own first paint; a page-wide settle is left to the test that reads
+        // geometry, which frames its section first (right after a cold load the page is still re-laying out).
         return page;
     }
 
@@ -89,7 +90,10 @@ public abstract class AnalyticsKitE2EBase : PlaywrightTestBase
         await FacetTrigger(page).ClickAsync();
         var surface = sheet ? FacetSheet(page) : FacetPanel(page);
         await surface.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
-        await page.WaitForTimeoutAsync(250);
+        // The surface is only usable once its groups and option rows have rendered — that is the state the
+        // callers read, so it is what this waits for.
+        await Assertions.Expect(surface.Locator("[data-testid='facet-filter-group']")).Not.ToHaveCountAsync(
+            0, new LocatorAssertionsToHaveCountOptions { Timeout = 5000 });
     }
 
     private static async Task<int> ResultCountAsync(IPage page)
@@ -194,7 +198,7 @@ public abstract class AnalyticsKitE2EBase : PlaywrightTestBase
             new PageWaitForFunctionOptions { Timeout = 10000 });
 
         await page.Keyboard.PressAsync("Escape");
-        await page.WaitForTimeoutAsync(300);
+        await Assertions.Expect(card).ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 5000 });
         Assert.AreEqual(0, await card.CountAsync(), "Escape hides the card");
         Assert.AreEqual(0, await page.Locator("[data-testid='analytics-kit-chart'] .tm-chart__crosshair").CountAsync(),
             "the crosshair follows the card");
@@ -212,7 +216,10 @@ public abstract class AnalyticsKitE2EBase : PlaywrightTestBase
 
         var row = FacetPanel(page).Locator("[data-testid='facet-filter-option'][data-option-value='paid']");
         await row.Locator(".tm-checkbox-text").ClickAsync();
-        await page.WaitForTimeoutAsync(400);
+
+        // The applied value becomes a chip (and the result line re-counts): both are render-driven state.
+        await Assertions.Expect(page.Locator("[data-testid='analytics-kit-facets'] [data-testid='facet-filter-chip']"))
+            .ToHaveCountAsync(1, new LocatorAssertionsToHaveCountOptions { Timeout = 5000 });
 
         var filtered = await ResultCountAsync(page);
         Assert.IsTrue(filtered < initial,
@@ -228,14 +235,18 @@ public abstract class AnalyticsKitE2EBase : PlaywrightTestBase
             "the counts are host-computed over the other groups, so filtering one group re-counts the rest");
 
         await page.Keyboard.PressAsync("Escape");
-        await page.WaitForTimeoutAsync(400);
+        await Assertions.Expect(FacetPanel(page)).ToHaveCountAsync(
+            0, new LocatorAssertionsToHaveCountOptions { Timeout = 5000 });
         Assert.AreEqual(0, await FacetPanel(page).CountAsync(), "Escape closes the dialog");
 
         await page.Locator("[data-testid='analytics-kit-facets'] .tm-filter-chip-remove").ClickAsync();
-        await page.WaitForTimeoutAsync(400);
+        await Assertions.Expect(page.Locator("[data-testid='analytics-kit-facets'] [data-testid='facet-filter-chip']"))
+            .ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 5000 });
+        // The result line is the host's re-count, so wait for it to report the unfiltered number again.
+        await Assertions.Expect(page.GetByTestId("analytics-kit-facet-result")).ToContainTextAsync(
+            initial.ToString("N0", CultureInfo.InvariantCulture),
+            new LocatorAssertionsToContainTextOptions { Timeout = 5000 });
         Assert.AreEqual(initial, await ResultCountAsync(page), "removing the chip restores the unfiltered period");
-        Assert.AreEqual(0, await page.Locator("[data-testid='analytics-kit-facets'] [data-testid='facet-filter-chip']").CountAsync(),
-            "the chip row empties with it");
     }
 
     [TestMethod]
@@ -250,10 +261,12 @@ public abstract class AnalyticsKitE2EBase : PlaywrightTestBase
         StringAssert.Matches((await confirm.TextContentAsync())!.Trim(), new Regex(@"^Show \d+ results$"),
             "the confirmation carries the host's result count");
 
-        await FacetSheet(page)
-            .Locator("[data-testid='facet-filter-option'][data-option-value='search'] .tm-checkbox-text")
-            .ClickAsync();
-        await page.WaitForTimeoutAsync(400);
+        var sheetOption = FacetSheet(page)
+            .Locator("[data-testid='facet-filter-option'][data-option-value='search']");
+        await sheetOption.Locator(".tm-checkbox-text").ClickAsync();
+        // The option's own checkbox is the state the click mutates (and the counted confirmation follows it).
+        await Assertions.Expect(sheetOption.Locator("input[type='checkbox']")).ToBeCheckedAsync(
+            new LocatorAssertionsToBeCheckedOptions { Timeout = 5000 });
 
         var filtered = await ResultCountAsync(page);
         await confirm.ClickAsync();
@@ -282,7 +295,12 @@ public abstract class AnalyticsKitE2EBase : PlaywrightTestBase
 
         await page.Locator("[data-testid='analytics-kit-picker'] .tm-date-range-trigger").ClickAsync();
         await page.Locator(".tm-date-range-preset-btn", new PageLocatorOptions { HasTextString = "Today" }).ClickAsync();
-        await page.WaitForTimeoutAsync(400);
+
+        // The picker's own comparison window is the state the assertions read, so wait for the edge it moves.
+        await Assertions.Expect(picker).ToHaveAttributeAsync(
+            "data-comparison-end",
+            today.AddDays(-1).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            new LocatorAssertionsToHaveAttributeOptions { Timeout = 5000 });
 
         var end = await picker.GetAttributeAsync("data-comparison-end");
         var start = await picker.GetAttributeAsync("data-comparison-start");
@@ -303,29 +321,33 @@ public abstract class AnalyticsKitE2EBase : PlaywrightTestBase
         var switcher = page.Locator("[data-testid='analytics-kit-breakdown'] .tm-breakdown-card__period [role='radio']");
         await switcher.First.FocusAsync();
         await page.Keyboard.PressAsync("ArrowRight");
-        await page.WaitForTimeoutAsync(500);
 
-        Assert.AreEqual("true", await switcher.Nth(1).GetAttributeAsync("aria-checked"),
-            "the arrow key moves the selection to the comparison window");
-        Assert.AreNotEqual(
+        await Assertions.Expect(switcher.Nth(1)).ToHaveAttributeAsync(
+            "aria-checked", "true", new LocatorAssertionsToHaveAttributeOptions { Timeout = 5000 });
+        // The rows re-sort with the same render: wait for the rendered ranking to leave the previous one.
+        await page.WaitForFunctionAsync(
+            """
+            (before) => [...document.querySelectorAll("[data-testid='analytics-kit-breakdown'] .tm-breakdown-card__row")]
+                .map(row => row.getAttribute('data-part-id')).join('|') !== before
+            """,
             string.Join("|", orderBefore),
-            string.Join("|", await BreakdownOrderAsync(page)),
-            "the comparison window ranks the channels differently");
+            new PageWaitForFunctionOptions { Timeout = 5000 });
 
         // The granularity tray: Home/End jump to the first/last segment.
         var granularity = page.Locator("[data-testid='analytics-kit-granularity'] [role='radio']");
         await granularity.Nth(1).FocusAsync();
         await page.Keyboard.PressAsync("End");
-        await page.WaitForTimeoutAsync(400);
-        Assert.AreEqual("true", await granularity.Nth(2).GetAttributeAsync("aria-checked"));
+        await Assertions.Expect(granularity.Nth(2)).ToHaveAttributeAsync(
+            "aria-checked", "true", new LocatorAssertionsToHaveAttributeOptions { Timeout = 5000 });
         await page.Keyboard.PressAsync("Home");
-        await page.WaitForTimeoutAsync(400);
-        Assert.AreEqual("true", await granularity.First.GetAttributeAsync("aria-checked"));
+        await Assertions.Expect(granularity.First).ToHaveAttributeAsync(
+            "aria-checked", "true", new LocatorAssertionsToHaveAttributeOptions { Timeout = 5000 });
 
         // The day granularity cuts the same window into more points than the week one.
         var dayPoints = await page.Locator("[data-testid='analytics-kit-chart'] .tm-chart__index-zone").CountAsync();
         await granularity.Nth(1).ClickAsync();
-        await page.WaitForTimeoutAsync(500);
+        await Assertions.Expect(page.Locator("[data-testid='analytics-kit-chart'] .tm-chart__index-zone"))
+            .Not.ToHaveCountAsync(dayPoints, new LocatorAssertionsToHaveCountOptions { Timeout = 5000 });
         var weekPoints = await page.Locator("[data-testid='analytics-kit-chart'] .tm-chart__index-zone").CountAsync();
         Assert.IsTrue(dayPoints > weekPoints, $"the day tray draws more points ({dayPoints} vs {weekPoints})");
     }
@@ -334,6 +356,8 @@ public abstract class AnalyticsKitE2EBase : PlaywrightTestBase
     public async Task PhoneBand_NeverScrollsSideways()
     {
         var page = await OpenAsync(375, 812, touch: true);
+        await Section(page, "analytics-kit-kpis").ScrollIntoViewIfNeededAsync();
+        await WaitForLayoutToSettleAsync(page, "[data-testid='analytics-kit-kpis']");
 
         var scrollWidth = await page.EvaluateAsync<int>("() => document.documentElement.scrollWidth");
         Assert.IsTrue(scrollWidth <= 376, $"the page does not scroll sideways (scrollWidth {scrollWidth})");
@@ -389,35 +413,50 @@ public abstract class AnalyticsKitE2EBase : PlaywrightTestBase
     {
         var desktop = await OpenAsync(1440, 1000);
         await Section(desktop, "analytics-kit-range").ScrollIntoViewIfNeededAsync();
-        await ShootAsync(desktop, "analytics-kit-light-1440");
+        await ShootAsync(desktop, "analytics-kit-light-1440", "[data-testid='analytics-kit-range']");
 
         await ToggleThemeAsync(desktop);
         await Section(desktop, "analytics-kit-range").ScrollIntoViewIfNeededAsync();
-        await ShootAsync(desktop, "analytics-kit-dark-1440");
+        await ShootAsync(desktop, "analytics-kit-dark-1440", "[data-testid='analytics-kit-range']");
 
         var phone = await OpenAsync(375, 812, touch: true);
         await Section(phone, "analytics-kit-kpis").ScrollIntoViewIfNeededAsync();
-        await ShootAsync(phone, "analytics-kit-light-375");
+        await ShootAsync(phone, "analytics-kit-light-375", "[data-testid='analytics-kit-kpis']");
 
         await ToggleThemeAsync(phone);
         await Section(phone, "analytics-kit-kpis").ScrollIntoViewIfNeededAsync();
-        await ShootAsync(phone, "analytics-kit-dark-375");
+        await ShootAsync(phone, "analytics-kit-dark-375", "[data-testid='analytics-kit-kpis']");
     }
 
     /// <summary>Switches the demo's own theme (the header toggle), so the whole frame repaints, not just a section.</summary>
     private static async Task ToggleThemeAsync(IPage page)
     {
         // The demo renders TWO toggles (the phone header and the sidebar footer); only one is visible per band.
+        var before = await page.EvaluateAsync<string?>(
+            "() => { const shell = document.querySelector('.demo-shell'); return shell ? `${shell.getAttribute('data-theme')}|${shell.classList.contains('dark')}` : null; }");
         await page.Locator("[data-testid='theme-toggle']:visible").First.ClickAsync();
-        await page.WaitForTimeoutAsync(600);
+        // The shell's own theme signature plus the finished colour transition — a fixed pause could screenshot
+        // the frame mid-repaint.
+        await page.WaitForFunctionAsync(
+            """
+            (before) => {
+                const shell = document.querySelector('.demo-shell');
+                return !!shell && `${shell.getAttribute('data-theme')}|${shell.classList.contains('dark')}` !== before;
+            }
+            """,
+            before,
+            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForLayoutToSettleAsync(page, ".demo-shell");
     }
 
-    private async Task ShootAsync(IPage page, string name)
+    private async Task ShootAsync(IPage page, string name, string selector)
     {
-        await page.WaitForTimeoutAsync(300);
         await page.Mouse.MoveAsync(0, 0);
         await page.EvaluateAsync(
             "() => document.activeElement instanceof HTMLElement && document.activeElement.blur()");
+        // The settle reads the real frames (fonts loaded, no CSS transition running, the framed section's box
+        // stable) instead of pausing for a guessed interval.
+        await WaitForLayoutToSettleAsync(page, selector);
         await page.ScreenshotAsync(new PageScreenshotOptions
         {
             Path = Path.Combine(ShotDir, $"{name}.png"),

@@ -86,6 +86,15 @@ metric, not a budget, so they stay in the full lane without the `Performance` ca
 
 **Decision DEC-TEMPO-PERF-LANE-BUDGETS.** Wall-clock budgets are kept at their product value and moved to a dedicated serial lane rather than loosened for the shared full lane. Every perf spec logs its measured number (`[perf] ...` line) so the lane produces evidence even when green, and a red run is judged from the logged breakdown (FCP/navigation timings, render-blocking CDN resources of the demo) rather than by raising the threshold.
 
+**The bUnit counterpart.** `Tempo.Blazor.Tests` has the same problem in miniature: two facts assert a stopwatch budget
+(a 200 000-task BPMN import under 10 s, a 200-node / 500-edge agent-graph layout under 50 ms) while twelve xUnit threads
+share the machine, so a red run measured the queue (13 s and 56 ms in the loaded FZE-15 runs, ~2 s and 20–30 ms alone).
+They now live in the `WallClockBudgets` collection (`tests/Tempo.Blazor.Tests/WallClockBudgets.cs`,
+`[CollectionDefinition(Name, DisableParallelization = true)]`), which xUnit runs exclusively: the product budgets keep
+their values and the measurement no longer includes the other suites. Add a class there only when its assertions read
+elapsed time or throughput. The same attribute is the tool for a whole-demo-page suite whose `WaitForAssertion` is
+starved by the parallel render load — `HeavyDemoPageRenders` is that collection.
+
 ## WASM / Server / InteractiveAuto lanes
 
 The suite also tags **which host** a spec runs against, because the same page can behave differently on each of the
@@ -126,6 +135,36 @@ on all three lanes instead of WASM only:
   DOM per render, so a component test can only assert the bands in the component's own render tree
   (`RenderTreeFrame.Sequence`, as `TmChartIndexTooltipTests` does) plus the markup contract (the zones and their rects
   are still there and `mouseout` clears the card).
+
+**Converted bases (plan 7ba95ed6, Fáze 15).** These bases no longer wait on a guessed interval before a render-driven
+assertion; each one waits on the state its very next line reads (`Expect(...).ToHaveAttributeAsync` / `ToHaveCountAsync` /
+`ToHaveTextAsync` / `ToBeCheckedAsync` / `ToBeFocusedAsync` / `Not.ToHaveCountAsync`, a `WaitForFunctionAsync` on the
+reported value, or `WaitForLayoutToSettleAsync` for geometry and screenshots):
+
+| Base | Former fixed delays |
+|------|---------------------|
+| `SortableListE2EBase` | 15 (one per-step pointer input pause stays, see below) |
+| `ContextUsageE2EBase` | 7 |
+| `UsageMeterE2EBase` | 8 |
+| `SegmentedControlE2EBase` | 3 |
+| `TraceWaterfallE2EBase` | 13 |
+| `TraceWaterfallPageE2EBase` | 13 (one negative-window pause stays, see below) |
+| `AnalyticsKitE2EBase` | 14 |
+| `DataDisplayKpiE2EBase` | 3 (the screenshot settle now waits for fonts, finished colour transitions and a stable box) |
+| `FacetFilterE2EBase` | converted earlier (phase 11) and is the reference |
+
+Two narrow exceptions are intentional and carry a comment at the call site:
+
+- **A window that is the behaviour under test.** `TraceWaterfallPageE2EBase`'s keyboard walk keeps one short pause after
+  `ArrowLeft`, because the assertion is "the focus must NOT move" — a negative claim needs a window in which the move
+  would have shown up.
+- **Per-step pointer input.** `SortableListE2EBase`'s drag keeps a 30 ms pause between its eight `Mouse.MoveAsync` steps:
+  each move has to reach the module as its own pointer event so it can be hit-tested. It is input, not a wait for a
+  render.
+
+Screenshot helpers take the selector of the section they frame and settle on it (fonts loaded, no CSS transition running,
+identical boxes across three frames) instead of pausing; a theme switch additionally waits for the demo shell's own
+`data-theme`/`dark` signature and the finished `transition-colors` fade, so a computed colour is never read mid-repaint.
 
 ## Regression screenshots
 

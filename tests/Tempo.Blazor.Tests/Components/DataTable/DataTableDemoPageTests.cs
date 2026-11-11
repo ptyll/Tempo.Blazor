@@ -8,6 +8,14 @@ using Tempo.Blazor.Tests.Localization;
 
 namespace Tempo.Blazor.Tests.Components.DataTable;
 
+/// <remarks>
+/// The suite renders the whole <c>/data-table</c> demo page in every fact (the redesign section alone is four
+/// interactive tables over a generated order set) and waits for a re-render after a control change. Under
+/// full-suite parallel load that wait timed out with 91 renders in the FZE-15 run (the same fact passes in
+/// isolation and with its own class), so it joins the serialized heavy page renders — the documented tool for
+/// exactly this (FZE-1/FZE-9). No assertion changes.
+/// </remarks>
+[Collection(HeavyDemoPageRenders.Name)]
 public class DataTableDemoPageTests : DemoPageLocalizationTestBase
 {
     public DataTableDemoPageTests()

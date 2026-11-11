@@ -50,7 +50,10 @@ public abstract class DataDisplayKpiE2EBase : PlaywrightTestBase
         var page = await context.NewPageAsync();
         await GotoAppReadyAsync(page, $"{BaseUrl}/data-display");
         await page.WaitForSelectorAsync("[data-testid='animated-numbers']", new PageWaitForSelectorOptions { Timeout = 30000 });
-        await page.WaitForTimeoutAsync(400);
+        // The card grid's own first paint and a settled layout, not a pause: every test reads the cards' text,
+        // their geometry or their colours.
+        await Assertions.Expect(KpiRow(page).Locator(".tm-stat-card")).Not.ToHaveCountAsync(
+            0, new LocatorAssertionsToHaveCountOptions { Timeout = 30000 });
         return page;
     }
 
@@ -225,10 +228,13 @@ public abstract class DataDisplayKpiE2EBase : PlaywrightTestBase
         Assert.AreEqual(0, await row.Locator("a.tm-stat-card button, button.tm-stat-card a").CountAsync(),
             "one native target per card — never a nested control");
 
-        // A native button is keyboard-activatable without any key emulation from the component.
+        // A native button is keyboard-activatable without any key emulation from the component. The click the
+        // Enter fires is a demo action, so the wait is on the focus the assertion reads: a focused button that
+        // lost focus to the activation would show up here, and a native Enter never blurs.
         await button.FocusAsync();
+        await Assertions.Expect(button).ToBeFocusedAsync(new LocatorAssertionsToBeFocusedOptions { Timeout = 5000 });
         await page.Keyboard.PressAsync("Enter");
-        await page.WaitForTimeoutAsync(300);
+        await Assertions.Expect(button).ToBeFocusedAsync(new LocatorAssertionsToBeFocusedOptions { Timeout = 5000 });
         Assert.AreEqual("button", await page.EvaluateAsync<string>(
             "() => document.activeElement && document.activeElement.tagName.toLowerCase()"),
             "Enter fires the native click without moving the focus away");
@@ -273,33 +279,36 @@ public abstract class DataDisplayKpiE2EBase : PlaywrightTestBase
     {
         var desktop = await OpenAsync(1440, 1000);
         await desktop.GetByTestId("stat-cards-kpi").ScrollIntoViewIfNeededAsync();
-        await WaitForLayoutToSettleAsync(desktop, "[data-testid='stat-cards-kpi']");
-        await ShootAsync(desktop, "data-display-kpi-cards-light-1440");
+        await ShootAsync(desktop, "data-display-kpi-cards-light-1440", "[data-testid='stat-cards-kpi']");
 
         await desktop.GetByTestId("animated-numbers").ScrollIntoViewIfNeededAsync();
-        await WaitForLayoutToSettleAsync(desktop, "[data-testid='animated-numbers']");
-        await ShootAsync(desktop, "data-display-kpi-numbers-light-1440");
+        await ShootAsync(desktop, "data-display-kpi-numbers-light-1440", "[data-testid='animated-numbers']");
 
         await ToggleDarkModeAsync(desktop);
         await desktop.GetByTestId("stat-cards-kpi").ScrollIntoViewIfNeededAsync();
-        await ShootAsync(desktop, "data-display-kpi-cards-dark-1440");
+        await ShootAsync(desktop, "data-display-kpi-cards-dark-1440", "[data-testid='stat-cards-kpi']");
         await desktop.GetByTestId("animated-numbers").ScrollIntoViewIfNeededAsync();
-        await ShootAsync(desktop, "data-display-kpi-numbers-dark-1440");
+        await ShootAsync(desktop, "data-display-kpi-numbers-dark-1440", "[data-testid='animated-numbers']");
 
         var phone = await OpenAsync(375, 812, touch: true);
         await phone.GetByTestId("stat-cards-kpi").ScrollIntoViewIfNeededAsync();
-        await WaitForLayoutToSettleAsync(phone, "[data-testid='stat-cards-kpi']");
-        await ShootAsync(phone, "data-display-kpi-cards-light-375");
+        await ShootAsync(phone, "data-display-kpi-cards-light-375", "[data-testid='stat-cards-kpi']");
         await phone.GetByTestId("animated-numbers").ScrollIntoViewIfNeededAsync();
-        await ShootAsync(phone, "data-display-kpi-numbers-light-375");
+        await ShootAsync(phone, "data-display-kpi-numbers-light-375", "[data-testid='animated-numbers']");
     }
 
-    private async Task ShootAsync(IPage page, string name)
+    /// <summary>
+    /// Captures a reference shot of ONE section. The settle is a state, not a pause: fonts loaded, no CSS
+    /// transition running (both the theme colour transition and the skeleton shimmer count), and the section's
+    /// box identical across three consecutive frames — the same signal
+    /// <see cref="PlaywrightTestBase.WaitForLayoutToSettleAsync"/> uses for geometry assertions.
+    /// </summary>
+    private async Task ShootAsync(IPage page, string name, string selector)
     {
-        await page.WaitForTimeoutAsync(300);
         await page.Mouse.MoveAsync(0, 0);
         await page.EvaluateAsync(
             "() => document.activeElement instanceof HTMLElement && document.activeElement.blur()");
+        await WaitForLayoutToSettleAsync(page, selector);
         await page.ScreenshotAsync(new PageScreenshotOptions
         {
             Path = Path.Combine(ShotDir, $"{name}.png"),
