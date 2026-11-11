@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Process_Camunda" targetNamespace="http://tempo.example/bpmn/corpus/camunda" exporter="Tempo.Blazor" exporterVersion="2.11.0" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:tempo="https://tempo.blazor/schemas/bpmn-extensions" name="Invoice approval" xmlns:camunda="http://camunda.org/schema/1.0/bpmn">
+  <process id="Process_Camunda" name="Invoice approval" isExecutable="true" camunda:versionTag="1.4.0" camunda:historyTimeToLive="180">
+    <startEvent id="StartEvent_InvoiceReceived" name="Invoice received" camunda:formKey="embedded:app:forms/invoice.html">
+      <outgoing>Flow_C1</outgoing>
+    </startEvent>
+    <userTask id="Task_Approve" name="Approve invoice" camunda:assignee="${approver}" camunda:dueDate="PT2D">
+      <incoming>Flow_C1</incoming>
+      <outgoing>Flow_C2</outgoing>
+      <extensionElements>
+        <camunda:taskListener event="create" expression="${approvalNotifier.notify(task)}" />
+        <camunda:inputOutput>
+          <camunda:inputParameter name="amount">${invoice.amount}</camunda:inputParameter>
+          <camunda:outputParameter name="approved">${approved}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </extensionElements>
+    </userTask>
+    <userTask id="Task_ReviewPool" name="Pool review" camunda:candidateGroups="finance,controlling" camunda:candidateUsers="alice,bob">
+      <incoming>Flow_C2</incoming>
+      <outgoing>Flow_C3</outgoing>
+    </userTask>
+    <serviceTask id="Task_Book" name="Book invoice" camunda:delegateExpression="${invoiceBooker}">
+      <incoming>Flow_C3</incoming>
+      <outgoing>Flow_C4</outgoing>
+      <extensionElements>
+        <camunda:connector>
+          <camunda:connectorId>http-connector</camunda:connectorId>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="url">https://erp.example/book</camunda:inputParameter>
+            <camunda:inputParameter name="method">POST</camunda:inputParameter>
+          </camunda:inputOutput>
+        </camunda:connector>
+      </extensionElements>
+    </serviceTask>
+    <endEvent id="EndEvent_Booked" name="Booked">
+      <incoming>Flow_C4</incoming>
+    </endEvent>
+    <sequenceFlow id="Flow_C1" sourceRef="StartEvent_InvoiceReceived" targetRef="Task_Approve" />
+    <sequenceFlow id="Flow_C2" sourceRef="Task_Approve" targetRef="Task_ReviewPool" />
+    <sequenceFlow id="Flow_C3" sourceRef="Task_ReviewPool" targetRef="Task_Book" />
+    <sequenceFlow id="Flow_C4" sourceRef="Task_Book" targetRef="EndEvent_Booked" />
+  </process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_BPMNPlane_1" name="Invoice approval">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_Camunda">
+      <bpmndi:BPMNShape id="StartEvent_InvoiceReceived_di" bpmnElement="StartEvent_InvoiceReceived">
+        <dc:Bounds x="152" y="152" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Approve_di" bpmnElement="Task_Approve">
+        <dc:Bounds x="240" y="130" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ReviewPool_di" bpmnElement="Task_ReviewPool">
+        <dc:Bounds x="400" y="130" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Book_di" bpmnElement="Task_Book">
+        <dc:Bounds x="560" y="130" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Booked_di" bpmnElement="EndEvent_Booked">
+        <dc:Bounds x="732" y="152" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_C1_di" bpmnElement="Flow_C1">
+        <di:waypoint x="188" y="170" />
+        <di:waypoint x="240" y="170" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_C2_di" bpmnElement="Flow_C2">
+        <di:waypoint x="340" y="170" />
+        <di:waypoint x="400" y="170" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_C3_di" bpmnElement="Flow_C3">
+        <di:waypoint x="500" y="170" />
+        <di:waypoint x="560" y="170" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_C4_di" bpmnElement="Flow_C4">
+        <di:waypoint x="660" y="170" />
+        <di:waypoint x="732" y="170" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>

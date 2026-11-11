@@ -6,9 +6,12 @@ using Tempo.Blazor.Modeling;
 
 namespace Tempo.Blazor.Modeling.BpmnXml;
 
-/// <summary>Partial of <see cref="BpmnModelBuilder"/> — extension elements (host and foreign namespaces), global definitions and the unused-global report.</summary>
+/// <summary>
+/// Part of <see cref="BpmnModelBuilder"/> split out to stay under the 1200-line source ceiling (N270/F13).
+/// </summary>
 internal sealed partial class BpmnModelBuilder
 {
+
     // ---------------------------------------------------------------- extensions
 
     private void ApplyExtensionElements(XElement extensionElements, ModelingElementDto? node, ModelingModelDto model)
@@ -49,6 +52,88 @@ internal sealed partial class BpmnModelBuilder
         }
     }
 
+    /// <summary>
+    /// Definitions-root <c>extensionElements</c>: host-namespace payloads restore model-level
+    /// properties (the exporter writes them there in the WithHostExtensions profile); tool plugins
+    /// get their namespace routed like anywhere else; unknown namespaces are reported instead of
+    /// silently dropped.
+    /// </summary>
+    private void ApplyRootExtensionElements(XElement root)
+    {
+        var extensionElements = BpmnImportInternals.Child(root, "extensionElements");
+        if (extensionElements is null || _models.Count == 0)
+        {
+            return;
+        }
+
+        var model = _models[0];
+        foreach (var group in extensionElements.Elements().GroupBy(payload => payload.Name.NamespaceName))
+        {
+            var ns = group.Key;
+            var plugin = _options.ToolExtensions.FirstOrDefault(extension =>
+                string.Equals(extension.NamespaceUri, ns, StringComparison.Ordinal));
+            if (plugin is not null)
+            {
+                plugin.OnImportElement(new BpmnToolImportContext
+                {
+                    ExtensionElements = extensionElements,
+                    Element = null,
+                    Model = model,
+                    ReportLoss = loss => _losses.Add(loss),
+                });
+                continue;
+            }
+
+            if (ns == HostExtensionNamespace)
+            {
+                foreach (var payload in group)
+                {
+                    ImportHostExtensionProperties(payload, model);
+                }
+
+                continue;
+            }
+
+            foreach (var payload in group)
+            {
+                _losses.Add(new BpmnImportLoss
+                {
+                    ElementId = null,
+                    XmlPath = BpmnImportInternals.BuildPath(payload),
+                    Construct = "extensionElements",
+                    Reason = $"Definitions-root extension element in namespace '{ns}' has no model element to attach to; content: {payload.ToString(SaveOptions.DisableFormatting)}",
+                    Severity = BpmnImportLossSeverity.Loss,
+                });
+            }
+        }
+    }
+
+    /// <summary>Model variant of the host property restore (definitions-root payloads).</summary>
+    private static void ImportHostExtensionProperties(XElement payload, ModelingModelDto model)
+    {
+        foreach (var property in BpmnImportInternals.Children(payload, "property"))
+        {
+            var name = property.Attribute("name")?.Value;
+            var value = property.Attribute("value")?.Value ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                continue;
+            }
+
+            try
+            {
+                model.Properties[name!] = JsonNode.Parse(value)?.Deserialize<JsonElement>()
+                    ?? BpmnImportInternals.StringElement(value);
+            }
+            catch (JsonException)
+            {
+                model.Properties[name!] = BpmnImportInternals.StringElement(value);
+            }
+        }
+    }
+
+    /// <summary>Element variant of the host property restore: <c>tags</c>/<c>governance</c>
+    /// payloads restore the typed DTO fields, everything else lands in Properties (finding 9).</summary>
     private void ImportHostExtensionProperties(XElement payload, ModelingElementDto? node)
     {
         if (node is null)
@@ -65,6 +150,33 @@ internal sealed partial class BpmnModelBuilder
                 continue;
             }
 
+            if (string.Equals(name, "tags", StringComparison.Ordinal))
+            {
+                if (TryParseJson(value, out var tags) && tags.ValueKind == JsonValueKind.Array)
+                {
+                    node.Tags.Clear();
+                    foreach (var tag in tags.EnumerateArray())
+                    {
+                        if (tag.ValueKind == JsonValueKind.String)
+                        {
+                            node.Tags.Add(tag.GetString() ?? string.Empty);
+                        }
+                    }
+                }
+
+                continue;
+            }
+
+            if (string.Equals(name, "governance", StringComparison.Ordinal))
+            {
+                if (TryParseJson(value, out var governance) && governance.ValueKind == JsonValueKind.Object)
+                {
+                    node.Governance = JsonSerializer.Deserialize<ModelingGovernanceDto>(governance.GetRawText()) ?? new ModelingGovernanceDto();
+                }
+
+                continue;
+            }
+
             try
             {
                 node.Properties[name!] = JsonNode.Parse(value)?.Deserialize<JsonElement>()
@@ -74,6 +186,25 @@ internal sealed partial class BpmnModelBuilder
             {
                 node.Properties[name!] = BpmnImportInternals.StringElement(value);
             }
+        }
+    }
+
+    private static bool TryParseJson(string value, out JsonElement element)
+    {
+        element = default;
+        if (value.Length == 0)
+        {
+            return false;
+        }
+
+        try
+        {
+            element = JsonNode.Parse(value)?.Deserialize<JsonElement>() ?? default;
+            return element.ValueKind != JsonValueKind.Undefined;
+        }
+        catch (JsonException)
+        {
+            return false;
         }
     }
 
@@ -106,6 +237,65 @@ internal sealed partial class BpmnModelBuilder
         });
     }
 
+    /// <summary>
+    /// Relationship <c>extensionElements</c> (finding 9): the host payload restores typed fields
+    /// (today: <c>tags</c>); every other namespace is reported — relationships have no element to
+    /// hang a verbatim foreign payload on.
+    /// </summary>
+    private void ApplyRelationshipExtensionElements(XElement source, ModelingRelationshipDto relationship, ModelingModelDto model)
+    {
+        var extensionElements = BpmnImportInternals.Child(source, "extensionElements");
+        if (extensionElements is null)
+        {
+            return;
+        }
+
+        foreach (var group in extensionElements.Elements().GroupBy(payload => payload.Name.NamespaceName))
+        {
+            var ns = group.Key;
+            if (string.Equals(ns, HostExtensionNamespace, StringComparison.Ordinal))
+            {
+                foreach (var payload in group)
+                {
+                    foreach (var property in BpmnImportInternals.Children(payload, "property"))
+                    {
+                        var name = property.Attribute("name")?.Value;
+                        var value = property.Attribute("value")?.Value ?? string.Empty;
+                        if (!string.Equals(name, "tags", StringComparison.Ordinal)
+                            || !TryParseJson(value, out var tags)
+                            || tags.ValueKind != JsonValueKind.Array)
+                        {
+                            continue;
+                        }
+
+                        relationship.Tags.Clear();
+                        foreach (var tag in tags.EnumerateArray())
+                        {
+                            if (tag.ValueKind == JsonValueKind.String)
+                            {
+                                relationship.Tags.Add(tag.GetString() ?? string.Empty);
+                            }
+                        }
+                    }
+                }
+
+                continue;
+            }
+
+            foreach (var payload in group)
+            {
+                _losses.Add(new BpmnImportLoss
+                {
+                    ElementId = relationship.Id,
+                    XmlPath = BpmnImportInternals.BuildPath(payload),
+                    Construct = "extensionElements",
+                    Reason = $"Relationship-level extension element in namespace '{ns}' is not preserved; content: {payload.ToString(SaveOptions.DisableFormatting)}",
+                    Severity = BpmnImportLossSeverity.Loss,
+                });
+            }
+        }
+    }
+
     /// <summary>Writes the accumulated foreign extension payloads into each element once, at the end.</summary>
     private void FlushForeignExtensions()
     {
@@ -118,143 +308,6 @@ internal sealed partial class BpmnModelBuilder
             }
 
             node.Properties["foreignExtensions"] = BpmnImportInternals.JsonElementFrom(foreign);
-        }
-    }
-
-    // ---------------------------------------------------------------- global definitions
-
-    private sealed class GlobalDefinition
-    {
-        public required string Kind { get; init; }
-        public required string Name { get; init; }
-        public required string Code { get; init; }
-    }
-
-    private void MarkGlobalUsed(ModelingModelDto model, string definitionId)
-    {
-        _usedGlobalDefinitions.Add(definitionId);
-        if (!_usedGlobalDefinitionsByModel.TryGetValue(model, out var used))
-        {
-            used = new HashSet<string>(StringComparer.Ordinal);
-            _usedGlobalDefinitionsByModel[model] = used;
-        }
-
-        used.Add(definitionId);
-    }
-
-    /// <summary>
-    /// Attaches the referenced global message/signal/error/escalation definitions to each model as
-    /// <c>Properties["bpmnDefinitions"]</c> (canonical JSON, declaration order) so the export phase
-    /// can rebuild the <c>&lt;definitions&gt;</c> root after a clean import → export cycle (design §4).
-    /// </summary>
-    private void AttachGlobalDefinitions()
-    {
-        foreach (var (model, used) in _usedGlobalDefinitionsByModel)
-        {
-            var definitions = new List<JsonObject>();
-            foreach (var (id, definition) in _globalDefinitions)
-            {
-                if (!used.Contains(id) || definition.Kind is not ("message" or "signal" or "error" or "escalation"))
-                {
-                    continue;
-                }
-
-                definitions.Add(new JsonObject
-                {
-                    ["kind"] = definition.Kind,
-                    ["id"] = id,
-                    ["name"] = definition.Name,
-                    ["code"] = definition.Code,
-                });
-            }
-
-            if (definitions.Count > 0)
-            {
-                model.Properties["bpmnDefinitions"] = JsonSerializer.SerializeToElement(definitions);
-            }
-        }
-    }
-
-    private void CollectGlobalDefinitions(XElement root)
-    {
-        foreach (var element in root.Elements())
-        {
-            var localName = element.Name.LocalName;
-            if (!GlobalDefinitionTypes.Contains(localName, StringComparer.Ordinal))
-            {
-                continue;
-            }
-
-            if (localName == "category")
-            {
-                foreach (var categoryValue in BpmnImportInternals.Children(element, "categoryValue"))
-                {
-                    if (categoryValue.Attribute("id") is { } id)
-                    {
-                        _globalDefinitions[id.Value] = new GlobalDefinition
-                        {
-                            Kind = "categoryValue",
-                            Name = categoryValue.Attribute("value")?.Value ?? string.Empty,
-                            Code = string.Empty,
-                        };
-                    }
-                }
-
-                continue;
-            }
-
-            if (element.Attribute("id") is not { } elementId)
-            {
-                continue;
-            }
-
-            var code = element.Attribute("errorCode")?.Value
-                ?? element.Attribute("escalationCode")?.Value
-                ?? string.Empty;
-            _globalDefinitions[elementId.Value] = new GlobalDefinition
-            {
-                Kind = localName,
-                Name = element.Attribute("name")?.Value ?? string.Empty,
-                Code = code,
-            };
-        }
-    }
-
-    private void ReportUnusedGlobalDefinitions()
-    {
-        foreach (var (id, definition) in _globalDefinitions.OrderBy(pair => pair.Key, StringComparer.Ordinal))
-        {
-            if (_usedGlobalDefinitions.Contains(id))
-            {
-                continue;
-            }
-
-            if (definition.Kind is "itemDefinition" or "dataStore" or "categoryValue")
-            {
-                // dataStore/itemDefinition/categoryValue are covered by their referencing elements.
-                if (definition.Kind == "itemDefinition")
-                {
-                    _losses.Add(new BpmnImportLoss
-                    {
-                        ElementId = id,
-                        XmlPath = $"/definitions/{definition.Kind}[@id='{id}']",
-                        Construct = definition.Kind,
-                        Reason = "Global definition is declared but never used; it is not preserved (nothing references it).",
-                        Severity = BpmnImportLossSeverity.Info,
-                    });
-                }
-
-                continue;
-            }
-
-            _losses.Add(new BpmnImportLoss
-            {
-                ElementId = id,
-                XmlPath = $"/definitions/{definition.Kind}[@id='{id}']",
-                Construct = definition.Kind,
-                Reason = "Global definition is declared but never used; the export phase can only restore definitions referenced from the model.",
-                Severity = BpmnImportLossSeverity.Info,
-            });
         }
     }
 }

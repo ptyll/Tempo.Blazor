@@ -147,7 +147,19 @@
           "TargetElementId": "Catch_Multiple",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 188,
+                "y": 180
+              },
+              {
+                "x": 260,
+                "y": 180
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_Multiple"
+          },
           "Tags": []
         },
         {
@@ -158,7 +170,19 @@
           "TargetElementId": "Catch_Parallel",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 296,
+                "y": 180
+              },
+              {
+                "x": 380,
+                "y": 180
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_Multiple"
+          },
           "Tags": []
         },
         {
@@ -169,7 +193,19 @@
           "TargetElementId": "Task_Multiple",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 416,
+                "y": 180
+              },
+              {
+                "x": 470,
+                "y": 180
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_Multiple"
+          },
           "Tags": []
         },
         {
@@ -180,11 +216,134 @@
           "TargetElementId": "EndEvent_Multiple",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 570,
+                "y": 180
+              },
+              {
+                "x": 642,
+                "y": 180
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_Multiple"
+          },
           "Tags": []
         }
       ],
-      "Views": [],
+      "Views": [
+        {
+          "Id": "BPMNPlane_Multiple",
+          "Name": "Multiple event definitions",
+          "Notation": "bpmn2",
+          "ViewpointKey": "",
+          "Nodes": [
+            {
+              "ElementId": "StartEvent_Multiple",
+              "X": 152,
+              "Y": 162,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Catch_Multiple",
+              "X": 260,
+              "Y": 160,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Catch_Parallel",
+              "X": 380,
+              "Y": 160,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Task_Multiple",
+              "X": 470,
+              "Y": 140,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "EndEvent_Multiple",
+              "X": 642,
+              "Y": 162,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            }
+          ],
+          "Connections": [
+            {
+              "RelationshipId": "Flow_M1",
+              "SourceNodeId": "StartEvent_Multiple",
+              "TargetNodeId": "Catch_Multiple",
+              "Waypoints": [
+                {
+                  "X": 188,
+                  "Y": 180
+                },
+                {
+                  "X": 260,
+                  "Y": 180
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_M2",
+              "SourceNodeId": "Catch_Multiple",
+              "TargetNodeId": "Catch_Parallel",
+              "Waypoints": [
+                {
+                  "X": 296,
+                  "Y": 180
+                },
+                {
+                  "X": 380,
+                  "Y": 180
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_M3",
+              "SourceNodeId": "Catch_Parallel",
+              "TargetNodeId": "Task_Multiple",
+              "Waypoints": [
+                {
+                  "X": 416,
+                  "Y": 180
+                },
+                {
+                  "X": 470,
+                  "Y": 180
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_M4",
+              "SourceNodeId": "Task_Multiple",
+              "TargetNodeId": "EndEvent_Multiple",
+              "Waypoints": [
+                {
+                  "X": 570,
+                  "Y": 180
+                },
+                {
+                  "X": 642,
+                  "Y": 180
+                }
+              ]
+            }
+          ]
+        }
+      ],
       "Issues": [],
       "Metadata": {
         "SourceSystem": "bpmn-xml",
@@ -193,6 +352,7 @@
         "IsFresh": true
       },
       "Properties": {
+        "bpmn:isExecutable": "false",
         "bpmnDefinitions": [
           {
             "kind": "message",

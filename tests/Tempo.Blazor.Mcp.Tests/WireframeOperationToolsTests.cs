@@ -199,6 +199,8 @@ public class WireframeOperationToolsTests
         result.Warnings.Should().BeEmpty(
             "the dedicated TmOtpInput owns `otp-input` exclusively, so the role is unambiguous");
         var element = doc.Elements.Should().ContainSingle().Which;
+        // Finding 10 (phase 5 review): TmOtpInput is the unambiguous owner of the otp-input role
+        // (TmMaskedTextBox keeps only masked-input).
         element.Type.Should().Be("TmOtpInput");
         element.Role.Should().Be("otp-input");
         element.X.Should().Be(10);
@@ -817,6 +819,7 @@ public class WireframeOperationToolsTests
         root.GetProperty("warnings").GetArrayLength().Should().Be(0,
             "`otp-input` has one home component, so authoring reports no role-ambiguous warning");
         var saved = (await backend.GetWireframeDocumentAsync(id))!.Elements.Single();
+        // Finding 10: the otp-input role unambiguously resolves to TmOtpInput.
         saved.Type.Should().Be("TmOtpInput");
         saved.Role.Should().Be("otp-input");
     }

@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Process_Collapsed" targetNamespace="http://tempo.example/bpmn/corpus" exporter="Tempo.Blazor" exporterVersion="2.11.0" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:tempo="https://tempo.blazor/schemas/bpmn-extensions" name="Collapsed">
+  <process id="Process_Collapsed" name="Collapsed" isExecutable="false">
+    <startEvent id="StartEvent_Collapsed" name="Start">
+      <outgoing>Flow_C1</outgoing>
+    </startEvent>
+    <subProcess id="SubProcess_Collapsed" name="Inner detail">
+      <startEvent id="StartEvent_Inner" name="Inner start">
+        <outgoing>Flow_C2</outgoing>
+      </startEvent>
+      <task id="Task_Inner" name="Inner work">
+        <incoming>Flow_C2</incoming>
+        <outgoing>Flow_C3</outgoing>
+      </task>
+      <endEvent id="EndEvent_Inner" name="Inner end">
+        <incoming>Flow_C3</incoming>
+      </endEvent>
+      <sequenceFlow id="Flow_C2" sourceRef="StartEvent_Inner" targetRef="Task_Inner" />
+      <sequenceFlow id="Flow_C3" sourceRef="Task_Inner" targetRef="EndEvent_Inner" />
+    </subProcess>
+    <endEvent id="EndEvent_Collapsed" name="Done">
+      <incoming>Flow_C4</incoming>
+    </endEvent>
+    <sequenceFlow id="Flow_C1" sourceRef="StartEvent_Collapsed" targetRef="SubProcess_Collapsed" />
+    <sequenceFlow id="Flow_C4" sourceRef="SubProcess_Collapsed" targetRef="EndEvent_Collapsed" />
+  </process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_BPMNPlane_Collapsed" name="Collapsed overview">
+    <bpmndi:BPMNPlane id="BPMNPlane_Collapsed" bpmnElement="Process_Collapsed">
+      <bpmndi:BPMNShape id="StartEvent_Collapsed_di" bpmnElement="StartEvent_Collapsed">
+        <dc:Bounds x="152" y="162" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SubProcess_Collapsed_di" bpmnElement="SubProcess_Collapsed" isExpanded="false">
+        <dc:Bounds x="260" y="140" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Collapsed_di" bpmnElement="EndEvent_Collapsed">
+        <dc:Bounds x="432" y="162" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_C1_di" bpmnElement="Flow_C1">
+        <di:waypoint x="188" y="180" />
+        <di:waypoint x="260" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_C4_di" bpmnElement="Flow_C4">
+        <di:waypoint x="360" y="180" />
+        <di:waypoint x="432" y="180" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_BPMNPlane_Inner" name="Inner detail">
+    <bpmndi:BPMNPlane id="BPMNPlane_Inner" bpmnElement="SubProcess_Collapsed">
+      <bpmndi:BPMNShape id="StartEvent_Inner_di" bpmnElement="StartEvent_Inner">
+        <dc:Bounds x="172" y="162" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Inner_di" bpmnElement="Task_Inner">
+        <dc:Bounds x="260" y="140" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Inner_di" bpmnElement="EndEvent_Inner">
+        <dc:Bounds x="432" y="162" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_C2_di" bpmnElement="Flow_C2">
+        <di:waypoint x="208" y="180" />
+        <di:waypoint x="260" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_C3_di" bpmnElement="Flow_C3">
+        <di:waypoint x="360" y="180" />
+        <di:waypoint x="432" y="180" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>

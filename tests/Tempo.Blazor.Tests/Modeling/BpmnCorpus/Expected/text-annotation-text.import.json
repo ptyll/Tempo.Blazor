@@ -1,0 +1,266 @@
+{
+  "Models": [
+    {
+      "Id": "Process_AnnotationText",
+      "Title": "Annotated process",
+      "Notation": "bpmn2",
+      "SupportedNotations": [
+        "bpmn2"
+      ],
+      "Elements": [
+        {
+          "Id": "StartEvent_Annotated",
+          "SourceId": "StartEvent_Annotated",
+          "SourceType": "startEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_TextAnnotationText\u0027]/process[@id=\u0027Process_AnnotationText\u0027]/startEvent[@id=\u0027StartEvent_Annotated\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "StartEvent",
+          "Name": "Begin",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_Annotated",
+          "SourceId": "Task_Annotated",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_TextAnnotationText\u0027]/process[@id=\u0027Process_AnnotationText\u0027]/task[@id=\u0027Task_Annotated\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Do work",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "EndEvent_Annotated",
+          "SourceId": "EndEvent_Annotated",
+          "SourceType": "endEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_TextAnnotationText\u0027]/process[@id=\u0027Process_AnnotationText\u0027]/endEvent[@id=\u0027EndEvent_Annotated\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "EndEvent",
+          "Name": "Done",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "TextAnnotation_Standard",
+          "SourceId": "TextAnnotation_Standard",
+          "SourceType": "textAnnotation",
+          "SourcePath": "/definitions[@id=\u0027Definitions_TextAnnotationText\u0027]/process[@id=\u0027Process_AnnotationText\u0027]/textAnnotation[@id=\u0027TextAnnotation_Standard\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "TextAnnotation",
+          "Name": "Standard form: the annotation body lives in a \u003Ctext\u003E child element.",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        }
+      ],
+      "Relationships": [
+        {
+          "Id": "Association_Standard",
+          "SourceId": "Association_Standard",
+          "SourceType": "association",
+          "SourceElementId": "TextAnnotation_Standard",
+          "TargetElementId": "Task_Annotated",
+          "RelationshipType": "Association",
+          "Name": "",
+          "Properties": {
+            "bpmn:associationDirection": "None",
+            "direction": "None",
+            "bpmndi:waypoints": [
+              {
+                "x": 350,
+                "y": 250
+              },
+              {
+                "x": 330,
+                "y": 210
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_AnnotationText"
+          },
+          "Tags": []
+        },
+        {
+          "Id": "Flow_Annotated_1",
+          "SourceId": "Flow_Annotated_1",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "StartEvent_Annotated",
+          "TargetElementId": "Task_Annotated",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 208,
+                "y": 170
+              },
+              {
+                "x": 260,
+                "y": 170
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_AnnotationText"
+          },
+          "Tags": []
+        },
+        {
+          "Id": "Flow_Annotated_2",
+          "SourceId": "Flow_Annotated_2",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Annotated",
+          "TargetElementId": "EndEvent_Annotated",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 360,
+                "y": 170
+              },
+              {
+                "x": 420,
+                "y": 170
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_AnnotationText"
+          },
+          "Tags": []
+        }
+      ],
+      "Views": [
+        {
+          "Id": "BPMNPlane_AnnotationText",
+          "Name": "Annotated process",
+          "Notation": "bpmn2",
+          "ViewpointKey": "",
+          "Nodes": [
+            {
+              "ElementId": "StartEvent_Annotated",
+              "X": 172,
+              "Y": 152,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Task_Annotated",
+              "X": 260,
+              "Y": 130,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "EndEvent_Annotated",
+              "X": 420,
+              "Y": 152,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "TextAnnotation_Standard",
+              "X": 240,
+              "Y": 250,
+              "Width": 220,
+              "Height": 60,
+              "ParentNodeId": null
+            }
+          ],
+          "Connections": [
+            {
+              "RelationshipId": "Flow_Annotated_1",
+              "SourceNodeId": "StartEvent_Annotated",
+              "TargetNodeId": "Task_Annotated",
+              "Waypoints": [
+                {
+                  "X": 208,
+                  "Y": 170
+                },
+                {
+                  "X": 260,
+                  "Y": 170
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_Annotated_2",
+              "SourceNodeId": "Task_Annotated",
+              "TargetNodeId": "EndEvent_Annotated",
+              "Waypoints": [
+                {
+                  "X": 360,
+                  "Y": 170
+                },
+                {
+                  "X": 420,
+                  "Y": 170
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Association_Standard",
+              "SourceNodeId": "TextAnnotation_Standard",
+              "TargetNodeId": "Task_Annotated",
+              "Waypoints": [
+                {
+                  "X": 350,
+                  "Y": 250
+                },
+                {
+                  "X": 330,
+                  "Y": 210
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "Issues": [],
+      "Metadata": {
+        "SourceSystem": "bpmn-xml",
+        "SourceVersion": "http://tempo.example/bpmn/corpus",
+        "LoadedAt": "1970-01-01T00:00:00+00:00",
+        "IsFresh": true
+      },
+      "Properties": {
+        "bpmn:isExecutable": "false"
+      }
+    }
+  ],
+  "Losses": [],
+  "Warnings": [],
+  "HasErrors": false,
+  "ErrorMessage": null
+}

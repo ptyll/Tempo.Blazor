@@ -13,30 +13,7 @@ public sealed class BpmnImportGoldenTests
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
-    private static readonly string[] GoldenFixtures =
-    [
-        "simple-process.bpmn",
-        "collaboration-3-pools.bpmn",
-        "nested-lanes.bpmn",
-        "all-gateways.bpmn",
-        "all-events.bpmn",
-        "boundary-events.bpmn",
-        "event-subprocess.bpmn",
-        "call-activity.bpmn",
-        "data-objects.bpmn",
-        "no-bpmndi.bpmn",
-        "camunda-export.bpmn",
-        "signavio-export.bpmn",
-        "bizagi-export.bpmn",
-        "annotations-group.bpmn",
-        "unsupported-constructs.bpmn",
-        "prefixed-qnames.bpmn",
-        "nested-subprocess.bpmn",
-        "collapsed-subprocess.bpmn",
-        "black-box-pool.bpmn",
-        "multiple-events.bpmn",
-        "io-properties.bpmn",
-    ];
+    private static readonly string[] GoldenFixtures = BpmnImportGoldenFixtures.All;
 
     public static TheoryData<string> FixtureNames()
     {

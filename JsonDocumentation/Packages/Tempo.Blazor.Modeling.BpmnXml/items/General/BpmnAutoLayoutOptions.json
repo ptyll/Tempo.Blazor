@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "General",
+  "namespace": "Tempo.Blazor.Modeling.BpmnXml",
+  "description": "Options controlling the headless BpmnAutoLayout.",
+  "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+  "sourcePath": "src/Tempo.Blazor.Modeling.BpmnXml/BpmnAutoLayout.cs",
+  "documentationStatus": "generated",
+  "itemName": "BpmnAutoLayoutOptions"
+}

@@ -1,0 +1,33 @@
+{
+  "kind": "Class",
+  "category": "General",
+  "namespace": "Tempo.Blazor.Modeling.BpmnXml",
+  "description": "Default IBpmnXmlExporter: deterministic ModelingModelDto → BPMN 2.0 XML conversion (stable ordering, invariant-culture numbers, LF line endings, no BOM). Model-content problems surface as Losses instead of exceptions.",
+  "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+  "sourcePath": "src/Tempo.Blazor.Modeling.BpmnXml/BpmnXmlExporter.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "Export",
+      "kind": "Method",
+      "type": "BpmnExportResult",
+      "parameters": [
+        {
+          "name": "model",
+          "type": "ModelingModelDto"
+        },
+        {
+          "name": "options",
+          "type": "BpmnExportOptions?",
+          "default": "null"
+        },
+        {
+          "name": "ct",
+          "type": "CancellationToken",
+          "default": "default"
+        }
+      ]
+    }
+  ],
+  "itemName": "BpmnXmlExporter"
+}

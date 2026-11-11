@@ -103,7 +103,19 @@
           "TargetElementId": "Catch_Notify",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 188,
+                "y": 120
+              },
+              {
+                "x": 250,
+                "y": 120
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_Prefixed"
+          },
           "Tags": []
         },
         {
@@ -114,7 +126,19 @@
           "TargetElementId": "Task_Prefixed",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 286,
+                "y": 120
+              },
+              {
+                "x": 350,
+                "y": 120
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_Prefixed"
+          },
           "Tags": []
         },
         {
@@ -125,11 +149,111 @@
           "TargetElementId": "EndEvent_Prefixed",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 450,
+                "y": 120
+              },
+              {
+                "x": 512,
+                "y": 120
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_Prefixed"
+          },
           "Tags": []
         }
       ],
-      "Views": [],
+      "Views": [
+        {
+          "Id": "BPMNPlane_Prefixed",
+          "Name": "Prefixed dialect",
+          "Notation": "bpmn2",
+          "ViewpointKey": "",
+          "Nodes": [
+            {
+              "ElementId": "StartEvent_Prefixed",
+              "X": 152,
+              "Y": 102,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Catch_Notify",
+              "X": 250,
+              "Y": 100,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Task_Prefixed",
+              "X": 350,
+              "Y": 80,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "EndEvent_Prefixed",
+              "X": 512,
+              "Y": 102,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            }
+          ],
+          "Connections": [
+            {
+              "RelationshipId": "Flow_P1",
+              "SourceNodeId": "StartEvent_Prefixed",
+              "TargetNodeId": "Catch_Notify",
+              "Waypoints": [
+                {
+                  "X": 188,
+                  "Y": 120
+                },
+                {
+                  "X": 250,
+                  "Y": 120
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_P2",
+              "SourceNodeId": "Catch_Notify",
+              "TargetNodeId": "Task_Prefixed",
+              "Waypoints": [
+                {
+                  "X": 286,
+                  "Y": 120
+                },
+                {
+                  "X": 350,
+                  "Y": 120
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_P3",
+              "SourceNodeId": "Task_Prefixed",
+              "TargetNodeId": "EndEvent_Prefixed",
+              "Waypoints": [
+                {
+                  "X": 450,
+                  "Y": 120
+                },
+                {
+                  "X": 512,
+                  "Y": 120
+                }
+              ]
+            }
+          ]
+        }
+      ],
       "Issues": [],
       "Metadata": {
         "SourceSystem": "bpmn-xml",
@@ -138,6 +262,7 @@
         "IsFresh": true
       },
       "Properties": {
+        "bpmn:isExecutable": "false",
         "bpmnDefinitions": [
           {
             "kind": "message",

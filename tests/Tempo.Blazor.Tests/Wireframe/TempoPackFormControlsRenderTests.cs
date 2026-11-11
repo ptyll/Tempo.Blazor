@@ -93,10 +93,10 @@ public class TempoPackFormControlsRenderTests
     [Fact]
     public void FormControlTypeList_CoversCompleteSchemaCategories()
     {
-        // 46 since the schema gained TmSignature/TmCurrencyInput on main; bump this guard (and add
-        // a render case below) whenever a new form-control schema lands.
+        // 46: TmSignature/TmCurrencyInput (main) and TmOtpInput (OTP plan 4ebadc60) in the Inputs
+        // category; bump this guard (and add a render case below) whenever a new form-control schema lands.
         FormControlTypes.Should().HaveCount(46);
-        FormControlTypes.Should().Contain(["TmButton", "TmTextInput", "TmQueryInput", "TmDecimalInput", "TmDatePicker", "TmTagPicker", "TmDropdownItem"]);
+        FormControlTypes.Should().Contain(["TmButton", "TmTextInput", "TmQueryInput", "TmDecimalInput", "TmDatePicker", "TmTagPicker", "TmDropdownItem", "TmOtpInput"]);
     }
 
     [Fact]

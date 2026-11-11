@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Process_Annotated" targetNamespace="http://tempo.example/bpmn/corpus" exporter="Tempo.Blazor" exporterVersion="2.11.0" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:tempo="https://tempo.blazor/schemas/bpmn-extensions" name="Annotated process">
+  <process id="Process_Annotated" name="Annotated process" isExecutable="false">
+    <startEvent id="StartEvent_Annotated" name="Start">
+      <outgoing>Flow_AN1</outgoing>
+    </startEvent>
+    <task id="Task_Step1" name="Step one">
+      <incoming>Flow_AN1</incoming>
+      <outgoing>Flow_AN2</outgoing>
+    </task>
+    <task id="Task_Step2" name="Step two">
+      <incoming>Flow_AN2</incoming>
+      <outgoing>Flow_AN3</outgoing>
+    </task>
+    <endEvent id="EndEvent_Annotated" name="End">
+      <incoming>Flow_AN3</incoming>
+    </endEvent>
+    <textAnnotation id="TextAnnotation_Note1">
+      <text>Remember to keep the SLA under 2 days for premium clients.</text>
+    </textAnnotation>
+    <textAnnotation id="TextAnnotation_Note2">
+      <text>Step two is outsourced since 2026.</text>
+    </textAnnotation>
+    <group id="Group_Outsourced" categoryValueRef="CategoryValue_Outsource" />
+    <association id="Association_Note1" sourceRef="TextAnnotation_Note1" targetRef="Task_Step1" associationDirection="None" />
+    <association id="Association_Note2" sourceRef="Task_Step2" targetRef="TextAnnotation_Note2" associationDirection="One" />
+    <sequenceFlow id="Flow_AN1" sourceRef="StartEvent_Annotated" targetRef="Task_Step1" />
+    <sequenceFlow id="Flow_AN2" sourceRef="Task_Step1" targetRef="Task_Step2" />
+    <sequenceFlow id="Flow_AN3" sourceRef="Task_Step2" targetRef="EndEvent_Annotated" />
+  </process>
+  <category id="Category_50194c111d311db8">
+    <categoryValue id="CategoryValue_Outsource" value="Outsourced" />
+  </category>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_BPMNPlane_1" name="Annotated process">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_Annotated">
+      <bpmndi:BPMNShape id="StartEvent_Annotated_di" bpmnElement="StartEvent_Annotated">
+        <dc:Bounds x="152" y="152" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Step1_di" bpmnElement="Task_Step1">
+        <dc:Bounds x="240" y="130" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Step2_di" bpmnElement="Task_Step2">
+        <dc:Bounds x="420" y="130" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Annotated_di" bpmnElement="EndEvent_Annotated">
+        <dc:Bounds x="602" y="152" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="TextAnnotation_Note1_di" bpmnElement="TextAnnotation_Note1">
+        <dc:Bounds x="240" y="260" width="220" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="TextAnnotation_Note2_di" bpmnElement="TextAnnotation_Note2">
+        <dc:Bounds x="420" y="260" width="200" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Group_Outsourced_di" bpmnElement="Group_Outsourced">
+        <dc:Bounds x="400" y="100" width="300" height="240" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_AN1_di" bpmnElement="Flow_AN1">
+        <di:waypoint x="188" y="170" />
+        <di:waypoint x="240" y="170" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_AN2_di" bpmnElement="Flow_AN2">
+        <di:waypoint x="340" y="170" />
+        <di:waypoint x="420" y="170" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_AN3_di" bpmnElement="Flow_AN3">
+        <di:waypoint x="520" y="170" />
+        <di:waypoint x="602" y="170" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_Note1_di" bpmnElement="Association_Note1">
+        <di:waypoint x="290" y="260" />
+        <di:waypoint x="290" y="210" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_Note2_di" bpmnElement="Association_Note2">
+        <di:waypoint x="470" y="210" />
+        <di:waypoint x="470" y="260" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>

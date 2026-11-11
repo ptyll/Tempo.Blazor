@@ -69,6 +69,14 @@ public interface IBpmnToolExtension
     /// <summary>The extension namespace this plugin owns (e.g. <c>http://camunda.org/schema/1.0/bpmn</c>).</summary>
     string NamespaceUri { get; }
 
+    /// <summary>
+    /// When <c>true</c>, the exporter does NOT write this plugin's <c>{prefix}:*</c> property keys
+    /// as XML attributes; the plugin serializes them itself from <see cref="OnExportElement"/>
+    /// (the dialect-native payload shape). When <c>false</c> (the default), scalar values keep the
+    /// attribute shape the generic writer produces (e.g. Camunda's <c>camunda:assignee</c>).
+    /// </summary>
+    bool OwnsAttributeExport => false;
+
     /// <summary>Maps the extension payload into element properties during import.</summary>
     void OnImportElement(BpmnToolImportContext context);
 

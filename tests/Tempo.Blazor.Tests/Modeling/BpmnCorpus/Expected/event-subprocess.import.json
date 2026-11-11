@@ -56,7 +56,9 @@
           "Name": "Escalation handler",
           "ParentId": "",
           "Description": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:isExpanded": "true"
+          },
           "Tags": [],
           "Governance": {
             "TrustLevel": "",
@@ -184,7 +186,19 @@
           "TargetElementId": "Task_Review",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 188,
+                "y": 180
+              },
+              {
+                "x": 240,
+                "y": 180
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
+          },
           "Tags": []
         },
         {
@@ -195,11 +209,150 @@
           "TargetElementId": "EndEvent_Main",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 340,
+                "y": 180
+              },
+              {
+                "x": 420,
+                "y": 180
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
+          },
           "Tags": []
         }
       ],
-      "Views": [],
+      "Views": [
+        {
+          "Id": "BPMNPlane_1",
+          "Name": "Event subprocess",
+          "Notation": "bpmn2",
+          "ViewpointKey": "",
+          "Nodes": [
+            {
+              "ElementId": "StartEvent_Main",
+              "X": 152,
+              "Y": 162,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Task_Review",
+              "X": 240,
+              "Y": 140,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "SubProcess_OnSignal",
+              "X": 420,
+              "Y": 100,
+              "Width": 400,
+              "Height": 200,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "StartEvent_Escalation",
+              "X": 472,
+              "Y": 182,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": "SubProcess_OnSignal"
+            },
+            {
+              "ElementId": "Task_Notify",
+              "X": 560,
+              "Y": 160,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": "SubProcess_OnSignal"
+            },
+            {
+              "ElementId": "EndEvent_Escalation",
+              "X": 742,
+              "Y": 182,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": "SubProcess_OnSignal"
+            },
+            {
+              "ElementId": "EndEvent_Main",
+              "X": 922,
+              "Y": 162,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            }
+          ],
+          "Connections": [
+            {
+              "RelationshipId": "Flow_ES1",
+              "SourceNodeId": "StartEvent_Main",
+              "TargetNodeId": "Task_Review",
+              "Waypoints": [
+                {
+                  "X": 188,
+                  "Y": 180
+                },
+                {
+                  "X": 240,
+                  "Y": 180
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_ES2",
+              "SourceNodeId": "Task_Review",
+              "TargetNodeId": "EndEvent_Main",
+              "Waypoints": [
+                {
+                  "X": 340,
+                  "Y": 180
+                },
+                {
+                  "X": 420,
+                  "Y": 180
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_ES10",
+              "SourceNodeId": "StartEvent_Escalation",
+              "TargetNodeId": "Task_Notify",
+              "Waypoints": [
+                {
+                  "X": 508,
+                  "Y": 200
+                },
+                {
+                  "X": 560,
+                  "Y": 200
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_ES11",
+              "SourceNodeId": "Task_Notify",
+              "TargetNodeId": "EndEvent_Escalation",
+              "Waypoints": [
+                {
+                  "X": 660,
+                  "Y": 200
+                },
+                {
+                  "X": 742,
+                  "Y": 200
+                }
+              ]
+            }
+          ]
+        }
+      ],
       "Issues": [],
       "Metadata": {
         "SourceSystem": "bpmn-xml",
@@ -208,6 +361,7 @@
         "IsFresh": true
       },
       "Properties": {
+        "bpmn:isExecutable": "false",
         "bpmnDefinitions": [
           {
             "kind": "escalation",
@@ -220,7 +374,12 @@
     }
   ],
   "Losses": [],
-  "Warnings": [],
+  "Warnings": [
+    {
+      "Message": "2 connection(s) have no BPMNDI edge in plane \u0027BPMNPlane_1\u0027; their waypoints were generated by the auto-layout: Flow_ES10, Flow_ES11",
+      "XmlPath": "/definitions"
+    }
+  ],
   "HasErrors": false,
   "ErrorMessage": null
 }

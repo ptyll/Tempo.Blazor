@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Process_Gateways" targetNamespace="http://tempo.example/bpmn/corpus" exporter="Tempo.Blazor" exporterVersion="2.11.0" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:tempo="https://tempo.blazor/schemas/bpmn-extensions" name="Gateway zoo">
+  <process id="Process_Gateways" name="Gateway zoo" isExecutable="false">
+    <startEvent id="StartEvent_GW" name="Start">
+      <outgoing>Flow_G0</outgoing>
+    </startEvent>
+    <task id="Task_Before" name="Prepare">
+      <incoming>Flow_G0</incoming>
+      <outgoing>Flow_G1</outgoing>
+    </task>
+    <exclusiveGateway id="GW_Exclusive" name="Pick one">
+      <incoming>Flow_G1</incoming>
+      <outgoing>Flow_G2</outgoing>
+      <outgoing>Flow_G3</outgoing>
+    </exclusiveGateway>
+    <parallelGateway id="GW_ParallelFork" name="Fork">
+      <incoming>Flow_G2</incoming>
+      <outgoing>Flow_G4</outgoing>
+      <outgoing>Flow_G5</outgoing>
+    </parallelGateway>
+    <task id="Task_BranchA" name="Branch A">
+      <incoming>Flow_G4</incoming>
+      <outgoing>Flow_G6</outgoing>
+    </task>
+    <task id="Task_BranchB" name="Branch B">
+      <incoming>Flow_G5</incoming>
+      <outgoing>Flow_G7</outgoing>
+    </task>
+    <parallelGateway id="GW_ParallelJoin" name="Join">
+      <incoming>Flow_G6</incoming>
+      <incoming>Flow_G7</incoming>
+      <outgoing>Flow_G8</outgoing>
+    </parallelGateway>
+    <inclusiveGateway id="GW_Inclusive" name="One or more">
+      <incoming>Flow_G8</incoming>
+      <outgoing>Flow_G10</outgoing>
+      <outgoing>Flow_G9</outgoing>
+    </inclusiveGateway>
+    <complexGateway id="GW_Complex" name="Complex merge">
+      <incoming>Flow_G10</incoming>
+      <incoming>Flow_G9</incoming>
+      <outgoing>Flow_G11</outgoing>
+    </complexGateway>
+    <eventBasedGateway id="GW_EventBased" name="Wait for event" instantiate="false" eventGatewayType="Exclusive">
+      <incoming>Flow_G11</incoming>
+      <outgoing>Flow_G12</outgoing>
+      <outgoing>Flow_G13</outgoing>
+    </eventBasedGateway>
+    <intermediateCatchEvent id="Catch_Message" name="Message arrives">
+      <incoming>Flow_G12</incoming>
+      <outgoing>Flow_G14</outgoing>
+      <messageEventDefinition id="MsgDef_1" messageRef="Message_Info" />
+    </intermediateCatchEvent>
+    <intermediateCatchEvent id="Catch_Timer" name="Timeout">
+      <incoming>Flow_G13</incoming>
+      <timerEventDefinition id="TimerDef_1">
+        <timeDuration xsi:type="tFormalExpression">PT2H</timeDuration>
+      </timerEventDefinition>
+    </intermediateCatchEvent>
+    <task id="Task_After" name="Wrap up">
+      <incoming>Flow_G14</incoming>
+      <outgoing>Flow_G15</outgoing>
+    </task>
+    <endEvent id="EndEvent_GW" name="Done">
+      <incoming>Flow_G15</incoming>
+      <incoming>Flow_G3</incoming>
+    </endEvent>
+    <sequenceFlow id="Flow_G0" sourceRef="StartEvent_GW" targetRef="Task_Before" />
+    <sequenceFlow id="Flow_G1" sourceRef="Task_Before" targetRef="GW_Exclusive" />
+    <sequenceFlow id="Flow_G2" sourceRef="GW_Exclusive" targetRef="GW_ParallelFork" name="fork path" />
+    <sequenceFlow id="Flow_G3" sourceRef="GW_Exclusive" targetRef="EndEvent_GW" name="shortcut" />
+    <sequenceFlow id="Flow_G4" sourceRef="GW_ParallelFork" targetRef="Task_BranchA" />
+    <sequenceFlow id="Flow_G5" sourceRef="GW_ParallelFork" targetRef="Task_BranchB" />
+    <sequenceFlow id="Flow_G6" sourceRef="Task_BranchA" targetRef="GW_ParallelJoin" />
+    <sequenceFlow id="Flow_G7" sourceRef="Task_BranchB" targetRef="GW_ParallelJoin" />
+    <sequenceFlow id="Flow_G8" sourceRef="GW_ParallelJoin" targetRef="GW_Inclusive" />
+    <sequenceFlow id="Flow_G9" sourceRef="GW_Inclusive" targetRef="GW_Complex" />
+    <sequenceFlow id="Flow_G10" sourceRef="GW_Inclusive" targetRef="GW_Complex" />
+    <sequenceFlow id="Flow_G11" sourceRef="GW_Complex" targetRef="GW_EventBased" />
+    <sequenceFlow id="Flow_G12" sourceRef="GW_EventBased" targetRef="Catch_Message" />
+    <sequenceFlow id="Flow_G13" sourceRef="GW_EventBased" targetRef="Catch_Timer" />
+    <sequenceFlow id="Flow_G14" sourceRef="Catch_Message" targetRef="Task_After" />
+    <sequenceFlow id="Flow_G15" sourceRef="Task_After" targetRef="EndEvent_GW" />
+  </process>
+  <message id="Message_Info" name="Info message" />
+  <bpmndi:BPMNDiagram id="BPMNDiagram_BPMNPlane_1" name="Gateway zoo">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_Gateways">
+      <bpmndi:BPMNShape id="StartEvent_GW_di" bpmnElement="StartEvent_GW">
+        <dc:Bounds x="152" y="332" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Before_di" bpmnElement="Task_Before">
+        <dc:Bounds x="240" y="310" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_Exclusive_di" bpmnElement="GW_Exclusive" isMarkerVisible="true">
+        <dc:Bounds x="395" y="325" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_ParallelFork_di" bpmnElement="GW_ParallelFork">
+        <dc:Bounds x="520" y="240" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_BranchA_di" bpmnElement="Task_BranchA">
+        <dc:Bounds x="640" y="180" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_BranchB_di" bpmnElement="Task_BranchB">
+        <dc:Bounds x="640" y="300" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_ParallelJoin_di" bpmnElement="GW_ParallelJoin">
+        <dc:Bounds x="810" y="240" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_Inclusive_di" bpmnElement="GW_Inclusive" isMarkerVisible="true">
+        <dc:Bounds x="940" y="240" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_Complex_di" bpmnElement="GW_Complex" isMarkerVisible="true">
+        <dc:Bounds x="1060" y="240" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_EventBased_di" bpmnElement="GW_EventBased" isMarkerVisible="true">
+        <dc:Bounds x="1180" y="240" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Catch_Message_di" bpmnElement="Catch_Message">
+        <dc:Bounds x="1302" y="192" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Catch_Timer_di" bpmnElement="Catch_Timer">
+        <dc:Bounds x="1302" y="302" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_After_di" bpmnElement="Task_After">
+        <dc:Bounds x="1420" y="225" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_GW_di" bpmnElement="EndEvent_GW">
+        <dc:Bounds x="1602" y="247" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_G0_di" bpmnElement="Flow_G0">
+        <di:waypoint x="188" y="350" />
+        <di:waypoint x="240" y="350" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_G1_di" bpmnElement="Flow_G1">
+        <di:waypoint x="340" y="350" />
+        <di:waypoint x="395" y="350" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_G2_di" bpmnElement="Flow_G2">
+        <di:waypoint x="445" y="340" />
+        <di:waypoint x="545" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_G3_di" bpmnElement="Flow_G3">
+        <di:waypoint x="420" y="375" />
+        <di:waypoint x="420" y="640" />
+        <di:waypoint x="1620" y="640" />
+        <di:waypoint x="1620" y="283" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_G4_di" bpmnElement="Flow_G4">
+        <di:waypoint x="570" y="265" />
+        <di:waypoint x="690" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_G5_di" bpmnElement="Flow_G5">
+        <di:waypoint x="570" y="265" />
+        <di:waypoint x="690" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_G6_di" bpmnElement="Flow_G6">
+        <di:waypoint x="740" y="220" />
+        <di:waypoint x="835" y="265" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_G7_di" bpmnElement="Flow_G7">
+        <di:waypoint x="740" y="340" />
+        <di:waypoint x="835" y="265" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_G8_di" bpmnElement="Flow_G8">
+        <di:waypoint x="860" y="265" />
+        <di:waypoint x="940" y="265" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_G9_di" bpmnElement="Flow_G9">
+        <di:waypoint x="990" y="265" />
+        <di:waypoint x="1060" y="265" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_G10_di" bpmnElement="Flow_G10">
+        <di:waypoint x="965" y="290" />
+        <di:waypoint x="965" y="310" />
+        <di:waypoint x="1085" y="310" />
+        <di:waypoint x="1085" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_G11_di" bpmnElement="Flow_G11">
+        <di:waypoint x="1110" y="265" />
+        <di:waypoint x="1180" y="265" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_G12_di" bpmnElement="Flow_G12">
+        <di:waypoint x="1230" y="252" />
+        <di:waypoint x="1302" y="210" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_G13_di" bpmnElement="Flow_G13">
+        <di:waypoint x="1230" y="278" />
+        <di:waypoint x="1302" y="320" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_G14_di" bpmnElement="Flow_G14">
+        <di:waypoint x="1338" y="320" />
+        <di:waypoint x="1470" y="305" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_G15_di" bpmnElement="Flow_G15">
+        <di:waypoint x="1520" y="265" />
+        <di:waypoint x="1602" y="265" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>

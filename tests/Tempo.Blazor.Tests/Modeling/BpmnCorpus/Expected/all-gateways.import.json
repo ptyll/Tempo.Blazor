@@ -56,7 +56,9 @@
           "Name": "Pick one",
           "ParentId": "",
           "Description": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:isMarkerVisible": "true"
+          },
           "Tags": [],
           "Governance": {
             "TrustLevel": "",
@@ -151,7 +153,9 @@
           "Name": "One or more",
           "ParentId": "",
           "Description": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:isMarkerVisible": "true"
+          },
           "Tags": [],
           "Governance": {
             "TrustLevel": "",
@@ -170,7 +174,9 @@
           "Name": "Complex merge",
           "ParentId": "",
           "Description": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:isMarkerVisible": "true"
+          },
           "Tags": [],
           "Governance": {
             "TrustLevel": "",
@@ -191,7 +197,8 @@
           "Description": "",
           "Properties": {
             "bpmn:instantiate": "false",
-            "bpmn:eventGatewayType": "Exclusive"
+            "bpmn:eventGatewayType": "Exclusive",
+            "bpmndi:isMarkerVisible": "true"
           },
           "Tags": [],
           "Governance": {
@@ -304,7 +311,19 @@
           "TargetElementId": "Task_Before",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 188,
+                "y": 350
+              },
+              {
+                "x": 240,
+                "y": 350
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
+          },
           "Tags": []
         },
         {
@@ -315,7 +334,19 @@
           "TargetElementId": "GW_Exclusive",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 340,
+                "y": 350
+              },
+              {
+                "x": 395,
+                "y": 350
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
+          },
           "Tags": []
         },
         {
@@ -326,7 +357,19 @@
           "TargetElementId": "GW_ParallelFork",
           "RelationshipType": "SequenceFlow",
           "Name": "fork path",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 445,
+                "y": 340
+              },
+              {
+                "x": 545,
+                "y": 290
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
+          },
           "Tags": []
         },
         {
@@ -337,7 +380,27 @@
           "TargetElementId": "EndEvent_GW",
           "RelationshipType": "SequenceFlow",
           "Name": "shortcut",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 420,
+                "y": 375
+              },
+              {
+                "x": 420,
+                "y": 640
+              },
+              {
+                "x": 1620,
+                "y": 640
+              },
+              {
+                "x": 1620,
+                "y": 283
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
+          },
           "Tags": []
         },
         {
@@ -348,7 +411,19 @@
           "TargetElementId": "Task_BranchA",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 570,
+                "y": 265
+              },
+              {
+                "x": 690,
+                "y": 220
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
+          },
           "Tags": []
         },
         {
@@ -359,7 +434,19 @@
           "TargetElementId": "Task_BranchB",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 570,
+                "y": 265
+              },
+              {
+                "x": 690,
+                "y": 340
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
+          },
           "Tags": []
         },
         {
@@ -370,7 +457,19 @@
           "TargetElementId": "GW_ParallelJoin",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 740,
+                "y": 220
+              },
+              {
+                "x": 835,
+                "y": 265
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
+          },
           "Tags": []
         },
         {
@@ -381,7 +480,19 @@
           "TargetElementId": "GW_ParallelJoin",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 740,
+                "y": 340
+              },
+              {
+                "x": 835,
+                "y": 265
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
+          },
           "Tags": []
         },
         {
@@ -392,7 +503,19 @@
           "TargetElementId": "GW_Inclusive",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 860,
+                "y": 265
+              },
+              {
+                "x": 940,
+                "y": 265
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
+          },
           "Tags": []
         },
         {
@@ -403,7 +526,19 @@
           "TargetElementId": "GW_Complex",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 990,
+                "y": 265
+              },
+              {
+                "x": 1060,
+                "y": 265
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
+          },
           "Tags": []
         },
         {
@@ -414,7 +549,27 @@
           "TargetElementId": "GW_Complex",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 965,
+                "y": 290
+              },
+              {
+                "x": 965,
+                "y": 310
+              },
+              {
+                "x": 1085,
+                "y": 310
+              },
+              {
+                "x": 1085,
+                "y": 290
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
+          },
           "Tags": []
         },
         {
@@ -425,7 +580,19 @@
           "TargetElementId": "GW_EventBased",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 1110,
+                "y": 265
+              },
+              {
+                "x": 1180,
+                "y": 265
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
+          },
           "Tags": []
         },
         {
@@ -436,7 +603,19 @@
           "TargetElementId": "Catch_Message",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 1230,
+                "y": 252
+              },
+              {
+                "x": 1302,
+                "y": 210
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
+          },
           "Tags": []
         },
         {
@@ -447,7 +626,19 @@
           "TargetElementId": "Catch_Timer",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 1230,
+                "y": 278
+              },
+              {
+                "x": 1302,
+                "y": 320
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
+          },
           "Tags": []
         },
         {
@@ -458,7 +649,19 @@
           "TargetElementId": "Task_After",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 1338,
+                "y": 320
+              },
+              {
+                "x": 1470,
+                "y": 305
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
+          },
           "Tags": []
         },
         {
@@ -469,11 +672,402 @@
           "TargetElementId": "EndEvent_GW",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 1520,
+                "y": 265
+              },
+              {
+                "x": 1602,
+                "y": 265
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
+          },
           "Tags": []
         }
       ],
-      "Views": [],
+      "Views": [
+        {
+          "Id": "BPMNPlane_1",
+          "Name": "Gateway zoo",
+          "Notation": "bpmn2",
+          "ViewpointKey": "",
+          "Nodes": [
+            {
+              "ElementId": "StartEvent_GW",
+              "X": 152,
+              "Y": 332,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Task_Before",
+              "X": 240,
+              "Y": 310,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "GW_Exclusive",
+              "X": 395,
+              "Y": 325,
+              "Width": 50,
+              "Height": 50,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "GW_ParallelFork",
+              "X": 520,
+              "Y": 240,
+              "Width": 50,
+              "Height": 50,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Task_BranchA",
+              "X": 640,
+              "Y": 180,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Task_BranchB",
+              "X": 640,
+              "Y": 300,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "GW_ParallelJoin",
+              "X": 810,
+              "Y": 240,
+              "Width": 50,
+              "Height": 50,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "GW_Inclusive",
+              "X": 940,
+              "Y": 240,
+              "Width": 50,
+              "Height": 50,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "GW_Complex",
+              "X": 1060,
+              "Y": 240,
+              "Width": 50,
+              "Height": 50,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "GW_EventBased",
+              "X": 1180,
+              "Y": 240,
+              "Width": 50,
+              "Height": 50,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Catch_Message",
+              "X": 1302,
+              "Y": 192,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Catch_Timer",
+              "X": 1302,
+              "Y": 302,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Task_After",
+              "X": 1420,
+              "Y": 225,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "EndEvent_GW",
+              "X": 1602,
+              "Y": 247,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            }
+          ],
+          "Connections": [
+            {
+              "RelationshipId": "Flow_G0",
+              "SourceNodeId": "StartEvent_GW",
+              "TargetNodeId": "Task_Before",
+              "Waypoints": [
+                {
+                  "X": 188,
+                  "Y": 350
+                },
+                {
+                  "X": 240,
+                  "Y": 350
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_G1",
+              "SourceNodeId": "Task_Before",
+              "TargetNodeId": "GW_Exclusive",
+              "Waypoints": [
+                {
+                  "X": 340,
+                  "Y": 350
+                },
+                {
+                  "X": 395,
+                  "Y": 350
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_G2",
+              "SourceNodeId": "GW_Exclusive",
+              "TargetNodeId": "GW_ParallelFork",
+              "Waypoints": [
+                {
+                  "X": 445,
+                  "Y": 340
+                },
+                {
+                  "X": 545,
+                  "Y": 290
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_G3",
+              "SourceNodeId": "GW_Exclusive",
+              "TargetNodeId": "EndEvent_GW",
+              "Waypoints": [
+                {
+                  "X": 420,
+                  "Y": 375
+                },
+                {
+                  "X": 420,
+                  "Y": 640
+                },
+                {
+                  "X": 1620,
+                  "Y": 640
+                },
+                {
+                  "X": 1620,
+                  "Y": 283
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_G4",
+              "SourceNodeId": "GW_ParallelFork",
+              "TargetNodeId": "Task_BranchA",
+              "Waypoints": [
+                {
+                  "X": 570,
+                  "Y": 265
+                },
+                {
+                  "X": 690,
+                  "Y": 220
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_G5",
+              "SourceNodeId": "GW_ParallelFork",
+              "TargetNodeId": "Task_BranchB",
+              "Waypoints": [
+                {
+                  "X": 570,
+                  "Y": 265
+                },
+                {
+                  "X": 690,
+                  "Y": 340
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_G6",
+              "SourceNodeId": "Task_BranchA",
+              "TargetNodeId": "GW_ParallelJoin",
+              "Waypoints": [
+                {
+                  "X": 740,
+                  "Y": 220
+                },
+                {
+                  "X": 835,
+                  "Y": 265
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_G7",
+              "SourceNodeId": "Task_BranchB",
+              "TargetNodeId": "GW_ParallelJoin",
+              "Waypoints": [
+                {
+                  "X": 740,
+                  "Y": 340
+                },
+                {
+                  "X": 835,
+                  "Y": 265
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_G8",
+              "SourceNodeId": "GW_ParallelJoin",
+              "TargetNodeId": "GW_Inclusive",
+              "Waypoints": [
+                {
+                  "X": 860,
+                  "Y": 265
+                },
+                {
+                  "X": 940,
+                  "Y": 265
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_G9",
+              "SourceNodeId": "GW_Inclusive",
+              "TargetNodeId": "GW_Complex",
+              "Waypoints": [
+                {
+                  "X": 990,
+                  "Y": 265
+                },
+                {
+                  "X": 1060,
+                  "Y": 265
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_G10",
+              "SourceNodeId": "GW_Inclusive",
+              "TargetNodeId": "GW_Complex",
+              "Waypoints": [
+                {
+                  "X": 965,
+                  "Y": 290
+                },
+                {
+                  "X": 965,
+                  "Y": 310
+                },
+                {
+                  "X": 1085,
+                  "Y": 310
+                },
+                {
+                  "X": 1085,
+                  "Y": 290
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_G11",
+              "SourceNodeId": "GW_Complex",
+              "TargetNodeId": "GW_EventBased",
+              "Waypoints": [
+                {
+                  "X": 1110,
+                  "Y": 265
+                },
+                {
+                  "X": 1180,
+                  "Y": 265
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_G12",
+              "SourceNodeId": "GW_EventBased",
+              "TargetNodeId": "Catch_Message",
+              "Waypoints": [
+                {
+                  "X": 1230,
+                  "Y": 252
+                },
+                {
+                  "X": 1302,
+                  "Y": 210
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_G13",
+              "SourceNodeId": "GW_EventBased",
+              "TargetNodeId": "Catch_Timer",
+              "Waypoints": [
+                {
+                  "X": 1230,
+                  "Y": 278
+                },
+                {
+                  "X": 1302,
+                  "Y": 320
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_G14",
+              "SourceNodeId": "Catch_Message",
+              "TargetNodeId": "Task_After",
+              "Waypoints": [
+                {
+                  "X": 1338,
+                  "Y": 320
+                },
+                {
+                  "X": 1470,
+                  "Y": 305
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_G15",
+              "SourceNodeId": "Task_After",
+              "TargetNodeId": "EndEvent_GW",
+              "Waypoints": [
+                {
+                  "X": 1520,
+                  "Y": 265
+                },
+                {
+                  "X": 1602,
+                  "Y": 265
+                }
+              ]
+            }
+          ]
+        }
+      ],
       "Issues": [],
       "Metadata": {
         "SourceSystem": "bpmn-xml",
@@ -482,6 +1076,7 @@
         "IsFresh": true
       },
       "Properties": {
+        "bpmn:isExecutable": "false",
         "bpmnDefinitions": [
           {
             "kind": "message",

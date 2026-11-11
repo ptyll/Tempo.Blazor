@@ -8824,6 +8824,14 @@ writer capabilities `Content|Structure|Layout`, property schema + lookupy, `TmMo
 recept pro hostitele (writer s optimistickou konkurencí, schéma, chyby, MCP) je
 [docs/modeling-hosting-guide.md](docs/modeling-hosting-guide.md).
 
+Související headless balíček **`Tempo.Blazor.Modeling.BpmnXml`** (2.11.0; žádná UI závislost, jen
+`Tempo.Blazor.Abstractions`) převádí BPMN 2.0 XML ⇄ `ModelingModelDto` deterministicky a s reportem
+ztrát: bezpečný import (DTD prohibit, limity velikosti/hloubky/počtu), BPMNDI views + headless
+`BpmnAutoLayout`, export do schéma-validního XML (`Standard`/`WithHostExtensions` profily, host
+extension namespace `https://tempo.blazor/schemas/bpmn-extensions`), Camunda/Signavio/Bizagi tool
+pluginy a MCP nástroje `modeling_import_bpmn`/`modeling_export_bpmn`. Uživatelská příručka:
+[docs/modeling-bpmn-xml.md](docs/modeling-bpmn-xml.md).
+
 ### TmModelingEditor
 
 Pracovní plocha editoru: hlavička (titulek + stavový badge, volitelný select Poskytovatel, Notace/Pohled),

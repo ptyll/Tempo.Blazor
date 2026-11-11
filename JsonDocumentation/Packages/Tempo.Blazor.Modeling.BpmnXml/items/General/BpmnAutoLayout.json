@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "General",
+  "namespace": "Tempo.Blazor.Modeling.BpmnXml",
+  "description": "Deterministic, headless layered left-to-right layout for BPMN models that carry no (or incomplete) BPMNDI diagram data. Pools render as stacked horizontal bands with lanes stacked inside them; the token flow runs from left to right in longest-path layers; containers are sized to fit their contents. Pure functions over ModelingModelDto — no JS interop, no UI dependency, no randomness and no clock: the same model always produces the same view, so the output is safe for golden tests and server-side use.",
+  "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+  "sourcePath": "src/Tempo.Blazor.Modeling.BpmnXml/BpmnAutoLayout.cs",
+  "documentationStatus": "generated",
+  "itemName": "BpmnAutoLayout"
+}

@@ -24,7 +24,7 @@
 - **Docs.** New [docs/modeling-hosting-guide.md](docs/modeling-hosting-guide.md) — the writer implementation pattern with optimistic concurrency (capabilities, atomic apply through the translator + engine, layout/view changes, schema/lookups, issue mapping, MCP wiring, verification recipe). [docs/modeling-authoring.md](docs/modeling-authoring.md) carries the design contract and §6.5 "as implemented (phase 7)"; [docs/modeling-editor.md](docs/modeling-editor.md) the component contract; [docs/modeling-mcp-tools.md](docs/modeling-mcp-tools.md) the living MCP catalog and the "What 2.11.0 changed" table; AGENTS.md gained the authoring bullet list.
 - **Tests.** `ModelingModelDiffTests`, `TmModelingViewerOverlayTests` (a changed relationship), the phase 3–6 suites already in the tree, `ModelingMcpParityTests`, `ModelingViewOperationToolsTests`, `ModelingPropertySchemaToolsTests`, `ModelingMcpContractSnapshotTests`, `ModelingMcpToolsDocumentationDriftTests`; the JSON documentation overlays are regenerated and `validate --fail-on-drift` is clean.
 
-### Added — BPMN 2.0 XML converter (plan 6fca9139, phases 1–2: design, corpus, secure import)
+### Added — BPMN 2.0 XML converter (plan 6fca9139, phases 1–4: design, corpus, secure import, BPMNDI layout, export and round-trip)
 
 - Design document [docs/modeling-bpmn-xml.md](docs/modeling-bpmn-xml.md): the headless
   `Tempo.Blazor.Modeling.BpmnXml` package proposal (dependency on `Tempo.Blazor.Abstractions`
@@ -69,6 +69,189 @@
 - **Not in this phase (per the plan):** BPMNDI view import (phase 3), export/round-trip
   (phase 4), Camunda/Signavio/Bizagi tool plugins and MCP tools (phase 5). The
   `BpmnImportOptions` knobs those phases honor already exist.
+- **Phase 3 — BPMNDI view import and headless auto-layout.** BPMNShape bounds import as
+  view nodes and BPMNEdge waypoints as view connections: one `bpmn2` view per BPMNPlane
+  (per covered model under `PerProcess`, so a collaboration plane reaches every pool model
+  and a collapsed subprocess keeps its internals on their own second plane), with
+  `ParentNodeId` nesting for shapes inside lane/pool/expanded-subprocess shapes per DI
+  `isExpanded`. A connection is imported only when BOTH ends are nodes of that view —
+  cross-model message flows keep their full DI polyline on the relationship as
+  `bpmndi:waypoints` + `bpmndi:planeId` for the export round-trip instead. DI flags on
+  shapes and edges (`isExpanded`, `isHorizontal`, `isMarkerVisible`,
+  `messageVisibleKind`, `sourceElement`/`targetElement`, …) are preserved as `bpmndi:*`
+  element/relationship properties and `BPMNLabel` bounds as `bpmndi:labelBounds` JSON
+  (the `labelStyle` reference as `bpmndi:labelStyle`); `BPMNLabelStyle` definitions and
+  `di:extension` payloads are reported as losses. DI referencing unknown elements, shapes
+  without usable bounds and missing edges/positions are filled from the new deterministic,
+  headless `BpmnAutoLayout` — `O(V+E)` with an iterative Kahn longest-path layering (no
+  recursion; a 100k-node chain lays out in milliseconds), back edges ignored for ranking,
+  layer blocks centred so a plain chain renders as one horizontal line, boundary events
+  anchored to a separate row inside their activity's column, pools/lanes as stacked bands —
+  and reported as losses/warnings, never dropped. Each missing element joins only the view
+  holding its nearest semantic ancestor, offset below the view's DI bounding box, so no
+  ElementId is duplicated across views. Auto-layouted connections carry NO waypoints — the
+  diagram generator auto-routes them. Documents without BPMNDI (or `ImportBpmndi=false`)
+  get a full auto-layout view plus a warning. Nothing breaks for hosts: `BpmnImportResult`
+  only gains views inside the existing models; `BpmnModelBuilder` was split into partial
+  classes to satisfy the 1200-line source ceiling.
+- **Tests.** `BpmnViewImportTests` (shape/edge geometry, multi-plane and per-model
+  partitioning, collapsed/expanded subprocess nesting, `bpmndi:*` flags, label bounds and
+  edge attributes, waypoints/planeId round-trip properties, the both-ends connection rule
+  with a generator no-missing-end check, `SingleWithPools` one-view coverage with pool root
+  parents, nearest-ancestor partial-DI fill without duplicates/overlaps), `BpmnAutoLayoutTests`
+  (determinism, overlap freedom, layer centring, loops, boundary events, pools/lanes/
+  subprocess bands, a 50k reversed-declaration layering with no stack overflow and a 100k
+  chain under 5 s), `BpmnViewRenderTests` (bUnit: imported and auto-layouted coordinates
+  render through `TmModelingEditor`), the regenerated corpus goldens; JSON documentation
+  covers `BpmnAutoLayout`/`BpmnAutoLayoutOptions` and `validate --fail-on-drift` is clean.
+- **Phase 3 review hardening (findings 1–10):** the longest-path layering is an iterative
+  Kahn topological sort (a 50 000-node reversed-declaration chain cannot overflow the
+  stack) and the whole layout is O(V+E) with relationship indices built once and one-pass
+  layer bucketing (100k chain < 5 s; the 200k flat-task import budget was raised to 20 s
+  with a comment — it guards near-linearity, not wall time, and flaked at 10 s under
+  parallel load); a chain renders as one horizontal line (per-layer stacks centred on the
+  tallest layer); auto-layout emits no waypoints (the generator auto-routes); view
+  connections require both ends in the view (cross-model message flows keep their geometry
+  on the relationship); partial-DI fill targets the nearest-ancestor view below the DI
+  bounds with no duplicate ElementId; edge/label DI attributes (`messageVisibleKind`,
+  `sourceElement`/`targetElement`, `labelStyle`) are preserved as `bpmndi:*` properties
+  while `BPMNLabelStyle` definitions and `di:extension` are reported as losses; E2E
+  screenshots of the BPMN DI rendering are deferred to phase 5 (bUnit render tests cover
+  phase 3).
+- **Phase 4 — BPMN 2.0 XML export and round-trip.** `IBpmnXmlExporter`/`BpmnXmlExporter`
+  (`AddTempoBpmnXml()` now registers the exporter too) converts `ModelingModelDto` back to
+  deterministic BPMN 2.0 XML: stable ordering, invariant-culture numbers, LF line endings, no BOM.
+  `BpmnExportOptions` adds the `Standard`/`WithHostExtensions` profiles (the latter serializes every
+  non-native property into `<extensionElements><tempo:properties>` as canonical JSON under the
+  configurable host namespace), `EmitBpmndi`, `TargetNamespace`, tool-extension hooks
+  (`ToolExtensions`) and an `ExtensionNamespaces` prefix→URI map (pre-seeded with the
+  Camunda/Signavio/Bizagi dialect namespaces) for writing foreign attribute properties back.
+  Multi-model export (`Export(IReadOnlyList<ModelingModelDto>)` — an additive overload next to the
+  approved single-model API) rebuilds ONE `definitions` with a `collaboration`: pools become
+  participants, every populated pool keeps its process, cross-model message flows are re-wired
+  between participants, and `Properties["bpmnDefinitions"]` restores the global
+  message/signal/error/escalation definitions (data stores and group category values rebuild from
+  their referencing elements). The catch-all write-back emits `bpmn:*`/`bpmndi:*` properties as
+  attributes/DI (`labelBounds` → `BPMNLabel`, `labelStyle` reference kept, edge `waypoints` for
+  cross-model message flows from the relationship properties), `foreignExtensions` payloads embed
+  verbatim, event definitions/conditions/data associations/boundary attachments/ad-hoc and
+  transaction subprocesses/lane sets (lanes stay transparent containers — flow nodes stay
+  process-level children referenced by `flowNodeRef`) all round-trip natively. View geometry
+  exports as one `BPMNPlane` per distinct view id (a collaboration plane merges the per-model views
+  that share it; the plane's `bpmnElement` is derived deterministically — a fully-enclosing
+  collapsed subprocess plane references that subprocess); auto-layouted connections with empty
+  waypoints get synthesized endpoints (§5.4), elements/relationships without geometry are filled
+  from the deterministic auto-layout. Nothing is dropped silently: unrepresentable constructs land
+  in `BpmnExportResult.Losses`. Definitions-root `extensionElements` in the host namespace now
+  restore model-level properties on import (previously ignored). No breaking changes — everything is
+  additive; hosts that only import are untouched.
+- **Tests.** `BpmnXmlExporterTests` (document structure, profiles, host/foreign extension
+  write-back, escaping/injection safety, multi-model collaboration, global-definition rebuild,
+  determinism/LF/no-BOM, cancellation, DI registration), `BpmnExportGoldenTests` (XML goldens for
+  the whole corpus regenerated via `TEMPO_REGENERATE_BPMN_EXPORT_GOLDEN=1`, plus structural
+  validity: safe parse, namespace correctness, unique ids, every `bpmnElement`/flow/`flowNodeRef`
+  reference resolves and every emitted `*Ref` attribute — `dataObjectRef`, `dataStoreRef`,
+  `messageRef`, `signalRef`, `errorRef`, `escalationRef`, `attachedToRef`, `default`,
+  `categoryValueRef`, `processRef`, `activityRef` — resolves, and the Camunda-style
+  `incoming`/`outgoing` wiring is consistent), `BpmnRoundTripTests` (import → export → import
+  equals the normalized model for all 21 corpus fixtures with exact view membership/positions/DI
+  flags, and export(import(export(x))) is byte-identical to export(x)); the JSON documentation
+  covers the new public API and `validate --fail-on-drift` is clean.
+- **Phase 4 review hardening (findings 1–12 and 14):** text annotations export their body in a
+  standard `<text>` child (never a `name` attribute) and the import reads the `<text>` child with
+  a direct-text fallback (new `text-annotation-text.bpmn` corpus fixture); the root declares
+  `xmlns:xsi` and `conditionExpression`, `timeDuration`/`timeDate`/`timeCycle`, conditional-event
+  `condition` and ad-hoc `completionCondition` all carry `xsi:type="tFormalExpression"`; a plane
+  holding participant/message-flow DI references the collaboration and an empty
+  `<collaboration/>` is never emitted; one `<dataObject id name isCollection>` is synthesized per
+  distinct `dataObjectRef`; process attributes (`isExecutable` — default `"false"` —,
+  `camunda:versionTag`, `camunda:historyTimeToLive`, …) import into the model properties via a
+  catch-all and are written back on `<process>`, and `definitions` carries
+  `exporter="Tempo.Blazor"` + `exporterVersion`; robustness — catch-all names written natively
+  are skipped, `XmlConvert.VerifyNCName` guards every property-derived attribute name (invalid
+  names become losses, never exceptions), invalid XML 1.0 characters are stripped with an
+  `Approximated` loss, and event definitions with a missing/unknown type are reported instead of
+  silently terminating; duplicate element ids across models export the first occurrence only (a
+  shared element instance is not a duplicate) and duplicate relationship ids are reported;
+  generated namespace prefixes come from the stable FNV-1a `StableId` (no `GetHashCode`),
+  reserved prefixes (`bpmndi`/`dc`/`di`/`xsi`/`xml`/host) are never shadowed — collisions rename
+  deterministically to `{prefix}_1` with an info loss — and repeated `xmlns` declarations inside
+  preserved `foreignExtensions` payloads are stripped; element `Tags`/`Governance` and
+  relationship tags ride the host payload under `WithHostExtensions` (restoring the typed DTO
+  fields) and are reported as losses under `Standard`; children and relationships are pre-indexed
+  by parent/source/target (a 5000-task/5000-flow export stays under 2 s); flow nodes emit
+  Camunda-style `<incoming>`/`<outgoing>` wiring and generated `{id}_di` ids step aside
+  (`{id}_di_1`) of colliding element ids; legacy unprefixed Camunda `calledElementBinding`/
+  `calledElementVersion` and the `multiple` trigger flag (which has no BPMN 2.0 schema construct)
+  export in schema-valid form, verified by the new `npm run test:bpmn-interop` lane
+  (`bpmn-moddle` fromXML over every export golden, zero warnings, `bpmn:Definitions` root) and an
+  opt-in XSD validation test (`TM_BPMN_XSD_DIR`, skipped when unset). `BpmnExporterReviewTests`
+  pins every finding.
+- **Phase 5 — tool dialect plugins, MCP tools and the demo.** The built-in
+  `BpmnCamundaToolExtension`/`BpmnSignavioToolExtension`/`BpmnBizagiToolExtension` plugins
+  (exposed together as `BpmnBuiltInToolExtensions.All` and registered by `AddTempoBpmnXml()`)
+  map their dialects' `extensionElements` into typed properties and restore them on export:
+  Camunda `properties` → `camunda:*` keys, `camunda:documentation` → the element description and
+  every other Camunda payload (listeners, connectors, input/output) preserved verbatim under
+  `camundaExtensions` for a loss-free re-export; Signavio `signavioMetaData` → `signavio:*`
+  element keys and diagram-level `signavioDiagramMetaData` → `signavio:*` model properties;
+  Bizagi `BizagiProperty` name/value pairs → `bizagi:*` keys. `IBpmnToolExtension` gains the
+  additive default member `OwnsAttributeExport` (Signavio/Bizagi serialize their scalars in the
+  dialect-native payload shape; Camunda keeps the attribute shape), and the attribute catch-all
+  normalizes the known tool namespaces to their canonical lowercase prefixes (`Bizagi:property`
+  → `bizagi:property` — the seeded `ExtensionNamespaces` key is renamed `Bizagi` → `bizagi`, the
+  only visible export change: the same URI declared under the lowercase prefix). The DI-resolved
+  importer/exporter pick the registered plugins up automatically (an explicitly populated
+  `ToolExtensions` options list still wins), so `new BpmnXmlImporter()` stays plugin-free and the
+  existing corpus goldens only changed for the Bizagi prefix normalization. New MCP tools
+  `modeling_import_bpmn` (model + full loss report, optional per-model persistence through the
+  document provider, 2M-character input cap) and `modeling_export_bpmn` (XML + export loss
+  report, `Standard`/`WithHostExtensions` profiles) run the built-ins; the contract snapshot
+  gained both responses plus a `toolClassificationByEffect` map (write: `modeling_apply_operations`,
+  `modeling_import_bpmn` when `save=true`), and the catalog in `docs/modeling-mcp-tools.md` is
+  complete. The `/modeling-editor` demo page imports BPMN 2.0 XML (file picker / pasted XML /
+   corpus sample, or the `?bpmn=<sample>` deep link) and previews it in `TmModelingEditor`, shows
+  the loss report as a dialog table, and exports a downloadable `.bpmn` — localized in en/cs/sk/fr.
+  New corpus fixture `partial-bpmndi.bpmn` (DI covering only some nodes/edges) with regenerated
+  goldens; `npm run test:bpmn-interop` stays green.
+- **Tests.** `BpmnToolExtensionTests` (per-dialect import mapping from the corpus fixtures,
+  export round-trips keeping every `camunda:*`/`signavio:*`/`bizagi:*` key, the
+  plugin-free default importer unchanged, explicit options winning over the DI fallback,
+  DI registration), `ModelingBpmnToolsTests` (MCP import/export incl. size limits, save
+  persistence, profile validation, host-extensions round trip), E2E
+  `ModelingBpmnXmlConverterE2ETests` (dialog/file/paste/deep-link import, loss report dialog,
+  export download re-imported through the paste path) and `ModelingBpmnDiRenderingE2ETests`
+  (carry-forward c59bf3f1: DI rendering screenshots for 3 DI corpus files + no-DI + partial-DI +
+  collapsed plane at 1440/390 in light/dark, `#blazor-error-ui` hidden and PNG > 2 KB per shot);
+  JSON documentation overlays regenerated and `validate --fail-on-drift` clean.
+- **Phase 5 review hardening (findings 1–10).** Demo corpus samples load through an absolute
+  `NavigationManager.ToAbsoluteUri` URL (the Server/InteractiveAuto `HttpClient` targets the API;
+  the Server host maps the `.bpmn` content type so its static web assets actually serve)
+  with a Server-host `?bpmn=` E2E; the 24 DI rendering shots + the loss-report shot are committed
+  evidence in `__screenshots__/modeling-bpmn-di/`. Export merges tool plugins first-wins by
+  `NamespaceUri` (explicit options before the DI fallback) so dialect payloads never double-write.
+  `modeling_import_bpmn` validates `name` at 200 characters, reports malformed XML as
+  `validation_failed`, and saves each document independently — a failure returns the exact
+  partial progress (`saved`/`failedAt`/`failed`). The demo BPMN controls hide only below 768 px
+  (localized mobile hint otherwise), the loss table carries a localized caption, `scope="col"`,
+  the xmlPath in its own column and localized severities, the status line is an always-rendered
+  `role="status"` element and both dialogs restore focus to the Import BPMN trigger; oversized
+  files get a localized message. The `otp-input` role is unambiguously `TmOtpInput`'s again
+  (`TmMaskedTextBox` keeps only `masked-input`).
+- **Phase 6 — documentation and release preparation.** The design document became the
+  user guide [docs/modeling-bpmn-xml.md](docs/modeling-bpmn-xml.md): installation and DI
+  registration, import/export examples, the options/limits table, the loss-report contract,
+  host and tool extension points, the MCP tools, security notes (safe XML settings, input
+  limits), the opt-in XSD validation (`TM_BPMN_XSD_DIR`) and the `bpmn-moddle` interop
+  check. The package README ([src/Tempo.Blazor.Modeling.BpmnXml/README.md](src/Tempo.Blazor.Modeling.BpmnXml/README.md))
+  is packed into the nupkg; AGENTS.md and COMPONENTS.md index the package. Release prep per
+  repo conventions: `2.11.0` version set in the csproj, `eng/nuget-packages.txt` lists the
+  project, `ReleaseContractTests`/`ProvenanceComparisonTests` cover the announcement, local
+  `dotnet pack -c Release` verified (dependencies: `Tempo.Blazor.Abstractions` + the
+  TFM-matched `Microsoft.Extensions.DependencyInjection.Abstractions` only, README + XML
+  docs + symbols in the package) and a clean console-host smoke test (no Blazor) imports
+  the whole corpus, exports and round-trips it. No tag/publish — the release waits for the
+  owner's confirmation together with the full BPMN authoring plan.
 - **Phase 2 review hardening (all 10 findings):** O(n) import backed by per-model id sets and a
   global element index (200 000 flat tasks import in seconds under the default limits —
   `MaxElements` default raised to 500 000); the bounded reader never disposes the caller's stream

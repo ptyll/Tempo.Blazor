@@ -283,6 +283,9 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmSlider"] = ["slider"],
             ["TmRangeSlider"] = ["range-slider"],
             ["TmRating"] = ["rating"],
+            // The OTP plan made TmOtpInput the unambiguous owner of the otp-input role:
+            // TmMaskedTextBox keeps only masked-input so role resolution never warns about the
+            // otp-input ambiguity (phase 5 review, finding 10).
             ["TmMaskedTextBox"] = ["masked-input"],
             ["TmOtpInput"] = ["otp-input"],
             ["TmMultiColumnComboBox"] = ["combo-box", "data-table"],

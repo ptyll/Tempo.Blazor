@@ -29,6 +29,10 @@ public sealed class FakeModelingBackend : ITempoDocumentLibraryProvider, IModeli
     /// <summary>Number of times a model was saved (asserting no-write on invalid batches).</summary>
     public int SaveCount { get; private set; }
 
+    /// <summary>When set, <see cref="SaveModelingModelDocumentAsync"/> throws for the document
+    /// created with this title (exercising the import tool's per-document save failure path).</summary>
+    public string? FailSaveForTitle { get; set; }
+
     public DocumentLibraryCapabilities Capabilities => DocumentLibraryCapabilities.All;
 
     // ── Seeding helper ──────────────────────────────────────────────────────────
@@ -60,6 +64,12 @@ public sealed class FakeModelingBackend : ITempoDocumentLibraryProvider, IModeli
 
     public Task<ModelingModelDto> SaveModelingModelDocumentAsync(Guid documentId, ModelingModelDto model)
     {
+        if (FailSaveForTitle is not null && _docs.TryGetValue(documentId, out var failing)
+            && string.Equals(failing.Name, FailSaveForTitle, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("boom");
+        }
+
         SaveCount++;
         if (_docs.TryGetValue(documentId, out var e))
         {

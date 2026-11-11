@@ -18,7 +18,9 @@
           "Name": "Customer",
           "ParentId": "",
           "Description": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:isHorizontal": "true"
+          },
           "Tags": [],
           "Governance": {
             "TrustLevel": "",
@@ -180,12 +182,142 @@
             "externalModelRef": {
               "modelId": "Process_Shop",
               "elementId": "StartEvent_OrderReceived"
-            }
+            },
+            "bpmndi:waypoints": [
+              {
+                "x": 330,
+                "y": 180
+              },
+              {
+                "x": 240,
+                "y": 302
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
           },
           "Tags": []
         }
       ],
-      "Views": [],
+      "Views": [
+        {
+          "Id": "BPMNPlane_1",
+          "Name": "Order fulfilment",
+          "Notation": "bpmn2",
+          "ViewpointKey": "",
+          "Nodes": [
+            {
+              "ElementId": "Participant_Customer",
+              "X": 160,
+              "Y": 80,
+              "Width": 720,
+              "Height": 120,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "StartEvent_Want",
+              "X": 192,
+              "Y": 122,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": "Participant_Customer"
+            },
+            {
+              "ElementId": "Task_PlaceOrder",
+              "X": 280,
+              "Y": 100,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": "Participant_Customer"
+            },
+            {
+              "ElementId": "Task_AwaitConfirmation",
+              "X": 440,
+              "Y": 100,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": "Participant_Customer"
+            },
+            {
+              "ElementId": "Task_AwaitShipment",
+              "X": 600,
+              "Y": 100,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": "Participant_Customer"
+            },
+            {
+              "ElementId": "EndEvent_Happy",
+              "X": 752,
+              "Y": 122,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": "Participant_Customer"
+            }
+          ],
+          "Connections": [
+            {
+              "RelationshipId": "Flow_C1",
+              "SourceNodeId": "StartEvent_Want",
+              "TargetNodeId": "Task_PlaceOrder",
+              "Waypoints": [
+                {
+                  "X": 228,
+                  "Y": 140
+                },
+                {
+                  "X": 280,
+                  "Y": 140
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_C2",
+              "SourceNodeId": "Task_PlaceOrder",
+              "TargetNodeId": "Task_AwaitConfirmation",
+              "Waypoints": [
+                {
+                  "X": 380,
+                  "Y": 140
+                },
+                {
+                  "X": 440,
+                  "Y": 140
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_C3",
+              "SourceNodeId": "Task_AwaitConfirmation",
+              "TargetNodeId": "Task_AwaitShipment",
+              "Waypoints": [
+                {
+                  "X": 540,
+                  "Y": 140
+                },
+                {
+                  "X": 600,
+                  "Y": 140
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_C4",
+              "SourceNodeId": "Task_AwaitShipment",
+              "TargetNodeId": "EndEvent_Happy",
+              "Waypoints": [
+                {
+                  "X": 700,
+                  "Y": 140
+                },
+                {
+                  "X": 752,
+                  "Y": 140
+                }
+              ]
+            }
+          ]
+        }
+      ],
       "Issues": [],
       "Metadata": {
         "SourceSystem": "bpmn-xml",
@@ -193,7 +325,9 @@
         "LoadedAt": "1970-01-01T00:00:00+00:00",
         "IsFresh": true
       },
-      "Properties": {}
+      "Properties": {
+        "bpmn:isExecutable": "false"
+      }
     },
     {
       "Id": "Process_Shop",
@@ -213,7 +347,9 @@
           "Name": "Web shop",
           "ParentId": "",
           "Description": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:isHorizontal": "true"
+          },
           "Tags": [],
           "Governance": {
             "TrustLevel": "",
@@ -232,7 +368,9 @@
           "Name": "Sales",
           "ParentId": "Participant_Shop",
           "Description": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:isHorizontal": "true"
+          },
           "Tags": [],
           "Governance": {
             "TrustLevel": "",
@@ -251,7 +389,9 @@
           "Name": "Billing",
           "ParentId": "Participant_Shop",
           "Description": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:isHorizontal": "true"
+          },
           "Tags": [],
           "Governance": {
             "TrustLevel": "",
@@ -413,7 +553,18 @@
             "externalModelRef": {
               "modelId": "Process_Customer",
               "elementId": "Task_AwaitConfirmation"
-            }
+            },
+            "bpmndi:waypoints": [
+              {
+                "x": 430,
+                "y": 320
+              },
+              {
+                "x": 490,
+                "y": 180
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
           },
           "Tags": []
         },
@@ -429,12 +580,158 @@
             "externalModelRef": {
               "modelId": "Process_Warehouse",
               "elementId": "StartEvent_Pick"
-            }
+            },
+            "bpmndi:waypoints": [
+              {
+                "x": 570,
+                "y": 360
+              },
+              {
+                "x": 390,
+                "y": 582
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
           },
           "Tags": []
         }
       ],
-      "Views": [],
+      "Views": [
+        {
+          "Id": "BPMNPlane_1",
+          "Name": "Order fulfilment",
+          "Notation": "bpmn2",
+          "ViewpointKey": "",
+          "Nodes": [
+            {
+              "ElementId": "Participant_Shop",
+              "X": 160,
+              "Y": 260,
+              "Width": 720,
+              "Height": 220,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Lane_Sales",
+              "X": 190,
+              "Y": 260,
+              "Width": 690,
+              "Height": 110,
+              "ParentNodeId": "Participant_Shop"
+            },
+            {
+              "ElementId": "Lane_Billing",
+              "X": 190,
+              "Y": 370,
+              "Width": 690,
+              "Height": 110,
+              "ParentNodeId": "Participant_Shop"
+            },
+            {
+              "ElementId": "StartEvent_OrderReceived",
+              "X": 222,
+              "Y": 302,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": "Lane_Sales"
+            },
+            {
+              "ElementId": "Task_Confirm",
+              "X": 330,
+              "Y": 280,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": "Lane_Sales"
+            },
+            {
+              "ElementId": "Task_SendToWarehouse",
+              "X": 520,
+              "Y": 280,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": "Lane_Sales"
+            },
+            {
+              "ElementId": "Task_Invoice",
+              "X": 420,
+              "Y": 390,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": "Lane_Billing"
+            },
+            {
+              "ElementId": "EndEvent_Invoiced",
+              "X": 592,
+              "Y": 412,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": "Lane_Billing"
+            }
+          ],
+          "Connections": [
+            {
+              "RelationshipId": "Flow_S1",
+              "SourceNodeId": "StartEvent_OrderReceived",
+              "TargetNodeId": "Task_Confirm",
+              "Waypoints": [
+                {
+                  "X": 258,
+                  "Y": 320
+                },
+                {
+                  "X": 330,
+                  "Y": 320
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_S2",
+              "SourceNodeId": "Task_Confirm",
+              "TargetNodeId": "Task_SendToWarehouse",
+              "Waypoints": [
+                {
+                  "X": 430,
+                  "Y": 320
+                },
+                {
+                  "X": 520,
+                  "Y": 320
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_S3",
+              "SourceNodeId": "Task_SendToWarehouse",
+              "TargetNodeId": "Task_Invoice",
+              "Waypoints": [
+                {
+                  "X": 520,
+                  "Y": 320
+                },
+                {
+                  "X": 520,
+                  "Y": 430
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_S4",
+              "SourceNodeId": "Task_Invoice",
+              "TargetNodeId": "EndEvent_Invoiced",
+              "Waypoints": [
+                {
+                  "X": 520,
+                  "Y": 430
+                },
+                {
+                  "X": 592,
+                  "Y": 430
+                }
+              ]
+            }
+          ]
+        }
+      ],
       "Issues": [],
       "Metadata": {
         "SourceSystem": "bpmn-xml",
@@ -442,7 +739,9 @@
         "LoadedAt": "1970-01-01T00:00:00+00:00",
         "IsFresh": true
       },
-      "Properties": {}
+      "Properties": {
+        "bpmn:isExecutable": "false"
+      }
     },
     {
       "Id": "Process_Warehouse",
@@ -462,7 +761,9 @@
           "Name": "Warehouse",
           "ParentId": "",
           "Description": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:isHorizontal": "true"
+          },
           "Tags": [],
           "Governance": {
             "TrustLevel": "",
@@ -594,12 +895,119 @@
             "externalModelRef": {
               "modelId": "Process_Customer",
               "elementId": "Task_AwaitShipment"
-            }
+            },
+            "bpmndi:waypoints": [
+              {
+                "x": 620,
+                "y": 560
+              },
+              {
+                "x": 700,
+                "y": 180
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
           },
           "Tags": []
         }
       ],
-      "Views": [],
+      "Views": [
+        {
+          "Id": "BPMNPlane_1",
+          "Name": "Order fulfilment",
+          "Notation": "bpmn2",
+          "ViewpointKey": "",
+          "Nodes": [
+            {
+              "ElementId": "Participant_Warehouse",
+              "X": 160,
+              "Y": 540,
+              "Width": 720,
+              "Height": 120,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "StartEvent_Pick",
+              "X": 222,
+              "Y": 582,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": "Participant_Warehouse"
+            },
+            {
+              "ElementId": "Task_Pick",
+              "X": 330,
+              "Y": 560,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": "Participant_Warehouse"
+            },
+            {
+              "ElementId": "Task_Dispatch",
+              "X": 520,
+              "Y": 560,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": "Participant_Warehouse"
+            },
+            {
+              "ElementId": "EndEvent_Dispatched",
+              "X": 692,
+              "Y": 582,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": "Participant_Warehouse"
+            }
+          ],
+          "Connections": [
+            {
+              "RelationshipId": "Flow_W1",
+              "SourceNodeId": "StartEvent_Pick",
+              "TargetNodeId": "Task_Pick",
+              "Waypoints": [
+                {
+                  "X": 258,
+                  "Y": 600
+                },
+                {
+                  "X": 330,
+                  "Y": 600
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_W2",
+              "SourceNodeId": "Task_Pick",
+              "TargetNodeId": "Task_Dispatch",
+              "Waypoints": [
+                {
+                  "X": 430,
+                  "Y": 600
+                },
+                {
+                  "X": 520,
+                  "Y": 600
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_W3",
+              "SourceNodeId": "Task_Dispatch",
+              "TargetNodeId": "EndEvent_Dispatched",
+              "Waypoints": [
+                {
+                  "X": 620,
+                  "Y": 600
+                },
+                {
+                  "X": 692,
+                  "Y": 600
+                }
+              ]
+            }
+          ]
+        }
+      ],
       "Issues": [],
       "Metadata": {
         "SourceSystem": "bpmn-xml",
@@ -607,11 +1015,26 @@
         "LoadedAt": "1970-01-01T00:00:00+00:00",
         "IsFresh": true
       },
-      "Properties": {}
+      "Properties": {
+        "bpmn:isExecutable": "false"
+      }
     }
   ],
   "Losses": [],
-  "Warnings": [],
+  "Warnings": [
+    {
+      "Message": "4 connection(s) have no BPMNDI edge in plane \u0027BPMNPlane_1\u0027; their waypoints were generated by the auto-layout: Flow_C1, Flow_C2, Flow_C3, Flow_C4",
+      "XmlPath": "/definitions"
+    },
+    {
+      "Message": "4 connection(s) have no BPMNDI edge in plane \u0027BPMNPlane_1\u0027; their waypoints were generated by the auto-layout: Flow_S1, Flow_S2, Flow_S3, Flow_S4",
+      "XmlPath": "/definitions"
+    },
+    {
+      "Message": "3 connection(s) have no BPMNDI edge in plane \u0027BPMNPlane_1\u0027; their waypoints were generated by the auto-layout: Flow_W1, Flow_W2, Flow_W3",
+      "XmlPath": "/definitions"
+    }
+  ],
   "HasErrors": false,
   "ErrorMessage": null
 }

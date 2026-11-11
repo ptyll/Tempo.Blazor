@@ -18,7 +18,9 @@
           "Name": "Our system",
           "ParentId": "",
           "Description": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:isHorizontal": "true"
+          },
           "Tags": [],
           "Governance": {
             "TrustLevel": "",
@@ -37,7 +39,9 @@
           "Name": "Legacy vendor",
           "ParentId": "",
           "Description": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:isHorizontal": "true"
+          },
           "Tags": [],
           "Governance": {
             "TrustLevel": "",
@@ -132,7 +136,19 @@
           "TargetElementId": "Task_Send",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 248,
+                "y": 180
+              },
+              {
+                "x": 300,
+                "y": 180
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_BlackBox"
+          },
           "Tags": []
         },
         {
@@ -143,7 +159,19 @@
           "TargetElementId": "Task_Receive",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 400,
+                "y": 180
+              },
+              {
+                "x": 480,
+                "y": 180
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_BlackBox"
+          },
           "Tags": []
         },
         {
@@ -154,7 +182,19 @@
           "TargetElementId": "EndEvent_BlackBox",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 580,
+                "y": 180
+              },
+              {
+                "x": 652,
+                "y": 180
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_BlackBox"
+          },
           "Tags": []
         },
         {
@@ -165,7 +205,19 @@
           "TargetElementId": "Participant_External",
           "RelationshipType": "MessageFlow",
           "Name": "Request",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 350,
+                "y": 220
+              },
+              {
+                "x": 350,
+                "y": 340
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_BlackBox"
+          },
           "Tags": []
         },
         {
@@ -176,11 +228,157 @@
           "TargetElementId": "Task_Receive",
           "RelationshipType": "MessageFlow",
           "Name": "Reply",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 530,
+                "y": 340
+              },
+              {
+                "x": 530,
+                "y": 220
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_BlackBox"
+          },
           "Tags": []
         }
       ],
-      "Views": [],
+      "Views": [
+        {
+          "Id": "BPMNPlane_BlackBox",
+          "Name": "Black-box pool",
+          "Notation": "bpmn2",
+          "ViewpointKey": "",
+          "Nodes": [
+            {
+              "ElementId": "Participant_Internal",
+              "X": 160,
+              "Y": 80,
+              "Width": 720,
+              "Height": 200,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Participant_External",
+              "X": 160,
+              "Y": 340,
+              "Width": 720,
+              "Height": 120,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "StartEvent_BlackBox",
+              "X": 212,
+              "Y": 162,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": "Participant_Internal"
+            },
+            {
+              "ElementId": "Task_Send",
+              "X": 300,
+              "Y": 140,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": "Participant_Internal"
+            },
+            {
+              "ElementId": "Task_Receive",
+              "X": 480,
+              "Y": 140,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": "Participant_Internal"
+            },
+            {
+              "ElementId": "EndEvent_BlackBox",
+              "X": 652,
+              "Y": 162,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": "Participant_Internal"
+            }
+          ],
+          "Connections": [
+            {
+              "RelationshipId": "Flow_BB1",
+              "SourceNodeId": "StartEvent_BlackBox",
+              "TargetNodeId": "Task_Send",
+              "Waypoints": [
+                {
+                  "X": 248,
+                  "Y": 180
+                },
+                {
+                  "X": 300,
+                  "Y": 180
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_BB2",
+              "SourceNodeId": "Task_Send",
+              "TargetNodeId": "Task_Receive",
+              "Waypoints": [
+                {
+                  "X": 400,
+                  "Y": 180
+                },
+                {
+                  "X": 480,
+                  "Y": 180
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_BB3",
+              "SourceNodeId": "Task_Receive",
+              "TargetNodeId": "EndEvent_BlackBox",
+              "Waypoints": [
+                {
+                  "X": 580,
+                  "Y": 180
+                },
+                {
+                  "X": 652,
+                  "Y": 180
+                }
+              ]
+            },
+            {
+              "RelationshipId": "MessageFlow_Request",
+              "SourceNodeId": "Task_Send",
+              "TargetNodeId": "Participant_External",
+              "Waypoints": [
+                {
+                  "X": 350,
+                  "Y": 220
+                },
+                {
+                  "X": 350,
+                  "Y": 340
+                }
+              ]
+            },
+            {
+              "RelationshipId": "MessageFlow_Reply",
+              "SourceNodeId": "Participant_External",
+              "TargetNodeId": "Task_Receive",
+              "Waypoints": [
+                {
+                  "X": 530,
+                  "Y": 340
+                },
+                {
+                  "X": 530,
+                  "Y": 220
+                }
+              ]
+            }
+          ]
+        }
+      ],
       "Issues": [
         {
           "Id": "bpmn-import-loss-0001",
@@ -198,7 +396,9 @@
         "LoadedAt": "1970-01-01T00:00:00+00:00",
         "IsFresh": true
       },
-      "Properties": {}
+      "Properties": {
+        "bpmn:isExecutable": "false"
+      }
     }
   ],
   "Losses": [

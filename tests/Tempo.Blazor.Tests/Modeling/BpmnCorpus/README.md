@@ -22,10 +22,12 @@ tested against realistic dialects, without shipping any tool's copyrighted diagr
 | `call-activity.bpmn` | callActivity with calledElement attributes |
 | `data-objects.bpmn` | dataObject/dataObjectReference/dataStoreReference + associations |
 | `no-bpmndi.bpmn` | Semantic model without any BPMNDI section |
+| `partial-bpmndi.bpmn` | BPMNDI covering only some flow nodes/edges — the partial-DI fill places the missing geometry (phase 5) |
 | `camunda-export.bpmn` | `camunda:` extensionElements + attributes (assignee, candidateGroups, formKey) |
 | `signavio-export.bpmn` | Signavio namespace attributes + extensionElements |
 | `bizagi-export.bpmn` | Bizagi namespace attributes + extensionElements |
 | `annotations-group.bpmn` | textAnnotation, association, group, category |
+| `text-annotation-text.bpmn` | textAnnotation in the standard form (body in a `<text>` child element) |
 | `unsupported-constructs.bpmn` | Choreography/conversation/adHoc/multiInstance, top-level adHocSubProcess, compensation (boundaryEvent + isForCompensation + association) |
 | `prefixed-qnames.bpmn` | Prefixed dialect: `bpmn2:` elements, `tns:` QName refs (`messageRef="tns:…"`) |
 | `nested-subprocess.bpmn` | SubProcess nested 3 levels deep (ParentId hierarchy from XML nesting) |

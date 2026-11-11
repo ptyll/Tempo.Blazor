@@ -28,8 +28,9 @@ public sealed class BpmnImportOptions
     public BpmnModelSplit ModelSplit { get; set; } = BpmnModelSplit.PerProcess;
 
     /// <summary>
-    /// Whether BPMNDI diagram data is imported into views. Honored by the BPMNDI phase of the converter;
-    /// semantic import (the current phase) ignores diagram data either way.
+    /// Whether BPMNDI diagram data is imported into views. When <c>false</c> (or when the document
+    /// carries no BPMNDI), a deterministic headless <see cref="BpmnAutoLayout"/> generates the view
+    /// positions instead and the import result carries a warning.
     /// </summary>
     public bool ImportBpmndi { get; set; } = true;
 

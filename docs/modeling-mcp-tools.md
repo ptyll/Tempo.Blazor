@@ -233,6 +233,37 @@ The catalogue of `Code` values is the engine's (`parse`, `unknown_op`, `missing_
 `property_reference`, `unsupported_operation`); the `Message` keeps the 2.6.0 wording, so existing
 clients and tests see no rewrite.
 
+### `modeling_import_bpmn`
+Import a BPMN 2.0 XML document (text, `bpmnXml`) into Tempo modeling models through the headless
+`Tempo.Blazor.Modeling.BpmnXml` converter, with the built-in Camunda/Signavio/Bizagi tool dialect
+plugins. Returns `modelCount`, every `model` (`id`, `title`, `notation`, `counts`, `elements`,
+`relationships`, `views`) plus the full `losses` report (`elementId`, `xmlPath`, `construct`,
+`reason`, `severity`) and `warnings` — nothing is silently dropped. Options: `modelSplit`
+(`PerProcess` default | `SingleWithPools`), `importBpmndi` (default `true`; `false` runs the
+deterministic headless auto-layout), `save` (persist one document per imported model through
+`IModelingModelDocumentProvider`, default `false`), `name` (saved document title, capped at 200
+characters), `scopeAppId`. Inputs are size-limited: `bpmnXml` at 2M characters, `name` at 200
+characters (`validation_failed` beyond); malformed XML, a wrong root element or an over-limit
+document are **input problems → `validation_failed`** with the parser message (not the generic
+`error` code). Effect: **write** when `save=true`, otherwise a read-only conversion.
+
+**Save resilience.** With `save=true` every model is created + saved independently: one failing
+document neither aborts nor rolls back the remaining saves, and the failure response carries the
+exact partial progress — `saved` (the documents that persisted), `failedAt` (the first failing
+model index) and `failed` (per-document `index`/`title`/`error`). The provider contract has no
+delete, so partial progress is reported instead of silently cleaned up. Note that `scopeAppId` is
+**enforced by the host document provider** (its scoped `CreateModelingModelDocumentAsync`
+overload), not by the tool: a host that ignores the scope stores everything in its default app.
+
+### `modeling_export_bpmn`
+Export a stored modeling model (`modelId`) to BPMN 2.0 XML through the headless converter, with
+the built-in tool dialect plugins. Returns the `xml` document plus the export `losses` report
+(`elementId`, `construct`, `reason`, `severity`) for everything the model carries that BPMN cannot
+represent exactly. Options: `profile` (`Standard` default | `WithHostExtensions` — adds the Tempo
+host extension payloads so a clean re-import loses nothing), `emitBpmndi` (default `true`),
+`targetNamespace`. Unknown model → `not_found`; unknown profile → `validation_failed`. Effect:
+**read-only**.
+
 ### `modeling_validate`
 Run notation validation over a model (loaded by id, or a supplied `modelJson` for stateless
 checks) and return `ModelingIssueDto[]` — `severity`, `category` (`validation`/`viewpoint`/

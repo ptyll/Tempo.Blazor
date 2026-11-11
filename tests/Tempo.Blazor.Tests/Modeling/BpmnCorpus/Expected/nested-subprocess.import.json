@@ -37,7 +37,9 @@
           "Name": "Level 1",
           "ParentId": "",
           "Description": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:isExpanded": "true"
+          },
           "Tags": [],
           "Governance": {
             "TrustLevel": "",
@@ -75,7 +77,9 @@
           "Name": "Level 2",
           "ParentId": "SubProcess_L1",
           "Description": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:isExpanded": "true"
+          },
           "Tags": [],
           "Governance": {
             "TrustLevel": "",
@@ -113,7 +117,9 @@
           "Name": "Level 3",
           "ParentId": "SubProcess_L2",
           "Description": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:isExpanded": "true"
+          },
           "Tags": [],
           "Governance": {
             "TrustLevel": "",
@@ -312,7 +318,19 @@
           "TargetElementId": "SubProcess_L1",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 188,
+                "y": 260
+              },
+              {
+                "x": 260,
+                "y": 260
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_Nested"
+          },
           "Tags": []
         },
         {
@@ -323,11 +341,250 @@
           "TargetElementId": "EndEvent_Nested",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 780,
+                "y": 260
+              },
+              {
+                "x": 852,
+                "y": 260
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_Nested"
+          },
           "Tags": []
         }
       ],
-      "Views": [],
+      "Views": [
+        {
+          "Id": "BPMNPlane_Nested",
+          "Name": "Nested subprocesses",
+          "Notation": "bpmn2",
+          "ViewpointKey": "",
+          "Nodes": [
+            {
+              "ElementId": "StartEvent_Nested",
+              "X": 152,
+              "Y": 242,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "SubProcess_L1",
+              "X": 260,
+              "Y": 120,
+              "Width": 520,
+              "Height": 280,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "StartEvent_L1",
+              "X": 300,
+              "Y": 242,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": "SubProcess_L1"
+            },
+            {
+              "ElementId": "SubProcess_L2",
+              "X": 380,
+              "Y": 170,
+              "Width": 340,
+              "Height": 180,
+              "ParentNodeId": "SubProcess_L1"
+            },
+            {
+              "ElementId": "StartEvent_L2",
+              "X": 412,
+              "Y": 242,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": "SubProcess_L2"
+            },
+            {
+              "ElementId": "SubProcess_L3",
+              "X": 490,
+              "Y": 200,
+              "Width": 200,
+              "Height": 120,
+              "ParentNodeId": "SubProcess_L2"
+            },
+            {
+              "ElementId": "Task_L3",
+              "X": 550,
+              "Y": 220,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": "SubProcess_L3"
+            },
+            {
+              "ElementId": "EndEvent_Nested",
+              "X": 852,
+              "Y": 242,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "StartEvent_L3",
+              "X": 3336,
+              "Y": 440,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": "SubProcess_L3"
+            },
+            {
+              "ElementId": "EndEvent_L3",
+              "X": 3616,
+              "Y": 440,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": "SubProcess_L3"
+            },
+            {
+              "ElementId": "EndEvent_L1",
+              "X": 3712,
+              "Y": 440,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": "SubProcess_L2"
+            },
+            {
+              "ElementId": "EndEvent_L0",
+              "X": 3808,
+              "Y": 440,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": "SubProcess_L1"
+            }
+          ],
+          "Connections": [
+            {
+              "RelationshipId": "Flow_N1",
+              "SourceNodeId": "StartEvent_Nested",
+              "TargetNodeId": "SubProcess_L1",
+              "Waypoints": [
+                {
+                  "X": 188,
+                  "Y": 260
+                },
+                {
+                  "X": 260,
+                  "Y": 260
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_N4",
+              "SourceNodeId": "SubProcess_L1",
+              "TargetNodeId": "EndEvent_Nested",
+              "Waypoints": [
+                {
+                  "X": 780,
+                  "Y": 260
+                },
+                {
+                  "X": 852,
+                  "Y": 260
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_N2",
+              "SourceNodeId": "StartEvent_L3",
+              "TargetNodeId": "Task_L3",
+              "Waypoints": [
+                {
+                  "X": 3336,
+                  "Y": 458
+                },
+                {
+                  "X": 650,
+                  "Y": 260
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_N3",
+              "SourceNodeId": "Task_L3",
+              "TargetNodeId": "EndEvent_L3",
+              "Waypoints": [
+                {
+                  "X": 650,
+                  "Y": 260
+                },
+                {
+                  "X": 3616,
+                  "Y": 458
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_NL2",
+              "SourceNodeId": "StartEvent_L2",
+              "TargetNodeId": "SubProcess_L3",
+              "Waypoints": [
+                {
+                  "X": 448,
+                  "Y": 260
+                },
+                {
+                  "X": 490,
+                  "Y": 260
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_NL3",
+              "SourceNodeId": "SubProcess_L3",
+              "TargetNodeId": "EndEvent_L1",
+              "Waypoints": [
+                {
+                  "X": 690,
+                  "Y": 260
+                },
+                {
+                  "X": 3712,
+                  "Y": 458
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_NL1",
+              "SourceNodeId": "StartEvent_L1",
+              "TargetNodeId": "SubProcess_L2",
+              "Waypoints": [
+                {
+                  "X": 336,
+                  "Y": 260
+                },
+                {
+                  "X": 380,
+                  "Y": 260
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_NL4",
+              "SourceNodeId": "SubProcess_L2",
+              "TargetNodeId": "EndEvent_L0",
+              "Waypoints": [
+                {
+                  "X": 720,
+                  "Y": 260
+                },
+                {
+                  "X": 3808,
+                  "Y": 458
+                }
+              ]
+            }
+          ]
+        }
+      ],
       "Issues": [],
       "Metadata": {
         "SourceSystem": "bpmn-xml",
@@ -335,11 +592,22 @@
         "LoadedAt": "1970-01-01T00:00:00+00:00",
         "IsFresh": true
       },
-      "Properties": {}
+      "Properties": {
+        "bpmn:isExecutable": "false"
+      }
     }
   ],
   "Losses": [],
-  "Warnings": [],
+  "Warnings": [
+    {
+      "Message": "6 connection(s) have no BPMNDI edge in plane \u0027BPMNPlane_Nested\u0027; their waypoints were generated by the auto-layout: Flow_N2, Flow_N3, Flow_NL2, Flow_NL3, Flow_NL1, Flow_NL4",
+      "XmlPath": "/definitions"
+    },
+    {
+      "Message": "4 element(s) have no BPMNPlane shape in any plane of model \u0027Process_Nested\u0027; their positions were generated by the auto-layout below the plane\u0027s diagram bounds: StartEvent_L3, EndEvent_L3, EndEvent_L1, EndEvent_L0",
+      "XmlPath": "/definitions"
+    }
+  ],
   "HasErrors": false,
   "ErrorMessage": null
 }

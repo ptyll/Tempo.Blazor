@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "General",
+  "namespace": "Tempo.Blazor.Modeling.BpmnXml",
+  "description": "Camunda Modeler dialect plugin (http://camunda.org/schema/1.0/bpmn). Imports camunda:properties into camunda:* property keys, camunda:documentation into the element description and preserves every other payload (task listeners, connectors, input/output mappings, …) verbatim under the camundaExtensions property for a loss-free re-export. Element-level camunda:* attributes (assignee, candidateGroups, candidateUsers, formKey, dueDate, versionTag, delegateExpression, …) are the attribute catch-all's job and are written back as attributes by the exporter — this plugin owns only the element payloads.",
+  "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+  "sourcePath": "src/Tempo.Blazor.Modeling.BpmnXml/BpmnToolExtensions.cs",
+  "documentationStatus": "generated",
+  "itemName": "BpmnCamundaToolExtension"
+}

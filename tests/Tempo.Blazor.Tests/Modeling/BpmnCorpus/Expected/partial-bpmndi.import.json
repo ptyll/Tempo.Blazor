@@ -1,0 +1,249 @@
+{
+  "Models": [
+    {
+      "Id": "Process_PartialDi",
+      "Title": "Partial DI",
+      "Notation": "bpmn2",
+      "SupportedNotations": [
+        "bpmn2"
+      ],
+      "Elements": [
+        {
+          "Id": "StartEvent_Partial",
+          "SourceId": "StartEvent_Partial",
+          "SourceType": "startEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_PartialDi\u0027]/process[@id=\u0027Process_PartialDi\u0027]/startEvent[@id=\u0027StartEvent_Partial\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "StartEvent",
+          "Name": "Started",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_Build",
+          "SourceId": "Task_Build",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_PartialDi\u0027]/process[@id=\u0027Process_PartialDi\u0027]/task[@id=\u0027Task_Build\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Build",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_QA",
+          "SourceId": "Task_QA",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_PartialDi\u0027]/process[@id=\u0027Process_PartialDi\u0027]/task[@id=\u0027Task_QA\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "QA",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "EndEvent_Done",
+          "SourceId": "EndEvent_Done",
+          "SourceType": "endEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_PartialDi\u0027]/process[@id=\u0027Process_PartialDi\u0027]/endEvent[@id=\u0027EndEvent_Done\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "EndEvent",
+          "Name": "Done",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        }
+      ],
+      "Relationships": [
+        {
+          "Id": "Flow_1",
+          "SourceId": "Flow_1",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "StartEvent_Partial",
+          "TargetElementId": "Task_Build",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 208,
+                "y": 170
+              },
+              {
+                "x": 260,
+                "y": 170
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_Partial"
+          },
+          "Tags": []
+        },
+        {
+          "Id": "Flow_2",
+          "SourceId": "Flow_2",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Build",
+          "TargetElementId": "Task_QA",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_Done",
+          "SourceId": "Flow_Done",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_QA",
+          "TargetElementId": "EndEvent_Done",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        }
+      ],
+      "Views": [
+        {
+          "Id": "BPMNPlane_Partial",
+          "Name": "Partial DI",
+          "Notation": "bpmn2",
+          "ViewpointKey": "",
+          "Nodes": [
+            {
+              "ElementId": "StartEvent_Partial",
+              "X": 172,
+              "Y": 152,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Task_Build",
+              "X": 260,
+              "Y": 130,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Task_QA",
+              "X": 320,
+              "Y": 250,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "EndEvent_Done",
+              "X": 460,
+              "Y": 272,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            }
+          ],
+          "Connections": [
+            {
+              "RelationshipId": "Flow_1",
+              "SourceNodeId": "StartEvent_Partial",
+              "TargetNodeId": "Task_Build",
+              "Waypoints": [
+                {
+                  "X": 208,
+                  "Y": 170
+                },
+                {
+                  "X": 260,
+                  "Y": 170
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_2",
+              "SourceNodeId": "Task_Build",
+              "TargetNodeId": "Task_QA",
+              "Waypoints": [
+                {
+                  "X": 360,
+                  "Y": 170
+                },
+                {
+                  "X": 320,
+                  "Y": 290
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_Done",
+              "SourceNodeId": "Task_QA",
+              "TargetNodeId": "EndEvent_Done",
+              "Waypoints": [
+                {
+                  "X": 420,
+                  "Y": 290
+                },
+                {
+                  "X": 460,
+                  "Y": 290
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "Issues": [],
+      "Metadata": {
+        "SourceSystem": "bpmn-xml",
+        "SourceVersion": "http://tempo.example/bpmn/corpus/partial-di",
+        "LoadedAt": "1970-01-01T00:00:00+00:00",
+        "IsFresh": true
+      },
+      "Properties": {
+        "bpmn:isExecutable": "false"
+      }
+    }
+  ],
+  "Losses": [],
+  "Warnings": [
+    {
+      "Message": "2 connection(s) have no BPMNDI edge in plane \u0027BPMNPlane_Partial\u0027; their waypoints were generated by the auto-layout: Flow_2, Flow_Done",
+      "XmlPath": "/definitions"
+    },
+    {
+      "Message": "2 element(s) have no BPMNPlane shape in any plane of model \u0027Process_PartialDi\u0027; their positions were generated by the auto-layout below the plane\u0027s diagram bounds: Task_QA, EndEvent_Done",
+      "XmlPath": "/definitions"
+    }
+  ],
+  "HasErrors": false,
+  "ErrorMessage": null
+}

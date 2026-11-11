@@ -97,6 +97,24 @@ public class ModelingMcpContractSnapshotTests
         applied["diff"]!["layoutOnlyElementIds"]!.AsArray().Select(node => node!.GetValue<string>())
             .Should().Equal("task");
 
+        // BPMN converter plan phase 5: the import/export tools join the contract. The seeded model
+        // is exported with a fixed targetNamespace so the XML is deterministic (the exporter
+        // version comes from the assembly informational version, not the commit hash).
+        var imported = Normalize(ParseNode(await ModelingBpmnTools.ImportBpmn(backend, """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Defs" targetNamespace="http://tempo.example/contract-import">
+              <process id="ImportedProcess" name="Imported process" isExecutable="false">
+                <startEvent id="ImportedStart" name="Begin"/>
+              </process>
+            </definitions>
+            """)));
+        var exported = NormalizeModelId(Normalize(ParseNode(await ModelingBpmnTools.ExportBpmn(
+            backend,
+            backend,
+            id,
+            profile: "WithHostExtensions",
+            targetNamespace: "http://tempo.example/contract-export"))));
+
         return new JsonObject
         {
             ["responses"] = new JsonObject
@@ -104,7 +122,17 @@ public class ModelingMcpContractSnapshotTests
                 ["modeling_get_model_tree"] = tree,
                 ["modeling_get_property_schema"] = schema,
                 ["modeling_apply_operations_rejected"] = rejected,
-                ["modeling_apply_operations_applied"] = applied
+                ["modeling_apply_operations_applied"] = applied,
+                ["modeling_import_bpmn"] = imported,
+                ["modeling_export_bpmn"] = exported
+            },
+            // Classification by effect: which tools mutate host state. Everything not listed is
+            // read-only; the snapshot pins the classification so a new write tool cannot slip in
+            // unnoticed.
+            ["toolClassificationByEffect"] = new JsonObject
+            {
+                ["modeling_apply_operations"] = "write",
+                ["modeling_import_bpmn"] = "write (only when save=true; otherwise read-only conversion)"
             }
         };
     }

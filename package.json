@@ -21,9 +21,11 @@
     "test:ai": "node scripts/run-node-tests.mjs src/Tempo.Blazor.AI/wwwroot/js",
     "test:document-editor": "node scripts/run-node-tests.mjs src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor-canvas scripts",
     "test:document-editor-modules": "npm run test:document-editor",
-    "test:modeling": "node scripts/run-node-tests.mjs src/Tempo.Blazor.Modeling/wwwroot/js"
+    "test:modeling": "node scripts/run-node-tests.mjs src/Tempo.Blazor.Modeling/wwwroot/js",
+    "test:bpmn-interop": "node scripts/run-node-tests.mjs tests/Tempo.Blazor.Tests/Modeling/BpmnInterop"
   },
   "devDependencies": {
+    "bpmn-moddle": "^10.3.1",
     "esbuild": "^0.21.0"
   }
 }

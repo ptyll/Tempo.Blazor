@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Process_Data" targetNamespace="http://tempo.example/bpmn/corpus" exporter="Tempo.Blazor" exporterVersion="2.11.0" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:tempo="https://tempo.blazor/schemas/bpmn-extensions" name="Data handling">
+  <process id="Process_Data" name="Data handling" isExecutable="false">
+    <dataObject id="DataObject_Stock" name="Stock level" isCollection="false" />
+    <startEvent id="StartEvent_Data" name="Start">
+      <outgoing>Flow_D1</outgoing>
+    </startEvent>
+    <task id="Task_Check" name="Check stock">
+      <incoming>Flow_D1</incoming>
+      <outgoing>Flow_D2</outgoing>
+      <dataOutputAssociation id="DataOut_1">
+        <sourceRef>Task_Check</sourceRef>
+        <targetRef>DataObjectRef_Stock</targetRef>
+        <assignment>
+          <from>checkedStock</from>
+          <to>stockLevel</to>
+        </assignment>
+      </dataOutputAssociation>
+    </task>
+    <task id="Task_Order" name="Order goods">
+      <incoming>Flow_D2</incoming>
+      <outgoing>Flow_D3</outgoing>
+      <dataInputAssociation id="DataIn_1">
+        <sourceRef>DataObjectRef_Stock</sourceRef>
+        <targetRef>Task_Order</targetRef>
+      </dataInputAssociation>
+      <dataInputAssociation id="DataIn_2">
+        <sourceRef>DataStoreRef_Catalog</sourceRef>
+        <targetRef>Task_Order</targetRef>
+      </dataInputAssociation>
+    </task>
+    <endEvent id="EndEvent_Data" name="Done">
+      <incoming>Flow_D3</incoming>
+    </endEvent>
+    <dataObjectReference id="DataObjectRef_Stock" name="Stock level" dataObjectRef="DataObject_Stock" />
+    <dataStoreReference id="DataStoreRef_Catalog" name="Product catalog" dataStoreRef="DataStore_Catalog" />
+    <dataObject id="DataObject_Unused" name="Unreferenced list" isCollection="true" />
+    <sequenceFlow id="Flow_D1" sourceRef="StartEvent_Data" targetRef="Task_Check" />
+    <sequenceFlow id="Flow_D2" sourceRef="Task_Check" targetRef="Task_Order" />
+    <sequenceFlow id="Flow_D3" sourceRef="Task_Order" targetRef="EndEvent_Data" />
+  </process>
+  <dataStore id="DataStore_Catalog" name="Product catalog" />
+  <bpmndi:BPMNDiagram id="BPMNDiagram_BPMNPlane_1" name="Data handling">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_Data">
+      <bpmndi:BPMNShape id="StartEvent_Data_di" bpmnElement="StartEvent_Data">
+        <dc:Bounds x="152" y="162" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Check_di" bpmnElement="Task_Check">
+        <dc:Bounds x="240" y="140" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Order_di" bpmnElement="Task_Order">
+        <dc:Bounds x="400" y="140" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Data_di" bpmnElement="EndEvent_Data">
+        <dc:Bounds x="572" y="162" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DataObjectRef_Stock_di" bpmnElement="DataObjectRef_Stock">
+        <dc:Bounds x="320" y="280" width="36" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DataStoreRef_Catalog_di" bpmnElement="DataStoreRef_Catalog">
+        <dc:Bounds x="460" y="280" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DataObject_Unused_di" bpmnElement="DataObject_Unused">
+        <dc:Bounds x="206" y="370" width="36" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_D1_di" bpmnElement="Flow_D1">
+        <di:waypoint x="188" y="180" />
+        <di:waypoint x="240" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_D2_di" bpmnElement="Flow_D2">
+        <di:waypoint x="340" y="180" />
+        <di:waypoint x="400" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_D3_di" bpmnElement="Flow_D3">
+        <di:waypoint x="500" y="180" />
+        <di:waypoint x="572" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DataOut_1_di" bpmnElement="DataOut_1">
+        <di:waypoint x="340" y="180" />
+        <di:waypoint x="320" y="305" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DataIn_1_di" bpmnElement="DataIn_1">
+        <di:waypoint x="356" y="305" />
+        <di:waypoint x="400" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DataIn_2_di" bpmnElement="DataIn_2">
+        <di:waypoint x="460" y="305" />
+        <di:waypoint x="500" y="180" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>

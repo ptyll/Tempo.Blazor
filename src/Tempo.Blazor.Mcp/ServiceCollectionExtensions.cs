@@ -94,7 +94,8 @@ public static class TempoModelingMcp
         typeof(ModelingModelTools),
         typeof(ModelingOperationTools),
         typeof(ModelingPropertySchemaTools),
-        typeof(ModelingValidationTools)
+        typeof(ModelingValidationTools),
+        typeof(ModelingBpmnTools)
     ];
 
     /// <summary>
@@ -102,7 +103,10 @@ public static class TempoModelingMcp
     /// <c>ITempoDocumentLibraryProvider</c> and <c>IModelingModelDocumentProvider</c>; the notation
     /// rule providers, <c>IModelingDiagramProjector</c> (for <c>modeling_get_view</c>) and the
     /// diagram SVG renderer (for <c>diagram_render_svg</c>) come from <c>AddTempoBlazorModeling()</c>
-    /// / <c>AddTempoBlazorDiagramEditor()</c> and degrade gracefully when absent.
+    /// / <c>AddTempoBlazorDiagramEditor()</c> and degrade gracefully when absent. The BPMN import/
+    /// export tools (<c>modeling_import_bpmn</c>/<c>modeling_export_bpmn</c>) are self-contained —
+    /// they new up the headless <c>Tempo.Blazor.Modeling.BpmnXml</c> converter with its built-in
+    /// tool dialect plugins and need no extra host services.
     /// </summary>
     public static IServiceCollection AddTempoModelingMcpTools(this IServiceCollection services)
         => services;

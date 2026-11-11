@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "General",
+  "namespace": "Tempo.Blazor.Modeling.BpmnXml",
+  "description": "One entry of the export loss report: a model element, relationship or property that could NOT be represented (exactly) in BPMN 2.0 XML under the active BpmnExportProfile.",
+  "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+  "sourcePath": "src/Tempo.Blazor.Modeling.BpmnXml/IBpmnXmlExporter.cs",
+  "documentationStatus": "generated",
+  "itemName": "BpmnExportLoss"
+}

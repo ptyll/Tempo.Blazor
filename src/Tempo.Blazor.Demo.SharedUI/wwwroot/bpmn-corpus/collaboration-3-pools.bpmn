@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+             xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+             xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+             id="Definitions_Collaboration"
+             name="Collaboration 3 pools"
+             targetNamespace="http://tempo.example/bpmn/corpus">
+  <collaboration id="Collaboration_1" name="Order fulfilment">
+    <participant id="Participant_Customer" name="Customer" processRef="Process_Customer"/>
+    <participant id="Participant_Shop" name="Web shop" processRef="Process_Shop"/>
+    <participant id="Participant_Warehouse" name="Warehouse" processRef="Process_Warehouse"/>
+    <messageFlow id="MessageFlow_Order" name="Order" sourceRef="Task_PlaceOrder" targetRef="StartEvent_OrderReceived"/>
+    <messageFlow id="MessageFlow_Confirm" name="Confirmation" sourceRef="Task_Confirm" targetRef="Task_AwaitConfirmation"/>
+    <messageFlow id="MessageFlow_ShipRequest" sourceRef="Task_SendToWarehouse" targetRef="StartEvent_Pick"/>
+    <messageFlow id="MessageFlow_Shipped" name="Shipped" sourceRef="Task_Dispatch" targetRef="Task_AwaitShipment"/>
+  </collaboration>
+  <process id="Process_Customer" name="Customer" isExecutable="false">
+    <startEvent id="StartEvent_Want" name="Wants goods">
+      <outgoing>Flow_C1</outgoing>
+    </startEvent>
+    <task id="Task_PlaceOrder" name="Place order">
+      <incoming>Flow_C1</incoming>
+      <outgoing>Flow_C2</outgoing>
+    </task>
+    <task id="Task_AwaitConfirmation" name="Await confirmation">
+      <incoming>Flow_C2</incoming>
+      <outgoing>Flow_C3</outgoing>
+    </task>
+    <task id="Task_AwaitShipment" name="Await shipment">
+      <incoming>Flow_C3</incoming>
+      <outgoing>Flow_C4</outgoing>
+    </task>
+    <endEvent id="EndEvent_Happy" name="Goods received">
+      <incoming>Flow_C4</incoming>
+    </endEvent>
+    <sequenceFlow id="Flow_C1" sourceRef="StartEvent_Want" targetRef="Task_PlaceOrder"/>
+    <sequenceFlow id="Flow_C2" sourceRef="Task_PlaceOrder" targetRef="Task_AwaitConfirmation"/>
+    <sequenceFlow id="Flow_C3" sourceRef="Task_AwaitConfirmation" targetRef="Task_AwaitShipment"/>
+    <sequenceFlow id="Flow_C4" sourceRef="Task_AwaitShipment" targetRef="EndEvent_Happy"/>
+  </process>
+  <process id="Process_Shop" name="Web shop" isExecutable="false">
+    <laneSet id="LaneSet_Shop">
+      <lane id="Lane_Sales" name="Sales">
+        <flowNodeRef>StartEvent_OrderReceived</flowNodeRef>
+        <flowNodeRef>Task_Confirm</flowNodeRef>
+        <flowNodeRef>Task_SendToWarehouse</flowNodeRef>
+      </lane>
+      <lane id="Lane_Billing" name="Billing">
+        <flowNodeRef>Task_Invoice</flowNodeRef>
+        <flowNodeRef>EndEvent_Invoiced</flowNodeRef>
+      </lane>
+    </laneSet>
+    <startEvent id="StartEvent_OrderReceived" name="Order received">
+      <outgoing>Flow_S1</outgoing>
+    </startEvent>
+    <task id="Task_Confirm" name="Confirm order">
+      <incoming>Flow_S1</incoming>
+      <outgoing>Flow_S2</outgoing>
+    </task>
+    <task id="Task_SendToWarehouse" name="Send to warehouse">
+      <incoming>Flow_S2</incoming>
+      <outgoing>Flow_S3</outgoing>
+    </task>
+    <task id="Task_Invoice" name="Invoice customer">
+      <incoming>Flow_S3</incoming>
+      <outgoing>Flow_S4</outgoing>
+    </task>
+    <endEvent id="EndEvent_Invoiced" name="Invoiced">
+      <incoming>Flow_S4</incoming>
+    </endEvent>
+    <sequenceFlow id="Flow_S1" sourceRef="StartEvent_OrderReceived" targetRef="Task_Confirm"/>
+    <sequenceFlow id="Flow_S2" sourceRef="Task_Confirm" targetRef="Task_SendToWarehouse"/>
+    <sequenceFlow id="Flow_S3" sourceRef="Task_SendToWarehouse" targetRef="Task_Invoice"/>
+    <sequenceFlow id="Flow_S4" sourceRef="Task_Invoice" targetRef="EndEvent_Invoiced"/>
+  </process>
+  <process id="Process_Warehouse" name="Warehouse" isExecutable="false">
+    <startEvent id="StartEvent_Pick" name="Pick request">
+      <outgoing>Flow_W1</outgoing>
+    </startEvent>
+    <task id="Task_Pick" name="Pick goods">
+      <incoming>Flow_W1</incoming>
+      <outgoing>Flow_W2</outgoing>
+    </task>
+    <task id="Task_Dispatch" name="Dispatch">
+      <incoming>Flow_W2</incoming>
+      <outgoing>Flow_W3</outgoing>
+    </task>
+    <endEvent id="EndEvent_Dispatched" name="Dispatched">
+      <incoming>Flow_W3</incoming>
+    </endEvent>
+    <sequenceFlow id="Flow_W1" sourceRef="StartEvent_Pick" targetRef="Task_Pick"/>
+    <sequenceFlow id="Flow_W2" sourceRef="Task_Pick" targetRef="Task_Dispatch"/>
+    <sequenceFlow id="Flow_W3" sourceRef="Task_Dispatch" targetRef="EndEvent_Dispatched"/>
+  </process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1" name="Order fulfilment">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_1">
+      <bpmndi:BPMNShape id="Participant_Customer_di" bpmnElement="Participant_Customer" isHorizontal="true">
+        <dc:Bounds x="160" y="80" width="720" height="120"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_Shop_di" bpmnElement="Participant_Shop" isHorizontal="true">
+        <dc:Bounds x="160" y="260" width="720" height="220"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Sales_di" bpmnElement="Lane_Sales" isHorizontal="true">
+        <dc:Bounds x="190" y="260" width="690" height="110"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Billing_di" bpmnElement="Lane_Billing" isHorizontal="true">
+        <dc:Bounds x="190" y="370" width="690" height="110"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_Warehouse_di" bpmnElement="Participant_Warehouse" isHorizontal="true">
+        <dc:Bounds x="160" y="540" width="720" height="120"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_Want_di" bpmnElement="StartEvent_Want">
+        <dc:Bounds x="192" y="122" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_PlaceOrder_di" bpmnElement="Task_PlaceOrder">
+        <dc:Bounds x="280" y="100" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_AwaitConfirmation_di" bpmnElement="Task_AwaitConfirmation">
+        <dc:Bounds x="440" y="100" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_AwaitShipment_di" bpmnElement="Task_AwaitShipment">
+        <dc:Bounds x="600" y="100" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Happy_di" bpmnElement="EndEvent_Happy">
+        <dc:Bounds x="752" y="122" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_OrderReceived_di" bpmnElement="StartEvent_OrderReceived">
+        <dc:Bounds x="222" y="302" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Confirm_di" bpmnElement="Task_Confirm">
+        <dc:Bounds x="330" y="280" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_SendToWarehouse_di" bpmnElement="Task_SendToWarehouse">
+        <dc:Bounds x="520" y="280" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Invoice_di" bpmnElement="Task_Invoice">
+        <dc:Bounds x="420" y="390" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Invoiced_di" bpmnElement="EndEvent_Invoiced">
+        <dc:Bounds x="592" y="412" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_Pick_di" bpmnElement="StartEvent_Pick">
+        <dc:Bounds x="222" y="582" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Pick_di" bpmnElement="Task_Pick">
+        <dc:Bounds x="330" y="560" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Dispatch_di" bpmnElement="Task_Dispatch">
+        <dc:Bounds x="520" y="560" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Dispatched_di" bpmnElement="EndEvent_Dispatched">
+        <dc:Bounds x="692" y="582" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="MessageFlow_Order_di" bpmnElement="MessageFlow_Order">
+        <di:waypoint x="330" y="180"/>
+        <di:waypoint x="240" y="302"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MessageFlow_Confirm_di" bpmnElement="MessageFlow_Confirm">
+        <di:waypoint x="430" y="320"/>
+        <di:waypoint x="490" y="180"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MessageFlow_ShipRequest_di" bpmnElement="MessageFlow_ShipRequest">
+        <di:waypoint x="570" y="360"/>
+        <di:waypoint x="390" y="582"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MessageFlow_Shipped_di" bpmnElement="MessageFlow_Shipped">
+        <di:waypoint x="620" y="560"/>
+        <di:waypoint x="700" y="180"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>

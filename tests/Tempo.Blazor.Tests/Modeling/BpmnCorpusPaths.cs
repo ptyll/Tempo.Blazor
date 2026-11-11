@@ -35,3 +35,34 @@ internal static class BpmnCorpusPaths
     public static string ReadHostileFixture(string fileName) =>
         File.ReadAllText(Path.Combine(HostileDirectory, fileName)).ReplaceLineEndings("\n");
 }
+
+/// <summary>The corpus fixtures covered by the import/export golden suites (kept in one place).</summary>
+internal static class BpmnImportGoldenFixtures
+{
+    public static readonly string[] All =
+    [
+        "simple-process.bpmn",
+        "collaboration-3-pools.bpmn",
+        "nested-lanes.bpmn",
+        "all-gateways.bpmn",
+        "all-events.bpmn",
+        "boundary-events.bpmn",
+        "event-subprocess.bpmn",
+        "call-activity.bpmn",
+        "data-objects.bpmn",
+        "no-bpmndi.bpmn",
+        "partial-bpmndi.bpmn",
+        "camunda-export.bpmn",
+        "signavio-export.bpmn",
+        "bizagi-export.bpmn",
+        "annotations-group.bpmn",
+        "text-annotation-text.bpmn",
+        "unsupported-constructs.bpmn",
+        "prefixed-qnames.bpmn",
+        "nested-subprocess.bpmn",
+        "collapsed-subprocess.bpmn",
+        "black-box-pool.bpmn",
+        "multiple-events.bpmn",
+        "io-properties.bpmn",
+    ];
+}

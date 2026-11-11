@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+             xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+             xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             id="Definitions_Unsupported"
+             name="Unsupported constructs"
+             targetNamespace="http://tempo.example/bpmn/corpus">
+  <!-- This file intentionally contains BPMN constructs the headless converter does NOT
+       support semantically. Every one of them must appear in the import loss report;
+       nothing may be silently dropped. -->
+  <collaboration id="Collaboration_Unsup">
+    <participant id="Participant_Us" name="Us" processRef="Process_Us"/>
+    <participant id="Participant_Them" name="Them" processRef="Process_Them"/>
+    <choreographyTask id="ChoreoTask_1" name="Negotiate contract" initiatingParticipantRef="Participant_Us">
+      <participantRef>Participant_Us</participantRef>
+      <participantRef>Participant_Them</participantRef>
+    </choreographyTask>
+    <subChoreography id="SubChoreo_1" name="Negotiation phase">
+      <participantRef>Participant_Us</participantRef>
+      <participantRef>Participant_Them</participantRef>
+    </subChoreography>
+    <callChoreography id="CallChoreo_1" name="Standard negotiation" calledChoreographyRef="SubChoreo_1"/>
+    <conversation id="Conversation_1" name="Contract talks"/>
+    <subConversation id="SubConversation_1" name="Talks detail"/>
+    <callConversation id="CallConversation_1" name="Reuse talks" calledCollaborationRef="Collaboration_Unsup"/>
+    <conversationLink id="ConversationLink_1" sourceRef="Participant_Us" targetRef="Conversation_1"/>
+    <messageFlow id="MessageFlow_Unsup" sourceRef="Participant_Us" targetRef="Participant_Them"/>
+  </collaboration>
+  <process id="Process_Us" name="Our side" isExecutable="false">
+    <startEvent id="StartEvent_Unsup" name="Start">
+      <outgoing>Flow_U1</outgoing>
+    </startEvent>
+    <task id="Task_Multi" name="Fan out to all regions">
+      <incoming>Flow_U1</incoming>
+      <outgoing>Flow_U2</outgoing>
+      <multiInstanceLoopCharacteristics id="MultiLoop_1" isSequential="false">
+        <loopCardinality xsi:type="tFormalExpression">5</loopCardinality>
+      </multiInstanceLoopCharacteristics>
+    </task>
+    <task id="Task_StandardLoop" name="Retry until ok">
+      <incoming>Flow_U2</incoming>
+      <outgoing>Flow_U3</outgoing>
+      <standardLoopCharacteristics id="StdLoop_1" loopMaximum="10">
+        <loopCondition xsi:type="tFormalExpression">not ok</loopCondition>
+      </standardLoopCharacteristics>
+    </task>
+    <subProcess id="SubProcess_AdHoc" name="Ad-hoc review" adHoc="true">
+      <task id="Task_ReviewA" name="Review part A"/>
+      <task id="Task_ReviewB" name="Review part B"/>
+    </subProcess>
+    <!-- adHocSubProcess is a top-level BPMN activity (no adHoc attribute). The converter
+         imports it as a plain SubProcess and reports the lost ordering/completionCondition. -->
+    <adHocSubProcess id="AdHocOrder" name="Ordered ad-hoc work" ordering="Parallel">
+      <task id="Task_OrderedA" name="Ordered step A"/>
+      <task id="Task_OrderedB" name="Ordered step B"/>
+      <completionCondition xsi:type="tFormalExpression">done</completionCondition>
+    </adHocSubProcess>
+    <transaction id="Transaction_Unsup" name="Compensable payment">
+      <incoming>Flow_U3</incoming>
+      <outgoing>Flow_U4</outgoing>
+      <task id="Task_PayU" name="Pay">
+        <incoming>Flow_UT0</incoming>
+        <outgoing>Flow_UT1</outgoing>
+      </task>
+      <startEvent id="StartEvent_PayU" name="Pay start">
+        <outgoing>Flow_UT0</outgoing>
+      </startEvent>
+      <endEvent id="EndEvent_PayU" name="Pay end">
+        <incoming>Flow_UT1</incoming>
+      </endEvent>
+      <sequenceFlow id="Flow_UT0" sourceRef="StartEvent_PayU" targetRef="Task_PayU"/>
+      <sequenceFlow id="Flow_UT1" sourceRef="Task_PayU" targetRef="EndEvent_PayU"/>
+      <boundaryEvent id="Boundary_Compensate" attachedToRef="Task_PayU" cancelActivity="false">
+        <outgoing>Flow_U5</outgoing>
+        <compensateEventDefinition id="CompensateBoundaryDef" waitForCompletion="true"/>
+      </boundaryEvent>
+      <task id="Task_UndoPay" name="Undo payment" isForCompensation="true">
+        <incoming>Flow_U5</incoming>
+      </task>
+      <sequenceFlow id="Flow_U5" sourceRef="Boundary_Compensate" targetRef="Task_UndoPay"/>
+      <!-- Compensation link: the handler task (isForCompensation) associated with the
+           activity it compensates. Imports as Association + Properties flags. -->
+      <association id="Association_Comp" sourceRef="Task_UndoPay" targetRef="Task_PayU"/>
+    </transaction>
+    <endEvent id="EndEvent_Unsup" name="End">
+      <incoming>Flow_U4</incoming>
+      <compensateEventDefinition id="CompensateEndDef" activityRef="Task_PayU" waitForCompletion="true"/>
+    </endEvent>
+    <sequenceFlow id="Flow_U1" sourceRef="StartEvent_Unsup" targetRef="Task_Multi"/>
+    <sequenceFlow id="Flow_U2" sourceRef="Task_Multi" targetRef="Task_StandardLoop"/>
+    <sequenceFlow id="Flow_U3" sourceRef="Task_StandardLoop" targetRef="Transaction_Unsup"/>
+    <sequenceFlow id="Flow_U4" sourceRef="Transaction_Unsup" targetRef="EndEvent_Unsup"/>
+  </process>
+  <process id="Process_Them" name="Their side" isExecutable="false">
+    <startEvent id="StartEvent_Them" name="Start">
+      <outgoing>Flow_T1</outgoing>
+    </startEvent>
+    <task id="Task_Them" name="Their work">
+      <incoming>Flow_T1</incoming>
+      <outgoing>Flow_T2</outgoing>
+    </task>
+    <endEvent id="EndEvent_Them" name="End">
+      <incoming>Flow_T2</incoming>
+    </endEvent>
+    <sequenceFlow id="Flow_T1" sourceRef="StartEvent_Them" targetRef="Task_Them"/>
+    <sequenceFlow id="Flow_T2" sourceRef="Task_Them" targetRef="EndEvent_Them"/>
+  </process>
+  <signal id="Signal_Unused" name="Defined but never used"/>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1" name="Unsupported constructs">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_Unsup">
+      <bpmndi:BPMNShape id="Participant_Us_di" bpmnElement="Participant_Us" isHorizontal="true">
+        <dc:Bounds x="160" y="80" width="600" height="300"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_Them_di" bpmnElement="Participant_Them" isHorizontal="true">
+        <dc:Bounds x="160" y="440" width="600" height="200"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ChoreoTask_1_di" bpmnElement="ChoreoTask_1">
+        <dc:Bounds x="300" y="460" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SubChoreo_1_di" bpmnElement="SubChoreo_1" isExpanded="true">
+        <dc:Bounds x="480" y="460" width="200" height="120"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Conversation_1_di" bpmnElement="Conversation_1">
+        <dc:Bounds x="320" y="620" width="60" height="60"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="ConversationLink_1_di" bpmnElement="ConversationLink_1">
+        <di:waypoint x="340" y="620"/>
+        <di:waypoint x="340" y="380"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MessageFlow_Unsup_di" bpmnElement="MessageFlow_Unsup">
+        <di:waypoint x="400" y="380"/>
+        <di:waypoint x="400" y="460"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>

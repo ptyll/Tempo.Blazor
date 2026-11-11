@@ -60,7 +60,8 @@ public sealed class BpmnXmlImporterTests
         model.Metadata.SourceSystem.Should().Be("bpmn-xml");
         model.Metadata.SourceVersion.Should().Be("http://tempo.example/bpmn/corpus");
         model.Metadata.LoadedAt.Should().Be(DateTimeOffset.UnixEpoch);
-        model.Views.Should().BeEmpty("BPMNDI view import is phase 3");
+        model.Views.Should().ContainSingle("the BPMNDI plane imports as one view (phase 3)")
+            .Which.Nodes.Should().HaveCount(model.Elements.Count);
 
         model.Elements.Select(element => element.Id).Should().Equal(
             "StartEvent_1", "Task_EnterOrder", "Gateway_Approved", "Task_Ship",
@@ -357,8 +358,10 @@ public sealed class BpmnXmlImporterTests
         var callActivity = Element(result.Models[0], "CallActivity_Fulfil");
         callActivity.SemanticType.Should().Be("CallActivity");
         Property(callActivity, "bpmn:calledElement").GetString().Should().Be("Process_Fulfilment");
-        Property(callActivity, "bpmn:calledElementBinding").GetString().Should().Be("latest");
-        Property(callActivity, "bpmn:calledElementVersion").GetString().Should().Be("3");
+        // Legacy unprefixed Camunda dialect: preserved under the Camunda namespace key so the
+        // exporter writes them back namespaced (schema-valid per bpmn-moddle).
+        Property(callActivity, "camunda:calledElementBinding").GetString().Should().Be("latest");
+        Property(callActivity, "camunda:calledElementVersion").GetString().Should().Be("3");
     }
 
     // -------------------------------------------------------------- data
@@ -607,7 +610,10 @@ public sealed class BpmnXmlImporterTests
 
         result.HasErrors.Should().BeFalse(result.ErrorMessage ?? "import failed");
         result.Models.Should().ContainSingle().Which.Elements.Should().HaveCount(taskCount);
-        watch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(10),
+        // Budget raised 10 s → 20 s (review finding 2): the assertion guards near-linear import,
+        // not an absolute wall-clock figure — under a parallel MSBuild/test load the same import
+        // that normally takes ~4 s has been observed at 11.1 s, so a 10 s cap flaked.
+        watch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(20),
             "the per-model id sets and the element index must keep the import near-linear");
     }
 

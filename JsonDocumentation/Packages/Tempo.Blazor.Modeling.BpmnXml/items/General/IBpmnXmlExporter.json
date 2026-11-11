@@ -1,0 +1,10 @@
+{
+  "kind": "Interface",
+  "category": "General",
+  "namespace": "Tempo.Blazor.Modeling.BpmnXml",
+  "description": "Exports modeling models back to BPMN 2.0 XML. Implementations are deterministic (same input = same XML: stable ordering, invariant-culture numbers, LF line endings, no BOM) and never throw for model-content problems — unrepresentable constructs land in Losses.",
+  "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+  "sourcePath": "src/Tempo.Blazor.Modeling.BpmnXml/IBpmnXmlExporter.cs",
+  "documentationStatus": "generated",
+  "itemName": "IBpmnXmlExporter"
+}

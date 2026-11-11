@@ -807,6 +807,7 @@ Key consequences:
 - **`TmModelingViewer`** (phase 6): chrome-less read-only viewer — roving text-alternative element list (BFS), diff/heatmap overlays applied to a presentation copy (`Data["viewerState"]` / `["viewerBadge"]` / `["viewerTitle"]`, `DiagramEdge.Title`), `ExportSvgAsync` (resolves overlay tokens), print block. Its overlay comes from the headless **`ModelingModelDiff.Compute(baseline, current)`** in Abstractions (`ModelingDiffOverlayDto`, including `ChangedRelationshipIds`).
 - **MCP parity** (phase 7): `modeling_apply_operations` runs the SAME `Authoring` policy (view operations allowed + post-batch re-validation of relationships incident to a parent change), accepts `viewpointRules`, and returns the applied diff; `modeling_get_property_schema` reads the schema the batch judges. Parity and response-shape snapshots live in `tests/Tempo.Blazor.Mcp.Tests` (`ModelingMcpParityTests`, `ModelingMcpContractSnapshotTests`); no existing message string changed.
 - **Hosting docs**: [docs/modeling-hosting-guide.md](docs/modeling-hosting-guide.md) is the writer implementation pattern with optimistic concurrency (capabilities, atomic apply, schema/lookups, issue mapping, MCP wiring); the MCP catalog is [docs/modeling-mcp-tools.md](docs/modeling-mcp-tools.md).
+- **BPMN 2.0 XML converter** (`Tempo.Blazor.Modeling.BpmnXml`, headless — depends only on `Tempo.Blazor.Abstractions`): deterministic, loss-reporting import/export BPMN 2.0 XML ⇄ `ModelingModelDto` (`IBpmnXmlImporter`/`IBpmnXmlExporter`, `AddTempoBpmnXml()`); safe parser (DTD prohibited, no resolver, size/depth/count limits), headless `BpmnAutoLayout` for models without BPMNDI, Camunda/Signavio/Bizagi tool plugins, host extension namespace `https://tempo.blazor/schemas/bpmn-extensions`; MCP tools `modeling_import_bpmn`/`modeling_export_bpmn`. User guide: [docs/modeling-bpmn-xml.md](docs/modeling-bpmn-xml.md).
 
 ## Email Template Editor
 
@@ -976,6 +977,7 @@ Conventions the pipeline already encodes: `[Parameter(CaptureUnmatchedValues)]` 
 | `Tempo.Blazor.DiagramEditor` | Diagram editor components, services, CSS, and JS |
 | `Tempo.Blazor.Wireframe` | Wireframe editor components, CSS, and JS |
 | `Tempo.Blazor.Modeling` | Modeling editor + `TmModelingViewer` built on DiagramEditor; full BPMN authoring (change set v2, writer capabilities, property schema/lookups, MCP parity — [docs/modeling-hosting-guide.md](docs/modeling-hosting-guide.md)) |
+| `Tempo.Blazor.Modeling.BpmnXml` | Headless BPMN 2.0 XML ⇄ `ModelingModelDto` converter (import/export with BPMNDI, loss report, tool plugins, MCP tools — [docs/modeling-bpmn-xml.md](docs/modeling-bpmn-xml.md)) |
 | `Tempo.Blazor.Spreadsheet` | Spreadsheet editor components, XLSX support, CSS, and JS |
 | `Tempo.Blazor.GanttXlsx` | Optional Gantt XLSX import/export helpers |
 | `Tempo.Blazor.DocumentEditor` | Document editor UI and canvas runtime |

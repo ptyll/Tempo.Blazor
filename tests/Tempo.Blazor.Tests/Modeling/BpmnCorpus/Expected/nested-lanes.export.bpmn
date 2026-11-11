@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Process_Nested" targetNamespace="http://tempo.example/bpmn/corpus" exporter="Tempo.Blazor" exporterVersion="2.11.0" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:tempo="https://tempo.blazor/schemas/bpmn-extensions" name="Claim handling">
+  <process id="Process_Nested" name="Claim handling" isExecutable="false">
+    <laneSet>
+      <lane id="Lane_FrontOffice" name="Front office">
+        <flowNodeRef>StartEvent_Claim</flowNodeRef>
+        <flowNodeRef>Task_Register</flowNodeRef>
+        <flowNodeRef>Task_Respond</flowNodeRef>
+        <childLaneSet>
+          <lane id="Lane_Phone" name="Phone team">
+            <flowNodeRef>Task_PhoneCall</flowNodeRef>
+          </lane>
+          <lane id="Lane_Email" name="Email team">
+            <flowNodeRef>Task_ReplyEmail</flowNodeRef>
+          </lane>
+        </childLaneSet>
+      </lane>
+      <lane id="Lane_BackOffice" name="Back office">
+        <flowNodeRef>Task_Assess</flowNodeRef>
+        <flowNodeRef>Gateway_Decision</flowNodeRef>
+        <flowNodeRef>Task_Pay</flowNodeRef>
+        <flowNodeRef>EndEvent_Done</flowNodeRef>
+      </lane>
+    </laneSet>
+    <startEvent id="StartEvent_Claim" name="Claim received">
+      <outgoing>Flow_N1</outgoing>
+    </startEvent>
+    <task id="Task_Register" name="Register claim">
+      <incoming>Flow_N1</incoming>
+      <outgoing>Flow_N2</outgoing>
+    </task>
+    <task id="Task_PhoneCall" name="Phone the client">
+      <incoming>Flow_N2</incoming>
+      <outgoing>Flow_N3</outgoing>
+    </task>
+    <task id="Task_ReplyEmail" name="Reply by email">
+      <incoming>Flow_N3</incoming>
+      <outgoing>Flow_N4</outgoing>
+    </task>
+    <task id="Task_Respond" name="Respond to client">
+      <incoming>Flow_N4</incoming>
+      <outgoing>Flow_N5</outgoing>
+    </task>
+    <task id="Task_Assess" name="Assess claim">
+      <incoming>Flow_N5</incoming>
+      <outgoing>Flow_N6</outgoing>
+    </task>
+    <exclusiveGateway id="Gateway_Decision" name="Pay out?">
+      <incoming>Flow_N6</incoming>
+      <outgoing>Flow_N7</outgoing>
+      <outgoing>Flow_N8</outgoing>
+    </exclusiveGateway>
+    <task id="Task_Pay" name="Pay out">
+      <incoming>Flow_N7</incoming>
+      <outgoing>Flow_N9</outgoing>
+    </task>
+    <endEvent id="EndEvent_Done" name="Claim closed">
+      <incoming>Flow_N8</incoming>
+      <incoming>Flow_N9</incoming>
+    </endEvent>
+    <sequenceFlow id="Flow_N1" sourceRef="StartEvent_Claim" targetRef="Task_Register" />
+    <sequenceFlow id="Flow_N2" sourceRef="Task_Register" targetRef="Task_PhoneCall" />
+    <sequenceFlow id="Flow_N3" sourceRef="Task_PhoneCall" targetRef="Task_ReplyEmail" />
+    <sequenceFlow id="Flow_N4" sourceRef="Task_ReplyEmail" targetRef="Task_Respond" />
+    <sequenceFlow id="Flow_N5" sourceRef="Task_Respond" targetRef="Task_Assess" />
+    <sequenceFlow id="Flow_N6" sourceRef="Task_Assess" targetRef="Gateway_Decision" />
+    <sequenceFlow id="Flow_N7" sourceRef="Gateway_Decision" targetRef="Task_Pay" name="yes" />
+    <sequenceFlow id="Flow_N8" sourceRef="Gateway_Decision" targetRef="EndEvent_Done" name="no" />
+    <sequenceFlow id="Flow_N9" sourceRef="Task_Pay" targetRef="EndEvent_Done" />
+  </process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_BPMNPlane_1" name="Claim handling">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_Nested">
+      <bpmndi:BPMNShape id="Lane_FrontOffice_di" bpmnElement="Lane_FrontOffice" isHorizontal="true">
+        <dc:Bounds x="160" y="80" width="760" height="260" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Phone_di" bpmnElement="Lane_Phone" isHorizontal="true">
+        <dc:Bounds x="190" y="80" width="730" height="130" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Email_di" bpmnElement="Lane_Email" isHorizontal="true">
+        <dc:Bounds x="190" y="210" width="730" height="130" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_BackOffice_di" bpmnElement="Lane_BackOffice" isHorizontal="true">
+        <dc:Bounds x="160" y="340" width="760" height="160" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_Claim_di" bpmnElement="StartEvent_Claim">
+        <dc:Bounds x="212" y="162" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Register_di" bpmnElement="Task_Register">
+        <dc:Bounds x="300" y="140" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_PhoneCall_di" bpmnElement="Task_PhoneCall">
+        <dc:Bounds x="470" y="140" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ReplyEmail_di" bpmnElement="Task_ReplyEmail">
+        <dc:Bounds x="640" y="240" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Respond_di" bpmnElement="Task_Respond">
+        <dc:Bounds x="790" y="240" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Assess_di" bpmnElement="Task_Assess">
+        <dc:Bounds x="300" y="380" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Decision_di" bpmnElement="Gateway_Decision" isMarkerVisible="true">
+        <dc:Bounds x="465" y="395" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Pay_di" bpmnElement="Task_Pay">
+        <dc:Bounds x="580" y="380" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Done_di" bpmnElement="EndEvent_Done">
+        <dc:Bounds x="752" y="402" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_N1_di" bpmnElement="Flow_N1">
+        <di:waypoint x="248" y="180" />
+        <di:waypoint x="300" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_N2_di" bpmnElement="Flow_N2">
+        <di:waypoint x="400" y="180" />
+        <di:waypoint x="470" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_N3_di" bpmnElement="Flow_N3">
+        <di:waypoint x="520" y="220" />
+        <di:waypoint x="520" y="280" />
+        <di:waypoint x="690" y="280" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_N4_di" bpmnElement="Flow_N4">
+        <di:waypoint x="740" y="280" />
+        <di:waypoint x="840" y="280" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_N5_di" bpmnElement="Flow_N5">
+        <di:waypoint x="840" y="320" />
+        <di:waypoint x="840" y="500" />
+        <di:waypoint x="350" y="500" />
+        <di:waypoint x="350" y="460" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_N6_di" bpmnElement="Flow_N6">
+        <di:waypoint x="400" y="420" />
+        <di:waypoint x="465" y="420" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_N7_di" bpmnElement="Flow_N7">
+        <di:waypoint x="515" y="420" />
+        <di:waypoint x="580" y="420" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_N8_di" bpmnElement="Flow_N8">
+        <di:waypoint x="490" y="445" />
+        <di:waypoint x="490" y="420" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_N9_di" bpmnElement="Flow_N9">
+        <di:waypoint x="680" y="420" />
+        <di:waypoint x="752" y="420" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>

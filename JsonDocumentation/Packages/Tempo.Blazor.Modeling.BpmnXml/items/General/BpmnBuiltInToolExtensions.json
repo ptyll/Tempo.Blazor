@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "General",
+  "namespace": "Tempo.Blazor.Modeling.BpmnXml",
+  "description": "The built-in tool dialect plugins of the headless BPMN 2.0 XML converter, in their fixed registration order (Camunda, Signavio, Bizagi). State-free — fresh instances are cheap, so callers and DI can share this list or create their own; the mapping is deterministic either way.",
+  "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+  "sourcePath": "src/Tempo.Blazor.Modeling.BpmnXml/BpmnToolExtensions.cs",
+  "documentationStatus": "generated",
+  "itemName": "BpmnBuiltInToolExtensions"
+}

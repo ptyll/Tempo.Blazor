@@ -18,7 +18,9 @@
           "Name": "Us",
           "ParentId": "",
           "Description": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:isHorizontal": "true"
+          },
           "Tags": [],
           "Governance": {
             "TrustLevel": "",
@@ -460,12 +462,290 @@
             "externalModelRef": {
               "modelId": "Process_Them",
               "elementId": "Participant_Them"
-            }
+            },
+            "bpmndi:waypoints": [
+              {
+                "x": 400,
+                "y": 380
+              },
+              {
+                "x": 400,
+                "y": 460
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
           },
           "Tags": []
         }
       ],
-      "Views": [],
+      "Views": [
+        {
+          "Id": "BPMNPlane_1",
+          "Name": "Unsupported constructs",
+          "Notation": "bpmn2",
+          "ViewpointKey": "",
+          "Nodes": [
+            {
+              "ElementId": "Participant_Us",
+              "X": 160,
+              "Y": 80,
+              "Width": 600,
+              "Height": 300,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "StartEvent_Unsup",
+              "X": 90,
+              "Y": 420,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": "Participant_Us"
+            },
+            {
+              "ElementId": "Task_Multi",
+              "X": 550,
+              "Y": 638,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": "Participant_Us"
+            },
+            {
+              "ElementId": "Task_StandardLoop",
+              "X": 1010,
+              "Y": 638,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": "Participant_Us"
+            },
+            {
+              "ElementId": "SubProcess_AdHoc",
+              "X": 90,
+              "Y": 476,
+              "Width": 140,
+              "Height": 220,
+              "ParentNodeId": "Participant_Us"
+            },
+            {
+              "ElementId": "Task_ReviewA",
+              "X": 110,
+              "Y": 496,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": "SubProcess_AdHoc"
+            },
+            {
+              "ElementId": "Task_ReviewB",
+              "X": 110,
+              "Y": 596,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": "SubProcess_AdHoc"
+            },
+            {
+              "ElementId": "AdHocOrder",
+              "X": 90,
+              "Y": 716,
+              "Width": 140,
+              "Height": 220,
+              "ParentNodeId": "Participant_Us"
+            },
+            {
+              "ElementId": "Task_OrderedA",
+              "X": 110,
+              "Y": 736,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": "AdHocOrder"
+            },
+            {
+              "ElementId": "Task_OrderedB",
+              "X": 110,
+              "Y": 836,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": "AdHocOrder"
+            },
+            {
+              "ElementId": "Transaction_Unsup",
+              "X": 1470,
+              "Y": 590,
+              "Width": 420,
+              "Height": 176,
+              "ParentNodeId": "Participant_Us"
+            },
+            {
+              "ElementId": "Task_PayU",
+              "X": 1630,
+              "Y": 610,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": "Transaction_Unsup"
+            },
+            {
+              "ElementId": "StartEvent_PayU",
+              "X": 1490,
+              "Y": 660,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": "Transaction_Unsup"
+            },
+            {
+              "ElementId": "EndEvent_PayU",
+              "X": 1770,
+              "Y": 610,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": "Transaction_Unsup"
+            },
+            {
+              "ElementId": "Boundary_Compensate",
+              "X": 1630,
+              "Y": 710,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": "Transaction_Unsup"
+            },
+            {
+              "ElementId": "Task_UndoPay",
+              "X": 1770,
+              "Y": 666,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": "Transaction_Unsup"
+            },
+            {
+              "ElementId": "EndEvent_Unsup",
+              "X": 1930,
+              "Y": 660,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": "Participant_Us"
+            }
+          ],
+          "Connections": [
+            {
+              "RelationshipId": "Flow_UT0",
+              "SourceNodeId": "StartEvent_PayU",
+              "TargetNodeId": "Task_PayU",
+              "Waypoints": [
+                {
+                  "X": 1526,
+                  "Y": 678
+                },
+                {
+                  "X": 1630,
+                  "Y": 650
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_UT1",
+              "SourceNodeId": "Task_PayU",
+              "TargetNodeId": "EndEvent_PayU",
+              "Waypoints": [
+                {
+                  "X": 1730,
+                  "Y": 650
+                },
+                {
+                  "X": 1770,
+                  "Y": 628
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_U5",
+              "SourceNodeId": "Boundary_Compensate",
+              "TargetNodeId": "Task_UndoPay",
+              "Waypoints": [
+                {
+                  "X": 1666,
+                  "Y": 728
+                },
+                {
+                  "X": 1770,
+                  "Y": 706
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Association_Comp",
+              "SourceNodeId": "Task_UndoPay",
+              "TargetNodeId": "Task_PayU",
+              "Waypoints": [
+                {
+                  "X": 1770,
+                  "Y": 706
+                },
+                {
+                  "X": 1730,
+                  "Y": 650
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_U1",
+              "SourceNodeId": "StartEvent_Unsup",
+              "TargetNodeId": "Task_Multi",
+              "Waypoints": [
+                {
+                  "X": 126,
+                  "Y": 438
+                },
+                {
+                  "X": 550,
+                  "Y": 678
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_U2",
+              "SourceNodeId": "Task_Multi",
+              "TargetNodeId": "Task_StandardLoop",
+              "Waypoints": [
+                {
+                  "X": 650,
+                  "Y": 678
+                },
+                {
+                  "X": 1010,
+                  "Y": 678
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_U3",
+              "SourceNodeId": "Task_StandardLoop",
+              "TargetNodeId": "Transaction_Unsup",
+              "Waypoints": [
+                {
+                  "X": 1110,
+                  "Y": 678
+                },
+                {
+                  "X": 1470,
+                  "Y": 678
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_U4",
+              "SourceNodeId": "Transaction_Unsup",
+              "TargetNodeId": "EndEvent_Unsup",
+              "Waypoints": [
+                {
+                  "X": 1890,
+                  "Y": 678
+                },
+                {
+                  "X": 1930,
+                  "Y": 678
+                }
+              ]
+            }
+          ]
+        }
+      ],
       "Issues": [
         {
           "Id": "bpmn-import-loss-0001",
@@ -577,6 +857,42 @@
         },
         {
           "Id": "bpmn-import-loss-0013",
+          "Severity": "Warning",
+          "Category": "bpmn-import",
+          "SourceElementId": "ChoreoTask_1_di",
+          "SourceRelationshipId": "",
+          "Message": "BPMNShape: BPMNShape references \u0027ChoreoTask_1\u0027 which is not an imported model element; the diagram geometry is not preserved.",
+          "SuggestedFix": ""
+        },
+        {
+          "Id": "bpmn-import-loss-0014",
+          "Severity": "Warning",
+          "Category": "bpmn-import",
+          "SourceElementId": "SubChoreo_1_di",
+          "SourceRelationshipId": "",
+          "Message": "BPMNShape: BPMNShape references \u0027SubChoreo_1\u0027 which is not an imported model element; the diagram geometry is not preserved.",
+          "SuggestedFix": ""
+        },
+        {
+          "Id": "bpmn-import-loss-0015",
+          "Severity": "Warning",
+          "Category": "bpmn-import",
+          "SourceElementId": "Conversation_1_di",
+          "SourceRelationshipId": "",
+          "Message": "BPMNShape: BPMNShape references \u0027Conversation_1\u0027 which is not an imported model element; the diagram geometry is not preserved.",
+          "SuggestedFix": ""
+        },
+        {
+          "Id": "bpmn-import-loss-0016",
+          "Severity": "Warning",
+          "Category": "bpmn-import",
+          "SourceElementId": "ConversationLink_1_di",
+          "SourceRelationshipId": "",
+          "Message": "BPMNEdge: BPMNEdge references \u0027ConversationLink_1\u0027 which is not an imported model relationship; the diagram geometry is not preserved.",
+          "SuggestedFix": ""
+        },
+        {
+          "Id": "bpmn-import-loss-0017",
           "Severity": "Info",
           "Category": "bpmn-import",
           "SourceElementId": "Signal_Unused",
@@ -591,7 +907,9 @@
         "LoadedAt": "1970-01-01T00:00:00+00:00",
         "IsFresh": true
       },
-      "Properties": {}
+      "Properties": {
+        "bpmn:isExecutable": "false"
+      }
     },
     {
       "Id": "Process_Them",
@@ -611,7 +929,9 @@
           "Name": "Them",
           "ParentId": "",
           "Description": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:isHorizontal": "true"
+          },
           "Tags": [],
           "Governance": {
             "TrustLevel": "",
@@ -702,7 +1022,80 @@
           "Tags": []
         }
       ],
-      "Views": [],
+      "Views": [
+        {
+          "Id": "BPMNPlane_1",
+          "Name": "Unsupported constructs",
+          "Notation": "bpmn2",
+          "ViewpointKey": "",
+          "Nodes": [
+            {
+              "ElementId": "Participant_Them",
+              "X": 160,
+              "Y": 440,
+              "Width": 600,
+              "Height": 200,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "StartEvent_Them",
+              "X": 90,
+              "Y": 702,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": "Participant_Them"
+            },
+            {
+              "ElementId": "Task_Them",
+              "X": 230,
+              "Y": 680,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": "Participant_Them"
+            },
+            {
+              "ElementId": "EndEvent_Them",
+              "X": 370,
+              "Y": 702,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": "Participant_Them"
+            }
+          ],
+          "Connections": [
+            {
+              "RelationshipId": "Flow_T1",
+              "SourceNodeId": "StartEvent_Them",
+              "TargetNodeId": "Task_Them",
+              "Waypoints": [
+                {
+                  "X": 126,
+                  "Y": 720
+                },
+                {
+                  "X": 230,
+                  "Y": 720
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_T2",
+              "SourceNodeId": "Task_Them",
+              "TargetNodeId": "EndEvent_Them",
+              "Waypoints": [
+                {
+                  "X": 330,
+                  "Y": 720
+                },
+                {
+                  "X": 370,
+                  "Y": 720
+                }
+              ]
+            }
+          ]
+        }
+      ],
       "Issues": [],
       "Metadata": {
         "SourceSystem": "bpmn-xml",
@@ -710,7 +1103,9 @@
         "LoadedAt": "1970-01-01T00:00:00+00:00",
         "IsFresh": true
       },
-      "Properties": {}
+      "Properties": {
+        "bpmn:isExecutable": "false"
+      }
     }
   ],
   "Losses": [
@@ -799,6 +1194,34 @@
       "Severity": 0
     },
     {
+      "ElementId": "ChoreoTask_1_di",
+      "XmlPath": "/definitions[@id=\u0027Definitions_Unsupported\u0027]/BPMNDiagram[@id=\u0027BPMNDiagram_1\u0027]/BPMNPlane[@id=\u0027BPMNPlane_1\u0027]/BPMNShape[@id=\u0027ChoreoTask_1_di\u0027]",
+      "Construct": "BPMNShape",
+      "Reason": "BPMNShape references \u0027ChoreoTask_1\u0027 which is not an imported model element; the diagram geometry is not preserved.",
+      "Severity": 0
+    },
+    {
+      "ElementId": "SubChoreo_1_di",
+      "XmlPath": "/definitions[@id=\u0027Definitions_Unsupported\u0027]/BPMNDiagram[@id=\u0027BPMNDiagram_1\u0027]/BPMNPlane[@id=\u0027BPMNPlane_1\u0027]/BPMNShape[@id=\u0027SubChoreo_1_di\u0027]",
+      "Construct": "BPMNShape",
+      "Reason": "BPMNShape references \u0027SubChoreo_1\u0027 which is not an imported model element; the diagram geometry is not preserved.",
+      "Severity": 0
+    },
+    {
+      "ElementId": "Conversation_1_di",
+      "XmlPath": "/definitions[@id=\u0027Definitions_Unsupported\u0027]/BPMNDiagram[@id=\u0027BPMNDiagram_1\u0027]/BPMNPlane[@id=\u0027BPMNPlane_1\u0027]/BPMNShape[@id=\u0027Conversation_1_di\u0027]",
+      "Construct": "BPMNShape",
+      "Reason": "BPMNShape references \u0027Conversation_1\u0027 which is not an imported model element; the diagram geometry is not preserved.",
+      "Severity": 0
+    },
+    {
+      "ElementId": "ConversationLink_1_di",
+      "XmlPath": "/definitions[@id=\u0027Definitions_Unsupported\u0027]/BPMNDiagram[@id=\u0027BPMNDiagram_1\u0027]/BPMNPlane[@id=\u0027BPMNPlane_1\u0027]/BPMNEdge[@id=\u0027ConversationLink_1_di\u0027]",
+      "Construct": "BPMNEdge",
+      "Reason": "BPMNEdge references \u0027ConversationLink_1\u0027 which is not an imported model relationship; the diagram geometry is not preserved.",
+      "Severity": 0
+    },
+    {
       "ElementId": "Signal_Unused",
       "XmlPath": "/definitions/signal[@id=\u0027Signal_Unused\u0027]",
       "Construct": "signal",
@@ -806,7 +1229,40 @@
       "Severity": 2
     }
   ],
-  "Warnings": [],
+  "Warnings": [
+    {
+      "Message": "BPMNShape \u0027ChoreoTask_1_di\u0027 references \u0027ChoreoTask_1\u0027, which is not an imported element; the diagram geometry is not preserved.",
+      "XmlPath": "/definitions[@id=\u0027Definitions_Unsupported\u0027]/BPMNDiagram[@id=\u0027BPMNDiagram_1\u0027]/BPMNPlane[@id=\u0027BPMNPlane_1\u0027]/BPMNShape[@id=\u0027ChoreoTask_1_di\u0027]"
+    },
+    {
+      "Message": "BPMNShape \u0027SubChoreo_1_di\u0027 references \u0027SubChoreo_1\u0027, which is not an imported element; the diagram geometry is not preserved.",
+      "XmlPath": "/definitions[@id=\u0027Definitions_Unsupported\u0027]/BPMNDiagram[@id=\u0027BPMNDiagram_1\u0027]/BPMNPlane[@id=\u0027BPMNPlane_1\u0027]/BPMNShape[@id=\u0027SubChoreo_1_di\u0027]"
+    },
+    {
+      "Message": "BPMNShape \u0027Conversation_1_di\u0027 references \u0027Conversation_1\u0027, which is not an imported element; the diagram geometry is not preserved.",
+      "XmlPath": "/definitions[@id=\u0027Definitions_Unsupported\u0027]/BPMNDiagram[@id=\u0027BPMNDiagram_1\u0027]/BPMNPlane[@id=\u0027BPMNPlane_1\u0027]/BPMNShape[@id=\u0027Conversation_1_di\u0027]"
+    },
+    {
+      "Message": "BPMNEdge \u0027ConversationLink_1_di\u0027 references \u0027ConversationLink_1\u0027, which is not an imported relationship; the diagram geometry is not preserved.",
+      "XmlPath": "/definitions[@id=\u0027Definitions_Unsupported\u0027]/BPMNDiagram[@id=\u0027BPMNDiagram_1\u0027]/BPMNPlane[@id=\u0027BPMNPlane_1\u0027]/BPMNEdge[@id=\u0027ConversationLink_1_di\u0027]"
+    },
+    {
+      "Message": "8 connection(s) have no BPMNDI edge in plane \u0027BPMNPlane_1\u0027; their waypoints were generated by the auto-layout: Flow_UT0, Flow_UT1, Flow_U5, Association_Comp, Flow_U1, Flow_U2, Flow_U3, Flow_U4",
+      "XmlPath": "/definitions"
+    },
+    {
+      "Message": "16 element(s) have no BPMNPlane shape in any plane of model \u0027Process_Us\u0027; their positions were generated by the auto-layout below the plane\u0027s diagram bounds: StartEvent_Unsup, Task_Multi, Task_StandardLoop, SubProcess_AdHoc, Task_ReviewA, Task_ReviewB, AdHocOrder, Task_OrderedA, Task_OrderedB, Transaction_Unsup, Task_PayU, StartEvent_PayU, EndEvent_PayU, Boundary_Compensate, Task_UndoPay, EndEvent_Unsup",
+      "XmlPath": "/definitions"
+    },
+    {
+      "Message": "2 connection(s) have no BPMNDI edge in plane \u0027BPMNPlane_1\u0027; their waypoints were generated by the auto-layout: Flow_T1, Flow_T2",
+      "XmlPath": "/definitions"
+    },
+    {
+      "Message": "3 element(s) have no BPMNPlane shape in any plane of model \u0027Process_Them\u0027; their positions were generated by the auto-layout below the plane\u0027s diagram bounds: StartEvent_Them, Task_Them, EndEvent_Them",
+      "XmlPath": "/definitions"
+    }
+  ],
   "HasErrors": false,
   "ErrorMessage": null
 }

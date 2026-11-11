@@ -37,7 +37,9 @@
           "Name": "Inner detail",
           "ParentId": "",
           "Description": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:isExpanded": "false"
+          },
           "Tags": [],
           "Governance": {
             "TrustLevel": "",
@@ -132,7 +134,19 @@
           "TargetElementId": "Task_Inner",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 208,
+                "y": 180
+              },
+              {
+                "x": 260,
+                "y": 180
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_Inner"
+          },
           "Tags": []
         },
         {
@@ -143,7 +157,19 @@
           "TargetElementId": "EndEvent_Inner",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 360,
+                "y": 180
+              },
+              {
+                "x": 432,
+                "y": 180
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_Inner"
+          },
           "Tags": []
         },
         {
@@ -154,7 +180,19 @@
           "TargetElementId": "SubProcess_Collapsed",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 188,
+                "y": 180
+              },
+              {
+                "x": 260,
+                "y": 180
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_Collapsed"
+          },
           "Tags": []
         },
         {
@@ -165,11 +203,152 @@
           "TargetElementId": "EndEvent_Collapsed",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 360,
+                "y": 180
+              },
+              {
+                "x": 432,
+                "y": 180
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_Collapsed"
+          },
           "Tags": []
         }
       ],
-      "Views": [],
+      "Views": [
+        {
+          "Id": "BPMNPlane_Collapsed",
+          "Name": "Collapsed overview",
+          "Notation": "bpmn2",
+          "ViewpointKey": "",
+          "Nodes": [
+            {
+              "ElementId": "StartEvent_Collapsed",
+              "X": 152,
+              "Y": 162,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "SubProcess_Collapsed",
+              "X": 260,
+              "Y": 140,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "EndEvent_Collapsed",
+              "X": 432,
+              "Y": 162,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            }
+          ],
+          "Connections": [
+            {
+              "RelationshipId": "Flow_C1",
+              "SourceNodeId": "StartEvent_Collapsed",
+              "TargetNodeId": "SubProcess_Collapsed",
+              "Waypoints": [
+                {
+                  "X": 188,
+                  "Y": 180
+                },
+                {
+                  "X": 260,
+                  "Y": 180
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_C4",
+              "SourceNodeId": "SubProcess_Collapsed",
+              "TargetNodeId": "EndEvent_Collapsed",
+              "Waypoints": [
+                {
+                  "X": 360,
+                  "Y": 180
+                },
+                {
+                  "X": 432,
+                  "Y": 180
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "Id": "BPMNPlane_Inner",
+          "Name": "Inner detail",
+          "Notation": "bpmn2",
+          "ViewpointKey": "",
+          "Nodes": [
+            {
+              "ElementId": "StartEvent_Inner",
+              "X": 172,
+              "Y": 162,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Task_Inner",
+              "X": 260,
+              "Y": 140,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "EndEvent_Inner",
+              "X": 432,
+              "Y": 162,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            }
+          ],
+          "Connections": [
+            {
+              "RelationshipId": "Flow_C2",
+              "SourceNodeId": "StartEvent_Inner",
+              "TargetNodeId": "Task_Inner",
+              "Waypoints": [
+                {
+                  "X": 208,
+                  "Y": 180
+                },
+                {
+                  "X": 260,
+                  "Y": 180
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_C3",
+              "SourceNodeId": "Task_Inner",
+              "TargetNodeId": "EndEvent_Inner",
+              "Waypoints": [
+                {
+                  "X": 360,
+                  "Y": 180
+                },
+                {
+                  "X": 432,
+                  "Y": 180
+                }
+              ]
+            }
+          ]
+        }
+      ],
       "Issues": [],
       "Metadata": {
         "SourceSystem": "bpmn-xml",
@@ -177,7 +356,9 @@
         "LoadedAt": "1970-01-01T00:00:00+00:00",
         "IsFresh": true
       },
-      "Properties": {}
+      "Properties": {
+        "bpmn:isExecutable": "false"
+      }
     }
   ],
   "Losses": [],

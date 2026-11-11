@@ -1,4 +1,5 @@
 using System.Reflection;
+using Microsoft.AspNetCore.StaticFiles;
 using Tempo.Blazor.Configuration;
 using Tempo.Blazor.Modeling;
 using Tempo.Blazor.EmailTemplates;
@@ -226,7 +227,14 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseStaticFiles();
+
+// BPMN corpus samples (.bpmn) are unknown to the default content-type map and StaticFileMiddleware
+// 404s unknown extensions — map the extension so the /modeling-editor ?bpmn= deep link can fetch
+// the SharedUI static web assets on this host (finding 1).
+var staticFileContentTypes = new FileExtensionContentTypeProvider();
+staticFileContentTypes.Mappings[".bpmn"] = "application/xml";
+app.UseStaticFiles(new StaticFileOptions { ContentTypeProvider = staticFileContentTypes });
+
 app.UseRouting();
 
 // N193: dedicated readiness endpoint for the E2E host probe — /health must answer 2xx only when

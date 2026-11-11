@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "General",
+  "namespace": "Tempo.Blazor.Modeling.BpmnXml",
+  "description": "How much of the modeling model the exporter writes back into the BPMN document.",
+  "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+  "sourcePath": "src/Tempo.Blazor.Modeling.BpmnXml/IBpmnXmlExporter.cs",
+  "documentationStatus": "generated",
+  "itemName": "BpmnExportProfile"
+}
