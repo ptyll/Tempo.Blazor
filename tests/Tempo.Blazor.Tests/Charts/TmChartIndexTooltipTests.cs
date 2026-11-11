@@ -1,5 +1,9 @@
 using System.Globalization;
+using System.Reflection;
 using Bunit;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Rendering;
+using Microsoft.AspNetCore.Components.RenderTree;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Tempo.Blazor.Components.Charts;
@@ -790,6 +794,148 @@ public class TmChartIndexTooltipTests : LocalizationTestBase
 
         cut.Find("svg").GetAttribute("aria-label").Should()
             .Be(string.Format(Localized("TmChart_AriaLabel"), ChartType.Bar));
+    }
+
+    // ── Overlay sequence numbers: many series must not displace the hover zones ──
+
+    /// <summary>
+    /// Seven series is one more than the six that used to make a per-series dot land on the zones
+    /// group's sequence number: with the old <c>720 + 8 * i</c> band the sixth dot (i = 5) took 760 and
+    /// Blazor could treat it as a REPLACEMENT of the zones group. That is the pinned-card bug this phase
+    /// fixes, so the dots and the zone rects now reuse ONE fixed sequence number per loop iteration.
+    /// </summary>
+    private static ChartData SevenSeriesData
+    {
+        get
+        {
+            var datasets = new ChartDataset[7];
+            for (var i = 0; i < datasets.Length; i++)
+            {
+                datasets[i] = new ChartDataset
+                {
+                    Label = $"Series {i + 1}",
+                    Values = [10 + i, 20 + i, 30 + i],
+                    Color = "#2563eb"
+                };
+            }
+
+            return new ChartData { Labels = ["Q1", "Q2", "Q3"], Datasets = datasets };
+        }
+    }
+
+    /// <summary>
+    /// The element frames the index overlay emits for the chart's CURRENT state, in document order.
+    /// The component's own render tree is the only place where the sequence numbers Blazor diffs on are
+    /// observable: they are what decides whether an appearing dot is a new sibling or a REPLACEMENT of
+    /// the zones group. (bUnit rebuilds its DOM from the render tree on every render, so comparing
+    /// element instances across two renders is not possible in a unit test; the browser-level contract is
+    /// proven by the TmChartIndexTooltip E2E lanes.)
+    /// </summary>
+    private static IReadOnlyList<RenderTreeFrame> OverlayElementFrames(TmChart chart)
+    {
+        var fragment = (RenderFragment)typeof(TmChart)
+            .GetProperty("IndexOverlayContent", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetValue(chart)!;
+
+        var builder = new RenderTreeBuilder();
+        fragment(builder);
+
+        var frames = builder.GetFrames();
+        var elements = new List<RenderTreeFrame>(frames.Count);
+        for (var i = 0; i < frames.Count; i++)
+        {
+            if (frames.Array[i].FrameType == RenderTreeFrameType.Element)
+            {
+                elements.Add(frames.Array[i]);
+            }
+        }
+
+        return elements;
+    }
+
+    private static bool IsElement(RenderTreeFrame frame, string name) =>
+        frame.FrameType == RenderTreeFrameType.Element && frame.ElementName == name;
+
+    [Fact]
+    public void IndexMode_SevenSeries_OverlaySequenceNumbersAreFixedPerLoopAndNeverCollide()
+    {
+        var cut = Render<TmChart>(p => p
+            .Add(x => x.Type, ChartType.Line)
+            .Add(x => x.Data, SevenSeriesData)
+            .Add(x => x.TooltipMode, ChartTooltipMode.Index));
+
+        cut.FindAll("rect.tm-chart__index-zone")[0].MouseOver();
+
+        var frames = OverlayElementFrames(cut.Instance);
+        var crosshair = frames.Where(f => IsElement(f, "line")).Select(f => f.Sequence).ToArray();
+        var dots = frames.Where(f => IsElement(f, "circle")).ToArray();
+        var zones = frames.Where(f => IsElement(f, "rect")).ToArray();
+        var group = frames.Where(f => IsElement(f, "g")).ToArray();
+
+        crosshair.Should().ContainSingle("the crosshair is present while a zone is hovered");
+        dots.Should().HaveCount(7, "one dot per series");
+        zones.Should().HaveCount(3, "one hover zone per category");
+        group.Should().ContainSingle();
+
+        // Blazor's convention for a loop body: ONE sequence number, reused on every iteration. A number
+        // that moves with the loop index is a band that grows, and that is how a dot reached 760.
+        dots.Select(d => d.Sequence).Distinct().Should().ContainSingle(
+            "every dot is an iteration of the same loop body");
+        zones.Select(z => z.Sequence).Distinct().Should().ContainSingle(
+            "every zone rect is an iteration of the same loop body");
+
+        // The real defect: on the sixth series (i = 5) the old 720 + 8 * i dot took the zones group's
+        // 760, so Blazor could treat the appearing dot as a REPLACEMENT of the group. The replaced group
+        // took the hover zones with it and the browser never delivered the mouseout that clears the card.
+        var reserved = crosshair.Concat(group.Select(g => g.Sequence)).ToArray();
+        dots.Select(d => d.Sequence).Should().NotIntersectWith(reserved);
+        zones.Select(z => z.Sequence).Should().NotIntersectWith(reserved);
+        zones.Select(z => z.Sequence).Should().NotIntersectWith(dots.Select(d => d.Sequence));
+
+        // The general form of the invariant: one sequence number may only ever be reused by iterations
+        // of the same loop body, never by two different element kinds.
+        frames.GroupBy(f => f.Sequence).Should().OnlyContain(
+            band => band.Select(f => f.ElementName).Distinct().Count() == 1,
+            "no band may run into the next one");
+    }
+
+    [Fact]
+    public void IndexMode_SevenSeries_KeepsEveryHoverZoneAndClearsTheCardOnLeave()
+    {
+        var cut = Render<TmChart>(p => p
+            .Add(x => x.Type, ChartType.Line)
+            .Add(x => x.Data, SevenSeriesData)
+            .Add(x => x.TooltipMode, ChartTooltipMode.Index));
+
+        cut.FindAll("rect.tm-chart__index-zone").Count.Should().Be(3);
+
+        for (var i = 0; i < 3; i++)
+        {
+            // Re-query every pass: each hover re-renders the overlay, so a cached element carries a
+            // stale handler id.
+            cut.FindAll("rect.tm-chart__index-zone")[i].MouseOver();
+
+            cut.FindAll("line.tm-chart__crosshair").Count.Should().Be(1);
+            cut.FindAll("circle.tm-chart__index-dot").Count.Should().Be(7);
+            cut.FindAll(".tm-chart__tooltip--index").Count.Should().Be(1);
+
+            // The zones may never be collateral damage of the appearing crosshair/dots: without them the
+            // pointer has nothing to leave, so the card can never be cleared.
+            cut.FindAll("g.tm-chart__index-zones").Count.Should().Be(1);
+            cut.FindAll("rect.tm-chart__index-zone").Count.Should().Be(3);
+            cut.FindAll("[data-testid='chart-index-zone-0']").Count.Should().Be(1);
+            cut.FindAll("[data-testid='chart-index-zone-2']").Count.Should().Be(1);
+        }
+
+        cut.FindAll("rect.tm-chart__index-zone")[0].MouseOver();
+        cut.FindAll(".tm-chart__tooltip--index").Count.Should().Be(1);
+
+        cut.FindAll("rect.tm-chart__index-zone")[0].MouseOut();
+
+        cut.FindAll(".tm-chart__tooltip--index").Count.Should().Be(0, "leaving the zone clears the card");
+        cut.FindAll("line.tm-chart__crosshair").Count.Should().Be(0);
+        cut.FindAll("circle.tm-chart__index-dot").Count.Should().Be(0);
+        cut.FindAll("rect.tm-chart__index-zone").Count.Should().Be(3, "the zones stay in the plot");
     }
 
     private string Localized(string key) => Services.GetRequiredService<ITmLocalizer>()[key];

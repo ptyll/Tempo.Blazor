@@ -482,6 +482,48 @@
   instead of arriving in one lump after a round trip, with the speed switch and the pause still answered mid-stream
   within three seconds. Both classes stay in the `Performance` category (idle-machine budgets).
 
+### Fixed — the `TmChart` index tooltip card no longer stays pinned after the pointer leaves (plan 7ba95ed6, Fáze 11)
+
+- **`TooltipMode="ChartTooltipMode.Index"` clears its card again when the pointer leaves the plot.** The overlay's
+  crosshair and its hover-zone group shared render-tree sequence number `0`, so showing the card could be diffed as a
+  REPLACEMENT of the zones group: the zone under the pointer left the document, the browser therefore never delivered
+  its `mouseout`, and the all-series card stayed pinned over the plot after the pointer had gone. It was visible on the
+  Blazor Server and InteractiveAuto hosts, whose DOM updates arrive from a circuit instead of the same renderer tick.
+  The overlay now uses FIXED, distinct sequence bands — crosshair `700`–`706`, per-series dots `720`–`726`, the zones
+  group `760`–`761` and the zone rects `770`–`779` — and both loop bodies reuse one number per iteration, so a band can
+  no longer grow into the next one as series or categories are added (the old per-series dot number `720 + 8 * i`
+  reached the zones group at the sixth series). Hovering a category now only INSERTS the crosshair frames: the zone
+  rects keep their identity, so the `mouseout` that clears the card always arrives. Guarded by `TmChartIndexTooltipTests`
+  (a seven-series line chart: no sequence number is shared by two element kinds, every dot/zone rect is one loop body,
+  and leaving a zone clears the card) and by the `TmChartIndexTooltip` browser specs on all three lanes, which assert
+  that the hovered zone node is still `isConnected` while the card is open and that the card clears
+  (`data-index-ordinal="-1"`) once the pointer leaves.
+
+### Tests — the core component and page specs run on the WASM, Server AND InteractiveAuto lanes (plan 7ba95ed6, Fáze 11)
+
+- **The `TmChart` index-tooltip defect the new lanes caught is fixed** — see the `Fixed` entry above: the hover zones
+  are no longer re-created when the crosshair appears, so the card clears on every host.
+- **Ten core specs are lane-agnostic and inherited by all three lanes.** `SortableListE2EBase`, `ContextUsageE2EBase`,
+  `DataDisplayKpiE2EBase`, `FacetFilterE2EBase`, `UsageMeterE2EBase`, `SegmentedControlE2EBase`, `TraceWaterfallE2EBase`,
+  `TmChartIndexTooltipE2EBase`, `AnalyticsKitE2EBase` and `TraceWaterfallPageE2EBase` (each already the WASM class's
+  base) are now also inherited by a `…ServerE2ETests` (`[TestCategory("Server")]`, `https://localhost:7107`) and a
+  `…InteractiveAutoE2ETests` (`[TestCategory("InteractiveAuto")]`, `https://localhost:7108`) subclass, and the WASM
+  subclasses carry `[TestCategory("WASM")]`. The keyboard walks (list grab/move/drop and Tab release, panel section
+  removal with its focus hand-back, tray roving + measured strip, waterfall roving tabindex and ←/→, chart arrow
+  walk/Escape), the pointer paths (real `pointer-drag.js` reorder, crosshair hover and tap pin, facet popover/sheet),
+  the geometry (375/390 px bands, container-query detail placement), the forced-colors and reduced-motion branches, the
+  axe scans and the state contracts (`role="meter"`, treegrid, dialog) are asserted on the circuit and on the
+  prerender→WASM handover, not only on WASM.
+- **The data-display KPI ticker is measured from the page's own frame log.** The old spec polled the value node from
+  .NET and called the first read "the first paint", which is a WASM-timing accident (on a Server circuit the node is
+  already mid-animation). `AnimatedNumber_CountsUpToItsTarget_AndRetargetsOnBump` and
+  `WithoutReducedMotion_TheTickerRuns_AndWithIt_TheValueLandsImmediately` now install a `MutationObserver` before
+  navigation and assert the painted sequence: the FIRST text is the value Blazor rendered itself (never a flash of
+  zero), the bump's frames really pass between the old and the new target and land exactly on it, and a reduced-motion
+  context paints no intermediate frame at all — the same assertions on all three lanes.
+- **Lane coverage is documented** in [docs/e2e-test-lanes.md](docs/e2e-test-lanes.md) (which specs have all three lanes,
+  how to run one lane, and the sequence-number/DOM-identity rule a new conditional overlay has to respect).
+
 ### Breaking changes and migration
 
 **No source-breaking change.** Every new member is additive or a default interface member; every new component is new. The behavior changes below are the complete list a 2.10.0 consumer can notice, with before/after:

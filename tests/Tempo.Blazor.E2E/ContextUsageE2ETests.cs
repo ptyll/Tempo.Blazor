@@ -386,8 +386,34 @@ public abstract class ContextUsageE2EBase : PlaywrightTestBase
 
 /// <summary>The WASM lane (the demo default).</summary>
 [TestClass]
+[TestCategory("WASM")]
 public class ContextUsageE2ETests : ContextUsageE2EBase
 {
     protected override string BaseUrl =>
         Environment.GetEnvironmentVariable("TM_E2E_WASM_URL") ?? "https://localhost:7106";
+}
+
+/// <summary>
+/// The Server lane (plan 7ba95ed6, Fáze 11): the same <c>TmContextUsage</c> panel over a real Blazor Server
+/// circuit. The reading's ARIA contract, the segment/grid/cell highlight walk, the section removal that hands
+/// the focus back instead of raising <c>#blazor-error-ui</c> (a rejected focus move tears a circuit down, so
+/// this is the lane that can prove the guard), the compaction, the over-budget turn, the keyboard walk, the
+/// edge states, the phone geometry and the scoped axe scan are all inherited.
+/// </summary>
+[TestClass]
+[TestCategory("Server")]
+public class ContextUsageServerE2ETests : ContextUsageE2EBase
+{
+    protected override string BaseUrl => "https://localhost:7107";
+}
+
+/// <summary>
+/// The InteractiveAuto lane: the same panel on the host that starts on the Server circuit and finishes on
+/// WebAssembly, so both runtimes and the handover between them see the same expectations.
+/// </summary>
+[TestClass]
+[TestCategory("InteractiveAuto")]
+public class ContextUsageInteractiveAutoE2ETests : ContextUsageE2EBase
+{
+    protected override string BaseUrl => "https://localhost:7108";
 }

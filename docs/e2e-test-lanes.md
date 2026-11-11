@@ -86,6 +86,47 @@ metric, not a budget, so they stay in the full lane without the `Performance` ca
 
 **Decision DEC-TEMPO-PERF-LANE-BUDGETS.** Wall-clock budgets are kept at their product value and moved to a dedicated serial lane rather than loosened for the shared full lane. Every perf spec logs its measured number (`[perf] ...` line) so the lane produces evidence even when green, and a red run is judged from the logged breakdown (FCP/navigation timings, render-blocking CDN resources of the demo) rather than by raising the threshold.
 
+## WASM / Server / InteractiveAuto lanes
+
+The suite also tags **which host** a spec runs against, because the same page can behave differently on each of the
+three demo hosts:
+
+- `[TestCategory("WASM")]` — the WebAssembly demo (`:7106`), the default.
+- `[TestCategory("Server")]` — the Blazor Server demo (`:7107`), i.e. a real circuit: keyboard and focus state travel
+  over SignalR, DOM updates arrive asynchronously and a rejected focus move tears the circuit down.
+- `[TestCategory("InteractiveAuto")]` — the InteractiveAuto demo (`:7108`): the page prerenders, becomes interactive on
+  the Server circuit and is then handed to WebAssembly, so the DOM is re-created mid-session.
+
+A spec that is not lane-specific should not exist in three copies. The pattern is one **lane-agnostic base** holding the
+behaviour and one **~10-line subclass per lane** overriding `BaseUrl` (the WASM subclass keeps the historical class name);
+`SortableListE2EBase` + `SortableListE2ETests`/`SortableListServerE2ETests`/`SortableListInteractiveAutoE2ETests` is the
+reference. Run one lane with
+`dotnet test tests/Tempo.Blazor.E2E --filter "FullyQualifiedName~<Spec>ServerE2ETests"` (and `…InteractiveAutoE2ETests`);
+the hosts are self-hosted by `PlaywrightTestBase` unless `TM_E2E_SELF_HOST=false`.
+
+These specs run on all three lanes today: `SortableList`, `ContextUsage`, `DataDisplayKpi`, `FacetFilter`, `UsageMeter`,
+`SegmentedControl`, `TraceWaterfall` (`/data-display`), `TraceWaterfallPage` (`/trace-waterfall`), `AnalyticsKit`
+(`/analytics-kit`), `TmChartIndexTooltip` (`/charts`), `AiAgents` and `AiAgentVisualizations`. Screenshots stay in
+`TestResults/` and are written once per lane (the lanes never run in parallel: `[assembly: DoNotParallelize]`, and the
+demo hosts bind fixed ports).
+
+**What a lane actually catches.** Two classes of defect only reproduce away from WASM, so a new interaction spec belongs
+on all three lanes instead of WASM only:
+
+- **Circuit-latency races.** A fixed `WaitForTimeoutAsync` after a key press can be enough on WASM (same renderer tick)
+  and too short across a SignalR round trip. Wait on the *observable state* (`WaitForFunctionAsync`/
+  `Expect(...).ToHaveCountAsync`) rather than sleeping.
+- **DOM-identity loss (proved on the InteractiveAuto lane).** When a render REPLACES the element under the pointer, the
+  browser never delivers that element's `mouseout`/`mouseleave`, so hover state sticks. `TmChart`'s index overlay hid this
+  for months because the crosshair and the hover-zone group shared render-tree sequence number `0`, and even a first fix
+  let a per-series dot land on the zones group's number at the sixth series. Rule for a conditional overlay: give the
+  persistent part and the appearing part **distinct, FIXED bands**, and give every loop body **one** sequence number that
+  is reused on every iteration — a number that moves with the loop index is a band that grows into the next one. Assert
+  node identity in the browser spec (`elementHandle.EvaluateAsync("el => el.isConnected")`); a bUnit render rebuilds its
+  DOM per render, so a component test can only assert the bands in the component's own render tree
+  (`RenderTreeFrame.Sequence`, as `TmChartIndexTooltipTests` does) plus the markup contract (the zones and their rects
+  are still there and `mouseout` clears the card).
+
 ## Regression screenshots
 
 **Regression-screenshot convention:** a `before`/`after` PNG pair may enter the

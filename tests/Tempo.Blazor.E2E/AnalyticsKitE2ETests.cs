@@ -428,8 +428,34 @@ public abstract class AnalyticsKitE2EBase : PlaywrightTestBase
 
 /// <summary>The WASM lane (the demo default).</summary>
 [TestClass]
+[TestCategory("WASM")]
 public class AnalyticsKitE2ETests : AnalyticsKitE2EBase
 {
     protected override string BaseUrl =>
         Environment.GetEnvironmentVariable("TM_E2E_WASM_URL") ?? "https://localhost:7106";
+}
+
+/// <summary>
+/// The Server lane (plan 7ba95ed6, Fáze 11): the assembled <c>/analytics-kit</c> scenario over a real Blazor
+/// Server circuit. The comparison chart's single tab stop and arrow walk with its one polite live region, the
+/// facet filter's toggle/chip path and its phone bottom sheet with the counted confirmation, the preset that
+/// moves the period and its comparison window, the segmented trays, the 375 px geometry and the scoped axe scan
+/// are all inherited.
+/// </summary>
+[TestClass]
+[TestCategory("Server")]
+public class AnalyticsKitServerE2ETests : AnalyticsKitE2EBase
+{
+    protected override string BaseUrl => "https://localhost:7107";
+}
+
+/// <summary>
+/// The InteractiveAuto lane: the same assembled page on the host that prerenders over the Server circuit and
+/// then hands it to WebAssembly, so the chart walk and the facet sheet are proven across the handover.
+/// </summary>
+[TestClass]
+[TestCategory("InteractiveAuto")]
+public class AnalyticsKitInteractiveAutoE2ETests : AnalyticsKitE2EBase
+{
+    protected override string BaseUrl => "https://localhost:7108";
 }

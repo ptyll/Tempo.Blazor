@@ -356,8 +356,33 @@ public abstract class SegmentedControlE2EBase : PlaywrightTestBase
 
 /// <summary>The WASM lane (the demo default).</summary>
 [TestClass]
+[TestCategory("WASM")]
 public class SegmentedControlE2ETests : SegmentedControlE2EBase
 {
     protected override string BaseUrl =>
         Environment.GetEnvironmentVariable("TM_E2E_WASM_URL") ?? "https://localhost:7106";
+}
+
+/// <summary>
+/// The Server lane (plan 7ba95ed6, Fáze 11): the same segmented tray and combobox highlight over a real Blazor
+/// Server circuit. The roving tab stop with its wrapping arrow walk, the measured sliding strip claimed only
+/// after the script placed it, the tab copy's <c>aria-controls</c>, the overflowing tray that scrolls the
+/// visited segment into view, the create-row keyboard path and the reduced-motion branch are all inherited.
+/// </summary>
+[TestClass]
+[TestCategory("Server")]
+public class SegmentedControlServerE2ETests : SegmentedControlE2EBase
+{
+    protected override string BaseUrl => "https://localhost:7107";
+}
+
+/// <summary>
+/// The InteractiveAuto lane: the same trays on the host that starts over the Server circuit and finishes on
+/// WebAssembly, so the measured strip and the overflow scroller are proven across the runtime handover.
+/// </summary>
+[TestClass]
+[TestCategory("InteractiveAuto")]
+public class SegmentedControlInteractiveAutoE2ETests : SegmentedControlE2EBase
+{
+    protected override string BaseUrl => "https://localhost:7108";
 }

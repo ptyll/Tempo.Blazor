@@ -403,8 +403,36 @@ public abstract class SortableListE2EBase : PlaywrightTestBase
 
 /// <summary>The WASM lane (the demo default).</summary>
 [TestClass]
+[TestCategory("WASM")]
 public class SortableListE2ETests : SortableListE2EBase
 {
     protected override string BaseUrl =>
         Environment.GetEnvironmentVariable("TM_E2E_WASM_URL") ?? "https://localhost:7106";
+}
+
+/// <summary>
+/// The Server lane (plan 7ba95ed6, Fáze 11): the same <c>/sortable-list</c> contract over a real Blazor
+/// Server circuit. The keyboard grab/move/drop path, the Tab release that keeps the focus out of a trap, the
+/// real <c>pointer-drag.js</c> gesture with its single commit, the per-row move menu, the inset focus outline,
+/// the reduced-motion clamp, the dark repaint through the demo's own toggle and the phone geometry are all
+/// inherited, so a circuit-specific focus, interop or timing regression fails here instead of hiding behind a
+/// green WASM run.
+/// </summary>
+[TestClass]
+[TestCategory("Server")]
+public class SortableListServerE2ETests : SortableListE2EBase
+{
+    protected override string BaseUrl => "https://localhost:7107";
+}
+
+/// <summary>
+/// The InteractiveAuto lane: the same list on the host that renders over the Server circuit first and then
+/// hands the page to the WebAssembly runtime. Every walk is inherited and therefore also covers the handover
+/// between the two runtimes.
+/// </summary>
+[TestClass]
+[TestCategory("InteractiveAuto")]
+public class SortableListInteractiveAutoE2ETests : SortableListE2EBase
+{
+    protected override string BaseUrl => "https://localhost:7108";
 }

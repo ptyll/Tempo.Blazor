@@ -351,8 +351,33 @@ public abstract class UsageMeterE2EBase : PlaywrightTestBase
 
 /// <summary>The WASM lane (the demo default).</summary>
 [TestClass]
+[TestCategory("WASM")]
 public class UsageMeterE2ETests : UsageMeterE2EBase
 {
     protected override string BaseUrl =>
         Environment.GetEnvironmentVariable("TM_E2E_WASM_URL") ?? "https://localhost:7106";
+}
+
+/// <summary>
+/// The Server lane (plan 7ba95ed6, Fáze 11): the same <c>TmUsageMeter</c> over a real Blazor Server circuit.
+/// The <c>role="meter"</c> value contract, the warning ring and call to action, the two clicks that walk the
+/// quota over its limit, the reset, the compact copy, the forced-colors edge, the reduced-motion clamp, the
+/// phone geometry, the dark repaint through the demo's own toggle and the scoped axe scan are all inherited.
+/// </summary>
+[TestClass]
+[TestCategory("Server")]
+public class UsageMeterServerE2ETests : UsageMeterE2EBase
+{
+    protected override string BaseUrl => "https://localhost:7107";
+}
+
+/// <summary>
+/// The InteractiveAuto lane: the same meter on the host that prerenders over the Server circuit and then hands
+/// the page to WebAssembly, so the quota walk and the single threshold live region are proven on both runtimes.
+/// </summary>
+[TestClass]
+[TestCategory("InteractiveAuto")]
+public class UsageMeterInteractiveAutoE2ETests : UsageMeterE2EBase
+{
+    protected override string BaseUrl => "https://localhost:7108";
 }

@@ -44,6 +44,7 @@ public abstract class DataDisplayKpiE2EBase : PlaywrightTestBase
         });
         await context.AddInitScriptAsync(
             "localStorage.setItem('tm-demo-culture', 'en'); document.cookie = 'tm-demo-culture=en;path=/;max-age=31536000;samesite=lax';");
+        await context.AddInitScriptAsync(FrameRecorderScript);
         RegisterContext(context);
 
         var page = await context.NewPageAsync();
@@ -61,33 +62,55 @@ public abstract class DataDisplayKpiE2EBase : PlaywrightTestBase
     private static ILocator ShowcaseValue(IPage page)
         => page.Locator("[data-testid='animated-numbers'] .tm-animated-number__value").First;
 
-    private static async Task<long> ParseValueAsync(ILocator value)
+    /// <summary>
+    /// Records every text the demo's first animated value node ever shows, from the moment the document starts
+    /// parsing. Polling the node from .NET cannot prove what the browser painted — a frame can appear and be
+    /// replaced between two polls, and how long the first animation takes relative to the test's first read is
+    /// exactly what differs between a WASM boot, a Server circuit (whose prerendered markup is the first value)
+    /// and InteractiveAuto. The page owns the log, so the same walk means the same thing on all three lanes.
+    /// </summary>
+    private const string FrameRecorderScript = """
+        (() => {
+            const state = { values: [] };
+            window.__tmAnimatedFrames = state;
+            const record = () => {
+                const el = document.querySelector("[data-testid='animated-numbers'] .tm-animated-number__value");
+                if (!el) return;
+                const text = (el.textContent || '').trim();
+                if (!text || state.values[state.values.length - 1] === text) return;
+                state.values.push(text);
+            };
+            const start = () => {
+                record();
+                new MutationObserver(record).observe(document.documentElement, {
+                    subtree: true, childList: true, characterData: true
+                });
+            };
+            if (document.documentElement) start();
+            else document.addEventListener('DOMContentLoaded', start, { once: true });
+        })();
+        """;
+
+    /// <summary>Every text the animated value node showed, in paint order (installed before navigation).</summary>
+    private static async Task<string[]> PaintedFramesAsync(IPage page)
+        => await page.EvaluateAsync<string[]>(
+            "() => (window.__tmAnimatedFrames && window.__tmAnimatedFrames.values) || []");
+
+    /// <summary>The FIRST text the browser ever showed for the node — the value the component rendered itself.</summary>
+    private static async Task<string> FirstPaintedValueAsync(IPage page)
     {
-        var raw = await value.TextContentAsync() ?? string.Empty;
-        // en-US: "12,450" / "$12,450" — keep the digits only.
-        var digits = new string(raw.Where(char.IsDigit).ToArray());
-        return long.TryParse(digits, out var parsed) ? parsed : -1;
+        await page.WaitForFunctionAsync(
+            "() => ((window.__tmAnimatedFrames && window.__tmAnimatedFrames.values.length) || 0) > 0",
+            null,
+            new PageWaitForFunctionOptions { Timeout = 30000 });
+        return (await PaintedFramesAsync(page))[0];
     }
 
-    /// <summary>
-    /// Samples the showcase value for a moment and returns every distinct number it showed. Used to
-    /// prove the count-up actually animated in the browser rather than snapping to its target.
-    /// </summary>
-    private static async Task<List<long>> SampleAsync(ILocator value, int samples = 8, int everyMs = 60)
+    /// <summary>The numeric value of one painted frame ("12,450" / "$12,450" → 12450).</summary>
+    private static long ParseFrame(string frame)
     {
-        var seen = new List<long>();
-        for (var i = 0; i < samples; i++)
-        {
-            var current = await ParseValueAsync(value);
-            if (current >= 0 && (seen.Count == 0 || seen[^1] != current))
-            {
-                seen.Add(current);
-            }
-
-            await Task.Delay(everyMs);
-        }
-
-        return seen;
+        var digits = new string(frame.Where(char.IsDigit).ToArray());
+        return long.TryParse(digits, out var parsed) ? parsed : -1;
     }
 
     [TestMethod]
@@ -96,16 +119,22 @@ public abstract class DataDisplayKpiE2EBase : PlaywrightTestBase
         var page = await OpenAsync();
         var value = ShowcaseValue(page);
 
-        Assert.AreEqual(12450, await ParseValueAsync(value), "the first paint already shows the target, never a flash of zero");
+        // The component renders the FINAL text itself — the module only repaints that node between frames — so the
+        // very first value the browser shows is the target, never a flash of zero. The frame log proves it on a
+        // host whose first animation may still be running when the test starts reading.
+        Assert.AreEqual("12,450", await FirstPaintedValueAsync(page),
+            "the first text of the node is the value the component rendered for readers");
+        await Assertions.Expect(value).ToHaveTextAsync("12,450", new LocatorAssertionsToHaveTextOptions { Timeout = 5000 });
 
         // A bump retargets the running ticker: the intermediate frames have to be observable, and the
         // last one has to be the new target.
         await BumpButton(page).ClickAsync();
-        var seen = await SampleAsync(value);
-
-        Assert.IsTrue(seen.Any(v => v > 12450 && v < 13450),
-            "the count-up must be visible between the old and the new target; sampled: " + string.Join(", ", seen));
         await Assertions.Expect(value).ToHaveTextAsync("13,450", new LocatorAssertionsToHaveTextOptions { Timeout = 5000 });
+
+        var frames = (await PaintedFramesAsync(page)).Select(ParseFrame).ToList();
+        Assert.IsTrue(frames.Any(v => v > 12450 && v < 13450),
+            "the count-up must be visible between the old and the new target; painted: " + string.Join(", ", frames));
+        Assert.AreEqual(13450, frames[^1], "the ticker lands on the exact target, not one step before it");
     }
 
     [TestMethod]
@@ -113,15 +142,24 @@ public abstract class DataDisplayKpiE2EBase : PlaywrightTestBase
     {
         var animatedPage = await OpenAsync();
         await BumpButton(animatedPage).ClickAsync();
-        var animatedSamples = await SampleAsync(ShowcaseValue(animatedPage));
-        Assert.IsTrue(animatedSamples.Any(v => v > 12450 && v < 13450),
-            "a motion-friendly context animates; sampled: " + string.Join(", ", animatedSamples));
+        await Assertions.Expect(ShowcaseValue(animatedPage))
+            .ToHaveTextAsync("13,450", new LocatorAssertionsToHaveTextOptions { Timeout = 5000 });
+
+        var animatedFrames = (await PaintedFramesAsync(animatedPage)).Select(ParseFrame).ToList();
+        Assert.IsTrue(animatedFrames.Any(v => v > 12450 && v < 13450),
+            "a motion-friendly context animates; painted: " + string.Join(", ", animatedFrames));
 
         var reducedPage = await OpenAsync(reduceMotion: true);
+        Assert.AreEqual("12,450", await FirstPaintedValueAsync(reducedPage),
+            "the reduced-motion host renders the final value from the start as well");
         await BumpButton(reducedPage).ClickAsync();
-        await reducedPage.WaitForTimeoutAsync(50);
-        Assert.AreEqual(13450, await ParseValueAsync(ShowcaseValue(reducedPage)),
-            "prefers-reduced-motion: reduce means the target appears at once — no ticker at all");
+        await Assertions.Expect(ShowcaseValue(reducedPage))
+            .ToHaveTextAsync("13,450", new LocatorAssertionsToHaveTextOptions { Timeout = 5000 });
+
+        CollectionAssert.AreEqual(
+            new[] { "12,450", "13,450" },
+            await PaintedFramesAsync(reducedPage),
+            "prefers-reduced-motion: reduce means the target appears at once — no intermediate frame at all");
     }
 
     [TestMethod]
@@ -272,8 +310,34 @@ public abstract class DataDisplayKpiE2EBase : PlaywrightTestBase
 
 /// <summary>The WASM lane (the demo default).</summary>
 [TestClass]
+[TestCategory("WASM")]
 public class DataDisplayKpiE2ETests : DataDisplayKpiE2EBase
 {
     protected override string BaseUrl =>
         Environment.GetEnvironmentVariable("TM_E2E_WASM_URL") ?? "https://localhost:7106";
+}
+
+/// <summary>
+/// The Server lane (plan 7ba95ed6, Fáze 11): the <c>/data-display</c> KPI surface over a real Blazor Server
+/// circuit. The ticker is still caught MID-FLIGHT (the JavaScript module runs on the circuit-driven render,
+/// never only on the initial markup), the whole-card link/button targets land, reduced motion lands
+/// immediately, the delta keeps its direction word next to its tone, and the scoped axe scans hold.
+/// </summary>
+[TestClass]
+[TestCategory("Server")]
+public class DataDisplayKpiServerE2ETests : DataDisplayKpiE2EBase
+{
+    protected override string BaseUrl => "https://localhost:7107";
+}
+
+/// <summary>
+/// The InteractiveAuto lane: the same KPI cards on the host that prerenders over the Server circuit and then
+/// hands the page to WebAssembly, so the ticker, the targets and the reduced-motion branch are proven across
+/// the runtime handover too.
+/// </summary>
+[TestClass]
+[TestCategory("InteractiveAuto")]
+public class DataDisplayKpiInteractiveAutoE2ETests : DataDisplayKpiE2EBase
+{
+    protected override string BaseUrl => "https://localhost:7108";
 }

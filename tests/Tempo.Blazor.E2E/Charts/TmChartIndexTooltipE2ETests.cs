@@ -174,15 +174,28 @@ public abstract class TmChartIndexTooltipE2EBase : PlaywrightTestBase
         var page = await OpenAsync();
         var chart = DefaultChart(page);
 
+        // The hover zone the pointer rests on must be the SAME DOM node after the card appears. A render
+        // that replaces the zone detaches the element under the pointer, the browser then delivers no
+        // `mouseout` for it, and the card stays pinned after the pointer has left the plot — the Server
+        // and InteractiveAuto lanes caught exactly that, because their DOM updates arrive from a circuit
+        // instead of the same renderer tick.
+        var zone = await chart.Locator(".tm-chart__index-zone").Nth(3).ElementHandleAsync();
+        Assert.IsNotNull(zone);
+
         await HoverZoneAsync(page, chart, 3);
         await Assertions.Expect(chart.Locator(".tm-chart__tooltip--index")).ToHaveCountAsync(
             1, new LocatorAssertionsToHaveCountOptions { Timeout = 5000 });
+
+        Assert.IsTrue(await zone!.EvaluateAsync<bool>("el => el.isConnected"),
+            "showing the card must not replace the hover zone it was hovering");
 
         // Move the pointer out of the plot entirely (the legend row under the chart).
         await page.Mouse.MoveAsync(5, 5);
 
         await Assertions.Expect(chart.Locator(".tm-chart__tooltip--index")).ToHaveCountAsync(
             0, new LocatorAssertionsToHaveCountOptions { Timeout = 5000 });
+        Assert.AreEqual("-1", await chart.GetAttributeAsync("data-index-ordinal"),
+            "and the chart reports that nothing is highlighted any more");
     }
 
     [TestMethod]
@@ -450,8 +463,34 @@ public abstract class TmChartIndexTooltipE2EBase : PlaywrightTestBase
 
 /// <summary>The WASM lane (the demo default).</summary>
 [TestClass]
+[TestCategory("WASM")]
 public class TmChartIndexTooltipE2ETests : TmChartIndexTooltipE2EBase
 {
     protected override string BaseUrl =>
         Environment.GetEnvironmentVariable("TM_E2E_WASM_URL") ?? "https://localhost:7106";
+}
+
+/// <summary>
+/// The Server lane (plan 7ba95ed6, Fáze 11): the same <c>TmChart</c> index tooltip and sparkline extras over a
+/// real Blazor Server circuit. The hover crosshair with the all-series card, the single tab stop and its arrow
+/// walk, the pinned tap that survives the synthesized post-tap mouse events, the one polite live region, the
+/// sparkline tooltip that follows hover and keyboard and the scoped axe scans are all inherited.
+/// </summary>
+[TestClass]
+[TestCategory("Server")]
+public class TmChartIndexTooltipServerE2ETests : TmChartIndexTooltipE2EBase
+{
+    protected override string BaseUrl => "https://localhost:7107";
+}
+
+/// <summary>
+/// The InteractiveAuto lane: the same chart and sparkline on the host that prerenders over the Server circuit
+/// and then hands the page to WebAssembly, covering the pointer-driven crosshair and the keyboard walk across
+/// the runtime handover.
+/// </summary>
+[TestClass]
+[TestCategory("InteractiveAuto")]
+public class TmChartIndexTooltipInteractiveAutoE2ETests : TmChartIndexTooltipE2EBase
+{
+    protected override string BaseUrl => "https://localhost:7108";
 }

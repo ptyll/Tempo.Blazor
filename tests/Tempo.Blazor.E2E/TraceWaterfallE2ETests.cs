@@ -334,8 +334,34 @@ public abstract class TraceWaterfallE2EBase : PlaywrightTestBase
 
 /// <summary>The WASM lane (the demo default).</summary>
 [TestClass]
+[TestCategory("WASM")]
 public class TraceWaterfallE2ETests : TraceWaterfallE2EBase
 {
     protected override string BaseUrl =>
         Environment.GetEnvironmentVariable("TM_E2E_WASM_URL") ?? "https://localhost:7106";
+}
+
+/// <summary>
+/// The Server lane (plan 7ba95ed6, Fáze 11): the same <c>TmTraceWaterfall</c> over a real Blazor Server
+/// circuit. The treegrid's roving tabindex and its ←/→ subtree walk, the selected-span detail panel, the zoom
+/// group, the key-default cancellation, the forced-colors borders, the container-query detail placement on the
+/// phone band and the scroll containment are all inherited, so the circuit's key round trips are measured by
+/// the same expectations as the WASM lane.
+/// </summary>
+[TestClass]
+[TestCategory("Server")]
+public class TraceWaterfallServerE2ETests : TraceWaterfallE2EBase
+{
+    protected override string BaseUrl => "https://localhost:7107";
+}
+
+/// <summary>
+/// The InteractiveAuto lane: the same waterfall on the host that prerenders over the Server circuit and then
+/// hands the page to WebAssembly, covering the roving keys and the detail placement across the handover.
+/// </summary>
+[TestClass]
+[TestCategory("InteractiveAuto")]
+public class TraceWaterfallInteractiveAutoE2ETests : TraceWaterfallE2EBase
+{
+    protected override string BaseUrl => "https://localhost:7108";
 }

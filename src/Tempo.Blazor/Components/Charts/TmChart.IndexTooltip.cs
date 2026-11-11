@@ -350,6 +350,15 @@ public partial class TmChart
 
     // ── Rendering ──
 
+    // Sequence-number bands of the overlay's parts: 700-706 crosshair, 720-726 dots, 760-761 zones
+    // group, 770-779 zone rects. Every band is FIXED and the dots/zone-rect loops reuse ONE number per
+    // iteration, so no band can grow into the next one — a number that moved with the loop index made
+    // Blazor REPLACE a sibling (see the CHANGELOG `Fixed` entry on the pinned index-tooltip card).
+    private const int IndexCrosshairSequence = 700;
+    private const int IndexDotsSequence = 720;
+    private const int IndexZonesSequence = 760;
+    private const int IndexZoneRectsSequence = 770;
+
     /// <summary>Crosshair, per-series index dots and the hover zones; empty unless index mode is on.</summary>
     private RenderFragment IndexOverlayContent => builder =>
     {
@@ -363,13 +372,13 @@ public partial class TmChart
         {
             var center = slots[active].Center;
 
-            builder.OpenElement(0, "line");
-            builder.AddAttribute(1, "class", "tm-chart__crosshair");
-            builder.AddAttribute(2, "data-testid", TestId("chart-crosshair"));
-            builder.AddAttribute(3, "x1", F(center));
-            builder.AddAttribute(4, "y1", F(PT));
-            builder.AddAttribute(5, "x2", F(center));
-            builder.AddAttribute(6, "y2", F(PT + CH));
+            builder.OpenElement(IndexCrosshairSequence, "line");
+            builder.AddAttribute(IndexCrosshairSequence + 1, "class", "tm-chart__crosshair");
+            builder.AddAttribute(IndexCrosshairSequence + 2, "data-testid", TestId("chart-crosshair"));
+            builder.AddAttribute(IndexCrosshairSequence + 3, "x1", F(center));
+            builder.AddAttribute(IndexCrosshairSequence + 4, "y1", F(PT));
+            builder.AddAttribute(IndexCrosshairSequence + 5, "x2", F(center));
+            builder.AddAttribute(IndexCrosshairSequence + 6, "y2", F(PT + CH));
             builder.CloseElement();
 
             if (Type is ChartType.Line or ChartType.Area)
@@ -378,24 +387,25 @@ public partial class TmChart
             }
         }
 
-        builder.OpenElement(0, "g");
-        builder.AddAttribute(1, "class", "tm-chart__index-zones");
+        builder.OpenElement(IndexZonesSequence, "g");
+        builder.AddAttribute(IndexZonesSequence + 1, "class", "tm-chart__index-zones");
 
         for (var k = 0; k < slots.Length; k++)
         {
             var ordinal = k;
-            builder.OpenElement(3, "rect");
-            builder.AddAttribute(4, "class", "tm-chart__index-zone");
-            builder.AddAttribute(5, "data-testid", TestId($"chart-index-zone-{k}"));
-            builder.AddAttribute(6, "x", F(slots[k].Left));
-            builder.AddAttribute(7, "y", F(PT));
-            builder.AddAttribute(8, "width", F(slots[k].Right - slots[k].Left));
-            builder.AddAttribute(9, "height", F(CH));
-            builder.AddAttribute(10, "onmouseover",
+            const int sequence = IndexZoneRectsSequence;
+            builder.OpenElement(sequence, "rect");
+            builder.AddAttribute(sequence + 1, "class", "tm-chart__index-zone");
+            builder.AddAttribute(sequence + 2, "data-testid", TestId($"chart-index-zone-{k}"));
+            builder.AddAttribute(sequence + 3, "x", F(slots[k].Left));
+            builder.AddAttribute(sequence + 4, "y", F(PT));
+            builder.AddAttribute(sequence + 5, "width", F(slots[k].Right - slots[k].Left));
+            builder.AddAttribute(sequence + 6, "height", F(CH));
+            builder.AddAttribute(sequence + 7, "onmouseover",
                 EventCallback.Factory.Create<MouseEventArgs>(this, () => HoverIndex(ordinal)));
-            builder.AddAttribute(11, "onmouseout",
+            builder.AddAttribute(sequence + 8, "onmouseout",
                 EventCallback.Factory.Create<MouseEventArgs>(this, () => ClearPointerIndex(ordinal)));
-            builder.AddAttribute(12, "onclick",
+            builder.AddAttribute(sequence + 9, "onclick",
                 EventCallback.Factory.Create<MouseEventArgs>(this, () => HandleIndexClickAsync(ordinal)));
             builder.CloseElement();
         }
@@ -420,13 +430,14 @@ public partial class TmChart
                 ? AreaY(value, min, max)
                 : BarDomainY(value, min, max);
 
-            builder.OpenElement(0, "circle");
-            builder.AddAttribute(1, "class", "tm-chart__index-dot");
-            builder.AddAttribute(2, "cx", F(center));
-            builder.AddAttribute(3, "cy", F(y));
-            builder.AddAttribute(4, "r", "4");
-            builder.AddAttribute(5, "fill", dataset.Color);
-            builder.AddAttribute(6, "aria-hidden", "true");
+            const int sequence = IndexDotsSequence;
+            builder.OpenElement(sequence, "circle");
+            builder.AddAttribute(sequence + 1, "class", "tm-chart__index-dot");
+            builder.AddAttribute(sequence + 2, "cx", F(center));
+            builder.AddAttribute(sequence + 3, "cy", F(y));
+            builder.AddAttribute(sequence + 4, "r", "4");
+            builder.AddAttribute(sequence + 5, "fill", dataset.Color);
+            builder.AddAttribute(sequence + 6, "aria-hidden", "true");
             builder.CloseElement();
         }
     }

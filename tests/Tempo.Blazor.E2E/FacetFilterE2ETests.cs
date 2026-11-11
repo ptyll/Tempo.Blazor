@@ -165,7 +165,7 @@ public abstract class FacetFilterE2EBase : PlaywrightTestBase
         Assert.IsFalse(await input.IsCheckedAsync(), "Archived starts unchecked");
 
         await row.Locator(".tm-checkbox-text").ClickAsync();
-        await page.WaitForTimeoutAsync(500);
+        await Assertions.Expect(input).ToBeCheckedAsync(new LocatorAssertionsToBeCheckedOptions { Timeout = 5000 });
         Assert.IsTrue(await input.IsCheckedAsync(), "a click on the option row toggles its checkbox");
 
         var chipTexts = await PopoverCard(page).Locator(".tm-facet-filter__chip").AllTextContentsAsync();
@@ -175,7 +175,7 @@ public abstract class FacetFilterE2EBase : PlaywrightTestBase
         // The open dialog is modal (the background is inert), so the page-level chip row is
         // unreachable while it is up — a reader closes it first, which is what this does.
         await page.Keyboard.PressAsync("Escape");
-        await page.WaitForTimeoutAsync(400);
+        await Assertions.Expect(Panel(page)).ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 5000 });
         Assert.AreEqual(0, await Panel(page).CountAsync(), "Escape closes the dialog");
 
         var archivedChip = PopoverCard(page).Locator(".tm-facet-filter__chip")
@@ -214,14 +214,16 @@ public abstract class FacetFilterE2EBase : PlaywrightTestBase
         var all = await categoryGroup.Locator("[data-testid='facet-filter-option']").CountAsync();
         await search.FillAsync("gard");
 
-        await page.WaitForTimeoutAsync(300);
+        await Assertions.Expect(categoryGroup.Locator("[data-testid='facet-filter-option']"))
+            .ToHaveCountAsync(1, new LocatorAssertionsToHaveCountOptions { Timeout = 5000 });
         Assert.AreEqual(1, await categoryGroup.Locator("[data-testid='facet-filter-option']").CountAsync(),
             $"the filter narrows the group (was {all} options)");
         Assert.AreEqual("garden", await categoryGroup.Locator("[data-testid='facet-filter-option']").First
             .GetAttributeAsync("data-option-value"));
 
         await search.FillAsync("nikde");
-        await page.WaitForTimeoutAsync(300);
+        await Assertions.Expect(categoryGroup.Locator("[data-testid='facet-filter-option']"))
+            .ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 5000 });
         Assert.AreEqual(0, await categoryGroup.Locator("[data-testid='facet-filter-option']").CountAsync());
         Assert.AreEqual(1, await categoryGroup.Locator(".tm-facet-filter__no-results").CountAsync(),
             "an empty match says so instead of rendering nothing");
@@ -241,7 +243,11 @@ public abstract class FacetFilterE2EBase : PlaywrightTestBase
         StringAssert.Matches((await showMore.TextContentAsync())!.Trim(), new System.Text.RegularExpressions.Regex(@"^Show \d+ more$"));
 
         await showMore.ClickAsync();
-        await page.WaitForTimeoutAsync(200);
+
+        // Wait on the state the disclosure changes, never on a fixed delay: this click is a circuit round
+        // trip on the Server and InteractiveAuto lanes and a 200 ms sleep was not enough there.
+        await Assertions.Expect(categoryGroup.Locator("[data-testid='facet-filter-option']"))
+            .ToHaveCountAsync(7, new LocatorAssertionsToHaveCountOptions { Timeout = 5000 });
         Assert.AreEqual(7, await categoryGroup.Locator("[data-testid='facet-filter-option']").CountAsync());
         Assert.AreEqual(0, await categoryGroup.GetByTestId("facet-filter-show-more").CountAsync());
 
@@ -282,7 +288,7 @@ public abstract class FacetFilterE2EBase : PlaywrightTestBase
         await OpenPopoverAsync(page);
 
         await page.Keyboard.PressAsync("Escape");
-        await page.WaitForTimeoutAsync(300);
+        await Assertions.Expect(Panel(page)).ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 5000 });
 
         Assert.AreEqual("false", await Trigger(page).GetAttributeAsync("aria-expanded"));
         Assert.AreEqual(0, await Panel(page).CountAsync(), "the dialog unmounts");
@@ -305,18 +311,21 @@ public abstract class FacetFilterE2EBase : PlaywrightTestBase
         Assert.AreEqual("true", await firstToggle.GetAttributeAsync("aria-expanded"));
 
         await page.Keyboard.PressAsync("Enter");
-        await page.WaitForTimeoutAsync(150);
+        await Assertions.Expect(firstToggle).ToHaveAttributeAsync(
+            "aria-expanded", "false", new LocatorAssertionsToHaveAttributeOptions { Timeout = 5000 });
         Assert.AreEqual("false", await firstToggle.GetAttributeAsync("aria-expanded"),
             "a native button collapses its group on Enter");
 
         await page.Keyboard.PressAsync("Enter");
-        await page.WaitForTimeoutAsync(150);
+        await Assertions.Expect(firstToggle).ToHaveAttributeAsync(
+            "aria-expanded", "true", new LocatorAssertionsToHaveAttributeOptions { Timeout = 5000 });
 
         var checkbox = Panel(page).Locator("[data-testid='facet-filter-option'] input[type='checkbox']").First;
         await checkbox.FocusAsync();
         var checkedBefore = await checkbox.IsCheckedAsync();
         await page.Keyboard.PressAsync("Space");
-        await page.WaitForTimeoutAsync(250);
+        await Assertions.Expect(checkbox).ToBeCheckedAsync(
+            new LocatorAssertionsToBeCheckedOptions { Checked = !checkedBefore, Timeout = 5000 });
         Assert.AreNotEqual(checkedBefore, await checkbox.IsCheckedAsync(), "Space toggles the native checkbox");
     }
 
@@ -359,7 +368,8 @@ public abstract class FacetFilterE2EBase : PlaywrightTestBase
 
         var before = await Panel(page).Locator("[data-testid='facet-filter-option']").CountAsync();
         await Panel(page).GetByTestId("facet-filter-group-toggle").Nth(2).ClickAsync();
-        await page.WaitForTimeoutAsync(200);
+        await Assertions.Expect(Panel(page).Locator("[data-testid='facet-filter-option']")).Not.ToHaveCountAsync(
+            before, new LocatorAssertionsToHaveCountOptions { Timeout = 5000 });
         Assert.AreNotEqual(before, await Panel(page).Locator("[data-testid='facet-filter-option']").CountAsync(),
             "the disclosure still works without the transition");
     }
@@ -460,8 +470,33 @@ public abstract class FacetFilterE2EBase : PlaywrightTestBase
 
 /// <summary>The WASM lane (the demo default).</summary>
 [TestClass]
+[TestCategory("WASM")]
 public class FacetFilterE2ETests : FacetFilterE2EBase
 {
     protected override string BaseUrl =>
         Environment.GetEnvironmentVariable("TM_E2E_WASM_URL") ?? "https://localhost:7106";
+}
+
+/// <summary>
+/// The Server lane (plan 7ba95ed6, Fáze 11): the same <c>TmFacetFilter</c> over a real Blazor Server circuit.
+/// The anchored dialog popover (open, Escape, focus return), the counted confirmation, the chip row with its
+/// own remove/clear-all focus hand-off, the in-group search, "Show more", the phone band's bottom sheet and
+/// the single polite live region are all inherited, so a circuit round trip cannot hide a focus regression.
+/// </summary>
+[TestClass]
+[TestCategory("Server")]
+public class FacetFilterServerE2ETests : FacetFilterE2EBase
+{
+    protected override string BaseUrl => "https://localhost:7107";
+}
+
+/// <summary>
+/// The InteractiveAuto lane: the same facet filter on the host that starts over the Server circuit and finishes
+/// on WebAssembly, covering the popover, the sheet and the chip row across the runtime handover.
+/// </summary>
+[TestClass]
+[TestCategory("InteractiveAuto")]
+public class FacetFilterInteractiveAutoE2ETests : FacetFilterE2EBase
+{
+    protected override string BaseUrl => "https://localhost:7108";
 }
