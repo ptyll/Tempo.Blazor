@@ -140,8 +140,8 @@ public class TempoPackFormControlsRenderTests
             ("loading", true),
             ("loadingText", "Saving"));
 
-        disabledSvg.Should().Contain("opacity='0.45'");
-        loadingSvg.Should().Contain("opacity='0.7'");
+        disabledSvg.Should().MatchRegex("""opacity=['"]0\.45['"]""");
+        loadingSvg.Should().MatchRegex("""opacity=['"]0\.7['"]""");
         loadingSvg.Should().Contain("data-stencil-kind='spinner'");
         loadingSvg.Should().Contain(">Saving<");
     }

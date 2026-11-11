@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 using Microsoft.AspNetCore.Components.Rendering;
@@ -27,11 +28,104 @@ internal static class WireframeSvg
     internal static string F(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
 
     // ── Markup emit ──────────────────────────────────────────────────────────
-    private static int _seq;
-    private static int Seq() => _seq++;
+    //
+    // Every AddMarkupContent chunk is parsed into its OWN DOM template by Blazor, so a fragment
+    // MUST be a complete, standalone well-formed XML piece — an unclosed "<g transform=…>" frame
+    // is auto-closed by the browser and its children become SIBLINGS, collapsing every
+    // transformed sketch in the editor. Container nodes therefore go through OpenGroup/CloseGroup
+    // (real Blazor elements), and Markup guards (DEBUG) against split group fragments regressing.
+    //
+    // Sequence numbers live inside an OpenRegion so repeated renders produce identical frames
+    // and Blazor can diff them without rebuilding the DOM.
 
     internal static void Markup(RenderTreeBuilder b, string html)
-        => b.AddMarkupContent(Seq(), html);
+    {
+        RejectUnbalancedGroupMarkup(html);
+        b.OpenRegion(0);
+        b.AddMarkupContent(0, html);
+        b.CloseRegion();
+    }
+
+    /// <summary>Opens a real Blazor <c>&lt;g&gt;</c> element (transform first, then opacity).</summary>
+    internal static void OpenGroup(RenderTreeBuilder b, string transform, string? opacity = null)
+    {
+        b.OpenRegion(0);
+        b.OpenElement(0, "g");
+        b.AddAttribute(1, "transform", SafeRawAttribute(transform, "translate(0,0)"));
+        if (opacity is not null)
+            b.AddAttribute(2, "opacity", SafeRawAttribute(opacity, "1"));
+    }
+
+    /// <summary>Closes the <c>&lt;g&gt;</c> opened by <see cref="OpenGroup"/>.</summary>
+    internal static void CloseGroup(RenderTreeBuilder b)
+    {
+        b.CloseElement();
+        b.CloseRegion();
+    }
+
+    /// <summary>
+    /// Prepares a value for <c>AddAttribute</c>: values that could break out of the attribute
+    /// (markup chars, quotes, event-handler or javascript: payloads) fall back to
+    /// <paramref name="fallback"/>; plain values are returned RAW because Blazor encodes
+    /// <c>AddAttribute</c> values itself — pre-escaping would double-encode them.
+    /// </summary>
+    internal static string SafeRawAttribute(string value, string fallback)
+        => IsDangerousAttributeValue(value) ? fallback : value;
+
+    private static bool IsDangerousAttributeValue(string value)
+        => StencilPackRenderer.ContainsDangerousMarkup(value)
+           || value.IndexOfAny(['<', '>', '"', '\'']) >= 0;
+
+    /// <summary>
+    /// DEBUG-only guard: throws when a markup fragment contains an unbalanced <c>&lt;g&gt;</c>,
+    /// which the browser would auto-close per-frame, collapsing transformed sketches. The method
+    /// is annotated <c>[Conditional("DEBUG")]</c>, so it is a no-op in Release builds.
+    /// </summary>
+    [Conditional("DEBUG")]
+    private static void RejectUnbalancedGroupMarkup(string html)
+    {
+        var depth = 0;
+        var index = 0;
+        while (index < html.Length)
+        {
+            var lt = html.IndexOf('<', index);
+            if (lt < 0)
+                break;
+
+            if (lt + 1 < html.Length && html[lt + 1] == '/')
+            {
+                if (IsGroupTagName(html, lt + 2))
+                {
+                    depth--;
+                    if (depth < 0)
+                        ThrowUnbalanced(html, "stray </g>");
+                }
+            }
+            else if (IsGroupTagName(html, lt + 1))
+            {
+                var tagEnd = html.IndexOf('>', lt);
+                if (tagEnd < 0 || html[tagEnd - 1] != '/')
+                    depth++;
+            }
+
+            index = lt + 1;
+        }
+
+        if (depth != 0)
+            ThrowUnbalanced(html, "unclosed <g>");
+
+        static bool IsGroupTagName(string html, int i)
+            => i < html.Length
+               && html[i] == 'g'
+               && (i + 1 >= html.Length || html[i + 1] is ' ' or '>' or '\t' or '\r' or '\n' or '/');
+
+        static void ThrowUnbalanced(string html, string reason)
+            => throw new InvalidOperationException(
+                $"WireframeSvg.Markup received an unbalanced fragment ({reason}). Blazor parses each " +
+                "AddMarkupContent chunk into its own template, so a split <g> auto-closes in the " +
+                "browser and its children become siblings. Emit containers via " +
+                $"WireframeSvg.OpenGroup/CloseGroup instead. Fragment: {html}");
+    }
 
     // ── Primitives ────────────────────────────────────────────────────────────
 

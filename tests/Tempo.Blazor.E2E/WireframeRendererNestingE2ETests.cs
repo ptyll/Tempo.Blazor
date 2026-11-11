@@ -81,7 +81,7 @@ internal static class WireframeRendererNestingGuard
         ("TmImageGallery", "Image Gallery"),
         ("TmActivityLog", "Activity Log"),
         ("TmCalendarHeatmap", "Calendar Heatmap"),
-        ("TmRichEditorFull", "Rich Editor"),
+        ("TmRichEditorFull", "Rich Text"),
     ];
 
     public static async Task RunAsync(

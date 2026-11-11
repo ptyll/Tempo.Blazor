@@ -180,8 +180,38 @@ public class StencilPackRendererLayoutTests
             new StencilCompositionScope(registry, scope: null, pack, packMap));
 
         var groups = RenderFrameAssertions.GElementIndexes(frames);
-        groups.Should().ContainSingle("the recursion guard placeholder must stay inside its <g>");
-        RenderFrameAssertions.SubtreeContainsMarkup(frames, groups[0], "Recursive").Should().BeTrue();
+        groups.Should().HaveCount(2, "the component wrapper and the recursion placeholder wrapper are each a <g>");
+        RenderFrameAssertions.SubtreeContainsMarkup(frames, groups[0], "Recursive").Should().BeTrue(
+            "the recursion guard placeholder must be INSIDE the component <g> subtree");
+        RenderFrameAssertions.SubtreeContainsMarkup(frames, groups[1], "Recursive").Should().BeTrue();
+    }
+
+    [Fact]
+    public void RecursiveComponentCycle_InnerPlaceholderGroup_CarriesBlockedNodePosition()
+    {
+        var a = Component(
+            "tempo:A",
+            Node(RenderNodeKind.Component, ("ref", "tempo:B"), ("x", 10), ("y", 0)),
+            120,
+            36);
+        var b = Component(
+            "tempo:B",
+            Node(RenderNodeKind.Component, ("ref", "tempo:A"), ("x", 0), ("y", 20)),
+            120,
+            36);
+        var (registry, pack, packMap) = RegistryFor(a, b);
+
+        var frames = RenderFrameAssertions.RenderFrames(
+            a,
+            Element("tempo:A", 120, 36),
+            new StencilCompositionScope(registry, scope: null, pack, packMap));
+
+        var innerGroup = RenderFrameAssertions.FindGWithTransform(frames, "translate(0,20)");
+        innerGroup.Should().BeGreaterThan(-1, "the blocked A reference inside B keeps its own translate(x,y)");
+        RenderFrameAssertions.AttributesOf(frames, innerGroup).Should().ContainKey("transform")
+            .WhoseValue.Should().Be("translate(0,20)");
+        RenderFrameAssertions.SubtreeContainsMarkup(frames, innerGroup, "Recursive").Should().BeTrue(
+            "the recursion placeholder must render inside the blocked node's <g>, not at the parent origin");
     }
 
     [Fact]

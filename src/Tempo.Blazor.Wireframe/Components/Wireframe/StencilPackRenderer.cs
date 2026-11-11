@@ -1,11 +1,7 @@
 using System.Collections.Immutable;
 using System.Globalization;
-using System.Text;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using System.Threading;
-using System.Xml;
-using System.Xml.Linq;
 using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.Extensions.Logging;
 using Tempo.Blazor.Components.Icons;
@@ -21,71 +17,6 @@ internal static partial class StencilPackRenderer
     private static readonly IImmutableSet<string> EmptyRefPath = ImmutableHashSet.Create<string>(StringComparer.Ordinal);
 
     private static readonly AsyncLocal<RenderContext?> CurrentRenderContext = new();
-
-    private static readonly HashSet<string> AllowedRawSvgElements = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "svg",
-        "g",
-        "path",
-        "rect",
-        "circle",
-        "ellipse",
-        "line",
-        "polyline",
-        "polygon",
-        "text",
-        "tspan",
-        "defs",
-        "linearGradient",
-        "radialGradient",
-        "stop",
-        "clipPath",
-        "mask"
-    };
-
-    private static readonly HashSet<string> AllowedRawSvgAttributes = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "id",
-        "class",
-        "d",
-        "points",
-        "x",
-        "y",
-        "x1",
-        "y1",
-        "x2",
-        "y2",
-        "cx",
-        "cy",
-        "r",
-        "rx",
-        "ry",
-        "width",
-        "height",
-        "viewBox",
-        "fill",
-        "fill-opacity",
-        "stroke",
-        "stroke-width",
-        "stroke-linecap",
-        "stroke-linejoin",
-        "stroke-dasharray",
-        "stroke-opacity",
-        "opacity",
-        "transform",
-        "font-size",
-        "font-family",
-        "font-weight",
-        "text-anchor",
-        "dominant-baseline",
-        "dx",
-        "dy",
-        "offset",
-        "stop-color",
-        "stop-opacity",
-        "clip-path",
-        "mask"
-    };
 
     public static void Render(
         StencilComponent spec,
@@ -392,17 +323,23 @@ internal static partial class StencilPackRenderer
         var x = state.Number(node, "x", 0);
         var y = state.Number(node, "y", 0);
         var transform = state.Text(node, "transform", string.Empty);
-        var opacity = node.Attributes.ContainsKey("opacity")
-            ? $" opacity='{WireframeSvg.F(state.Number(node, "opacity", 1))}'"
-            : string.Empty;
-        var safeTransform = SafeAttribute(transform, string.Empty);
+        var opacityAttr = node.Attributes.ContainsKey("opacity")
+            ? WireframeSvg.F(state.Number(node, "opacity", 1))
+            : null;
+        var safeTransform = ContainsDangerousMarkup(transform) ? string.Empty : transform;
         var transformAttr = safeTransform.Length == 0
             ? $"translate({WireframeSvg.F(x)},{WireframeSvg.F(y)})"
             : $"translate({WireframeSvg.F(x)},{WireframeSvg.F(y)}) {safeTransform}";
 
-        WireframeSvg.Markup(b, $"<g transform='{transformAttr}'{opacity}>");
-        RenderChildren(node.Children, state, b);
-        WireframeSvg.Markup(b, "</g>");
+        WireframeSvg.OpenGroup(b, transformAttr, opacityAttr);
+        try
+        {
+            RenderChildren(node.Children, state, b);
+        }
+        finally
+        {
+            WireframeSvg.CloseGroup(b);
+        }
     }
 
     private static void RenderLayoutContainer(RenderNode node, RendererState state, RenderTreeBuilder b)
@@ -557,7 +494,7 @@ internal static partial class StencilPackRenderer
             Props = childProps
         };
 
-        WireframeSvg.Markup(b, $"<g transform='translate({WireframeSvg.F(x)},{WireframeSvg.F(y)})'>");
+        WireframeSvg.OpenGroup(b, $"translate({WireframeSvg.F(x)},{WireframeSvg.F(y)})");
         try
         {
             RenderWithContext(childContext, () => def.RenderSvg(child, b));
@@ -569,7 +506,7 @@ internal static partial class StencilPackRenderer
         }
         finally
         {
-            WireframeSvg.Markup(b, "</g>");
+            WireframeSvg.CloseGroup(b);
         }
     }
 
@@ -602,7 +539,7 @@ internal static partial class StencilPackRenderer
         }
 
         var childContext = state.RenderContext.Descend(guardKey, state.RenderContext.Scope);
-        WireframeSvg.Markup(b, $"<g transform='translate({WireframeSvg.F(x)},{WireframeSvg.F(y)})'>");
+        WireframeSvg.OpenGroup(b, $"translate({WireframeSvg.F(x)},{WireframeSvg.F(y)})");
         try
         {
             RenderWithContext(childContext, () => RenderNode(part, state.WithRenderContext(childContext), b));
@@ -614,7 +551,7 @@ internal static partial class StencilPackRenderer
         }
         finally
         {
-            WireframeSvg.Markup(b, "</g>");
+            WireframeSvg.CloseGroup(b);
         }
     }
 
@@ -654,9 +591,15 @@ internal static partial class StencilPackRenderer
 
     private static void RenderChildAt(RenderNode child, LayoutRect rect, RendererState state, RenderTreeBuilder b)
     {
-        WireframeSvg.Markup(b, $"<g transform='translate({WireframeSvg.F(rect.X)},{WireframeSvg.F(rect.Y)})'>");
-        RenderNode(child, state.WithSize(rect.W, rect.H), b);
-        WireframeSvg.Markup(b, "</g>");
+        WireframeSvg.OpenGroup(b, $"translate({WireframeSvg.F(rect.X)},{WireframeSvg.F(rect.Y)})");
+        try
+        {
+            RenderNode(child, state.WithSize(rect.W, rect.H), b);
+        }
+        finally
+        {
+            WireframeSvg.CloseGroup(b);
+        }
     }
 
     private static LayoutRect NodeSize(RenderNode node, RendererState state)
@@ -834,9 +777,15 @@ internal static partial class StencilPackRenderer
         double h,
         string label)
     {
-        WireframeSvg.Markup(b, $"<g transform='translate({WireframeSvg.F(x)},{WireframeSvg.F(y)})'>");
-        RenderPlaceholder(b, w, h, label);
-        WireframeSvg.Markup(b, "</g>");
+        WireframeSvg.OpenGroup(b, $"translate({WireframeSvg.F(x)},{WireframeSvg.F(y)})");
+        try
+        {
+            RenderPlaceholder(b, w, h, label);
+        }
+        finally
+        {
+            WireframeSvg.CloseGroup(b);
+        }
     }
 
     private static void RenderPlaceholder(RenderTreeBuilder b, double w, double h, string label)
@@ -925,104 +874,6 @@ internal static partial class StencilPackRenderer
     private static bool NearlyEqual(double left, double right)
         => Math.Abs(left - right) < 0.001;
 
-    private static bool IsSafeDataUrl(string value)
-        => value.TrimStart().StartsWith("data:image/", StringComparison.OrdinalIgnoreCase)
-           && !ContainsDangerousMarkup(value);
-
-    private static string SafeAttribute(string value, string fallback)
-        => ContainsDangerousMarkup(value) ? fallback : EscapeAttribute(value);
-
-    private static string EscapeAttribute(string value)
-        => WireframeSvg.Escape(value).Replace("'", "&apos;", StringComparison.Ordinal);
-
-    private static string SanitizeRawSvg(string value)
-    {
-        if (string.IsNullOrEmpty(value))
-            return string.Empty;
-
-        XDocument document;
-        try
-        {
-            using var reader = XmlReader.Create(
-                new StringReader("<root>" + value + "</root>"),
-                new XmlReaderSettings
-                {
-                    DtdProcessing = DtdProcessing.Prohibit,
-                    XmlResolver = null
-                });
-            document = XDocument.Load(reader, LoadOptions.PreserveWhitespace);
-        }
-        catch (XmlException)
-        {
-            return string.Empty;
-        }
-
-        var root = document.Root;
-        if (root is null)
-            return string.Empty;
-
-        var builder = new StringBuilder();
-        foreach (var node in root.Nodes())
-            AppendSanitizedNode(node, builder);
-
-        var sanitized = builder.ToString();
-        return ContainsDangerousMarkup(sanitized) ? string.Empty : sanitized;
-    }
-
-    private static bool ContainsDangerousMarkup(string value)
-        => ScriptTagRegex().IsMatch(value)
-           || ForeignObjectTagRegex().IsMatch(value)
-           || JavascriptUrlRegex().IsMatch(value)
-           || EventAttributeRegex().IsMatch(value);
-
-    private static void AppendSanitizedNode(XNode node, StringBuilder builder)
-    {
-        switch (node)
-        {
-            case XElement element:
-                AppendSanitizedElement(element, builder);
-                break;
-            case XText text:
-                builder.Append(WireframeSvg.Escape(text.Value));
-                break;
-        }
-    }
-
-    private static void AppendSanitizedElement(XElement element, StringBuilder builder)
-    {
-        var localName = element.Name.LocalName;
-        if (!AllowedRawSvgElements.Contains(localName))
-            return;
-
-        builder.Append('<').Append(localName);
-        foreach (var attribute in element.Attributes())
-        {
-            if (attribute.IsNamespaceDeclaration)
-                continue;
-
-            var attributeName = attribute.Name.LocalName;
-            var attributeValue = attribute.Value;
-            if (!AllowedRawSvgAttributes.Contains(attributeName)
-                || ContainsDangerousMarkup(attributeName)
-                || ContainsDangerousMarkup(attributeValue))
-            {
-                continue;
-            }
-
-            builder
-                .Append(' ')
-                .Append(attributeName)
-                .Append("='")
-                .Append(EscapeAttribute(attributeValue))
-                .Append('\'');
-        }
-
-        builder.Append('>');
-        foreach (var child in element.Nodes())
-            AppendSanitizedNode(child, builder);
-        builder.Append("</").Append(localName).Append('>');
-    }
-
     private sealed record RenderContext(
         StencilCompositionScope? Scope,
         int Depth,
@@ -1105,16 +956,4 @@ internal static partial class StencilPackRenderer
             };
         }
     }
-
-    [GeneratedRegex(@"<\s*/?\s*script\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
-    private static partial Regex ScriptTagRegex();
-
-    [GeneratedRegex(@"<\s*/?\s*foreignObject\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
-    private static partial Regex ForeignObjectTagRegex();
-
-    [GeneratedRegex(@"(^|[^A-Za-z0-9_:-])on[a-zA-Z][\w:-]*\s*=", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
-    private static partial Regex EventAttributeRegex();
-
-    [GeneratedRegex(@"javascript\s*:", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
-    private static partial Regex JavascriptUrlRegex();
 }
