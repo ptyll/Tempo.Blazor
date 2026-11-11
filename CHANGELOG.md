@@ -610,6 +610,39 @@
 - **Verification.** `dotnet test tests/Tempo.Blazor.Tests -f net10.0` 3× consecutively green (21 496 passed / 0 failed /
   1 skipped each), and the affected specs on all three lanes (WASM, Server, InteractiveAuto) twice (243 tests per pass).
 
+### Changed — the `otp-input` wireframe role and two stencil samples (plan 7ba95ed6, Fáze 16)
+
+- **`otp-input` has one home component: `TmOtpInput`.** `BuiltInComponentSchemas` used to list the role on
+  `TmMaskedTextBox` (`["masked-input", "otp-input"]`) as well as on the dedicated `TmOtpInput`, so
+  `ResolveByRole` returned both candidates, the operations and authoring engines reported a `role-ambiguous`
+  warning on every OTP a design asked for, and the display-name ordering resolved the role to `TmMaskedTextBox`
+  (180×36 instead of the OTP's 232×44). `TmMaskedTextBox` now keeps `masked-input` alone in both the schema role
+  map and the `tempo` stencil pack (which `StencilPackRegistryParity` keeps in lock-step); the baseline UI role
+  vocabulary already named `TmOtpInput` for the role. Decision `WIREFRAME-ROLE-OTP-INPUT-EXCLUSIVE`; the four
+  stale `Tempo.Blazor.Mcp.Tests` specs that pinned the old resolution were rewritten (role → `TmOtpInput`,
+  no warning, the OTP synonym suggestion names `TmOtpInput`). The remaining built-in role overlaps are policy —
+  a composite's part (`TmAccordionItem` → `accordion`) and a family member standing in for its kind
+  (`TmPivotTable` → `data-table`) deliberately claim the parent role — and the new
+  `WireframeRoleExclusivityTests` pins them by name, so a NEW collision must be a conscious edit to that list;
+  `otp-input` is asserted to be a single-candidate role.
+- **`TmSegmentedControl` wireframe stencil is 240×52** (schema `DefaultHeight` 36 → 52, and the same
+  `defaultSize` in the `tempo` stencil pack). The sketch paints a 20 px label line above the 32 px tray plus a
+  badge inside it, so a 36 px element box clipped the label and the "New" badge out of the selection box — at
+  the editor's zoom that read as a smear. The phase-12 gallery E2E asserts the new default height.
+- **`TmFacetFilter` stencil chip row reads as two filters.** The `showChips` sample used to paint a 74 px
+  `Category: Books` pill (ellipsised to `Category: Boo…`) next to a `Books` pill — the same filter twice. It now
+  paints `Books` and `In stock`, each pill sized from its own label at the sketch's 8 px font (so nothing is
+  ellipsised at the default 240 px) and staying clear of the "Show {n} results" footer button. The row is
+  width-gated (`size.w >= 220`): the pills sit at fixed x positions while the button is anchored at
+  `size.w - 116`, so on a box too narrow to hold both the sketch drops the chips instead of painting them
+  underneath the button.
+- **Verification.** `dotnet test tests/Tempo.Blazor.Mcp.Tests` 464/464 green; the affected bUnit set
+  (`WireframeStencil*`, `UiRoleVocabulary*`, `StencilPackRegistryParity*`, `WireframeRoleExclusivityTests`,
+  `TempoPackFormControlsRenderTests`) 377/377 green; the phase-12 wireframe stencil gallery E2E (WASM) green
+  with refreshed palette/render/state screenshots for both stencils. The post-review nit pass re-ran the MCP
+  suite (464/464) and the whole wireframe/stencil bUnit set (`~Wireframe`, `~Stencil`, `~UiRoleVocabulary`,
+  `~TempoPack`) 2030/2030 green.
+
 ### Breaking changes and migration
 
 **No source-breaking change.** Every new member is additive or a default interface member; every new component is new. The behavior changes below are the complete list a 2.10.0 consumer can notice, with before/after:
@@ -653,6 +686,8 @@
 | `TmAgentPresenceOverlay` label position on a phone | Mirrored onto the other side of the point, often over the last words of the anchored paragraph | Beside the point → under the anchored line → above it → mirrored last | None at the API level; the label MOVES (that is the fix). The roster and the live region still carry the same presence as text |
 | `TmDelegateBoard` column markup | A column exposed `data-column` / `data-agent-id` / `data-full` / `data-preview` | Adds `data-drag-over="true\|false"` on the backlog and every agent column, and the target column's availability line projects the dragged card while the gesture runs | None — additive state attributes; a selector that matches `.tm-ai-delegate__column` is unaffected |
 | Touch targets on `(pointer: coarse)` | `TmSegmentedControl` kept its size modifier's height (24–32 px), the `TmTraceWaterfall` chevron stayed 20 px and a `TmUsageMeter` call to action inherited the host's button size | All three reach `--tm-touch-target` (44 px): `.tm-segmented .tm-segmented__option`, `.tm-trace-waterfall__toggle` + `…-toggle-spacer`, and a `button` / `a` / `[role='button']` inside `.tm-usage-meter__cta` | None at the API level, and a mouse-driven layout is untouched (every rule sits in `@media (pointer: coarse)`). A host rule that pinned a smaller segmented height on a touch device now needs the root class to win — expect 44 px targets on a phone |
+| `otp-input` wireframe role | `TmMaskedTextBox` (`masked-input` + `otp-input`) and `TmOtpInput` both claimed the role, so `ResolveByRole("otp-input")` returned both candidates, the operations/authoring engines reported a `role-ambiguous` warning on every OTP a design asked for, and the display-name ordering resolved it to the 180×36 masked text box | `TmOtpInput` owns `otp-input` exclusively (232×44, no warning); `TmMaskedTextBox` keeps `masked-input` alone. Both the schema role map and the `tempo` stencil pack agree | A design that asked for `otp-input` and meant a masked text box now asks for `masked-input`. Elements already placed keep their stored type and size — nothing is re-resolved on load |
+| `TmSegmentedControl` wireframe stencil default height | 36 (the sketch's label line and the "New" badge were clipped out of the selection box) | 52 (20 px label line + 32 px Md tray) in both the schema and the `tempo` stencil pack | None for an element already saved — it keeps its stored size. A newly inserted stencil is 52 px tall. The Lg variant with a label still draws 60 px and needs a taller box (recorded as known behaviour in `SegmentedControlStencilTests`) |
 
 
 ### Release preparation

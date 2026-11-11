@@ -25,8 +25,40 @@ public sealed class SegmentedControlStencilTests
         schema.DisplayName.Should().Be("Segmented Control");
         schema.Roles.Should().BeEquivalentTo("segmented-control");
         schema.Props.Select(prop => prop.Name).Should().Equal(ExpectedProps);
-        schema.DefaultWidth.Should().BePositive();
-        schema.DefaultHeight.Should().BePositive();
+        schema.DefaultWidth.Should().Be(240);
+        schema.DefaultHeight.Should().Be(52,
+            "the sketch paints a 20 px label line ABOVE the 32 px tray, so a 36 px element box clipped "
+            + "both the label and the badge that sits inside the tray (phase 16 of plan 7ba95ed6)");
+    }
+
+    [Fact]
+    public void StencilPack_DeclaresTheSameDefaultSizeAsTheSchema()
+    {
+        using var pack = System.Text.Json.JsonDocument.Parse(BuiltInStencilPackProvider.ReadPackJson());
+        var component = pack.RootElement.GetProperty("components").EnumerateArray()
+            .Single(entry => entry.GetProperty("type").GetString() == "TmSegmentedControl");
+        var size = component.GetProperty("defaultSize");
+
+        size.GetProperty("width").GetDouble().Should().Be(240);
+        size.GetProperty("height").GetDouble().Should().Be(52,
+            "a 52 px default is what the label line plus the 32 px tray need, and the palette inserts "
+            + "the pack's defaultSize — a 36 there would keep clipping the sketch");
+    }
+
+    [Fact]
+    public void TheSketchFitsItsDeclaredHeight()
+    {
+        // The pack stacks a label line (y 10) over a tray that starts at y 20 and is 32 px tall on the Md
+        // default, so the drawn height is 52. The badge baseline (y 26 inside the tray) stays inside it.
+        var entry = Entry();
+        var schema = new BuiltInComponentSchemas().GetSchemas().Single(s => s.Type == "TmSegmentedControl");
+
+        entry.Should().Contain("\"y\": \"{label ? 20 : 0}\"", "the tray starts below the label line");
+        entry.Should().Contain("\"y\": 26", "the badge baseline sits inside the tray, not past the box");
+
+        schema.DefaultHeight.Should().BeGreaterThanOrEqualTo(
+            52,
+            "the Md tray (32 px) plus its label line (20 px) has to fit the declared default height");
     }
 
     [Fact]
@@ -36,6 +68,32 @@ public sealed class SegmentedControlStencilTests
 
         schema.Props.Should().NotContain(prop => prop.Name == "size",
             "the stencil expression context already owns `size` for the element box — a prop of that name would shadow it");
+    }
+
+    [Fact]
+    public void TheLgVariantWithALabelIsTallerThanTheDefaultBox_KnownLimitation()
+    {
+        // Recorded, not fixed (phase 16 review): the pack stacks a 20 px label line ABOVE the tray, and
+        // the Lg tray is 40 px, so an Lg control WITH a label draws 60 px inside the 52 px default box.
+        // The default variant is Md (20 + 32 = 52) — that is what the palette inserts — and an Lg element
+        // is made taller by its host or its resize handle. Pinned here so the overflow stays a known,
+        // deliberate number and a future fix has a test to flip instead of a silent regression.
+        var entry = Entry();
+        var schema = new BuiltInComponentSchemas().GetSchemas().Single(s => s.Type == "TmSegmentedControl");
+
+        entry.Should().Contain("sizeVariant == \\\"Lg\\\" ? 40", "the Lg tray is 40 px tall");
+        entry.Should().Contain("sizeVariant == \\\"Sm\\\" ? 24", "the Sm tray is 24 px tall");
+
+        const double labelLine = 20;
+        const double mdTray = 32;
+        const double lgTray = 40;
+
+        (labelLine + mdTray).Should().Be(
+            schema.DefaultHeight,
+            "the default (Md) variant is exactly what the 52 px default box is sized for");
+        (labelLine + lgTray).Should().BeGreaterThan(
+            schema.DefaultHeight,
+            "known limitation: Lg + label draws 60 px in a 52 px box, so the host has to make it taller");
     }
 
     [Fact]

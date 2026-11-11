@@ -90,17 +90,21 @@ public class WireframeCatalogToolsTests
     [Fact]
     public void SuggestType_UsesRoleSynonymsBeforeNameDistance()
     {
+        // "verification code" is an `otp-input` synonym, so the ROLE path answers with the role's home
+        // component instead of falling through to nearest-name matching (which would have to guess across
+        // every Tm* name). Since phase 16 of plan 7ba95ed6 that home is the dedicated TmOtpInput — a mask
+        // is a different control, so `masked-input` no longer answers for OTP.
         var registry = Registry();
         var vocabulary = new UiRoleVocabulary([new BuiltInUiRoleVocabularySource()]);
 
         var suggestion = WireframeCatalog.SuggestType(
             registry,
             vocabulary,
-            "TmOtpInput",
+            "verification code",
             scope: null,
             targetPackIds: null);
 
-        suggestion.Should().Be("TmMaskedTextBox");
+        suggestion.Should().Be("TmOtpInput");
     }
 
     [Fact]

@@ -109,7 +109,8 @@ public class WireframeSchemaTests
     public void SerializedElement_RoleRoundTrips()
     {
         var wf = new WireframeDocument();
-        wf.Elements.Add(new WireframeElement { Type = "TmMaskedTextBox", Role = "otp-input" });
+        // The OTP role belongs to the dedicated component (decision WIREFRAME-ROLE-OTP-INPUT-EXCLUSIVE).
+        wf.Elements.Add(new WireframeElement { Type = "TmOtpInput", Role = "otp-input" });
 
         var json = WireframeSerializer.Serialize(wf);
         using var doc = JsonDocument.Parse(json);

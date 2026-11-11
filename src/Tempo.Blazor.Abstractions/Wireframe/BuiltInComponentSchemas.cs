@@ -283,7 +283,7 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmSlider"] = ["slider"],
             ["TmRangeSlider"] = ["range-slider"],
             ["TmRating"] = ["rating"],
-            ["TmMaskedTextBox"] = ["masked-input", "otp-input"],
+            ["TmMaskedTextBox"] = ["masked-input"],
             ["TmOtpInput"] = ["otp-input"],
             ["TmMultiColumnComboBox"] = ["combo-box", "data-table"],
             ["TmSignature"] = ["signature-pad"],
@@ -688,7 +688,7 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
         yield return new WireframeComponentSchema
         {
             Type = "TmSegmentedControl", Category = "Inputs", DisplayName = "Segmented Control",
-            DefaultWidth = 240, DefaultHeight = 36,
+            DefaultWidth = 240, DefaultHeight = 52,
             Props =
             [
                 P("label",       "Label",          PropType.String,     "Period", cat: "Content"),

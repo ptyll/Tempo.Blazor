@@ -6,7 +6,8 @@ namespace Tempo.Blazor.E2E;
 /// <summary>
 /// Plan 7ba95ed6 phase 12 — the FOUR stencils this plan series added or changed, looked at IN THE RUNNING
 /// WIREFRAME EDITOR: <c>TmFacetFilter</c> (240×220), <c>TmTraceWaterfall</c> (420×260), <c>TmUsageMeter</c>
-/// (280×200) and <c>TmSegmentedControl</c> (240×36).
+/// (280×200) and <c>TmSegmentedControl</c> (240×52 — phase 16 raised it from 36 so the label line above
+/// the tray and the badge inside it stop painting outside the element's own selection box).
 /// <para>
 /// Their schema, role vocabulary, pack parity and conditional branches are already pinned by bUnit
 /// (<c>FacetFilterStencilTests</c>, <c>TraceWaterfallStencilTests</c>, <c>UsageMeterStencilTests</c>,
@@ -72,7 +73,7 @@ public class WireframeStencilGalleryPhase12E2ETests : WasmTestBase
         ("TmFacetFilter", "Facet Filter", 240, 220),
         ("TmTraceWaterfall", "Trace Waterfall", 420, 260),
         ("TmUsageMeter", "Usage Meter", 280, 200),
-        ("TmSegmentedControl", "Segmented Control", 240, 36),
+        ("TmSegmentedControl", "Segmented Control", 240, 52),
     ];
 
     /// <summary>
@@ -170,6 +171,15 @@ public class WireframeStencilGalleryPhase12E2ETests : WasmTestBase
         var chipRects = WireframeStencilHarness.Occurrences(initial, "rx=\"9\"");
         Assert.IsTrue(chipRects >= 2,
             $"the two active-filter chips are part of the default sketch (found {chipRects} rx-9 pills)");
+        // Phase 16 of plan 7ba95ed6: the row reads as TWO filters, not the same one twice — the old sample
+        // painted "Category: Boo…" (74 px, ellipsised) next to "Books". Both labels are whole now.
+        Assert.AreEqual(2, WireframeStencilHarness.Occurrences(initial, ">Books<"),
+            "the Books option row AND the Books active-filter chip, each drawn once");
+        Assert.IsTrue(initial.Contains(">In stock<"), "the second chip is a DIFFERENT filter, not a duplicate");
+        Assert.IsFalse(initial.Contains("Category:"),
+            "a chip names the value; the facet name is the group header above the list");
+        Assert.IsFalse(initial.Contains("Boo\u2026"), "nothing is ellipsised in the chip row at the default 240 px");
+        Assert.IsFalse(initial.Contains("In sto\u2026"), "the longest chip label fits its pill too");
         Assert.IsFalse(initial.Contains("Status"), "the collapsed second group is opt-in");
         await ShootElementAsync(page, elementId, "state-TmFacetFilter-default");
 

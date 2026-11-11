@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Tempo.Blazor.Components.Wireframe;
+using Tempo.Blazor.Components.Wireframe.Stencil;
 using Xunit;
 
 namespace Tempo.Blazor.Tests.Wireframe;
@@ -68,9 +69,104 @@ public sealed class FacetFilterStencilTests
         entry.Should().Contain("{presentation", "the inline presentation has no trigger, the canvas has to show that");
         entry.Should().Contain("{showSearch");
         entry.Should().Contain("{showCounts");
-        entry.Should().Contain("{showChips");
+        entry.Should().Contain("(showChips ?? true)",
+            "the chip row is opt-out and, below 220 px, also width-gated so it never paints under the footer button");
         entry.Should().Contain("{collapsed");
         entry.Should().Contain("token(", "the drawing paints with design tokens, never with raw palette steps");
+    }
+
+    [Fact]
+    public void ChipBranch_ShowsTwoDistinctFilters_AndNeitherIsEllipsisedAtTheDefaultWidth()
+    {
+        // Phase 16 of plan 7ba95ed6: the chip row used to read "Category: Boo…" next to "Books" — the same
+        // filter twice, one of them cut off. The row now carries two DIFFERENT active filters and each pill
+        // is sized from its own label (5 px per glyph at the sketch's 8 px font plus 10 px padding), so
+        // nothing has to be ellipsised inside a 240 px wide default element.
+        using var pack = System.Text.Json.JsonDocument.Parse(BuiltInStencilPackProvider.ReadPackJson());
+        var component = pack.RootElement.GetProperty("components").EnumerateArray()
+            .Single(entry => entry.GetProperty("type").GetString() == "TmFacetFilter");
+        var chips = component.GetProperty("render").GetProperty("children").EnumerateArray()
+            .Single(node => node.TryGetProperty("when", out var when)
+                            && when.GetString()!.Contains("showChips", StringComparison.Ordinal))
+            .GetProperty("children").EnumerateArray()
+            .ToArray();
+
+        var pills = chips.Where(node => node.GetProperty("kind").GetString() == "rect").ToArray();
+        var texts = chips.Where(node => node.GetProperty("kind").GetString() == "text").ToArray();
+
+        pills.Should().HaveCount(2, "the sketch shows a row of active-filter chips");
+        texts.Should().HaveCount(2);
+
+        var labels = texts.Select(node => node.GetProperty("text").GetString()!).ToArray();
+        labels.Should().Equal("Books", "In stock");
+        labels.Should().OnlyHaveUniqueItems(
+            "two chips that read almost the same thing look like one filter drawn twice");
+        labels.Should().NotContain(
+            label => label.Contains(':', StringComparison.Ordinal),
+            "a chip names the VALUE; the facet name belongs to the group header above it");
+
+        const double glyphWidth = 5;
+        const double pillPadding = 10;
+        const double defaultWidth = 240;
+        const double footerButtonWidth = 104;
+        const double gutter = 12;
+
+        // The pack cannot measure text, so the pill widths (35 and 50) and the text widths (25 and 40)
+        // are literals derived from THESE two labels. Editing a label without editing its pill silently
+        // reintroduces the ellipsis this test is about — the assertions below are the guard that has to
+        // move with it.
+        for (var i = 0; i < labels.Length; i++)
+        {
+            var label = labels[i];
+            var pillX = pills[i].GetProperty("x").GetDouble();
+            var pillWidth = pills[i].GetProperty("w").GetDouble();
+            var textX = texts[i].GetProperty("x").GetDouble();
+            var textWidth = texts[i].GetProperty("w").GetDouble();
+
+            textWidth.Should().BeGreaterThanOrEqualTo(
+                label.Length * glyphWidth,
+                $"'{label}' needs about {label.Length * glyphWidth} px at the sketch's 8 px font");
+            (textX - pillX).Should().BeGreaterThan(0, "the label is inset inside its pill");
+            (textX - pillX + textWidth).Should().BeLessThanOrEqualTo(
+                pillWidth,
+                $"the whole of '{label}' stays inside its pill, so nothing is ellipsised at {defaultWidth} px");
+            pillWidth.Should().BeGreaterThanOrEqualTo(
+                label.Length * glyphWidth + pillPadding,
+                $"the pill for '{label}' is derived from the label length");
+        }
+
+        var firstRight = pills[0].GetProperty("x").GetDouble() + pills[0].GetProperty("w").GetDouble();
+        pills[1].GetProperty("x").GetDouble().Should().BeGreaterThan(firstRight, "the two pills do not overlap");
+
+        var lastRight = pills[1].GetProperty("x").GetDouble() + pills[1].GetProperty("w").GetDouble();
+        lastRight.Should().BeLessThan(
+            defaultWidth - gutter - footerButtonWidth,
+            "the chip row leaves the 'Show {n} results' button its own space in the footer row");
+    }
+
+    [Fact]
+    public void ChipBranch_IsHiddenOnANarrowBox_SoTheChipsNeverPaintUnderTheFooterButton()
+    {
+        // The pills sit at fixed x positions while the "Show {n} results" button is anchored at
+        // size.w - 116, so on a box narrower than ~220 px the row would paint chips UNDER the button.
+        // The pack therefore draws the row of chips only when the box can hold both (phase 16 review).
+        using var pack = System.Text.Json.JsonDocument.Parse(BuiltInStencilPackProvider.ReadPackJson());
+        var chipsWhen = pack.RootElement.GetProperty("components").EnumerateArray()
+            .Single(entry => entry.GetProperty("type").GetString() == "TmFacetFilter")
+            .GetProperty("render").GetProperty("children").EnumerateArray()
+            .Single(node => node.TryGetProperty("when", out var when)
+                            && when.GetString()!.Contains("showChips", StringComparison.Ordinal))
+            .GetProperty("when").GetString()!;
+
+        var evaluator = new StencilEvaluator();
+        bool DrawsChips(double width) => evaluator
+            .Evaluate(chipsWhen, new StencilEvalContext(new Dictionary<string, object?>(), width, 220, 0, null))
+            .AsBool();
+
+        DrawsChips(240).Should().BeTrue("the 240 px default box holds both the chips and the button");
+        DrawsChips(220).Should().BeTrue("at 220 px the last pill (ending at 103) still clears the button (x 104)");
+        DrawsChips(200).Should().BeFalse(
+            "at 200 px the button starts at x 84, so the chip row would paint underneath it");
     }
 
     private static string Entry(string type) => BuiltInStencilPackProvider.ReadPackJson()

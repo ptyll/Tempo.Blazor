@@ -50,13 +50,17 @@ public class WireframeValidationEngineTests
     [Fact]
     public void UnknownType_UsesRoleSynonymSuggestion()
     {
-        var doc = DocWith(new WireframeElement { Type = "TmOtpInput", W = 100, H = 40 });
+        // An unknown TYPE that names a UI ROLE resolves through the vocabulary to the role's HOME
+        // component — "verification code" is an `otp-input` synonym. Since phase 16 of plan 7ba95ed6 the
+        // dedicated TmOtpInput owns that role exclusively (TmMaskedTextBox keeps only `masked-input`), so
+        // the did-you-mean suggestion names the real component instead of a near-miss alias.
+        var doc = DocWith(new WireframeElement { Type = "verification code", W = 100, H = 40 });
 
         var result = WireframeValidationEngine.Validate(doc, Registry());
 
         result.IsValid.Should().BeFalse();
         result.Errors.Should().ContainSingle()
-            .Which.Should().Contain("TmMaskedTextBox");
+            .Which.Should().Contain("unknown component type").And.Contain("TmOtpInput");
     }
 
     [Fact]

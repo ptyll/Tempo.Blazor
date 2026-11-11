@@ -196,14 +196,15 @@ public class WireframeOperationToolsTests
             Registry());
 
         result.Success.Should().BeTrue();
-        result.Warnings.Should().BeEmpty();
+        result.Warnings.Should().BeEmpty(
+            "the dedicated TmOtpInput owns `otp-input` exclusively, so the role is unambiguous");
         var element = doc.Elements.Should().ContainSingle().Which;
-        element.Type.Should().Be("TmMaskedTextBox");
+        element.Type.Should().Be("TmOtpInput");
         element.Role.Should().Be("otp-input");
         element.X.Should().Be(10);
         element.Y.Should().Be(12);
-        element.W.Should().Be(180);
-        element.H.Should().Be(36);
+        element.W.Should().Be(232);
+        element.H.Should().Be(44);
     }
 
     [Fact]
@@ -813,8 +814,10 @@ public class WireframeOperationToolsTests
             WireframeSerializer.Serialize(doc)));
 
         root.GetProperty("success").GetBoolean().Should().BeTrue(root.GetRawText());
+        root.GetProperty("warnings").GetArrayLength().Should().Be(0,
+            "`otp-input` has one home component, so authoring reports no role-ambiguous warning");
         var saved = (await backend.GetWireframeDocumentAsync(id))!.Elements.Single();
-        saved.Type.Should().Be("TmMaskedTextBox");
+        saved.Type.Should().Be("TmOtpInput");
         saved.Role.Should().Be("otp-input");
     }
 
