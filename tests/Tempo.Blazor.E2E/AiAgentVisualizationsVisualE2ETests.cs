@@ -127,7 +127,8 @@ public sealed class AiAgentVisualizationsVisualE2ETests : AiAgentVisualizationsP
                      (HandoffSection, "handoff"),
                      (DelegateSection, "delegate"),
                      (RunsSection, "runs"),
-                     (ConflictSection, "conflict"),
+                     (ConflictSection, "radar"),
+                     (PresenceSection, "presence"),
                      (FanOutSection, "fan-out"),
                  })
         {
@@ -140,6 +141,56 @@ public sealed class AiAgentVisualizationsVisualE2ETests : AiAgentVisualizationsP
 
         var pageWidth = await page.EvaluateAsync<double>("() => document.documentElement.scrollWidth");
         Assert.IsTrue(pageWidth <= 769, $"the page itself never scrolls sideways at 768 px (width {pageWidth})");
+    }
+
+    /// <summary>
+    /// Plan 7ba95ed6 phase 12 — <c>TmAgentBadge</c>'s browser-level verification. It had no route of its own,
+    /// and its contrast was only measured at the token level (<c>AgentColorTokenTests</c>), so the badge strip
+    /// this phase adds to the page is what gets shot: 375 / 768 / 1440 px in light AND dark, plus a scoped axe
+    /// scan per width. The axe scan runs on the SAME element the screenshots show, so a contrast regression in
+    /// either theme fails here rather than only in a token test.
+    /// </summary>
+    [TestMethod]
+    public async Task TheAgentBadgeIsShotAtEveryWidthInBothThemes_AndPassesAScopedAxeScan()
+    {
+        foreach (var (width, name) in new[] { (375, "375"), (768, "768"), (1440, "1440") })
+        {
+            var page = await OpenAsync(width, 1000, coarsePointer: width < 1024);
+
+            await ScrollToTopAsync(page, BadgeSection);
+            var box = await page.Locator(BadgeSection).BoundingBoxAsync();
+            Assert.IsNotNull(box, $"the badge strip is laid out at {name} px");
+            Assert.IsTrue(box!.Width <= width + 1,
+                $"the badge strip fits {name} px (width {box.Width})");
+
+            // Four state badges, three densities, and the avatar-only badge (which carries its OWN test id,
+            // because DataTestId overrides the root one).
+            var badges = page.Locator($"{BadgeSection} [data-testid='agent-badge']");
+            var count = await badges.CountAsync();
+            Assert.AreEqual(7, count,
+                $"{name} px: four state badges plus three densities (found {count})");
+            Assert.AreEqual(1, await page.Locator("[data-testid='ai-viz-badge-avatar-only']").CountAsync(),
+                $"{name} px: the avatar-only badge is on the page");
+            for (var index = 0; index < count; index++)
+            {
+                var badge = badges.Nth(index);
+                var hasName = await badge.Locator(".tm-agent-badge__name").CountAsync();
+                var role = await badge.GetAttributeAsync("role");
+                Assert.IsTrue(hasName == 1 || role == "img",
+                    $"{name} px: badge {index} is either named by its visible text or is a named graphic");
+            }
+
+            await ShootAsync(page, $"ai-viz-badge-light-{name}");
+            await AssertNoSeriousAxeViolationsAsync(page, "ai-viz-badge-section");
+
+            await ToggleThemeAsync(page);
+            await ScrollToTopAsync(page, BadgeSection);
+            await ShootAsync(page, $"ai-viz-badge-dark-{name}");
+
+            // The dark scan is the one that matters for the palette: the avatar ink and the state tone are
+            // re-pointed by the dark tokens, and a ratio that only holds in light would surface here.
+            await AssertNoSeriousAxeViolationsAsync(page, "ai-viz-badge-section");
+        }
     }
 
     [TestMethod]

@@ -69,10 +69,11 @@ public class AiAgentVisualizationsPageTests : DemoPageLocalizationTestBase
 
         foreach (var section in new[]
                  {
-                     "ai-viz-simulator", "ai-viz-lanes-section", "ai-viz-graph-section", "ai-viz-fan-out-section",
-                     "ai-viz-attempts-section", "ai-viz-handoff-section", "ai-viz-fallback-section",
-                     "ai-viz-autonomy-section", "ai-viz-memory-section", "ai-viz-delegate-section",
-                     "ai-viz-runs-section", "ai-viz-conflict-section", "ai-viz-presence-section",
+                     "ai-viz-simulator", "ai-viz-badge-section", "ai-viz-lanes-section", "ai-viz-graph-section",
+                     "ai-viz-fan-out-section", "ai-viz-attempts-section", "ai-viz-handoff-section",
+                     "ai-viz-fallback-section", "ai-viz-autonomy-section", "ai-viz-memory-section",
+                     "ai-viz-delegate-section", "ai-viz-runs-section", "ai-viz-conflict-section",
+                     "ai-viz-presence-section",
                  })
         {
             Section(cut, section).TextContent.Should().NotContain("[Tm", "no raw resource key may reach the page");
@@ -85,6 +86,44 @@ public class AiAgentVisualizationsPageTests : DemoPageLocalizationTestBase
         cut.Find("[data-testid='ai-viz-announcer']").GetAttribute("aria-live").Should().Be("polite");
         cut.FindAll("[data-testid='ai-viz-announcer']").Should().HaveCount(1,
             "the page owns exactly one live region");
+    }
+
+    /// <summary>
+    /// Plan 7ba95ed6 phase 12: the page's badge strip is where TmAgentBadge is looked at (it has no route of its
+    /// own). The fact pins the contract the visual sweep reads: one badge per activity state, all three densities,
+    /// and an avatar-only badge that is a named <c>role="img"</c> rather than a role-less span with an ignored
+    /// aria-label.
+    /// </summary>
+    [Fact]
+    public void TheBadgeSectionShowsEveryDensityAndNamesTheAvatarOnlyBadge()
+    {
+        RegisterClock();
+        var cut = RenderPage();
+
+        var section = Section(cut, "ai-viz-badge-section");
+        section.TextContent.Should().NotContain("[Tm", "no raw resource key may reach the page");
+
+        var statuses = section.QuerySelectorAll("[data-testid='ai-viz-badge-statuses'] [data-testid='agent-badge']");
+        statuses.Length.Should().Be(4, "one badge per activity state");
+        statuses.Select(badge => badge.GetAttribute("data-status")).Should()
+            .Equal("Running", "WaitingForApproval", "Succeeded", "Failed");
+        statuses.Should().OnlyContain(badge => badge.QuerySelector(".tm-agent-badge__status-text") != null,
+            "the state is a WORD in the badge, never colour alone");
+
+        var sizes = section.QuerySelectorAll("[data-testid='ai-viz-badge-sizes'] [data-testid='agent-badge']");
+        var sizeClasses = sizes.Select(badge => badge.ClassName ?? string.Empty).ToArray();
+        foreach (var density in new[] { "tm-agent-badge--sm", "tm-agent-badge--md", "tm-agent-badge--lg" })
+        {
+            sizeClasses.Should().Contain(name => name.Contains(density, StringComparison.Ordinal),
+                $"the strip shows the {density} density");
+        }
+
+        var avatarOnly = cut.Find("[data-testid='ai-viz-badge-avatar-only']");
+        avatarOnly.GetAttribute("role").Should().Be("img",
+            "an aria-label on a role-less span is ignored, so the composed avatar has to be a graphic");
+        avatarOnly.GetAttribute("aria-label").Should().Contain("Retriever").And.Contain("Succeeded");
+        avatarOnly.QuerySelector(".tm-agent-badge__name").Should()
+            .BeNull("ShowName=false renders the avatar only");
     }
 
     [Fact]

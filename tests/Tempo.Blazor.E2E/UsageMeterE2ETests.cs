@@ -286,14 +286,21 @@ public abstract class UsageMeterE2EBase : PlaywrightTestBase
 
         var light = await FullMeter(page).EvaluateAsync<string>("el => getComputedStyle(el).backgroundColor");
 
-        await page.EvaluateAsync(
-            """
-            () => {
-                document.documentElement.setAttribute('data-theme', 'dark');
-                document.querySelectorAll('[data-theme]').forEach(el => el.setAttribute('data-theme', 'dark'));
-            }
-            """);
-        await page.WaitForTimeoutAsync(300);
+        // Plan 7ba95ed6 phase 12: the dark reference goes through the demo's OWN theme toggle. Forcing
+        // `data-theme="dark"` on the document painted the meter dark but left the page's Tailwind chrome
+        // light (its `dark:` variants key off the `dark` CLASS the toggle writes on the shell), so the
+        // reference PNG showed a half-light frame. The toggle is the real path: ThemeService flips, the
+        // shell re-renders with `data-theme="dark"` AND the `dark` class, and the tokens re-point.
+        await page.Locator("[data-testid='theme-toggle']:visible").First.ClickAsync();
+        await page.WaitForFunctionAsync(
+            "() => document.querySelector('.demo-shell')?.getAttribute('data-theme') === 'dark'",
+            null,
+            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await page.WaitForTimeoutAsync(400);
+        Assert.IsTrue(
+            (await page.Locator(".demo-shell").First.GetAttributeAsync("class") ?? string.Empty)
+                .Split(' ').Contains("dark"),
+            "the real toggle also puts the `dark` class on the shell, which is what repaints the page chrome");
 
         var dark = await FullMeter(page).EvaluateAsync<string>("el => getComputedStyle(el).backgroundColor");
         Assert.AreEqual("rgb(30, 41, 59)", dark, "the dark theme re-points --tm-bg-surface (#1e293b)");

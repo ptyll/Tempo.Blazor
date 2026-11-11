@@ -159,6 +159,20 @@
                          Parts="@BreakdownParts"
                          Total="12000" />
     </div>
+
+    @* Live fixture for the row identity: two parts have an EMPTY Id and two share one, which is the case
+       a hand-written @key collapses onto a single node. The card derives a private key for every row that
+       does not own a unique one, so the browser proof is that all four rows render AND the period switch
+       still re-sorts them. *@
+    <div class="mt-4 max-w-xl" data-testid="breakdown-fixture">
+        <p class="mb-2 text-sm text-slate-600 dark:text-slate-400">@Loc["TmDataDisplayDemo_BreakdownFixtureHint"]</p>
+        <TmBreakdownCard Title="@Loc["TmDataDisplayDemo_BreakdownFixtureTitle"]"
+                         Parts="@BreakdownFixtureParts"
+                         PeriodOptions="@_periodOptions"
+                         @bind-Period="_breakdownFixturePeriod"
+                         DataTestId="breakdown-fixture-card" />
+    </div>
+
     <DemoCrossLinks LabelKey="TmDemo_FullScenario"
                     Links="DemoCrossLinkSets.AnalyticsKitScenario"
                     DataTestId="data-display-breakdown-scenario"
@@ -739,6 +753,30 @@
         new() { Id = "search", Label = "Search", Value = 980 },
         new() { Id = "social", Label = "Social", Value = 210 },
         new() { Id = "email", Label = "E-mail", Value = 320 }
+    ];
+
+    // The broken-identity fixture: two EMPTY ids and two that share "dup". The card must still render
+    // four rows and re-sort them on a period switch; the two populations also reorder DIFFERENTLY, so a
+    // collapse onto one @key would show as a wrong row count or a frozen order in the browser.
+    private string _breakdownFixturePeriod = "month";
+
+    private IReadOnlyList<BreakdownPart> BreakdownFixtureParts
+        => _breakdownFixturePeriod == "week" ? BreakdownFixtureWeekParts : BreakdownFixtureMonthParts;
+
+    private static readonly IReadOnlyList<BreakdownPart> BreakdownFixtureMonthParts =
+    [
+        new() { Id = string.Empty, Label = "Unkeyed A", Value = 4200 },
+        new() { Id = "dup", Label = "Repeated A", Value = 3100 },
+        new() { Id = string.Empty, Label = "Unkeyed B", Value = 1800 },
+        new() { Id = "dup", Label = "Repeated B", Value = 900 }
+    ];
+
+    private static readonly IReadOnlyList<BreakdownPart> BreakdownFixtureWeekParts =
+    [
+        new() { Id = string.Empty, Label = "Unkeyed A", Value = 640 },
+        new() { Id = "dup", Label = "Repeated A", Value = 2400 },
+        new() { Id = string.Empty, Label = "Unkeyed B", Value = 1800 },
+        new() { Id = "dup", Label = "Repeated B", Value = 320 }
     ];
 
 

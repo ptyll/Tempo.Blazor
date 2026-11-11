@@ -192,7 +192,7 @@ public abstract class DataDisplayTrendBreakdownE2EBase : PlaywrightTestBase
         StringAssert.Contains(firstLabel ?? string.Empty, "Direct");
 
         // The demo binds Period; selecting "Last week" swaps the values, so another channel leads.
-        await card.Locator(".tm-breakdown-card__period label.tm-radio-segment").Nth(1).ClickAsync();
+        await card.Locator(".tm-breakdown-card__period [role='radio']").Nth(1).ClickAsync();
 
         await Assertions.Expect(card.Locator("tbody tr .tm-breakdown-card__label").First)
             .ToContainTextAsync("Search", new LocatorAssertionsToContainTextOptions { Timeout = 5000 });
@@ -205,6 +205,102 @@ public abstract class DataDisplayTrendBreakdownE2EBase : PlaywrightTestBase
         Assert.AreEqual(5, await totalCard.Locator("tbody tr").CountAsync(),
             "four parts plus the explicit 'Other' row a declared total leaves over");
         Assert.AreEqual("Other", (await totalCard.Locator(".tm-breakdown-card__row--remainder .tm-breakdown-card__label").TextContentAsync())?.Trim());
+    }
+
+    /// <summary>
+    /// Plan 7ba95ed6 phase 12 — the forced-colors fallback of the breakdown card in a REAL browser, not in
+    /// the stylesheet source: the strip and the swatches are painted with <c>background-color</c> only, which
+    /// forced-colors removes, so the card opts them out of the substitution and keeps a CanvasText edge on
+    /// the bar. Both facts are read as COMPUTED styles, captured before and after the emulation.
+    /// </summary>
+    [TestMethod]
+    public async Task Breakdown_ForcedColors_KeepsTheStripPaint_AndTheBarKeepsItsCanvasTextEdge()
+    {
+        var page = await OpenAsync();
+        var card = PeriodCard(page);
+
+        var segment = card.Locator(".tm-breakdown-card__segment").First;
+        var swatch = card.Locator("tbody tr .tm-breakdown-card__swatch").First;
+        var bar = card.Locator(".tm-breakdown-card__bar");
+
+        var lightSegment = await segment.EvaluateAsync<string>("el => getComputedStyle(el).backgroundColor");
+        var lightSwatch = await swatch.EvaluateAsync<string>("el => getComputedStyle(el).backgroundColor");
+        Assert.AreNotEqual("rgba(0, 0, 0, 0)", lightSegment, "the strip segment is painted in light mode too");
+
+        await page.EmulateMediaAsync(new PageEmulateMediaOptions { ForcedColors = ForcedColors.Active });
+        await page.WaitForTimeoutAsync(400);
+
+        var forced = await page.EvaluateAsync<bool>(
+            "() => matchMedia('(forced-colors: active)').matches");
+        Assert.IsTrue(forced, "Playwright's forced-colors emulation has to be active for this test to mean anything");
+
+        var forcedSegment = await segment.EvaluateAsync<string>("el => getComputedStyle(el).backgroundColor");
+        var forcedSwatch = await swatch.EvaluateAsync<string>("el => getComputedStyle(el).backgroundColor");
+        Assert.AreEqual(lightSegment, forcedSegment,
+            "the segment opts out of the system-colour substitution, so the strip keeps its proportions");
+        Assert.AreEqual(lightSwatch, forcedSwatch,
+            "the row swatch keeps its paint as well — otherwise the table loses its colour key");
+
+        // The bar's edge is the SYSTEM colour, resolved by the browser: a probe with `color: CanvasText`
+        // yields exactly the value the border must carry.
+        var systemCanvasText = await page.EvaluateAsync<string>(
+            """
+            () => {
+                const probe = document.createElement('span');
+                probe.style.color = 'CanvasText';
+                probe.style.display = 'none';
+                document.body.appendChild(probe);
+                const value = getComputedStyle(probe).color;
+                probe.remove();
+                return value;
+            }
+            """);
+        var border = await bar.EvaluateAsync<string[]>(
+            "el => { const s = getComputedStyle(el); return [s.borderTopWidth, s.borderTopColor, s.borderTopStyle]; }");
+        Assert.AreEqual("1px", border[0], "the bar carries a visible edge in forced colors");
+        Assert.AreEqual(systemCanvasText, border[1],
+            $"the bar's edge is CanvasText (expected {systemCanvasText}, the border is {border[1]})");
+
+        // The card has to be IN the frame: the capture is a viewport shot, so an unscrolled page would show the
+        // top of the demo and prove nothing about the strip it claims to document.
+        await BreakdownSection(page).ScrollIntoViewIfNeededAsync();
+        await WaitForLayoutToSettleAsync(page, "[data-testid='breakdown-card-section']");
+        await ShootAsync(page, "breakdown-forced-colors");
+    }
+
+    /// <summary>
+    /// Plan 7ba95ed6 phase 12 — the LIVE fixture with duplicate and empty <c>BreakdownPart.Id</c> values. The
+    /// card derives a private row key for every row that does not own a unique one, so the browser proof is
+    /// that all four rows are in the DOM and the period switch still re-sorts them.
+    /// </summary>
+    [TestMethod]
+    public async Task Breakdown_DuplicateAndEmptyIds_RenderAndReSortInTheBrowser()
+    {
+        var page = await OpenAsync();
+        var fixture = page.GetByTestId("breakdown-fixture");
+        await fixture.ScrollIntoViewIfNeededAsync();
+
+        var card = fixture.GetByTestId("breakdown-fixture-card");
+        var rows = card.Locator("tbody tr");
+        await Assertions.Expect(rows).ToHaveCountAsync(4, new LocatorAssertionsToHaveCountOptions { Timeout = 5000 });
+        CollectionAssert.AreEqual(
+            new[] { string.Empty, "dup", string.Empty, "dup" },
+            await rows.EvaluateAllAsync<string[]>("trs => trs.map(tr => tr.getAttribute('data-part-id') ?? '')"),
+            "the fixture really carries the empty and the repeated ids");
+
+        var before = await card.Locator("tbody tr .tm-breakdown-card__label").AllTextContentsAsync();
+        await card.Locator(".tm-breakdown-card__period [role='radio']").Nth(1).ClickAsync();
+        await Assertions.Expect(card.Locator("tbody tr .tm-breakdown-card__label").First)
+            .ToContainTextAsync("Repeated A", new LocatorAssertionsToContainTextOptions { Timeout = 5000 });
+        Assert.AreEqual(4, await rows.CountAsync(), "the reorder keeps every row");
+        Assert.AreNotEqual(
+            before.Select(label => label.Trim()).ToArray(),
+            (await card.Locator("tbody tr .tm-breakdown-card__label").AllTextContentsAsync())
+                .Select(label => label.Trim()).ToArray(),
+            "the duplicate/empty ids did not freeze the order");
+
+        await WaitForLayoutToSettleAsync(page, "[data-testid='breakdown-fixture']");
+        await ShootAsync(page, "breakdown-duplicate-id-fixture");
     }
 
     [TestMethod]
@@ -231,9 +327,9 @@ public abstract class DataDisplayTrendBreakdownE2EBase : PlaywrightTestBase
             }
             """);
 
-        Assert.AreEqual(2, await card.Locator(".tm-breakdown-card__period label.tm-radio-segment").CountAsync(),
+        Assert.AreEqual(2, await card.Locator(".tm-breakdown-card__period [role='radio']").CountAsync(),
             "the demo offers two periods");
-        await card.Locator(".tm-breakdown-card__period label.tm-radio-segment").Nth(1).ClickAsync();
+        await card.Locator(".tm-breakdown-card__period [role='radio']").Nth(1).ClickAsync();
 
         await Assertions.Expect(card.Locator("tbody tr .tm-breakdown-card__label").First)
             .ToContainTextAsync("Search", new LocatorAssertionsToContainTextOptions { Timeout = 5000 });
@@ -258,7 +354,7 @@ public abstract class DataDisplayTrendBreakdownE2EBase : PlaywrightTestBase
         var page = await OpenAsync(reduceMotion: true);
         var card = PeriodCard(page);
 
-        await card.Locator(".tm-breakdown-card__period label.tm-radio-segment").Nth(1).ClickAsync();
+        await card.Locator(".tm-breakdown-card__period [role='radio']").Nth(1).ClickAsync();
 
         await Assertions.Expect(card.Locator("tbody tr .tm-breakdown-card__label").First)
             .ToContainTextAsync("Search", new LocatorAssertionsToContainTextOptions { Timeout = 5000 });

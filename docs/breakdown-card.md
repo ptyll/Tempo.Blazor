@@ -50,6 +50,13 @@ derived positional key in its own namespace. Consequences:
   definition — so that row is not animated (the data order still changes immediately). Give the parts
   stable, unique ids to get the FLIP.
 
+The `/data-display` demo carries a LIVE fixture for this (`[data-testid="breakdown-fixture"]`, inside
+`breakdown-card-section`): two parts with an empty `Id` and two that share one, with its own period switch.
+It is what the browser lane looks at —
+`DataDisplayTrendBreakdownE2ETests.Breakdown_DuplicateAndEmptyIds_RenderAndReSortInTheBrowser` proves all
+four rows render and still re-sort, and `…Breakdown_ForcedColors_KeepsTheStripPaint_AndTheBarKeepsItsCanvasTextEdge`
+reads the same card's computed styles under Chromium's forced-colors emulation.
+
 ## The total and the shares
 
 - `Total` is the declared whole. Null (default) means the parts' sum, and the rounded shares add up

@@ -502,3 +502,21 @@
     border: 1px solid CanvasText;
   }
 }
+
+/* ── coarse pointers ─────────────────────────────────────────── */
+/* A row is TAP-selected (the row itself is the click target), and the disclosure chevron is the only
+   control a finger has for folding a subtree. At 20 px it is below the 44 px target every other
+   coarse-pointer surface keeps (WCAG 2.5.8), so it grows to the shared token — and its spacer grows
+   with it, otherwise every label on a leaf row would shift left by 24 px against its parent's. */
+
+@media (pointer: coarse) {
+  /* The basis is the token, not `auto`: the name cell is a flex row inside a narrow tree column, and a
+     content-sized basis would let the 44 px box be re-measured against the icon before the minimum
+     applies. `flex-shrink: 0` keeps the chevron from collapsing when the column is squeezed. */
+  .tm-trace-waterfall__toggle,
+  .tm-trace-waterfall__toggle-spacer {
+    flex: 0 0 var(--tm-touch-target);
+    min-inline-size: var(--tm-touch-target);
+    min-block-size: var(--tm-touch-target);
+  }
+}

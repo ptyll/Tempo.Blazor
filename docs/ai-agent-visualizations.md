@@ -84,6 +84,7 @@ WASM is single-threaded, which is why the browser lanes never saw this; the `AiA
 
 | Section | Surface | What is live |
 |---|---|---|
+| Agent badge | `TmAgentBadge` | The shared identity line every surface below reuses, on its own so it can be looked at: one badge per activity state (running, waiting for approval, succeeded, failed), all three densities, and an avatar-only badge that is a named `role="img"`. It is the page's only purely static section, and it exists because the badge has no route of its own. |
 | Lanes | `TmAgentLanes` | Four agents, the seeded and the simulated blocks, handoff arrows, an approval marker, the running block and the "now" line. |
 | Graph | `TmAgentGraph` | The human, the four agents, the ledger and two tools. **This is the one surface fed the incremental path**: each tool call travels as its own `AgentGraphCall` and pulses its edge. |
 | Fan-out | `TmFanOutGrid` | Forty units over four workers, with a failure that can be retried and a queue that loops. |
@@ -153,8 +154,12 @@ Every graphical surface has a text or table alternative a keyboard reaches, and 
 - **The WASM-only references** are the screenshots and the phone geometry: those are a design reference, not a lane
   contract, so they stay on the WASM host.
 - **The visual sweep** (`AiAgentVisualizationsVisualE2ETests`) shoots every section at 1440 px in light and dark, the
-  phone sweep at 375 px with the width and coarse-target assertions, the table alternatives on the phone, and the
-  reduced-motion presentation. Reference screenshots land in
+  phone sweep at 375 px with the width and coarse-target assertions, the table alternatives on the phone, the
+  tablet sweep at 768 px for the surfaces that WRAP there (the handoff chain, the delegate board, the week of runs,
+  the conflict radar, the presence overlay and the fan-out grid), and the reduced-motion presentation. It also shoots
+  the badge strip at 375 / 768 / 1440 px in BOTH themes and runs a scoped axe scan of it per width and per theme —
+  that is the badge's browser-level verification, since the token-level contrast measurement
+  (`AgentColorTokenTests`) cannot see the composed element. Reference screenshots land in
   `tests/Tempo.Blazor.E2E/TestResults/ai-agent-visualizations`.
 - **The performance lane** runs the two-minute budget spec described above on BOTH hosts: the WASM measurement
   (`AiAgentVisualizationsPerformanceE2ETests`, the inherited budget) and the Server measurement

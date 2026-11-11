@@ -944,7 +944,7 @@ to{opacity:1;}
 .tm-segmented--md .tm-segmented__option{min-block-size:var(--tm-input-height-md);font-size:var(--tm-font-size-sm);}
 .tm-segmented--lg .tm-segmented__option{min-block-size:var(--tm-input-height-lg);padding-inline:var(--tm-space-4);font-size:var(--tm-font-size-md);}
 .tm-segmented--disabled{opacity:0.75;}
-@media (pointer:coarse){.tm-segmented__option{min-block-size:var(--tm-touch-target);}
+@media (pointer:coarse){.tm-segmented .tm-segmented__option{min-block-size:var(--tm-touch-target);}
 }
 @media (forced-colors:active){.tm-segmented__track[data-tm-indicator] .tm-segmented__indicator{display:none;}
 .tm-segmented__track[data-tm-indicator] .tm-segmented__option--selected,.tm-segmented__option--selected{border-color:Highlight;background-color:Highlight;color:HighlightText;forced-color-adjust:none;}
@@ -1505,6 +1505,8 @@ button.tm-stat-card{appearance:none;}
 .tm-trace-waterfall__bar{background-color:Canvas;}
 .tm-trace-waterfall__status,.tm-trace-waterfall__slowest,.tm-trace-waterfall__orphan{border:1px solid CanvasText;}
 }
+@media (pointer:coarse){.tm-trace-waterfall__toggle,.tm-trace-waterfall__toggle-spacer{flex:0 0 var(--tm-touch-target);min-inline-size:var(--tm-touch-target);min-block-size:var(--tm-touch-target);}
+}
 .tm-usage-meter{display:flex;flex-direction:column;gap:var(--tm-space-2);padding:var(--tm-space-4);background-color:var(--tm-bg-surface);border:1px solid var(--tm-border-color);border-radius:var(--tm-radius-lg);color:var(--tm-text-primary);}
 .tm-usage-meter--compact{gap:var(--tm-space-1);padding:var(--tm-space-3);}
 .tm-usage-meter__title{margin:0;font-size:var(--tm-font-size-sm);font-weight:var(--tm-font-weight-semibold);color:var(--tm-text-secondary);}
@@ -1561,6 +1563,7 @@ button.tm-stat-card{appearance:none;}
 .tm-usage-meter__fill,.tm-usage-meter__segment,.tm-usage-meter__swatch{forced-color-adjust:none;}
 }
 @media (pointer:coarse){.tm-usage-meter__state,.tm-usage-meter__reset,.tm-usage-meter__over{font-size:var(--tm-font-size-sm);}
+.tm-usage-meter__cta button,.tm-usage-meter__cta a,.tm-usage-meter__cta [role='button']{min-block-size:var(--tm-touch-target);}
 }
 .tm-sortable-list{display:flex;flex-direction:column;gap:var(--tm-space-2);min-inline-size:0;font-family:var(--tm-font-sans);}
 .tm-sortable-list__items{display:flex;flex-direction:column;gap:var(--tm-space-1);margin:0;padding:0;list-style:none;}

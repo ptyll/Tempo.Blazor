@@ -152,7 +152,7 @@ rather than a decorative squiggle.
 | Focus | The meter has no tab stop and no focus management of its own; `NearLimitContent` is host markup, so its focus behaviour is the host's. |
 | Forced colours | The fill, the segments and the swatches opt out of the colour substitution (`forced-color-adjust: none`) and the track keeps a `CanvasText` edge, so the filled share stays visible instead of collapsing into an empty box. |
 | Reduced motion | The one animated subject — the fill's width transition — is enumerated in the `animations.css` reduced-motion block, so `prefers-reduced-motion: reduce` clamps it to 0.01 ms. |
-| Coarse pointers | Nothing to enlarge (the meter is read-only), but the state badge, the reset line and the over-limit line step up to the small font size on `(pointer: coarse)`. |
+| Coarse pointers | The state badge, the reset line and the over-limit line step up to the small font size, and a `button`, an `a` or a `[role='button']` control in the `NearLimitContent` slot gets `min-block-size: var(--tm-touch-target)` (44 px) on `(pointer: coarse)`. The slot is host markup, so the meter — not the host's button size — owns the finger target. |
 
 ## Edge cases
 

@@ -206,9 +206,12 @@
   opacity: 0.75;
 }
 
-/* The 44px target is a TOUCH requirement — a mouse keeps the control height of the fields beside it. */
+/* The 44px target is a TOUCH requirement — a mouse keeps the control height of the fields beside it.
+   The selector carries the root class on purpose: the size modifiers above are `.tm-segmented--md
+   .tm-segmented__option` (two classes), so a bare `.tm-segmented__option` here loses on specificity and
+   the tray stayed 24–32 px tall on a finger (measured: 32 px at the Md size on /data-display). */
 @media (pointer: coarse) {
-  .tm-segmented__option {
+  .tm-segmented .tm-segmented__option {
     min-block-size: var(--tm-touch-target);
   }
 }

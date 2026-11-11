@@ -110,6 +110,10 @@
                 <div class="tm-trace-waterfall__scroll" role="rowgroup">
                     @if (_visibleRows.Count > VirtualizeThreshold)
                     {
+                        @* ItemSize is the INITIAL scroll estimate only: the virtualizer measures the real
+                           rows as they render. 32 px is the mouse row; on a coarse pointer the disclosure
+                           grows to the 44 px touch target (plus the row's own padding), so a phone's first
+                           estimate is deliberately low and settles on the measured height straight away. *@
                         <Virtualize Items="_visibleRows"
                                     ItemContent="RowTemplate"
                                     OverscanCount="8"

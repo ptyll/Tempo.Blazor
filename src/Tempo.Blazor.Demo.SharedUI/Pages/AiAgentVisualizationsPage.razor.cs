@@ -110,6 +110,36 @@ public partial class AiAgentVisualizationsPage
     /// <summary>The submitted body of a draft, rendered through the attempts' content slot.</summary>
     private static string AttemptBody(string attemptId) => AiAgentVisualizationsSamples.AttemptBody(attemptId);
 
+    /// <summary>
+    /// The badge strip's samples: one agent per activity state, so the section shows every tone the shared
+    /// identity line can paint — the state chip carries an icon, a WORD and a tone, never colour alone.
+    /// </summary>
+    /// <returns>One (agent, state) pair per rendered badge.</returns>
+    private IEnumerable<(AgentRef Agent, AgentActivityStatus Status)> BadgeSamples()
+    {
+        AgentActivityStatus[] states =
+        [
+            AgentActivityStatus.Running,
+            AgentActivityStatus.WaitingForApproval,
+            AgentActivityStatus.Succeeded,
+            AgentActivityStatus.Failed,
+        ];
+
+        for (var index = 0; index < states.Length; index++)
+        {
+            yield return (_agents[index % _agents.Count], states[index]);
+        }
+    }
+
+    /// <summary>The three densities of the shared identity line, in ascending order.</summary>
+    /// <returns>The size values the badge strip renders.</returns>
+    private static AgentBadgeSize[] BadgeSizes() =>
+    [
+        AgentBadgeSize.Sm,
+        AgentBadgeSize.Md,
+        AgentBadgeSize.Lg,
+    ];
+
     // ── Text alternatives ────────────────────────────────────────────────────
 
     /// <summary>Whether a section shows its table presentation instead of its graphical one.</summary>

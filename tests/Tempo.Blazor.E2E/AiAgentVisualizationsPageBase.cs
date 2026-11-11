@@ -14,6 +14,7 @@ namespace Tempo.Blazor.E2E;
 public abstract class AiAgentVisualizationsPageBase : PlaywrightTestBase
 {
     protected const string SimulatorSection = "[data-testid='ai-viz-simulator']";
+    protected const string BadgeSection = "[data-testid='ai-viz-badge-section']";
     protected const string LanesSection = "[data-testid='ai-viz-lanes-section']";
     protected const string GraphSection = "[data-testid='ai-viz-graph-section']";
     protected const string FanOutSection = "[data-testid='ai-viz-fan-out-section']";
@@ -29,7 +30,7 @@ public abstract class AiAgentVisualizationsPageBase : PlaywrightTestBase
 
     protected static readonly string[] AllSections =
     [
-        "ai-viz-simulator", "ai-viz-lanes-section", "ai-viz-graph-section", "ai-viz-fan-out-section",
+        "ai-viz-simulator", "ai-viz-badge-section", "ai-viz-lanes-section", "ai-viz-graph-section", "ai-viz-fan-out-section",
         "ai-viz-attempts-section", "ai-viz-handoff-section", "ai-viz-fallback-section", "ai-viz-autonomy-section",
         "ai-viz-memory-section", "ai-viz-delegate-section", "ai-viz-runs-section", "ai-viz-conflict-section",
         "ai-viz-presence-section",

@@ -524,6 +524,33 @@
 - **Lane coverage is documented** in [docs/e2e-test-lanes.md](docs/e2e-test-lanes.md) (which specs have all three lanes,
   how to run one lane, and the sequence-number/DOM-identity rule a new conditional overlay has to respect).
 
+### Fixed — coarse-pointer touch targets, and the visual/emulation sweep (plan 7ba95ed6, Fáze 12)
+
+- **Coarse pointers: `TmSegmentedControl` options now reach the 44 px touch target at every size.** The coarse
+  rule lost on specificity to `.tm-segmented--{size} .tm-segmented__option` (two classes), so the tray stayed
+  24–32 px tall on a finger (measured 32 px at the `Md` size on `/data-display`); the rule now carries the root
+  class as well. Hosts that override a segmented option's height on touch devices should know the coarse block is
+  the last word on it. CSS only, no API change.
+- **The `TmTraceWaterfall` disclosure chevron and its leaf spacer grow to `--tm-touch-target`** under
+  `@media (pointer: coarse)` (44 px, with a token flex basis so a narrow tree column cannot shrink it). The spacer
+  grows with the toggle, so a leaf row's label stays aligned with its parent's. `Virtualize`'s `ItemSize="32"` is
+  documented as the initial estimate only — the virtualizer measures the taller coarse-pointer rows itself.
+- **A `button`, `a` or `[role='button']` in the `TmUsageMeter` call-to-action slot gets
+  `min-block-size: var(--tm-touch-target)`** on a coarse pointer. The slot is host markup, so the meter owns the
+  finger target rather than the host's button size; the three descendant rules are written separately because the
+  bundler's `:is(` minification turns the descendant combinator into a compound selector.
+- **`/data-display` gained a live `TmBreakdownCard` fixture** with two empty `BreakdownPart.Id` values and two that
+  share one (plus its own period switch), so the duplicate/empty-id row identity and the forced-colors strip/edge
+  are proven in a real browser and not only in bUnit. `/ai-agent-visualizations` gained the `TmAgentBadge` strip.
+- **Tests.** `CoarsePointerTargetCssTests` (source + committed bundle guards for all three coarse rules),
+  `DataDisplayPageBreakdownFixtureTests`, the badge section in `AiAgentVisualizationsPageTests`,
+  `Fze12TouchEmulationSweepE2ETests` (a Playwright `HasTouch`/`IsMobile`/coarse-pointer context at 375/390 px and
+  Chromium's `forced-colors` emulation) and `WireframeStencilGalleryPhase12E2ETests` (the four stencil sketches
+  shot in the running wireframe editor); the tablet 768 px sweep and the badge axe scan join
+  `AiAgentVisualizationsVisualE2ETests`, and the dark `TmUsageMeter` reference is re-shot through the demo's real
+  `theme-toggle`. Docs updated: [docs/breakdown-card.md](docs/breakdown-card.md),
+  [docs/ai-agent-visualizations.md](docs/ai-agent-visualizations.md), [docs/usage-meter.md](docs/usage-meter.md).
+
 ### Breaking changes and migration
 
 **No source-breaking change.** Every new member is additive or a default interface member; every new component is new. The behavior changes below are the complete list a 2.10.0 consumer can notice, with before/after:
@@ -566,6 +593,7 @@
 | `TmAgentPresenceOverlay` placement attributes | `data-presence-flip="true"` + `transform: translateX(-100%)` on a mirrored marker | `data-presence-place="start"` (mirrored along the inline axis) and/or `data-presence-stack="below|above"` (stacked against the anchored line), with logical `inset-inline-*` / `inset-block-*` rules and no `translateX` | None for a host that only feeds `Markers`. A host CSS rule that matched `[data-presence-flip="true"]` must match `[data-presence-place="start"]` / `[data-presence-stack]`; a host that positioned the label itself should drop its override — the measured placement now avoids covering the anchored text |
 | `TmAgentPresenceOverlay` label position on a phone | Mirrored onto the other side of the point, often over the last words of the anchored paragraph | Beside the point → under the anchored line → above it → mirrored last | None at the API level; the label MOVES (that is the fix). The roster and the live region still carry the same presence as text |
 | `TmDelegateBoard` column markup | A column exposed `data-column` / `data-agent-id` / `data-full` / `data-preview` | Adds `data-drag-over="true\|false"` on the backlog and every agent column, and the target column's availability line projects the dragged card while the gesture runs | None — additive state attributes; a selector that matches `.tm-ai-delegate__column` is unaffected |
+| Touch targets on `(pointer: coarse)` | `TmSegmentedControl` kept its size modifier's height (24–32 px), the `TmTraceWaterfall` chevron stayed 20 px and a `TmUsageMeter` call to action inherited the host's button size | All three reach `--tm-touch-target` (44 px): `.tm-segmented .tm-segmented__option`, `.tm-trace-waterfall__toggle` + `…-toggle-spacer`, and a `button` / `a` / `[role='button']` inside `.tm-usage-meter__cta` | None at the API level, and a mouse-driven layout is untouched (every rule sits in `@media (pointer: coarse)`). A host rule that pinned a smaller segmented height on a touch device now needs the root class to win — expect 44 px targets on a phone |
 
 
 ### Release preparation

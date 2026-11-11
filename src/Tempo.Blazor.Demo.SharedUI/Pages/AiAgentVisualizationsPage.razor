@@ -21,6 +21,35 @@
 <AiAgentRunLiveSurfaces />
 
 @* ---------------------------------------------------------------------------------------------------------
+   The shared identity line, on its own so it can be looked at. Every agent surface above and below reuses
+   TmAgentBadge, so this section is where its palette, its three densities and its state chip are visible at
+   once — the state travels as an icon, a WORD and a tone, so it never depends on colour alone. *@
+<section class="demo-section mb-8" data-testid="ai-viz-badge-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmAiAgentVizDemo_BadgeTitle"]</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-2">@Loc["TmAiAgentVizDemo_BadgeHint"]</p>
+
+    <div class="flex flex-wrap items-center gap-3" data-testid="ai-viz-badge-statuses">
+        @foreach (var sample in BadgeSamples())
+        {
+            <TmAgentBadge Agent="sample.Agent" Status="sample.Status" />
+        }
+    </div>
+
+    <div class="mt-3 flex flex-wrap items-center gap-3" data-testid="ai-viz-badge-sizes">
+        @foreach (var size in BadgeSizes())
+        {
+            <TmAgentBadge Agent="@_agents[0]" Status="AgentActivityStatus.Running" Size="size" />
+        }
+        @* Avatar only: the composed graphic is role="img" named by the agent AND its state, because an
+           aria-label on a role-less span is ignored and the name would vanish for a reader. *@
+        <TmAgentBadge Agent="@_agents[1]"
+                      Status="AgentActivityStatus.Succeeded"
+                      ShowName="false"
+                      DataTestId="ai-viz-badge-avatar-only" />
+    </div>
+</section>
+
+@* ---------------------------------------------------------------------------------------------------------
    One task attempted three ways. The page's table presentation is the text alternative; the surface keeps the
    scored comparison and the confirmation. *@
 <section class="demo-section mb-8" data-testid="ai-viz-attempts-section">

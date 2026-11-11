@@ -287,12 +287,25 @@
 }
 
 /* ── Coarse pointers ────────────────────────────────────────────────────
-   The meter itself is not interactive, so there is no 44 px target to grow; the state badge and the
-   call to action stay comfortably tappable instead. */
+   The meter itself is not interactive, so there is no 44 px target of its own to grow; the state badge
+   and the call to action stay comfortably tappable instead. The call to action is a HOST slot, so it is
+   sized here rather than by the host's button: whatever size the host's control asks for, a finger gets
+   the shared 44 px target (WCAG 2.5.8) — and a 44 px line box is what keeps the enlarged state text from
+   crowding it. */
 @media (pointer: coarse) {
   .tm-usage-meter__state,
   .tm-usage-meter__reset,
   .tm-usage-meter__over {
     font-size: var(--tm-font-size-sm);
+  }
+
+  /* Three explicit descendant rules rather than `.tm-usage-meter__cta :is(button, a, [role='button'])`:
+     the CSS bundler minifies `:is(` without its leading space, which silently turns the descendant
+     combinator into a compound selector (`.tm-usage-meter__cta:is(…)` matches nothing here). The third
+     rule covers a host that puts a role-based control in the slot instead of a native button or link. */
+  .tm-usage-meter__cta button,
+  .tm-usage-meter__cta a,
+  .tm-usage-meter__cta [role='button'] {
+    min-block-size: var(--tm-touch-target);
   }
 }
