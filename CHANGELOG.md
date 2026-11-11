@@ -551,6 +551,27 @@
   `theme-toggle`. Docs updated: [docs/breakdown-card.md](docs/breakdown-card.md),
   [docs/ai-agent-visualizations.md](docs/ai-agent-visualizations.md), [docs/usage-meter.md](docs/usage-meter.md).
 
+### Changed — `TmQueryInput`'s debounce runs on the injectable `TimeProvider` (plan 7ba95ed6, Fáze 14)
+
+- **The debounce window is an `ITimer` on the injected `TimeProvider`, not a `System.Timers.Timer`.**
+  `TmQueryInput` resolves the clock exactly the way `TmDateRangePicker` / `TmSearchInput` do — an optional
+  `TimeProvider` from `IServiceProvider`, falling back to `TimeProvider.System` when the consumer
+  never registers one (a bare `[Inject] TimeProvider` would throw for those hosts) — and arms a
+  single-shot timer (`period: Timeout.InfiniteTimeSpan`) whose callback hops to the renderer's
+  dispatcher. A keystroke cancels and re-arms the window; `CloseDropdown`/Escape/outside dismissal
+  and `Dispose` cancel it (N323 keeps holding). The timer is now identified by reference, so a
+  callback already queued for the thread pool when the dismissal ran can no longer reopen the
+  dropdown the user just closed.
+- **No host-visible behavior change.** `DebounceMs` keeps its 200 ms default, the window still
+  restarts on every edit, `DebounceMs <= 0` still loads synchronously, and every public member is
+  unchanged.
+- **Tests.** `TmQueryInputTests` drives the window with a `FakeTimeProvider` (`Advance`): the
+  provider is queried only at the very end of the window (not 1 ms earlier, and never twice), a
+  second keystroke restarts it, a dismissal inside the window leaves the provider at one call, and
+  disposing inside the window never queries it at all. The N323 guard no longer needs its 2 s window
+  and 2.3 s real sleep — it runs the production 200 ms window on the fake clock, so no real waiting
+  and no loaded-CI race remains.
+
 ### Breaking changes and migration
 
 **No source-breaking change.** Every new member is additive or a default interface member; every new component is new. The behavior changes below are the complete list a 2.10.0 consumer can notice, with before/after:

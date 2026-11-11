@@ -152,6 +152,19 @@
     private string _inputId => $"tm-query-input-{_instanceId}";
     private string _listboxId => $"tm-query-input-listbox-{_instanceId}";
 
+    /// <summary>
+    /// Service provider used to resolve the optional <see cref="TimeProvider"/> that owns the
+    /// debounce window. Resolved this way (instead of a bare <c>[Inject] TimeProvider</c>) so a
+    /// consumer that never registers one still gets <see cref="TimeProvider.System"/> rather than
+    /// an injection failure; tests register a FakeTimeProvider and drive the window with
+    /// <c>Advance</c> instead of sleeping through a real delay.
+    /// </summary>
+    [Inject] private IServiceProvider Services { get; set; } = default!;
+
+    private TimeProvider Clock
+        => _clock ??= Services.GetService(typeof(TimeProvider)) as TimeProvider ?? TimeProvider.System;
+    private TimeProvider? _clock;
+
     private ElementReference _inputRef;
     private bool _isOpen;
     private ElementReference _fieldRef;
@@ -180,7 +193,8 @@
     private int _selectedIndex = -1;
     private int _caretPosition;
     private int _requestVersion;
-    private System.Timers.Timer? _debounce;
+    /// <summary>Armed debounce window — a one-shot <see cref="ITimer"/> on <see cref="Clock"/>.</summary>
+    private ITimer? _debounce;
     private bool _disposed;
     private bool _focusPending;
     private int? _pendingSetCaret;
@@ -283,8 +297,9 @@
     {
         if (SuggestionsProvider is null || Disabled) return;
 
-        _debounce?.Stop();
-        _debounce?.Dispose();
+        // A keystroke restarts the window: the previous (still armed) timer is dead, so the full
+        // DebounceMs is counted from the last edit, never from the first one.
+        CancelDebounce();
 
         if (DebounceMs <= 0)
         {
@@ -292,13 +307,57 @@
             return;
         }
 
-        _debounce = new System.Timers.Timer(DebounceMs) { AutoReset = false };
-        _debounce.Elapsed += async (_, _) =>
+        // Single-shot timer on the injected clock. The callback closes over `timer` itself so the
+        // ReferenceEquals check inside can tell "the currently armed window" apart from one that was
+        // cancelled (or re-armed) while its callback was already queued for the thread pool.
+        // The timer is created disarmed and armed only after `_debounce` already holds it, so a
+        // callback can never run against a window that the field does not point at yet (the
+        // ReferenceEquals check would otherwise drop that one load).
+        ITimer? timer = null;
+        timer = Clock.CreateTimer(
+            _ => _ = OnDebounceElapsedAsync(timer!),
+            state: null,
+            dueTime: Timeout.InfiniteTimeSpan,
+            period: Timeout.InfiniteTimeSpan);
+        _debounce = timer;
+        timer.Change(TimeSpan.FromMilliseconds(DebounceMs), Timeout.InfiniteTimeSpan);
+    }
+
+    /// <summary>
+    /// Timer callback (a thread-pool thread for <see cref="TimeProvider.System"/>): hops to the
+    /// renderer before touching component state, and loads only when this is still the armed window —
+    /// a disposed component or a window the dismissal already killed can never query the provider.
+    /// </summary>
+    private async Task OnDebounceElapsedAsync(ITimer timer)
+    {
+        // Fire-and-forget from the timer callback: once the renderer is gone, InvokeAsync throws
+        // ObjectDisposedException, and an unobserved task exception would surface as a process-level
+        // failure for a window nobody is waiting on any more.
+        try
         {
             if (_disposed) return;
-            await InvokeAsync(LoadSuggestionsAsync);
-        };
-        _debounce.Start();
+            await InvokeAsync(() =>
+            {
+                if (_disposed || !ReferenceEquals(_debounce, timer)) return Task.CompletedTask;
+                // Single-shot: once fired it can never deliver again — disarm it so the close path
+                // does not dispose a spent timer and a stale callback cannot load twice.
+                _debounce = null;
+                timer.Dispose();
+                return LoadSuggestionsAsync();
+            });
+        }
+        catch (ObjectDisposedException)
+        {
+            // The renderer was disposed while this callback was in flight — nothing left to load.
+        }
+    }
+
+    /// <summary>Stops and releases the armed debounce window (idempotent — the field is cleared).</summary>
+    private void CancelDebounce()
+    {
+        var debounce = _debounce;
+        _debounce = null;
+        debounce?.Dispose();
     }
 
     private async Task LoadSuggestionsAsync()
@@ -387,9 +446,7 @@
         // N323: an armed debounce is a future open — the timer fires LoadSuggestionsAsync, which
         // stamps its own fresh version and re-sets _isOpen, reopening the dropdown the dismissal
         // just closed. Kill it alongside the version bump that invalidates in-flight loads.
-        _debounce?.Stop();
-        _debounce?.Dispose();
-        _debounce = null;
+        CancelDebounce();
         _requestVersion++; // invalidate any in-flight suggestion request
         _isOpen = false;
         _isLoading = false;
@@ -441,7 +498,6 @@
     public void Dispose()
     {
         _disposed = true;
-        _debounce?.Stop();
-        _debounce?.Dispose();
+        CancelDebounce();
     }
 }

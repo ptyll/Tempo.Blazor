@@ -1,6 +1,8 @@
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 using Tempo.Blazor.Components.Inputs;
 using Tempo.Blazor.Tests.Localization;
 
@@ -96,11 +98,14 @@ public class TmQueryInputTests : LocalizationTestBase
     }
 
     [Fact]
-    public void QueryInput_Debounce_QueriesProviderAfterDelay()
+    public void QueryInput_Debounce_WithoutRegisteredTimeProvider_UsesTheSystemClock()
     {
+        // FZE-14: the debounce must NOT require a TimeProvider registration — a bare
+        // [Inject] TimeProvider would throw for a host that never calls AddSingleton(TimeProvider).
+        // Nothing is registered here, so the component has to fall back to TimeProvider.System.
         var calls = 0;
         var cut = Render<TmQueryInput>(p => p
-            .Add(c => c.DebounceMs, 60)
+            .Add(c => c.DebounceMs, 20)
             .Add(c => c.SuggestionsProvider, _ =>
             {
                 calls++;
@@ -111,6 +116,88 @@ public class TmQueryInputTests : LocalizationTestBase
 
         calls.Should().Be(0); // not queried synchronously — debounced
         cut.WaitForAssertion(() => calls.Should().Be(1));
+    }
+
+    [Fact]
+    public async Task QueryInput_Debounce_FiresOnlyAtTheEndOfTheWindow()
+    {
+        // FZE-14: the window is an ITimer on the injected TimeProvider, so a test drives it with
+        // Advance instead of sleeping through a real delay.
+        var clock = new FakeTimeProvider();
+        Services.AddSingleton<TimeProvider>(clock);
+        var calls = 0;
+        var cut = Render<TmQueryInput>(p => p
+            .Add(c => c.DebounceMs, 200)
+            .Add(c => c.SuggestionsProvider, _ =>
+            {
+                calls++;
+                return Task.FromResult<IReadOnlyList<QuerySuggestion>>(Sample);
+            }));
+
+        cut.Find(".tm-query-input__input").Input("st");
+
+        calls.Should().Be(0, "a debounced query must not run synchronously");
+
+        await cut.InvokeAsync(() => clock.Advance(TimeSpan.FromMilliseconds(199)));
+        calls.Should().Be(0, "1 ms short of the window is still inside it");
+
+        await cut.InvokeAsync(() => clock.Advance(TimeSpan.FromMilliseconds(1)));
+        calls.Should().Be(1, "the timer fires exactly once when the window elapses");
+
+        await cut.InvokeAsync(() => clock.Advance(TimeSpan.FromSeconds(10)));
+        calls.Should().Be(1, "a one-shot debounce must never fire a second time");
+        cut.FindAll(".tm-query-input__option").Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task QueryInput_Debounce_Rearm_ExtendsTheWindow()
+    {
+        var clock = new FakeTimeProvider();
+        Services.AddSingleton<TimeProvider>(clock);
+        var calls = 0;
+        var cut = Render<TmQueryInput>(p => p
+            .Add(c => c.DebounceMs, 200)
+            .Add(c => c.SuggestionsProvider, _ =>
+            {
+                calls++;
+                return Task.FromResult<IReadOnlyList<QuerySuggestion>>(Sample);
+            }));
+
+        cut.Find(".tm-query-input__input").Input("s");
+        await cut.InvokeAsync(() => clock.Advance(TimeSpan.FromMilliseconds(150)));
+        calls.Should().Be(0);
+
+        // A second keystroke re-arms the window: the 150 ms already spent must not count.
+        cut.Find(".tm-query-input__input").Input("st");
+        await cut.InvokeAsync(() => clock.Advance(TimeSpan.FromMilliseconds(150)));
+        calls.Should().Be(0, "the re-armed window restarts from the last keystroke");
+
+        await cut.InvokeAsync(() => clock.Advance(TimeSpan.FromMilliseconds(50)));
+        calls.Should().Be(1, "only the re-armed window's full length queries the provider");
+    }
+
+    [Fact]
+    public void QueryInput_Dispose_InsideWindow_NeverQueriesProvider()
+    {
+        var clock = new FakeTimeProvider();
+        Services.AddSingleton<TimeProvider>(clock);
+        var calls = 0;
+        var cut = Render<TmQueryInput>(p => p
+            .Add(c => c.DebounceMs, 200)
+            .Add(c => c.SuggestionsProvider, _ =>
+            {
+                calls++;
+                return Task.FromResult<IReadOnlyList<QuerySuggestion>>(Sample);
+            }));
+
+        cut.Find(".tm-query-input__input").Input("st");
+
+        // Dispose the component (via IDisposable, as the renderer would) while the timer is armed.
+        ((IDisposable)cut.Instance).Dispose();
+
+        clock.Advance(TimeSpan.FromSeconds(10));
+
+        calls.Should().Be(0, "a disposed component must not run the timer callback");
     }
 
     [Fact]
@@ -212,33 +299,35 @@ public class TmQueryInputTests : LocalizationTestBase
         // Escape inside the debounce window, and the pending timer still fired
         // LoadSuggestionsAsync, reopening the dropdown the user just closed (the new load
         // stamps its own fresh version, so the version bump cannot catch it).
-        // The debounce must outlive the dismissal bookkeeping with margin: with the production
-        // 80 ms window a loaded CI machine can stall between Input("sta") and the dismissal long
-        // enough for the timer to fire legitimately, which is the flake this guard used to hit
-        // (calls == 2). A 2 s window makes "dismissal ran first" deterministic; we then wait past
-        // the full window to prove the armed timer was cancelled.
+        // FZE-14: the window is an ITimer on the injected TimeProvider, so "dismissal ran first"
+        // is deterministic — no real 2 s sleep and no loaded-CI stall can race the timer, and the
+        // test always runs the PRODUCTION 200 ms window.
+        var clock = new FakeTimeProvider();
+        Services.AddSingleton<TimeProvider>(clock);
         var calls = 0;
         var cut = Render<TmQueryInput>(p => p
-            .Add(c => c.DebounceMs, 2000)
+            .Add(c => c.DebounceMs, 200)
             .Add(c => c.SuggestionsProvider, _ =>
             {
                 calls++;
                 return Task.FromResult<IReadOnlyList<QuerySuggestion>>(Sample);
             }));
 
-        var input = cut.Find(".tm-query-input__input");
-        input.Input("st");
-        cut.WaitForAssertion(() => cut.FindAll("[role='listbox']").Should().HaveCount(1));
+        cut.Find(".tm-query-input__input").Input("st");
+        await cut.InvokeAsync(() => clock.Advance(TimeSpan.FromMilliseconds(200)));
+
+        calls.Should().Be(1);
+        cut.FindAll("[role='listbox']").Should().HaveCount(1);
 
         // Re-arm the debounce while the dropdown is open…
-        input.Input("sta");
+        cut.Find(".tm-query-input__input").Input("sta");
 
         var overlay = cut.FindComponent<Tempo.Blazor.Components.Overlay.TmOverlayPanel>();
         await cut.InvokeAsync(() => overlay.Instance.NotifyDismissedAsync("escape"));
         cut.FindAll("[role='listbox']").Should().BeEmpty();
 
         // …and the armed timer must be dead: no second provider call, no reopen.
-        await Task.Delay(2300);
+        await cut.InvokeAsync(() => clock.Advance(TimeSpan.FromSeconds(30)));
         calls.Should().Be(1,
             "the dismissal must cancel the pending debounce — letting it fire reopens the dropdown (N323)");
         cut.FindAll("[role='listbox']").Should().BeEmpty();
