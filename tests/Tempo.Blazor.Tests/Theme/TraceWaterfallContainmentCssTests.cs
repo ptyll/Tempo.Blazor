@@ -20,7 +20,7 @@ namespace Tempo.Blazor.Tests.Theme;
 /// The guard reads the stylesheet, not a layout engine: <c>contain: layout paint</c> on the scroll
 /// owner is the declaration that makes the element a containment context, so its overflowing content
 /// stops contributing to the viewport's scrollable overflow. The behaviour itself is proven by the
-/// browser lane (<c>TraceWaterfallPageE2ETests.FullPageScreenshot_HasNoBlankTail</c>), which measures the
+/// browser lane (<c>TraceWaterfallPageE2EBase.FullPageScreenshot_HasNoBlankTail</c>), which measures the
 /// two scroll heights in Chromium and takes the shot.
 /// </para>
 /// </summary>

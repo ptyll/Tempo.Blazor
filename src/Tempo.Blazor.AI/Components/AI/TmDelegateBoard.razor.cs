@@ -836,23 +836,54 @@ public partial class TmDelegateBoard : TmComponentBase, IDisposable
         StateHasChanged();
     }
 
-    /// <summary>The projection one agent column shows: the task the reader is pointing at, else the agent's own load.</summary>
+    /// <summary>
+    /// ONE agent column's preview state, projected ONCE per column per render. The availability sentence, its state
+    /// slug, its estimate flag and the drag-over marker each used to read the dragged card and re-project the column
+    /// on their own, so a single column paid five or six lookups per render.
+    /// </summary>
+    /// <param name="Projection">The availability projection this column shows.</param>
+    /// <param name="IsDragTarget">Whether the dragged card would land in this column right now.</param>
+    /// <param name="PointsAtTask">
+    /// Whether the hover/focus preview points at this column; false whenever a dragged card resolves — the drag is
+    /// reported by <paramref name="IsDragTarget"/> instead.
+    /// </param>
+    internal readonly record struct ColumnPreview(
+        DelegateOccupancyProjection Projection,
+        bool IsDragTarget,
+        bool PointsAtTask);
+
+    /// <summary>
+    /// Projects one agent column once. This is the single source <see cref="PreviewFor"/>, <see cref="PreviewState"/>
+    /// and <see cref="PreviewText"/> read from; the markup calls it once per column and feeds the result to the
+    /// <see cref="ColumnPreview"/> overloads.
+    /// </summary>
     /// <param name="agent">The column's agent.</param>
-    /// <returns>The projection.</returns>
-    internal DelegateOccupancyProjection PreviewFor(DelegateAgent agent)
+    /// <returns>The column's projection plus the two flags that explain why it looks the way it does.</returns>
+    internal ColumnPreview ColumnPreviewFor(DelegateAgent agent)
     {
         if (DraggedTask is { } dragged)
         {
             // A live drag points at exactly ONE column: the one the card would land in. Every other column — the
             // SOURCE included — falls back to its own resting load, so the source shows its projection WITHOUT the
             // lifted card, and a FULL column never promises a time for a card it is going to refuse.
-            var projected = IsDragTarget(agent) && !agent.IsFull ? dragged : null;
-            return DelegatePresentation.Project(agent, projected, _now);
+            var dragTarget = IsDragTarget(agent);
+            var projected = dragTarget && !agent.IsFull ? dragged : null;
+            return new ColumnPreview(DelegatePresentation.Project(agent, projected, _now), dragTarget, PointsAtTask: false);
         }
 
-        var task = string.Equals(_previewAgentId, agent.Id, StringComparison.Ordinal) ? PreviewTask() : null;
-        return DelegatePresentation.Project(agent, task, _now);
+        var pointsAtTask = string.Equals(_previewAgentId, agent.Id, StringComparison.Ordinal);
+        return new ColumnPreview(
+            DelegatePresentation.Project(agent, pointsAtTask ? PreviewTask() : null, _now),
+            // IsDragTarget can still be true while the gesture is live but the dragged card no longer resolves;
+            // keep reporting it so the drop marker stays.
+            IsDragTarget(agent),
+            pointsAtTask);
     }
+
+    /// <summary>The projection one agent column shows: the task the reader is pointing at, else the agent's own load.</summary>
+    /// <param name="agent">The column's agent.</param>
+    /// <returns>The projection.</returns>
+    internal DelegateOccupancyProjection PreviewFor(DelegateAgent agent) => ColumnPreviewFor(agent).Projection;
 
     /// <summary>The task the reader last pointed at, or null.</summary>
     internal DelegateTask? PreviewTask() => FindTask(_previewTaskId);
@@ -860,18 +891,15 @@ public partial class TmDelegateBoard : TmComponentBase, IDisposable
     /// <summary>The stable state slug of a column's availability line.</summary>
     /// <param name="agent">The column's agent.</param>
     /// <returns><c>free</c>, <c>busy</c> or <c>preview</c>.</returns>
-    internal string PreviewState(DelegateAgent agent)
-    {
-        var projection = PreviewFor(agent);
-        var pointsAtATask = IsDragTarget(agent)
-            || (DraggedTask is null && string.Equals(_previewAgentId, agent.Id, StringComparison.Ordinal));
-        if (projection.UsesEstimate && pointsAtATask)
-        {
-            return "preview";
-        }
+    internal string PreviewState(DelegateAgent agent) => ColumnPreviewState(ColumnPreviewFor(agent));
 
-        return projection.IsKnown ? "busy" : "free";
-    }
+    /// <summary>The stable state slug of an ALREADY projected column (<c>free</c>, <c>busy</c> or <c>preview</c>).</summary>
+    /// <param name="preview">The column's projection.</param>
+    /// <returns>The state slug.</returns>
+    internal static string ColumnPreviewState(ColumnPreview preview)
+        => preview.Projection.UsesEstimate && (preview.IsDragTarget || preview.PointsAtTask)
+            ? "preview"
+            : preview.Projection.IsKnown ? "busy" : "free";
 
     /// <summary>
     /// The availability line: "Occupied until 14:20", "Occupied until 14:50 with this task" while a card with an
@@ -879,24 +907,28 @@ public partial class TmDelegateBoard : TmComponentBase, IDisposable
     /// </summary>
     /// <param name="agent">The column's agent.</param>
     /// <returns>The localized sentence.</returns>
-    internal string PreviewText(DelegateAgent agent)
+    internal string PreviewText(DelegateAgent agent) => ColumnPreviewText(ColumnPreviewFor(agent), agent);
+
+    /// <summary>The availability line of an ALREADY projected column (same sentence the parameter overload returns).</summary>
+    /// <param name="preview">The column's projection.</param>
+    /// <param name="agent">The column's agent (the full-state wording depends on it).</param>
+    /// <returns>The localized sentence.</returns>
+    internal string ColumnPreviewText(ColumnPreview preview, DelegateAgent agent)
     {
-        var projection = PreviewFor(agent);
-        if (!projection.IsKnown)
+        if (!preview.Projection.IsKnown)
         {
             return Loc["TmDelegateBoard_FreeNow"];
         }
 
-        var time = DelegatePresentation.TimeText(projection.Until, CultureInfo.CurrentCulture);
+        var time = DelegatePresentation.TimeText(preview.Projection.Until, CultureInfo.CurrentCulture);
         // The drag wording belongs to a column the card can actually LAND in: a full target keeps its own load
         // sentence, because claiming a projected end time for a card it will refuse is a lie.
-        if (IsDragTarget(agent) && !agent.IsFull)
+        if (preview.IsDragTarget && !agent.IsFull)
         {
             return Loc["TmDelegateBoard_DragUntil", time];
         }
 
-        return projection.UsesEstimate && DraggedTask is null
-            && string.Equals(_previewAgentId, agent.Id, StringComparison.Ordinal)
+        return preview.Projection.UsesEstimate && preview.PointsAtTask
             ? Loc["TmDelegateBoard_PreviewUntil", time]
             : Loc["TmDelegateBoard_OccupiedUntil", time];
     }

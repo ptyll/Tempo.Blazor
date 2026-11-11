@@ -20,7 +20,8 @@ namespace Tempo.Blazor.Components.AI;
 /// whole surface.
 /// </para>
 /// <para>
-/// The drawing is never the only way to read the graph. The scrollport is the ONE labelled group (`role="group"`) and
+/// The drawing is never the only way to read the graph. The scrollport is the ONE labelled group
+/// (<c>role="group"</c>) and
 /// its nodes are focusable buttons named by their label, kind, state and call count; the ARROW keys walk the actual
 /// CONNECTIONS (not the DOM order), Home/End jump to the edges and Enter/Space select, so a keyboard-only reader
 /// navigates the network the way it is drawn. The View switcher renders the SAME data as two plain tables (every

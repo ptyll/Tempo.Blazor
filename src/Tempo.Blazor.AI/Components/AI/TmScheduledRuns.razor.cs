@@ -483,14 +483,14 @@ public partial class TmScheduledRuns : TmComponentBase, IAsyncDisposable
     /// key set, the modifiers and the browser's Back/Forward shortcut); this method owns what a key MEANS.
     /// </para>
     /// <para>
-    /// Called from JS; not meant to be called by hosts.
+    /// Called by the package's JS module (see <see cref="ScheduledRunsInterop"/>); not meant to be called by hosts.
     /// </para>
     /// </summary>
     /// <param name="runId">The run id of the focused row (resolved by the module from <c>data-run-id</c>).</param>
     /// <param name="key">The <c>KeyboardEvent.key</c> the module accepted.</param>
     /// <returns>A task that completes when the move (or the boundary announcement) is done.</returns>
     // The identifier is explicit: Blazor resolves a JS-side invocation by the EXACT name (it never strips an "Async"
-    // suffix), and the package module calls `OnRunMoveStep`.
+    // suffix), and the package module calls OnRunMoveStep.
     [JSInvokable("OnRunMoveStep")]
     [EditorBrowsable(EditorBrowsableState.Never)]
     public async Task OnRunMoveStepAsync(string? runId, string? key)

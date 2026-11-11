@@ -18,8 +18,21 @@ namespace Tempo.Blazor.Components.AI;
 /// refusal and the single announcement.
 /// </para>
 /// <para>
-/// Every call is guarded: where JavaScript is unavailable (bUnit, prerender, a disconnected circuit) the chord is
-/// unavailable; the row's move menu (which lists every window) remains the path.
+/// The chord is a shortcut, never the only path: the row's move menu (which lists every window) stays reachable in
+/// every case below. The three no-JS paths are distinct, and none of them throws its way out of the component:
+/// </para>
+/// <para>
+/// (a) PRERENDER — the component arms the guard from <see cref="TmScheduledRuns.OnAfterRenderAsync"/>, which does not
+/// run at all while prerendering, so <see cref="AttachAsync"/> is never called and nothing is armed.
+/// </para>
+/// <para>
+/// (b) A bUnit render in <c>JSRuntimeMode.Loose</c> — <c>import</c> resolves to a NULL module reference rather than
+/// throwing, and the call takes the <c>_module is null</c> return below.
+/// </para>
+/// <para>
+/// (c) A disconnected circuit or a module the host does not serve — the interop call itself throws
+/// (<see cref="JSException"/>, <see cref="JSDisconnectedException"/>, …) and the guards below swallow exactly those
+/// exception types.
 /// </para>
 /// </remarks>
 internal sealed class ScheduledRunsInterop : IAsyncDisposable
@@ -69,8 +82,9 @@ internal sealed class ScheduledRunsInterop : IAsyncDisposable
         }
         catch (Exception exception) when (IsInteropFailure(exception))
         {
-            // Without JavaScript the chord is unavailable; the row's move menu (which lists every window) remains
-            // the path.
+            // A disconnected circuit, a runtime that is already gone, or a module the host does not serve: the chord
+            // is a shortcut only, so the row's move menu (which lists every window) remains the path. A Loose bUnit
+            // render never reaches this catch — its null module takes the return above.
             _handle = null;
             _root = null;
         }

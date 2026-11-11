@@ -96,12 +96,15 @@
         {
             var agent = column.Agent;
             var columnTasks = column.Tasks;
+            // Projected ONCE per column: the drag-over marker, the state slug, the estimate flag and the sentence all
+            // read this one struct instead of re-reading the dragged card and re-projecting the column four times.
+            var preview = ColumnPreviewFor(agent);
             <section class="tm-ai-delegate__column tm-ai-delegate__column--agent@(agent.IsFull ? " tm-ai-delegate__column--full" : string.Empty)"
                      data-column="@agent.Id"
                      data-agent-id="@agent.Id"
                      data-full="@(agent.IsFull ? "true" : "false")"
                      data-preview="@(_previewAgentId == agent.Id ? "true" : "false")"
-                     data-drag-over="@(IsDragTarget(agent) ? "true" : "false")"
+                     data-drag-over="@(preview.IsDragTarget ? "true" : "false")"
                      aria-labelledby="@ColumnTitleId(agent)"
                      @onmouseenter="() => OnAgentPreviewEnter(agent)"
                      @onmouseleave="() => OnAgentPreviewLeaveAsync(agent)"
@@ -118,8 +121,8 @@
 
                     <p class="tm-ai-delegate__availability"
                        data-testid="@TestId("delegate-agent-preview")"
-                       data-state="@PreviewState(agent)"
-                       data-estimate="@(PreviewFor(agent).UsesEstimate ? "true" : "false")">@PreviewText(agent)</p>
+                       data-state="@ColumnPreviewState(preview)"
+                       data-estimate="@(preview.Projection.UsesEstimate ? "true" : "false")">@ColumnPreviewText(preview, agent)</p>
 
                     @if (agent.IsFull)
                     {

@@ -128,7 +128,9 @@
      anything measuring the document sees (a Playwright FullPage capture shots it as thousands of blank
      pixels). `layout` stops the overflowing content from propagating its box outward and `paint` clips
      it here; `size` is deliberately absent, because the grid takes its size from its host, never from
-     its rows. Behaviour check: TraceWaterfallPageE2ETests.FullPageScreenshot_HasNoBlankTail. */
+     its rows. Behaviour check: TraceWaterfallPageE2EBase.FullPageScreenshot_HasNoBlankTail (the method
+     lives in the abstract base, so it runs in the WASM, Server and InteractiveAuto lanes alike); the
+     declaration itself is pinned by TraceWaterfallContainmentCssTests. */
   contain: layout paint;
 }
 
