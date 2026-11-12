@@ -9,7 +9,10 @@
     <PackageId>Tempo.Blazor.Modeling.BpmnXml</PackageId>
     <Version>2.11.0</Version>
     <!-- The exporter writes exporterVersion into every BPMN document; a commit-hash suffix would
-         churn the committed export goldens on every commit. -->
+         churn the committed export goldens on every commit. The same applies to the CI version
+         stamp (-p:Version=<base>-ci-<timestamp> on main pushes in publish-nuget*.yml) —
+         BpmnExportBuilder.ExporterVersion cuts every prerelease/build-metadata suffix off the
+         informational version so exports stay reproducible across build environments. -->
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Authors>ptyll</Authors>
     <Title>Tempo.Blazor.Modeling.BpmnXml</Title>

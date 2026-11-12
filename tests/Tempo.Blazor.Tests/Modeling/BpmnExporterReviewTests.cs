@@ -102,6 +102,21 @@ public sealed class BpmnExporterReviewTests
             .Should().Be("tFormalExpression");
     }
 
+    // Regression for the red main CI gate (run 43155072274): the publish workflows build with
+    // -p:Version=<base>-ci-<timestamp> on every main push, which stamps the exporter assembly's
+    // informational version. exporterVersion must carry only the release line — with a CI-stamped
+    // assembly this test fails when the stripping regresses, and it is green under a plain build.
+    [Fact]
+    public void Exporter_version_carries_no_prerelease_or_build_metadata_suffix()
+    {
+        var root = Parse(Export(SimpleModel()));
+
+        var version = root.Attribute("exporterVersion")!.Value;
+        version.Should().MatchRegex("^[0-9]+(\\.[0-9]+){1,3}$",
+            "exporterVersion must be the bare release version — CI version stamps (-ci-<timestamp>, " +
+            "dispatch prerelease suffixes, build metadata) would churn the committed export goldens");
+    }
+
     [Fact]
     public void Timer_and_conditional_event_expressions_carry_the_formal_expression_type()
     {

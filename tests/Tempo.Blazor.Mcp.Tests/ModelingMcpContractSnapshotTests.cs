@@ -99,7 +99,8 @@ public class ModelingMcpContractSnapshotTests
 
         // BPMN converter plan phase 5: the import/export tools join the contract. The seeded model
         // is exported with a fixed targetNamespace so the XML is deterministic (the exporter
-        // version comes from the assembly informational version, not the commit hash).
+        // version is the assembly informational version with any CI prerelease/build-metadata
+        // suffix cut off, so CI version stamps cannot churn this snapshot).
         var imported = Normalize(ParseNode(await ModelingBpmnTools.ImportBpmn(backend, """
             <?xml version="1.0" encoding="UTF-8"?>
             <definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Defs" targetNamespace="http://tempo.example/contract-import">

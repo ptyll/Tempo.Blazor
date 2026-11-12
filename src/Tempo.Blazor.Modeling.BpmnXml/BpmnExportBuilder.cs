@@ -225,10 +225,31 @@ internal sealed partial class BpmnExportBuilder
         return root;
     }
 
-    private static string ExporterVersion =>
-        System.Reflection.CustomAttributeExtensions.GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>(
-                typeof(BpmnXmlExporter).Assembly)
-            ?.InformationalVersion ?? string.Empty;
+    /// <summary>
+    /// The version stamped into <c>exporterVersion</c>: the exporter assembly's informational
+    /// version with any prerelease/build-metadata suffix cut off. The publish workflows stamp a CI
+    /// version on top of the csproj version (<c>-ci-&lt;timestamp&gt;</c> on every main push, an
+    /// optional dispatch suffix for prereleases); that stamp is build-environment noise, and an
+    /// export that carries it is not reproducible — the committed export goldens and the modeling
+    /// MCP contract snapshot would churn on every CI run. Same defect class the csproj guards
+    /// against for the commit-hash suffix via <c>IncludeSourceRevisionInInformationalVersion</c>;
+    /// exports stay byte-for-byte stable across local, CI and tag builds of the same release line.
+    /// </summary>
+    private static string ExporterVersion
+    {
+        get
+        {
+            var informational =
+                System.Reflection.CustomAttributeExtensions.GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>(
+                        typeof(BpmnXmlExporter).Assembly)
+                    ?.InformationalVersion ?? string.Empty;
+            var suffixStart = informational.IndexOfAny(SuffixMarkers);
+            return suffixStart > 0 ? informational[..suffixStart] : informational;
+        }
+    }
+
+    /// <summary>The characters that start the prerelease (<c>-</c>) or build-metadata (<c>+</c>) suffix.</summary>
+    private static readonly char[] SuffixMarkers = ['-', '+'];
 
     /// <summary>Prefixes reserved by the exporter itself; generated prefixes never collide with them (finding 8).</summary>
     private HashSet<string> ReservedPrefixes =>
