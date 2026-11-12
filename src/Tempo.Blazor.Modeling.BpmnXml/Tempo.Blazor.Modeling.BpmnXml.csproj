@@ -8,11 +8,11 @@
     <IsPackable>true</IsPackable>
     <PackageId>Tempo.Blazor.Modeling.BpmnXml</PackageId>
     <Version>2.11.0</Version>
-    <!-- The exporter writes exporterVersion into every BPMN document; a commit-hash suffix would
-         churn the committed export goldens on every commit. The same applies to the CI version
-         stamp (-p:Version=<base>-ci-<timestamp> on main pushes in publish-nuget*.yml) —
-         BpmnExportBuilder.ExporterVersion cuts every prerelease/build-metadata suffix off the
-         informational version so exports stay reproducible across build environments. -->
+    <!-- The exporter writes exporterVersion (full SemVer incl. prerelease; build metadata cut) into
+         every BPMN document; a commit-hash suffix would churn the committed export goldens on every
+         commit, so it is excluded here. The CI version stamp (-p:Version=<base>-ci-<timestamp> on
+         main pushes in publish-nuget*.yml) survives as a prerelease label — the goldens and the
+         modeling MCP contract snapshot normalize exporterVersion to a placeholder instead. -->
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Authors>ptyll</Authors>
     <Title>Tempo.Blazor.Modeling.BpmnXml</Title>
@@ -40,6 +40,12 @@
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>Tempo.Blazor.Tests</_Parameter1>
+    </AssemblyAttribute>
   </ItemGroup>
 
   <ItemGroup>

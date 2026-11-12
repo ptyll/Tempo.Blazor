@@ -135,15 +135,25 @@ public class E8ComponentsTests : BunitContext
     [Fact]
     public void Preview_UpdatesWhenVariablesJsonChanges()
     {
+        var time = new Microsoft.Extensions.Time.Testing.FakeTimeProvider();
+        var doc = DocWithText("Hello {{ first_name }}");
         var cut = Render<TmEmailTemplatePreview>(p => p
-            .Add(c => c.Document, DocWithText("Hello {{ first_name }}"))
-            .Add(c => c.VariablesJson, "{\"first_name\":\"Alice\"}"));
+            .Add(c => c.Document, doc)
+            .Add(c => c.VariablesJson, "{\"first_name\":\"Alice\"}")
+            .Add(c => c.TimeProvider, time));
 
         cut.WaitForAssertion(() => cut.Find("[data-tm-preview-frame]").GetAttribute("srcdoc").Should().Contain("Alice"));
 
         // Parent (the send form) supplies fresh values as the user types — the live
         // preview must adopt them, not stay pinned to the first snapshot.
-        cut.Render(p => p.Add(c => c.VariablesJson, "{\"first_name\":\"Bob\"}"));
+        cut.Render(p => p
+            .Add(c => c.Document, doc)
+            .Add(c => c.VariablesJson, "{\"first_name\":\"Bob\"}")
+            .Add(c => c.TimeProvider, time));
+
+        // The external change is debounced (750 ms) before it reaches the renderer; advance the fake
+        // clock instead of racing the real debounce against bUnit's 1 s WaitForAssertion timeout.
+        time.Advance(TimeSpan.FromMilliseconds(750));
 
         cut.WaitForAssertion(() => cut.Find("[data-tm-preview-frame]").GetAttribute("srcdoc").Should().Contain("Bob"));
         cut.Find("[data-tm-preview-frame]").GetAttribute("srcdoc").Should().NotContain("Alice");

@@ -38,7 +38,9 @@ public sealed class BpmnExportGoldenTests
 
         var goldenPath = Path.Combine(BpmnCorpusPaths.ExpectedDirectory,
             fixture.Replace(".bpmn", ".export.bpmn", StringComparison.Ordinal));
-        var actual = result.Xml!.ReplaceLineEndings("\n");
+        // exporterVersion carries the assembly's SemVer (incl. a CI prerelease stamp); the goldens
+        // pin a placeholder so a -p:Version stamp cannot churn them.
+        var actual = NormalizeExporterVersion(result.Xml!.ReplaceLineEndings("\n"));
 
         if (Environment.GetEnvironmentVariable("TEMPO_REGENERATE_BPMN_EXPORT_GOLDEN") == "1")
         {
@@ -50,6 +52,10 @@ public sealed class BpmnExportGoldenTests
         File.ReadAllText(goldenPath).ReplaceLineEndings("\n").Should().Be(actual,
             $"the export of {fixture} must be deterministic; regenerate the golden intentionally with TEMPO_REGENERATE_BPMN_EXPORT_GOLDEN=1");
     }
+
+    private static string NormalizeExporterVersion(string xml) =>
+        System.Text.RegularExpressions.Regex.Replace(
+            xml, "exporterVersion=\"[^\"]*\"", "exporterVersion=\"{version}\"");
 
     [Fact]
     public void Export_goldens_exist_for_every_corpus_fixture()

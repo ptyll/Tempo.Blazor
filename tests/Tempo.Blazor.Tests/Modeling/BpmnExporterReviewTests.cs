@@ -104,18 +104,29 @@ public sealed class BpmnExporterReviewTests
 
     // Regression for the red main CI gate (run 43155072274): the publish workflows build with
     // -p:Version=<base>-ci-<timestamp> on every main push, which stamps the exporter assembly's
-    // informational version. exporterVersion must carry only the release line — with a CI-stamped
-    // assembly this test fails when the stripping regresses, and it is green under a plain build.
+    // informational version. exporterVersion is that full SemVer (prerelease kept) with the
+    // build metadata cut — with a CI-stamped assembly this test fails when the stripping regresses.
     [Fact]
-    public void Exporter_version_carries_no_prerelease_or_build_metadata_suffix()
+    public void Exporter_version_is_the_informational_version_with_build_metadata_cut()
     {
         var root = Parse(Export(SimpleModel()));
 
-        var version = root.Attribute("exporterVersion")!.Value;
-        version.Should().MatchRegex("^[0-9]+(\\.[0-9]+){1,3}$",
-            "exporterVersion must be the bare release version — CI version stamps (-ci-<timestamp>, " +
-            "dispatch prerelease suffixes, build metadata) would churn the committed export goldens");
+        var informational =
+            System.Reflection.CustomAttributeExtensions.GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>(
+                    typeof(BpmnXmlExporter).Assembly)
+                ?.InformationalVersion ?? string.Empty;
+        var expected = BpmnExportBuilder.StripBuildMetadata(informational);
+        expected.Should().NotBeEmpty("the exporter assembly must carry an informational version");
+
+        root.Attribute("exporterVersion")!.Value.Should().Be(expected);
     }
+
+    [Theory]
+    [InlineData("2.11.0-ci-20261112+abc", "2.11.0-ci-20261112")]
+    [InlineData("2.11.0+abc", "2.11.0")]
+    [InlineData("2.11.0", "2.11.0")]
+    public void StripBuildMetadata_cuts_only_the_build_metadata(string version, string expected) =>
+        BpmnExportBuilder.StripBuildMetadata(version).Should().Be(expected);
 
     [Fact]
     public void Timer_and_conditional_event_expressions_carry_the_formal_expression_type()

@@ -98,9 +98,9 @@ public class ModelingMcpContractSnapshotTests
             .Should().Equal("task");
 
         // BPMN converter plan phase 5: the import/export tools join the contract. The seeded model
-        // is exported with a fixed targetNamespace so the XML is deterministic (the exporter
-        // version is the assembly informational version with any CI prerelease/build-metadata
-        // suffix cut off, so CI version stamps cannot churn this snapshot).
+        // is exported with a fixed targetNamespace so the XML is deterministic (Normalize replaces
+        // the exporterVersion attribute with a placeholder — the attribute carries the assembly's
+        // SemVer incl. prerelease, which a -p:Version CI stamp would otherwise churn here).
         var imported = Normalize(ParseNode(await ModelingBpmnTools.ImportBpmn(backend, """
             <?xml version="1.0" encoding="UTF-8"?>
             <definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Defs" targetNamespace="http://tempo.example/contract-import">
@@ -175,7 +175,9 @@ public class ModelingMcpContractSnapshotTests
 
     /// <summary>
     /// Replaces the volatile members (wall-clock tokens, generated timestamps) with a stable marker, so
-    /// the snapshot pins the SHAPE and the stable values only.
+    /// the snapshot pins the SHAPE and the stable values only. The BPMN xml payload additionally gets
+    /// its exporterVersion attribute normalized — it carries the assembly's SemVer (incl. a CI
+    /// prerelease stamp), which must not churn the contract.
     /// </summary>
     private static JsonNode? Normalize(JsonNode? node)
     {
@@ -192,8 +194,25 @@ public class ModelingMcpContractSnapshotTests
             }
         }
 
+        if (root.TryGetPropertyValue("xml", out var xmlNode)
+            && xmlNode is JsonValue xmlValue
+            && xmlValue.TryGetValue<string>(out var xml))
+        {
+            root["xml"] = NormalizeExporterVersion(xml);
+        }
+
         return root;
     }
+
+    private static string NormalizeExporterVersion(string xml) =>
+        System.Text.RegularExpressions.Regex.Replace(
+            System.Text.RegularExpressions.Regex.Replace(
+                xml,
+                "exporterVersion=\"[^\"]*\"",
+                "exporterVersion=\"{version}\""),
+            // Same attribute in the JSON-escaped \u0022 form (raw-JSON payloads).
+            "exporterVersion=\\\\u0022[^\\\\]*?\\\\u0022",
+            "exporterVersion=\\u0022{version}\\u0022");
 
     private static JsonNode? ParseNode(string json) => JsonNode.Parse(json);
 

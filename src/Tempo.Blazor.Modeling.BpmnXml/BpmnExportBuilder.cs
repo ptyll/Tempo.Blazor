@@ -227,29 +227,30 @@ internal sealed partial class BpmnExportBuilder
 
     /// <summary>
     /// The version stamped into <c>exporterVersion</c>: the exporter assembly's informational
-    /// version with any prerelease/build-metadata suffix cut off. The publish workflows stamp a CI
-    /// version on top of the csproj version (<c>-ci-&lt;timestamp&gt;</c> on every main push, an
-    /// optional dispatch suffix for prereleases); that stamp is build-environment noise, and an
-    /// export that carries it is not reproducible — the committed export goldens and the modeling
-    /// MCP contract snapshot would churn on every CI run. Same defect class the csproj guards
-    /// against for the commit-hash suffix via <c>IncludeSourceRevisionInInformationalVersion</c>;
+    /// version as the full SemVer incl. prerelease; the build metadata (<c>+…</c>) is cut.
+    /// The publish workflows stamp a CI prerelease on top of the csproj version
+    /// (<c>-ci-&lt;timestamp&gt;</c> on every main push, an optional dispatch suffix for
+    /// prereleases); that label stays — a prerelease export is honestly labelled — while the
+    /// commit-hash build metadata is dropped by the csproj's
+    /// <c>IncludeSourceRevisionInInformationalVersion=false</c>. The committed export goldens
+    /// and the modeling MCP contract snapshot normalize this attribute to a placeholder, so
     /// exports stay byte-for-byte stable across local, CI and tag builds of the same release line.
     /// </summary>
-    private static string ExporterVersion
-    {
-        get
-        {
-            var informational =
-                System.Reflection.CustomAttributeExtensions.GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>(
-                        typeof(BpmnXmlExporter).Assembly)
-                    ?.InformationalVersion ?? string.Empty;
-            var suffixStart = informational.IndexOfAny(SuffixMarkers);
-            return suffixStart > 0 ? informational[..suffixStart] : informational;
-        }
-    }
+    private static string ExporterVersion =>
+        StripBuildMetadata(
+            System.Reflection.CustomAttributeExtensions.GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>(
+                    typeof(BpmnXmlExporter).Assembly)
+                ?.InformationalVersion ?? string.Empty);
 
-    /// <summary>The characters that start the prerelease (<c>-</c>) or build-metadata (<c>+</c>) suffix.</summary>
-    private static readonly char[] SuffixMarkers = ['-', '+'];
+    /// <summary>
+    /// Cuts the SemVer build metadata (<c>+…</c>) off a version string; the prerelease label
+    /// (<c>-…</c>) is kept. An empty input stays empty (never throws on a missing attribute).
+    /// </summary>
+    internal static string StripBuildMetadata(string version)
+    {
+        var metadataStart = version.IndexOf('+');
+        return metadataStart >= 0 ? version[..metadataStart] : version;
+    }
 
     /// <summary>Prefixes reserved by the exporter itself; generated prefixes never collide with them (finding 8).</summary>
     private HashSet<string> ReservedPrefixes =>

@@ -313,9 +313,9 @@ Loss/Approximated/Info — mapuje se na `ModelingIssueDto` kategorií `bpmn-impo
   distinct view id; auto-layouted connections se syntetizují koncové body.
 - **Schéma-validní výstup:** kořen deklaruje `xmlns:xsi`; výrazy nesou
   `xsi:type="tFormalExpression"`; `<process>` vždy nese `isExecutable`; `definitions`
-  nese `exporter="Tempo.Blazor"` + `exporterVersion` (holá release verze — prerelease/
-  build-metadata přípony, vč. CI stampu `-ci-<timestamp>` z `-p:Version`, se usekávají,
-  aby export zůstal byte-for-byte reprodukovatelný); flow nodes nesou Camunda-style
+  nese `exporter="Tempo.Blazor"` + `exporterVersion` (plná SemVer vč. prerelease; build
+  metadata `+...` se usekává — goldena normalizují tento atribut na placeholder, takže export
+  zůstane byte-for-byte reprodukovatelný); flow nodes nesou Camunda-style
   `<incoming>`/`<outgoing>`; per každý `dataObjectRef` se syntetizuje jeden
   `<dataObject id name isCollection>`; DI id `{id}_di` (kolize ⇒ `{id}_di_1`).
 - **Robustnost exportu** (nikdy nehází pro špatný modelový obsah): nevalidní NCName
