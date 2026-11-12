@@ -25,11 +25,11 @@
             @if (ShowGrid)
             {
                 <pattern id="@_gridSmallId" width="@_gs" height="@_gs" patternUnits="userSpaceOnUse">
-                    <path d="M @_gs 0 L 0 0 0 @_gs" fill="none" stroke="#e5e7eb" stroke-width="0.5" />
+                    <path class="tm-diagram-grid-line" d="M @_gs 0 L 0 0 0 @_gs" fill="none" stroke="var(--tm-canvas-grid)" stroke-width="0.5" />
                 </pattern>
                 <pattern id="@_gridLargeId" width="@_gl" height="@_gl" patternUnits="userSpaceOnUse">
                     <rect width="@_gl" height="@_gl" fill="url(#@_gridSmallId)" />
-                    <path d="M @_gl 0 L 0 0 0 @_gl" fill="none" stroke="#d1d5db" stroke-width="1" />
+                    <path class="tm-diagram-grid-line--strong" d="M @_gl 0 L 0 0 0 @_gl" fill="none" stroke="var(--tm-canvas-grid-strong)" stroke-width="1" />
                 </pattern>
             }
 
@@ -48,11 +48,11 @@
         @* Canvas background + page view + grid *@
         @if (ShowPageView)
         {
-            <rect class="tm-diagram-page-backdrop" x="-100000" y="-100000" width="200000" height="200000" fill="#f3f4f6" />
+            <rect class="tm-diagram-page-backdrop" x="-100000" y="-100000" width="200000" height="200000" fill="var(--tm-diagram-backdrop)" />
         }
         <rect class="tm-diagram-page" x="0" y="0"
               width="@(Document?.Width ?? 3000)" height="@(Document?.Height ?? 2000)"
-              fill="white" stroke="#d1d5db" stroke-width="1"
+              fill="var(--tm-diagram-paper)" stroke="var(--tm-canvas-paper-border)" stroke-width="1"
               rx="@(ShowPageView ? 0 : 4)"
               filter="@(ShowPageView ? $"url(#{_pageShadowFilterId})" : null)" />
         @if (ShowGrid)
@@ -403,8 +403,8 @@
                 var _nodeTransform = $"translate({F(node.X)},{F(node.Y)}) rotate({F(node.Rotation)} {_nodeCx} {_nodeCy})";
                 var _nodeLayout = StencilRegistry.GetStencil(node.StencilId)?.Layout;
                 var _shapeKind = _nodeLayout.GetNativeShapeKind();
-                var _shapeFill = node.Style.Fill ?? _nodeLayout?.Fill ?? "#ffffff";
-                var _shapeStroke = node.Style.Stroke ?? _nodeLayout?.Stroke ?? "#111827";
+                var _shapeFill = node.Style.Fill ?? _nodeLayout?.Fill ?? "var(--stencil-fill)";
+                var _shapeStroke = node.Style.Stroke ?? _nodeLayout?.Stroke ?? "var(--stencil-stroke)";
                 // U1/MODELING-AUTHORING §10: a BPMN stencil's own ShapeSvg is the SINGLE source of
                 // truth for its body (task type markers, event rings, gateway markers). Its
                 // .tm-diagram-node__svg-bg is re-shown by CSS (the native primitive would otherwise

@@ -202,12 +202,14 @@ public sealed class BpmnStencilMapperConventionsTests : LocalizationTestBase
 
         foreach (var stencil in nodeStencils)
         {
-            stencil.Layout.Fill.Should().StartWith("var(--tm-diagram-paper",
+            stencil.Layout.Fill.Should().Be("var(--tm-diagram-paper)",
                 $"{stencil.Id} must resolve its fill from the canvas PAPER token");
-            stencil.Layout.Stroke.Should().StartWith("var(--tm-diagram-node-stroke",
+            stencil.Layout.Stroke.Should().Be("var(--tm-diagram-node-stroke)",
                 $"{stencil.Id} must resolve its stroke from the canvas STROKE token");
-            stencil.Layout.Fill.Should().Contain("#ffffff",
-                "the literal fallback keeps an SVG viewer without the stylesheet white");
+            stencil.Layout.Fill.Should().NotContain("#",
+                "TG-004: no literal hex fallback inside the var() — the export palette/baked clone covers a stylesheet-less viewer");
+            stencil.Layout.Stroke.Should().NotContain("#",
+                "TG-004: no literal hex fallback inside the var()");
             stencil.Layout.StrokeWidth.Should().BeGreaterThan(0);
         }
     }
@@ -222,8 +224,8 @@ public sealed class BpmnStencilMapperConventionsTests : LocalizationTestBase
         // overriding them.
         tokens.Should().Contain("--tm-diagram-paper:", "--tm-diagram-paper is the fill token");
         tokens.Should().Contain("--tm-diagram-node-stroke:", "--tm-diagram-node-stroke is the stroke token");
-        tokens.Should().Contain("--tm-diagram-node-stroke: var(--tm-paper-ink);",
-            "the stroke token resolves the paper ink");
+        tokens.Should().Contain("--tm-diagram-node-stroke: var(--tm-canvas-paper-ink);",
+            "TG-004: the stroke token resolves the catalogued canvas ink (dark in dark mode)");
     }
 
     [Fact]
@@ -231,11 +233,18 @@ public sealed class BpmnStencilMapperConventionsTests : LocalizationTestBase
     {
         // A standalone serialized SVG has no stylesheet: the exporter copies the computed values of
         // the canvas-scoped custom properties onto the clone root, so the BPMN fills/strokes survive.
+        // TG-004: the catalogued --stencil-* tokens ride along too — the stencil ShapeSvg templates
+        // reference them and the dark theme re-declares them, so the export must bake the CONCRETE
+        // computed value (a serialized file has no tokens-dark.css to resolve).
         var script = ReadEditorAsset(Path.Combine("js", "diagram-editor.js"));
 
         script.Should().Contain("'--tm-diagram-paper'");
         script.Should().Contain("'--tm-diagram-node-stroke'");
         script.Should().Contain("'--tm-diagram-node-ink'");
+        script.Should().Contain("'--stencil-fill'");
+        script.Should().Contain("'--stencil-stroke'");
+        script.Should().Contain("'--stencil-stroke-width'");
+        script.Should().Contain("'--stencil-text'");
     }
 
     [Fact]

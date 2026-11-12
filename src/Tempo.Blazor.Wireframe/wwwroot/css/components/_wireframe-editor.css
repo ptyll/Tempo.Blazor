@@ -54,8 +54,9 @@
   /* Canvas. The workspace follows the theme (--tm-bg-workspace: white by default, the indigo off-white / dark slate),
      tinted 6 % toward the text colour so the white page always stands out from it, also in the default
      light theme where the workspace itself is white;
-     the PAGE drawn on it is paper — theme-invariant by design (--tm-paper*), exactly like the
-     diagram editor's page: the wireframe components are drawn light-on-white, so a dark page would
+     the PAGE drawn on it is paper — theme-invariant by design (--tm-paper*), deliberately UNLIKE the
+     diagram editor's page since TG-004 (a drawing canvas flips dark through the --tm-canvas-* tokens):
+     the wireframe components are drawn light-on-white, so a dark page would
      turn their ink invisible, and the SVG/PNG/PDF export (always explicit colours) then matches what
      the user saw. The minor grid step is the paper border at half opacity (stroke-opacity on the
      path), so it stays faint on the paper without a colour-mix the exporter could not rasterise. */

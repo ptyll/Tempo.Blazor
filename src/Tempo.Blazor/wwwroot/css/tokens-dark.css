@@ -241,12 +241,37 @@
   --tm-bg-workspace:           var(--tm-bg-page);
   /* The paper tokens (--tm-paper*) are the exception to "re-declare everything here":
      they are theme-invariant by design and stay literal light values declared ONLY in
-     tokens.css, so a descendant-scoped dark theme keeps the paper white. Do NOT add
-     dark re-declarations for them — that would undo the guarantee. */
+     tokens.css, so a descendant-scoped dark theme keeps the PRINTED paper white. Do NOT add
+     dark re-declarations for them — that would undo the guarantee. The DIAGRAM canvas is the
+     one scoped exception (TG-004, see --tm-canvas-* below): a drawing page is a canvas
+     surface, not a printed page, so it flips dark without touching --tm-paper*. */
   /* The canvas BACKDROP is not paper: the area outside the page follows the theme
-     (carry-forward F8 m5) — the white page floats on a dark workspace instead of a light
-     frame. The light island below re-pins the :root value. */
-  --tm-canvas-backdrop:        var(--tm-bg-workspace);
+     (carry-forward F8 m5) — the page floats on a dark workspace instead of a light
+     frame. TG-004 review: the workspace tone (--tm-bg-page, slate-900) measured only
+     ~1.19:1 against the zinc-800 dark page — the page edge disappeared into it. The
+     backdrop sinks to zinc-950 (the same zinc family as the page) so the page floats
+     on it at ≥1.2:1 (TokenContrastTests). The light island below re-pins the :root value. */
+  --tm-canvas-backdrop:        #09090b;  /* zinc-950 — the zinc-800 page floats on it */
+  /* ── Diagram canvas paints (TG-004) — the dark flip ─────────────────────────────────
+     A dark diagram shows NO white sheet: the page turns the dark zinc steps the headless
+     DiagramSvgPalette.Dark export uses, the ink lifts to gray-200, and the grid/border sink
+     to zinc-700/600 so they stay visible without glare. Re-declared on the theme roots
+     (never a component stylesheet), with light-island mirrors below. The printed-paper
+     --tm-paper* tokens above stay the theme-invariant exception — only the canvas flips. */
+  --tm-canvas-paper:           #27272a;  /* zinc-800 — DiagramSvgPalette.Dark DefaultNodeFill */
+  --tm-canvas-paper-ink:       #e5e7eb;  /* gray-200 — dark DefaultNodeStroke / DefaultText */
+  --tm-canvas-paper-ink-muted: #a1a1aa;  /* zinc-400 — muted labels on the dark sheet */
+  --tm-canvas-paper-border:    #3f3f46;  /* zinc-700 — dark Grid / Divider */
+  --tm-canvas-grid:            #3f3f46;
+  --tm-canvas-grid-strong:     #52525b;  /* zinc-600 */
+  /* ── Stencil paints (TG-004) — the SAME expressions as tokens.css, re-declared so a
+     parent-scoped dark theme recomputes them against the flipped --tm-canvas-* tokens
+     (a :root-only alias would freeze the light value — the convention documented above). */
+  --stencil-fill:              var(--tm-canvas-paper);
+  --stencil-stroke:            var(--tm-canvas-paper-ink);
+  --stencil-text:              var(--tm-canvas-paper-ink);
+  --stencil-stroke-width:      1.5px;
+  --stencil-accent:            var(--tm-color-primary);
   --tm-radius-card:            var(--tm-radius-lg);
   --tm-radius-control:         var(--tm-radius-md);
   --tm-shadow-card:            var(--tm-shadow-md);
@@ -512,6 +537,18 @@
   --tm-chart-neutral:               var(--tm-color-gray-500);
   --tm-bg-workspace:                var(--tm-bg-page);
   --tm-canvas-backdrop:            var(--tm-paper-backdrop);
+  /* Light-island mirrors of the TG-004 canvas/stencil tokens (the dark roots flip them). */
+  --tm-canvas-paper:               var(--tm-paper);
+  --tm-canvas-paper-ink:           var(--tm-paper-ink);
+  --tm-canvas-paper-ink-muted:     var(--tm-paper-ink-muted);
+  --tm-canvas-paper-border:        var(--tm-paper-border);
+  --tm-canvas-grid:                #e5e7eb;
+  --tm-canvas-grid-strong:         #d1d5db;
+  --stencil-fill:                  var(--tm-canvas-paper);
+  --stencil-stroke:                var(--tm-canvas-paper-ink);
+  --stencil-text:                  var(--tm-canvas-paper-ink);
+  --stencil-stroke-width:          1.5px;
+  --stencil-accent:                var(--tm-color-primary);
   --tm-radius-card:                 var(--tm-radius-lg);
   --tm-radius-control:              var(--tm-radius-md);
   --tm-shadow-card:                 var(--tm-shadow-md);

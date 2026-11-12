@@ -7,11 +7,11 @@ using Xunit;
 namespace Tempo.Blazor.Tests.Diagram;
 
 /// <summary>
-/// Phase 4 review (A7): the server-side SVG export of a BPMN node. The shipped stencils paint with
-/// the canvas tokens (<c>var(--tm-diagram-paper, #ffffff)</c> / <c>var(--tm-diagram-node-stroke)</c>)
-/// — a standalone serialized SVG has NO stylesheet, so a <c>var()</c> paint would render black. The
-/// builder therefore resolves a token paint to the palette and lets the NODE's own style win over the
-/// stencil layout.
+/// Phase 4 review (A7), tightened by TG-004: the server-side SVG export of a BPMN node. The shipped
+/// stencils paint with the canvas tokens (<c>var(--tm-diagram-paper)</c> /
+/// <c>var(--tm-diagram-node-stroke)</c>) — a standalone serialized SVG has NO stylesheet, so a
+/// <c>var()</c> paint would render black. The builder therefore resolves a token paint to the
+/// palette and lets the NODE's own style win over the stencil layout.
 /// </summary>
 public class DiagramSvgBuilderPaintTests
 {
@@ -79,5 +79,40 @@ public class DiagramSvgBuilderPaintTests
         var svg = BuildRenderer().RenderSvg(BpmnTaskDocument(fill: "rebeccapurple"));
 
         svg.Should().Contain("rebeccapurple");
+    }
+
+    private static DiagramDocument UmlInitialDocument()
+    {
+        var document = new DiagramDocument();
+        document.EnsurePages();
+        document.Pages[0].Nodes.Add(new DiagramNode
+        {
+            Id = "initial",
+            StencilId = "uml.activity-start",
+            X = 40,
+            Y = 40,
+            W = 60,
+            H = 60
+        });
+        return document;
+    }
+
+    [Theory]
+    [InlineData(DiagramSvgTheme.Light)]
+    [InlineData(DiagramSvgTheme.Dark)]
+    public void The_uml_initial_node_fills_with_the_stroke_token_in_every_theme(DiagramSvgTheme theme)
+    {
+        // TG-004 review (B3): the UML initial node is a SOLID ink disc — its layout fill is
+        // var(--stencil-stroke), so the export maps the token BY NAME to the palette stroke slot
+        // (mapping every var() to the fill slot would paint a white disc). The label ink is
+        // var(--stencil-fill) → the palette fill, so the pair keeps its contrast in both themes.
+        var palette = DiagramSvgPalette.ForTheme(theme);
+        var svg = BuildRenderer().RenderSvg(UmlInitialDocument(), new DiagramSvgRenderOptions { Theme = theme });
+
+        svg.Should().NotContain("var(", "a var() paint cannot resolve in a standalone SVG");
+        svg.Should().Contain($"fill=\"{palette.DefaultNodeStroke}\"",
+            "the solid disc fills with the palette STROKE colour — the token the stencil names");
+        svg.Should().Contain($"fill=\"{palette.DefaultNodeFill}\"",
+            "the label ink resolves var(--stencil-fill) to the palette fill (readable on the disc)");
     }
 }

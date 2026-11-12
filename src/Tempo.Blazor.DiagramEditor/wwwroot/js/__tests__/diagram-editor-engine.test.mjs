@@ -1906,6 +1906,16 @@ function exportFixture(paint) {
         [svg, {
             '--tm-diagram-node-ink': paint.nodeInk,
             '--tm-diagram-paper': paint.paper,
+            '--stencil-fill': paint.stencilFill,
+            '--stencil-stroke': paint.stencilStroke,
+            '--stencil-stroke-width': paint.stencilStrokeWidth,
+            '--stencil-text': paint.stencilText,
+            '--tm-canvas-paper': paint.canvasPaper,
+            '--tm-canvas-paper-ink': paint.canvasPaperInk,
+            '--tm-canvas-paper-ink-muted': paint.canvasPaperInkMuted,
+            '--tm-canvas-paper-border': paint.canvasPaperBorder,
+            '--tm-canvas-grid': paint.canvasGrid,
+            '--tm-canvas-grid-strong': paint.canvasGridStrong,
         }],
     ]);
 
@@ -2012,6 +2022,60 @@ test('exportViewportAsSvg sets the computed ink/paper custom properties on the c
     assert.equal(serialized.style.getPropertyValue('--tm-diagram-node-ink'), 'rgb(74, 63, 42)',
         'the clone root carries the computed ink so every var() in the tree resolves');
     assert.equal(serialized.style.getPropertyValue('--tm-diagram-paper'), 'rgb(245, 238, 218)');
+});
+
+test('exportViewportAsSvg bakes the catalogued --stencil-* tokens onto the clone root (TG-004)', () => {
+    // The stencil ShapeSvg templates paint with var(--stencil-fill) / var(--stencil-stroke) /
+    // var(--stencil-stroke-width), and the dark theme re-declares those tokens — a standalone
+    // serialized SVG has no tokens-dark.css, so the engine must bake the CONCRETE computed
+    // values (here: the dark theme's) onto the clone root or every stencil paints black.
+    const fx = exportFixture({
+        pageFill: 'rgb(39, 39, 42)',
+        pageStroke: 'rgb(63, 63, 70)',
+        backdropFill: 'rgb(15, 23, 42)',
+        labelColor: 'rgb(229, 231, 235)',
+        labelBackground: 'rgb(39, 39, 42)',
+        nodeInk: 'rgb(161, 161, 170)',
+        paper: 'rgb(39, 39, 42)',
+        stencilFill: 'rgb(39, 39, 42)',
+        stencilStroke: 'rgb(229, 231, 235)',
+        stencilStrokeWidth: '1.5px',
+        stencilText: 'rgb(229, 231, 235)',
+        canvasPaper: 'rgb(39, 39, 42)',
+        canvasPaperInk: 'rgb(229, 231, 235)',
+        canvasPaperInkMuted: 'rgb(161, 161, 170)',
+        canvasPaperBorder: 'rgb(63, 63, 70)',
+        canvasGrid: 'rgb(63, 63, 70)',
+        canvasGridStrong: 'rgb(82, 82, 91)',
+    });
+    let serialized = null;
+    const engine = loadEngine({
+        window: { getComputedStyle: fx.getComputedStyle },
+        extra: {
+            XMLSerializer: function () {
+                this.serializeToString = (node) => { serialized = node; return '<svg/>'; };
+            },
+        },
+    });
+    engine.instances.set('c1', { id: 'c1', svg: fx.svg });
+
+    engine.exportViewportAsSvg({ id: 'c1' });
+
+    assert.equal(serialized.style.getPropertyValue('--stencil-fill'), 'rgb(39, 39, 42)',
+        'the dark stencil fill is baked as a concrete colour');
+    assert.equal(serialized.style.getPropertyValue('--stencil-stroke'), 'rgb(229, 231, 235)');
+    assert.equal(serialized.style.getPropertyValue('--stencil-stroke-width'), '1.5px');
+    assert.equal(serialized.style.getPropertyValue('--stencil-text'), 'rgb(229, 231, 235)');
+    // TG-004 review (B2): the catalogued --tm-canvas-* tokens reach the cloned root too — the
+    // page edge (var(--tm-canvas-paper-border)) and the grid lines resolve them in the
+    // standalone file, so a dark export must not fall back to black paints.
+    assert.equal(serialized.style.getPropertyValue('--tm-canvas-paper'), 'rgb(39, 39, 42)');
+    assert.equal(serialized.style.getPropertyValue('--tm-canvas-paper-ink'), 'rgb(229, 231, 235)');
+    assert.equal(serialized.style.getPropertyValue('--tm-canvas-paper-ink-muted'), 'rgb(161, 161, 170)');
+    assert.equal(serialized.style.getPropertyValue('--tm-canvas-paper-border'), 'rgb(63, 63, 70)',
+        'the border token reaches the cloned root (the page edge paints with it)');
+    assert.equal(serialized.style.getPropertyValue('--tm-canvas-grid'), 'rgb(63, 63, 70)');
+    assert.equal(serialized.style.getPropertyValue('--tm-canvas-grid-strong'), 'rgb(82, 82, 91)');
 });
 
 test('exportViewportAsSvg leaves the clone root custom properties unset when the canvas computes none', () => {

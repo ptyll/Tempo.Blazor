@@ -492,6 +492,13 @@ public sealed partial class TokenContrastTests
             // generic --tm-canvas-backdrop in the phase 15b review; the DiagramEditor keeps
             // a --tm-diagram-backdrop alias on .tm-diagram-canvas.
             "--tm-canvas-backdrop",
+            // TG-004 (plan 92e96b25, phase 4): the DIAGRAM canvas paints are theme-relative —
+            // a drawing page is a canvas surface, not a printed page, so the dark theme flips
+            // the page/ink/border/grid to the DiagramSvgPalette.Dark steps. The --stencil-*
+            // defaults repeat the light expression and recompute through these; the printed
+            // --tm-paper* tokens stay the theme-invariant exception (never re-declared here).
+            "--tm-canvas-paper", "--tm-canvas-paper-border",
+            "--tm-canvas-paper-ink", "--tm-canvas-paper-ink-muted",
             "--tm-calendar-view-event-bg", "--tm-calendar-view-event-border",
             "--tm-calendar-view-event-fg", "--tm-calendar-view-highlight",
             "--tm-calendar-view-today-bg", "--tm-calendar-view-today-fg",

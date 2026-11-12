@@ -6,7 +6,7 @@
 <div class="tm-diagram-arrow-select @Class" style="position:relative;width:100%;display:block;" @onfocusout="OnFocusOut" @onfocusin="OnFocusIn">
     <button type="button"
             class="tm-diagram-arrow-select__trigger"
-            style="display:flex;align-items:center;gap:6px;width:100%;min-height:34px;padding:5px 10px;background:#ffffff;border:1px solid #d1d5db;border-radius:6px;font-size:13px;color:#111827;cursor:pointer;text-align:left;box-sizing:border-box;"
+            style="display:flex;align-items:center;gap:6px;width:100%;min-height:34px;padding:5px 10px;background:var(--tm-bg-surface);border:1px solid var(--tm-border-color);border-radius:6px;font-size:13px;color:var(--tm-text-primary);cursor:pointer;text-align:left;box-sizing:border-box;"
             @onclick="Toggle"
             @onclick:stopPropagation="true">
         <span style="flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;width:28px;height:20px;">
@@ -15,7 +15,7 @@
         <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;">
             @GetLabel(Value)
         </span>
-        <svg style="flex-shrink:0;width:14px;height:14px;color:#6b7280;@(_isOpen ? "transform:rotate(180deg);" : "")transition:transform 150ms ease;"
+        <svg style="flex-shrink:0;width:14px;height:14px;color:var(--tm-text-tertiary);@(_isOpen ? "transform:rotate(180deg);" : "")transition:transform 150ms ease;"
              viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="6 9 12 15 18 9" />
         </svg>
@@ -23,7 +23,7 @@
     @if (_isOpen)
     {
         <div id="@_menuId"
-             style="position:absolute;top:calc(100% + 3px);left:0;right:0;z-index:var(--tm-z-popover);background:#ffffff;border:1px solid #d1d5db;border-radius:6px;box-shadow:0 10px 28px rgba(0,0,0,0.15);max-height:260px;overflow-y:auto;padding:4px 0;min-width:180px;"
+             style="position:absolute;top:calc(100% + 3px);left:0;right:0;z-index:var(--tm-z-popover);background:var(--tm-bg-surface);border:1px solid var(--tm-border-color);border-radius:6px;box-shadow:var(--tm-shadow-popover);max-height:260px;overflow-y:auto;padding:4px 0;min-width:180px;"
              role="listbox"
              tabindex="-1">
             @for (int i = 0; i < (Options?.Count ?? 0); i++)
@@ -197,11 +197,11 @@
     private string GetOptionStyle(SelectOption<string> opt, bool isFocused)
     {
         var sb = new System.Text.StringBuilder();
-        sb.Append("display:flex;align-items:center;gap:6px;width:100%;min-height:34px;padding:5px 10px;background:none;border:none;font-size:13px;color:#111827;cursor:pointer;text-align:left;box-sizing:border-box;");
+        sb.Append("display:flex;align-items:center;gap:6px;width:100%;min-height:34px;padding:5px 10px;background:none;border:none;font-size:13px;color:var(--tm-text-primary);cursor:pointer;text-align:left;box-sizing:border-box;");
         if (opt.Value == Value)
-            sb.Append("background:#eff6ff;color:#2563eb;");
+            sb.Append("background:var(--tm-color-primary-subtle);color:var(--tm-color-primary-text);");
         if (isFocused)
-            sb.Append("outline:2px solid #3b82f6;outline-offset:-2px;");
+            sb.Append("outline:2px solid var(--tm-color-primary);outline-offset:-2px;");
         return sb.ToString();
     }
 
@@ -213,8 +213,9 @@
         if (def is null || def.FillMode == "none") return GetEmptyPreview();
 
         var isFilled = def.FillMode == "filled";
-        var fill = isFilled ? "#374151" : "none";
-        var stroke = "#374151";
+        // The preview paints the arrowhead as the canvas would — the edge ink token (TG-004).
+        var fill = isFilled ? "var(--stencil-stroke)" : "none";
+        var stroke = "var(--stencil-stroke)";
         var sw = isFilled ? "0" : "1.5";
         var w = def.Width; var h = def.Height; var pad = 3;
 
@@ -237,7 +238,7 @@
     }
 
     private static string GetEmptyPreview()
-        => "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 4\" width=\"22\" height=\"6\" style=\"display:block;\"><line x1=\"0\" y1=\"2\" x2=\"24\" y2=\"2\" stroke=\"#9ca3af\" stroke-width=\"1.5\" /></svg>";
+        => "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 4\" width=\"22\" height=\"6\" style=\"display:block;\"><line x1=\"0\" y1=\"2\" x2=\"24\" y2=\"2\" stroke=\"var(--tm-canvas-paper-ink-muted)\" stroke-width=\"1.5\" /></svg>";
 
     public async ValueTask DisposeAsync()
     {

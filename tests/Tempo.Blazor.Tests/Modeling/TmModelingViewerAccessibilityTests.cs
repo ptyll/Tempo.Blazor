@@ -216,6 +216,34 @@ public sealed class TmModelingViewerAccessibilityTests : LocalizationTestBase
         css.Should().Contain("display: none", "the list is hidden in print unless opted in");
     }
 
+    [Fact]
+    public void Print_repoints_the_canvas_and_stencil_tokens_to_the_theme_invariant_paper()
+    {
+        // TG-004 review (B1): a custom property substitutes its var() where it is DECLARED, so
+        // the --tm-canvas-* / --stencil-* aliases keep the dark values they computed to on :root.
+        // The print block must re-declare them on .tm-modeling-viewer or the embedded diagram
+        // prints as a dark sheet with light ink on white paper.
+        var css = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "Tempo.Blazor.Modeling", "Components", "Modeling", "TmModelingViewer.razor.css"));
+        var stripped = System.Text.RegularExpressions.Regex.Replace(css, @"/\*.*?\*/", " ",
+            System.Text.RegularExpressions.RegexOptions.Singleline);
+
+        var block = System.Text.RegularExpressions.Regex.Match(
+            stripped, @"@media print\s*\{\s*\.tm-modeling-viewer\s*\{(?<body>[^}]*)\}");
+        block.Success.Should().BeTrue("the @media print .tm-modeling-viewer block must exist");
+        var body = System.Text.RegularExpressions.Regex.Replace(block.Groups["body"].Value, @"\s+", " ");
+
+        body.Should().Contain("--tm-canvas-paper: var(--tm-paper)");
+        body.Should().Contain("--tm-canvas-paper-ink: var(--tm-paper-ink)");
+        body.Should().Contain("--tm-canvas-paper-ink-muted: var(--tm-paper-ink-muted)");
+        body.Should().Contain("--tm-canvas-paper-border: var(--tm-paper-border)");
+        body.Should().Contain("--tm-canvas-grid: var(--tm-paper-border)");
+        body.Should().Contain("--tm-canvas-grid-strong: var(--tm-paper-border)");
+        body.Should().Contain("--tm-canvas-backdrop: var(--tm-paper)");
+        body.Should().Contain("--stencil-fill: var(--tm-paper)");
+        body.Should().Contain("--stencil-stroke: var(--tm-paper-ink)");
+        body.Should().Contain("--stencil-text: var(--tm-paper-ink)");
+    }
+
     private IRenderedComponent<TmModelingViewer> Render()
         => Render<TmModelingViewer>(parameters => parameters
             .Add(p => p.Model, ModelingViewerTestModels.CreateProcessModel())

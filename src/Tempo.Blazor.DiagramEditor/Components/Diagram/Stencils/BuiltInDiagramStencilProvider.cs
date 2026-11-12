@@ -1101,7 +1101,10 @@ public sealed class BuiltInDiagramStencilProvider : IDiagramStencilProvider
                     {
                         BackgroundShape = "ellipse",
                         ShapeSvg = "<circle cx='50' cy='50' r='46' fill='var(--stencil-fill)' stroke='var(--stencil-stroke)' stroke-width='var(--stencil-stroke-width)' vector-effect='non-scaling-stroke'/>",
-                        Fill = "#111827",
+                        // TG-004: the UML initial node is a SOLID ink disc — the fill is the stencil
+                        // stroke token and the label ink the stencil fill, so the pair keeps its
+                        // contrast in both themes (dark disc + light text in light, inverted in dark).
+                        Fill = "var(--stencil-stroke)",
                         Sections =
                         [
                             new()
@@ -1110,7 +1113,7 @@ public sealed class BuiltInDiagramStencilProvider : IDiagramStencilProvider
                                 DataKey = "label",
                                 DefaultText = "",
                                 Padding = 0,
-                                TextStyle = new() { TextAlign = StencilTextAlign.Center, FontSize = 10, Color = "#ffffff" }
+                                TextStyle = new() { TextAlign = StencilTextAlign.Center, FontSize = 10, Color = "var(--stencil-fill)" }
                             }
                         ]
                     },

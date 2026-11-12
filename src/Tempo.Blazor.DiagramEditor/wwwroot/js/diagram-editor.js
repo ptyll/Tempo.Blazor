@@ -5031,7 +5031,9 @@ window.tmDiagramEditor = {
         const PAINT_SOURCES = [
             { selector: '.tm-diagram-page', props: ['fill', 'stroke'] },
             { selector: '.tm-diagram-page-backdrop', props: ['fill'] },
-            { selector: '.tm-diagram-edge-label__text', props: ['color', 'background-color'] }
+            { selector: '.tm-diagram-edge-label__text', props: ['color', 'background-color'] },
+            { selector: '.tm-diagram-grid-line', props: ['stroke'] },
+            { selector: '.tm-diagram-grid-line--strong', props: ['stroke'] }
         ];
         PAINT_SOURCES.forEach(function (rule) {
             const live = inst.svg.querySelectorAll(rule.selector);
@@ -5050,8 +5052,19 @@ window.tmDiagramEditor = {
         // var(--tm-diagram-paper) / var(--tm-diagram-node-stroke), and the standalone export has
         // no stylesheet to resolve them.
         // Setting the computed values on the clone ROOT re-points every var() in the tree.
+        // TG-004: the catalogued --stencil-* tokens ride along — the stencil ShapeSvg templates
+        // paint with var(--stencil-fill) / var(--stencil-stroke) / var(--stencil-stroke-width)
+        // and the dark theme re-declares them, so the export must carry the CONCRETE computed
+        // value (the serialized file has no tokens-dark.css to resolve). The --tm-canvas-*
+        // catalog tokens (page fill/ink/border/grid) ride along for the same reason: page
+        // stroke, grid lines and any host override of the canvas paints must resolve in the
+        // standalone file.
         const canvasComputed = window.getComputedStyle(inst.svg);
-        ['--tm-diagram-node-ink', '--tm-diagram-paper', '--tm-diagram-node-stroke'].forEach(function (prop) {
+        ['--tm-diagram-node-ink', '--tm-diagram-paper', '--tm-diagram-node-stroke',
+            '--tm-canvas-paper', '--tm-canvas-paper-ink', '--tm-canvas-paper-ink-muted',
+            '--tm-canvas-paper-border', '--tm-canvas-grid', '--tm-canvas-grid-strong',
+            '--stencil-fill', '--stencil-stroke', '--stencil-stroke-width', '--stencil-text', '--stencil-accent'
+        ].forEach(function (prop) {
             const value = canvasComputed.getPropertyValue(prop);
             if (value) clone.style.setProperty(prop, value);
         });
@@ -5070,8 +5083,11 @@ window.tmDiagramEditor = {
             fallback.setAttribute('y', fo.getAttribute('y') || '0');
             fallback.setAttribute('width', fo.getAttribute('width') || '0');
             fallback.setAttribute('height', fo.getAttribute('height') || '0');
-            fallback.setAttribute('fill', '#f9fafb');
-            fallback.setAttribute('stroke', '#d1d5db');
+            // TG-004: the placeholder paints with the LIVE canvas tokens (baked computed values),
+            // never the old #f9fafb / #d1d5db literals — in dark mode the fallback must be the
+            // dark paper, not a white box.
+            fallback.setAttribute('fill', (canvasComputed.getPropertyValue('--tm-diagram-paper') || '').trim() || '#f9fafb');
+            fallback.setAttribute('stroke', (canvasComputed.getPropertyValue('--tm-canvas-paper-border') || '').trim() || '#d1d5db');
             fallback.setAttribute('stroke-width', '1');
             parent.insertBefore(sw, fo);
             sw.appendChild(fo);

@@ -30,12 +30,13 @@
              @onpointercancel="OnSvgPointerUp"
              @onlostpointercapture="OnSvgPointerUp">
 
-            @* Canvas background *@
+            @* Canvas background — the miniature of the page, so it rides the same canvas tokens
+               (TG-004): white sheet in light, the dark zinc sheet in dark. *@
             <rect x="0" y="0"
                   width="@F(Document.Width)"
                   height="@F(Document.Height)"
-                  fill="var(--tm-color-surface-elevated, #f9fafb)"
-                  stroke="var(--tm-color-border, #e5e7eb)"
+                  fill="var(--tm-canvas-paper)"
+                  stroke="var(--tm-canvas-paper-border)"
                   stroke-width="1" />
 
             @* Viewport rectangle: a transparent outline UNDER the nodes (X4) — it must never
@@ -66,7 +67,7 @@
                       y1="@F(src.Y + src.H / 2)"
                       x2="@F(tgt.X + tgt.W / 2)"
                       y2="@F(tgt.Y + tgt.H / 2)"
-                      stroke="var(--tm-color-border-strong, #d1d5db)"
+                      stroke="var(--tm-canvas-paper-ink-muted)"
                       stroke-width="@F(1.5 / scale)" />
             }
 
@@ -80,8 +81,8 @@
                       y="@F(node.Y)"
                       width="@F(Math.Max(1, node.W))"
                       height="@F(Math.Max(1, node.H))"
-                      fill="@(isSelected ? "var(--tm-color-primary-subtle, #dbeafe)" : "var(--tm-color-surface, #ffffff)")"
-                      stroke="@(isSelected ? "var(--tm-color-primary, #3b82f6)" : "var(--tm-color-text-muted, #6b7280)")"
+                      fill="@(isSelected ? "var(--tm-color-primary-subtle)" : "var(--stencil-fill)")"
+                      stroke="@(isSelected ? "var(--tm-color-primary)" : "var(--stencil-stroke)")"
                       stroke-width="@(isSelected ? F(2 / scale) : F(1 / scale))"
                       rx="1" />
             }

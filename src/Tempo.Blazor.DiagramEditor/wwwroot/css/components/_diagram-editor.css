@@ -764,14 +764,15 @@
 
 /* Overlay badge (Modeling viewer phase 6): a short non-colour cue a host writes into the node's
  * Data bag ("+" added, "~" changed, "↔" layout-only), rendered in the node's top-right corner. It
- * paints over the node body, never takes a pointer, and uses the white paper's ink (the page is
- * theme-invariant) with a paper-coloured halo so it stays legible over any fill. */
+ * paints over the node body, never takes a pointer, and uses the canvas ink with a paper-coloured
+ * halo (both ride the --tm-canvas-* tokens, TG-004) so it stays legible over any fill in both
+ * themes. */
 .tm-diagram-node__viewer-badge {
     font-size: var(--tm-font-size-sm);
     font-weight: var(--tm-font-weight-bold);
-    fill: var(--tm-paper-ink);
+    fill: var(--tm-canvas-paper-ink);
     paint-order: stroke;
-    stroke: var(--tm-paper);
+    stroke: var(--tm-canvas-paper);
     stroke-width: 3px;
     stroke-linejoin: round;
     pointer-events: none;
@@ -1011,10 +1012,11 @@ rect.tm-diagram-selection-outline {
     display: flex;
     flex-direction: row;
     min-height: 0;
-    /* Phase 4 U2: a swimlane band is painted ON the page paper, so its separators, its header
-       band and its ink come from the PAPER tokens (theme-invariant by design) instead of the
-       themed surface tokens — a dark theme keeps the paper white and the label legible. */
-    border-bottom: 1px solid var(--tm-paper-border);
+    /* Phase 4 U2, TG-004: a swimlane band is painted ON the page paper, so its separators, its
+       header band and its ink come from the CANVAS tokens (white paper in light, the dark zinc
+       sheet in dark) instead of the themed surface tokens — the band follows the page in both
+       themes and the label stays legible. */
+    border-bottom: 1px solid var(--tm-canvas-paper-border);
 }
 
 .tm-diagram-node__swimlane--horizontal .tm-diagram-node__swimlane-row:last-child {
@@ -1026,9 +1028,11 @@ rect.tm-diagram-selection-outline {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--tm-paper-backdrop);
-    color: var(--tm-paper-ink);
-    border-right: 1px solid var(--tm-paper-border);
+    /* A 6 % ink tint on the paper — the light gray-100 band in light mode, a subtly lighter
+       dark band in dark mode (the same relationship, no theme-invariant literal). */
+    background: color-mix(in srgb, var(--tm-canvas-paper-ink) 6%, var(--tm-canvas-paper));
+    color: var(--tm-canvas-paper-ink);
+    border-right: 1px solid var(--tm-canvas-paper-border);
     flex-shrink: 0;
     writing-mode: vertical-rl;
     text-orientation: mixed;
@@ -1049,7 +1053,7 @@ rect.tm-diagram-selection-outline {
     display: flex;
     flex-direction: column;
     min-width: 0;
-    border-right: 1px solid var(--tm-paper-border);
+    border-right: 1px solid var(--tm-canvas-paper-border);
 }
 
 .tm-diagram-node__swimlane--vertical .tm-diagram-node__swimlane-col:last-child {
@@ -1061,9 +1065,9 @@ rect.tm-diagram-selection-outline {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--tm-paper-backdrop);
-    color: var(--tm-paper-ink);
-    border-bottom: 1px solid var(--tm-paper-border);
+    background: color-mix(in srgb, var(--tm-canvas-paper-ink) 6%, var(--tm-canvas-paper));
+    color: var(--tm-canvas-paper-ink);
+    border-bottom: 1px solid var(--tm-canvas-paper-border);
     flex-shrink: 0;
     padding: 0 4px;
 }
@@ -1091,8 +1095,9 @@ rect.tm-diagram-selection-outline {
     text-overflow: ellipsis;
     white-space: nowrap;
     font-size: var(--tm-font-size-xs);
-    /* Table cells are labels painted on the node's data-driven (white) fill, so they use the
-       node ink — --tm-color-text flips light in dark and would vanish on the white fill. */
+    /* Table cells are labels painted on the node's data-driven (paper) fill, so they use the
+       node ink — the chrome's --tm-color-text flips with the shell surface and would vanish
+       on the canvas fill in one of the two themes. */
     color: var(--tm-diagram-node-ink);
     box-sizing: border-box;
 }
@@ -1186,11 +1191,11 @@ rect.tm-diagram-selection-outline {
     font-size: var(--tm-font-size-xs);
     line-height: 1;
     font-weight: 700;
-    /* Phase 4 U2: the toggle rides on the page PAPER (like the swimlane header band), so it is
-       painted with the paper tokens and stays legible when the surrounding chrome is dark. */
-    color: var(--tm-paper-ink);
-    background: var(--tm-paper);
-    border: 1px solid var(--tm-paper-border);
+    /* Phase 4 U2, TG-004: the toggle rides on the page PAPER (like the swimlane header band), so
+       it is painted with the canvas tokens and stays legible in both themes. */
+    color: var(--tm-canvas-paper-ink);
+    background: var(--tm-canvas-paper);
+    border: 1px solid var(--tm-canvas-paper-border);
     border-radius: var(--tm-radius-sm, 4px);
     cursor: pointer;
     z-index: 20;
@@ -1198,8 +1203,10 @@ rect.tm-diagram-selection-outline {
 }
 
 .tm-diagram-node__collapse-btn:hover {
-    background: var(--tm-paper-backdrop);
-    border-color: var(--tm-paper-ink);
+    /* TG-004 review: an ink tint over the page paper — --tm-canvas-grid is a GRID line paint
+       (in dark mode nearly the page colour), too weak to read as a hover state. */
+    background: color-mix(in srgb, var(--tm-canvas-paper-ink) 10%, var(--tm-canvas-paper));
+    border-color: var(--tm-canvas-paper-ink);
 }
 
 .tm-diagram-editor--readonly .tm-diagram-node__collapse-btn {
@@ -1610,8 +1617,8 @@ circle.tm-diagram-port-hit {
     user-select: none;
 }
 
-/* A paper-coloured pill so the edge stroke never runs through the text; paper and ink
-   are theme-invariant (the page is white in every theme). */
+/* A paper-coloured pill so the edge stroke never runs through the text; the paper and ink
+   ride the canvas tokens, so the pill follows the page in both themes (TG-004). */
 .tm-diagram-edge-label__text {
     padding: 0 var(--tm-space-1);
     border-radius: var(--tm-radius-sm);
@@ -3199,13 +3206,17 @@ line.tm-diagram-rotate-handle-stem {
 .tm-diagram-canvas {
     touch-action: none;
     /* Paper + ink for everything painted ON the page (node bodies, edge labels,
-       cardinalities). Declared here, not on the node body, so edge labels resolve it. */
-    --tm-diagram-paper: var(--tm-paper);
-    /* Node OUTLINE. The shipped BPMN stencils paint their fill/stroke with the two canvas tokens
-       (var(--tm-diagram-paper, #ffffff) / var(--tm-diagram-node-stroke)), so a host or a
+       cardinalities). Declared here, not on the node body, so edge labels resolve it.
+       TG-004: the values alias the catalogued --tm-canvas-* tokens (tokens.css), which the
+       dark roots re-declare to the DiagramSvgPalette.Dark steps — a dark theme turns the
+       page and every paper-painted node dark WITHOUT touching the theme-invariant
+       --tm-paper* tokens the printed surfaces (report designer, document pages) keep.
+       The shipped BPMN stencils paint their fill/stroke with these two canvas tokens
+       (var(--tm-diagram-paper) / var(--tm-diagram-node-stroke)), so a host or a
        high-contrast theme recolours every BPMN shape by overriding them here. */
-    --tm-diagram-node-stroke: var(--tm-paper-ink);
-    --tm-diagram-node-ink: var(--tm-paper-ink-muted);
+    --tm-diagram-paper: var(--tm-canvas-paper);
+    --tm-diagram-node-stroke: var(--tm-canvas-paper-ink);
+    --tm-diagram-node-ink: var(--tm-canvas-paper-ink-muted);
     /* Swimlane header band. Matches DiagramNodeSwimlaneData.HeaderSize = 30 — the data model
        hit-testing and drop math both measure 30px, so the painted header must not drift
        (the old --tm-input-height-xs resolves to 28px and clipped the drop detection). */
@@ -3216,17 +3227,47 @@ line.tm-diagram-rotate-handle-stem {
     --tm-diagram-backdrop: var(--tm-canvas-backdrop);
 }
 
-/* The page rects keep literal fill/stroke ATTRIBUTES as a fallback for viewers without
-   the stylesheet; CSS beats presentation attributes on screen, so the tokens (and any host
-   override) win in the editor. exportViewportAsSvg additionally copies the computed values
-   onto the serialized clone, so an export always carries the paints the user actually saw.
-   The backdrop is the area OUTSIDE the page and follows the THEME (carry-forward F8 m5):
-   --tm-diagram-backdrop (the alias above) resolves the generic --tm-canvas-backdrop, which
-   keeps the historical paper-backdrop gray in light themes and flips to the workspace tone
-   in dark ones (declared in tokens.css / tokens-dark.css — a dark override may not live in a
-   component stylesheet). The paper itself stays theme-invariant. */
+/* The page rects keep token fill/stroke ATTRIBUTES so the markup itself carries no literal
+   paint (TG-004 — a captured/serialized canvas no longer shows "white" / #d1d5db). The CSS
+   rules below win on screen and follow any host override; exportViewportAsSvg bakes the
+   computed values onto the serialized clone, so a standalone export carries the concrete
+   colours the user actually saw. The backdrop is the area OUTSIDE the page and follows the
+   THEME (carry-forward F8 m5): --tm-diagram-backdrop (the alias above) resolves the generic
+   --tm-canvas-backdrop, which keeps the historical paper-backdrop gray in light themes and
+   flips to the workspace tone in dark ones (declared in tokens.css / tokens-dark.css — a dark
+   override may not live in a component stylesheet). The page itself follows the
+   --tm-canvas-paper token: white in light, the dark zinc sheet in dark (TG-004). */
 .tm-diagram-page-backdrop { fill: var(--tm-diagram-backdrop); }
-.tm-diagram-page { fill: var(--tm-diagram-paper); stroke: var(--tm-paper-border); }
+.tm-diagram-page { fill: var(--tm-diagram-paper); stroke: var(--tm-canvas-paper-border); }
+
+/* The grid lines are pattern paths inside <defs>; their stroke rides the same catalog
+   tokens as the page so a dark theme sinks them to the dark grid steps (TG-004). The
+   attributes on the paths mirror the tokens for a stylesheet-less viewer; these rules win
+   on screen, and the SVG export bakes the computed values onto the serialized clone. */
+.tm-diagram-grid-line { stroke: var(--tm-canvas-grid); }
+.tm-diagram-grid-line--strong { stroke: var(--tm-canvas-grid-strong); }
+
+/* ── Print: the page is paper in every theme ─────────────────────────────────
+ * TG-004 review (B1): the canvas/stencil paints are re-pointed at the
+ * theme-invariant --tm-paper* steps. A custom property substitutes its var()
+ * where it is DECLARED, so the --tm-canvas-* / --stencil-* aliases computed on
+ * :root keep the DARK values they resolved to there — without these
+ * re-declarations a diagram printed from a dark-themed host would come out as a
+ * dark sheet with light ink on white paper. */
+@media print {
+    .tm-diagram-editor {
+        --tm-canvas-paper: var(--tm-paper);
+        --tm-canvas-paper-ink: var(--tm-paper-ink);
+        --tm-canvas-paper-ink-muted: var(--tm-paper-ink-muted);
+        --tm-canvas-paper-border: var(--tm-paper-border);
+        --tm-canvas-grid: var(--tm-paper-border);
+        --tm-canvas-grid-strong: var(--tm-paper-border);
+        --tm-canvas-backdrop: var(--tm-paper);
+        --stencil-fill: var(--tm-paper);
+        --stencil-stroke: var(--tm-paper-ink);
+        --stencil-text: var(--tm-paper-ink);
+    }
+}
 
 /* ── Minimap overlay (DI3) ─────────────────────────────────────────────────── */
 

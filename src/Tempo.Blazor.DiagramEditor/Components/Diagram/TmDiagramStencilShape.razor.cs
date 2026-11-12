@@ -195,13 +195,34 @@ public partial class TmDiagramStencilShape : ComponentBase, IAsyncDisposable
     private string GetShapeStyleVars()
     {
         var layout = _stencil?.Layout;
-        var fill = Node.Style.Fill ?? layout?.Fill ?? "#ffffff";
-        var stroke = Node.Style.Stroke ?? layout?.Stroke ?? "#111827";
-        var strokeWidth = Node.Style.StrokeWidth ?? layout?.StrokeWidth ?? 1.5;
+        var fill = Node.Style.Fill ?? layout?.Fill;
+        var stroke = Node.Style.Stroke ?? layout?.Stroke;
+        var strokeWidth = Node.Style.StrokeWidth ?? layout?.StrokeWidth;
         var opacity = Node.Style.Opacity ?? 1.0;
         var shadow = (Node.Style.HasShadow ?? false) ? "box-shadow: 2px 2px 6px rgba(0,0,0,0.25);" : "";
         var baseOpacity = $"opacity: {F(opacity)};";
-        return $"--stencil-fill:{fill};--stencil-stroke:{stroke};--stencil-stroke-width:{F(strokeWidth)}px;{baseOpacity} {shadow}";
+        // TG-004: emit a --stencil-* custom property ONLY when the node's own style or the stencil
+        // layout sets an explicit paint. There is no hardcoded hex fallback any more — with nothing
+        // set the shape inherits the catalogued token (tokens.css / tokens-dark.css), which is the
+        // documented host override point and what makes the shapes follow the dark theme.
+        var sb = new System.Text.StringBuilder();
+        if (fill is not null)
+        {
+            sb.Append($"--stencil-fill:{fill};");
+        }
+
+        if (stroke is not null)
+        {
+            sb.Append($"--stencil-stroke:{stroke};");
+        }
+
+        if (strokeWidth is not null)
+        {
+            sb.Append($"--stencil-stroke-width:{F(strokeWidth.Value)}px;");
+        }
+
+        sb.Append(baseOpacity);
+        return $"{sb} {shadow}";
     }
 
     private string GetSvgBgStyle(bool contentBelow)
@@ -517,7 +538,7 @@ public partial class TmDiagramStencilShape : ComponentBase, IAsyncDisposable
     private string GetTableCellStyle(DiagramTableCellStyle? style)
     {
         var sb = new System.Text.StringBuilder();
-        sb.Append("border: 1px solid var(--tm-color-border, #e5e7eb);");
+        sb.Append("border: 1px solid var(--tm-canvas-paper-border);");
         sb.Append(" padding: 4px;");
         if (!string.IsNullOrEmpty(style?.BackgroundColor))
             sb.Append($" background-color: {style.BackgroundColor};");

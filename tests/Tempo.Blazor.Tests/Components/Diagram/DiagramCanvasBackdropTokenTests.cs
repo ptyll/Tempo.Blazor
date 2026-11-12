@@ -69,11 +69,14 @@ public class DiagramCanvasBackdropTokenTests
         ThemeCss.Normalise(TokensCss())
             .Should().Contain("--tm-canvas-backdrop: var(--tm-paper-backdrop)");
 
-        // Dark: the token re-maps to the themed workspace tone — on the theme roots
-        // (a component stylesheet may not carry a dark block), never a literal.
+        // Dark: the token re-maps to a literal zinc-950 — TG-004 review: the workspace tone
+        // (--tm-bg-page, slate-900) measured only ~1.19:1 against the zinc-800 dark page, so
+        // the page edge disappeared; zinc-950 (the page's own zinc family) holds ≥1.2:1
+        // (TokenContrastTests). Declared on the theme roots (a component stylesheet may not
+        // carry a dark block).
         var dark = ThemeCss.Normalise(TokensDarkCss());
-        dark.Should().Contain("--tm-canvas-backdrop: var(--tm-bg-workspace)",
-            "the dark canvas rides the same workspace tone as the editor chrome");
+        dark.Should().Contain("--tm-canvas-backdrop: #09090b",
+            "the dark backdrop sinks below the zinc-800 page so the page edge stays visible (≥1.2:1)");
 
         // The light island re-pins the :root value (ThemeLightIslandTests requires the mirror).
         var island = System.Text.RegularExpressions.Regex.Match(
@@ -101,5 +104,23 @@ public class DiagramCanvasBackdropTokenTests
         // design — a descendant-scoped dark theme would otherwise turn the paper dark).
         System.Text.RegularExpressions.Regex.Matches(dark, @"--tm-paper[a-z-]*\s*:")
             .Should().BeEmpty("tokens-dark.css must never re-declare the theme-invariant paper tokens");
+    }
+
+    /// <summary>
+    /// TG-004 review: in dark mode the diagram page (<c>--tm-canvas-paper</c>, zinc-800) must stay
+    /// distinguishable from the backdrop it floats on (<c>--tm-canvas-backdrop</c>). The workspace
+    /// tone (--tm-bg-page, slate-900) measured only ~1.19:1 — the page edge disappeared; the
+    /// backdrop sank to zinc-950, which holds at least 1.2:1 against the page.
+    /// </summary>
+    [Fact]
+    public void DarkCanvasPage_KeepsOnePointTwoToOne_AgainstTheBackdrop()
+    {
+        var tokens = ThemeCss.TokenGraph(dark: true);
+        var page = ThemeCss.ResolveColour("var(--tm-canvas-paper)", tokens);
+        var backdrop = ThemeCss.ResolveColour("var(--tm-canvas-backdrop)", tokens);
+
+        ThemeCss.Contrast(page, backdrop).Should().BeGreaterThanOrEqualTo(1.2,
+            "the dark diagram page ({0}) must stay distinguishable from the backdrop ({1}) — "
+            + "a page that melts into its frame loses its edge", page, backdrop);
     }
 }

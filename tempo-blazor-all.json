@@ -49040,7 +49040,63 @@
           "cssVariables": [
             {
               "name": "--tm-diagram-backdrop",
-              "description": "Fill of the area OUTSIDE the diagram page (.tm-diagram-page-backdrop). Follows the THEME: light keeps the historical --tm-paper-backdrop gray, a dark theme re-maps it to the workspace tone so the white paper floats on a dark canvas. Override this token (not --tm-paper-backdrop) to restyle the backdrop."
+              "description": "Fill of the area OUTSIDE the diagram page (.tm-diagram-page-backdrop). Follows the THEME: light keeps the historical --tm-paper-backdrop gray, a dark theme re-maps it to the workspace tone so the page floats on a dark canvas. Override this token (not --tm-paper-backdrop) to restyle the backdrop."
+            },
+            {
+              "name": "--tm-diagram-paper",
+              "description": "The canvas paper: fill of the diagram page and of every paper-painted node body (the shipped BPMN stencils resolve it). Alias of the catalogued --tm-canvas-paper (tokens.css), which flips to the dark DiagramSvgPalette.Dark steps in dark mode (TG-004) — a dark diagram shows no white sheet. The printed-paper --tm-paper* tokens stay theme-invariant; only the drawing canvas flips. Override on .tm-diagram-canvas."
+            },
+            {
+              "name": "--tm-diagram-node-stroke",
+              "description": "Outline ink of the paper-painted shapes (BPMN outlines, edge defaults). Alias of --tm-canvas-paper-ink; dark in light mode, gray-200 in dark mode."
+            },
+            {
+              "name": "--tm-diagram-node-ink",
+              "description": "Label/table ink painted on the canvas paper (edge labels, cardinalities, table cells). Alias of --tm-canvas-paper-ink-muted so it stays legible on the page in both themes."
+            },
+            {
+              "name": "--tm-canvas-paper",
+              "description": "Catalog token (tokens.css / tokens-dark.css): the diagram page fill and the default stencil body fill. Light: var(--tm-paper) (white). Dark: #27272a, the headless DiagramSvgPalette.Dark DefaultNodeFill."
+            },
+            {
+              "name": "--tm-canvas-paper-ink",
+              "description": "Catalog token: the canvas outline ink. Light: var(--tm-paper-ink). Dark: #e5e7eb (DiagramSvgPalette.Dark DefaultNodeStroke)."
+            },
+            {
+              "name": "--tm-canvas-paper-ink-muted",
+              "description": "Catalog token: muted canvas label ink. Light: var(--tm-paper-ink-muted). Dark: #a1a1aa."
+            },
+            {
+              "name": "--tm-canvas-paper-border",
+              "description": "Catalog token: the page edge and stencil table-cell borders. Light: var(--tm-paper-border). Dark: #3f3f46."
+            },
+            {
+              "name": "--tm-canvas-grid",
+              "description": "Catalog token: minor grid line stroke (.tm-diagram-grid-line). Light: #e5e7eb. Dark: #3f3f46."
+            },
+            {
+              "name": "--tm-canvas-grid-strong",
+              "description": "Catalog token: major grid line stroke (.tm-diagram-grid-line--strong). Light: #d1d5db. Dark: #52525b."
+            },
+            {
+              "name": "--stencil-fill",
+              "description": "Catalog token (TG-004): the default fill of a stencil shape when neither the node's own style nor the stencil layout sets one — the five --stencil-* tokens the stencil templates reference are catalogued here so a host or high-contrast theme recolours every stencil in one place. Resolves --tm-canvas-paper. A serialized/exported SVG carries the baked computed value, never the var()."
+            },
+            {
+              "name": "--stencil-stroke",
+              "description": "Catalog token (TG-004): the default stencil outline (also the default edge stroke). Resolves --tm-canvas-paper-ink."
+            },
+            {
+              "name": "--stencil-stroke-width",
+              "description": "Catalog token (TG-004): the default stencil outline width. 1.5px in both themes."
+            },
+            {
+              "name": "--stencil-text",
+              "description": "Catalog token (TG-004): the default stencil label ink. Resolves --tm-canvas-paper-ink."
+            },
+            {
+              "name": "--stencil-accent",
+              "description": "Catalog token (TG-004): the stencil accent paint. Resolves --tm-color-primary, so it follows the colour theme."
             }
           ]
         },

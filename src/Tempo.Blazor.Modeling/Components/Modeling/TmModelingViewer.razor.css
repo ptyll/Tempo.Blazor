@@ -531,8 +531,25 @@
         height: auto !important;
         border: 0;
         overflow: visible;
-        background: var(--tm-color-white);
-        color: var(--tm-color-gray-900);
+        /* Print is a paper surface (the theme-invariant tokens — a printed page is white in
+           every theme, the same rule tokens.css documents for the report designer). */
+        background: var(--tm-paper);
+        color: var(--tm-paper-ink);
+        /* TG-004 review (B1): the diagram canvas/stencil paints are re-pointed at the
+           theme-invariant paper steps. A custom property substitutes its var() where it is
+           DECLARED, so the --tm-canvas-* / --stencil-* aliases computed on :root keep the
+           DARK values they resolved to there — without these re-declarations the embedded
+           diagram would print as a dark sheet with light ink on white paper. */
+        --tm-canvas-paper: var(--tm-paper);
+        --tm-canvas-paper-ink: var(--tm-paper-ink);
+        --tm-canvas-paper-ink-muted: var(--tm-paper-ink-muted);
+        --tm-canvas-paper-border: var(--tm-paper-border);
+        --tm-canvas-grid: var(--tm-paper-border);
+        --tm-canvas-grid-strong: var(--tm-paper-border);
+        --tm-canvas-backdrop: var(--tm-paper);
+        --stencil-fill: var(--tm-paper);
+        --stencil-stroke: var(--tm-paper-ink);
+        --stencil-text: var(--tm-paper-ink);
     }
 
     .tm-modeling-viewer ::deep .tm-modeling-viewer__canvas,

@@ -7,7 +7,7 @@ namespace Tempo.Blazor.Tests.Theme;
 /// <see cref="Tempo.Blazor.Components.Layout.TmTopBar"/>.
 /// <para>
 /// The bar answers its OWN container (never the viewport): the root declares a named inline-size
-/// container, a <c>@container tm-topbar (width &lt; 480px)</c> block hides the Auto user name (the
+/// container, a <c>@container tm-topbar (width &lt; 30rem (480px))</c> block hides the Auto user name (the
 /// avatar stays) and collapses the command palette trigger to its icon (the localized
 /// <c>aria-label</c> stays the accessible name), the brand and the actions never wrap or overflow,
 /// and the new rules paint with <c>--tm-*</c> tokens only and introduce no new animated subject.
@@ -52,13 +52,22 @@ public sealed class TmTopBarCssTests
 
         css.Should().Contain(".tm-topbar[data-user-name-display=\"auto\"] .tm-topbar-user-name",
             "only the Auto name gives way — a host that pinned Always keeps the name at every width");
-        css.Should().NotContain("[data-user-name-display=\"always\"] .tm-topbar-user-name",
-            "there must be no rule that hides the Always name");
 
         var hide = css.IndexOf(".tm-topbar-user-name", css.IndexOf("@container tm-topbar", StringComparison.Ordinal), StringComparison.Ordinal);
         hide.Should().BeGreaterThan(-1, "the hiding rule lives inside the narrow container block");
         var block = css.Substring(css.IndexOf("@container tm-topbar", StringComparison.Ordinal));
         block.Should().Contain("display: none");
+
+        // TG-003 review carry-over: a pinned Always name stays visible but ellipsises at a tighter
+        // 8rem cap inside the narrow block, so the brand keeps its share of the row. The rule must
+        // cap the width — never hide the name.
+        var always = block.IndexOf(".tm-topbar[data-user-name-display=\"always\"] .tm-topbar-user-name", StringComparison.Ordinal);
+        always.Should().BeGreaterThan(-1, "the Always name gets a narrow-width cap in the container block");
+        var alwaysRule = block.Substring(always);
+        alwaysRule.Substring(0, alwaysRule.IndexOf('}')).Should().Contain("max-width: 8rem",
+            "the narrow Always cap keeps the brand from being squeezed");
+        alwaysRule.Substring(0, alwaysRule.IndexOf('}')).Should().NotContain("display: none",
+            "there must be no rule that hides the Always name");
     }
 
     [Fact]

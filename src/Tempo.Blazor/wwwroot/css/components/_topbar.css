@@ -306,7 +306,8 @@
    account name gives way (the avatar and the menu behind it stay), and the command palette trigger
    collapses to a square icon button — the localized aria-label stays the accessible name, so nothing is
    lost for a reader. A host that pinned UserNameDisplay=Always keeps the name; it ellipsises like on a
-   wide bar. The collapse is instant (like the toolbar's label drop), not animated. The threshold is
+   wide bar, at a tighter 8rem cap so the brand keeps its share of the row. The collapse is instant
+   (like the toolbar's label drop), not animated. The threshold is
    480px = 30rem: component-local density thresholds are declared in rem (the scheduler's 4.5/8/9rem card
    queries and the chart funnel's 32.5rem are the precedent) — TmBreakpoints guards the four LAYOUT
    widths in px. */
@@ -314,6 +315,13 @@
 @container tm-topbar (width < 30rem) {
   .tm-topbar[data-user-name-display="auto"] .tm-topbar-user-name {
     display: none;
+  }
+
+  /* A pinned Always keeps the name on a narrow bar, but it ellipsises at a tighter cap than the
+     wide bar's 12rem so the brand never gets squeezed out of the row (TG-003 review). No fitting
+     token exists — the base cap is the 12rem literal above, so the narrow cap stays a literal too. */
+  .tm-topbar[data-user-name-display="always"] .tm-topbar-user-name {
+    max-width: 8rem;
   }
 
   .tm-topbar-search-trigger {

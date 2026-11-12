@@ -24,18 +24,20 @@ public class TmDiagramCanvasTests : LocalizationTestBase
     }
 
     [Fact]
-    public void PageRects_CarryPaperClasses_AndKeepExportFallbackAttributes()
+    public void PageRects_CarryPaperClasses_AndTokenAttributes()
     {
         var doc = new DiagramDocument();
         var cut = Render<TmDiagramCanvas>(p => p
             .Add(c => c.Document, doc)
             .Add(c => c.ShowPageView, true));
 
-        // The paper colour itself is a token (U14): on screen the CSS class wins, while the
-        // literal presentation attributes stay as the standalone-export fallback.
-        cut.Find("rect.tm-diagram-page").GetAttribute("fill").Should().Be("white");
-        cut.Find("rect.tm-diagram-page").GetAttribute("stroke").Should().Be("#d1d5db");
-        cut.Find("rect.tm-diagram-page-backdrop").Should().NotBeNull();
+        // TG-004: the page/backdrop paints are TOKEN references, never literals — a captured or
+        // serialized canvas no longer shows "white" / #d1d5db. The CSS classes win on screen
+        // (and follow any host override); the SVG export bakes the computed values onto the
+        // serialized clone, so a standalone export still carries concrete colours.
+        cut.Find("rect.tm-diagram-page").GetAttribute("fill").Should().Be("var(--tm-diagram-paper)");
+        cut.Find("rect.tm-diagram-page").GetAttribute("stroke").Should().Be("var(--tm-canvas-paper-border)");
+        cut.Find("rect.tm-diagram-page-backdrop").GetAttribute("fill").Should().Be("var(--tm-diagram-backdrop)");
     }
 
     [Fact]
@@ -44,14 +46,15 @@ public class TmDiagramCanvasTests : LocalizationTestBase
         var css = ThemeCss.StripComments(File.ReadAllText(
             Path.Combine(ThemeCss.RepositoryRoot().FullName, DiagramEditorCssPath)));
 
-        // The node ink is declared once, on the canvas, from the theme-invariant paper token —
-        // never again on the node body (that was the --tm-color-secondary-hover hack).
+        // The node ink is declared once, on the canvas, from the catalogued canvas tokens
+        // (TG-004 — they flip to the dark steps in dark mode) — never again on the node body
+        // (that was the --tm-color-secondary-hover hack).
         var canvas = System.Text.RegularExpressions.Regex.Match(
             css, @"\.tm-diagram-canvas\s*\{([^}]*)\}");
         canvas.Success.Should().BeTrue("the package must keep a plain .tm-diagram-canvas rule");
         var canvasBody = ThemeCss.Normalise(canvas.Groups[1].Value);
-        canvasBody.Should().Contain("--tm-diagram-node-ink: var(--tm-paper-ink-muted)");
-        canvasBody.Should().Contain("--tm-diagram-paper: var(--tm-paper)");
+        canvasBody.Should().Contain("--tm-diagram-node-ink: var(--tm-canvas-paper-ink-muted)");
+        canvasBody.Should().Contain("--tm-diagram-paper: var(--tm-canvas-paper)");
 
         var nodeBody = System.Text.RegularExpressions.Regex.Match(
             css, @"\.tm-diagram-node__body\s*\{([^}]*)\}");

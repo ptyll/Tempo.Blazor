@@ -13,17 +13,18 @@ public sealed class Bpmn2DiagramStencilProvider : IDiagramStencilProvider
     /// <summary>
     /// Token-based fill of every BPMN node shape. The drawing surface is the canvas PAPER
     /// (<c>--tm-diagram-paper</c>, declared on <c>.tm-diagram-canvas</c> next to the other
-    /// canvas-scoped paints; theme-invariant by design, because the page is a paper metaphor even
-    /// in a dark theme), so the shapes paint with the canvas tokens instead of a hard-coded hex: a
-    /// host (or a high-contrast theme) can recolour them by overriding the tokens. The literal
-    /// fallback covers an SVG viewer WITHOUT the stylesheet (the server-side export resolves the
-    /// token through <c>DiagramSvgBuilder</c> instead).
+    /// canvas-scoped paints), so the shapes paint with the canvas tokens instead of a hard-coded hex:
+    /// a host (or a high-contrast theme) can recolour them by overriding the tokens, and the dark
+    /// theme flips them to the <c>DiagramSvgPalette.Dark</c> steps (TG-004). There is deliberately
+    /// NO literal fallback inside the var(): a serialized markup copy must not smuggle a hex back
+    /// in — the server-side export resolves the token through the <c>DiagramSvgBuilder</c> palette
+    /// and the browser export bakes the computed value onto the serialized clone.
     /// </summary>
-    private const string NodeFillToken = "var(--tm-diagram-paper, #ffffff)";
+    private const string NodeFillToken = "var(--tm-diagram-paper)";
 
     /// <summary>Token-based stroke of every BPMN node shape (the canvas ink keeps the boundary
-    /// legible on the paper surface in every theme).</summary>
-    private const string NodeStrokeToken = "var(--tm-diagram-node-stroke, #111827)";
+    /// legible on the page surface in every theme).</summary>
+    private const string NodeStrokeToken = "var(--tm-diagram-node-stroke)";
 
     /// <inheritdoc />
     public int Priority => 10;
@@ -307,10 +308,10 @@ public sealed class Bpmn2DiagramStencilProvider : IDiagramStencilProvider
                 BackgroundShape = backgroundShape,
                 ShapeSvg = shapeSvg,
                 Sections = sections,
-                // Phase 4 of the Modeling authoring plan ("dark mode tokens"): without an explicit
-                // fill/stroke the node renderer falls back to hard-coded #ffffff / #111827, which a
-                // dark theme and a high-contrast theme cannot recolour. BPMN shapes therefore carry
-                // the canonical TOKENS (the node's own DiagramStyle still wins when set).
+                // Phase 4 of the Modeling authoring plan ("dark mode tokens"), tightened by TG-004:
+                // without an explicit fill/stroke the node renderer resolves the catalogued
+                // --stencil-* tokens, and the BPMN shapes carry the canvas TOKENS so the whole set
+                // follows the theme (the node's own DiagramStyle still wins when set).
                 Fill = NodeFillToken,
                 Stroke = NodeStrokeToken,
                 StrokeWidth = 1.5

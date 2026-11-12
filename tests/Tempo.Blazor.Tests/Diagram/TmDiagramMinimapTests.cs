@@ -57,7 +57,24 @@ public class TmDiagramMinimapTests : DiagramTestBase
             });
 
         var rect = cut.Find("rect.tm-diagram-minimap__node");
-        rect.GetAttribute("fill").Should().Be("var(--tm-color-primary-subtle, #dbeafe)");
+        // TG-004: the minimap paints the miniature of the page — selected nodes take the primary
+        // subtle fill, unselected ones the catalogued stencil fill (no hex fallbacks anywhere).
+        rect.GetAttribute("fill").Should().Be("var(--tm-color-primary-subtle)");
+        rect.GetAttribute("stroke").Should().Be("var(--tm-color-primary)");
+    }
+
+    [Fact]
+    public void UnselectedNodeUsesTheStencilFillAndStroke()
+    {
+        var doc = new DiagramDocument { Width = 500, Height = 400 };
+        doc.Nodes.Add(new DiagramNode { Id = "n1", X = 10, Y = 20, W = 100, H = 80 });
+
+        var cut = Render<TmDiagramMinimap>(
+            parameters => parameters.Add(p => p.Document, doc));
+
+        var rect = cut.Find("rect.tm-diagram-minimap__node");
+        rect.GetAttribute("fill").Should().Be("var(--stencil-fill)");
+        rect.GetAttribute("stroke").Should().Be("var(--stencil-stroke)");
     }
 
     [Fact]

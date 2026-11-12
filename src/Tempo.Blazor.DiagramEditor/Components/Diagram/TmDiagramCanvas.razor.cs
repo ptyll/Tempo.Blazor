@@ -3235,7 +3235,10 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     }
 
     private static string GetEdgeColor(DiagramEdge edge)
-        => edge.Shape == "wire" ? "#ff0000" : (edge.Style.Stroke ?? "#111827");
+        // The wire's red is the shape's semantic identity (a highlighted wire stays red in every
+        // theme); everything else falls back to the catalogued stencil stroke token (TG-004 —
+        // was the hardcoded #111827), so an edge with no explicit stroke follows the theme.
+        => edge.Shape == "wire" ? "#ff0000" : (edge.Style.Stroke ?? "var(--stencil-stroke)");
 
     private static double GetEdgeOpacity(DiagramEdge edge)
         => edge.Style.Opacity ?? 1.0;

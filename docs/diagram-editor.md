@@ -301,51 +301,71 @@ both the media query and the motion-suppressing rules.
 
 ## Canvas tokens (paper and ink)
 
-The page itself — and everything painted on it — is theme-invariant: the page rect, edge-label
-pills and node bodies resolve the core `--tm-paper*` tokens (`--tm-paper`, `--tm-paper-ink`,
-`--tm-paper-ink-muted`, `--tm-paper-border`, `--tm-paper-backdrop`), which are deliberately
-declared light-only (NOT re-declared in `tokens-dark.css`) so the paper stays white and the ink
-stays dark grey in every theme. Hosts rebrand them by targeting `:root`, `[data-theme="dark"]`
-and `.tm-dark` together, or per-canvas through the aliases below.
+Since TG-004 (plan 92e96b25, phase 4) the drawing canvas is THEME-RELATIVE: a diagram page is a
+canvas surface, not a printed page, so in a dark theme the page and everything painted on it
+flips to the dark steps the headless `DiagramSvgPalette.Dark` export already ships — a dark
+diagram shows **no white sheet**. The catalogued `--tm-canvas-*` tokens (declared in
+`tokens.css`, re-declared on the dark roots and re-pinned in the light island in
+`tokens-dark.css`) carry the paints:
 
-The one paper-adjacent surface that DOES follow the theme is the area OUTSIDE the page: the
-`.tm-diagram-page-backdrop` rect paints `--tm-diagram-backdrop` — a package alias of the
-generic core `--tm-canvas-backdrop` token (declared on `.tm-diagram-canvas`). Light keeps the
-historical paper-backdrop gray (`--tm-canvas-backdrop: var(--tm-paper-backdrop)` in
-`tokens.css`), and the dark theme roots re-map the generic token to the workspace tone
-(`tokens-dark.css`), so the white page floats on a dark canvas instead of inside a light frame
-(carry-forward F8 m5). Hosts restyle the backdrop by overriding `--tm-canvas-backdrop` (on
+| Token | Light | Dark |
+|---|---|---|
+| `--tm-canvas-paper` | `var(--tm-paper)` (white) | `#27272a` (Dark `DefaultNodeFill`) |
+| `--tm-canvas-paper-ink` | `var(--tm-paper-ink)` | `#e5e7eb` (Dark `DefaultNodeStroke`) |
+| `--tm-canvas-paper-ink-muted` | `var(--tm-paper-ink-muted)` | `#a1a1aa` |
+| `--tm-canvas-paper-border` | `var(--tm-paper-border)` | `#3f3f46` |
+| `--tm-canvas-grid` / `--tm-canvas-grid-strong` | `#e5e7eb` / `#d1d5db` | `#3f3f46` / `#52525b` |
+
+The PRINTED paper surfaces (report designer, document pages) are the untouched exception: the
+`--tm-paper*` tokens stay theme-invariant light literals, declared only in `tokens.css` and never
+re-declared in `tokens-dark.css` (`DiagramCanvasBackdropTokenTests.Paper_stays_theme_invariant`
+guards that rule).
+
+The area OUTSIDE the page follows the theme since carry-forward F8 m5: the
+`.tm-diagram-page-backdrop` rect paints `--tm-diagram-backdrop` — a package alias of the generic
+core `--tm-canvas-backdrop` token. Light keeps the historical paper-backdrop gray; the dark theme
+roots sink it to zinc-950 (`#09090b`) so the zinc-800 page floats on it at ≥1.2:1 (the workspace
+tone measured only ~1.19:1 against the page and the page edge disappeared). Hosts restyle the
+backdrop by overriding `--tm-canvas-backdrop` (on
 `[data-theme="dark"]`/`.tm-dark` and `:root` together, or `:root` for both themes) or
 `--tm-diagram-backdrop` per canvas; **overriding `--tm-paper-backdrop` only applies in LIGHT
 themes now** — the dark theme roots re-map the canvas token and win over `:root` by source
-order (and it still restyles every surface aliased to the paper backdrop).
+order.
 
-Everything painted ON the page (node bodies, edge-label pills, cardinalities) resolves the
-canvas-scoped aliases declared on `.tm-diagram-canvas`:
+Everything painted ON the page (node bodies, edge-label pills, cardinalities, swimlane bands,
+the collapse toggle) resolves the canvas-scoped aliases declared on `.tm-diagram-canvas`:
 
 - `--tm-diagram-backdrop` — the page-backdrop fill (alias of the generic `--tm-canvas-backdrop`).
 - `--tm-diagram-paper` — the page fill AND the fill of the shipped BPMN node stencils (alias of
-  the theme-invariant `--tm-paper`, white in every theme). Edge-label pills reuse it so the edge
+  `--tm-canvas-paper`: white in light, `#27272a` in dark). Edge-label pills reuse it so the edge
   stroke never runs through the text.
 - `--tm-diagram-node-stroke` — the OUTLINE of the shipped BPMN node stencils (alias of
-  `--tm-paper-ink`). A host or a high-contrast theme recolours every BPMN shape by overriding the
-  two `--tm-diagram-*` paint tokens.
-- `--tm-diagram-node-ink` — the node/label ink (alias of `--tm-paper-ink-muted`).
+  `--tm-canvas-paper-ink`). A host or a high-contrast theme recolours every BPMN shape by
+  overriding the two `--tm-diagram-*` paint tokens.
+- `--tm-diagram-node-ink` — the node/label ink (alias of `--tm-canvas-paper-ink-muted`).
 
-The BPMN stencils carry the paints as `var(--tm-diagram-paper, #ffffff)` /
-`var(--tm-diagram-node-stroke, #111827)` (the literal is the fallback for an SVG viewer without the
-stylesheet). Two consequences worth knowing:
+The five `--stencil-*` tokens (`--stencil-fill`, `--stencil-stroke`, `--stencil-stroke-width`,
+`--stencil-text`, `--stencil-accent`) are catalogued in `tokens.css` / `tokens-dark.css`: the
+stencil ShapeSvg templates (BPMN 2.0, UML 2.5, Archimate 3, the extended and built-in sets) paint
+with `var(--stencil-fill)` / `var(--stencil-stroke)` / `var(--stencil-stroke-width)`.
+`TmDiagramStencilShape` emits those custom properties inline ONLY when the node's own style or
+the stencil layout sets an explicit paint — otherwise the shape inherits the catalogued value,
+which is the one override point for hosts and high-contrast themes. The BPMN stencils carry the
+paints as `var(--tm-diagram-paper)` / `var(--tm-diagram-node-stroke)` with NO literal hex
+fallback. Two consequences worth knowing:
 
 - the **server-side export** (`DiagramSvgBuilder`) cannot resolve a `var()`: it emits the palette
   colour instead, and the node's own `Style.Fill`/`Style.Stroke` wins over the stencil layout —
   an exported SVG is therefore always self-contained;
 - the **client export** (`exportViewportAsSvg`) copies the computed `--tm-diagram-paper`,
-  `--tm-diagram-node-stroke` and `--tm-diagram-node-ink` values onto the clone root, so the
-  serialized tree keeps the paints the user actually saw.
+  `--tm-diagram-node-stroke`, `--tm-diagram-node-ink` AND the `--stencil-*` values onto the clone
+  root, and the computed grid-line strokes onto the matching clone paths, so the serialized tree
+  keeps the concrete paints the user actually saw (a serialized SVG has no stylesheet to resolve
+  a `var()` against).
 
-Swimlane bands paint with the SAME paper tokens: the header background (`--tm-paper-backdrop`),
-its ink (`--tm-paper-ink`), the separators (`--tm-paper-border`) and the node collapse toggle
-(`--tm-paper` / `--tm-paper-ink`) stay legible when the surrounding chrome is dark (≥ 4.5:1).
+Swimlane bands paint with the SAME canvas tokens: the header background (a 6 % ink tint on the
+paper — the light gray band in light mode, a subtly lighter dark band in dark mode), its ink, the
+separators and the node collapse toggle stay legible on the page in both themes.
 
 ### Swimlane bands and the drag clamp
 
@@ -368,8 +388,10 @@ shallower ancestor than `.tm-diagram-canvas`:
 ```
 
 `exportViewportAsSvg` copies the computed fills/colours of `.tm-diagram-page`,
-`.tm-diagram-page-backdrop` and `.tm-diagram-edge-label__text` onto the serialized clone, so
-an export taken under a host override carries the overridden paints.
+`.tm-diagram-page-backdrop`, `.tm-diagram-edge-label__text` and the grid lines onto the
+serialized clone, and the computed `--tm-diagram-*` / `--stencil-*` custom properties onto the
+clone root, so an export taken under a host override (or in dark mode) carries the concrete
+paints the user actually saw.
 
 ## Touch
 
