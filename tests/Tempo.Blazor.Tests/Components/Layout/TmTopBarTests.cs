@@ -414,6 +414,89 @@ public class TmTopBarTests : LocalizationTestBase
         cut.Find(".tm-topbar-user-menu-item").GetAttribute("data-testid").Should().Be("topbar-user-menu-item-profile");
     }
 
+    // ── User name display (narrow-width behaviour, TG-003) ──────────────────────
+
+    [Fact]
+    public void User_Name_Display_Defaults_To_Auto_And_Renders_The_Name()
+    {
+        var cut = Render<TmTopBar>(p => p.Add(c => c.User, User));
+
+        cut.Find(".tm-topbar-user-name").TextContent.Trim().Should().Be("Jane Doe");
+        cut.Find("header").GetAttribute("data-user-name-display").Should().Be("auto",
+            "Auto is the default and the stylesheet keys the narrow-width hiding off this attribute");
+    }
+
+    [Fact]
+    public void UserNameDisplay_Auto_Renders_The_Name_Like_Today()
+    {
+        var cut = Render<TmTopBar>(p => p
+            .Add(c => c.User, User)
+            .Add(c => c.UserNameDisplay, TopBarUserNameDisplay.Auto));
+
+        cut.Find(".tm-topbar-user-name").Should().NotBeNull();
+        cut.Find("header").GetAttribute("data-user-name-display").Should().Be("auto");
+    }
+
+    [Fact]
+    public void UserNameDisplay_Always_Keeps_The_Name_For_The_Narrow_Stylesheet()
+    {
+        var cut = Render<TmTopBar>(p => p
+            .Add(c => c.User, User)
+            .Add(c => c.UserNameDisplay, TopBarUserNameDisplay.Always));
+
+        cut.Find(".tm-topbar-user-name").Should().NotBeNull("Always renders the name at every width");
+        cut.Find("header").GetAttribute("data-user-name-display").Should().Be("always",
+            "the <480px container query only hides the Auto name — Always must survive it");
+    }
+
+    [Fact]
+    public void UserNameDisplay_Never_Renders_The_Avatar_Without_The_Name()
+    {
+        var cut = Render<TmTopBar>(p => p
+            .Add(c => c.User, User)
+            .Add(c => c.UserNameDisplay, TopBarUserNameDisplay.Never));
+
+        cut.FindAll(".tm-topbar-user-name").Should().BeEmpty();
+        cut.Find(".tm-topbar-user-button").Should().NotBeNull("the avatar button stays — only the name goes");
+        cut.Find("header").GetAttribute("data-user-name-display").Should().Be("never");
+    }
+
+    [Fact]
+    public void UserNameDisplay_Never_Still_Names_The_Account_Button()
+    {
+        var cut = Render<TmTopBar>(p => p
+            .Add(c => c.User, User)
+            .Add(c => c.UserNameDisplay, TopBarUserNameDisplay.Never));
+
+        cut.Find(".tm-topbar-user-button").GetAttribute("aria-label").Should().Be("User menu",
+            "without the visible name the localized accessible name is the only way to tell the button apart");
+    }
+
+    [Fact]
+    public void A_User_Without_A_Display_Name_Renders_No_Span_In_Every_Mode()
+    {
+        foreach (var mode in new[] { TopBarUserNameDisplay.Auto, TopBarUserNameDisplay.Always, TopBarUserNameDisplay.Never })
+        {
+            var cut = Render<TmTopBar>(p => p
+                .Add(c => c.User, new FakeUser(""))
+                .Add(c => c.UserNameDisplay, mode));
+
+            cut.FindAll(".tm-topbar-user-name").Should().BeEmpty("an empty name never renders an empty span");
+        }
+    }
+
+    [Fact]
+    public void The_Plain_Wrapper_Carries_The_Same_State_Attribute_As_The_Header()
+    {
+        var cut = Render<TmTopBar>(p => p
+            .Add(c => c.User, User)
+            .Add(c => c.UserNameDisplay, TopBarUserNameDisplay.Always)
+            .Add(c => c.IsLandmark, false));
+
+        cut.FindAll("header").Should().BeEmpty();
+        cut.Find("[data-testid='topbar']").GetAttribute("data-user-name-display").Should().Be("always");
+    }
+
     // ── Keyboard: Escape, Tab out and the APG menu button pattern ───────────────
 
     [Fact]

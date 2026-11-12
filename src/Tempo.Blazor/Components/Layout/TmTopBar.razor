@@ -16,6 +16,7 @@
 {
     <header class="@RootCss"
             data-testid="@RootTestId("topbar")"
+            data-user-name-display="@UserNameDisplayAttribute"
             @attributes="AdditionalAttributes">
         @Body
     </header>
@@ -26,6 +27,7 @@ else
        an inner <header> would nest a banner inside the frame's own. *@
     <div class="@RootCss"
          data-testid="@RootTestId("topbar")"
+         data-user-name-display="@UserNameDisplayAttribute"
          @attributes="AdditionalAttributes">
         @Body
     </div>
@@ -99,7 +101,7 @@ else
                         @onkeydown="HandleUserButtonKeyDown"
                         @onkeydown:stopPropagation="true">
                     <TmAvatar Src="@User.AvatarSrc" Name="@User.DisplayName" Size="AvatarSize.Sm" />
-                    @if (!string.IsNullOrEmpty(User.DisplayName))
+                    @if (!string.IsNullOrEmpty(User.DisplayName) && UserNameDisplay != TopBarUserNameDisplay.Never)
                     {
                         <span class="tm-topbar-user-name">@User.DisplayName</span>
                     }
@@ -269,6 +271,15 @@ else
     [Parameter] public IUserInfo? User { get; set; }
 
     /// <summary>
+    /// Whether the account button shows the user's display name next to the avatar.
+    /// <see cref="TopBarUserNameDisplay.Auto"/> (the default) shows it on a wide bar and hides it
+    /// when the bar's own box narrows below 480px (the avatar stays); <see cref="TopBarUserNameDisplay.Always"/>
+    /// keeps it at every width (it ellipsises instead of hiding); <see cref="TopBarUserNameDisplay.Never"/>
+    /// renders the avatar alone.
+    /// </summary>
+    [Parameter] public TopBarUserNameDisplay UserNameDisplay { get; set; } = TopBarUserNameDisplay.Auto;
+
+    /// <summary>
     /// Entries of the account menu, above the built-in sign out. A <c>UserMenuItem</c> with
     /// <c>Href</c> renders as a link, one with <c>OnClick</c> as a command, <c>Separator</c> as a
     /// group separator and <c>IsDanger</c> in the destructive style. Null renders no host entries.
@@ -304,6 +315,13 @@ else
 
     /// <summary>The root's class list — identical for the <c>&lt;header&gt;</c> and the plain-wrapper form.</summary>
     private string RootCss => string.IsNullOrWhiteSpace(Class) ? "tm-topbar" : $"tm-topbar {Class}";
+
+    /// <summary>
+    /// The <c>data-user-name-display</c> state attribute — the narrow-width container query in
+    /// <c>_topbar.css</c> keys the Auto name hiding off it, so a host that pinned
+    /// <see cref="TopBarUserNameDisplay.Always"/> keeps the name at every width.
+    /// </summary>
+    private string UserNameDisplayAttribute => UserNameDisplay.ToString().ToLowerInvariant();
 
     private string EffectiveUserMenuLabel
         => string.IsNullOrWhiteSpace(UserMenuLabel) ? Loc["TmTopBar_UserMenu"] : UserMenuLabel!;

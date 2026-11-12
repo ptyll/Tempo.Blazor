@@ -10213,6 +10213,30 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "TopBarUserNameDisplay",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Layout",
+          "description": "Whether the top bar's account button shows the user's display name next to the avatar (TmTopBar.UserNameDisplay).",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Layout/TopBarUserNameDisplay.cs",
+          "documentationStatus": "merged",
+          "values": [
+            {
+              "name": "Auto",
+              "description": "The default: the name shows on a wide bar and hides when the bar's own box narrows below 480px (the avatar and the menu behind it stay). The breakpoint is a container query on the bar itself, never the viewport."
+            },
+            {
+              "name": "Always",
+              "description": "The name renders at every width; on a narrow bar it ellipsises instead of hiding."
+            },
+            {
+              "name": "Never",
+              "description": "The name never renders; the account button is the avatar alone (the localized accessible name on the button is the only naming)."
+            }
+          ]
+        },
+        {
           "itemName": "TrendDirection",
           "kind": "Enum",
           "category": "Components",
@@ -26051,6 +26075,13 @@
               "type": "string?",
               "isRequired": false,
               "description": "Accessible name of the account button and of its menu. Null (the default) uses the localized \"User menu\"; a host with more than one account surface names this one (\"Signed-in account\")."
+            },
+            {
+              "name": "UserNameDisplay",
+              "type": "TopBarUserNameDisplay",
+              "isRequired": false,
+              "default": "TopBarUserNameDisplay.Auto",
+              "description": "Whether the account button shows the user's display name next to the avatar. Auto (the default) shows it on a wide bar and hides it when the bar's own box narrows below 480px (the avatar stays, the hiding is a @container tm-topbar query on the bar itself); Always keeps it at every width (it ellipsises instead of hiding); Never renders the avatar alone. The root carries data-user-name-display=\"auto|always|never\" for the stylesheet and tests."
             }
           ],
           "cssClasses": [
@@ -36453,12 +36484,12 @@
         }
       ],
       "summary": {
-        "itemCount": 456,
-        "manualItemCount": 456,
-        "generatedItemCount": 448,
+        "itemCount": 457,
+        "manualItemCount": 457,
+        "generatedItemCount": 449,
         "generatedOnlyItemCount": 0,
         "componentCount": 237,
-        "publicApiTypeCount": 211
+        "publicApiTypeCount": 212
       }
     },
     {
@@ -147160,10 +147191,10 @@
   ],
   "summary": {
     "packageCount": 29,
-    "itemCount": 3736,
-    "manualItemCount": 3736,
+    "itemCount": 3737,
+    "manualItemCount": 3737,
     "generatedOnlyItemCount": 0,
     "componentCount": 565,
-    "publicApiTypeCount": 3119
+    "publicApiTypeCount": 3120
   }
 }

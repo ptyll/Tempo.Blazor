@@ -184,10 +184,68 @@
         <div class="p-4" id="layout-topbar-menu-target">
             <p class="text-sm text-slate-600 dark:text-slate-400">
                 Click the search button (Ctrl+K), the navigation disclosure button or the account avatar.
+                The user has a long name on purpose: below 480&nbsp;px of the bar's own width the name
+                gives way and the search trigger collapses to its icon (resize the window to watch it).
             </p>
             <p class="mt-2 text-sm text-slate-600 dark:text-slate-400" data-testid="topbar-last-action">
                 Last account action: <strong>@(_lastAccountAction ?? "none")</strong>
             </p>
+        </div>
+    </div>
+</section>
+
+<!-- TopBar narrow-width Section -->
+<section class="demo-section" data-testid="topbar-narrow-section">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">TopBar — narrow width</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">
+                Below 480&nbsp;px of the bar's own box (a container query, not the viewport) the Auto user name
+                hides — the avatar stays — and the command palette trigger narrows to a square icon button.
+                <code class="px-1 bg-slate-100 dark:bg-slate-800 rounded">UserNameDisplay</code> pins the name when a host needs it.
+            </p>
+        </div>
+        <span class="px-2 py-0.5 text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full">Layout</span>
+    </div>
+
+    @* No overflow-hidden on the wrappers: the account menu is an absolutely positioned dropdown. *@
+    <div class="showcase-card p-4 space-y-5">
+        <div>
+            <p class="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">UserNameDisplay="Auto" (default) — the name gives way under 480&nbsp;px</p>
+            <div class="border border-slate-200 dark:border-slate-700 rounded-lg" style="max-width: 24rem;" data-testid="topbar-narrow-auto">
+                <TmTopBar BrandTitle="Tempo"
+                          TestIdPrefix="topbar-narrow-auto"
+                          ShowMenuButton="true"
+                          CommandPaletteShortcut="Ctrl+K"
+                          User="_narrowUser"
+                          OnCommandPalette="() => _commandPaletteOpen = true" />
+            </div>
+        </div>
+
+        <div>
+            <p class="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">UserNameDisplay="Always" — the name stays and ellipsises</p>
+            <div class="border border-slate-200 dark:border-slate-700 rounded-lg" style="max-width: 24rem;" data-testid="topbar-narrow-always">
+                <TmTopBar BrandTitle="Tempo"
+                          TestIdPrefix="topbar-narrow-always"
+                          ShowMenuButton="true"
+                          CommandPaletteShortcut="Ctrl+K"
+                          User="_narrowUser"
+                          UserNameDisplay="TopBarUserNameDisplay.Always"
+                          OnCommandPalette="() => _commandPaletteOpen = true" />
+            </div>
+        </div>
+
+        <div>
+            <p class="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">UserNameDisplay="Never" — the avatar alone, at every width</p>
+            <div class="border border-slate-200 dark:border-slate-700 rounded-lg" style="max-width: 24rem;" data-testid="topbar-narrow-never">
+                <TmTopBar BrandTitle="Tempo"
+                          TestIdPrefix="topbar-narrow-never"
+                          ShowMenuButton="true"
+                          CommandPaletteShortcut="Ctrl+K"
+                          User="_narrowUser"
+                          UserNameDisplay="TopBarUserNameDisplay.Never"
+                          OnCommandPalette="() => _commandPaletteOpen = true" />
+            </div>
         </div>
     </div>
 </section>
@@ -414,7 +472,8 @@
     private bool _sectionedSidebarCollapsed = false;
     private bool _topBarMenuExpanded = false;
     private string? _lastAccountAction;
-    private readonly IUserInfo _topBarUser = new DemoUser("Jane Doe", "jane@example.com");
+    private readonly IUserInfo _topBarUser = new DemoUser("Markéta Dvořáková", "marketa@example.com");
+    private readonly IUserInfo _narrowUser = new DemoUser("Ing. Markéta Dvořáková-Křivánková, Ph.D.", "marketa.dvorakova-krivankova@example.com");
 
     private List<UserMenuItem> _userMenuItems = new();
 

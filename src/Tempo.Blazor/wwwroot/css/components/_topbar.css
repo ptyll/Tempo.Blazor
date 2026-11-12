@@ -13,6 +13,12 @@
   position: sticky;
   top: 0;
   z-index: var(--tm-z-sticky);
+  /* The narrow-width rules below answer the bar's OWN box (a bar slotted into a narrow column of a
+     wide page must behave like a phone bar). The height is a fixed token, so inline-size
+     containment cannot change the block axis; a shrink-to-fit host gives the bar an explicit
+     width (see the changelog migration note). */
+  container-type: inline-size;
+  container-name: tm-topbar;
 }
 
 /* The brand is the part that gives way: the actions (and the account button) must stay on screen
@@ -276,12 +282,47 @@
     min-inline-size: var(--tm-touch-target);
   }
 
+  /* The account button can shrink to the avatar alone (a narrow bar hides the name, or a host
+     pins UserNameDisplay=Never) — the avatar-only button still has to meet the 44px target. */
+  .tm-topbar-user-button {
+    min-inline-size: var(--tm-touch-target);
+  }
+
   .tm-topbar-user-menu-item {
     min-block-size: var(--tm-touch-target);
   }
 
   .tm-topbar-search-trigger {
     padding-inline: var(--tm-space-3);
+    /* The narrow container query below fixes the inline size at 2.25rem — a finger still needs the
+       full 44px in both axes. */
+    min-inline-size: var(--tm-touch-target);
   }
 
+}
+
+/* ── Narrow bar (the bar's own box, never the viewport) ────
+   Below 480px of the bar's own box the bar sheds its wide-only chrome instead of overflowing: the Auto
+   account name gives way (the avatar and the menu behind it stay), and the command palette trigger
+   collapses to a square icon button — the localized aria-label stays the accessible name, so nothing is
+   lost for a reader. A host that pinned UserNameDisplay=Always keeps the name; it ellipsises like on a
+   wide bar. The collapse is instant (like the toolbar's label drop), not animated. The threshold is
+   480px = 30rem: component-local density thresholds are declared in rem (the scheduler's 4.5/8/9rem card
+   queries and the chart funnel's 32.5rem are the precedent) — TmBreakpoints guards the four LAYOUT
+   widths in px. */
+
+@container tm-topbar (width < 30rem) {
+  .tm-topbar[data-user-name-display="auto"] .tm-topbar-user-name {
+    display: none;
+  }
+
+  .tm-topbar-search-trigger {
+    justify-content: center;
+    padding-inline: 0;
+    inline-size: 2.25rem;
+  }
+
+  .tm-topbar-search-hint {
+    display: none;
+  }
 }

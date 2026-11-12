@@ -12,7 +12,8 @@ disclosure button and account menu.
   `Tempo.Blazor.Components.Layout.SidebarNavMatchMode`
 - Demo: `/layout` (the *Sidebar* and *TopBar* sections)
 - Tests: `tests/Tempo.Blazor.Tests/Components/Layout/TmSidebarTests.cs`, `TmTopBarTests.cs`,
-  `LayoutPageChromeTests.cs`, `tests/Tempo.Blazor.E2E/LayoutChromeE2ETests.cs`
+  `LayoutPageChromeTests.cs`, `tests/Tempo.Blazor.Tests/Theme/TmTopBarCssTests.cs`,
+  `tests/Tempo.Blazor.E2E/LayoutChromeE2ETests.cs`, `TmTopBarNarrowE2ETests.cs`
 
 ## TmSidebar
 
@@ -149,6 +150,7 @@ private async Task OnNavItemSelectedAsync(ISidebarNavItem item) => await CloseNa
 | `CommandPaletteShortcut` | `string?` | `"Ctrl+K"` | Chord printed in the palette trigger; empty hides the hint. |
 | `CommandPaletteKeyShortcuts` | `string?` | `"Control+K Meta+K"` | `aria-keyshortcuts` value; pass the chord the host actually binds. |
 | `User` | `IUserInfo?` | `null` | Signed-in user (avatar + name + account menu). |
+| `UserNameDisplay` | `TopBarUserNameDisplay` | `Auto` | Whether the account button shows the display name next to the avatar (see *Narrow bars*). |
 | `UserMenuItems` | `IReadOnlyList<UserMenuItem>?` | `null` | Host entries above the built-in sign out. |
 | `UserMenuLabel` | `string?` | `null` → localized | Accessible name of the account button and menu. |
 | `OnCommandPalette` | `EventCallback` | — | Palette trigger clicked (the trigger renders only with a handler). |
@@ -216,6 +218,27 @@ bool, so switching it on for the menu would also swallow Tab and the entries' na
 The brand is the flexible slot: the actions (and the account button) never shrink, so on a bar too
 narrow for everything the brand title ellipsises and finally yields. A host that must always show a
 mark uses `BrandContent` with a compact logo instead of a title.
+
+Below **480px of the bar's own box** the bar sheds its wide-only chrome instead of overflowing. The
+query is a container query on the bar itself (`container-name: tm-topbar`,
+`@container tm-topbar (width < 30rem)` — 480px in rem, the component-local threshold convention;
+`TmBreakpointsTests` guards the four layout widths in px) — never the viewport — so a bar slotted
+into a narrow column of a wide page behaves like a phone bar:
+
+- the account **name** hides and the **avatar stays** (the menu behind it is untouched) — but only
+  for `UserNameDisplay="Auto"`, the default. `Always` keeps the name at every width (it ellipsises at
+  its 12rem cap instead of hiding); `Never` renders the avatar alone at every width. The root carries
+  `data-user-name-display="auto|always|never"` — the stylesheet keys the hiding off it, hosts and
+  tests read it;
+- the command palette trigger collapses to a square icon button: the printed `Ctrl+K` hint hides,
+  the localized `aria-label` and `aria-keyshortcuts` stay — the button keeps its accessible name;
+- the actions keep **one row** (a wrapped bar would double its height) and the document must not
+  overflow horizontally — the acceptance E2E (`TmTopBarNarrowE2ETests`) measures a real 390px
+  viewport with the menu button, search, a bell action and a long user name.
+
+Because the root declares `container-type: inline-size`, a host that sized the bar from its content
+(a float, an inline-block, a `width: auto` flex item) must give it an explicit width; in a normal
+stretch context nothing changes. The collapse is instant and introduces no new animated subject.
 
 ### Command palette trigger
 
