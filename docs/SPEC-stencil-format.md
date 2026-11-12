@@ -92,6 +92,36 @@ Meaning:
 
 Raw SVG is sanitized. Unsafe elements and attributes, scripts, event handlers, `javascript:` URLs, and `foreignObject` are not part of the contract.
 
+## Render Contract (Blazor hosts)
+
+Container render nodes — `group`, `repeat`, `part` and `component` — are REAL SVG elements: the
+renderer emits an actual `<g>` (via `WireframeSvg.OpenGroup`/`CloseGroup`, i.e. Blazor
+`OpenElement`), so transforms, opacity and nesting reach the live DOM exactly as written. The
+layout containers (`stack`, `row`, `grid`) place each child in a real `<g
+transform=translate(…)>`, so per-child offsets reach the live DOM exactly as written. Never emit
+a container as a raw markup string. The built-in `WireframeSvg` helpers are `internal` to the
+library; a Blazor host copies the render pattern from the custom-provider sample in
+[stencil-pack-authoring-guide.md](stencil-pack-authoring-guide.md) instead of calling them.
+
+The same contract binds a host's own `RenderSvg` delegate (`WireframeComponentDef.RenderSvg`,
+the `IWireframeComponentProvider` custom-provider hook):
+
+- **Every `AddMarkupContent` frame MUST be a complete, standalone well-formed XML fragment.**
+  Blazor parses each markup chunk into its OWN DOM template, so an opening `<g transform=…>`
+  emitted in one frame and `</g>` in another never pairs up — the browser auto-closes the opening
+  tag and the children become SIBLINGS, collapsing every transformed sketch in the editor, the
+  toolbox preview and the client-side export. (The server-side string renderer only concatenates
+  frames, so a split group stays invisible to every string-asserting test — only a per-frame parse
+  catches it.)
+- **To wrap children in a container, emit a real element** (`OpenElement` / `AddAttribute` /
+  `CloseElement`), not markup strings. The library's built-in helpers that return markup strings
+  (rect, text, …) are `internal` leaf fragments — hosts compose their own markup into one frame
+  or place it inside an `OpenElement` (see the sample in
+  [stencil-pack-authoring-guide.md](stencil-pack-authoring-guide.md)).
+- **Guard.** `StencilPackRendererMarkupFrameInvariantTests` renders every built-in and
+  JSON-provider definition and parses each emitted markup frame as `<root>{frame}</root>` with
+  DTD processing prohibited; any orphan, unclosed or mismatched tag fails the suite.
+
 ## Binding Expressions
 
 String values may be literals or safe expressions:

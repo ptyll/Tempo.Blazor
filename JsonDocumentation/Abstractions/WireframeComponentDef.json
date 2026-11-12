@@ -47,7 +47,7 @@
     {
       "name": "RenderSvg",
       "type": "Action<WireframeElement, RenderTreeBuilder> (required)",
-      "description": "Delegate that renders the component's SVG shape. Coordinates are relative to the element's top-left (0, 0). The outer <g> transform is applied by the canvas."
+      "description": "Delegate that renders the component's SVG shape. Coordinates are relative to the element's top-left (0, 0); the outer <g> transform is applied by the canvas. Markup-frame contract: every AddMarkupContent frame MUST be a complete, standalone well-formed XML fragment — never an opening tag in one frame and its closing tag in another (Blazor parses each chunk into its own DOM template, so a split <g> auto-closes in the browser and collapses the sketch). Wrap children in a real element (OpenElement/AddAttribute/CloseElement), not markup strings."
     },
     {
       "name": "IsBuiltIn",

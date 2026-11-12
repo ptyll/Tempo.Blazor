@@ -28,7 +28,9 @@ public partial class WireframeEditorPage
         "}";
 
     private const string _providerCode =
-        "// 1. Implement IWireframeComponentProvider\n" +
+        "// 1. Implement IWireframeComponentProvider (MarketingComponentProvider.cs)\n" +
+        "using System.Globalization;\n" +
+        "\n" +
         "public class MarketingComponentProvider : IWireframeComponentProvider\n" +
         "{\n" +
         "    public string ProviderId => \"Marketing\";\n" +
@@ -54,9 +56,22 @@ public partial class WireframeEditorPage
         "\n" +
         "    private static void RenderHero(WireframeElement el, RenderTreeBuilder b)\n" +
         "    {\n" +
-        "        WireframeSvg.Rect(b, 0, 0, el.W, el.H, fill:\"#f0f9ff\", stroke:\"#bae6fd\");\n" +
-        "        WireframeSvg.Text(b, el.GetString(\"heading\",\"Hero\"), 16, 32, fontSize:18, bold:true);\n" +
-        "        WireframeSvg.Text(b, el.GetString(\"subheading\",\"\"), 16, 56, color:WireframeSvg.ColorMuted);\n" +
+        "        // Leaf markup: ONE frame holding complete, well-formed fragments —\n" +
+        "        // Blazor parses each AddMarkupContent chunk into its OWN DOM template,\n" +
+        "        // so an opening tag and its closing tag must never be split across frames.\n" +
+        "        // User text is HTML-encoded; doubles are formatted invariantly.\n" +
+        "        var heading    = System.Net.WebUtility.HtmlEncode(el.GetString(\"heading\", \"Hero\"));\n" +
+        "        var subheading = System.Net.WebUtility.HtmlEncode(el.GetString(\"subheading\", \"\"));\n" +
+        "        b.AddMarkupContent(0,\n" +
+        "            string.Create(CultureInfo.InvariantCulture, $\"<rect width='{el.W}' height='{el.H}' rx='8' fill='#f0f9ff' stroke='#bae6fd'></rect>\") +\n" +
+        "            $\"<text x='16' y='32' font-size='18' font-weight='600' fill='#374151'>{heading}</text>\" +\n" +
+        "            $\"<text x='16' y='56' font-size='11' fill='#6b7280'>{subheading}</text>\");\n" +
+        "\n" +
+        "        // Container: a REAL element — children stay inside the group.\n" +
+        "        b.OpenElement(1, \"g\");\n" +
+        "        b.AddAttribute(2, \"transform\", string.Create(CultureInfo.InvariantCulture, $\"translate(16,{el.H - 40})\"));\n" +
+        "        b.AddMarkupContent(3, \"<rect width='120' height='28' rx='6' fill='#dbeafe'></rect>\");\n" +
+        "        b.CloseElement();\n" +
         "    }\n" +
         "}\n" +
         "\n" +

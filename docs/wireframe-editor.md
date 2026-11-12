@@ -98,6 +98,25 @@ The pack ships the themes `dark`, `indigo` (primary / info families from the cor
 
 The theme is ambient for the synchronous `RenderSvg` calls (`StencilThemeScope`, internal and async-local, because `WireframeComponentDef.RenderSvg` is the frozen contract between the registry and custom providers); a custom pack with its own `themes` table is themed through the same name, and a pack without that theme keeps its own defaults. `StencilTokenScope` stays internal. **Custom stencil packs: the scope is synchronous only** - it is async-local and wraps the synchronous `RenderSvg` call, so a render function must read the theme (through the pack tokens) without awaiting; an `await` inside it, or handing the work to another thread, would see whichever theme is ambient where it resumes. `RenderSvg` is a synchronous delegate, so a provider that follows its contract is safe by construction. Exports: the browser draws the SVG with the theme before it posts it, so the PNG / PDF server rasterises it as it is; `WireframeExportRequest.Theme` carries the resolved canonical name or `null` for the default tokens (informational: the server never re-themes the SVG; the demo API validates and logs it), and the headless `IWireframeSvgRenderer` / the demo preview endpoints (`?theme=`) resolve the same order (`RenderDocumentAsync` also uses the document `TargetTheme`). The demo passes `indigo` / `indigo-dark` / `dark` from its colour theme and dark mode. The MCP authoring guide documents the themes (`themes` block).
 
+### Markup frame invariant (plan 5b94f69c)
+
+Every `AddMarkupContent` frame a stencil render emits MUST be a complete, standalone well-formed
+XML fragment. Blazor parses each markup chunk into its OWN DOM template, so a container written as
+an opening `<g transform=…>` frame plus a separate `</g>` frame never pairs up: the browser
+auto-closes the opening tag and the children become siblings. Before this invariant was enforced
+(plan 5b94f69c, phases 1–2) every transformed container — `group`, `repeat` rows, `part` and
+`component` references, anchored layout children, the disabled-input opacity group, placeholders —
+painted collapsed in the editor canvas, the toolbox preview tiles and the client-side SVG export,
+while the server-side string renderer (which only concatenates frames) and every string-asserting
+bUnit suite stayed green. The renderer now emits containers as REAL elements
+(`WireframeSvg.OpenGroup`/`CloseGroup`), a DEBUG-only guard in `WireframeSvg.Markup` throws on any
+unbalanced `<g>` fragment, and `StencilPackRendererMarkupFrameInvariantTests` renders EVERY
+built-in and JSON-provider definition (default AND sample props) and parses each markup frame as
+`<root>{frame}</root>` — the suite, not a string snapshot, is the regression guard. A custom
+`RenderSvg` delegate must follow the same rule; see the render contract in
+[SPEC-stencil-format.md](SPEC-stencil-format.md) and the sample in
+[stencil-pack-authoring-guide.md](stencil-pack-authoring-guide.md).
+
 ## The `TmSpreadsheet` stencil draws every chrome layout
 
 `TmSpreadsheet` is a placeable native stencil (`TempoNativeRendererDefinitions.RenderSpreadsheet`). Like the diagram

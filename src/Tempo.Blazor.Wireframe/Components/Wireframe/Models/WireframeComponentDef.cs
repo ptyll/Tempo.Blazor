@@ -58,6 +58,14 @@ public sealed class WireframeComponentDef
     /// Renders the wireframe SVG shape into <paramref name="builder"/>.
     /// Coordinates inside the render are relative to the element's top-left (0, 0).
     /// The outer <c>&lt;g&gt;</c> transform is applied by the canvas.
+    /// <para>
+    /// <b>Markup-frame contract:</b> Blazor parses each <c>AddMarkupContent</c> chunk into its OWN
+    /// DOM template, so every markup frame MUST be a complete, standalone well-formed XML fragment —
+    /// NEVER an opening tag in one frame and its closing tag in another. A split <c>&lt;g&gt;</c>
+    /// auto-closes in the browser and its children become siblings, collapsing the sketch. To wrap
+    /// children in a container, emit a real element (<c>OpenElement</c> / <c>AddAttribute</c> /
+    /// <c>CloseElement</c>), not markup strings.
+    /// </para>
     /// </summary>
     public required Action<WireframeElement, RenderTreeBuilder> RenderSvg { get; init; }
 

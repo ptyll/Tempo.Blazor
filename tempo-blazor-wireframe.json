@@ -2510,7 +2510,7 @@
           "name": "RenderSvg",
           "kind": "Property",
           "type": "required Action<WireframeElement, RenderTreeBuilder>",
-          "description": "Renders the wireframe SVG shape into builder. Coordinates inside the render are relative to the element's top-left (0, 0). The outer <g> transform is applied by the canvas."
+          "description": "Renders the wireframe SVG shape into builder. Coordinates inside the render are relative to the element's top-left (0, 0); the outer <g> transform is applied by the canvas. Markup-frame contract: Blazor parses each AddMarkupContent chunk into its OWN DOM template, so every markup frame MUST be a complete, standalone well-formed XML fragment — NEVER an opening tag in one frame and its closing tag in another (a split <g> auto-closes in the browser and its children become siblings, collapsing the sketch). To wrap children in a container, emit a real element (OpenElement / AddAttribute / CloseElement), not markup strings."
         },
         {
           "name": "Roles",

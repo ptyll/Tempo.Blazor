@@ -355,6 +355,40 @@
   pack control count guard follows the main-merge schema (46).
 - `MoveNodesCommand` gained an internal timestamp ctor for tests; the public surface is unchanged.
 
+### Fixed — wireframe stencil groups nest in the browser (plan 5b94f69c, phases 1–4)
+
+- **Root cause.** `StencilPackRenderer` emitted every container `<g>` as TWO separate `AddMarkupContent`
+  frames — an opening `<g transform='…'>` frame and a closing `</g>` frame. Blazor parses each
+  markup chunk into its OWN DOM template, so the browser auto-closed every opening tag and the
+  children painted as SIBLINGS of the group. Five emit sites were affected: the `group` node
+  (transform + opacity), the `component` reference placement, the `part` reference placement,
+  the layout / `repeat` child placement, and the placeholder placement.
+- **Impact.** Every stencil carrying a transformation (repeat rows, nested components, part
+  references, anchored layout children, the disabled-input opacity group, placeholders) drew
+  COLLAPSED — un-transformed, stacked at the origin — in the editor canvas, the toolbox preview
+  tiles and the client-side SVG export. The server-side string renderer only concatenates frames,
+  so the server export and every string-asserting test suite stayed green while the browser
+  output was broken; a whole-pack visual sweep (231 stencils) later proved the collapse.
+- **Fix.** Container nodes now emit REAL Blazor elements through `WireframeSvg.OpenGroup` /
+  `CloseGroup` (an `OpenElement` + guarded attributes), never split markup frames. A DEBUG-only
+  guard in `WireframeSvg.Markup` throws on any unbalanced `<g>` fragment — note it runs only in
+  the library's own markup path in Debug builds and does not check host `RenderSvg` delegates,
+  so hosts stay responsible for their own frames (per-frame contract above). The raw-SVG sanitizer
+  moved to its own partial (`StencilPackRenderer.Sanitize.cs`), and the attribute-escaping
+  contract is pinned by `WireframeSvgSafeRawAttributeTests`. The invariant itself is guarded by
+  `StencilPackRendererMarkupFrameInvariantTests`, which parses EVERY markup frame of EVERY
+  built-in and JSON-provider definition as a standalone XML fragment (both default and sample
+  props), plus the `WireframeRendererNestingE2ETests` E2E spec and the whole-pack visual sweep
+  (`WireframeStencilPackSweepE2ETests`, 231 stencils, 0 stacked labels).
+- **Server string export.** Geometry is unchanged, but the export now serializes the `g`
+  attributes with double quotes — `<g transform="translate(4,4)">` instead of the old
+  single-quoted raw markup `<g transform='translate(4,4)'>` — because the groups are real
+  elements now. Only a host that compares the exported SVG string TEXTUALLY (a string snapshot)
+  can notice; see the migration table below.
+- **Stencil / role audit.** No component was added and no public API surface changed (one XML doc
+  comment on `WireframeComponentDef.RenderSvg` now states the markup-frame contract) → no new
+  stencil, no new UI role; the pack control count and the role vocabulary are unchanged.
+
 ### Added — `TmFanOutGrid` measured columns, popover detail and the elapsed read-out (plan 7ba95ed6, phase FZE-3)
 
 - **`ColumnsMode` (`FanOutColumnsMode.Fixed` default | `Auto`) and `MinTileWidth` (CSS px, default 144).**
@@ -897,6 +931,7 @@
 | Touch targets on `(pointer: coarse)` | `TmSegmentedControl` kept its size modifier's height (24–32 px), the `TmTraceWaterfall` chevron stayed 20 px and a `TmUsageMeter` call to action inherited the host's button size | All three reach `--tm-touch-target` (44 px): `.tm-segmented .tm-segmented__option`, `.tm-trace-waterfall__toggle` + `…-toggle-spacer`, and a `button` / `a` / `[role='button']` inside `.tm-usage-meter__cta` | None at the API level, and a mouse-driven layout is untouched (every rule sits in `@media (pointer: coarse)`). A host rule that pinned a smaller segmented height on a touch device now needs the root class to win — expect 44 px targets on a phone |
 | `otp-input` wireframe role | `TmMaskedTextBox` (`masked-input` + `otp-input`) and `TmOtpInput` both claimed the role, so `ResolveByRole("otp-input")` returned both candidates, the operations/authoring engines reported a `role-ambiguous` warning on every OTP a design asked for, and the display-name ordering resolved it to the 180×36 masked text box | `TmOtpInput` owns `otp-input` exclusively (232×44, no warning); `TmMaskedTextBox` keeps `masked-input` alone. Both the schema role map and the `tempo` stencil pack agree | A design that asked for `otp-input` and meant a masked text box now asks for `masked-input`. Elements already placed keep their stored type and size — nothing is re-resolved on load |
 | `TmSegmentedControl` wireframe stencil default height | 36 (the sketch's label line and the "New" badge were clipped out of the selection box) | 52 (20 px label line + 32 px Md tray) in both the schema and the `tempo` stencil pack | None for an element already saved — it keeps its stored size. A newly inserted stencil is 52 px tall. The Lg variant with a label still draws 60 px and needs a taller box (recorded as known behaviour in `SegmentedControlStencilTests`) |
+| Wireframe server string export (`IWireframeSvgRenderer`) — `g` attribute quoting | Container groups were raw markup: `<g transform='translate(4,4)'>` (single quotes) | Container groups are real elements: `<g transform="translate(4,4)">` (double quotes, the standard HTML/SVG serializer) | None for any DOM, parser or rasteriser consumer — geometry and nesting are identical. Only a host that snapshots the exported string and compares it TEXTUALLY must expect the double-quoted form (an XML-aware comparison is unaffected) |
 
 
 ### Release preparation
