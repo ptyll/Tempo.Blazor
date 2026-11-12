@@ -1,3 +1,4 @@
+using System.Globalization;
 using AngleSharp.Dom;
 using Bunit;
 using FluentAssertions;
@@ -44,6 +45,8 @@ public class ContextUsagePageTests : DemoPageLocalizationTestBase
     [Fact]
     public void TheReadingStartsAtFourteenThousandOfSixteenThousandTokens()
     {
+        // The grouped-value assertions need the suite's invariant baseline, not the ambient culture.
+        using var _ = CultureScope.Use(CultureInfo.InvariantCulture);
         var cut = RenderPage();
 
         Text(cut, "context-usage-readout").Should()
@@ -67,6 +70,8 @@ public class ContextUsagePageTests : DemoPageLocalizationTestBase
     [Fact]
     public void RemovingAnEntry_IsAppliedByThePage_AndLogged()
     {
+        // The grouped-value assertions need the suite's invariant baseline, not the ambient culture.
+        using var _ = CultureScope.Use(CultureInfo.InvariantCulture);
         var cut = RenderPage();
         Row(cut, "context-usage-basic", "files").QuerySelector(".tm-context-usage__toggle")!.Click();
 
@@ -84,6 +89,8 @@ public class ContextUsagePageTests : DemoPageLocalizationTestBase
     [Fact]
     public void RemovingASection_IsAppliedByThePage_AndLogged()
     {
+        // The grouped-value assertion needs the suite's invariant baseline, not the ambient culture.
+        using var _ = CultureScope.Use(CultureInfo.InvariantCulture);
         var cut = RenderPage();
 
         Row(cut, "context-usage-basic", "tools").QuerySelector(".tm-context-usage__remove")!.Click();
@@ -97,6 +104,8 @@ public class ContextUsagePageTests : DemoPageLocalizationTestBase
     [Fact]
     public void CompactingTheOptionalSections_ShrinksTheContext_AndDisablesTheAction()
     {
+        // The grouped-value assertion needs the suite's invariant baseline, not the ambient culture.
+        using var _ = CultureScope.Use(CultureInfo.InvariantCulture);
         var cut = RenderPage();
 
         cut.Find("[data-testid='context-usage-basic'] [data-testid='context-usage-compact']").Click();
@@ -110,6 +119,8 @@ public class ContextUsagePageTests : DemoPageLocalizationTestBase
     [Fact]
     public void TheNextTurnPushesTheContextOverBudget_AndThePanelSaysSo()
     {
+        // The grouped-value assertions need the suite's invariant baseline, not the ambient culture.
+        using var _ = CultureScope.Use(CultureInfo.InvariantCulture);
         var cut = RenderPage();
 
         cut.Find("[data-testid='context-usage-turn']").Click();

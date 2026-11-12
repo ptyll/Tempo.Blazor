@@ -436,7 +436,7 @@ internal sealed partial class BpmnModelBuilder
                         ElementId = null,
                         XmlPath = BpmnImportInternals.BuildPath(payload),
                         Construct = "extensionElements",
-                        Reason = $"Process-level extension element in namespace '{ns}' has no model element to attach to; content: {payload.ToString(SaveOptions.DisableFormatting)}",
+                        Reason = $"Process-level extension element in namespace '{ns}' has no model element to attach to; content: {BpmnImportInternals.PreserveMarkup(payload)}",
                         Severity = BpmnImportLossSeverity.Loss,
                     });
                 }

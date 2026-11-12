@@ -101,7 +101,7 @@ internal sealed partial class BpmnModelBuilder
                     ElementId = null,
                     XmlPath = BpmnImportInternals.BuildPath(payload),
                     Construct = "extensionElements",
-                    Reason = $"Definitions-root extension element in namespace '{ns}' has no model element to attach to; content: {payload.ToString(SaveOptions.DisableFormatting)}",
+                    Reason = $"Definitions-root extension element in namespace '{ns}' has no model element to attach to; content: {BpmnImportInternals.PreserveMarkup(payload)}",
                     Severity = BpmnImportLossSeverity.Loss,
                 });
             }
@@ -224,7 +224,7 @@ internal sealed partial class BpmnModelBuilder
                 byNamespace[ns] = accumulated;
             }
 
-            accumulated.Append(payload.ToString(SaveOptions.DisableFormatting));
+            accumulated.Append(BpmnImportInternals.PreserveMarkup(payload));
         }
 
         _losses.Add(new BpmnImportLoss
@@ -289,7 +289,7 @@ internal sealed partial class BpmnModelBuilder
                     ElementId = relationship.Id,
                     XmlPath = BpmnImportInternals.BuildPath(payload),
                     Construct = "extensionElements",
-                    Reason = $"Relationship-level extension element in namespace '{ns}' is not preserved; content: {payload.ToString(SaveOptions.DisableFormatting)}",
+                    Reason = $"Relationship-level extension element in namespace '{ns}' is not preserved; content: {BpmnImportInternals.PreserveMarkup(payload)}",
                     Severity = BpmnImportLossSeverity.Loss,
                 });
             }
@@ -304,7 +304,7 @@ internal sealed partial class BpmnModelBuilder
             var foreign = new JsonObject();
             foreach (var (ns, accumulated) in byNamespace.OrderBy(pair => pair.Key, StringComparer.Ordinal))
             {
-                foreign[ns] = accumulated.ToString();
+                foreign[ns] = accumulated.ToString().Replace("\r\n", "\n", StringComparison.Ordinal);
             }
 
             node.Properties["foreignExtensions"] = BpmnImportInternals.JsonElementFrom(foreign);

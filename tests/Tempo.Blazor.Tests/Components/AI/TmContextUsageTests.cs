@@ -196,6 +196,8 @@ public class TmContextUsageTests : LocalizationTestBase
     [Fact]
     public void TheTotalIsAMeter_CarryingTheMachineValueAndTheLocalizedText()
     {
+        // The grouped-value assertions need the suite's invariant baseline, not the ambient culture.
+        using var _ = CultureScope.Use(CultureInfo.InvariantCulture);
         var cut = RenderUsage();
 
         var meter = cut.Find("[data-testid='context-usage-meter']");
@@ -213,6 +215,8 @@ public class TmContextUsageTests : LocalizationTestBase
     [Fact]
     public void TheVisibleReadoutIsSightedOnlyDuplicate_BecauseTheMeterAlreadySpeaksIt()
     {
+        // The grouped-value assertions need the suite's invariant baseline, not the ambient culture.
+        using var _ = CultureScope.Use(CultureInfo.InvariantCulture);
         var cut = RenderUsage();
 
         var readout = cut.Find(".tm-context-usage__readout");
@@ -282,6 +286,8 @@ public class TmContextUsageTests : LocalizationTestBase
     [Fact]
     public void TheLegendListsEverySection_WithItsTokensShareAndStateWords()
     {
+        // The grouped-value assertions need the suite's invariant baseline, not the ambient culture.
+        using var _ = CultureScope.Use(CultureInfo.InvariantCulture);
         var cut = RenderUsage();
 
         var table = cut.Find("table.tm-context-usage__table");
@@ -318,6 +324,8 @@ public class TmContextUsageTests : LocalizationTestBase
     [Fact]
     public void ASectionWithItems_ExpandsIntoItsItems_OnAButtonThatOwnsTheDisclosure()
     {
+        // The tokens assertion needs the suite's invariant baseline, not the ambient culture.
+        using var _ = CultureScope.Use(CultureInfo.InvariantCulture);
         var cut = RenderUsage();
 
         var toggle = Row(cut, "files").QuerySelector(".tm-context-usage__toggle")!;
@@ -557,6 +565,8 @@ public class TmContextUsageTests : LocalizationTestBase
     [Fact]
     public void AnOverBudgetContext_IsFlaggedInWordsAndColour()
     {
+        // The grouped-value assertions need the suite's invariant baseline, not the ambient culture.
+        using var _ = CultureScope.Use(CultureInfo.InvariantCulture);
         var cut = Render<TmContextUsage>(parameters => parameters
             .Add(component => component.Snapshot, new ContextUsageSnapshot
             {

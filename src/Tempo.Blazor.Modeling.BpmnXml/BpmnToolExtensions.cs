@@ -96,7 +96,7 @@ public sealed class BpmnCamundaToolExtension : IBpmnToolExtension
                 continue;
             }
 
-            preserved.Append(payload.ToString(SaveOptions.DisableFormatting));
+            preserved.Append(BpmnImportInternals.PreserveMarkup(payload));
         }
 
         if (preserved.Length == 0)
@@ -186,7 +186,7 @@ public sealed class BpmnSignavioToolExtension : IBpmnToolExtension
                     ElementId = context.Element?.Id,
                     XmlPath = BpmnImportInternals.BuildPath(payload),
                     Construct = payload.Name.LocalName,
-                    Reason = $"The Signavio extension element '{payload.Name.LocalName}' has no dedicated mapping; content: {payload.ToString(SaveOptions.DisableFormatting)}",
+                    Reason = $"The Signavio extension element '{payload.Name.LocalName}' has no dedicated mapping; content: {BpmnImportInternals.PreserveMarkup(payload)}",
                     Severity = BpmnImportLossSeverity.Loss,
                 });
                 continue;
@@ -264,7 +264,7 @@ public sealed class BpmnBizagiToolExtension : IBpmnToolExtension
                     ElementId = context.Element?.Id,
                     XmlPath = BpmnImportInternals.BuildPath(payload),
                     Construct = payload.Name.LocalName,
-                    Reason = $"The Bizagi extension element '{payload.Name.LocalName}' has no dedicated mapping; content: {payload.ToString(SaveOptions.DisableFormatting)}",
+                    Reason = $"The Bizagi extension element '{payload.Name.LocalName}' has no dedicated mapping; content: {BpmnImportInternals.PreserveMarkup(payload)}",
                     Severity = BpmnImportLossSeverity.Loss,
                 });
                 continue;

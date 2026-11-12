@@ -189,6 +189,8 @@ public class TmUsageMeterTests : LocalizationTestBase
     [Fact]
     public void Meter_ValueFormatterOverridesTheAmounts()
     {
+        // The host formatter interpolates with the ambient culture; the assertion needs the invariant baseline.
+        using var _ = CultureScope.Use(CultureInfo.InvariantCulture);
         var cut = RenderMeter(p => p
             .Add(c => c.Used, 7_500)
             .Add(c => c.Limit, 10_000)

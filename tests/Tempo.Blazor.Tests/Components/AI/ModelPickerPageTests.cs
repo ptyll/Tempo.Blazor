@@ -1,3 +1,4 @@
+using System.Globalization;
 using AngleSharp.Dom;
 using Bunit;
 using FluentAssertions;
@@ -198,6 +199,8 @@ public class ModelPickerPageTests : DemoPageLocalizationTestBase
     [Fact]
     public void TheHostOwnsTheMoneyVocabulary()
     {
+        // The money and credits assertions need the suite's invariant baseline, not the ambient culture.
+        using var _ = CultureScope.Use(CultureInfo.InvariantCulture);
         var cut = RenderPage();
 
         Trigger(cut, "model-picker-credits").Click();

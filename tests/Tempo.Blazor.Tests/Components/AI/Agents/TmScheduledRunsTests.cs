@@ -1,3 +1,4 @@
+using System.Globalization;
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
@@ -283,6 +284,8 @@ public class TmScheduledRunsTests : LocalizationTestBase
     [Fact]
     public async Task TheTableIsTheTextAlternative_WithOneRowPerSliceAndTheSameMoveMenu()
     {
+        // The "t"-formatted window range needs the suite's invariant baseline (HH:mm), not the ambient culture.
+        using var _ = CultureScope.Use(CultureInfo.InvariantCulture);
         var cut = RenderRuns(
             windows: [Window("w1", 0, 9, capacity: 4), Window("w2", 0, 13, capacity: 4)],
             runs: [Run("r1", "Long batch", 6), Run("r2", "Short", 1)]);

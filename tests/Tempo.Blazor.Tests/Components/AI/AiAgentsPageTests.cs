@@ -1,3 +1,4 @@
+using System.Globalization;
 using AngleSharp.Dom;
 using Bunit;
 using FluentAssertions;
@@ -395,6 +396,8 @@ public class AiAgentsPageTests : DemoPageLocalizationTestBase
     [Fact]
     public void TheThreeContextVariantsShareTheSnapshot_AndRemovalAndCompactionAreApplied()
     {
+        // The grouped-value assertions need the suite's invariant baseline, not the ambient culture.
+        using var _ = CultureScope.Use(CultureInfo.InvariantCulture);
         var cut = RenderPage();
 
         Text(cut, "ai-agents-context-readout").Should().Contain("13,800").And.Contain("of 16,000");

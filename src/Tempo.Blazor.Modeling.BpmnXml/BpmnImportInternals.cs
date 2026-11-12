@@ -82,6 +82,19 @@ internal static class BpmnImportInternals
             ? string.Empty
             : string.Concat(element.Nodes().OfType<XText>().Select(text => text.Value)).Trim();
 
+    /// <summary>
+    /// Serializes a preserved XML payload (<c>foreignExtensions</c>, dialect extension properties and
+    /// loss-report content) with LF line endings on every OS. <see cref="XElement.ToString()"/> formats
+    /// through an <c>XmlWriter</c> whose newline convention is <see cref="Environment.NewLine"/>, so a
+    /// multi-line payload stringifies with <c>\r\n</c> on Windows and <c>\n</c> elsewhere — the same
+    /// import then produced different model JSON and golden files per OS (measured: the bizagi-export
+    /// and camunda-export goldens mismatched on a Windows checkout purely on <c>\r\n</c> vs <c>\n</c>).
+    /// The exporter already normalizes the same way (<c>BpmnExportBuilder</c>); the import side must,
+    /// because the preserved string IS the round-tripped payload.
+    /// </summary>
+    public static string PreserveMarkup(XElement payload) =>
+        payload.ToString(SaveOptions.DisableFormatting).Replace("\r\n", "\n", StringComparison.Ordinal);
+
     public static JsonElement JsonElementFrom<TValue>(TValue value) => JsonSerializer.SerializeToElement(value);
 
     public static JsonElement StringElement(string? value) => JsonSerializer.SerializeToElement(value);

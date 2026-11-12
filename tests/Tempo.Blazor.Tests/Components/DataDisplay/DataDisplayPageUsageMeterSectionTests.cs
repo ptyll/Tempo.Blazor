@@ -1,3 +1,4 @@
+using System.Globalization;
 using Bunit;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
@@ -48,6 +49,8 @@ public class DataDisplayPageUsageMeterSectionTests : DemoPageLocalizationTestBas
     [Fact]
     public void UsageMeterSection_ExposesTheQuotaToAssistiveTechnology()
     {
+        // The value-text assertions need the suite's invariant baseline, not the ambient culture.
+        using var _ = CultureScope.Use(CultureInfo.InvariantCulture);
         var cut = Render<DataDisplayPage>();
 
         var meter = Meter(cut).QuerySelector("[role='meter']")!;

@@ -1,3 +1,4 @@
+using System.Globalization;
 using Bunit;
 using FluentAssertions;
 using Tempo.Blazor.Components.Charts;
@@ -112,6 +113,8 @@ public class TmChartNewTypesTests : LocalizationTestBase
     [Fact]
     public void Funnel_ShowValues_RendersConversionPercentages()
     {
+        // The thousands-grouping assertion needs the suite's invariant baseline, not the ambient culture.
+        using var _ = CultureScope.Use(CultureInfo.InvariantCulture);
         var cut = Render(ChartType.Funnel, FunnelData, p => p.Add(x => x.ShowValues, true));
 
         var text = cut.Find("svg").TextContent;

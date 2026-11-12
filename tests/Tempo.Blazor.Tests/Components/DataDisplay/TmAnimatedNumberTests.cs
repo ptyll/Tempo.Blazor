@@ -36,6 +36,8 @@ public class TmAnimatedNumberTests : LocalizationTestBase
     [Fact]
     public void Renders_ItsRootAndTheVisualValue()
     {
+        // The grouped-value assertions need the suite's invariant baseline, not the ambient culture.
+        using var _ = CultureScope.Use(CultureInfo.InvariantCulture);
         SetupModule();
         var cut = Render<TmAnimatedNumber>(p => p.Add(c => c.Value, 1234.0));
 
@@ -51,6 +53,8 @@ public class TmAnimatedNumberTests : LocalizationTestBase
     [Fact]
     public void WithoutAnnounce_TheValueNodeIsTheAccessibleValue()
     {
+        // The grouped-value assertions need the suite's invariant baseline, not the ambient culture.
+        using var _ = CultureScope.Use(CultureInfo.InvariantCulture);
         SetupModule();
         var cut = Render<TmAnimatedNumber>(p => p
             .Add(c => c.Value, 1234.0)

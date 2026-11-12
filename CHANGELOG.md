@@ -3,9 +3,10 @@
 ## 2.11.0 (unreleased)
 
 > Modeling **full BPMN authoring** plan (eadbf967, phases 2–7). The release ships together with the
-> separate BPMN 2.0 XML converter plan (decision Q6); until the owner confirms it, the packages are
-> prepared (version, changelog, docs, JSON documentation, local pack + clean-host smoke test) but
-> NOT tagged or published. Everything below is additive and opt-in — the migration table at the end of
+> separate BPMN 2.0 XML converter plan (decision Q6, confirmed by the owner on 2026-11-11); the
+> packages are prepared (version, changelog, docs, JSON documentation, local pack + clean-host smoke
+> test) and will be tagged and published as `v2.11.0`. Everything below is additive and opt-in — the
+> migration table at the end of
 > this section lists every behavior a 2.10.0 host could notice, with a before/after. It also carries the
 > core `TmChart` funnel-label work (plan 8fa7319c, phase 1), the `TmScheduler` day-granularity
 > timeline (phase 2) and the `TmQRCode` accessible-name/token/download work (phase 3), none of which
@@ -354,6 +355,21 @@
   `BpmnModelBuilder` was split into partials to respect the 1200-line source ceiling; the wireframe
   pack control count guard follows the main-merge schema (46).
 - `MoveNodesCommand` gained an internal timestamp ctor for tests; the public surface is unchanged.
+
+### Fixed — release-gate findings (plan 5b94f69c, phase 5)
+
+- **BPMN import preserved OS-dependent line endings.** `XElement.ToString()` formats through an
+  `XmlWriter` whose newline convention is `Environment.NewLine`, so preserved extension payloads
+  (`foreignExtensions`, dialect `camundaExtensions`, loss-report content) embedded `\r\n` on Windows
+  and `\n` elsewhere — the same import produced different model JSON per OS and the committed
+  `BpmnImportGoldenTests` goldens mismatched on a Windows checkout (bizagi-export, camunda-export).
+  The importer now normalizes preserved markup to LF (`BpmnImportInternals.PreserveMarkup`, the same
+  normalization the exporter already applied); no mapping, loss report or export behavior changes.
+- **Nineteen tests asserted en-US/invariant number and time formatting against the ambient culture**
+  (animated number, usage meter, context usage, funnel conversions, model-picker money, scheduled-runs
+  windows, agent visualizations). They pin `CultureInfo.InvariantCulture` through `CultureScope` now —
+  the suite's formatting baseline, matching what CI's first lane resolves — so the Czech ambient
+  culture lane is green.
 
 ### Fixed — wireframe stencil groups nest in the browser (plan 5b94f69c, phases 1–4)
 
@@ -938,9 +954,9 @@
 
 - Package versions bumped to `2.11.0` across every packable project so `ReleaseContractTests` (csproj ↔ first CHANGELOG heading) agrees; JSON documentation bundles regenerated; `validate --fail-on-drift` clean.
 - The packages were packed locally and smoke-tested in a clean host implementing `IModelingModelWriter` (Structure + Layout) and `IModelingPropertySchemaProvider` against a BPMN model — see `docs/modeling-hosting-guide.md` §9 for the recipe.
-- **Not released.** Tagging `v2.11.0` and publishing to the feed are gated on the owner's confirmation and ship together with the BPMN 2.0 XML converter plan (decision Q6); the PromptHelper *Upgrade Tempo.Blazor* plan is announced only after that release.
+- **To be released.** Tagging `v2.11.0` and publishing to the feed ship together with the BPMN 2.0 XML converter plan (decision Q6, confirmed by the owner on 2026-11-11); the PromptHelper *Upgrade Tempo.Blazor* plan is announced after that release.
 
-## 2.10.0 (unreleased)
+## 2.10.0 (not released separately — shipped in 2.11.0)
 
 - **New demo page `/ai-agent-visualizations`** (plan d67b33af, phase 9) with its host-side simulator and its demo-only sample data (`src/Tempo.Blazor.Demo.SharedUI/Pages/AiAgentVisualizationsPage.razor`, `AiAgentVisualizationsPage.razor.cs`, `AiAgentVisualizationsSamples.cs`, `src/Tempo.Blazor.Demo.SharedUI/Services/AiAgentRunSimulator.cs`): ONE simulated multi-agent run rendered by **every** agent surface of the package at once — lanes, graph, fan-out, parallel attempts, handoff chain, fallback chain, autonomy dial, memory panel, delegate board, scheduled runs, conflict radar and the presence overlay. No library component, parameter default, CSS class or public API changed: the page is a HOST, exactly as an application would drive these components.
   - **The simulator.** `AiAgentRunSimulator` owns a `TimeProvider`-driven change log and the reducer, and hands the components a bounded snapshot. One change is one `AiAgentRunEvent` with a `Sequence` that grows by exactly one (the contiguity `AgentEventStream<T>` defines as "delivered"); the timer applies **ten events per second at 1×** — five at 0,5× and twenty at 2×. The four-beat cycle opens a block on an agent's lane, calls a tool along a graph edge, completes the oldest open block and retires the oldest finished block once the lane reached its cap, and every completion advances the forty-unit fan-out queue by one unit (starting the next queued unit or retrying a failed one with an incremented attempt). The state is BOUNDED — twelve blocks, eight handoffs and the same forty units looping back into the queue — so two minutes at ten events per second cost what the first second costs; every mutable field sits behind ONE gate, because on Blazor Server the timer callback and the circuit's UI thread both reach the run — a tick that arrives after a pause or a dispose is dropped, the change event is raised outside the gate, and a failing subscriber is recorded on `LastTickError` instead of being thrown out of the timer callback (an unhandled thread-pool exception would take the Server host down). The page repaints through `AgentRenderThrottle` (a 200 ms window), and a tick inside the window is folded into the trailing paint instead of being dropped. The simulator and the three surfaces its data changes (lanes, graph, fan-out) live in their own demo component, `AiAgentRunLiveSurfaces`: the first version painted all thirteen surfaces once per 100 ms and the WASM renderer needed ~200 ms per paint, so only 44 of a window's 100 events reached the state — the split is what makes the ten-events-per-second budget hold.

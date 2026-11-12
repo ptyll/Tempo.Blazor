@@ -246,6 +246,8 @@ public class AiAgentVisualizationsPageTests : DemoPageLocalizationTestBase
     [Fact]
     public void TheAttemptsTableListsTheThreeDrafts()
     {
+        // The score assertion needs the suite's invariant baseline (a dot decimal), not the ambient culture.
+        using var _ = CultureScope.Use(CultureInfo.InvariantCulture);
         RegisterClock();
         var cut = RenderPage();
 
