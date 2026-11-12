@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http.Features;
 using Tempo.Blazor.Components.Wireframe;
 using Tempo.Blazor.Demo.Api.Services;
 
@@ -22,6 +23,46 @@ public static class WireframePreviewEndpoints
             if (WireframeThemeRequest.Validate(theme) is { } invalid) return invalid;
             var document = SampleWireframes.ForScenario(scenario);
             var pages = await renderer.RenderDocumentAsync(document, options: new WireframePageSvgOptions { StencilTheme = theme });
+            return Results.Ok(pages);
+        });
+
+        // Renders an arbitrary WireframeDocument posted as JSON (the exact shape WireframeSerializer
+        // produces) through the same headless IWireframeSvgRenderer, so E2E specs can compare the
+        // server-side string render against the live browser DOM for ONE AND THE SAME document
+        // (client/server export parity).
+        group.MapPost("/render-document", async (HttpRequest request, IWireframeSvgRenderer renderer) =>
+        {
+            const long maxBodyBytes = 1_048_576; // 1 MB — documents are a few KB; this is a demo/test endpoint.
+            if (request.ContentLength > maxBodyBytes)
+                return Results.BadRequest(new { error = "The WireframeDocument JSON exceeds the 1 MB limit." });
+
+            // A chunked body carries no Content-Length, so ask the server to enforce the same cap
+            // while the upload is being read (no-op on servers where the feature is read-only).
+            var sizeFeature = request.HttpContext.Features.Get<IHttpMaxRequestBodySizeFeature>();
+            if (sizeFeature is { IsReadOnly: false })
+                sizeFeature.MaxRequestBodySize = maxBodyBytes;
+
+            string json;
+            try
+            {
+                // TestServer does not enforce MaxRequestBodySize, so also read through a capped
+                // buffer and reject the moment the body outgrows it.
+                using var reader = new StreamReader(request.Body);
+                var buffer = new char[maxBodyBytes + 1];
+                var read = await reader.ReadBlockAsync(buffer, 0, buffer.Length);
+                if (read > maxBodyBytes)
+                    return Results.BadRequest(new { error = "The WireframeDocument JSON exceeds the 1 MB limit." });
+                json = new string(buffer, 0, read);
+            }
+            catch (BadHttpRequestException ex) when (ex.StatusCode == StatusCodes.Status413PayloadTooLarge)
+            {
+                return Results.BadRequest(new { error = "The WireframeDocument JSON exceeds the 1 MB limit." });
+            }
+
+            if (string.IsNullOrWhiteSpace(json) || !WireframeSerializer.TryDeserialize(json, out var document) || document is null)
+                return Results.BadRequest(new { error = "The body must be a WireframeDocument JSON produced by WireframeSerializer." });
+
+            var pages = await renderer.RenderDocumentAsync(document, options: new WireframePageSvgOptions());
             return Results.Ok(pages);
         });
 

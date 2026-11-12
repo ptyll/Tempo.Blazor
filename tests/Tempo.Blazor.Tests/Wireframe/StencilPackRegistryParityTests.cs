@@ -210,7 +210,9 @@ public class StencilPackRegistryParityTests
 
         entry.Should().Contain("showAddButton");
         entry.Should().Contain("showSidePanel");
-        entry.Should().Contain("\\u25be");
+        // The title carries the chevron as a literal glyph — a "\u25be" escape inside the stencil
+        // expression is NOT decoded by the expression evaluator and would paint as "u25be" text.
+        entry.Should().Contain("▾");
         entry.Should().Contain("layoutMode == \\\"mobile\\\"");
     }
 
