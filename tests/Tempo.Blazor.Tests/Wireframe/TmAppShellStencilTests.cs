@@ -52,7 +52,7 @@ public sealed class TmAppShellStencilTests
 
         var variant = schema.Props.Single(prop => prop.Name == "variant");
         variant.Type.Should().Be(PropType.Enum);
-        variant.Options.Should().BeEquivalentTo("Inset", "Flat");
+        variant.Options.Should().BeEquivalentTo("Inset", "Flat", "Workspace");
         variant.Default.Should().Be("Inset");
 
         var mobileNav = schema.Props.Single(prop => prop.Name == "mobileNav");
@@ -130,6 +130,8 @@ public sealed class TmAppShellStencilTests
         entry.Should().Contain("{showWorkArea", "the work-area sheet is an opt-in region");
         entry.Should().Contain("{workAreaWidth", "its width is the host's knob");
         entry.Should().Contain("{variant", "the inset/flat treatment is what the variant prop changes");
+        entry.Should().Contain("Workspace",
+            "the TG-008 variant drops the content panel: the pack must branch on it, not fall through to a card");
         entry.Should().Contain("{mobileNav", "the phone presentation follows the mobileNav prop");
     }
 

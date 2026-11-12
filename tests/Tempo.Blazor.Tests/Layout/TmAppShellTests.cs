@@ -153,6 +153,7 @@ public class TmAppShellTests : LocalizationTestBase
     [Theory]
     [InlineData(AppShellVariant.Inset, "tm-app-shell--inset", "inset")]
     [InlineData(AppShellVariant.Flat, "tm-app-shell--flat", "flat")]
+    [InlineData(AppShellVariant.Workspace, "tm-app-shell--workspace", "workspace")]
     public void Variant_AddsItsModifierClassAndDataAttribute(AppShellVariant variant, string css, string data)
     {
         Module();
@@ -169,6 +170,7 @@ public class TmAppShellTests : LocalizationTestBase
         Module();
         ((int)AppShellVariant.Inset).Should().Be(0, "the default must stay the first enum value");
         ((int)AppShellVariant.Flat).Should().Be(1);
+        ((int)AppShellVariant.Workspace).Should().Be(2, "the TG-008 variant is additive, appended after Flat");
 
         var cut = Render<TmAppShell>(p => p.Add(x => x.LayoutMode, TmLayoutMode.Desktop));
         cut.Instance.Variant.Should().Be(AppShellVariant.Inset);

@@ -167,7 +167,10 @@
     min-inline-size: 0;
     min-block-size: 0;
     overflow: auto;
-    background-color: var(--tm-bg-surface);
+    /* The TG-008 token: the Inset and Flat variants paint the catalogued surface alias (default
+       var(--tm-bg-surface), i.e. today's look). The Workspace variant paints main transparent
+       over the workspace instead — see .tm-app-shell--workspace below. */
+    background-color: var(--tm-app-shell-main-bg);
 }
 
 /* The skip link's target takes the focus, so it needs a visible indicator. */
@@ -303,6 +306,22 @@
 
 .tm-app-shell--flat .tm-app-shell__main {
     padding: var(--tm-space-4);
+}
+
+/* ── Workspace variant: the page lies on the workspace (TG-008) ──────────── */
+
+/* No content panel at all: main is transparent over the workspace background, without the
+   border, radius and shadow the Inset card carries. The page's own cards stay white surfaces
+   on the workspace tone (the PromptHelper redesign look, DEC-UI-MOCKS-THEME). The navigation
+   column and the work area keep their own panels. */
+.tm-app-shell--workspace .tm-app-shell__body {
+    /* No gutter between the navigation column and main — the same rule the Flat variant carries. */
+    gap: 0;
+}
+
+.tm-app-shell--workspace .tm-app-shell__main {
+    padding: var(--tm-space-4);
+    background-color: transparent;
 }
 
 /* ── Navigation overlay (the rail's and the phone's expanded drawer) ─────── */

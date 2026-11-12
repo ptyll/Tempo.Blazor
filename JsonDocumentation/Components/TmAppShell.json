@@ -14,7 +14,7 @@
       "type": "AppShellVariant",
       "isRequired": false,
       "default": "Inset",
-      "description": "Visual treatment of the frame. Inset (default) floats the content as a rounded card on the workspace background; Flat fills the frame edge to edge with a hairline divider."
+      "description": "Visual treatment of the frame. Inset (default) floats the content as a rounded card on the workspace background; Flat fills the frame edge to edge with a hairline divider; Workspace (additive, TG-008) drops the content panel entirely — main is transparent over the workspace background with no border, radius or shadow, so the page content and its own white cards lie directly on the workspace. The content panel's background is the catalogued --tm-app-shell-main-bg token (default var(--tm-bg-surface), theme-relative, re-declared on the dark roots) for Inset and Flat; Workspace paints transparent and never reads it."
     },
     {
       "name": "LayoutMode",
@@ -251,6 +251,7 @@
     "tm-app-shell__frame",
     "tm-app-shell--inset",
     "tm-app-shell--flat",
+    "tm-app-shell--workspace",
     "tm-app-shell__skip-link",
     "tm-app-shell__topbar",
     "tm-app-shell__body",

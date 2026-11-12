@@ -712,6 +712,54 @@
   behavior, so the `TmDrawer` overlay, aggregates and `validate --fail-on-drift` are unchanged;
   the `TmDrawer` wireframe stencil is a schematic placeholder and needs no change.
 
+### Added — `TmAppShell` Workspace variant + `--tm-app-shell-main-bg` token (plan 92e96b25, phase 7 / TG-008)
+
+- **The token.** The frame's content panel background moves behind a catalogued token,
+  `--tm-app-shell-main-bg` (default `var(--tm-bg-surface)` — today's computed value, so the Inset
+  and Flat variants render byte-identically to before). The token is theme-relative like every
+  alias of a themed value and is re-declared on BOTH dark roots in `tokens-dark.css` (the
+  `[data-theme="dark"]` block and the `data-theme="light"` island, same expression) — a
+  `:root`-only alias would compute with the light `--tm-bg-surface` and freeze the nested dark
+  region's panel to the light colour. A host re-skins the panel by overriding the token.
+- **The variant.** `AppShellVariant.Workspace` (appended as `2`; `Inset = 0`, `Flat = 1` stay the
+  defaults) drops the content panel entirely: `main` paints `transparent` over
+  `--tm-bg-workspace` — no border, no `--tm-radius-card`, no `--tm-shadow-card` — so the page
+  content lies directly on the workspace and its own cards read as white surfaces (the
+  PromptHelper redesign look, decision `DEC-UI-MOCKS-THEME`). The navigation column and the work
+  area keep their panels in every variant (a tool column floating on the transparent workspace
+  would read as page content, not chrome), and the variant does NOT use the new token — its
+  transparency is a rule, not a token value. The frame carries the one modifier class
+  `tm-app-shell--workspace` plus the matching `data-variant` on the frame and the root.
+- **No breaking change.** Without the new value nothing moves: the default stays `Inset`, the
+  Inset/Flat rules and the computed `main` background are unchanged, the enum is append-only and
+  the stencil/schema additions are opt-in values. Nothing to migrate.
+- **Demo.** `/app-shell` gains a third variant button (`app-shell-variant-workspace`,
+  `aria-pressed`) next to Inset/Flat; the page's checklist and stat blocks already carry their own
+  surface cards, so the Workspace presentation shows the redesign look with no page CSS for the
+  cards. One demo-only override IS needed: the demo viewport re-declares `--tm-bg-workspace` to
+  `--tm-color-gray-100` **in the light theme only** (re-pointed at `--tm-bg-page` under the dark
+  roots), because the default light tokens make the workspace and the surface the same white —
+  without the distinct tone the Flat and Workspace variants render pixel-identical and the redesign
+  look cannot be reviewed. The hook lives in the page's inline `<style>`: the strict token audit
+  forbids a `[data-theme="dark"]` block in a `.css` file, and the `WireframeEditorPage` demo hook
+  sets the same precedent. New `TmAppShellDemo_VariantWorkspace` in all four `DemoResources`
+  tables.
+- **Tests.** bUnit (TDD, RED first): `TmAppShellVariantCssTests` pins the token catalogue
+  (tokens.css alias, both dark re-declarations, the sheet rule, the workspace rule's
+  transparency/no-border/no-shadow and the Inset/Flat rules kept byte-for-byte) plus the bundle;
+  `TmAppShellTests` gains the Workspace modifier/`data-variant` theory row and the enum-stability
+  assertion; `AppShellDemoPageTests` walks the three-button switch. Wireframe stencil: the
+  `TmAppShell` schema `variant` prop offers `Workspace` and the tempo stencil pack paints the
+  content card `none`/`none` for it (`TmAppShellStencilTests` updated). E2E: the
+  `AppShellE2EBase` lane asserts the computed styles (workspace `main` transparent over the
+  workspace tone in light AND dark, Inset/Flat unchanged) and captures locator screenshots of all
+  three variants at 1440 in light and dark, plus the workspace variant with the work area open and
+  on a phone stage, in `tests/Tempo.Blazor.E2E/TestResults/app-shell/`.
+- **JSON documentation / docs.** The `TmAppShell` overlay documents the variant and the token,
+  `gettingStarted.json` publishes the token, aggregates regenerated and `validate --fail-on-drift`
+  clean; [docs/app-shell.md](docs/app-shell.md) gains the *Variants* section (the three treatments,
+  the token, the dark-root re-declaration rule and the host override recipe).
+
 
 ### Fixed — test suite stability (plan 7ba95ed6, phase FZE-1)
 

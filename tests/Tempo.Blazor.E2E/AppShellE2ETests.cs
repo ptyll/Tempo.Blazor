@@ -389,6 +389,121 @@ public abstract class AppShellE2EBase : PlaywrightTestBase
         await ShootStageAsync(page, "checklist-checked-1440");
     }
 
+    // ── Variants: the Workspace treatment drops the content panel (TG-008) ─────
+
+    private async Task<string> ComputedAsync(IPage page, string selector, string property)
+        => await page.EvaluateAsync<string>(
+            $"() => getComputedStyle(document.querySelector(\"{selector}\")).{property}");
+
+    /// <summary>The frame div paints the workspace background (the root itself is transparent).</summary>
+    private static string FrameSelector => "[data-testid='shell-app-shell'] [data-region='frame']";
+
+    private async Task SelectVariantAsync(IPage page, string variant)
+    {
+        var button = page.GetByTestId($"app-shell-variant-{variant}");
+        await button.EvaluateAsync("el => { el.scrollIntoView({ block: 'center', behavior: 'instant' }); }");
+        await page.WaitForTimeoutAsync(150);
+        await button.ClickAsync();
+        await page.WaitForFunctionAsync(
+            "expected => document.querySelector(\"[data-testid='shell-app-shell']\")?.getAttribute('data-variant') === expected",
+            variant, new PageWaitForFunctionOptions { Timeout = 15000 });
+        await page.WaitForTimeoutAsync(250);
+    }
+
+    [TestMethod]
+    public async Task Variant_Workspace_Drops_The_Content_Panel_In_Light_And_Dark()
+    {
+        var page = await OpenAsync();
+        await SelectWidthAsync(page, "desktop", "desktop");
+
+        const string transparent = "rgba(0, 0, 0, 0)";
+
+        // Inset baseline: the content IS a surface card with a border (today's look, unchanged).
+        Assert.AreEqual("inset", await Frame(page).GetAttributeAsync("data-variant"));
+        var insetMainBg = await ComputedAsync(page, "[data-testid='shell-app-shell-main']", "backgroundColor");
+        Assert.AreNotEqual(transparent, insetMainBg, "the Inset content panel is an opaque surface card");
+        Assert.AreEqual("1px", await ComputedAsync(page, "[data-testid='shell-app-shell-main']", "borderTopWidth"));
+        var insetFrameBg = await ComputedAsync(page, FrameSelector, "backgroundColor");
+
+        // Flat: still the opaque surface, but no card border.
+        await SelectVariantAsync(page, "flat");
+        Assert.AreNotEqual(transparent, await ComputedAsync(page, "[data-testid='shell-app-shell-main']", "backgroundColor"));
+        Assert.AreEqual("0px", await ComputedAsync(page, "[data-testid='shell-app-shell-main']", "borderTopWidth"));
+
+        // Workspace: main is transparent — the workspace tone behind it paints through, no border.
+        await SelectVariantAsync(page, "workspace");
+        Assert.AreEqual(transparent, await ComputedAsync(page, "[data-testid='shell-app-shell-main']", "backgroundColor"),
+            "the Workspace variant has no content panel: main is transparent over the workspace");
+        Assert.AreEqual("0px", await ComputedAsync(page, "[data-testid='shell-app-shell-main']", "borderTopWidth"));
+        Assert.AreEqual("0px", await ComputedAsync(page, "[data-testid='shell-app-shell-main']", "borderTopLeftRadius"));
+        Assert.AreEqual(insetFrameBg, await ComputedAsync(page, FrameSelector, "backgroundColor"),
+            "the frame itself keeps painting the workspace background");
+
+        // The work area keeps its own panel in the workspace variant (chrome, not content).
+        await OpenWorkAreaAsync(page);
+        Assert.AreNotEqual(transparent, await ComputedAsync(page, "[data-testid='shell-app-shell-work-area']", "backgroundColor"),
+            "a tool column floating on the transparent workspace would read as page content");
+        await page.GetByTestId("app-shell-work-area-toggle").ClickAsync();
+        await page.WaitForSelectorAsync("[data-testid='app-shell-sources']",
+            new PageWaitForSelectorOptions { State = WaitForSelectorState.Detached, Timeout = 15000 });
+
+        // Dark theme: the transparency holds and the workspace tone flips with the token layer.
+        await page.Locator("button[title*='dark' i]:visible").First.ClickAsync();
+        await page.WaitForSelectorAsync("[data-theme='dark']", new PageWaitForSelectorOptions { Timeout = 15000 });
+        await page.WaitForTimeoutAsync(400);
+        Assert.AreEqual(transparent, await ComputedAsync(page, "[data-testid='shell-app-shell-main']", "backgroundColor"),
+            "the Workspace variant stays panel-less in the dark theme");
+        Assert.AreNotEqual(insetFrameBg, await ComputedAsync(page, FrameSelector, "backgroundColor"),
+            "the workspace background follows the dark token layer");
+
+        await ShootStageAsync(page, "frame-workspace-dark-1440");
+        await page.Locator("button[title*='light' i]:visible").First.ClickAsync();
+        await page.WaitForFunctionAsync(
+            "() => !document.querySelector(\"[data-theme='dark']\")", null, new PageWaitForFunctionOptions { Timeout = 15000 });
+    }
+
+    [TestMethod]
+    public async Task Variant_Screenshots_Light_And_Dark_At_1440()
+    {
+        var page = await OpenAsync();
+        await SelectWidthAsync(page, "desktop", "desktop");
+
+        foreach (var variant in new[] { "inset", "flat", "workspace" })
+        {
+            await SelectVariantAsync(page, variant);
+            await ShootStageAsync(page, $"frame-variant-{variant}-light-1440");
+
+            await page.Locator("button[title*='dark' i]:visible").First.ClickAsync();
+            await page.WaitForSelectorAsync("[data-theme='dark']", new PageWaitForSelectorOptions { Timeout = 15000 });
+            await page.WaitForTimeoutAsync(400);
+            await ShootStageAsync(page, $"frame-variant-{variant}-dark-1440");
+
+            await page.Locator("button[title*='light' i]:visible").First.ClickAsync();
+            await page.WaitForFunctionAsync(
+                "() => !document.querySelector(\"[data-theme='dark']\")", null, new PageWaitForFunctionOptions { Timeout = 15000 });
+            await page.WaitForTimeoutAsync(300);
+        }
+
+        // Edge case: the workspace variant WITH the work area open — the panel must read as chrome.
+        await SelectVariantAsync(page, "workspace");
+        await OpenWorkAreaAsync(page);
+        await ShootStageAsync(page, "frame-variant-workspace-workarea-light-1440");
+    }
+
+    [TestMethod]
+    public async Task Variant_Workspace_On_A_Phone_Stage_Screenshot()
+    {
+        var page = await OpenAsync(width: 390, height: 900, touch: true);
+        await SelectWidthAsync(page, "phone", "mobile");
+        await SelectVariantAsync(page, "workspace");
+
+        const string transparent = "rgba(0, 0, 0, 0)";
+        Assert.AreEqual(transparent, await ComputedAsync(page, "[data-testid='shell-app-shell-main']", "backgroundColor"),
+            "a phone container gets the same panel-less main as a desktop one");
+
+        await ShootStageAsync(page, "frame-variant-workspace-phone-390");
+    }
+
     // ── axe and the visual reference ───────────────────────────────────────────
 
     private static async Task AssertNoAxeViolationsAsync(IPage page, string state)

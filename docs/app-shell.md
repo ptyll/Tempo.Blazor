@@ -33,11 +33,44 @@ The frame classifies **its own width**, never the viewport, so it can be embedde
 (default `768` / `1200`). The stylesheet carries **no width condition**: only the markup branch moves,
 so a per-instance pair can never disagree with a media query.
 
+## Variants
+
+The `Variant` parameter decides how the page content sits on the workspace background
+(`--tm-bg-workspace`):
+
+- **`Inset`** (default) — the content is a rounded card (border, `--tm-radius-card`,
+  `--tm-shadow-card`) floating in a gutter on the workspace, like a desktop application window.
+- **`Flat`** — the content fills the frame edge to edge; a hairline divider is the only separation
+  from the navigation. The denser treatment for data-heavy applications.
+- **`Workspace`** (plan 92e96b25 / TG-008) — no content panel at all: `main` is transparent over the
+  workspace background, without the border, radius and shadow the Inset card carries. The page
+  content lies directly on the workspace and its own cards read as white surfaces (the PromptHelper
+  redesign look, decision `DEC-UI-MOCKS-THEME`). The navigation column and the work area keep their
+  panels in every variant — a tool column floating on the transparent workspace would read as page
+  content, not chrome.
+
+The content panel's background is the catalogued token **`--tm-app-shell-main-bg`** (default
+`var(--tm-bg-surface)`, i.e. today's look), which the Inset and Flat variants resolve; Workspace
+paints `transparent` instead and never reads the token. The token is theme-relative like every alias
+of a themed value: it is re-declared on both dark roots in `tokens-dark.css` (the dark block and the
+light island), because a `:root`-only alias would compute with the light `--tm-bg-surface`. A host
+re-styles the panel by overriding the token on an ancestor; the Workspace variant's transparency is
+a rule, not a token value, so it cannot be accidentally re-tinted through the alias.
+
+> **Host note:** in the default light theme `--tm-bg-workspace` and `--tm-bg-surface` are both white,
+> so `Workspace` looks the same as `Flat` until the host sets a workspace tone. Set
+> `--tm-bg-workspace` (for example `var(--tm-color-gray-100)`) on an ancestor of the shell to get
+> the look — the demo's grey override is exactly this.
+
+Each variant is the single modifier class `tm-app-shell--{inset|flat|workspace}` on the frame, with
+the matching `data-variant` on the frame and the root. The default stays `Inset` and the enum is
+append-only (`Inset = 0`, `Flat = 1`, `Workspace = 2`).
+
 ## Parameters
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
-| `Variant` | `AppShellVariant` | `Inset` | `Inset` = the content is a rounded card on the workspace; `Flat` = edge to edge with a hairline divider. |
+| `Variant` | `AppShellVariant` | `Inset` | `Inset` = the content is a rounded card on the workspace; `Flat` = edge to edge with a hairline divider; `Workspace` = no content panel at all — `main` is transparent over `--tm-bg-workspace` (no border, radius or shadow) and the page's own cards read as white surfaces. |
 | `LayoutMode` | `TmLayoutMode` | `Auto` | `Auto` measures the shell's root; any other value pins the layout. |
 | `InitialMode` | `TmLayoutMode` | `Desktop` | The mode rendered before the first measurement (SSR, prerender). |
 | `Breakpoints` | `TmLayoutBreakpoints?` | `null` → 768 / 1200 | Per-instance thresholds. |
@@ -265,7 +298,7 @@ phone presentations are all reviewable at one viewport:
 |---|---|
 | Stage (`app-shell-stage`) | A horizontally scrollable box around `app-shell-viewport` whose height the page stylesheet caps at `min(60rem, 100dvh - var(--tm-space-16))` — an inline 60rem was taller than any phone viewport, so the frame's footer sat off screen inside a page that already scrolls. The frame measures the stage, so the layout follows the chosen width. The page takes the demo's full content width (`width: auto`, never `100vw`, which includes the scrollbar width; the demo sidebar is hidden through the `data-demo-shell` hooks) so the desktop preset fits. |
 | Width presets | `Fit` (`100%`), `Phone 375`, `Tablet 900` and `Desktop 1280`. Buttons, not a drag handle — the same non-drag alternative the work-area separator offers (WCAG 2.5.7), and the readout next to them reports the resolved layout. |
-| Variant switch | `Inset` / `Flat` (`aria-pressed`, `data-variant` on the frame). |
+| Variant switch | `Inset` / `Flat` / `Workspace` (`aria-pressed`, `data-variant` on the frame). `Workspace` shows the redesign look: the checklist and the stat blocks read as white cards on the workspace tone. |
 | Sources toggle | Opens the frame's work area: the docked resizable column on a desktop container, the bottom sheet on a phone container (default closed, so a phone never loads with a modal sheet over its content). |
 | Frame content | The sectioned navigation model (`Workspace` / `Reports`), the account menu in `SidebarFooter` (profile completion and the theme switch) and an onboarding checklist inside `main`, plus the frame's own top bar. |
 | `TmUserMenu` section | The account menu as the anchored popover (`Auto`), the **forced** `MobilePresentation="Sheet"` bottom sheet and the avatar-only trigger. |

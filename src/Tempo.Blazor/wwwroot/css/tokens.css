@@ -641,6 +641,12 @@
   --tm-editor-shell-overlay-width: 20rem;
   /* TmAppShell: the width of the navigation overlay drawer the tablet rail expands into. Declared here (not on the shell root) because the drawer renders BESIDE the frame, outside the root's inheritance tree — a host overrides it on an ancestor. */
   --tm-app-shell-nav-width: 20rem;
+  /* TmAppShell (TG-008): the background of the frame's main content panel. The default aliases the
+     surface, so the Inset and Flat variants keep today's look; the Workspace variant overrides the
+     painted background to transparent instead, so it does NOT use this token. THEME-RELATIVE like
+     every alias of a themed token: re-declared on the dark roots in tokens-dark.css (both blocks),
+     because a :root-only alias would compute with the light --tm-bg-surface. */
+  --tm-app-shell-main-bg:    var(--tm-bg-surface);
   /* TmEditorShell mobile sheet: the canvas reserve under an open sheet never exceeds this fraction of the stage (a short landscape-phone stage keeps a usable canvas). A host overrides it on an ancestor. */
   --tm-editor-shell-sheet-reserve-max: 0.6;
   /* A whole box-shadow value: a 2px surface gap, then a 2px primary ring. The gap

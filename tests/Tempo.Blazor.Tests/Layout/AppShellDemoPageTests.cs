@@ -85,6 +85,33 @@ public class AppShellDemoPageTests : DemoPageLocalizationTestBase
     }
 
     [Fact]
+    public void The_Viewport_Gives_The_Frame_A_Distinct_Light_Workspace_Tone()
+    {
+        // TG-008 UX review: with the default light tokens --tm-bg-workspace equals --tm-bg-surface
+        // (both white), so Flat and Workspace would render pixel-identical and the redesign look
+        // could not be reviewed. The demo stage therefore overrides the token LIGHT-ONLY; the dark
+        // roots re-declare --tm-bg-workspace closer to the frame, and the demo re-points its
+        // override at the dark page tone so a scoped dark region keeps the dark workspace. The hook
+        // lives in the page's inline <style>: the strict token audit forbids a [data-theme="dark"]
+        // block in a .css file (the WireframeEditorPage demo hook sets the precedent).
+        var razor = System.Text.RegularExpressions.Regex.Replace(
+            Read("src", "Tempo.Blazor.Demo.SharedUI", "Pages", "AppShellPage.razor"),
+            @"/\*.*?\*/",
+            string.Empty,
+            System.Text.RegularExpressions.RegexOptions.Singleline);
+
+        razor.Should().Contain(".app-shell-page__viewport { --tm-bg-workspace: var(--tm-color-gray-100); }",
+            "the light demo stage gives the frame a workspace tone distinct from the surface");
+
+        var lightAt = razor.IndexOf("--tm-color-gray-100", StringComparison.Ordinal);
+        var darkAt = razor.IndexOf("[data-theme=\"dark\"] .app-shell-page__viewport", StringComparison.Ordinal);
+        darkAt.Should().BeGreaterThan(lightAt,
+            "the dark re-point must come after the light override (source order breaks the tie)");
+        razor[darkAt..].Should().Contain("--tm-bg-workspace: var(--tm-bg-page)",
+            "a scoped dark region must not inherit the light gray-100 workspace");
+    }
+
+    [Fact]
     public void Links_Stay_Relative_So_The_Demo_Base_Href_Applies()
     {
         var cut = RenderPage();
@@ -138,6 +165,14 @@ public class AppShellDemoPageTests : DemoPageLocalizationTestBase
         cut.Find("[data-testid='shell-app-shell']").GetAttribute("data-variant").Should().Be("flat");
         cut.Find("[data-testid='app-shell-variant-flat']").GetAttribute("aria-pressed").Should().Be("true");
         cut.Find("[data-testid='app-shell-variant-inset']").GetAttribute("aria-pressed").Should().Be("false");
+
+        // TG-008: the third variant drops the content panel — the frame reports it and the pressed
+        // state walks on to the workspace button.
+        cut.Find("[data-testid='app-shell-variant-workspace']").Click();
+
+        cut.Find("[data-testid='shell-app-shell']").GetAttribute("data-variant").Should().Be("workspace");
+        cut.Find("[data-testid='app-shell-variant-workspace']").GetAttribute("aria-pressed").Should().Be("true");
+        cut.Find("[data-testid='app-shell-variant-flat']").GetAttribute("aria-pressed").Should().Be("false");
     }
 
     [Fact]

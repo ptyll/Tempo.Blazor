@@ -19,6 +19,18 @@
        grew a ~15 px horizontal scrollbar on a desktop browser (WCAG 1.4.10 reflow). */
     .demo-shell:has(.app-shell-page) [data-demo-shell="main"] { margin-left: 0 !important; width: auto !important; max-width: none !important; }
     .demo-shell:has(.app-shell-page) [data-demo-shell="page-body"] { max-width: none !important; }
+
+    /* A DISTINCT workspace tone under the demo frame (TG-008): in the default light theme
+       --tm-bg-workspace equals the surface (both white), so the Flat and Workspace variants would
+       render pixel-identical and the redesign look (content lying on the workspace, white cards)
+       could not be reviewed. The override is LIGHT-ONLY: the dark roots re-declare
+       --tm-bg-workspace closer to the frame, and the demo override is re-pointed at the dark page
+       tone below so a scoped dark region keeps the dark workspace. An inline style block, not the
+       scoped stylesheet: the strict token audit forbids a [data-theme="dark"] rule in a .css file
+       (the WireframeEditorPage demo hook sets the same precedent). Token-only, no literals. */
+    .app-shell-page__viewport { --tm-bg-workspace: var(--tm-color-gray-100); }
+    [data-theme="dark"] .app-shell-page__viewport,
+    .tm-dark .app-shell-page__viewport { --tm-bg-workspace: var(--tm-bg-page); }
 </style>
 
 @* Plan 5d396592 phase 6: the frame series demo. The live frame sits inside a width-controlled stage,
@@ -58,6 +70,11 @@
                         data-testid="app-shell-variant-flat"
                         aria-pressed="@BoolText(_variant == AppShellVariant.Flat)"
                         @onclick="() => _variant = AppShellVariant.Flat">@Loc["TmAppShellDemo_VariantFlat"]</button>
+                <button type="button"
+                        class="tm-btn tm-btn-secondary tm-btn-sm"
+                        data-testid="app-shell-variant-workspace"
+                        aria-pressed="@BoolText(_variant == AppShellVariant.Workspace)"
+                        @onclick="() => _variant = AppShellVariant.Workspace">@Loc["TmAppShellDemo_VariantWorkspace"]</button>
             </div>
 
             <div class="app-shell-page__control" role="group" aria-label="@Loc["TmAppShellDemo_WidthGroup"]">

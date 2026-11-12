@@ -249,6 +249,10 @@
      declared, so a dark theme switched on a parent element would otherwise keep the
      light value. Same convention as --tm-text-placeholder above. */
   --tm-bg-workspace:           var(--tm-bg-page);
+  /* TmAppShell main panel (TG-008): the same alias as :root, re-declared so it recomputes against
+     the dark --tm-bg-surface above. The Workspace variant paints main transparent and never reads
+     this token. */
+  --tm-app-shell-main-bg:      var(--tm-bg-surface);
   /* The paper tokens (--tm-paper*) are the exception to "re-declare everything here":
      they are theme-invariant by design and stay literal light values declared ONLY in
      tokens.css, so a descendant-scoped dark theme keeps the PRINTED paper white. Do NOT add
@@ -553,6 +557,9 @@
   --tm-kanban-column-review:        var(--tm-color-primary-600);
   --tm-kanban-column-done:          var(--tm-color-success-strong);
   --tm-bg-workspace:                var(--tm-bg-page);
+  /* TmAppShell main panel (TG-008): the light-island mirror of the dark re-declaration above —
+     the island resets exactly the names the dark block flips. */
+  --tm-app-shell-main-bg:           var(--tm-bg-surface);
   --tm-canvas-backdrop:            var(--tm-paper-backdrop);
   /* Light-island mirrors of the TG-004 canvas/stencil tokens (the dark roots flip them). */
   --tm-canvas-paper:               var(--tm-paper);

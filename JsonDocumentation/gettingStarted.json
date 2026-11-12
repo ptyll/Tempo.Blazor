@@ -399,7 +399,8 @@
             "--tm-input-height-lg": "2.75rem",
             "--tm-sidebar-width": "16rem",
             "--tm-sidebar-collapsed": "3.5rem",
-            "--tm-topbar-height": "3.5rem"
+            "--tm-topbar-height": "3.5rem",
+            "--tm-app-shell-main-bg": "var(--tm-bg-surface)"
           }
         }
       },

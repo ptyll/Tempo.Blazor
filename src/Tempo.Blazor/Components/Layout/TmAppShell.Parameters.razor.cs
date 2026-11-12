@@ -15,7 +15,9 @@ public partial class TmAppShell
     /// <summary>
     /// The visual treatment of the frame. <see cref="AppShellVariant.Inset"/> (default) floats the
     /// content as a rounded card on the workspace background; <see cref="AppShellVariant.Flat"/> fills
-    /// the frame edge to edge with a hairline divider.
+    /// the frame edge to edge with a hairline divider; <see cref="AppShellVariant.Workspace"/> drops
+    /// the content panel entirely — the main area is transparent over the workspace background, so the
+    /// page content (and its own white cards) lies directly on the workspace.
     /// </summary>
     [Parameter] public AppShellVariant Variant { get; set; } = AppShellVariant.Inset;
 

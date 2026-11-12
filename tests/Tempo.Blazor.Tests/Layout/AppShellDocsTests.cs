@@ -20,7 +20,8 @@ public class AppShellDocsTests
 
         foreach (var term in new[]
         {
-            "TmAppShell", "AppShellVariant", "Inset", "Flat", "TmLayoutObserver", "TmSidebar", "TmTopBar",
+            "TmAppShell", "AppShellVariant", "Inset", "Flat", "Workspace", "--tm-app-shell-main-bg",
+            "DEC-UI-MOCKS-THEME", "TmLayoutObserver", "TmSidebar", "TmTopBar",
             "TmDrawer", "NavSections", "NavItems", "SidebarCollapsedChanged", "SidebarNavLabel",
             "SkipLinkTarget", "WorkAreaOpen", "WorkAreaWidth", "WorkAreaMinWidth", "WorkAreaMaxWidth",
             "MinContentWidth", "WorkAreaLabel", "PersistKey", "Breakpoints", "768", "1200",

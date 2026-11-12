@@ -2121,7 +2121,7 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             Props =
             [
                 P("variant",          "Variant",           PropType.Enum,   "Inset",  cat: "Appearance",
-                    opts: ["Inset", "Flat"]),
+                    opts: ["Inset", "Flat", "Workspace"]),
                 P("mobileNav",        "Mobile Navigation", PropType.Enum,   "Drawer", cat: "Appearance",
                     opts: ["Drawer", "BottomNavigation"]),
                 P("title",            "Title",             PropType.String, "Dashboard", cat: "Content"),

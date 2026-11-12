@@ -138,7 +138,12 @@ public partial class TmAppShell
         && MobileNav == AppShellMobileNav.BottomNavigation
         && EffectiveBottomNavItems.Count > 0;
 
-    private string CssVariant => Variant == AppShellVariant.Flat ? "flat" : "inset";
+    private string CssVariant => Variant switch
+    {
+        AppShellVariant.Flat => "flat",
+        AppShellVariant.Workspace => "workspace",
+        _ => "inset",
+    };
 
     private string RootClasses => string.Join(" ", new[] { "tm-app-shell", Class }.Where(static c => !string.IsNullOrWhiteSpace(c)));
 
