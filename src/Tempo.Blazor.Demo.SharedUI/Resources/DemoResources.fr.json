@@ -1369,5 +1369,17 @@
   "TmDemo_Modeling_LossSeverity_Warning": "Avertissement",
   "TmDemo_Modeling_BpmnFileTooLarge": "Le fichier {0} est trop volumineux ; l'import prend en charge les fichiers jusqu'à {1} Mo.",
   "TmDemo_Modeling_BpmnMobileHint": "L'importation est disponible sur des écrans plus larges.",
-  "TmDemo_Modeling_BpmnNothingToImport": "Collez ou chargez d'abord le XML BPMN."
+  "TmDemo_Modeling_BpmnNothingToImport": "Collez ou chargez d'abord le XML BPMN.",
+  "TmDashboardOverviewDemo_PageTitle": "Aperçu",
+  "TmDashboardOverviewDemo_Heading": "Aperçu",
+  "TmDashboardOverviewDemo_Subtitle": "Aperçu après connexion : les widgets s'affichent sans chrome d'en-tête (WidgetChrome=EditOnly) — le modèle fournit le titre et le lien de chaque carte. Modifier bascule vers le mode édition standard.",
+  "TmDashboardOverviewDemo_ViewAll": "Tout voir",
+  "TmDashboardOverviewDemo_Task1": "✔ Parité des pochoirs wireframe",
+  "TmDashboardOverviewDemo_Task2": "✔ Revue des teintes du mode sombre",
+  "TmDashboardOverviewDemo_Task3": "☐ TG-009 : widgets sans chrome",
+  "TmDashboardOverviewDemo_Task4": "☐ Revue des captures E2E",
+  "TmDashboardOverviewDemo_Event1": "09:30 Stand-up",
+  "TmDashboardOverviewDemo_Event2": "13:00 Revue de conception",
+  "TmDashboardOverviewDemo_Event3": "16:30 Vérification de la version",
+  "TmDashboardOverviewDemo_DefaultHint": "Le contenu de démonstration de ce widget s'affiche ici via WidgetTemplate."
 }

@@ -88,6 +88,21 @@ public partial class TmDashboard : IAsyncDisposable
     [Parameter] public bool AllowEdit { get; set; } = true;
 
     /// <summary>
+    /// Chrome of the widget card (TG-009). <c>WidgetChrome.Always</c> (default) renders the header —
+    /// icon tile, title, description, collapse chevron, host <see cref="WidgetHeaderActions"/> — in
+    /// every mode; <c>WidgetChrome.EditOnly</c> renders it only in edit mode; <c>WidgetChrome.Never</c>
+    /// renders no decorative chrome at all (edit mode keeps a minimal functional strip with the drag
+    /// handle / move group and the remove control, so widgets stay movable). Without chrome the
+    /// widget stays a <c>role="region"</c> named by a visually hidden title through
+    /// <c>aria-labelledby</c>, the <see cref="WidgetTemplate"/> owns its own title and links, and a
+    /// persisted collapsed state is ignored (the content always renders). Switching modes never
+    /// changes the grid placement or the widget order — entering edit mode adds the header above
+    /// the card content, so the content shifts down by roughly the header height while the widget
+    /// keeps its exact grid cells.
+    /// </summary>
+    [Parameter] public WidgetChrome WidgetChrome { get; set; } = WidgetChrome.Always;
+
+    /// <summary>
     /// Raised after a different dashboard becomes current: the initial load (the default dashboard
     /// or <see cref="DashboardId"/>) and a switcher selection. A dashboard created through the
     /// create dialog does NOT raise it, and neither does the cancel-restore that discards such an
@@ -668,8 +683,11 @@ public partial class TmDashboard : IAsyncDisposable
     private string GetWidgetClasses(WidgetInstance widget)
     {
         var classes = new List<string>();
-        if (widget.IsCollapsed) classes.Add("tm-widget--collapsed");
+        // TG-009: a chromeless widget always renders its content (no collapse control exists), so
+        // the collapsed sizing class — which hides the content — must not apply.
+        if (widget.IsCollapsed && !IsWidgetChromeless) classes.Add("tm-widget--collapsed");
         if (widget.IsMinimized) classes.Add("tm-widget--minimized");
+        if (IsWidgetChromeless) classes.Add("tm-widget--chromeless");
         // tm-widget--dragging / --resizing are the live pointer states painted by dashboard.js
         // (Fáze 5, pointer-drag.js); the grab state below stays the keyboard mirror in C#.
         if (_grabbedWidget == widget) classes.Add("tm-widget--grabbed");
@@ -760,6 +778,36 @@ public partial class TmDashboard : IAsyncDisposable
     {
         return WidgetRegistry?.GetWidget(widget.WidgetId)?.IsCollapsible ?? true;
     }
+
+    // ── TG-009: WidgetChrome ──────────────────────────────────────
+
+    /// <summary>
+    /// Whether the widget header bar renders at all: always in edit mode (it carries the functional
+    /// controls — drag handle / move group, remove), in view mode only when
+    /// <see cref="WidgetChrome"/> is <c>Always</c>.
+    /// </summary>
+    private bool RendersWidgetHeader => _isEditMode || WidgetChrome == WidgetChrome.Always;
+
+    /// <summary>
+    /// Whether the header renders its decorative chrome (icon tile, title, description, host
+    /// actions, collapse chevron). <c>Never</c> strips it even in edit mode, leaving the functional
+    /// strip; <c>EditOnly</c> strips it only outside edit mode.
+    /// </summary>
+    private bool RendersWidgetHeaderDecor => WidgetChrome != WidgetChrome.Never;
+
+    /// <summary>
+    /// Whether the widget renders without its header chrome (EditOnly/Never outside edit mode).
+    /// A chromeless widget stays a region named by a visually hidden title and always renders its
+    /// content — a persisted collapsed state has no collapse control to honour.
+    /// </summary>
+    private bool IsWidgetChromeless => !RendersWidgetHeader;
+
+    /// <summary>
+    /// Whether the widget title renders visually hidden (TG-009): outside edit mode without
+    /// chrome, or in the <c>Never</c> edit strip. The hidden title names the widget's region
+    /// through <c>aria-labelledby</c> and the edit controls describe themselves through it.
+    /// </summary>
+    private bool RendersWidgetTitleHidden => !RendersWidgetHeader || !RendersWidgetHeaderDecor;
     
     private bool HasOverlap(WidgetInstance a, WidgetInstance b)
     {

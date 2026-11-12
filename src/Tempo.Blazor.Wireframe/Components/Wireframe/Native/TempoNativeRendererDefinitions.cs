@@ -919,6 +919,9 @@ internal static partial class TempoNativeRendererDefinitions
     // "auto" (and any unknown value) renders the desktop variant; tablet reflows the widget grid
     // to two columns and mobile to a single stacked column with a compact switcher chip. The
     // stencil communicates the chosen presentation, it does not re-flow the canvas layout.
+    // TG-009: widgetChrome mirrors TmDashboard.WidgetChrome — "editOnly"/"never" drop the per-tile
+    // header (icon + label) outside edit mode / everywhere; "never" keeps a small grip hint when
+    // the dashboard is editable (the functional edit strip).
     private static void RenderDashboard(WireframeElement el, RenderTreeBuilder b)
     {
         var title = el.Props.GetString("title", "Dashboard");
@@ -926,6 +929,9 @@ internal static partial class TempoNativeRendererDefinitions
         var showSwitcher = el.Props.GetBool("showSwitcher", true);
         var editable = el.Props.GetBool("editable", false);
         var showAddWidget = el.Props.GetBool("showAddWidget", false);
+        var chrome = el.Props.GetString("widgetChrome", "always");
+        var chromelessTiles = chrome is "editOnly" or "never";
+        var neverChrome = chrome == "never";
 
         var sb = new StringBuilder();
         sb.Append(Rect(0, 0, el.W, el.H, Fill, Border, 8));
@@ -988,22 +994,38 @@ internal static partial class TempoNativeRendererDefinitions
                 sb.Append(Rect(cx, cy, cellW, cellH, "white", Border, 6));
                 if (layout == "mobile")
                 {
-                    sb.Append(Rect(cx + 10, cy + cellH / 2 - 6, 12, 12, FillAccent, "none", 3));
-                    sb.Append(Text($"Widget {i + 1}", cx + 28, cy + cellH / 2, 9, ColorText, "start", "600"));
+                    if (!chromelessTiles)
+                    {
+                        sb.Append(Rect(cx + 10, cy + cellH / 2 - 6, 12, 12, FillAccent, "none", 3));
+                        sb.Append(Text($"Widget {i + 1}", cx + 28, cy + cellH / 2, 9, ColorText, "start", "600"));
+                    }
                     if (cellH > 52)
                     {
-                        sb.Append(Rect(cx + 10, cy + cellH - 22, cellW * 0.5, 6, FillAccent, "none", 3));
-                        sb.Append(Rect(cx + 10, cy + cellH - 11, cellW * 0.7, 5, FillDark, "none", 2));
+                        var bodyY = chromelessTiles ? cy + 12 : cy + cellH - 22;
+                        sb.Append(Rect(cx + 10, bodyY, cellW * 0.5, 6, FillAccent, "none", 3));
+                        sb.Append(Rect(cx + 10, bodyY + 11, cellW * 0.7, 5, FillDark, "none", 2));
                     }
                 }
                 else
                 {
-                    sb.Append(Rect(cx + 12, cy + 12, 16, 16, FillAccent, "none", 4));
-                    sb.Append(Text($"Widget {i + 1}", cx + 36, cy + 20, 10, ColorText, "start", "600"));
+                    if (!chromelessTiles)
+                    {
+                        sb.Append(Rect(cx + 12, cy + 12, 16, 16, FillAccent, "none", 4));
+                        sb.Append(Text($"Widget {i + 1}", cx + 36, cy + 20, 10, ColorText, "start", "600"));
+                    }
+                    if (neverChrome && editable)
+                    {
+                        // TG-009: the Never edit strip keeps the widget movable — three grip bars
+                        // in the tile's top-left corner hint the drag affordance without header
+                        // chrome.
+                        for (var g = 0; g < 3; g++)
+                            sb.Append(Rect(cx + 12, cy + 10 + g * 4, 10, 2, FillDark, "none", 1));
+                    }
                     if (cellH > 88)
                     {
-                        sb.Append(Rect(cx + 12, cy + 40, cellW * 0.45, 16, FillAccent, "none", 4));
-                        sb.Append(Rect(cx + 12, cy + 68, cellW * 0.62, 8, FillDark, "none", 4));
+                        var bodyY = chromelessTiles ? cy + 14 : cy + 40;
+                        sb.Append(Rect(cx + 12, bodyY, cellW * 0.45, 16, FillAccent, "none", 4));
+                        sb.Append(Rect(cx + 12, bodyY + 28, cellW * 0.62, 8, FillDark, "none", 4));
                     }
                 }
 

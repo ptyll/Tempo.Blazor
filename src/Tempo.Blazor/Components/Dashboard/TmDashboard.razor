@@ -337,10 +337,16 @@
                 var maxWidth = definition is { MaxWidth: > 0 } ? Math.Min(definition.MaxWidth, Columns) : Columns;
                 var minHeight = Math.Max(1, definition?.MinHeight ?? 1);
                 var maxHeight = definition is { MaxHeight: > 0 } ? definition.MaxHeight : 0;
+                @* The chrome marker is a test/inspection hook for the opt-in values only: with the
+                   default Always it renders nothing, so the default DOM stays strictly pre-TG-009
+                   byte-identical. (Razor has no comments inside a tag — keep this above the div.) *@
                 <div class="tm-widget @GetWidgetClasses(widget)"
                      style="@GetWidgetStyles(widget, widgetOrder)"
                      @key="widget.InstanceId"
                      data-instance-id="@widget.InstanceId"
+                     data-widget-chrome="@(WidgetChrome == WidgetChrome.Always ? null : WidgetChrome.ToString().ToLowerInvariant())"
+                     role="@(RendersWidgetTitleHidden ? "region" : null)"
+                     aria-labelledby="@(RendersWidgetTitleHidden ? GetWidgetTitleId(widget) : null)"
                      data-min-w="@minWidth"
                      data-max-w="@maxWidth"
                      data-min-h="@minHeight"
@@ -349,7 +355,13 @@
                     @* Widget Header ───────────────────────────────── *@
                     @* Fáze 5: no @ondragstart/@ondragend here any more — the move gesture is the
                        shared pointer-drag.js helper attached by dashboard.js on the drag handle
-                       (mouse, touch and pen). The handle button keeps the keyboard grab mode. *@
+                       (mouse, touch and pen). The handle button keeps the keyboard grab mode.
+                       TG-009: the header bar renders in edit mode always (it carries the functional
+                       controls) and in view mode only with WidgetChrome=Always; WidgetChrome=Never
+                       drops the decorative half (icon tile, title, description, host actions,
+                       collapse) even in edit mode, leaving the functional strip. *@
+                    @if (RendersWidgetHeader)
+                    {
                     <div class="tm-widget-header">
 
                         <div class="tm-widget-header-left">
@@ -403,48 +415,56 @@
                                     </button>
                                 </span>
                             }
-                            @if (ShowWidgetIcons)
+                            @if (RendersWidgetHeaderDecor)
                             {
-                                @* 40px category tile (F2): the colour rides the shared
-                                   tm-dashboard-category--{id} class (built-ins) or the inline
-                                   --category-color (host categories), tinted with
-                                   --tm-dashboard-category-tint over the surface. *@
-                                <span class="tm-widget-icon @(definition is null ? "" : DashboardCategoryStyles.GetColorClass(definition.Category))"
-                                      style="@(definition is null ? "" : DashboardCategoryStyles.GetColorStyle(definition.Category, GetCategories()))"
-                                      aria-hidden="true">
-                                    <TmIcon Name="@GetWidgetIcon(definition)" Size="IconSize.Md" />
-                                </span>
-                            }
-                            <div class="tm-widget-heading">
-                                <h3 class="tm-widget-title" id="@GetWidgetTitleId(widget)">@(widget.CustomTitle ?? GetWidgetName(widget))</h3>
-                                @if (ShowWidgetDescriptions && !string.IsNullOrEmpty(definition?.Description))
+                                @if (ShowWidgetIcons)
                                 {
-                                    <p class="tm-widget-description" id="@GetWidgetDescriptionId(widget)">@definition!.Description</p>
+                                    @* 40px category tile (F2): the colour rides the shared
+                                       tm-dashboard-category--{id} class (built-ins) or the inline
+                                       --category-color (host categories), tinted with
+                                       --tm-dashboard-category-tint over the surface. *@
+                                    <span class="tm-widget-icon @(definition is null ? "" : DashboardCategoryStyles.GetColorClass(definition.Category))"
+                                          style="@(definition is null ? "" : DashboardCategoryStyles.GetColorStyle(definition.Category, GetCategories()))"
+                                          aria-hidden="true">
+                                        <TmIcon Name="@GetWidgetIcon(definition)" Size="IconSize.Md" />
+                                    </span>
                                 }
-                            </div>
+                                <div class="tm-widget-heading">
+                                    <h3 class="tm-widget-title" id="@GetWidgetTitleId(widget)">@(widget.CustomTitle ?? GetWidgetName(widget))</h3>
+                                    @if (ShowWidgetDescriptions && !string.IsNullOrEmpty(definition?.Description))
+                                    {
+                                        <p class="tm-widget-description" id="@GetWidgetDescriptionId(widget)">@definition!.Description</p>
+                                    }
+                                </div>
+                            }
                         </div>
 
                         <div class="tm-widget-header-actions">
                             @if (!_isEditMode)
                             {
-                                @* Host slot before the chevron: DOM order = tab order; view mode
-                                   only, because edit mode owns the header. *@
-                                @if (WidgetHeaderActions is not null)
+                                @if (RendersWidgetHeaderDecor)
                                 {
-                                    <div class="tm-widget-host-actions">@WidgetHeaderActions(widget)</div>
-                                }
-                                @if (CanCollapse(widget))
-                                {
-                                    @* aria-describedby points at the widget title, so N identical
-                                       "Collapse" controls are announced with the widget they act on. *@
-                                    <button type="button" class="tm-widget-btn" @onclick="() => ToggleCollapse(widget)"
-                                            aria-expanded="@(widget.IsCollapsed ? "false" : "true")"
-                                            aria-controls="@(widget.IsCollapsed ? null : GetWidgetContentId(widget))"
-                                            aria-describedby="@GetWidgetTitleId(widget)"
-                                            title="@(widget.IsCollapsed ? Loc["TmDashboard_Expand"] : Loc["TmDashboard_Collapse"])"
-                                            aria-label="@(widget.IsCollapsed ? Loc["TmDashboard_Expand"] : Loc["TmDashboard_Collapse"])">
-                                        <TmIcon Name="@(widget.IsCollapsed ? "chevron-down" : "chevron-up")" Size="IconSize.Sm" />
-                                    </button>
+                                    @* Host slot before the chevron: DOM order = tab order; view mode
+                                       only, because edit mode owns the header. TG-009: the slot is
+                                       chrome — a chromeless widget renders no header and no slot; the
+                                       template owns its own actions. *@
+                                    @if (WidgetHeaderActions is not null)
+                                    {
+                                        <div class="tm-widget-host-actions">@WidgetHeaderActions(widget)</div>
+                                    }
+                                    @if (CanCollapse(widget))
+                                    {
+                                        @* aria-describedby points at the widget title, so N identical
+                                           "Collapse" controls are announced with the widget they act on. *@
+                                        <button type="button" class="tm-widget-btn" @onclick="() => ToggleCollapse(widget)"
+                                                aria-expanded="@(widget.IsCollapsed ? "false" : "true")"
+                                                aria-controls="@(widget.IsCollapsed ? null : GetWidgetContentId(widget))"
+                                                aria-describedby="@GetWidgetTitleId(widget)"
+                                                title="@(widget.IsCollapsed ? Loc["TmDashboard_Expand"] : Loc["TmDashboard_Collapse"])"
+                                                aria-label="@(widget.IsCollapsed ? Loc["TmDashboard_Expand"] : Loc["TmDashboard_Collapse"])">
+                                            <TmIcon Name="@(widget.IsCollapsed ? "chevron-down" : "chevron-up")" Size="IconSize.Sm" />
+                                        </button>
+                                    }
                                 }
                             }
                             else
@@ -459,9 +479,21 @@
                             }
                         </div>
                     </div>
-                    
+                    }
+
+                    @* TG-009: without chrome the title stays in the DOM as a visually hidden heading —
+                       it names the widget's region through aria-labelledby above, and the edit-mode
+                       controls point at the same id through aria-describedby. *@
+                    @if (RendersWidgetTitleHidden)
+                    {
+                        <h3 class="tm-widget-title tm-sr-only" id="@GetWidgetTitleId(widget)">@(widget.CustomTitle ?? GetWidgetName(widget))</h3>
+                    }
+
                     @* Widget Content ──────────────────────────────── *@
-                    @if (!widget.IsCollapsed)
+                    @* TG-009: a chromeless widget always renders its content — a persisted collapsed
+                       state has no collapse control to honour, and an (almost) empty card would read
+                       as broken. *@
+                    @if (!widget.IsCollapsed || IsWidgetChromeless)
                     {
                         <div class="tm-widget-content" id="@GetWidgetContentId(widget)">
                             @RenderWidgetContent(widget)

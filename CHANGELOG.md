@@ -760,6 +760,72 @@
   clean; [docs/app-shell.md](docs/app-shell.md) gains the *Variants* section (the three treatments,
   the token, the dark-root re-declaration rule and the host override recipe).
 
+### Added — `TmDashboard` widget chrome without header outside edit mode (plan 92e96b25, phase 8 / TG-009)
+
+- **`WidgetChrome` (`Tempo.Blazor.Components.Dashboard`).** New parameter on `TmDashboard`
+  (default `WidgetChrome.Always` = today's behaviour): `EditOnly` renders the widget header
+  (category icon tile, title, description, collapse chevron, host `WidgetHeaderActions`) only in
+  edit mode; `Never` renders no decorative chrome anywhere — edit mode replaces the header with a
+  minimal functional strip (drag handle on desktop, Move up/down in the compact layouts, plus the
+  remove control), so widgets stay movable and removable and the edit-mode operations (move,
+  hide, settings, add) are unchanged. Switching modes never changes the layout or widget order.
+- **Chromeless accessibility.** Without chrome the widget stays a `role="region"` named by a
+  visually hidden title through `aria-labelledby` (`.tm-widget-title.tm-sr-only`); the
+  `WidgetTemplate` owns the visible title and links. A widget persisted in the collapsed state
+  still renders its content (`tm-widget--collapsed` is not applied to chromeless cards — an
+  (almost) empty card would read as broken), and `.tm-widget--chromeless .tm-widget-content`
+  gains its top padding from the spacing tokens (no header supplies it).
+- **No breaking change.** Without the new parameter nothing moves: the DOM, the a11y tree
+  (chrome-ful widgets are *not* regions), the CSS and the edit-mode behaviour are
+  byte-identical; the enum and the stencil prop are append-only. The only visible difference
+  hosts can opt into is the suppression of their own `WidgetHeaderActions` slot outside edit
+  mode — a chromeless widget renders no header and therefore no slot (the template owns its
+  actions).
+- **Demo.** New `/dashboard-overview` page (nav: *Dashboard Overview*) — the "post-login
+  overview": `WidgetChrome=EditOnly`, chromeless cards whose titles and "view all" links come
+  from the `WidgetTemplate`, and the standard Edit button switching into the full edit mode.
+  New `TmDashboardOverviewDemo_*` keys in all four `DemoResources` tables.
+- **Tests.** bUnit (TDD, RED first): `TmDashboardWidgetChromeTests` — Always renders the full
+  header in both modes and keeps the pre-TG-009 DOM, EditOnly/Never render no chrome outside edit
+  mode, the widget stays a named region in both modes, Never's edit strip keeps drag/remove and
+  the compact move buttons without the decorative chrome, the host `WidgetHeaderActions` slot
+  follows the header, a persisted collapsed widget still renders its content, mode switching
+  leaves the grid geometry byte-identical, and the chromeless CSS contract (token-only padding).
+  `DashboardOverviewPageTests` renders the demo page (EditOnly binding, chromeless regions,
+  template titles/links, localized-string sweep, edit-mode switch). Wireframe stencil: the
+  `TmDashboard` schema gains the `widgetChrome` prop (`always` default | `editOnly` | `never`)
+  and the tempo pack paints chromeless tiles without the icon/label, with a grip hint for
+  editable `never` (`WireframeDashboardRendererTests` extended). E2E: the
+  `DashboardTG009ChromelessE2ETests` WASM lane (4 tests) asserts the chromeless contract in a real
+  browser (one region per widget named through `aria-labelledby`, no `.tm-widget-header` outside
+  edit mode, `data-widget-chrome` markers on the chromeless page only — the default `Always` path
+  emits none, so its DOM stays strictly pre-TG-009, grid geometry stable across the mode switch, no
+  horizontal overflow on a 390 px stage), guards the `/dashboard` baseline (`WidgetChrome=Always`
+  unchanged) and captures locator screenshots — light/dark view, light/dark edit, reduced motion
+  and phone — in `tests/Tempo.Blazor.E2E/__screenshots__/dashboard/tg009/` (every capture asserts
+  the Blazor error UI stays hidden and the PNG is non-trivial; UX-reviewed).
+- **JSON documentation / docs.** The `TmDashboard` overlay documents `WidgetChrome`, the new CSS
+  classes and a chromeless example; the `WidgetChrome` enum overlay participates in the bundle
+  pipeline; aggregates regenerated and `validate --fail-on-drift` clean;
+  [docs/dashboard.md](docs/dashboard.md) gains the *Widget chrome outside edit mode (TG-009)*
+  section.
+- **Review polish (phase-8 nits).** `data-widget-chrome` now renders only for the opt-in values —
+  the default `Always` path keeps the pre-TG-009 DOM byte-identical (E2E baseline asserts the
+  absence); the overview's template title hides while the dashboard is in edit mode (the restored
+  header already carries the title — the duplicate read twice and wrapped narrow cards onto two
+  lines); the seeded demo widgets were re-heighted (My Tasks 5 → 4 rows, Mini Calendar 4 → 3,
+  both bottom-aligned, calendar `MinHeight` 4 → 3) so the chromeless cards no longer read
+  half-empty; and [docs/dashboard.md](docs/dashboard.md) plus the `WidgetChrome` remarks state
+  explicitly that edit mode shifts card content down by roughly the header height while the grid
+  placement and widget order stay untouched.
+- **Review fix (pre-existing defect the phase-8 review exposed).** The `TmStatCard` wireframe
+  schema carried the `trend` prop twice (commit `72b053452`), so any MCP/consumer that builds a
+  name-keyed dictionary from the schema threw `An item with the same key has already been added.
+  Key: trend` — the `DashboardTG009ChromelessE2ETests` full-lane sweep surfaced the broken
+  `Mcp5_AgentScenario_Replay` E2E exactly this way. The stray duplicate (the unreachable
+  "Trend (override)" variant) is removed; the remaining `trend` prop (`up/down/neutral`) is the
+  one `TmStatCard` renders. Only consumers enumerating the duplicate row can notice.
+
 
 ### Fixed — test suite stability (plan 7ba95ed6, phase FZE-1)
 

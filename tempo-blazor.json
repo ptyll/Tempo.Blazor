@@ -10404,6 +10404,16 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "WidgetChrome",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Dashboard",
+      "description": "Chrome of the TmDashboard widget card (TG-009): the header with the category icon tile, title, description, collapse chevron and host WidgetHeaderActions, plus the edit-mode drag handle / move buttons and remove control. Switching modes never changes the grid placement (columns/rows) or the widget order — but entering edit mode adds the header bar above the card content, so the content shifts down by roughly the header height while the widget keeps its exact grid cells.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Dashboard/WidgetChrome.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "WorkflowCanvasDefinition",
       "kind": "Class",
       "category": "Components",
@@ -10476,7 +10486,7 @@
       "kind": "Component",
       "category": "Dashboard",
       "namespace": "Tempo.Blazor.Components.Dashboard",
-      "description": "Configurable dashboard with a CSS grid layout, drag-and-drop widget positioning, resize handles, edit mode, widget selector modal, multiple saved dashboards via IDashboardProvider, and JS interop for grid interactions. Renders directly on the workspace (Appearance=Plain) with a select-like dashboard switcher, optional Title/Subtitle and host HeaderActions; each widget card carries a 40px category icon tile with an optional description and a host WidgetHeaderActions slot.",
+      "description": "Configurable dashboard with a CSS grid layout, drag-and-drop widget positioning, resize handles, edit mode, widget selector modal, multiple saved dashboards via IDashboardProvider, and JS interop for grid interactions. Renders directly on the workspace (Appearance=Plain) with a select-like dashboard switcher, optional Title/Subtitle and host HeaderActions; each widget card carries a 40px category icon tile with an optional description and a host WidgetHeaderActions slot. The WidgetChrome parameter (TG-009) can strip the widget header chrome outside edit mode (EditOnly) or entirely (Never) — chromeless widgets stay regions named by a visually hidden title, and Never keeps a minimal functional edit strip so widgets stay movable.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Dashboard/TmDashboard.razor",
       "documentationStatus": "merged",
@@ -10602,10 +10612,17 @@
           "description": "Owner id passed through to IDashboardProvider; null means the provider's default scope."
         },
         {
+          "name": "WidgetChrome",
+          "type": "WidgetChrome",
+          "isRequired": false,
+          "default": "WidgetChrome.Always",
+          "description": "Chrome of the widget card (TG-009). Always (default) is the pre-TG-009 behaviour; EditOnly renders the full header only in edit mode; Never renders no decorative chrome at all (edit mode keeps a minimal functional strip with the drag handle / move group and the remove control, so widgets stay movable). Without chrome the widget stays a role=\"region\" named by a visually hidden title through aria-labelledby, the WidgetTemplate owns its own title and links, and a persisted collapsed state is ignored (the content always renders). Switching modes never changes the grid placement or the widget order — entering edit mode adds the header above the card content, so the content shifts down by roughly the header height while the widget keeps its exact grid cells."
+        },
+        {
           "name": "WidgetHeaderActions",
           "type": "RenderFragment<WidgetInstance>?",
           "isRequired": false,
-          "description": "Host slot in every widget header (a badge, a view-all link, a period select), receiving the WidgetInstance. Renders before the collapse chevron in view mode only; the host owns its content's accessible names."
+          "description": "Host slot in every widget header (a badge, a view-all link, a period select), receiving the WidgetInstance. Renders before the collapse chevron in view mode only; the host owns its content's accessible names. TG-009: with WidgetChrome=EditOnly or Never the slot does not render outside edit mode (Never: never) — no header, no slot; the WidgetTemplate owns its own actions."
         },
         {
           "name": "WidgetTemplate",
@@ -10659,9 +10676,14 @@
         "tm-widget--dragging",
         "tm-widget--collapsed",
         "tm-widget--minimized",
+        "tm-widget--chromeless",
         "tm-widget-header",
         "tm-widget-header-left",
         "tm-widget-drag-handle",
+        "tm-widget-move-group",
+        "tm-widget-move-btn",
+        "tm-widget-move-btn--up",
+        "tm-widget-move-btn--down",
         "tm-widget-icon",
         "tm-widget-heading",
         "tm-widget-title",
@@ -10694,6 +10716,10 @@
         {
           "title": "Embedding on a contrasting page (pre-2.9.1 look)",
           "code": "<TmDashboard DashboardId=\"overview\"\n             Appearance=\"DashboardAppearance.Card\" />"
+        },
+        {
+          "title": "Chromeless post-login overview (TG-009)",
+          "code": "<TmDashboard DashboardId=\"overview\"\n             WidgetChrome=\"WidgetChrome.EditOnly\"\n             ShowHeader=\"false\">\n    <WidgetTemplate Context=\"widget\">\n        @* Without chrome the template owns the title and the link. *@\n        <h3>@widget.Title</h3>\n        <a href=\"/details/@widget.WidgetId\">View all</a>\n        <OverviewContent Widget=\"widget\" />\n    </WidgetTemplate>\n</TmDashboard>"
         }
       ]
     },
@@ -36498,11 +36524,11 @@
     }
   ],
   "summary": {
-    "itemCount": 457,
-    "manualItemCount": 457,
-    "generatedItemCount": 449,
+    "itemCount": 458,
+    "manualItemCount": 458,
+    "generatedItemCount": 450,
     "generatedOnlyItemCount": 0,
     "componentCount": 237,
-    "publicApiTypeCount": 212
+    "publicApiTypeCount": 213
   }
 }

@@ -1107,8 +1107,6 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("delta",         "Delta",           PropType.Double, "",              cat: "Content"),
                 P("deltaFormat",   "Delta Format",    PropType.String, "",              cat: "Content"),
                 P("comparisonLabel", "Comparison Label", PropType.String, "vs. last month", cat: "Content"),
-                P("trend",         "Trend (override)",PropType.Enum,   "",              cat: "Appearance",
-                    opts: ["", "up", "down", "flat"]),
                 P("positiveIsGood","Positive Is Good", PropType.Bool,   true,            cat: "Appearance"),
                 P("icon",          "Icon",            PropType.Icon,   cat: "Content"),
                 P("sparkline",     "Sparkline",       PropType.Bool,   false,           cat: "Appearance"),
@@ -2714,6 +2712,11 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("editable",     "Editable",      PropType.Bool,   false,       cat: "Behavior"),
                 P("showAddWidget","Show Add Widget",PropType.Bool,  false,       cat: "Appearance"),
                 P("showSwitcher", "Show Switcher", PropType.Bool,   true,        cat: "Appearance"),
+                // TG-009: mirrors TmDashboard.WidgetChrome — the stencil drops the per-tile header
+                // (icon + "Widget N" label) outside edit mode for editOnly and everywhere for
+                // never; editable never keeps a small grip hint for the functional edit strip.
+                P("widgetChrome", "Widget Chrome", PropType.Enum,   "always",    cat: "Appearance",
+                    opts: ["always", "editOnly", "never"]),
             ]
         };
 

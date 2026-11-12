@@ -44,15 +44,19 @@ public class InMemoryDashboardProvider : IDashboardProvider
                     WidgetId = "chart-line",
                     X = 6, Y = 0, Width = 6, Height = 4
                 },
+                // Review nit (TG-009): the tasks/calendar demo bodies are short lists, so the
+                // earlier 5/4-row slots read half-empty (especially on the chromeless overview,
+                // which has no header filling the card top). Both now carry 4 rows and stay
+                // bottom-aligned (Y 3 + H 4 = Y 4 + H 3).
                 new WidgetInstance
                 {
                     WidgetId = "list-tasks",
-                    X = 0, Y = 3, Width = 4, Height = 5
+                    X = 0, Y = 3, Width = 4, Height = 4
                 },
                 new WidgetInstance
                 {
                     WidgetId = "calendar-mini",
-                    X = 4, Y = 4, Width = 4, Height = 4
+                    X = 4, Y = 4, Width = 4, Height = 3
                 }
             }
         };

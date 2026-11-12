@@ -1,0 +1,65 @@
+/* TG-009 (/dashboard-overview): the post-login overview template. The widget card is the library's
+   surface — this stylesheet only lays out the template's own title row and body, from --tm-* tokens
+   in both themes. */
+.tm-demo-ow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-3);
+  block-size: 100%;
+}
+
+.tm-demo-ow__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--tm-space-3);
+}
+
+.tm-demo-ow__title {
+  margin: 0;
+  font-size: var(--tm-font-size-base);
+  font-weight: var(--tm-font-weight-semibold);
+  line-height: var(--tm-line-height-tight);
+  color: var(--tm-text-primary);
+}
+
+/* Edit mode restores the widget header with its own visible title — the template's duplicate would
+   read twice and wrap narrow cards onto two lines, so it hides while the dashboard is in edit mode
+   (the header title keeps naming the card, so nothing is lost from the a11y tree). */
+.demo-section ::deep .tm-dashboard--edit .tm-demo-ow__title {
+  display: none;
+}
+
+.tm-demo-ow__link {
+  flex-shrink: 0;
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-color-primary);
+  text-decoration: none;
+}
+
+.tm-demo-ow__link:hover {
+  text-decoration: underline;
+}
+
+.tm-demo-ow__body {
+  flex: 1;
+  min-block-size: 0;
+}
+
+.tm-demo-ow__tasks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-2);
+  font-size: var(--tm-font-size-sm);
+  line-height: var(--tm-line-height-normal);
+  color: var(--tm-text-primary);
+}
+
+.tm-demo-ow__hint {
+  margin: 0;
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-text-secondary);
+}

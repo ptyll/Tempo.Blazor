@@ -1369,5 +1369,17 @@
   "TmDemo_Modeling_LossSeverity_Warning": "Warning",
   "TmDemo_Modeling_BpmnFileTooLarge": "The file {0} is too large; import supports files up to {1} MB.",
   "TmDemo_Modeling_BpmnMobileHint": "Import is available on wider screens.",
-  "TmDemo_Modeling_BpmnNothingToImport": "Paste or load BPMN XML first."
+  "TmDemo_Modeling_BpmnNothingToImport": "Paste or load BPMN XML first.",
+  "TmDashboardOverviewDemo_PageTitle": "Overview",
+  "TmDashboardOverviewDemo_Heading": "Overview",
+  "TmDashboardOverviewDemo_Subtitle": "Post-login overview: the widgets render without header chrome (WidgetChrome=EditOnly) — each card title and link come from the template. Edit switches to the standard edit mode.",
+  "TmDashboardOverviewDemo_ViewAll": "View all",
+  "TmDashboardOverviewDemo_Task1": "✔ Wireframe stencil parity",
+  "TmDashboardOverviewDemo_Task2": "✔ Dark-mode tint review",
+  "TmDashboardOverviewDemo_Task3": "☐ TG-009: chromeless widgets",
+  "TmDashboardOverviewDemo_Task4": "☐ E2E screenshot review",
+  "TmDashboardOverviewDemo_Event1": "09:30 Standup",
+  "TmDashboardOverviewDemo_Event2": "13:00 Design review",
+  "TmDashboardOverviewDemo_Event3": "16:30 Release check",
+  "TmDashboardOverviewDemo_DefaultHint": "Demo content for this widget renders here through WidgetTemplate."
 }

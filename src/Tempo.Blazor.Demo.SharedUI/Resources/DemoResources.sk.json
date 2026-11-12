@@ -1369,5 +1369,17 @@
   "TmDemo_Modeling_LossSeverity_Warning": "Upozornenie",
   "TmDemo_Modeling_BpmnFileTooLarge": "Súbor {0} je príliš veľký; import podporuje súbory do {1} MB.",
   "TmDemo_Modeling_BpmnMobileHint": "Import je k dispozícii na širších obrazovkách.",
-  "TmDemo_Modeling_BpmnNothingToImport": "Najprv vložte alebo načítajte BPMN XML."
+  "TmDemo_Modeling_BpmnNothingToImport": "Najprv vložte alebo načítajte BPMN XML.",
+  "TmDashboardOverviewDemo_PageTitle": "Prehľad",
+  "TmDashboardOverviewDemo_Heading": "Prehľad",
+  "TmDashboardOverviewDemo_Subtitle": "Prehľad po prihlásení: widgety sa vykresľujú bez hlavičky (WidgetChrome=EditOnly) — titulok a odkaz každej karty dodáva šablóna. Tlačidlom Upraviť prepnete do štandardného režimu úprav.",
+  "TmDashboardOverviewDemo_ViewAll": "Zobraziť všetko",
+  "TmDashboardOverviewDemo_Task1": "✔ Parita wireframe šablón",
+  "TmDashboardOverviewDemo_Task2": "✔ Kontrola tónov tmavého režimu",
+  "TmDashboardOverviewDemo_Task3": "☐ TG-009: widgety bez chrome",
+  "TmDashboardOverviewDemo_Task4": "☐ Kontrola E2E snímok",
+  "TmDashboardOverviewDemo_Event1": "09:30 Standup",
+  "TmDashboardOverviewDemo_Event2": "13:00 Design review",
+  "TmDashboardOverviewDemo_Event3": "16:30 Kontrola vydania",
+  "TmDashboardOverviewDemo_DefaultHint": "Ukážkový obsah tohto widgetu sa vykreslí cez WidgetTemplate."
 }

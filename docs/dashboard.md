@@ -39,6 +39,37 @@ builder.Services.AddSingleton<IWidgetRegistry, MyWidgetRegistry>();
 | `ShowWidgetDescriptions` | `bool` | `false` | Renders `WidgetDefinition.Description` as a secondary line under the widget title. |
 | `WidgetHeaderActions` | `RenderFragment<WidgetInstance>?` | `null` | Host slot in every widget header (badge, "view all" link, period select), rendered before the collapse chevron, view mode only. The host owns its content's accessible names. |
 
+## Widget chrome outside edit mode (TG-009)
+
+`WidgetChrome` (default `Always`) decides whether a widget card renders its header — the icon
+tile, title, description, collapse chevron and `WidgetHeaderActions`, plus the edit-mode drag
+handle / move group and remove control:
+
+| Value | View mode | Edit mode |
+|-------|-----------|-----------|
+| `Always` (default) | full header | full header (today's behaviour) |
+| `EditOnly` | **no header at all** | full header, unchanged |
+| `Never` | no header at all | minimal functional strip: drag handle (desktop) or Move up/down (compact) + remove — widgets stay movable/removable |
+
+Without chrome:
+
+- the widget stays a `role="region"` named by a visually hidden title
+  (`aria-labelledby` → `.tm-widget-title.tm-sr-only`) — the a11y tree never loses the widget
+  name, and the template owns the *visible* title and links (the post-login-overview look);
+- a widget persisted in the collapsed state still renders its content — there is no collapse
+  control to honour, and an (almost) empty card would read as broken
+  (`tm-widget--collapsed` is not applied, `.tm-widget--chromeless .tm-widget-content` pads all
+  four sides through the spacing tokens);
+- switching modes never changes the layout or the widget order — the grid geometry (columns,
+  rows, gap) is a view-mode concern. Note this is about *placement* only: entering edit mode adds
+  the header bar back above each card's content, so the content shifts down by roughly the header
+  height (~50 px) while the widget keeps its exact grid cells; leaving edit mode restores the
+  view-mode rendering.
+
+Hosts that keep `WidgetChrome` at the default see no DOM, a11y-tree or CSS change. The demo
+`/dashboard-overview` renders the "post-login overview" style (section cards with template
+titles and links) and switches into the standard edit mode.
+
 ## Widget model hooks
 
 `WidgetDefinition` (registered in `IWidgetRegistry`) gained `IsCollapsible` (default `true`) —

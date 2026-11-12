@@ -620,6 +620,13 @@
   display: none;
 }
 
+/* TG-009: a chromeless card has no header to supply the content's top padding (the header's own
+   bottom padding is the content's top gap in the chrome-ful card), so the chromeless variant
+   pads all four sides through the spacing tokens. */
+.tm-widget--chromeless .tm-widget-content {
+  padding-top: var(--tm-space-5);
+}
+
 /* UX polish: TmChart draws its SVG in a fixed 600×400 viewBox, so a widget's wide-short card
    scales the whole drawing down (a 6×4 card measures ≈ 0.5) and the 11-unit axis/value text
    landed at ≈ 6px on screen — illegible. This dashboard-scoped override (specificity (0,3,0)

@@ -1,0 +1,97 @@
+@page "/dashboard-overview"
+@using Tempo.Blazor.Components.Dashboard
+@using Tempo.Blazor.Components.Charts
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Interfaces
+@using Tempo.Blazor.Localization
+@using Tempo.Blazor.Models
+@inject ITmLocalizer Loc
+
+<PageTitle>@Loc["TmDashboardOverviewDemo_PageTitle"] – Tempo.Blazor</PageTitle>
+
+<!-- Page Header -->
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">@Loc["TmDashboardOverviewDemo_Heading"]</h1>
+    <p class="text-slate-600 dark:text-slate-400">@Loc["TmDashboardOverviewDemo_Subtitle"]</p>
+</div>
+
+<!-- Post-login overview (TG-009) -->
+<section class="demo-section">
+    @* TG-009: WidgetChrome=EditOnly — outside edit mode every widget renders WITHOUT its header
+       chrome (no icon tile, title, collapse chevron or drag handle). Each card's title and
+       "view all" link come from the WidgetTemplate, so the content reads as section cards of a
+       post-login overview. The Edit button switches into the standard edit mode (full chrome,
+       move/resize/remove); Save/Cancel return here with the layout untouched. *@
+    <TmDashboard @ref="_dashboard"
+                 DashboardId="default"
+                 UserId="@CurrentUserId"
+                 Title="@Loc["TmDashboardOverviewDemo_Heading"]"
+                 WidgetChrome="WidgetChrome.EditOnly">
+        <WidgetTemplate Context="widget">
+            <div class="tm-demo-ow">
+                <div class="tm-demo-ow__head">
+                    <h3 class="tm-demo-ow__title">@NameOf(widget)</h3>
+                    <a class="tm-demo-ow__link" href="@LinkFor(widget)">@Loc["TmDashboardOverviewDemo_ViewAll"]</a>
+                </div>
+                <div class="tm-demo-ow__body">
+                    @switch (widget.WidgetId)
+                    {
+                        case "kpi-revenue":
+                            <div class="tm-demo-kpi">
+                                <span class="tm-demo-kpi-value">€84,120</span>
+                                <span class="tm-demo-kpi-hint">+12.4% vs last month</span>
+                            </div>
+                            break;
+                        case "kpi-users":
+                            <div class="tm-demo-kpi">
+                                <span class="tm-demo-kpi-value">2,845</span>
+                                <span class="tm-demo-kpi-hint">+3.1% vs last month</span>
+                            </div>
+                            break;
+                        case "chart-line":
+                            <TmChart Type="ChartType.Line" Data="VisitorsData" Height="100%" Animated="false" />
+                            break;
+                        case "list-tasks":
+                            <ul class="tm-demo-ow__tasks">
+                                <li>@Loc["TmDashboardOverviewDemo_Task1"]</li>
+                                <li>@Loc["TmDashboardOverviewDemo_Task2"]</li>
+                                <li>@Loc["TmDashboardOverviewDemo_Task3"]</li>
+                                <li>@Loc["TmDashboardOverviewDemo_Task4"]</li>
+                            </ul>
+                            break;
+                        case "calendar-mini":
+                            <ul class="tm-demo-ow__tasks">
+                                <li>@Loc["TmDashboardOverviewDemo_Event1"]</li>
+                                <li>@Loc["TmDashboardOverviewDemo_Event2"]</li>
+                                <li>@Loc["TmDashboardOverviewDemo_Event3"]</li>
+                            </ul>
+                            break;
+                        default:
+                            <p class="tm-demo-ow__hint">@Loc["TmDashboardOverviewDemo_DefaultHint"]</p>
+                            break;
+                    }
+                </div>
+            </div>
+        </WidgetTemplate>
+    </TmDashboard>
+</section>
+
+@code {
+    [Inject] public IWidgetRegistry WidgetRegistry { get; set; } = default!;
+
+    private TmDashboard? _dashboard;
+    private string CurrentUserId => "demo-user";
+
+    private static readonly ChartData VisitorsData = new()
+    {
+        Labels = ["Mon", "Tue", "Wed", "Thu", "Fri"],
+        Datasets = [new ChartDataset { Label = "Visitors", Values = [120, 180, 150, 210, 190], Color = "#3b82f6" }],
+    };
+
+    /// <summary>The template's own title: the definition name (the sr-only region title carries the same text).</summary>
+    private string NameOf(WidgetInstance widget) =>
+        WidgetRegistry.GetWidget(widget.WidgetId)?.Name ?? widget.WidgetId;
+
+    /// <summary>Each overview card links back to the full-chrome dashboard demo.</summary>
+    private static string LinkFor(WidgetInstance widget) => "/dashboard";
+}

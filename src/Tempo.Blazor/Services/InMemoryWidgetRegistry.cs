@@ -203,7 +203,7 @@ public class InMemoryWidgetRegistry : IWidgetRegistry
             DefaultWidth = 4,
             DefaultHeight = 5,
             MinWidth = 3,
-            MinHeight = 4,
+            MinHeight = 3,
             ComponentType = "Tempo.Blazor.Components.Widgets.MiniCalendarWidget"
         });
 

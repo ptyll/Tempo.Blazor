@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Dashboard",
+  "description": "Chrome of the TmDashboard widget card (TG-009): the header with the category icon tile, title, description, collapse chevron and host WidgetHeaderActions, plus the edit-mode drag handle / move buttons and remove control. Switching modes never changes the grid placement (columns/rows) or the widget order — but entering edit mode adds the header bar above the card content, so the content shifts down by roughly the header height while the widget keeps its exact grid cells.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/Dashboard/WidgetChrome.cs",
+  "documentationStatus": "generated",
+  "itemName": "WidgetChrome"
+}

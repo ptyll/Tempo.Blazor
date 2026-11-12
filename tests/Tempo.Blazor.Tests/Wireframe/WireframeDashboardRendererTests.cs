@@ -207,4 +207,42 @@ public class WireframeDashboardRendererTests
         Regex.IsMatch(svg, @"<text[^>]*>Quarterly Revenue Da…</text>").Should().BeTrue(
             "the header title must ellipsize instead of painting under the switcher pill");
     }
+
+    // ── TG-009: widgetChrome mirrors TmDashboard.WidgetChrome ──────────────
+
+    [Fact]
+    public async Task WidgetChromeDefault_Always_PaintsTileHeaders()
+    {
+        var svg = await RenderAsync(800, 500);
+
+        svg.Should().Contain("Widget 1", "the default keeps the pre-TG-009 tile chrome");
+    }
+
+    [Theory]
+    [InlineData("editOnly")]
+    [InlineData("never")]
+    public async Task WidgetChrome_ChromelessTiles_OmitIconAndLabel(string chrome)
+    {
+        var svg = await RenderAsync(800, 500, ("widgetChrome", P(chrome)));
+
+        svg.Should().NotContain("Widget 1", "chromeless tiles carry no per-tile header");
+        HasAttr(svg, "data-region", "widget-grid").Should().BeTrue("the grid itself stays");
+    }
+
+    [Fact]
+    public async Task WidgetChrome_UnknownValue_KeepsTheAlwaysPresentation()
+    {
+        var svg = await RenderAsync(800, 500, ("widgetChrome", P("fancy")));
+
+        svg.Should().Contain("Widget 1", "an unknown value falls back to always, like layoutMode");
+    }
+
+    [Fact]
+    public async Task WidgetChromeNever_Editable_PaintsTheFunctionalGripHint()
+    {
+        var svg = await RenderAsync(800, 500, ("widgetChrome", P("never")), ("editable", P(true)));
+
+        svg.Should().NotContain("Widget 1");
+        svg.Should().Contain("Edit", "the dashboard-level edit affordance stays");
+    }
 }
