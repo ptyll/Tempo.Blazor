@@ -25,11 +25,12 @@ namespace Tempo.Blazor.Components.Charts;
 /// </para>
 /// <para>
 /// <b>Ink.</b> No label carries an inline colour: the placement class selects a
-/// <c>--tm-chart-funnel-label-*</c> token. An inside label additionally picks the ink that actually
-/// contrasts with its resolved fill (the fill decides, because the palette does not change with the
-/// theme) — <c>--tm-chart-funnel-label-inside</c> on a dark fill, <c>…-inside-on-light</c> on a light
-/// one. An outside label sits on the chart surface, so it uses the ordinary secondary text token. The
-/// colour arithmetic lives in <see cref="ChartColorContrast"/>.
+/// <c>--tm-chart-funnel-label-*</c> or <c>--tm-chart-series-n-ink</c> token. An inside label on a
+/// built-in series fill takes the fill's PAIRED ink token (the palette is theme-relative since TG-002);
+/// an inside label on a host colour takes the ink that actually contrasts with its resolved value —
+/// <c>--tm-chart-funnel-label-inside</c> on a dark fill, <c>…-inside-on-light</c> on a light one. An
+/// outside label sits on the chart surface, so it uses the ordinary secondary text token. The colour
+/// arithmetic for host colours lives in <see cref="ChartColorContrast"/>.
 /// </para>
 /// <para>
 /// <b>Type scale.</b> The viewBox is 600 × 400 and the SVG meets into its box, so a funnel in a 672 × 320
@@ -161,7 +162,7 @@ public partial class TmChart
             var botW = WidthOf(s + 1 < values.Length ? values[s + 1] : values[s]);
             var yTop = PT + s * sh;
             var yBot = yTop + sh - 3;
-            var fill = ResolveFillColor(ds, i, Palette[i % Palette.Length]);
+            var fill = ResolveFillColor(ds, i, PaletteColor(i));
             var ci = i;
 
             b.OpenElement(0, "path");
@@ -322,15 +323,22 @@ public partial class TmChart
     };
 
     /// <summary>
-    /// The ink class of one funnel text node. The colour itself is a theme token; the ONLY decision
-    /// made here is which of the two inside inks contrasts with the resolved fill (an outside label is
-    /// ordinary secondary text on the surface and needs no per-fill choice).
+    /// The ink class of one funnel text node. An outside label is ordinary secondary text on the
+    /// surface and needs no per-fill choice. An inside label takes the PAIRED series ink when the fill
+    /// IS a built-in series token (the palette is theme-relative since TG-002, so the ink cannot be
+    /// decided from a fixed lightness table); a host's own colour keeps the
+    /// <see cref="ChartColorContrast"/> decision against its resolved value.
     /// </summary>
     private static string FunnelLabelInkClass(string fill, bool inside)
     {
         if (!inside)
         {
             return "tm-chart__funnel-label--outside";
+        }
+
+        if (ChartSeriesTokens.IndexOf(fill) is { } series)
+        {
+            return $"tm-chart__funnel-label--inside tm-chart__funnel-label--series-{series + 1}";
         }
 
         return ChartColorContrast.IsLight(fill)

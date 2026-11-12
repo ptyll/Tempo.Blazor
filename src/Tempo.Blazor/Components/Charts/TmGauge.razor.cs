@@ -68,7 +68,7 @@ public partial class TmGauge : ComponentBase
         builder.AddAttribute(1, "d", ArcPath(cx, cy, r, startAngle, endAngle, true));
         builder.AddAttribute(2, "class", "tm-gauge__track");
         builder.AddAttribute(3, "fill", "none");
-        builder.AddAttribute(4, "stroke", "var(--tm-color-neutral-200, #e5e7eb)");
+        builder.AddAttribute(4, "stroke", "var(--tm-color-gray-200)");
         builder.AddAttribute(5, "stroke-width", "12");
         builder.AddAttribute(6, "stroke-linecap", "round");
         builder.CloseElement();
@@ -97,7 +97,7 @@ public partial class TmGauge : ComponentBase
         builder.AddAttribute(1, "d", ArcPath(cx, cy, r, startAngle, valEnd));
         builder.AddAttribute(2, "class", "tm-gauge__fill");
         builder.AddAttribute(3, "fill", "none");
-        builder.AddAttribute(4, "stroke", "#3b82f6");
+        builder.AddAttribute(4, "stroke", "var(--tm-chart-series-1)");
         builder.AddAttribute(5, "stroke-width", "12");
         builder.AddAttribute(6, "stroke-linecap", "round");
         builder.CloseElement();
@@ -109,7 +109,7 @@ public partial class TmGauge : ComponentBase
         builder.AddAttribute(2, "cy", F(py));
         builder.AddAttribute(3, "r", "6");
         builder.AddAttribute(4, "class", "tm-gauge__pointer");
-        builder.AddAttribute(5, "fill", "#3b82f6");
+        builder.AddAttribute(5, "fill", "var(--tm-chart-series-1)");
         builder.CloseElement();
 
         // Center value
@@ -123,7 +123,7 @@ public partial class TmGauge : ComponentBase
             builder.AddAttribute(5, "dominant-baseline", "middle");
             builder.AddAttribute(6, "font-size", "22");
             builder.AddAttribute(7, "font-weight", "600");
-            builder.AddAttribute(8, "fill", "var(--tm-color-neutral-900, #111827)");
+            builder.AddAttribute(8, "fill", "var(--tm-text-primary)");
             builder.AddContent(9, FormattedValue);
             builder.CloseElement();
         }
@@ -144,7 +144,7 @@ public partial class TmGauge : ComponentBase
         builder.AddAttribute(3, "r", F(r));
         builder.AddAttribute(4, "class", "tm-gauge__track");
         builder.AddAttribute(5, "fill", "none");
-        builder.AddAttribute(6, "stroke", "var(--tm-color-neutral-200, #e5e7eb)");
+        builder.AddAttribute(6, "stroke", "var(--tm-color-gray-200)");
         builder.AddAttribute(7, "stroke-width", "10");
         builder.CloseElement();
 
@@ -171,7 +171,7 @@ public partial class TmGauge : ComponentBase
         builder.AddAttribute(1, "d", ArcPath(cx, cy, r, -90, valEnd));
         builder.AddAttribute(2, "class", "tm-gauge__fill");
         builder.AddAttribute(3, "fill", "none");
-        builder.AddAttribute(4, "stroke", "#3b82f6");
+        builder.AddAttribute(4, "stroke", "var(--tm-chart-series-1)");
         builder.AddAttribute(5, "stroke-width", "10");
         builder.AddAttribute(6, "stroke-linecap", "round");
         builder.CloseElement();
@@ -186,7 +186,7 @@ public partial class TmGauge : ComponentBase
             builder.AddAttribute(5, "dominant-baseline", "middle");
             builder.AddAttribute(6, "font-size", "20");
             builder.AddAttribute(7, "font-weight", "600");
-            builder.AddAttribute(8, "fill", "var(--tm-color-neutral-900, #111827)");
+            builder.AddAttribute(8, "fill", "var(--tm-text-primary)");
             builder.AddContent(9, FormattedValue);
             builder.CloseElement();
         }
@@ -209,7 +209,7 @@ public partial class TmGauge : ComponentBase
         builder.AddAttribute(3, "width", F(tw));
         builder.AddAttribute(4, "height", F(th));
         builder.AddAttribute(5, "class", "tm-gauge__track");
-        builder.AddAttribute(6, "fill", "var(--tm-color-neutral-200, #e5e7eb)");
+        builder.AddAttribute(6, "fill", "var(--tm-color-gray-200)");
         builder.AddAttribute(7, "rx", F(rx));
         builder.CloseElement();
 
@@ -240,7 +240,7 @@ public partial class TmGauge : ComponentBase
         builder.AddAttribute(3, "width", F(Math.Max(0, fw)));
         builder.AddAttribute(4, "height", F(th));
         builder.AddAttribute(5, "class", "tm-gauge__fill");
-        builder.AddAttribute(6, "fill", "#3b82f6");
+        builder.AddAttribute(6, "fill", "var(--tm-chart-series-1)");
         builder.AddAttribute(7, "rx", F(rx));
         builder.CloseElement();
 
@@ -254,7 +254,7 @@ public partial class TmGauge : ComponentBase
             builder.AddAttribute(4, "text-anchor", "middle");
             builder.AddAttribute(5, "font-size", "14");
             builder.AddAttribute(6, "font-weight", "600");
-            builder.AddAttribute(7, "fill", "var(--tm-color-neutral-900, #111827)");
+            builder.AddAttribute(7, "fill", "var(--tm-text-primary)");
             builder.AddContent(8, FormattedValue);
             builder.CloseElement();
         }
@@ -266,7 +266,7 @@ public partial class TmGauge : ComponentBase
         builder.AddAttribute(3, "class", "tm-gauge__axis-label");
         builder.AddAttribute(4, "text-anchor", "start");
         builder.AddAttribute(5, "font-size", "10");
-        builder.AddAttribute(6, "fill", "var(--tm-color-neutral-500, #6b7280)");
+        builder.AddAttribute(6, "fill", "var(--tm-text-secondary)");
         builder.AddContent(7, F(Min));
         builder.CloseElement();
 
@@ -276,7 +276,7 @@ public partial class TmGauge : ComponentBase
         builder.AddAttribute(3, "class", "tm-gauge__axis-label");
         builder.AddAttribute(4, "text-anchor", "end");
         builder.AddAttribute(5, "font-size", "10");
-        builder.AddAttribute(6, "fill", "var(--tm-color-neutral-500, #6b7280)");
+        builder.AddAttribute(6, "fill", "var(--tm-text-secondary)");
         builder.AddContent(7, F(Max));
         builder.CloseElement();
     };

@@ -65,8 +65,9 @@ public partial class TmSparkline : TmComponentBase
 
     /// <summary>
     /// Stroke/fill colour of a Line, Bar or Area sparkline (any CSS colour value, typically a
-    /// <c>var(--tm-*)</c> token). Null (default) keeps the built-in blue, so existing hosts are
-    /// unaffected. A <see cref="SparklineType.Pie"/> keeps its categorical palette and ignores this.
+    /// <c>var(--tm-*)</c> token). Null (default) keeps the built-in series colour
+    /// (<c>--tm-chart-series-1</c>, theme-relative since TG-002). A <see cref="SparklineType.Pie"/>
+    /// keeps its categorical palette and ignores this.
     /// </summary>
     [Parameter] public string? Color { get; set; }
 
@@ -97,7 +98,7 @@ public partial class TmSparkline : TmComponentBase
     private const int Pad = 4;
 
     /// <summary>The colour a Line/Bar/Area sparkline has always used when the host sets no <see cref="Color"/>.</summary>
-    private const string DefaultColor = "#3b82f6";
+    private const string DefaultColor = "var(--tm-chart-series-1)";
 
     private static int _hintSequence;
 
@@ -186,11 +187,8 @@ public partial class TmSparkline : TmComponentBase
         return Pad + (SvgH - 2 * Pad) - ((value - MinVal) / Range) * (SvgH - 2 * Pad);
     }
 
-    private static readonly string[] Palette =
-    [
-        "#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6",
-        "#ec4899", "#06b6d4", "#84cc16", "#f97316", "#6366f1"
-    ];
+    /// <summary>The categorical palette a Pie sparkline slices through — the shared chart series tokens.</summary>
+    private static string PaletteColor(int index) => ChartSeriesTokens.Series(index);
 
     // ── Tooltip interaction ──
 
@@ -417,8 +415,8 @@ public partial class TmSparkline : TmComponentBase
             builder.OpenElement(0, "path");
             builder.AddAttribute(1, "d", d);
             builder.AddAttribute(2, "class", "tm-sparkline__slice");
-            builder.AddAttribute(3, "fill", Palette[i % Palette.Length]);
-            builder.AddAttribute(4, "stroke", "#fff");
+            builder.AddAttribute(3, "fill", PaletteColor(i));
+            builder.AddAttribute(4, "stroke", "var(--tm-bg-surface)");
             builder.AddAttribute(5, "stroke-width", "1");
             builder.OpenElement(6, "title");
             builder.AddContent(7, F(Data[i]));

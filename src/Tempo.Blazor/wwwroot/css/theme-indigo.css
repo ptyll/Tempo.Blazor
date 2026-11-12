@@ -49,6 +49,11 @@
   /* Cards 12px, controls 8px — the reference radii, not the library default. */
   --tm-radius-card:    0.75rem;
   --tm-radius-control: 0.5rem;
+
+  /* Chart series 1 follows the theme primary: the default theme's primary-500 IS the historical
+     series blue (#3b82f6, so the default theme is unchanged), and the indigo rebrand retints the first
+     series to indigo-500. Re-declared because a :root alias substitutes its var() where declared. */
+  --tm-chart-series-1: var(--tm-color-primary-500);
 }
 
 /* Dark half. The same-element forms cover <html data-tm-theme="indigo" data-theme="dark">;
@@ -85,6 +90,9 @@
 
   /* Slate workspace, one step below the dark surface so cards still lift off it. */
   --tm-bg-workspace: #0b1120;
+
+  /* Dark series 1 follows the dark indigo primary step (indigo-400), matching tokens-dark.css. */
+  --tm-chart-series-1: var(--tm-color-primary-400);
 
   --tm-radius-card:    0.75rem;
   --tm-radius-control: 0.5rem;

@@ -244,6 +244,80 @@ public class TmChartNewTypesTests : LocalizationTestBase
         cells.Should().OnlyContain(c => c.GetAttribute("data-row") == "1");
     }
 
+    [Fact]
+    public void Heatmap_DarkCallerColour_StrongCells_NeverTakeTheThemeInverseInk()
+    {
+        // TG-002 review B1: --tm-text-inverse resolves DARK in dark mode (#0f172a), so the old
+        // norm-only rule painted dark-on-dark on a caller colour like #1d4ed8. The ink is picked
+        // from the FILL now: a strong cell on a dark caller colour takes the light inside ink,
+        // a weak cell the ordinary primary text — never --tm-text-inverse.
+        var data = new ChartData
+        {
+            Labels = ["8:00", "12:00", "16:00"],
+            Datasets =
+            [
+                new ChartDataset { Label = "Pondělí", Values = [2, 10, 4], Color = "#1d4ed8" },
+                new ChartDataset { Label = "Úterý", Values = [0, 6, 8], Color = "#1d4ed8" },
+            ],
+        };
+        var cut = Render(ChartType.Heatmap, data, p => p.Add(x => x.ShowValues, true));
+
+        var cells = cut.FindAll(".tm-chart__heatmap-cell");
+        var values = cells
+            .Select(c => double.Parse(c.GetAttribute("data-value")!, CultureInfo.InvariantCulture))
+            .ToArray();
+        var min = values.Min();
+        var range = values.Max() - min;
+
+        foreach (var cell in cells)
+        {
+            var norm = range > 0
+                ? (double.Parse(cell.GetAttribute("data-value")!, CultureInfo.InvariantCulture) - min) / range
+                : 1;
+            if (norm <= 0.55)
+            {
+                continue;
+            }
+
+            var label = cut.FindAll(".tm-chart__heatmap-value")
+                .Single(text => text.TextContent == cell.GetAttribute("data-value"));
+            label.GetAttribute("fill")
+                .Should().NotBe("var(--tm-text-inverse)",
+                    "a strong cell (norm {0:0.00}) on the dark caller colour #1d4ed8 would read dark-on-dark in dark mode",
+                    norm);
+            label.GetAttribute("fill")
+                .Should().Be("var(--tm-chart-funnel-label-inside)",
+                    "a strong cell on a dark caller colour takes the light inside ink");
+        }
+
+        // Weak cells on the same caller colour fall back to the primary text token.
+        cut.FindAll(".tm-chart__heatmap-value")
+            .Select(text => text.GetAttribute("fill"))
+            .Should().NotContain("var(--tm-text-inverse)");
+    }
+
+    [Fact]
+    public void Heatmap_SeriesTokenFill_TakesThePairedSeriesInk()
+    {
+        // The other half of B1: a fill that IS a built-in series token takes the fill's paired
+        // --tm-chart-series-n-ink (theme-relative since TG-002), not the caller-colour rule.
+        var data = new ChartData
+        {
+            Labels = ["8:00", "12:00", "16:00"],
+            Datasets =
+            [
+                new ChartDataset { Label = "Pondělí", Values = [2, 10, 4], Color = "var(--tm-chart-series-1)" },
+                new ChartDataset { Label = "Úterý", Values = [0, 6, 8], Color = "var(--tm-chart-series-1)" },
+            ],
+        };
+        var cut = Render(ChartType.Heatmap, data, p => p.Add(x => x.ShowValues, true));
+
+        cut.FindAll(".tm-chart__heatmap-value")
+            .Select(text => text.GetAttribute("fill"))
+            .Should().AllBe("var(--tm-chart-series-1-ink)",
+                "a series-token fill takes the paired series ink on every cell");
+    }
+
     // ── Treemap ──────────────────────────────────────────────────────────────
 
     [Fact]

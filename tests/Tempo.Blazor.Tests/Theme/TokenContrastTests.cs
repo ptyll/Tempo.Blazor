@@ -477,6 +477,15 @@ public sealed partial class TokenContrastTests
             "--tm-border-color", "--tm-border-color-control", "--tm-border-color-strong",
             "--tm-cal-range-bg",
             "--tm-cal-comparison-border",
+            // TG-002 (plan 92e96b25, phase 2): the chart series palette is THEME-RELATIVE. Series 1
+            // follows the primary step the way the rest of the dark theme does (500 light → 400 dark,
+            // same convention as --tm-shadow-focus), and the paired label ink is the theme's dark ink —
+            // near-black on the light fills in light mode, --tm-text-inverse on the lifted 400-tones
+            // in dark mode. Both differences are the point of the tokens, not drift.
+            "--tm-chart-series-1",
+            "--tm-chart-series-1-ink", "--tm-chart-series-2-ink", "--tm-chart-series-3-ink",
+            "--tm-chart-series-4-ink", "--tm-chart-series-5-ink", "--tm-chart-series-6-ink",
+            "--tm-chart-series-7-ink", "--tm-chart-series-8-ink",
             // Phase 15b: the canvas backdrop is deliberately THEME-AWARE — light keeps the
             // paper-backdrop gray, dark rides the workspace tone so the white page floats on
             // a dark canvas (docs/diagram-editor.md, carry-forward F8 m5). Renamed to the
@@ -640,6 +649,25 @@ public sealed partial class TokenContrastTests
                 .Should().BeGreaterThanOrEqualTo(3,
                     "focus ring je non-text indikátor a musí držet 3:1 proti povrchu ({0})", dark ? "dark" : "light");
         }
+    }
+
+    /// <summary>
+    /// TG-002 review: the indigo theme retints series 1 to the indigo primary (<c>#6366f1</c> in
+    /// light) — the paired <c>--tm-chart-series-1-ink</c> must keep WCAG AA on THAT fill, resolved
+    /// through the indigo token graph exactly as a consumer loads it. Pins the exact pair so a
+    /// retune of either half goes red.
+    /// </summary>
+    [Fact]
+    public void IndigoSeriesOneInk_HoldsAa_OnTheIndigoSeriesOneFill_InLight()
+    {
+        var tokens = IndigoTokens(dark: false);
+        var fill = ThemeCss.ResolveColour("var(--tm-chart-series-1)", tokens);
+        var ink = ThemeCss.ResolveColour("var(--tm-chart-series-1-ink)", tokens);
+
+        fill.Should().Be("#6366f1", "the indigo theme retints series 1 to the indigo primary-500");
+        ThemeCss.Contrast(ink, fill).Should().BeGreaterThanOrEqualTo(4.5,
+            "the paired series-1 ink ({0}) must clear WCAG AA on the indigo series-1 fill ({1}) — measured {2:0.00}:1",
+            ink, fill, ThemeCss.Contrast(ink, fill));
     }
 
     /// <summary>The indigo file layered over the theme it customises, exactly as a consumer loads it.</summary>

@@ -14,11 +14,12 @@ namespace Tempo.Blazor.Tests.Theme;
 /// </summary>
 public class TmChartFunnelLabelContrastTests
 {
-    /// <summary>The component's built-in funnel palette — the fills an inside label has to survive on.</summary>
+    /// <summary>The component's built-in funnel palette — the series tokens an inside label has to survive on.</summary>
     private static readonly string[] Palette =
     [
-        "#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6",
-        "#ec4899", "#06b6d4", "#84cc16", "#f97316", "#6366f1"
+        "var(--tm-chart-series-1)", "var(--tm-chart-series-2)", "var(--tm-chart-series-3)",
+        "var(--tm-chart-series-4)", "var(--tm-chart-series-5)", "var(--tm-chart-series-6)",
+        "var(--tm-chart-series-7)", "var(--tm-chart-series-8)",
     ];
 
     /// <summary>The funnel's viewBox (<c>TmChart.SvgW</c> × <c>SvgH</c>) — the scale the type compensates.</summary>
@@ -141,23 +142,46 @@ public class TmChartFunnelLabelContrastTests
     [Fact]
     public void FunnelLabelInk_HoldsAaContrast_ForEveryPaletteColour_InBothThemes()
     {
+        // Since TG-002 the palette is theme-relative and every series fill carries a PAIRED ink token
+        // (--tm-chart-series-n-ink): the funnel picks it per stage, so the contract under test is "the
+        // paired ink clears WCAG AA on the resolved fill", in BOTH themes.
         foreach (var dark in new[] { false, true })
         {
             var tokens = ThemeCss.TokenGraph(dark);
-            var white = ThemeCss.ResolveColour("var(--tm-chart-funnel-label-inside)", tokens);
-            var black = ThemeCss.ResolveColour("var(--tm-chart-funnel-label-inside-on-light)", tokens);
 
-            foreach (var fill in Palette)
+            for (var i = 0; i < Palette.Length; i++)
             {
-                var lightInk = ThemeCss.Contrast(white, fill);
-                var darkInk = ThemeCss.Contrast(black, fill);
-                var best = Math.Max(lightInk, darkInk);
+                var fill = ThemeCss.ResolveColour(Palette[i], tokens);
+                var ink = ThemeCss.ResolveColour($"var(--tm-chart-series-{i + 1}-ink)", tokens);
+                var ratio = ThemeCss.Contrast(ink, fill);
 
-                best.Should().BeGreaterThanOrEqualTo(4.5,
-                    "at least one inside-ink token must clear WCAG AA on {0} ({1}) — white {2:0.00}:1, "
-                    + "dark {3:0.00}:1", fill, dark ? "dark" : "light", lightInk, darkInk);
+                ratio.Should().BeGreaterThanOrEqualTo(4.5,
+                    "the paired ink of series {0} must clear WCAG AA on its resolved fill ({1} theme): "
+                    + "fill {2}, ink {3}", i + 1, dark ? "dark" : "light", fill, ink);
             }
         }
+    }
+
+    [Fact]
+    public void FunnelSeriesInkRules_PaintFromThePairedTokens_AndCarryNoHardcodedColour()
+    {
+        var css = ThemeCss.ComponentCss("_chart.css");
+
+        for (var i = 1; i <= 8; i++)
+        {
+            ThemeCss.Property("_chart.css", $".tm-chart__funnel-label--series-{i}", "fill")
+                .Should().Be($"var(--tm-chart-series-{i}-ink)");
+            ThemeCss.RuleDeclarations(css, $".tm-chart__funnel-label--series-{i}").Should().NotContain("#",
+                "a series ink rule must not hardcode a colour — a literal hex cannot follow a theme");
+        }
+
+        // Source order: a series rule paints AFTER the plain --inside rule at equal specificity, so the
+        // paired ink wins when both classes are on the label.
+        var insideAt = css.IndexOf(".tm-chart__funnel-label--inside {", StringComparison.Ordinal);
+        var seriesAt = css.IndexOf(".tm-chart__funnel-label--series-1 {", StringComparison.Ordinal);
+        insideAt.Should().BeGreaterThan(-1);
+        seriesAt.Should().BeGreaterThan(insideAt,
+            "the series ink rules must come after the plain --inside rule (equal specificity)");
     }
 
     [Fact]

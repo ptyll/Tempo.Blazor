@@ -310,7 +310,7 @@
     {
         var ds = Data.Datasets[datasetIndex];
         return Type is ChartType.Pie or ChartType.Donut
-            ? ResolveFillColor(ds, valueIndex, Palette[valueIndex % Palette.Length])
+            ? ResolveFillColor(ds, valueIndex, PaletteColor(valueIndex))
             : ResolveFillColor(ds, valueIndex, ds.BackgroundColor ?? ds.Color);
     }
 
@@ -341,9 +341,7 @@
     private static string F(double v) =>
         v.ToString("0.##", CultureInfo.InvariantCulture);
 
-    private static readonly string[] Palette =
-        ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6",
-         "#ec4899", "#06b6d4", "#84cc16", "#f97316", "#6366f1"];
+    private static string PaletteColor(int index) => ChartSeriesTokens.Series(index);
 
     private List<LegendItem> LegendItemList
     {
@@ -354,7 +352,7 @@
             {
                 for (int i = 0; i < TreeNodes.Count; i++)
                 {
-                    list.Add(new LegendItem(TreeNodes[i].Label, TreeNodes[i].Color ?? Palette[i % Palette.Length]));
+                    list.Add(new LegendItem(TreeNodes[i].Label, TreeNodes[i].Color ?? PaletteColor(i)));
                 }
                 return list;
             }
@@ -517,7 +515,7 @@
             b.AddAttribute(3, "y1", F(zeroY));
             b.AddAttribute(4, "x2", F(PL + CW));
             b.AddAttribute(5, "y2", F(zeroY));
-            b.AddAttribute(6, "stroke", "#9ca3af");
+            b.AddAttribute(6, "stroke", "var(--tm-color-gray-400)");
             b.AddAttribute(7, "stroke-width", "1");
             b.CloseElement();
         }
@@ -645,7 +643,7 @@
                 b.AddAttribute(3, "cy", F(y));
                 b.AddAttribute(4, "r", "4");
                 b.AddAttribute(5, "fill", ds.Color);
-                b.AddAttribute(6, "stroke", "white");
+                b.AddAttribute(6, "stroke", "var(--tm-bg-surface)");
                 b.AddAttribute(7, "stroke-width", "2");
                 b.AddAttribute(8, "onclick",
                     EventCallback.Factory.Create<Microsoft.AspNetCore.Components.Web.MouseEventArgs>(
@@ -740,7 +738,7 @@
                 b.AddAttribute(3, "cy", F(y));
                 b.AddAttribute(4, "r", "4");
                 b.AddAttribute(5, "fill", ds.Color);
-                b.AddAttribute(6, "stroke", "white");
+                b.AddAttribute(6, "stroke", "var(--tm-bg-surface)");
                 b.AddAttribute(7, "stroke-width", "2");
                 b.AddAttribute(8, "onclick",
                     EventCallback.Factory.Create<Microsoft.AspNetCore.Components.Web.MouseEventArgs>(
@@ -933,7 +931,7 @@
             b.AddAttribute(3, "y1", F(zeroY));
             b.AddAttribute(4, "x2", F(PL + CW));
             b.AddAttribute(5, "y2", F(zeroY));
-            b.AddAttribute(6, "stroke", "#9ca3af");
+            b.AddAttribute(6, "stroke", "var(--tm-color-gray-400)");
             b.AddAttribute(7, "stroke-width", "1");
             b.CloseElement();
         }
@@ -1070,7 +1068,7 @@
                     b.AddAttribute(3, "cy", F(y));
                     b.AddAttribute(4, "r", "4");
                     b.AddAttribute(5, "fill", ds.Color);
-                    b.AddAttribute(6, "stroke", "white");
+                    b.AddAttribute(6, "stroke", "var(--tm-bg-surface)");
                     b.AddAttribute(7, "stroke-width", "2");
                     b.AddAttribute(8, "onclick",
                         EventCallback.Factory.Create<Microsoft.AspNetCore.Components.Web.MouseEventArgs>(
@@ -1148,8 +1146,8 @@
             b.OpenElement(0, "path");
             b.AddAttribute(1, "class", "tm-chart__slice");
             b.AddAttribute(2, "d", path);
-            b.AddAttribute(3, "fill", ResolveFillColor(ds, i, Palette[i % Palette.Length]));
-            b.AddAttribute(4, "stroke", "white");
+            b.AddAttribute(3, "fill", ResolveFillColor(ds, i, PaletteColor(i)));
+            b.AddAttribute(4, "stroke", "var(--tm-bg-surface)");
             b.AddAttribute(5, "stroke-width", "2");
             b.AddAttribute(6, "onclick",
                 EventCallback.Factory.Create<Microsoft.AspNetCore.Components.Web.MouseEventArgs>(
@@ -1422,7 +1420,7 @@
     private string ResolveLegendFillColor(ChartDataset dataset, int index)
     {
         return Type is ChartType.Pie or ChartType.Donut or ChartType.Funnel or ChartType.Treemap
-            ? ResolveFillColor(dataset, index, Palette[index % Palette.Length])
+            ? ResolveFillColor(dataset, index, PaletteColor(index))
             : ResolveFillColor(dataset, index, dataset.BackgroundColor ?? dataset.Color);
     }
 
@@ -1442,7 +1440,7 @@
         b.AddAttribute(3, "y1", F(y1));
         b.AddAttribute(4, "x2", F(x2));
         b.AddAttribute(5, "y2", F(y2));
-        b.AddAttribute(6, "stroke", "#e5e7eb");
+        b.AddAttribute(6, "stroke", "var(--tm-color-gray-200)");
         b.AddAttribute(7, "stroke-width", "1");
         b.AddAttribute(8, "stroke-dasharray", "4,4");
         b.CloseElement();
@@ -1457,7 +1455,7 @@
         b.AddAttribute(3, "y", F(y));
         b.AddAttribute(4, "text-anchor", anchor);
         b.AddAttribute(5, "font-size", "11");
-        b.AddAttribute(6, "fill", "#6b7280");
+        b.AddAttribute(6, "fill", "var(--tm-color-gray-500)");
         b.AddContent(7, content);
         b.CloseElement();
     }
@@ -1693,6 +1691,7 @@
                 var x = PL + c * cw2;
                 var cdi = di;
                 var cc = c;
+                var fill = ResolveFillColor(ds, c, ds.BackgroundColor ?? ds.Color);
 
                 b.OpenElement(0, "rect");
                 b.AddAttribute(1, "class", "tm-chart__heatmap-cell");
@@ -1701,7 +1700,7 @@
                 b.AddAttribute(4, "width", F(Math.Max(cw2 - 2, 0)));
                 b.AddAttribute(5, "height", F(Math.Max(ch2 - 2, 0)));
                 b.AddAttribute(6, "rx", "2");
-                b.AddAttribute(7, "fill", ResolveFillColor(ds, c, ds.BackgroundColor ?? ds.Color));
+                b.AddAttribute(7, "fill", fill);
                 b.AddAttribute(8, "fill-opacity", F(0.08 + 0.92 * norm));
                 b.AddAttribute(9, "data-row", cdi.ToString(CultureInfo.InvariantCulture));
                 b.AddAttribute(10, "data-col", cc.ToString(CultureInfo.InvariantCulture));
@@ -1719,9 +1718,11 @@
                 if (ShowValues && cw2 > 26 && ch2 > 16)
                 {
                     // SvgTextColored sets pointer-events:none so the label never steals the cell's
-                    // hover; dark cells get white text for contrast.
+                    // hover; the ink is picked from the FILL (see HeatmapValueInk), never from the
+                    // theme alone — --tm-text-inverse is dark in dark mode, which would read
+                    // dark-on-dark on a caller colour like #1d4ed8.
                     SvgTextColored(b, "tm-chart__heatmap-value", x + cw2 / 2, y + ch2 / 2 + 4, F(val),
-                        "middle", norm > 0.55 ? "#ffffff" : "#4b5563", 11);
+                        "middle", HeatmapValueInk(fill, norm), 11);
                 }
             }
         }
@@ -1730,6 +1731,27 @@
         {
             SvgText(b, "tm-chart__axis-label", PL + c * cw2 + cw2 / 2, PT + CH + 16, Data.Labels[c], "middle");
         }
+    }
+
+    /// <summary>
+    /// The ink of one heatmap value label, picked from the cell's FILL — never from the theme alone.
+    /// A built-in series fill takes the fill's PAIRED ink token (<see cref="ChartSeriesTokens.SeriesInk"/>,
+    /// theme-relative since TG-002); a caller colour keeps the norm-and-lightness decision: a strong
+    /// cell (<paramref name="norm"/> &gt; 0.55) on a DARK fill takes the light inside ink, everything
+    /// else the ordinary primary text token. The old norm-only rule emitted
+    /// <c>var(--tm-text-inverse)</c>, which resolves DARK in dark mode — dark-on-dark on a caller
+    /// colour like <c>#1d4ed8</c>.
+    /// </summary>
+    private static string HeatmapValueInk(string fill, double norm)
+    {
+        if (ChartSeriesTokens.IndexOf(fill) is { } series)
+        {
+            return ChartSeriesTokens.SeriesInk(series);
+        }
+
+        return norm > 0.55 && !ChartColorContrast.IsLight(fill)
+            ? "var(--tm-chart-funnel-label-inside)"
+            : "var(--tm-text-primary)";
     }
 
     // ── Treemap (squarified; flat from Data or hierarchical from TreeNodes) ──
@@ -1760,7 +1782,7 @@
                 var (topIndex, node) = visible[g];
                 var (gx, gy, gw, gh) = rects[g];
                 if (gw <= 0 || gh <= 0) continue;
-                var color = node.Color ?? Palette[topIndex % Palette.Length];
+                var color = node.Color ?? PaletteColor(topIndex);
 
                 b.OpenElement(0, "rect");
                 b.AddAttribute(1, "class", "tm-chart__treemap-group");
@@ -1812,7 +1834,7 @@
         for (int t = 0; t < items.Count; t++)
         {
             var (index, value) = items[t];
-            var fill = ResolveFillColor(ds, index, Palette[index % Palette.Length]);
+            var fill = ResolveFillColor(ds, index, PaletteColor(index));
             EmitTreemapTile(b, flatRects[t], Data.Labels[index], ds.Label, value, fill, 1, Data.Labels[index], index);
         }
     }
@@ -1837,7 +1859,7 @@
         b.AddAttribute(5, "height", F(rect.H));
         b.AddAttribute(6, "fill", fill);
         b.AddAttribute(7, "fill-opacity", F(opacity));
-        b.AddAttribute(8, "stroke", "#ffffff");
+        b.AddAttribute(8, "stroke", "var(--tm-bg-surface)");
         b.AddAttribute(9, "data-path", path);
         b.AddAttribute(10, "data-value", F(value));
         if (dataIndex is { } di)
@@ -1856,15 +1878,25 @@
 
         if (rect.W > 56 && rect.H > 20)
         {
+            // A series fill takes its PAIRED theme ink (dark on a light 400-tone in dark mode, dark on
+            // the dark 500-tones in light mode); a host's own colour keeps the historical white label.
+            var ink = TreemapLabelInk(fill);
             SvgTextColored(b, "tm-chart__treemap-label", rect.X + rect.W / 2, rect.Y + rect.H / 2 + 4,
-                shortLabel, "middle", "#ffffff", 10);
+                shortLabel, "middle", ink, 10);
             if (ShowValues && rect.H > 36)
             {
                 SvgTextColored(b, "tm-chart__treemap-value", rect.X + rect.W / 2, rect.Y + rect.H / 2 + 18,
-                    F(value), "middle", "#ffffff", 9);
+                    F(value), "middle", ink, 9);
             }
         }
     }
+
+    /// <summary>
+    /// The ink a treemap label takes on <paramref name="fill"/>: the paired series ink for a built-in
+    /// series token (theme-correct in both themes), white for a host colour (the pre-TG-002 behavior).
+    /// </summary>
+    private static string TreemapLabelInk(string fill) =>
+        ChartSeriesTokens.IndexOf(fill) is { } series ? ChartSeriesTokens.SeriesInk(series) : "var(--tm-color-white)";
 
     private async Task HandleTreeClickAsync(int leafIndex)
     {

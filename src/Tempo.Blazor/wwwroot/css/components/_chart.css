@@ -518,6 +518,18 @@
     fill: var(--tm-chart-funnel-label-inside-on-light);
 }
 
+/* A funnel stage filled from the built-in series palette takes the fill's PAIRED ink token — the
+   palette is theme-relative since TG-002 (dark lifts it to the light 400-tones), so the ink that
+   reads on it is a token pair, not a fixed-lightness table. */
+.tm-chart__funnel-label--series-1 { fill: var(--tm-chart-series-1-ink); }
+.tm-chart__funnel-label--series-2 { fill: var(--tm-chart-series-2-ink); }
+.tm-chart__funnel-label--series-3 { fill: var(--tm-chart-series-3-ink); }
+.tm-chart__funnel-label--series-4 { fill: var(--tm-chart-series-4-ink); }
+.tm-chart__funnel-label--series-5 { fill: var(--tm-chart-series-5-ink); }
+.tm-chart__funnel-label--series-6 { fill: var(--tm-chart-series-6-ink); }
+.tm-chart__funnel-label--series-7 { fill: var(--tm-chart-series-7-ink); }
+.tm-chart__funnel-label--series-8 { fill: var(--tm-chart-series-8-ink); }
+
 .tm-chart__funnel-label--outside {
     fill: var(--tm-chart-funnel-label-outside);
 }

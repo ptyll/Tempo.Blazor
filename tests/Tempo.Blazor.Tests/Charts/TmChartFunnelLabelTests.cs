@@ -21,11 +21,12 @@ namespace Tempo.Blazor.Tests.Charts;
 /// </summary>
 public class TmChartFunnelLabelTests : LocalizationTestBase
 {
-    /// <summary>The component's built-in funnel palette — the colours the ink guard has to cover.</summary>
+    /// <summary>The component's built-in funnel palette — the series tokens the ink guard has to cover.</summary>
     private static readonly string[] Palette =
     [
-        "#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6",
-        "#ec4899", "#06b6d4", "#84cc16", "#f97316", "#6366f1"
+        "var(--tm-chart-series-1)", "var(--tm-chart-series-2)", "var(--tm-chart-series-3)",
+        "var(--tm-chart-series-4)", "var(--tm-chart-series-5)", "var(--tm-chart-series-6)",
+        "var(--tm-chart-series-7)", "var(--tm-chart-series-8)",
     ];
 
     private static ChartData FunnelData => new()
@@ -355,6 +356,15 @@ public class TmChartFunnelLabelTests : LocalizationTestBase
     private static string? SelectorInk(AngleSharp.Dom.IElement label)
     {
         var classes = label.GetAttribute("class") ?? "";
+        var series = System.Text.RegularExpressions.Regex.Match(
+            classes, @"tm-chart__funnel-label--series-(\d)");
+        if (series.Success)
+        {
+            // A built-in series fill takes its paired ink token (TG-002): the palette is theme-relative,
+            // so the ink is a token pair, not a fixed-lightness verdict.
+            return $"var(--tm-chart-series-{series.Groups[1].Value}-ink)";
+        }
+
         if (classes.Contains("tm-chart__funnel-label--on-light"))
         {
             return "var(--tm-chart-funnel-label-inside-on-light)";

@@ -358,7 +358,7 @@ public class TmChartTests : LocalizationTestBase
             .Add(x => x.Type, ChartType.Donut)
             .Add(x => x.Data, data));
 
-        AssertFillAttributes(cut.FindAll("path.tm-chart__slice"), ["#dc2626", "#ea580c", "#10b981"]);
+        AssertFillAttributes(cut.FindAll("path.tm-chart__slice"), ["#dc2626", "#ea580c", "var(--tm-chart-series-3)"]);
     }
 
     [Fact]
@@ -371,7 +371,10 @@ public class TmChartTests : LocalizationTestBase
             .Add(x => x.Type, ChartType.Bar)
             .Add(x => x.Data, SimpleBarData));
 
-        AssertFillAttributes(donutCut.FindAll("path.tm-chart__slice"), ["#3b82f6", "#ef4444", "#10b981"]);
+        AssertFillAttributes(donutCut.FindAll("path.tm-chart__slice"),
+            ["var(--tm-chart-series-1)", "var(--tm-chart-series-2)", "var(--tm-chart-series-3)"]);
+        // The bar dataset carries its own Color — a caller-passed colour renders verbatim (the one
+        // documented exception to the token-only markup contract).
         AssertFillAttributes(barCut.FindAll("rect.tm-chart__bar"), ["#3b82f6", "#3b82f6", "#3b82f6"]);
     }
 

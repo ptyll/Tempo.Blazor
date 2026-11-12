@@ -53,8 +53,8 @@ public class TmStockChartTests : LocalizationTestBase
             .Add(x => x.Type, StockChartType.Candlestick));
 
         var body = cut.Find("rect.tm-stock-chart__body");
-        var fill = body.GetAttribute("fill") ?? "";
-        fill.Should().MatchRegex("green|22c55e|10b981");
+        body.GetAttribute("fill").Should().Be("var(--tm-chart-positive)",
+            "a bull candle takes the semantic positive token since TG-002");
     }
 
     [Fact]
@@ -71,8 +71,8 @@ public class TmStockChartTests : LocalizationTestBase
             .Add(x => x.Type, StockChartType.Candlestick));
 
         var body = cut.Find("rect.tm-stock-chart__body");
-        var fill = body.GetAttribute("fill") ?? "";
-        fill.Should().MatchRegex("red|ef4444|f87171");
+        body.GetAttribute("fill").Should().Be("var(--tm-chart-negative)",
+            "a bear candle takes the semantic negative token since TG-002");
     }
 
     [Fact]

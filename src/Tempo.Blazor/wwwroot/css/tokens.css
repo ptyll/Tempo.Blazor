@@ -484,6 +484,40 @@
 
   /* ── Charts ── */
   --tm-chart-area-fill-opacity: 0.25;
+  /* ── Chart series palette ─────────────────────────────────────
+     The categorical colours every chart component cycles through (TmChart, TmSparkline, TmSankeyChart,
+     TmGauge, TmStockChart). Series 1 follows the theme primary, so a rebrand (theme-indigo.css, or a
+     host overriding the primary scale) retints the first series automatically; the other seven are
+     hue-fixed accents. LIGHT values equal the pre-token palette hexes, so light mode is pixel-identical.
+     DARK lifts them to the 400-tones (tokens-dark.css) so a series clears 3:1+ on the dark surface —
+     same convention as --tm-category-*. Each series has a PAIRED ink (--tm-chart-series-n-ink): the ink
+     a label drawn ON that fill must take in the current theme (funnel/treemap pick it per stage). */
+  --tm-chart-series-1: var(--tm-color-primary-500);
+  --tm-chart-series-2: #ef4444; /* red-500   */
+  --tm-chart-series-3: #10b981; /* emerald-500 */
+  --tm-chart-series-4: #f59e0b; /* amber-500 */
+  --tm-chart-series-5: #8b5cf6; /* violet-500 */
+  --tm-chart-series-6: #ec4899; /* pink-500  */
+  --tm-chart-series-7: #06b6d4; /* cyan-500  */
+  --tm-chart-series-8: #84cc16; /* lime-500  */
+  /* Ink ON a series fill (light theme): every light series fill is dark enough for the dark ink — the
+     lightest (#84cc16, luminance 0.48) takes black at 10.6:1 and the darkest luminance that still picks
+     the dark ink is #8b5cf6 at 4.95:1, so ONE ink serves all eight. A host re-pointing a series to a
+     light colour overrides the paired ink token with --tm-chart-funnel-label-inside (white). */
+  --tm-chart-series-1-ink: var(--tm-chart-funnel-label-inside-on-light);
+  --tm-chart-series-2-ink: var(--tm-chart-funnel-label-inside-on-light);
+  --tm-chart-series-3-ink: var(--tm-chart-funnel-label-inside-on-light);
+  --tm-chart-series-4-ink: var(--tm-chart-funnel-label-inside-on-light);
+  --tm-chart-series-5-ink: var(--tm-chart-funnel-label-inside-on-light);
+  --tm-chart-series-6-ink: var(--tm-chart-funnel-label-inside-on-light);
+  --tm-chart-series-7-ink: var(--tm-chart-funnel-label-inside-on-light);
+  --tm-chart-series-8-ink: var(--tm-chart-funnel-label-inside-on-light);
+  /* Semantic chart colours: gains/losses and neutral chrome (e.g. a stock chart's wick). They alias the
+     theme semantic tokens, so tokens-dark.css re-declares the SAME expression (a :root alias would
+     freeze the light colour — the documented convention). */
+  --tm-chart-positive: var(--tm-color-success);
+  --tm-chart-negative: var(--tm-color-danger);
+  --tm-chart-neutral:  var(--tm-color-gray-500);
   /* Font size of the tick/value/label text inside a dashboard widget chart (20 units default,
      which renders ≈ 10 px at the widget chart's viewBox scale). Declared so the strict token
      audit no longer counts the alias as undefined; the value matches the stylesheet fallback. */

@@ -2,7 +2,7 @@
   "itemName": "TmSparkline",
   "kind": "Component",
   "category": "Charts",
-  "description": "Compact inline SVG mini-chart for a single data series. Renders Line, Bar, Area, or Pie variants and shows an empty state when no data is supplied; sized to fit inline within tables, cards, or text.",
+  "description": "Compact inline SVG mini-chart for a single data series. Renders Line, Bar, Area, or Pie variants and shows an empty state when no data is supplied; sized to fit inline within tables, cards, or text. The default stroke/fill and the Pie slice palette resolve the token-driven chart series palette (--tm-chart-series-1..8, theme-relative since TG-002); Color overrides the stroke/fill with any CSS colour and renders verbatim. A serialized sparkline SVG carries those var(--tm-chart-*) references, resolved only under the Tempo stylesheet: before serializing, copy getComputedStyle(el).fill/.stroke onto each node as attributes (like _bakePaints in wireframe-designer.js), or override the tokens on the exported root.",
   "packageId": "Tempo.Blazor",
   "namespace": "Tempo.Blazor.Components.Charts",
   "sourcePath": "src/Tempo.Blazor/Components/Charts/TmSparkline.razor",

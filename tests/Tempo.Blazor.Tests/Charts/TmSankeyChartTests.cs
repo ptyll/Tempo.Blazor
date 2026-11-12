@@ -42,7 +42,8 @@ public class TmSankeyChartTests : LocalizationTestBase
         var nodes = cut.FindAll("rect.tm-sankey__node");
 
         nodes[0].GetAttribute("fill").Should().Be("#123456");
-        nodes[1].GetAttribute("fill").Should().Be("#ef4444");
+        nodes[1].GetAttribute("fill").Should().Be("var(--tm-chart-series-2)",
+            "the palette fallback is the token-driven series colour since TG-002");
     }
 
     [Fact]
@@ -171,7 +172,7 @@ public class TmSankeyChartTests : LocalizationTestBase
             .Add(component => component.Data, data)
             .Add(component => component.LinkOpacity, double.NaN));
 
-        cut.Find("rect.tm-sankey__node").GetAttribute("fill").Should().Be("#3b82f6");
+        cut.Find("rect.tm-sankey__node").GetAttribute("fill").Should().Be("var(--tm-chart-series-1)");
         cut.Find("path.tm-sankey__link").GetAttribute("stroke-opacity").Should().Be("0.4");
     }
 

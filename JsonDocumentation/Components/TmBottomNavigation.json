@@ -37,7 +37,7 @@
       "type": "string?",
       "isRequired": false,
       "default": "Localized TmBottomNavigation_AriaLabel resource (\"Main navigation\")",
-      "description": "Accessible name of the navigation bar. Defaults to the localized resource; set to override it (e.g. when the bar navigates a subsection rather than the application's top-level destinations)."
+      "description": "Accessible name of the navigation bar. A null or whitespace value falls back to the localized resource; set a value to override it (e.g. when the bar navigates a subsection rather than the application's top-level destinations). TmAppShell passes its own NavigationName (SidebarNavLabel or the localized default) so the bar names the same navigation as the shell's column/drawer."
     }
   ],
   "cssClasses": [

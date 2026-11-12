@@ -202,9 +202,37 @@
   --tm-chart-area-fill-opacity: 0.3;
   /* Funnel stage labels — the SAME expression as tokens.css, re-declared here on purpose: an alias
      declared only on :root substitutes its var() where it is DECLARED, so a dark theme switched on a
-     PARENT element would keep the light secondary ink forever. The two inside inks stay literal
-     (they sit on a palette fill, which does not change with the theme). */
+     PARENT element would keep the light secondary ink forever. */
   --tm-chart-funnel-label-outside: var(--tm-text-secondary);
+
+  /* Chart series palette — the dark 400-tones. Since TG-002 the palette is theme-relative (the light
+     values fail on dark surfaces, e.g. lime-500 at 1.9:1 on #1e293b), so the dark theme re-declares
+     every slot, the SAME convention as --tm-category-* above. Series 1 follows the dark primary step
+     (primary-400), series 2–8 lift one tone each. */
+  --tm-chart-series-1: var(--tm-color-primary-400);
+  --tm-chart-series-2: #f87171; /* red-400     */
+  --tm-chart-series-3: #34d399; /* emerald-400 */
+  --tm-chart-series-4: #fbbf24; /* amber-400   */
+  --tm-chart-series-5: #a78bfa; /* violet-400  */
+  --tm-chart-series-6: #f472b6; /* pink-400    */
+  --tm-chart-series-7: #22d3ee; /* cyan-400    */
+  --tm-chart-series-8: #a3e635; /* lime-400    */
+  /* Ink ON a dark series fill: every dark 400-tone is LIGHT (luminance 0.30–0.65), so the dark theme
+     ink (--tm-text-inverse, #0f172a) takes all eight at 5.6:1 or better. The SAME expression as
+     tokens.css, re-declared here on purpose (the :root declaration froze the light ink). */
+  --tm-chart-series-1-ink: var(--tm-text-inverse);
+  --tm-chart-series-2-ink: var(--tm-text-inverse);
+  --tm-chart-series-3-ink: var(--tm-text-inverse);
+  --tm-chart-series-4-ink: var(--tm-text-inverse);
+  --tm-chart-series-5-ink: var(--tm-text-inverse);
+  --tm-chart-series-6-ink: var(--tm-text-inverse);
+  --tm-chart-series-7-ink: var(--tm-text-inverse);
+  --tm-chart-series-8-ink: var(--tm-text-inverse);
+  /* Semantic chart colours — SAME expressions as tokens.css, re-declared so a parent-scoped dark theme
+     recomputes them against the brightened dark semantic tokens. */
+  --tm-chart-positive: var(--tm-color-success);
+  --tm-chart-negative: var(--tm-color-danger);
+  --tm-chart-neutral:  var(--tm-color-gray-500);
 
   /* ── Redesign surfaces (F0) ─────────────────────────────────── */
   /* Re-declared, not inherited: a custom property substitutes its var() where it is
@@ -461,6 +489,27 @@
   --tm-shadow-focus:                0 0 0 3px rgb(from var(--tm-color-primary-500) r g b / 0.4);
   --tm-chart-area-fill-opacity:     0.25;
   --tm-chart-funnel-label-outside:  var(--tm-text-secondary);
+  /* Light-island reset: a light island nested in a dark region keeps the LIGHT series palette (and the
+     dark ink that reads on it), the same values tokens.css declares. */
+  --tm-chart-series-1:              var(--tm-color-primary-500);
+  --tm-chart-series-2:              #ef4444;
+  --tm-chart-series-3:              #10b981;
+  --tm-chart-series-4:              #f59e0b;
+  --tm-chart-series-5:              #8b5cf6;
+  --tm-chart-series-6:              #ec4899;
+  --tm-chart-series-7:              #06b6d4;
+  --tm-chart-series-8:              #84cc16;
+  --tm-chart-series-1-ink:          var(--tm-chart-funnel-label-inside-on-light);
+  --tm-chart-series-2-ink:          var(--tm-chart-funnel-label-inside-on-light);
+  --tm-chart-series-3-ink:          var(--tm-chart-funnel-label-inside-on-light);
+  --tm-chart-series-4-ink:          var(--tm-chart-funnel-label-inside-on-light);
+  --tm-chart-series-5-ink:          var(--tm-chart-funnel-label-inside-on-light);
+  --tm-chart-series-6-ink:          var(--tm-chart-funnel-label-inside-on-light);
+  --tm-chart-series-7-ink:          var(--tm-chart-funnel-label-inside-on-light);
+  --tm-chart-series-8-ink:          var(--tm-chart-funnel-label-inside-on-light);
+  --tm-chart-positive:              var(--tm-color-success);
+  --tm-chart-negative:              var(--tm-color-danger);
+  --tm-chart-neutral:               var(--tm-color-gray-500);
   --tm-bg-workspace:                var(--tm-bg-page);
   --tm-canvas-backdrop:            var(--tm-paper-backdrop);
   --tm-radius-card:                 var(--tm-radius-lg);

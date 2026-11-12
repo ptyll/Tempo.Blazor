@@ -461,6 +461,28 @@ public class TmAppShellMobileTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Mobile_BottomNavigation_NamesTheBarAfterTheShellsNavigationName()
+    {
+        // Phase-1 review carry-over (plan 92e96b25): the bar is the shell's navigation landmark, so it
+        // carries the SAME accessible name the shell gives its navigation column / drawer (NavigationName,
+        // i.e. SidebarNavLabel or the localized TmAppShell_NavLabel) — never a generic name that would
+        // make two landmarks on the page indistinguishable.
+        var cut = RenderShell(extra: p => p.Add(x => x.MobileNav, AppShellMobileNav.BottomNavigation));
+
+        cut.FindComponent<TmBottomNavigation>().Instance.AriaLabel.Should().Be("Main navigation",
+            "the default NavigationName is the localized TmAppShell_NavLabel");
+        cut.Find("[data-region='bottom-nav'] nav").GetAttribute("aria-label").Should().Be("Main navigation");
+
+        var named = RenderShell(extra: p =>
+        {
+            p.Add(x => x.MobileNav, AppShellMobileNav.BottomNavigation);
+            p.Add(x => x.SidebarNavLabel, "Workspace");
+        });
+        named.Find("[data-region='bottom-nav'] nav").GetAttribute("aria-label").Should().Be("Workspace",
+            "a host-set SidebarNavLabel renames the bar together with the navigation column");
+    }
+
+    [Fact]
     public void Mobile_BottomNavigation_DerivesItsEntriesFromTheNavigationModel()
     {
         var cut = RenderShell(extra: p => p.Add(x => x.MobileNav, AppShellMobileNav.BottomNavigation));

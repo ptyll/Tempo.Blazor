@@ -60,14 +60,28 @@ public sealed class TmChartColorsE2ETests : WasmTestBase
     }
 
     [TestMethod]
-    public async Task TmChart_Donut_DefaultPalette_KeepsBackwardCompatibility()
+    public async Task TmChart_Donut_DefaultPalette_UsesSeriesTokens_AndComputesTheLegacyColours()
     {
         var page = await OpenChartsPageAsync();
         var chart = page.Locator("[data-testid='chart-donut-default']");
 
+        // The fill ATTRIBUTE carries the design token since TG-002 (no hardcoded hex in the library
+        // markup)…
         await AssertFillAttributesAsync(
             chart.Locator("path.tm-chart__slice"),
-            ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6"]);
+            ["var(--tm-chart-series-1)", "var(--tm-chart-series-2)", "var(--tm-chart-series-3)",
+             "var(--tm-chart-series-4)", "var(--tm-chart-series-5)"]);
+
+        // …while the COMPUTED fills stay byte-identical to the pre-token palette in the light theme,
+        // so an existing host's charts look exactly the same (getComputedStyle returns rgb(), so the
+        // comparison normalises to #rrggbb).
+        var computedFills = await chart.Locator("path.tm-chart__slice").EvaluateAllAsync<string[]>(
+            "elements => elements.map(e => getComputedStyle(e).fill)");
+        CollectionAssert.AreEqual(
+            new[] { "#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6" },
+            computedFills.Select(ParseHex).ToArray(),
+            $"Expected computed fills: #3b82f6, #ef4444, #10b981, #f59e0b, #8b5cf6; actual: {string.Join(", ", computedFills)}");
+
         await CaptureChartAsync(chart, "tm-chart-colors-donut-default");
     }
 
@@ -100,6 +114,15 @@ public sealed class TmChartColorsE2ETests : WasmTestBase
             expectedFills,
             actualFills,
             $"Expected fills: {string.Join(", ", expectedFills)}; actual fills: {string.Join(", ", actualFills)}");
+    }
+
+    private static string ParseHex(string rgb)
+    {
+        var match = System.Text.RegularExpressions.Regex.Match(rgb, @"rgba?\((\d+),\s*(\d+),\s*(\d+)");
+        Assert.IsTrue(match.Success, $"cannot parse '{rgb}'");
+        return "#" + string.Concat(match.Groups.Cast<System.Text.RegularExpressions.Group>().Skip(1)
+            .Select(g => int.Parse(g.Value, System.Globalization.CultureInfo.InvariantCulture)
+                .ToString("x2", System.Globalization.CultureInfo.InvariantCulture)));
     }
 
     private static async Task CaptureChartAsync(ILocator chart, string screenshotName)

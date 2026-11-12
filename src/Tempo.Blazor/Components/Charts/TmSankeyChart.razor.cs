@@ -15,11 +15,8 @@ public partial class TmSankeyChart
     private const double LabelHorizontalPadding = 144;
     private const double CompactHorizontalPadding = 32;
 
-    private static readonly string[] Palette =
-    [
-        "#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6",
-        "#ec4899", "#06b6d4", "#84cc16", "#f97316", "#6366f1",
-    ];
+    /// <summary>The token-driven series palette a node colour falls back to (see <see cref="ChartSeriesTokens"/>).</summary>
+    private static string PaletteColor(int index) => ChartSeriesTokens.Series(index);
 
     private SankeyLayoutResult? _layout;
     private Dictionary<string, int> _nodeIndexes = new(StringComparer.Ordinal);
@@ -322,10 +319,10 @@ public partial class TmSankeyChart
             return Data.Nodes[index].Color!;
         }
 
-        return Palette[
+        return PaletteColor(
             _nodeIndexes.TryGetValue(nodeId, out index)
-                ? index % Palette.Length
-                : 0];
+                ? index
+                : 0);
     }
 
     private string LinkColor(SankeyLink link) =>

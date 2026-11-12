@@ -348,17 +348,68 @@
   exists in all four tables — en "Main navigation", cs "Hlavní navigace", sk "Hlavná navigácia", fr
   "Navigation principale" — and the bar announces the localized name.
 - **`AriaLabel` parameter (additive, opt-in).** Hosts can override the accessible name (e.g. a bar
-  navigating a subsection); `null` (the default) keeps the localized resource. No DOM or CSS change
-  beyond the attribute's value source, so no migration is needed. The wireframe stencil
+  navigating a subsection); `null` or whitespace (the default is `null`) keeps the localized resource,
+  matching the component's `ResolvedAriaLabel` fallback (`string.IsNullOrWhiteSpace`). No DOM or CSS
+  change beyond the attribute's value source, so no migration is needed. The wireframe stencil
   (`bottom-navigation` role in `tempo.stencil.json`) is a visual placeholder and is unchanged.
 - **Tests:** `TmBottomNavigationTests` (bUnit, TDD RED first: the en/cs localized names, the raw-key
-  absence in `aria-label` and markup, the `null` fallback and the parameter override) and
+  absence in `aria-label` and markup, the null-or-whitespace fallback and the parameter override) and
   `TmResourceCompletenessTests`; the JSON documentation overlay documents the parameter and
   `validate --fail-on-drift` is clean. E2E: `TmBottomNavigationE2ETests` (WASM — localized name, dark
   mode, the 375 px phone fit, item-click selection; screenshots in
   `tests/Tempo.Blazor.E2E/TestResults/bottom-navigation/`) with
   `TmBottomNavigationServerE2ETests` / `TmBottomNavigationInteractiveAutoE2ETests` smoke runs; the
   `/new-components` demo section carries a `data-testid="bottom-navigation-section"` hook.
+
+
+### Fixed — chart series colours from theme tokens (plan 92e96b25, phase 2 / TG-002)
+
+- **The chart palette is token-driven.** `TmChart`, `TmSparkline`, `TmSankeyChart`, `TmGauge` and
+  `TmStockChart` cycled hardcoded hexes (`#3b82f6`, `#ef4444`, …) that could not follow a theme and
+  went pale on dark surfaces (lime-500 measures 1.9:1 on the dark page). The built-in palette now
+  resolves the new `--tm-chart-series-1..8` design tokens: series 1 follows the theme primary
+  (default `#3b82f6`, indigo `#6366f1`), the other seven are the legacy hue-fixed accents, and dark
+  mode lifts every slot to its 400-tone (`#60a5fa`, `#f87171`, …) so a series holds ≥ 3:1 on the dark
+  page. Each series pairs with a `--tm-chart-series-n-ink` token (≥ 4.5:1 on the fill in both themes)
+  that the funnel and treemap pick for labels drawn on a series fill. The semantic
+  `--tm-chart-positive` / `--tm-chart-negative` / `--tm-chart-neutral` tokens alias the theme
+  semantic colours and drive `TmStockChart`'s bull/bear/wick paint. The rendered SVG carries
+  `var(--tm-…)` references only — the one documented exception is a colour the caller passes
+  (`Color`, `BackgroundColors`, a Sankey node colour, a gauge range), which still renders verbatim.
+  Light mode keeps the series fills identical (the light token values equal the legacy hexes);
+  label ink and series 9+ change (see Breaking).
+- **Chart chrome is theme-aware.** `TmGauge`'s track, value ink and axis labels were pinned to light
+  greys (the track stayed `#e5e7eb` in dark mode, invisible on the dark surface) and now resolve the
+  gray-scale / text tokens; `TmChart`'s grid lines, zero axis and axis labels follow the theme too,
+  and the heatmap value ink is picked from the cell's fill (the paired `--tm-chart-series-n-ink` on a
+  series-token fill, the light inside ink on a strong dark caller cell) instead of fixed
+  `#ffffff` / `#4b5563` — the norm-only flip to `--tm-text-inverse` read dark-on-dark on caller
+  colours in dark mode.
+- **Composed components inherit the palette with no own hex.** `TmStatCard`, `TmTrendList`,
+  `TmUsageMeter` and `TmDashboard` render their mini-charts through `TmSparkline`/`TmChart` and take
+  the token palette automatically; `TmGantt` bars were already token-based
+  (`var(--tm-color-primary-solid)` default) and are unchanged.
+- **Tokens.** `--tm-chart-series-1..8` + `--tm-chart-series-1-ink..8-ink` +
+  `--tm-chart-positive/-negative/-neutral` ship in `tokens.css`, are re-declared on the dark roots
+  (incl. the light-island reset) in `tokens-dark.css`, and `theme-indigo.css` re-points series 1 to
+  the indigo primary in both halves. Guards: `TmChartSeriesTokenTests` (no hardcoded hex in any
+  library-rendered chart SVG — caller colours are the documented exception; the palette cycles
+  1..8,1; dark slots hold ≥ 3:1 on the dark page; light slots equal the legacy hexes byte for byte;
+  series 1 follows the primary in every theme) and the reworked `TmChartFunnelLabelContrastTests`
+  (paired ink ≥ 4.5:1 on every series fill in both themes, token-only CSS rules).
+- **E2E.** `TmChartThemeE2ETests` (WASM): the default donut's computed fills stay the legacy hexes in
+  light, lift in dark (≥ 3:1 against the page background), the funnel's paired ink clears AA in dark,
+  series 1 follows the indigo theme in light (`#6366f1`) and dark (`#818cf8`), and the sparkline
+  stroke resolves the token in both modes; UX-reviewed element screenshots of the donut, funnel,
+  sparkline, gauge and heatmap sections (scrolled into view) in light/dark/indigo in
+  `tests/Tempo.Blazor.E2E/TestResults/chart-themes/`. `TmChartColorsE2ETests` now asserts the token
+  attribute AND the computed legacy colours.
+- **JSON documentation.** The `TmChart` / `TmSparkline` overlays document the token palette;
+  aggregates regenerated, `validate --fail-on-drift` clean. **Wireframe stencil:** the chart stencils
+  (`TmChart`, `TmSparkline`, `TmSankeyChart`, `TmGauge`, `TmStockChart`) are visual placeholders on
+  the pack's own document-token bridge and need no change.
+- **Demo.** The `/charts` page already renders every chart type; the E2E above verifies it in dark
+  mode and in both colour themes with UX-reviewed screenshots.
 
 
 ### Fixed — test suite stability (plan 7ba95ed6, phase FZE-1)
@@ -946,6 +997,13 @@
 | `TmChart` funnel — type scale | Fixed 12 / 10 viewBox units, so ≈ 9,6 px on a desktop card and ≈ 6,6 px on a phone | Tokens with a RENDERED floor: ≥ 12 px label, ≥ 11 px value, at every container size (`--tm-chart-funnel-label-size*`, `…-value-size*`) | None; a host that pinned the old look sets the `-size-viewbox` / `-narrow` pair to `12px` / `10px` |
 | `TmChart` funnel — stage numbers | Invariant formatting (`1000`, `45 %`) | The reader's culture (`1,000` / `1 000`), two decimals at most, a non-breaking space before `%` | None at the API level; a test that asserted the invariant string must format with the same culture |
 | `TmChart` funnel — screen-reader output | Only the `role="img"` SVG name | The SVG name plus a visually hidden stage/conversion table | None; an unrelated `table` query in a host test could now match the hidden table (`[data-testid='chart-funnel-table']` names it) |
+| Chart series palette (`TmChart`, `TmSparkline`, `TmSankeyChart`, `TmGauge`, `TmStockChart` + the composed `TmStatCard` / `TmTrendList` / `TmUsageMeter` / `TmDashboard` mini-charts) | Hardcoded hexes (`#3b82f6`, `#ef4444`, `#10b981`, …, 10 slots) in every `fill`/`stroke` attribute; identical in dark mode, where lime-500 read at 1.9:1 on the dark page | The attributes carry `var(--tm-chart-series-1..8)`; series 1 follows the theme primary (indigo: `#6366f1`); dark mode lifts every slot to its 400-tone; the palette now cycles 8 slots, so series 9+ reuse slots 1–2 (was `#f97316` / `#6366f1`) | No API change. A host/test that scraped the `fill` ATTRIBUTE for a literal hex must read `getComputedStyle(el).fill` (returns `#rrggbb`) or match `var(--tm-chart-series-n)`; a host that pinned the old 10-slot cycle overrides `--tm-chart-series-1..8` (and the two dropped slots map onto series 1–2 overrides) |
+| Serialized / exported chart SVG | A saved or exported chart SVG carried literal colours, so it rendered correctly anywhere | It carries `var(--tm-chart-*)` references, resolved only under the Tempo stylesheet — outside it the paints fall back to nothing | Before serializing, copy `getComputedStyle(el).fill` / `.stroke` onto each node as attributes (the `_bakePaints` pattern in `wireframe-designer.js`), or override the `--tm-chart-*` tokens on the exported root |
+| `TmStockChart` bull/bear/wick paint | `#22c55e` / `#ef4444` / `#6b7280` literals in the markup | `var(--tm-chart-positive)` / `var(--tm-chart-negative)` / `var(--tm-chart-neutral)` (theme-relative) | Same migration as above: read the computed style, or override the three `--tm-chart-*` semantic tokens to pin the old literals |
+| `TmGauge` chrome (track, value ink, axis labels) | `var(--tm-color-neutral-200, #e5e7eb)` etc. — the neutral tokens do not exist, so the light greys applied in EVERY theme (the track was invisible on the dark surface) | `var(--tm-color-gray-200)` / `var(--tm-text-primary)` / `var(--tm-text-secondary)` — theme-relative | None for a host; the old markup visually fixed a dark-mode defect |
+| `TmChart` heatmap value ink | `#ffffff` on dark cells, `#4b5563` on light cells, in both themes | Picked from the cell's FILL: a built-in series fill takes the paired `var(--tm-chart-series-n-ink)`; a caller colour takes `var(--tm-chart-funnel-label-inside)` (light ink) on a strong (norm > 0.55) dark cell, `var(--tm-text-primary)` otherwise | None at the API level; a test asserting the literal fill must expect the token reference. The old norm-only flip to `--tm-text-inverse` read dark-on-dark on caller colours in dark mode (the token resolves to `#0f172a` there) |
+| `TmChart` funnel/treemap label ink on a built-in series fill | The label class came from `ChartColorContrast` against the fixed light palette (white ink on several fills at 2.0–4.4:1) | A paired `--tm-chart-series-n-ink` token per series (dark ink on every light-theme fill at ≥ 4.5:1, dark-theme ink on the lifted 400-tones) picked through the `tm-chart__funnel-label--series-n` class | A host CSS rule that keyed off `--on-light` for palette stages must key off `--series-n` (host colours keep the `--inside` / `--on-light` classes); overriding `--tm-chart-series-n-ink` retints one series' labels |
+| `TmChart` treemap tile stroke | `#ffffff` separators in both themes | `var(--tm-bg-surface)` — separators match the chart surface | None; a host that wants white separators sets `.tm-chart__treemap-tile { stroke: #fff }` |
 | Event time markup (time grid, timeline, day board) | One `<span class="…-event-time">9:00 AM – 10:00 AM</span>` | The wrapper keeps the `title` with the full range and holds two spans: `.tm-scheduler-event-time-full` (the culture's full range) and `.tm-scheduler-event-time-compact` (`9:00 – 10:00 AM`); the stylesheet shows exactly one by the card's width | None for behaviour. A host selector that targeted the wrapper still matches; a selector that expected the time TEXT inside `.tm-scheduler-event-time` must target `.tm-scheduler-event-time-full` (or read the wrapper's `title`). The full reading now joins the time to its meridiem with U+00A0, so a test that asserted `9:00 AM – 10:00 AM` with plain spaces has to normalise or expect the non-breaking space |
 | `TmKanbanBoard` card markup (`ShowMoveMenu` defaults to `true`) | A card was a plain draggable `<div class="tm-kanban__card">` wrapping the host's `CardTemplate` verbatim; a pointer could drag it and a click raised `OnCardClick` | Every card is a focusable `role="group"` with one roving tab stop per cell (`tabindex` `0`/`-1`), a localized `aria-roledescription`, `aria-describedby` at the board's visually hidden instructions, and a `tm-kanban__card-content` wrapper around the host template fenced on keydown AND keyup; Enter (keydown, repeat-guarded) and Space (keyup) raise `OnCardClick`; `M` / `Alt+ArrowDown` open the card's "Move…" `TmContextMenu` whose trigger is `tabindex="-1"` (the new `TmContextMenu.TriggerTabIndex`), so a cell keeps exactly ONE tab stop. The menu lists Move up / Move down plus one target per column × lane, with the cell the card already sits in named "(current)", `disabled` and `aria-current="true"`. The board root gains `data-focus-target` (the hand-back destination) and the drop zones `tabindex="-1"`, and the board renders one visually hidden instructions `<p>` plus one polite live region (`data-testid="kanban-status"`) | None for behaviour: every control and every key the host renders inside `CardTemplate` keeps its own events (the wrapper fences propagation, and the card's key handlers never see a key a child handled). A host that wants the 2.10.0 card byte-for-byte — no wrapper, no tab stop, no aria attributes, no menu, no live region, `OnCardClick` on a pointer only — sets `ShowMoveMenu="false"` (also rendered by a `Disabled` board). A card template that relied on its own Enter/Space bubbling to the card's click keeps working through the default (the card emulates the activation) or opts out with `ShowMoveMenu="false"` |
 | `TmKanbanBoard` collapsed swimlane markup (`SwimlanesCollapsible` defaults to `true`) | A collapsed lane rendered no body at all — its `(column, lane)` cells vanished, so a card could not be dropped there | A collapsed lane renders `.tm-kanban__swimlane-slots` with one `.tm-kanban__lane-slot` per column (`data-testid="lane-slot-{column}-{lane}"`, widths copying the grid), so every `(column, lane)` drop keeps working while the lane is collapsed; the slots are visually quiet outside a drag and highlight as targets (`--drop-target`) for the length of one | None at the API level; the addition is presentational and only renders while a lane IS collapsed. A selector scoped to `.tm-kanban__swimlane-body` no longer matches a collapsed lane — target the slots instead |

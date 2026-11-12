@@ -49,9 +49,9 @@ public partial class TmStockChart : ComponentBase
         return PL + (index * CW / (double)(Data.Count - 1));
     }
 
-    private const string BullColor = "#22c55e";
-    private const string BearColor = "#ef4444";
-    private const string WickColor = "#6b7280";
+    private const string BullColor = "var(--tm-chart-positive)";
+    private const string BearColor = "var(--tm-chart-negative)";
+    private const string WickColor = "var(--tm-chart-neutral)";
 
     // ── Render fragments ──────────────────────────────────────────────────
 
@@ -202,7 +202,7 @@ public partial class TmStockChart : ComponentBase
         builder.AddAttribute(1, "points", pts);
         builder.AddAttribute(2, "class", "tm-stock-chart__line");
         builder.AddAttribute(3, "fill", "none");
-        builder.AddAttribute(4, "stroke", "#3b82f6");
+        builder.AddAttribute(4, "stroke", "var(--tm-chart-series-1)");
         builder.AddAttribute(5, "stroke-width", "2");
         builder.AddAttribute(6, "stroke-linejoin", "round");
         builder.AddAttribute(7, "stroke-linecap", "round");
@@ -216,7 +216,7 @@ public partial class TmStockChart : ComponentBase
             builder.AddAttribute(2, "cy", F(ScaleY(Data[i].Close)));
             builder.AddAttribute(3, "r", "3");
             builder.AddAttribute(4, "class", "tm-stock-chart__point");
-            builder.AddAttribute(5, "fill", "#3b82f6");
+            builder.AddAttribute(5, "fill", "var(--tm-chart-series-1)");
             builder.CloseElement();
         }
     };

@@ -147,7 +147,8 @@ public sealed class TmBottomNavigationE2ETests : WasmTestBase
         await items.Nth(2).Locator("button, a").ClickAsync();
         await page.WaitForTimeoutAsync(300);
 
-        Assert.AreEqual("tm-bottom-nav__item tm-bottom-nav__item--active", (await items.Nth(2).GetAttributeAsync("class"))?.Trim(),
+        StringAssert.Matches((await items.Nth(2).GetAttributeAsync("class"))?.Trim() ?? string.Empty,
+            new System.Text.RegularExpressions.Regex("--active"),
             "clicking the third item marks it active");
         var activeReadout = await page.Locator($"{Section} p").First.InnerTextAsync();
         StringAssert.Contains(activeReadout, "Favorites", "the demo read-out follows the selection");

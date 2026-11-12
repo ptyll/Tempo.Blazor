@@ -32,7 +32,8 @@ public class TmSparklineExtensionTests : LocalizationTestBase
         cut.FindAll(".tm-sparkline__minmax").Count.Should().Be(0);
         cut.FindAll("[aria-live]").Count.Should().Be(0);
         cut.FindAll(".tm-sparkline__tooltip").Count.Should().Be(0);
-        cut.Find("polyline.tm-sparkline__line").GetAttribute("stroke").Should().Be("#3b82f6");
+        cut.Find("polyline.tm-sparkline__line").GetAttribute("stroke").Should().Be("var(--tm-chart-series-1)",
+            "the default stroke is the token-driven series colour since TG-002");
     }
 
     // ── AriaLabel ──
