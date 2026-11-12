@@ -3056,6 +3056,8 @@
   "TmKanban_MoveUp": "Přesunout nahoru",
   "TmKanban_NoSwimlane": "Bez hodnoty",
   "TmKanban_ToggleSwimlane": "Přepnout pruh",
+  "TmKanban_LaneSlotTarget": "{0} v pruhu {1}",
+  "TmKanban_DragCancelled": "Přesun karty {0} zrušen — karta zůstala v {1}",
   "TmKeyboardShortcutsHelp_Or": "nebo",
   "TmKeyboardShortcutsHelp_Title": "Klávesové zkratky",
   "TmKycWizard_AddAddress": "Přidat adresu",

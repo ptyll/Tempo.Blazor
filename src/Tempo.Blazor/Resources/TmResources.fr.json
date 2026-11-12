@@ -3031,6 +3031,8 @@
   "TmKanban_MoveUp": "Déplacer vers le haut",
   "TmKanban_NoSwimlane": "Aucune valeur",
   "TmKanban_ToggleSwimlane": "Basculer le couloir",
+  "TmKanban_LaneSlotTarget": "{0} dans le couloir {1}",
+  "TmKanban_DragCancelled": "Déplacement de {0} annulé — la carte est restée dans {1}",
   "TmKeyboardShortcutsHelp_Or": "ou",
   "TmKeyboardShortcutsHelp_Title": "Raccourcis clavier",
   "TmKycWizard_AddAddress": "Ajouter une adresse",

@@ -108,7 +108,9 @@
         With <code>VirtualizeCards="true"</code> each column body becomes a fixed-height scroll container that renders
         only the cards in view via Blazor's built-in <code>&lt;Virtualize&gt;</code>. This board holds
         <strong>@_manyTasks.Count</strong> cards spread across the columns, yet each column only materializes its
-        visible window as you scroll. <code>CardItemSize</code> sets the estimated card row height.
+        visible window as you scroll. <code>CardItemSize</code> sets the estimated card row height. Columns collapse
+        here too, and this board carries <code>TestIdPrefix="virtual"</code> so its test ids stay unique next to the
+        boards above.
     </p>
 
     <TmKanbanBoard TItem="TaskItem"
@@ -117,8 +119,38 @@
                    ColumnSelector="t => t.Status"
                    CardTemplate="RenderCard"
                    CardLabelSelector="t => t.Title"
+                   TestIdPrefix="virtual"
+                   ColumnsCollapsible="true"
                    VirtualizeCards="true"
-                   CardItemSize="92" />
+                   CardItemSize="92"
+                   OnItemMoved="HandleVirtualMove"
+                   OnItemReordered="HandleVirtualReorder" />
+
+    @if (_lastVirtualChange is not null)
+    {
+        <p class="mt-4 text-sm text-slate-600 dark:text-slate-400">
+            Last change: <strong>@_lastVirtualChange</strong>
+        </p>
+    }
+</section>
+
+<section class="demo-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-1">Disabled board</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+        A <code>Disabled</code> board renders its content and its collapse state, but every drop zone is inert: no
+        drag starts, no zone highlights during a drag and no drop commits. Collapsing and expanding still work, so a
+        read-only board stays readable.
+    </p>
+
+    <TmKanbanBoard TItem="TaskItem"
+                   Columns="_columns"
+                   Items="_disabledTasks"
+                   ColumnSelector="t => t.Status"
+                   CardTemplate="RenderCard"
+                   CardLabelSelector="t => t.Title"
+                   TestIdPrefix="disabled"
+                   ColumnsCollapsible="true"
+                   Disabled="true" />
 </section>
 
 @code {
@@ -138,13 +170,16 @@
         </div>
     };
 
+    // The column colours are the theme's --tm-kanban-column-* tokens (TG-005), so the dots follow the
+    // theme in light AND dark — a raw hex cannot. Any CSS colour still works; tokens are the
+    // recommendation (see docs/kanban-board.md).
     private static readonly IReadOnlyList<KanbanColumn> _columns =
     [
-        new("backlog", "Backlog", "#6b7280"),
-        new("todo", "To Do", "#3b82f6", MaxItems: 5),
-        new("doing", "In Progress", "#f59e0b", MaxItems: 3),
-        new("review", "Review", "#8b5cf6", MaxItems: 2),
-        new("done", "Done", "#10b981"),
+        new("backlog", "Backlog", "var(--tm-kanban-column-backlog)"),
+        new("todo", "To Do", "var(--tm-kanban-column-todo)", MaxItems: 5),
+        new("doing", "In Progress", "var(--tm-kanban-column-doing)", MaxItems: 3),
+        new("review", "Review", "var(--tm-kanban-column-review)", MaxItems: 2),
+        new("done", "Done", "var(--tm-kanban-column-done)"),
     ];
 
     private List<TaskItem> _tasks =
@@ -164,11 +199,11 @@
 
     private static readonly IReadOnlyList<KanbanColumn> _virtualColumns =
     [
-        new("backlog", "Backlog", "#6b7280"),
-        new("todo", "To Do", "#3b82f6"),
-        new("doing", "In Progress", "#f59e0b"),
-        new("review", "Review", "#8b5cf6"),
-        new("done", "Done", "#10b981"),
+        new("backlog", "Backlog", "var(--tm-kanban-column-backlog)"),
+        new("todo", "To Do", "var(--tm-kanban-column-todo)"),
+        new("doing", "In Progress", "var(--tm-kanban-column-doing)"),
+        new("review", "Review", "var(--tm-kanban-column-review)"),
+        new("done", "Done", "var(--tm-kanban-column-done)"),
     ];
 
     private static readonly List<TaskItem> _manyTasks = BuildManyTasks();
@@ -192,7 +227,52 @@
         return list;
     }
 
+    // The virtualized board reports moves like the first board — and the reported index is the
+    // card's position in the column's FULL list even though only the visible window renders (the
+    // touch drag reports the hovered card's own list index, so a windowed drop lands where the
+    // finger saw it).
+    private string? _lastVirtualChange;
+
+    private void HandleVirtualMove(KanbanMoveEvent<TaskItem> move)
+    {
+        _lastVirtualChange = $"'{move.Item.Title}' moved from {move.FromColumn} to {move.ToColumn} at index {move.TargetIndex}";
+        ApplyVirtualMove(move);
+    }
+
+    private void HandleVirtualReorder(KanbanMoveEvent<TaskItem> move)
+    {
+        _lastVirtualChange = $"'{move.Item.Title}' reordered within {move.ToColumn} to index {move.TargetIndex}";
+        ApplyVirtualMove(move);
+    }
+
+    private void ApplyVirtualMove(KanbanMoveEvent<TaskItem> move)
+    {
+        var moved = move.Item with { Status = move.ToColumn };
+        _manyTasks.RemoveAll(t => t.Id == move.Item.Id);
+
+        int insertAt;
+        if (move.TargetBeforeItem is not null)
+        {
+            insertAt = _manyTasks.FindIndex(t => t.Id == move.TargetBeforeItem.Id);
+            if (insertAt < 0) insertAt = _manyTasks.Count;
+        }
+        else
+        {
+            // Dropped at the end of the target column: place after that column's last card.
+            var lastInColumn = _manyTasks.FindLastIndex(t => t.Status == move.ToColumn);
+            insertAt = lastInColumn >= 0 ? lastInColumn + 1 : _manyTasks.Count;
+        }
+
+        _manyTasks.Insert(insertAt, moved);
+    }
+
     private void HandleCardClick(TaskItem task) => _clickedTask = task;
+
+    private readonly List<TaskItem> _disabledTasks =
+    [
+        new(101, "Read-only card A", "todo", "Low", "Alice"),
+        new(102, "Read-only card B", "doing", "High", "Bob"),
+    ];
 
     private void HandleItemMoved(KanbanMoveEvent<TaskItem> move)
     {

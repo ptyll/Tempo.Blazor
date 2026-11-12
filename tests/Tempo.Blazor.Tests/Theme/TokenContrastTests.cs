@@ -486,6 +486,13 @@ public sealed partial class TokenContrastTests
             "--tm-chart-series-1-ink", "--tm-chart-series-2-ink", "--tm-chart-series-3-ink",
             "--tm-chart-series-4-ink", "--tm-chart-series-5-ink", "--tm-chart-series-6-ink",
             "--tm-chart-series-7-ink", "--tm-chart-series-8-ink",
+            // TG-005 (plan 92e96b25, phase 5): the kanban column tones are THEME-RELATIVE like the
+            // chart series palette — the light values are the strong tones that clear the non-text
+            // 3:1 level on the light header panel, and dark lifts every slot to its 400-tone
+            // (todo/doing/done ride the brightened dark semantic tokens, review follows primary-400,
+            // backlog the dark gray-400). The difference IS the point of the tokens, not drift.
+            "--tm-kanban-column-backlog", "--tm-kanban-column-todo", "--tm-kanban-column-doing",
+            "--tm-kanban-column-review", "--tm-kanban-column-done",
             // Phase 15b: the canvas backdrop is deliberately THEME-AWARE — light keeps the
             // paper-backdrop gray, dark rides the workspace tone so the white page floats on
             // a dark canvas (docs/diagram-editor.md, carry-forward F8 m5). Renamed to the

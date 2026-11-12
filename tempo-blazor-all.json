@@ -11736,7 +11736,7 @@
           "kind": "Component",
           "category": "Data Display",
           "namespace": "Tempo.Blazor.Components.DataDisplay",
-          "description": "Generic drag-and-drop Kanban board with typed items, configurable columns with optional color and WIP limits, optional horizontal swimlanes, custom card/column/swimlane templates, cross-column and cross-lane moves, in-column reordering with a visual drop indicator, collapsible columns and swimlanes whose collapsed zones stay drop targets, and events for card moves and clicks. Every card is also a focusable, keyboard-operable move target (WCAG 2.5.7): a \"Move…\" menu on the card offers every column × swimlane destination, collapsed zones included, plus Move up / Move down, and reports the same OnItemMoved / OnItemReordered contract as a drop.",
+          "description": "Generic drag-and-drop Kanban board with typed items, configurable columns with optional color and WIP limits, optional horizontal swimlanes, custom card/column/swimlane templates, cross-column and cross-lane moves, in-column reordering with a visual drop indicator, collapsible columns and swimlanes whose collapsed zones stay drop targets, and events for card moves and clicks. Mouse drags through HTML5 drag and drop, touch drags through the shared pointer-drag helper (a long-press starts the drag; a cancelled gesture rolls back and is announced), and every card is also a focusable, keyboard-operable move target (WCAG 2.5.7): a \"Move…\" menu on the card offers every column × swimlane destination, collapsed zones included, plus Move up / Move down, and reports the same OnItemMoved / OnItemReordered contract as a drop.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/TmKanbanBoard.razor",
           "documentationStatus": "merged",
@@ -11937,6 +11937,10 @@
             "tm-kanban__lane-slot--collapsed",
             "tm-kanban__lane-slot--drop-target",
             "tm-kanban--dragging",
+            "tm-kanban__card--touch-dragging",
+            "tm-kanban__cell--touch-target",
+            "tm-kanban__touch-indicator",
+            "tm-kanban__slot-color",
             "tm-kanban__card--movable",
             "tm-kanban__card-content",
             "tm-kanban__card-actions",
@@ -11946,9 +11950,11 @@
           "notes": [
             "The board is a pure view over the host's list: it never inserts, removes or reorders an item, it reports KanbanMoveEvent and the host applies the move. Prefer TargetBeforeItem over TargetIndex when persisting order — it is unaffected by whether the dragged item is removed before or after the insertion point is computed.",
             "A drop on a zone (header, padding, empty area, a collapsed strip or a collapsed lane's slot) appends: TargetIndex equals the cell's card count and TargetBeforeItem is null. The horizontal __drop-indicator line is drawn only by an expanded column.",
-            "Collapsing is view state. A collapsed column narrows to the --tm-kanban-collapsed-width strip (vertical title, count, WIP badge, no card body) and stays a drop target that appends; a collapsed swimlane renders .tm-kanban__swimlane-slots with one .tm-kanban__lane-slot per column instead of dropping its body, so every (column, lane) drop keeps working. Disabled keeps the collapse but leaves every drop zone inert.",
+            "Collapsing is view state. A collapsed column narrows to the --tm-kanban-collapsed-width strip (vertical title, count, WIP badge, no card body) and stays a drop target that appends; a collapsed swimlane renders .tm-kanban__swimlane-slots with one .tm-kanban__lane-slot per column instead of dropping its body, so every (column, lane) drop keeps working. Every slot names its (column, lane) target in title/aria-label (TmKanban_LaneSlotTarget) and carries the column's colour strip (.tm-kanban__slot-color). Disabled keeps the collapse but leaves every drop zone inert.",
+            "Column colours: the component renders KanbanColumn.Color verbatim (inline background-color of .tm-kanban__header-color / .tm-kanban__swimlane-color) and invents no default. Pass a token reference — the recommended palette is --tm-kanban-column-backlog/-todo/-doing/-review/-done (declared in tokens.css, lifted tones in tokens-dark.css, every value clearing the non-text 3:1 level on the header background in both themes) — instead of a raw hex, so the dot follows the theme. A collapsed column keeps its dot on the strip; a collapsed lane's slot carries the strip instead.",
+            "Touch drag (decision O7, plan 92e96b25): touch pointers drag through the shared pointer-drag.js helper via the tm-kanban.js module — a 400 ms long-press starts the drag (a tap and a page scroll keep working), the module paints the lifted card, the hovered zone and the insertion line without any Blazor re-render, and the ONE commit arrives on release through the same KanbanMoveEvent contract (the insertion index resolves by the midpoint rule against the other cards). pointercancel / Escape / a second finger roll back every paint and announce TmKanban_DragCancelled through the one polite live region. Mouse keeps the HTML5 drag path; the per-card \"Move…\" menu is the WCAG 2.5.7 alternative for every pointer.",
             "The non-drag path is on by default because a drag-only card fails WCAG 2.5.7: one roving tab stop per cell, M / Alt+ArrowDown opens the move menu, Enter / Space raise OnCardClick, and the result is announced once through one polite live region.",
-            "Full behaviour contract: docs/kanban-board.md (layouts, collapsed zones, drop contract, a11y, data-testid set, localization keys, wireframe role, verification)."
+            "Full behaviour contract: docs/kanban-board.md (layouts, collapsed zones, drop contract, colours, touch drag, a11y, data-testid set, localization keys, wireframe role, verification)."
           ],
           "examples": [
             {
@@ -36279,6 +36285,10 @@
           "kind": "JavaScript"
         },
         {
+          "path": "src/Tempo.Blazor/wwwroot/js/tm-kanban.js",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor/wwwroot/js/tm-menu-nav.js",
           "kind": "JavaScript"
         },
@@ -36428,6 +36438,10 @@
         },
         {
           "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-focus-trap.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-kanban.test.mjs",
           "kind": "JavaScript"
         },
         {

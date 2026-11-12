@@ -3056,6 +3056,8 @@
   "TmKanban_MoveUp": "Presunúť nahor",
   "TmKanban_NoSwimlane": "Žiadna hodnota",
   "TmKanban_ToggleSwimlane": "Prepnúť pásmo",
+  "TmKanban_LaneSlotTarget": "{0} v pásme {1}",
+  "TmKanban_DragCancelled": "Presun karty {0} zrušený — karta zostala v {1}",
   "TmKeyboardShortcutsHelp_Or": "alebo",
   "TmKeyboardShortcutsHelp_Title": "Klávesové skratky",
   "TmKycWizard_AddAddress": "Pridať adresu",

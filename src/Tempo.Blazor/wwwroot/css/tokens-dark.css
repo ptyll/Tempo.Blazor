@@ -234,6 +234,16 @@
   --tm-chart-negative: var(--tm-color-danger);
   --tm-chart-neutral:  var(--tm-color-gray-500);
 
+  /* Kanban column tones — the dark 400-tones, the same lift as the chart series palette: the light
+     strong tones sink into the dark muted panel (success-strong #15803d measures ~2:1 on #334155), so
+     the dark theme re-declares every slot. backlog takes the DARK gray-400 (#94a3b8, re-declared
+     above); todo/doing/done follow the brightened dark semantic tokens; review follows primary-400. */
+  --tm-kanban-column-backlog: var(--tm-color-gray-400);
+  --tm-kanban-column-todo:    var(--tm-color-info);
+  --tm-kanban-column-doing:   var(--tm-color-warning);
+  --tm-kanban-column-review:  var(--tm-color-primary-400);
+  --tm-kanban-column-done:    var(--tm-color-success);
+
   /* ── Redesign surfaces (F0) ─────────────────────────────────── */
   /* Re-declared, not inherited: a custom property substitutes its var() where it is
      declared, so a dark theme switched on a parent element would otherwise keep the
@@ -535,6 +545,13 @@
   --tm-chart-positive:              var(--tm-color-success);
   --tm-chart-negative:              var(--tm-color-danger);
   --tm-chart-neutral:               var(--tm-color-gray-500);
+  /* Light-island reset: a light island nested in a dark region keeps the LIGHT kanban column tones
+     (the same expressions tokens.css declares — the island re-pins the strong/gray tokens above). */
+  --tm-kanban-column-backlog:       var(--tm-color-gray-500);
+  --tm-kanban-column-todo:          var(--tm-color-info-strong);
+  --tm-kanban-column-doing:         var(--tm-color-warning-strong);
+  --tm-kanban-column-review:        var(--tm-color-primary-600);
+  --tm-kanban-column-done:          var(--tm-color-success-strong);
   --tm-bg-workspace:                var(--tm-bg-page);
   --tm-canvas-backdrop:            var(--tm-paper-backdrop);
   /* Light-island mirrors of the TG-004 canvas/stencil tokens (the dark roots flip them). */

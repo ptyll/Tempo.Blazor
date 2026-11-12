@@ -555,6 +555,122 @@
   points at the migration table.
 
 
+### Fixed — `TmKanbanBoard` column colours from theme tokens + touch drag (plan 92e96b25, phase 5 / TG-005, decision O7)
+
+- **The column palette is token-driven.** The mock gap's hexes (`#10b981`, `#3b82f6`, `#6b7280`, …)
+  came from the DEMO (`KanbanPage.razor` passed them as `KanbanColumn.Color`), and the component —
+  which renders any colour verbatim as the dot's inline `background-color` and invents no default —
+  could not follow a theme: on the dark header the dots sank to 1.9–2.3:1. The demo now passes the
+  new catalogued `--tm-kanban-column-backlog` / `-todo` / `-doing` / `-review` / `-done` tokens
+  (declared in `tokens.css`, lifted to the 400-tones on the dark roots incl. the light-island
+  reset in `tokens-dark.css`, the TG-002 series-token convention). The dot is identifying paint
+  (WCAG 1.4.11), so every light value is a STRONG tone (`--tm-color-info-strong`,
+  `…-warning-strong`, `…-success-strong`, `primary-600`, gray-500) clearing the non-text 3:1 level
+  on the header's muted panel — measured for all ten values by `TmKanbanColumnTokenTests`, which
+  also pins the demo to token colours (no hardcoded column hex). A caller colour — hex or any CSS
+  colour — still renders verbatim; the recommendation "tones over hexes" is documented in
+  [docs/kanban-board.md](docs/kanban-board.md).
+- **A collapsed lane's slot keeps the column's colour.** The slot replaces the whole column body,
+  so without a mark the lane hides which column each slot belongs to: every slot now renders
+  `.tm-kanban__slot-color` (a quiet bar at the slot's start edge, a horizontal cap under a
+  collapsed column) from the column's colour, and names its `(column, lane)` target in `title` /
+  `aria-label` (`TmKanban_LaneSlotTarget`). The collapsed column strip keeps its header dot as
+  before.
+- **Touch drag (decision O7).** The board was mouse-only (HTML5 drag and drop does not fire on a
+  touch pointer), so on a phone the ONLY way to move a card was the "Move…" menu. Touch pointers
+  now drag cards through the SHARED `pointer-drag.js` / `pointer-gesture.js` helpers via the new
+  `tm-kanban.js` module — never a second drag implementation: a 400 ms long-press starts the drag
+  (a tap and a page scroll keep working; drifting past the tolerance before the hold completes is
+  a swipe), the module drags a GHOST — a fixed-position clone under the finger (the source card's
+  own `.tm-kanban__cards` container, `overflow-y: auto`, computes `overflow-x` to `auto` and would
+  clip a translated card the moment it left its column; the invisible in-flow source keeps its
+  siblings from jumping) — paints the hovered zone and the insertion line with classes and fixed
+  coordinates only — Blazor NEVER re-renders mid-gesture, which is what keeps the captured
+  card's DOM node alive — and the ONE commit arrives on release through the same
+  `KanbanMoveEvent` contract as an HTML5 drop (the insertion index resolves by the midpoint rule
+  against the other cards; the board resolves the item from the host's unchanged list by the
+  `(column, lane, index)` triple the module reports). **Collapsed columns and collapsed lane slots
+  are full citizens of the touch path** — they carry the module's `data-tm-kanban-*` identity and
+  highlight under the finger exactly like the HTML5 path. **A cancelled gesture
+  (`pointercancel` / Escape / a second finger — all owned by the shared helper) rolls back every
+  inline paint and is announced** through the one polite live region (`TmKanban_DragCancelled`,
+  "Move of {0} cancelled — the card stayed in {1}"); a release over no zone rolls back and
+  announces the same way. The mouse path is untouched, and the per-card "Move…" menu stays the
+  WCAG 2.5.7 alternative for every pointer.
+- **Touch-drag review fixes (phase review, B1–B3 + nits).** Three review findings and a polish
+  pass on the new touch path, none of which changes the public contract a host binds:
+  **(B1) the virtualized drop index** — the module now keeps the hovered cell's other cards as
+  elements and reports the FULL-LIST index of the card before which the drop lands (its own
+  `data-tm-kanban-index`, `-1` = append) instead of a visible-window position, so a
+  `VirtualizeCards` cell (whose DOM renders only the window) reads the same slot as a
+  fully-rendered one; **(B2) native drag on touch** — the module records the last pointer type and
+  blocks `dragstart` in the capture phase whenever the last press was a touch or a touch session
+  owns the gesture (removed on detach), and on `(pointer: coarse)` the card disables the touch
+  callout and text selection, so the long-press hold can never surface a native drag or a text
+  selection; **(B3) edge auto-scroll** — the board root scrolls horizontally and the hovered cell's
+  `.tm-kanban__cards` list vertically through the shared `pointer-gesture.js`
+  `createAutoScroller` (the `tm-sortable.js` / `gantt.js` composition; the vertical scroller swaps
+  on every zone change), feeding the pointer from `onMove` and re-running the zone/indicator hit
+  test on every scrolled frame. The nits: the ghost is `inert` with its subtree's `id` /
+  `data-testid` stripped (no test, focus or reader can address the clone) and stays under the
+  finger until the commit invoke resolves (timeout-bounded) — no snap-back on Blazor Server; the
+  report carries the card's STABLE key (`data-tm-kanban-key`, the card's index in the host's full
+  list) and the board verifies the source identity at release, cancelling (and announcing the
+  rollback) on mismatch; a collapsed lane's slot gains `role="group"` and its target name becomes a
+  phrase — `TmKanban_LaneSlotTarget` "{0} in lane {1}" in en/cs/sk/fr; the dead indicator query is
+  out of detach; `KanbanBoardInterop.AttachAsync` re-checks `_disposed` after the module import
+  yield; the touch-drag stylesheet comment describes the ghost (not the abandoned inline
+  transform); the hardcoded `4px`/`3px`/`9999px`/`z-index: 10`/`1000` are tokens now
+  (`--tm-space-1`, the `--tm-kanban-indicator-thickness` knob, `--tm-radius-full`,
+  `--tm-z-inline-sheet` / `--tm-z-dropdown`); both `[JSInvokable]`s carry
+  `[EditorBrowsable(EditorBrowsableState.Never)]`; `UpdateTouchAttachmentAsync` runs after the
+  focus logic in `OnAfterRenderAsync`.
+- **Behaviour change.** The touch drop and its cancel announce through the board's live region
+  (the mouse's HTML5 drop still announces nothing) — one board still owns exactly ONE polite live
+  region. The lane slot's DOM gains the colour strip `<span>` and the `title`/`aria-label`, every
+  card gains `data-tm-kanban-card` / `data-tm-kanban-index`, every drop zone gains
+  `data-tm-kanban-column` / `data-tm-kanban-lane` (additive attributes), and the demo's column
+  dots CHANGE COLOUR (light dots are now the strong tones; dark dots lift to the 400-tones) — the
+  before/after and the token-pinning migration are in the **Breaking changes and migration**
+  table below.
+- **Demo.** `/kanban` passes the `--tm-kanban-column-*` tokens for both boards; the virtualized
+  board now renders `ColumnsCollapsible="true"` and `TestIdPrefix="virtual"` (so the E2E can
+  prove two boards on one page never collide) and binds the same `OnItemMoved` / `OnItemReordered`
+  contract as the first board — its "Last change" line reports the index inside the column's full
+  list, which is what the scrolled-window touch drop anchors on.
+- **Tests.** bUnit (TDD, RED first): the new `TmKanbanTouchDragTests` (the `[JSInvokable]` drop
+  contract — cross-column / same-cell / swimlane+sentinel / before-item anchor / out-of-range and
+  self-anchor appends / the stable-key verification with mismatch and out-of-range cancels /
+  invalid-index and Disabled no-ops / the drop and cancel announcements — plus the module's DOM
+  selectors and the slot's target name, `role="group"` and colour strip),
+  `TmKanbanColumnColorTests` and `TmKanbanColumnTokenTests` (token output, verbatim caller colours,
+  no invented default, the 3:1 light+dark guard, the demo's hex-free columns). Node:
+  `__tests__/tm-kanban.test.mjs` (20 tests over the pure zone /
+  insertion / indicator resolvers and the gesture lifecycle — long-press gate, ONE commit with the
+  full-list beforeIndex and the source key, the cancel-on-release-outside, pointercancel /
+  second-finger rollback with the announcement, the collapsed-lane slot sentinel, the mouse veto,
+  detach safety, the dragstart block during a touch session, the inert anonymous ghost, the ghost
+  held until the commit resolves, and the horizontal/vertical edge auto-scroll with the zone swap)
+  in `npm run test:overlay`. E2E: `KanbanTouchDragE2ETests` (real touch input via CDP
+  `Input.dispatchTouchEvent` on a `hasTouch` context — long-press drag to an expanded column, a
+  collapsed strip and a collapsed lane's slot; a virtualized column scrolled before the drop
+  anchors on the full-list index; the board edge auto-scrolls near the edge and stays still away
+  from it; pointercancel and a second finger roll back and are announced) and
+  `KanbanCollapsedDropE2ETests` (edge cases: collapsed column in a collapsed lane, the "no value"
+  lane slot, an over-limit strip, a Disabled board with no highlight, the virtualized board now
+  committing through the demo's move handler, two boards with a `TestIdPrefix`; locator screenshots
+  in light and dark in
+  `tests/Tempo.Blazor.E2E/TestResults/kanban-collapsed-drop/`).
+- **JSON documentation.** The `TmKanbanBoard` overlay documents the colour tokens, the touch drag
+  and the new classes; aggregates regenerated, `validate --fail-on-drift` clean. **Wireframe
+  stencil:** the `TmKanbanBoard` stencil is a schematic placeholder (columns + cards, no colours,
+  no drag) — the phase changes paints and adds attributes only, so the stencil, the `kanban-board`
+  UI role and the schema are unchanged (checked against `BuiltInComponentSchemas`).
+- **Docs.** [docs/kanban-board.md](docs/kanban-board.md) gains "Column colours — tokens, not
+  hexes" and "Touch drag (decision O7)" sections, the slot target localization key and the
+  verification list.
+
+
 ### Fixed — test suite stability (plan 7ba95ed6, phase FZE-1)
 
 - **No production behavior change.** `Tempo.Blazor.Tests` (21 331 tests) is green 3× consecutively
@@ -1156,6 +1272,12 @@
 | `TmQRCode` default markup | `<svg … >`, one `<rect>` per dark run, inline background style | `<svg role="img" aria-label … ><title>…</title><rect …/><g class="tm-qr-code__modules" fill="#000000">…</g></svg>` — the same rects, wrapped in one group | None; `svg rect` still matches every module, a selector that assumed modules are `svg > rect` must target `.tm-qr-code__modules rect` |
 | `TmQRCode` SVG sizing | `.tm-qr-code svg { max-width: 100% }` was scoped and never matched the injected SVG | The rule is `::deep` and applies: a code wider than its container shrinks instead of overflowing | None at the API level; a host that relied on the overflow sets an explicit width |
 | `TmQRCode` SVG download | Did not exist | Opt-in `ShowDownload` (localized `<a download>` with a `data:` URL) plus the public `GetSvg()` / `GetStandaloneSvg()` | None — opt-in; the demo shows both |
+| `TmKanbanBoard` lane-slot DOM | An empty `<div class="tm-kanban__lane-slot">` per column of a collapsed lane | The slot may hold a `.tm-kanban__slot-color` `<span>` (when the column has a `Color`) and carries `title` / `aria-label` naming the `(column, lane)` target | None for behaviour — drops and the move menu are unchanged. A host selector that relied on `:empty` (or that scrapes the slot's text) must expect the strip; the colour/label only appear when the column has a colour |
+| `TmKanbanBoard` card and zone DOM | A card carried `data-testid`/`draggable` only; a drop zone carried `data-testid` only | Additive `data-tm-kanban-card` / `data-tm-kanban-index` on every card and `data-tm-kanban-column` / `data-tm-kanban-lane` on every drop zone (the touch module's selectors; the lane value is the public `NoSwimlaneId` sentinel for the "no value" lane, absent in the classic layout) | None — attributes only; no class, test id or event changed |
+| `TmKanbanBoard` announcements | Only the non-drag move spoke through the live region (an HTML5 drop announced nothing) | A TOUCH drop announces `TmKanban_CardMoved` and a cancelled touch drag announces `TmKanban_DragCancelled` through the SAME single polite live region; the mouse HTML5 path is unchanged | None; a host test asserting silence after a touch drop/cancel must expect the sentence |
+| `TmKanbanBoard` disposal and JS surface | The component implemented no `IAsyncDisposable` and exposed no JS-callable members | The board now implements `IAsyncDisposable` (the touch-drag registration releases its JS module session and `DotNetObjectReference` on dispose — a host that never disposes keeps working exactly as before) and exposes two public `[JSInvokable]` methods, `OnKanbanTouchDrop` and `OnKanbanTouchDragCancelled`, as the `tm-kanban.js` module's commit/cancel callbacks (both carry `[EditorBrowsable(EditorBrowsableState.Never)]` — they are not a host API) | None for behaviour: `IDisposable` hosts may keep their existing pattern, or switch to `await using` / `DisposeAsync`. Hosts must not call the invokables themselves — the module owns the arguments |
+| `TmKanbanBoard` lane-slot naming | A collapsed lane's slot had no accessible name of its own | The slot carries `role="group"` and names its `(column, lane)` target in `title` / `aria-label` as a phrase — `TmKanban_LaneSlotTarget` "{0} in lane {1}" (en "{0} in lane {1}", cs "{0} v pruhu {1}", sk "{0} v pásme {1}", fr "{0} dans le couloir {1}") | None at the API level; a host test that scraped the old "{0} / {1}" wording must expect the phrase |
+| Demo `/kanban` column dots | Light dots were the legacy hexes (`#3b82f6`, `#f59e0b`, …) at 1.9–2.3:1 on the header panel; dark dots kept the same hexes and sank further | Both demo boards pass `var(--tm-kanban-column-*)`: light dots are the strong tones (todo `#0e7490`, doing `#b45309`, review `#2563eb`, done `#15803d`, backlog `#6b7280`) at ≥ 3:1, dark dots lift to the 400-tones (`#38bdf8`, `#fbbf24`, `#60a5fa`, `#4ade80`, `#94a3b8`) | None at the API level (`KanbanColumn.Color` still renders verbatim). A host that wants the demo's old look pins the five tokens to the legacy hexes; the demo's virtualized board additionally namespaces its test ids with `TestIdPrefix="virtual"` — selectors reach it as `virtual-board-column-{id}` etc. |
 | `TmMemoryPanel` undo bar markup | `.tm-ai-memory__undo` WAS the bar (text + Undo + countdown) | `.tm-ai-memory__undo` is the STACK and every removal is its own `.tm-ai-memory__undo-row` (`data-testid="memory-undo-row"`, `data-item-id`) holding `memory-undo-text` / `memory-undo-action` / `memory-undo-timer` | None for behaviour: in the default `UndoMode="Single"` there is exactly one row, so a selector on `.tm-ai-memory__undo-timer` / `[data-testid='memory-undo-action']` still matches (the first row). A selector that styled `.tm-ai-memory__undo` as a BAR must move its border/padding to `.tm-ai-memory__undo-row` — the container now only stacks |
 | `TmMemoryPanel` root container | The card was a plain flex column that sized from its content | The card declares `container-type: inline-size` + `container-name: tm-memory` (that is what the filter query reads) | None in a block/grid/flex STRETCH context (the normal case). A host that made the card shrink-to-fit (a float, an inline-block, a `width: auto` flex item that relied on the content's intrinsic width) must give it an explicit width — inline-size containment makes the card independent of its contents by design |
 | `TmTopBar` below 480px of the bar's own box | The account name ellipsised at its 12rem cap and the command palette trigger kept its `Ctrl+K` hint, so a bar with the menu button, search, an action and a longer user name overran the right edge (~20px at 390px) | `@container tm-topbar (width < 30rem)` (480px in rem, the component-local threshold convention) hides the Auto account name (the avatar stays) and collapses the trigger to a square icon button; the actions keep one row and the document no longer overflows | None at the API level. A host that needs the name on a phone bar passes the new `UserNameDisplay="Always"` (it ellipsises instead of hiding, at a tighter 8rem cap under 480px so the brand keeps its share of the row); `Never` renders the avatar alone. The visible `Ctrl+K` hint hides under 480px in every mode — the chord stays in `aria-keyshortcuts` + the localized `aria-label` |

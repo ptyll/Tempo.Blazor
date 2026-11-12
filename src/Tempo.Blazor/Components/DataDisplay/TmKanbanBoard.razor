@@ -9,7 +9,7 @@
         + (Disabled ? " tm-kanban-disabled" : "");
 }
 
-<div class="@rootCss @Class" data-focus-target="@(IsMoveMenuEnabled ? _focusTarget : null)" @attributes="AdditionalAttributes">
+<div class="@rootCss @Class" data-focus-target="@(IsMoveMenuEnabled ? _focusTarget : null)" @ref="_rootElement" @attributes="AdditionalAttributes">
     @* The keyboard instructions and the ONE polite live region of the whole board sit outside the
        columns: a card's keys are described once, and a move is announced once instead of once per
        column. Both are visually hidden (position: absolute), so the flex layout is untouched, and both
@@ -36,6 +36,8 @@
             <div class="@colCss"
                  @ref="ZoneHandle(col.Id, null).Ref"
                  data-testid="@TestId($"board-column-{col.Id}")"
+                 data-tm-kanban-column="@col.Id"
+                 data-tm-kanban-lane="@((string?)null)"
                  title="@(isCollapsed ? col.Title : null)"
                  role="@(isCollapsed ? "group" : null)"
                  aria-label="@(isCollapsed ? CollapsedColumnSummary(col, colItems.Count) : null)"
@@ -206,6 +208,8 @@
                             <div class="@cellCss"
                                  @ref="ZoneHandle(col.Id, laneKey).Ref"
                                  data-testid="@TestId($"cell-{col.Id}-{laneTestId}")"
+                                 data-tm-kanban-column="@col.Id"
+                                 data-tm-kanban-lane="@LaneDragValue(laneKey)"
                                  tabindex="@(IsMoveMenuEnabled ? "-1" : null)"
                                  @ondragover="@(() => HandleColumnDragOver(col.Id, laneKey))"
                                  @ondragover:preventDefault="@(!Disabled)"
@@ -228,6 +232,7 @@
                         @foreach (var col in Columns)
                         {
                             var colCollapsed = IsColumnCollapsed(col.Id);
+                            var slotTarget = Loc["TmKanban_LaneSlotTarget", col.Title, lane.Title];
                             var slotCss = "tm-kanban__lane-slot"
                                 + (colCollapsed ? " tm-kanban__lane-slot--collapsed" : "")
                                 + (IsActiveDropTarget(col.Id, laneKey) ? " tm-kanban__lane-slot--drop-target" : "");
@@ -235,10 +240,20 @@
                             <div class="@slotCss"
                                  @ref="ZoneHandle(col.Id, laneKey).Ref"
                                  data-testid="@TestId($"lane-slot-{col.Id}-{laneTestId}")"
+                                 data-tm-kanban-column="@col.Id"
+                                 data-tm-kanban-lane="@LaneDragValue(laneKey)"
+                                 role="group"
+                                 title="@slotTarget"
+                                 aria-label="@slotTarget"
                                  tabindex="@(IsMoveMenuEnabled ? "-1" : null)"
                                  @ondragover="@(() => HandleColumnDragOver(col.Id, laneKey))"
                                  @ondragover:preventDefault="@(!Disabled)"
-                                 @ondrop="@(() => HandleDrop(col.Id, laneKey))"></div>
+                                 @ondrop="@(() => HandleDrop(col.Id, laneKey))">
+                                @if (col.Color is not null)
+                                {
+                                    <span class="tm-kanban__slot-color" style="background-color: @col.Color;"></span>
+                                }
+                            </div>
                         }
                     </div>
                 }
@@ -624,6 +639,11 @@
         }
         return -1;
     }
+
+    // The module's STABLE card key: the card's index in the host's full Items list. Unlike the
+    // cell index it survives a host refresh that moved the list under the gesture, so the release
+    // report can be verified (a mismatch cancels the drop).
+    private int KeyIndex(TItem item) => Items is null ? -1 : IndexOfItem(Items, item);
 
     private void HandleDragStart(TItem item, string fromColumn, string? fromLane)
     {

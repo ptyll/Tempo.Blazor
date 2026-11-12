@@ -21,6 +21,10 @@
     --tm-kanban-lane-padding: var(--tm-space-2, 0.5rem);
     --tm-kanban-lane-inset: calc(var(--tm-kanban-lane-padding) + var(--tm-border-width));
 
+    /* The thickness of the two insertion lines (the HTML5 drop indicator and the touch drag's
+       fixed-position line, which re-declares the knob itself — it is appended to <body>). */
+    --tm-kanban-indicator-thickness: 3px;
+
     display: flex;
     gap: var(--tm-space-4, 1rem);
     overflow-x: auto;
@@ -76,7 +80,7 @@
     color: var(--tm-text-secondary);
     background-color: var(--tm-bg-muted);
     padding: 0 6px;
-    border-radius: 9999px;
+    border-radius: var(--tm-radius-full, 9999px);
     min-width: 20px;
     text-align: center;
 }
@@ -129,6 +133,14 @@
     .tm-kanban__card-move-trigger {
         inline-size: var(--tm-touch-target);
         block-size: var(--tm-touch-target);
+    }
+
+    /* The card is a long-press drag grip on a finger: the hold must never surface the text
+       selection or the OS callout — the drag owns the hold. */
+    .tm-kanban__card {
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        user-select: none;
     }
 }
 
@@ -327,7 +339,7 @@
     color: var(--tm-text-secondary);
     background-color: var(--tm-bg-muted);
     padding: 0 6px;
-    border-radius: 9999px;
+    border-radius: var(--tm-radius-full, 9999px);
     min-width: 20px;
     text-align: center;
 }
@@ -354,12 +366,38 @@
 }
 
 .tm-kanban__lane-slot {
+    position: relative;
     flex: 0 0 var(--tm-kanban-column-width);
     min-width: var(--tm-kanban-column-width);
     min-height: var(--tm-kanban-lane-slot-height);
     border: 1px dashed transparent;
     border-radius: var(--tm-radius-md, 0.5rem);
     transition: background-color var(--tm-transition-fast), border-color var(--tm-transition-fast);
+}
+
+/* The column's colour mark inside a collapsed lane's slot: the slot replaces the whole column body,
+   so without this strip the lane would hide which column each slot belongs to. The colour is the
+   COLUMN's own (a token reference recommended — see --tm-kanban-column-*) and stays visible in the
+   idle state at the non-text 3:1 level (TG-005). The strip is a quiet bar: vertical at the slot's
+   start edge, flipping to a horizontal cap when the column under it is collapsed to the narrow
+   width, where a vertical bar would read as a border. */
+.tm-kanban__slot-color {
+    position: absolute;
+    inset-inline-start: var(--tm-space-1, 0.25rem);
+    inset-block-start: 25%;
+    inset-block-end: 25%;
+    inline-size: var(--tm-space-1, 0.25rem);
+    border-radius: var(--tm-radius-full, 9999px);
+    pointer-events: none;
+}
+
+.tm-kanban__lane-slot--collapsed .tm-kanban__slot-color {
+    inset-inline-start: 20%;
+    inset-inline-end: 20%;
+    inset-block-start: var(--tm-space-1, 0.25rem);
+    inset-block-end: auto;
+    inline-size: auto;
+    block-size: var(--tm-space-1, 0.25rem);
 }
 
 .tm-kanban__lane-slot--collapsed {
@@ -484,12 +522,62 @@
     background-color: var(--tm-color-primary-subtle);
 }
 
+/* ── Touch drag (plan 92e96b25, phase 5 / TG-005, decision O7) ──
+
+   The touch path rides the SHARED pointer-drag.js / pointer-gesture.js helpers through tm-kanban.js:
+   a long-press starts the drag (a tap and a page scroll keep working — the card never claims
+   touch-action), the module drags a FIXED-POSITION GHOST under the finger (the source card stays in
+   the flow invisibly, so its siblings never jump and the column's overflow can never clip the drag),
+   paints the hovered zone and the insertion line, and edge auto-scrolls the board root (horizontal)
+   and the hovered cell's card list (vertical) while the finger rests near an edge. Every rule below
+   is class-only paint; the board never re-renders mid-gesture, so these classes are never diffed
+   away while the pointer is down. */
+
+/* The lifted card — actually the module's GHOST clone (appended to <body>, so the z-index reads the
+   global --tm-z-* token — a --tm-kanban-* knob could never inherit there), painted at a fixed
+   position under the pointer. The shadow is what makes it read as "picked up". No transition — it
+   follows the finger directly, so reduced motion has nothing to suppress. */
+.tm-kanban__card--touch-dragging {
+    box-shadow: var(--tm-shadow-lg);
+    cursor: grabbing;
+    /* Below the overlay/popover chrome (--tm-z-overlay), above the page content — the ghost is
+       feedback, never a dialog. */
+    z-index: var(--tm-z-dropdown, 1000);
+}
+
+/* An EXPANDED zone under the drag reports itself the way the collapsed strip does (a --tm-color-primary
+   pair that clears 3:1 in both themes) — the existing --drop-target modifiers cover the collapsed
+   strip and the lane slot; this class covers the expanded column and the lane cell. */
+.tm-kanban__cell--touch-target {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: -2px;
+    background-color: var(--tm-color-primary-subtle);
+    border-radius: inherit;
+}
+
+/* The insertion line the module positions between cards (fixed coordinates, pointer-events none).
+   The paint reads --tm-color-primary (primary-600 light, primary-400 on the dark roots — the SAME
+   theme-relative step the rest of the dark theme uses), so no component-level dark block is needed;
+   the primary-200 ring stays a light halo in both themes. The line is appended to <body>, so the
+   thickness knob is declared here rather than read from the board root; the z-index is the shared
+   inline-sheet band (--tm-z-inline-sheet). */
+.tm-kanban__touch-indicator {
+    --tm-kanban-indicator-thickness: 3px;
+    position: fixed;
+    height: var(--tm-kanban-indicator-thickness);
+    border-radius: var(--tm-radius-full, 9999px);
+    background-color: var(--tm-color-primary);
+    box-shadow: 0 0 0 1px var(--tm-color-primary-200);
+    pointer-events: none;
+    z-index: var(--tm-z-inline-sheet, 10);
+}
+
 /* ── Drop indicator (in-column reorder / drop position) ── */
 
 .tm-kanban__drop-indicator {
-    height: 3px;
+    height: var(--tm-kanban-indicator-thickness, 3px);
     margin: -1px 0;
-    border-radius: 9999px;
+    border-radius: var(--tm-radius-full, 9999px);
     background-color: var(--tm-color-primary-500, #3b82f6);
     box-shadow: 0 0 0 1px var(--tm-color-primary-200, #bfdbfe);
     animation: tm-kanban-drop-indicator-in 0.12s ease;

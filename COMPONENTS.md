@@ -1701,7 +1701,11 @@ popisuje [docs/kanban-board.md](docs/kanban-board.md).
 | `tm-kanban__column--header-only` / `__column--lane-cell` | Hlavičková buňka a buňka `(sloupec, lane)` |
 | `tm-kanban__swimlane` / `--collapsed` / `__swimlane-header` / `__swimlane-toggle` / `__swimlane-color` / `__swimlane-title` / `__swimlane-count` / `__swimlane-body` | Swimlane |
 | `tm-kanban__swimlane-slots` | Tělo SBALENÉ swimlane: pruh se sloty pro drop |
-| `tm-kanban__lane-slot` / `--collapsed` / `--drop-target` | Drop slot sbalené lane pro jeden sloupec (pod sbaleným sloupcem úzký, během dragu zvýrazněný) |
+| `tm-kanban__lane-slot` / `--collapsed` / `--drop-target` | Drop slot sbalené lane pro jeden sloupec (pod sbaleným sloupcem úzký, během dragu zvýrazněný; nese `title`/`aria-label` s cílem `{sloupec} / {lane}` a `__slot-color` pruh barvy sloupce) |
+| `tm-kanban__slot-color` | Barevná značka sloupce ve slotu sbalené lane (svislá čárka, pod sbaleným sloupcem vodorovný proužek) — viditelná i v klidu (TG-005) |
+| `tm-kanban__card--touch-dragging` | Karta zvednutá TOUCH dragem (dlouhý stisk 400 ms přes sdílený pointer-drag.js; stín + z-index, pohyb inline transformem, Blazor během gesta nerenderuje) |
+| `tm-kanban__cell--touch-target` | Rozbalená zóna (sloupec/lane buňka) pod prstem během touch dragu |
+| `tm-kanban__touch-indicator` | Vodorovná linka pozice vložení touch dragu (pozicuje ji modul, jen v zóně s kartami) |
 | `tm-kanban__card--movable` / `__card-content` / `__card-actions` | Karta s ne-drag akcí (rezervovaný roh, fencovaný obsah) |
 | `tm-kanban__card-move` / `__card-move-trigger` | Trigger menu „Přesunout…“ |
 
@@ -1716,6 +1720,12 @@ popisuje [docs/kanban-board.md](docs/kanban-board.md).
 | `--tm-kanban-lane-padding` | `var(--tm-space-2, 0.5rem)` | Padding těla lane / slotů |
 | `--tm-kanban-lane-inset` | `calc(var(--tm-kanban-lane-padding) + var(--tm-border-width))` | Levý inset řádku hlaviček — stejný jako inset lane buněk, aby hlavička neseděla o pár px vedle své buňky |
 | `--tm-kanban-virtual-max-height` | `520px` | Maximální výška scroll kontejneru `<Virtualize>` (`VirtualizeCards`) |
+
+Barevné tóny sloupců (TG-005): doporučená paleta `--tm-kanban-column-backlog` / `-todo` / `-doing` /
+`-review` / `-done` žije v `tokens.css` a na tmavých kořenech se zvedá na 400-tóny (stejná konvence
+jako `--tm-chart-series-*`); každá hodnota drží netextový kontrast 3:1 na hlavičkovém panelu v obou
+tématech. `KanbanColumn.Color` ji přijímá jako `var(--tm-kanban-column-todo)` — raw hex funguje dál,
+ale téma nezmodifikujete.
 
 #### Parametry
 

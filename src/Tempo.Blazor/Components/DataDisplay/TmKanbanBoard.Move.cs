@@ -550,51 +550,61 @@ public partial class TmKanbanBoard<TItem>
         {
             _focusBatchReady = true;
             StateHasChanged();
-            return;
         }
-
-        if (!_focusHandback) return;
-
-        _focusHandback = false;
-        var column = _pendingFocusColumn;
-        var lane = _pendingFocusLane;
-        var item = _pendingFocusItem;
-        var card = _pendingFocusCard.Ref;
-        _pendingFocusItem = default;
-        _pendingFocusColumn = null;
-        _pendingFocusLane = null;
-        _pendingFocusIndex = -1;
-        _pendingFocusCard.Ref = default;
-
-        if (column is null) return;
-
-        var columnCollapsed = IsColumnCollapsed(column);
-        var laneCollapsed = !columnCollapsed && SwimlanesEnabled && lane is not null && IsLaneCollapsed(lane);
-
-        if (!columnCollapsed && !laneCollapsed)
+        else if (_focusHandback)
         {
-            if (card.Id is not null)
-            {
-                _rovingItem = item;
-                await FocusSafelyAsync(card);
-                return;
-            }
+            _focusHandback = false;
+            var column = _pendingFocusColumn;
+            var lane = _pendingFocusLane;
+            var item = _pendingFocusItem;
+            var card = _pendingFocusCard.Ref;
+            _pendingFocusItem = default;
+            _pendingFocusColumn = null;
+            _pendingFocusLane = null;
+            _pendingFocusIndex = -1;
+            _pendingFocusCard.Ref = default;
 
-            // A host that has not applied the move yet still renders the card in its OLD cell: its
-            // identity handle is the card the reader was on, so the focus stays on it.
-            if (item is not null && _cardHandles.TryGetValue(item, out var unchanged) && unchanged.Ref.Id is not null)
+            if (column is not null)
             {
-                _rovingItem = item;
-                await FocusSafelyAsync(unchanged.Ref);
-                return;
+                var columnCollapsed = IsColumnCollapsed(column);
+                var laneCollapsed = !columnCollapsed && SwimlanesEnabled && lane is not null && IsLaneCollapsed(lane);
+
+                if (!columnCollapsed && !laneCollapsed)
+                {
+                    if (card.Id is not null)
+                    {
+                        _rovingItem = item;
+                        await FocusSafelyAsync(card);
+                    }
+                    else
+                    {
+                        // A host that has not applied the move yet still renders the card in its OLD
+                        // cell: its identity handle is the card the reader was on, so the focus stays
+                        // on it.
+                        if (item is not null && _cardHandles.TryGetValue(item, out var unchanged) && unchanged.Ref.Id is not null)
+                        {
+                            _rovingItem = item;
+                            await FocusSafelyAsync(unchanged.Ref);
+                        }
+                    }
+                }
+                else
+                {
+                    var zoneLane = laneCollapsed ? lane : null;
+                    if (GetZoneHandle(column, zoneLane) is { Ref.Id: not null } zone)
+                    {
+                        await FocusSafelyAsync(zone.Ref);
+                    }
+                }
             }
         }
 
-        var zoneLane = laneCollapsed ? lane : null;
-        if (GetZoneHandle(column, zoneLane) is { Ref.Id: not null } zone)
-        {
-            await FocusSafelyAsync(zone.Ref);
-        }
+        // The touch drag attaches to an enabled board and detaches from a Disabled one; a re-render
+        // with an unchanged state must not re-attach (the module's registry would drop the live
+        // session). It runs AFTER the focus hand-back: attachment is idempotent per state and must
+        // never delay (nor be skipped by) the focus logic's early batch. Best-effort: a host without
+        // JS keeps every other path.
+        await UpdateTouchAttachmentAsync();
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -693,6 +703,14 @@ public partial class TmKanbanBoard<TItem>
         if (keyed) builder.SetKey(index);
         builder.AddAttribute(9, "class", IsMoveMenuEnabled ? "tm-kanban__card tm-kanban__card--movable" : "tm-kanban__card");
         builder.AddAttribute(10, "data-testid", TestId($"card-{columnId}-{LaneToken(laneId)}-{index}"));
+        // The touch-drag identity the tm-kanban module reads at press time: the card flag makes the
+        // card a drag grip, the index addresses it inside its cell, the key is its index in the
+        // host's FULL list (stable across a host refresh — the board verifies the source identity
+        // at release against this key). Both indexes are stable for the whole gesture: Blazor never
+        // re-renders mid-drag.
+        builder.AddAttribute(28, "data-tm-kanban-card", "true");
+        builder.AddAttribute(29, "data-tm-kanban-index", index);
+        builder.AddAttribute(30, "data-tm-kanban-key", KeyIndex(item));
         if (IsMoveMenuEnabled)
         {
             builder.AddAttribute(11, "role", "group");

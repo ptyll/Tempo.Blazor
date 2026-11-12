@@ -518,6 +518,20 @@
   --tm-chart-positive: var(--tm-color-success);
   --tm-chart-negative: var(--tm-color-danger);
   --tm-chart-neutral:  var(--tm-color-gray-500);
+
+  /* ── Kanban column tones ────────────────────────────────────
+     The recommended colours for a TmKanbanBoard column dot / lane colour (plan 92e96b25, TG-005):
+     a host passes "var(--tm-kanban-column-backlog)" (etc.) as KanbanColumn.Color instead of a raw
+     hex, so the dot follows the theme. The dot is IDENTIFYING paint (WCAG 1.4.11), not a large
+     fill: the light values are the STRONG tones (info/warning/success-strong, primary-600) that
+     clear the non-text 3:1 level on the header's muted panel — the plain 500-tones measure 1.9–2.3:1
+     there — and tokens-dark.css lifts every slot to its 400-tone for the same reason (the TG-002
+     series-token convention). */
+  --tm-kanban-column-backlog: var(--tm-color-gray-500);
+  --tm-kanban-column-todo:    var(--tm-color-info-strong);
+  --tm-kanban-column-doing:   var(--tm-color-warning-strong);
+  --tm-kanban-column-review:  var(--tm-color-primary-600);
+  --tm-kanban-column-done:    var(--tm-color-success-strong);
   /* Font size of the tick/value/label text inside a dashboard widget chart (20 units default,
      which renders ≈ 10 px at the widget chart's viewBox scale). Declared so the strict token
      audit no longer counts the alias as undefined; the value matches the stylesheet fallback. */

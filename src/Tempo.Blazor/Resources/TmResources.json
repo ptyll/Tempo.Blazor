@@ -3006,6 +3006,8 @@
   "TmKanban_MoveUp": "Move up",
   "TmKanban_NoSwimlane": "No value",
   "TmKanban_ToggleSwimlane": "Toggle swimlane",
+  "TmKanban_LaneSlotTarget": "{0} in lane {1}",
+  "TmKanban_DragCancelled": "Move of {0} cancelled — the card stayed in {1}",
   "TmKeyboardShortcutsHelp_Or": "or",
   "TmKeyboardShortcutsHelp_Title": "Keyboard Shortcuts",
   "TmKycWizard_AddAddress": "Add address",

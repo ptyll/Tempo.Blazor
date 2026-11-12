@@ -1598,6 +1598,10 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmKanban_CollapsedColumnOverLimit"] = "over limit",
         ["TmKanban_CollapsedColumnSummary_One"] = "{1}, {0} card",
         ["TmKanban_CollapsedColumnSummary_Other"] = "{1}, {0} cards",
+        // TmKanbanBoard — collapsed-lane slot target name and the touch-drag cancel announcement
+        // (plan 92e96b25, phase 5 / TG-005, decision O7).
+        ["TmKanban_LaneSlotTarget"] = "{0} in lane {1}",
+        ["TmKanban_DragCancelled"] = "Move of {0} cancelled — the card stayed in {1}",
 
         // TmRichEditor - Tokens
         ["TmRichEditor_Token"]          = "Insert variable",
@@ -6462,6 +6466,8 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmGanttTaskPanel_NoAssignees"] = "Bez řešitelů",
         ["TmGanttTaskPanel_BaselineDeviation"] = "Odchylka od baseline",
         ["TmGanttTaskPanel_BaselineStart"] = "Začátek {0} d",
+        ["TmKanban_LaneSlotTarget"] = "{0} v pruhu {1}",
+        ["TmKanban_DragCancelled"] = "Přesun karty {0} zrušen — karta zůstala v {1}",
         ["TmGanttTaskPanel_BaselineEnd"] = "Konec {0} d",
         ["TmGanttTaskPanel_Action_MarkDone"] = "Označit jako hotové",
         ["TmGantt_DuplicateSuffix"] = "(kopie)",

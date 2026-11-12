@@ -235,7 +235,9 @@ public class ProvenanceComparisonTests
         // tm-toast.test.mjs and tm-toast-swipe.test.mjs (plan 4ebadc60 phases 3-4) pushed the count by one without
         // moving this number; a stale denominator is exactly what this guard exists for (recounted on 2026-11-10:
         // every excluded file under src/Tempo.Blazor/wwwroot is a *.test.mjs / __tests__ / *.md item, none other).
-        denominator.PackExcludedFiles.Should().Be(36);
+        // tm-kanban.test.mjs (plan 92e96b25 phase 5 / TG-005, decision O7: the kanban touch-drag module tests) —
+        // the same Pack=false treatment, one more excluded file.
+        denominator.PackExcludedFiles.Should().Be(37);
     }
 
     /// <summary>

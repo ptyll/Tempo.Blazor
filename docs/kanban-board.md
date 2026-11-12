@@ -125,7 +125,90 @@ is unaffected by whether the dragged item is removed before or after the inserti
 `TargetIndex` is the zero-based index in the cell's current ordering; a value equal to the card count
 means "append".
 
-A pointer drag announces nothing — only the non-drag path below owns the board's live region.
+The mouse's HTML5 drag announces nothing — the live region speaks for the touch path (its drop and
+its cancel) and for the non-drag move below; one board, one polite live region either way.
+
+## Column colours — tokens, not hexes
+
+`KanbanColumn.Color` (and `KanbanSwimlane.Color`) render **verbatim** as the inline
+`background-color` of `.tm-kanban__header-color` / `.tm-kanban__swimlane-color`; the component
+invents no default colour, so a column without one renders no dot. The recommendation (the TG-005
+mock gap): pass a **token reference** instead of a raw hex, so the dot follows the theme in light
+AND dark:
+
+```csharp
+new KanbanColumn("todo", "To Do", "var(--tm-kanban-column-todo)")
+```
+
+The catalogued `--tm-kanban-column-backlog` / `-todo` / `-doing` / `-review` / `-done` tokens ship in
+`tokens.css` and lift to the 400-tones on the dark roots (`tokens-dark.css`) — the same convention
+as the TG-002 chart series palette. The dot is *identifying* paint (WCAG 1.4.11), so every value
+clears the non-text **3:1** level against the header's muted panel in both themes; the plain
+500-tones a host would reach for first measure only 1.9–2.3:1 there, which is why the light values
+are the *strong* tones (`--tm-color-info-strong`, `…-warning-strong`, `…-success-strong`,
+`primary-600`). `TmKanbanColumnTokenTests` computes the contrast for all ten values. A raw hex (or
+any CSS colour) still works — the parameter keeps its meaning for hosts with a brand palette of
+their own.
+
+The colour stays visible while the zone is collapsed: the strip keeps its header dot, and a
+collapsed lane's slot renders the column's mark as `.tm-kanban__slot-color` (a quiet bar at the
+slot's start edge, a horizontal cap under a collapsed column) — without it a collapsed lane would
+hide which column each slot belongs to. Every slot also names its target in `title` /
+`aria-label` as a phrase — `TmKanban_LaneSlotTarget`, "{0} in lane {1}" ("To Do in lane Alice") —
+and carries `role="group"` like the collapsed column strip, so a reader dropping onto a collapsed
+zone hears where the card will land.
+
+## Touch drag (decision O7, plan 92e96b25)
+
+On a touch pointer the board drags cards through the **shared** `pointer-drag.js` helper (via the
+`tm-kanban.js` module) — never a second drag implementation:
+
+- A **long-press starts the drag** (400 ms). Before the hold completes the card keeps its native
+  behaviour — a tap still clicks, a move is a page scroll (drifting past the tolerance aborts the
+  gesture as a swipe); after it, the card lifts and follows the finger.
+- The module paints everything with a **ghost**: the source card stays in the flow invisibly (its
+  siblings never jump, and the column's `overflow` can never clip the drag — a translated card
+  would vanish the moment it left its column), while a fixed-position clone rides the finger
+  (`.tm-kanban__card--touch-dragging`). The clone is **inert and anonymous** — `inert`, and its
+  subtree's `id` / `data-testid` stripped — so no test, focus or assistive technology can address
+  it, and it keeps riding the finger until the commit report settles on the .NET side (with a
+  timeout), so on Blazor Server the card never visibly snaps back for the length of the round
+  trip. The hovered zone carries its `--drop-target` / `--touch-target` class and the insertion
+  line (`.tm-kanban__touch-indicator`) sits between the other cards. **Blazor never re-renders
+  mid-gesture**, which is what keeps the captured card's DOM node alive for the whole drag; the
+  insertion index resolves by the midpoint rule against the OTHER cards of the hovered cell.
+- The drop report carries **identities, not guesses**: the source is the press-time
+  `(column, lane, index)` triple PLUS the card's **stable key** (`data-tm-kanban-key`, the card's
+  index in the host's full `Items` list) — the board verifies at release that the key still
+  addresses the same card and **cancels on mismatch** (a host refresh under the gesture moves
+  nothing, and the rollback is announced). The target is the `(column, lane)` pair with the
+  **full-list index of the card before which the drop lands** (`-1` = append): the module reads the
+  hovered card's own `data-tm-kanban-index`, so a `VirtualizeCards` cell — whose DOM holds only
+  the visible window — reads exactly the slot a fully-rendered cell would.
+- **Edge auto-scroll** rides the shared `pointer-gesture.js` `createAutoScroller` (the
+  `tm-sortable.js` / `gantt.js` composition): the board root scrolls horizontally and the hovered
+  cell's `.tm-kanban__cards` list scrolls vertically (the scroller swaps on every zone change),
+  and the zone/indicator hit test re-runs on every scrolled frame — the content moves under a
+  stationary finger.
+- **HTML5 dragstart stays the mouse path**: the module blocks a native `dragstart` in the capture
+  phase whenever the last press was a touch or a touch session owns the gesture, and on
+  `(pointer: coarse)` the card disables the touch callout and text selection for the length of the
+  hold.
+- The **one commit** arrives on release and reports the same `KanbanMoveEvent` contract as an HTML5
+  drop (the board resolves the item from the host's unchanged list by the triple the module
+  reports). A release over no zone rolls back and announces the cancel.
+- **pointercancel / Escape / a second finger** (all owned by the shared helper) roll back every
+  inline paint and are **announced** through the one polite live region
+  (`TmKanban_DragCancelled`, "Move of {0} cancelled — the card stayed in {1}").
+- **Collapsed zones are full citizens of the touch path**: the strip and every lane slot carry the
+  module's `data-tm-kanban-*` identity and highlight under the finger exactly like the HTML5 path.
+- The mouse keeps the HTML5 drag-and-drop path untouched, and the per-card "Move…" menu stays the
+  WCAG 2.5.7 alternative for every pointer.
+
+The module's pure resolvers and the gesture lifecycle are node-tested (`npm run test:overlay`,
+`__tests__/tm-kanban.test.mjs`); the .NET commit/cancel contract is bUnit-tested
+(`TmKanbanTouchDragTests`); the browser path is E2E-tested with `hasTouch` + CDP
+`Input.dispatchTouchEvent` (`KanbanTouchDragE2ETests`).
 
 ## Non-drag move (WCAG 2.5.7 / `ShowMoveMenu`)
 
@@ -215,6 +298,8 @@ reads `swimlane-none` for it.
 | `TmKanban_NoSwimlane` | The no-value lane title |
 | `TmKanban_CardMoved` | Announcement, `{0}` = card, `{1}` = target |
 | `TmKanban_MoveCard` / `TmKanban_MoveUp` / `TmKanban_MoveDown` / `TmKanban_CurrentTarget` | Move menu |
+| `TmKanban_LaneSlotTarget` | Collapsed-lane slot `title`/`aria-label` phrase: `{0}` = column, `{1}` = lane |
+| `TmKanban_DragCancelled` | Touch-drag cancel announcement: `{0}` = card, `{1}` = the cell it stayed in |
 | `TmKanban_CardRoleDescription` / `TmKanban_CardNumber` / `TmKanban_CardInstructions` / `TmKanban_CardInstructionsOpen` | Card a11y |
 | `TmKanbanBoard_Empty` | Empty cell |
 
@@ -234,11 +319,20 @@ column, and a host that needs it does so in the wireframe document itself.
   `ToColumn`, `ToSwimlane`, `TargetIndex` and `TargetBeforeItem`), `/data-display` for the
   component-level reference.
 - bUnit: `TmKanbanBoardTests`, `TmKanbanBoardCollapseTests`, `TmKanbanBoardCollapseLocalizationTests`,
-  `TmKanbanBoardMoveTests`, `TmKanbanCollapseCssTests`, plus `TmResourceCompletenessTests`.
+  `TmKanbanBoardMoveTests`, `TmKanbanCollapseCssTests`, `TmKanbanTouchDragTests` (the touch commit /
+  cancel contract and the module's DOM selectors), `TmKanbanColumnColorTests` +
+  `TmKanbanColumnTokenTests` (the colour contract and the 3:1 token guard), plus
+  `TmResourceCompletenessTests`.
 - E2E: `KanbanReorderE2ETests`, `KanbanSwimlaneE2ETests`, `KanbanCollapseE2ETests`,
   `KanbanDropZonesE2ETests`, `KanbanCollapsedLayoutE2ETests`, `KanbanMoveE2ETests`,
-  `KanbanVisualE2ETests` (committed light/dark baselines under
-  `tests/Tempo.Blazor.E2E/__screenshots__/kanban/`).
+  `KanbanTouchDragE2ETests` (real touch input via CDP: long-press drag to an expanded column, a
+  collapsed strip and a collapsed lane's slot; a virtualized column scrolled before the drop
+  anchors on the full-list index; the board edge auto-scrolls near the edge and stays still away
+  from it; pointercancel / a second finger roll back and are announced), `KanbanCollapsedDropE2ETests` (edge cases: collapsed column in a collapsed lane, the
+  "no value" slot, an over-limit strip, a Disabled board, the virtualized board, two boards with
+  `TestIdPrefix` on one page; screenshots in
+  `tests/Tempo.Blazor.E2E/TestResults/kanban-collapsed-drop/`), `KanbanVisualE2ETests` (committed
+  light/dark baselines under `tests/Tempo.Blazor.E2E/__screenshots__/kanban/`).
 
 ```bash
 dotnet test tests/Tempo.Blazor.Tests --filter "FullyQualifiedName~Kanban"
