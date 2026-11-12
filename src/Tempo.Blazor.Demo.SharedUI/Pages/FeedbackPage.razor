@@ -729,7 +729,7 @@
     </div>
 
     <div class="showcase-card">
-        <div class="flex flex-wrap gap-3">
+        <div class="flex flex-wrap items-end gap-3">
             <TmButton Variant="ButtonVariant.Primary" data-testid="open-right-drawer" OnClick="@(() => _drawerRightOpen = true)">
                 Open Right Drawer
             </TmButton>
@@ -739,12 +739,38 @@
             <TmButton Variant="ButtonVariant.Secondary" data-testid="open-bottom-sheet" OnClick="@(() => { _sheetOpen = true; StateHasChanged(); })">
                 Open Bottom Sheet
             </TmButton>
+            <TmSelect TValue="string"
+                      Label="@Loc["TmDemo_DrawerWidth"]"
+                      data-testid="right-drawer-width"
+                      @bind-Value="_drawerRightWidth"
+                      Options="@_drawerWidthOptions" />
+            <TmButton Variant="ButtonVariant.Secondary" data-testid="open-drawer-launchpad" OnClick="@(() => _drawerLaunchpadOpen = true)">
+                @Loc["TmDemo_OpenDrawerLaunchpad"]
+            </TmButton>
+        </div>
+    </div>
+
+    @* TG-006: a NON-modal (inline) right drawer anchors to its own container, not the viewport —
+       the popover promotion and the right-edge alignment apply to modal drawers only. *@
+    <div class="showcase-card mt-4">
+        <div data-testid="inline-drawer-host" class="relative h-[260px] overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
+            <div class="p-4">
+                <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" data-testid="open-inline-right-drawer" OnClick="@(() => _inlineRightOpen = true)">
+                    @Loc["TmDemo_OpenInlineRightDrawer"]
+                </TmButton>
+                <p class="text-sm text-slate-600 dark:text-slate-400 mt-2">@Loc["TmDemo_InlineRightDrawerBody"]</p>
+            </div>
+            <TmDrawer IsOpen="@_inlineRightOpen" IsOpenChanged="@(v => _inlineRightOpen = v)"
+                      Position="DrawerPosition.Right" Modal="false" Width="260px"
+                      Title="@Loc["TmDemo_InlineRightDrawerTitle"]">
+                <p class="text-sm text-slate-600 dark:text-slate-400">@Loc["TmDemo_InlineRightDrawerBody"]</p>
+            </TmDrawer>
         </div>
     </div>
 </section>
 
 <TmDrawer IsOpen="@_drawerRightOpen" IsOpenChanged="@(v => { _drawerRightOpen = v; StateHasChanged(); })"
-          Title="Edit Record" Width="420px">
+          Title="Edit Record" Width="@_drawerRightWidth">
     <div class="space-y-4">
         <p class="text-sm text-slate-600 dark:text-slate-400">This is a right-side drawer panel. It slides in from the right edge.</p>
         <TmTextInput data-testid="right-drawer-field" Label="@Loc["TmDemo_FocusScopeInput"]" />
@@ -791,6 +817,17 @@
 
 <TmDialog Show="_sheetDialog" Type="DialogType.Confirm" Title="@Loc["TmDemo_FocusScopeLabel"]"
           Message="@Loc["TmDemo_InlineSheetBody"]" OnResult="@(_ => { _sheetDialog = false; StateHasChanged(); })" />
+
+@* TG-006: a drawer opened from inside a modal — the drawer's popover root promotes into the top
+   layer above the modal, and the panel must still stand at the window's right edge. *@
+<TmModal Show="_drawerLaunchpadOpen" OnClose="() => _drawerLaunchpadOpen = false"
+         Title="@Loc["TmDemo_DrawerLaunchpadTitle"]" data-testid="drawer-launchpad-modal">
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmDemo_DrawerLaunchpadBody"]</p>
+    <TmButton Variant="ButtonVariant.Primary" Size="ButtonSize.Sm" data-testid="launchpad-open-right-drawer"
+              OnClick="@(() => _drawerRightOpen = true)">
+        @Loc["TmDemo_LaunchpadOpenRightDrawer"]
+    </TmButton>
+</TmModal>
 
 <!-- Context Menu & Split Button -->
 <section class="demo-section">
@@ -1282,6 +1319,17 @@
     private bool _drawerLeftOpen;
     private bool _sheetOpen;
     private bool _sheetDialog;
+    private bool _inlineRightOpen;
+    private bool _drawerLaunchpadOpen;
+    private string _drawerRightWidth = "420px";
+
+    private IReadOnlyList<SelectOption<string>> _drawerWidthOptions =>
+    [
+        new("420px", "\u2068420 px\u2069"),
+        new("600px", "\u2068600 px\u2069"),
+        new("120vw", Loc["TmDemo_DrawerWidthOverflow"]),
+    ];
+
     private int _bulkCount;
     private int? _quantity = 1;
     private int? _amount = 100;

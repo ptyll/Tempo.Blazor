@@ -20,12 +20,29 @@
     display: flex;
 }
 
+/* A MODAL (popover) root is pinned to inset:0 below, so it stretches across the whole viewport
+   while the overlay stays position:fixed (out of flow) — the panel is the ONLY flex item. Without
+   an explicit alignment it would stand at the inline start (left in LTR), which parked a
+   Position=Right drawer at the left window edge (TG-006). Positions are PHYSICAL (the slide
+   keyframes travel physical axes, translateX(±100%)), so the RTL flex direction must flip the
+   alignment back — see the [dir="rtl"] rules with the responsive block. A non-popover root is
+   shrink-wrapped against its edge, where the alignment is a no-op. */
 .tm-drawer--right {
     right: 0;
+    justify-content: flex-end;
 }
 
 .tm-drawer--left {
     left: 0;
+    justify-content: flex-start;
+}
+
+[dir="rtl"] .tm-drawer--right {
+    justify-content: flex-start;
+}
+
+[dir="rtl"] .tm-drawer--left {
+    justify-content: flex-end;
 }
 
 /* A bottom drawer is a sheet. The shared sheet rules own the viewport lengths, the keyboard padding

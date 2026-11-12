@@ -670,6 +670,48 @@
   hexes" and "Touch drag (decision O7)" sections, the slot target localization key and the
   verification list.
 
+### Fixed — `TmDrawer` Position=Right at the right window edge (plan 92e96b25, phase 6 / TG-006)
+
+- **The bug.** A MODAL drawer root is a top-layer popover pinned to `inset: 0`
+  (`.tm-drawer[popover].tm-drawer--right`), so the root stretches across the whole viewport while
+  the overlay stays `position: fixed` (out of flow). The panel is then the ONLY flex item of
+  `.tm-drawer`, and with the default `flex-start` alignment a `Position=Right` drawer stood at the
+  LEFT window edge in LTR (live-demo verified at ≥ 641 px: a 420 px panel's right edge sat at
+  x=420). Below 640 px the panel is full-width so the bug could not show; an inline (non-modal)
+  drawer carries no popover and kept its own container-anchored position. In RTL the mirror-image
+  defect parked a `Position=Left` drawer at the right edge.
+- **The fix (stylesheet only, `_drawer.css`).** `.tm-drawer--right` gains
+  `justify-content: flex-end` and `.tm-drawer--left` `justify-content: flex-start`, with
+  `[dir="rtl"]` counterparts flipping the alignment back — `DrawerPosition` is PHYSICAL (the slide
+  keyframes travel physical axes, `translateX(±100%)`), so a right drawer keeps standing at the
+  window's right edge in RTL and a left one at the left. The slide-in animations, reduced motion
+  and the dark-mode overlay are untouched. A non-popover root is shrink-wrapped against its edge,
+  where the new alignment is a no-op.
+- **Derived surfaces.** Every `Position=Right` consumer inherits the fix through the shared
+  stylesheet: `TmSidePanel` (the side sheet behind the scheduler/Gantt panels and the
+  `TmPdfViewer` tablet comments), `TmAppShell`'s overlay drawer (`Position=Left`, correct in LTR,
+  fixed for RTL), `TmOverlayPanel` and the spreadsheet/popover surfaces. `TmEditorShell`'s tablet
+  overlay inspector is its own absolutely-positioned panel (`inset-inline-end: 0`) and was never
+  affected. The `tm-drawer-slide-right` animation enters from the physical right edge before and
+  after the fix (in RTL it enters from the left only for the surfaces whose `Side`/position is
+  logical — unchanged behavior).
+- **Demo.** `/feedback` binds the right drawer's `Width` to a new picker (420 px / 600 px / wider
+  than the window), adds a `Modal="false"` inline right drawer inside a positioned container, and a
+  "Open Dialog → Drawer" launchpad that opens the drawer from inside a `TmModal` (top-layer
+  stacking probe). New `TmDemo_*` keys in all four `DemoResources` tables.
+- **Tests.** bUnit (TDD, RED first): `DrawerPositionAlignmentTests` pins the stylesheet contract
+  (end/start alignment of the stretched popover root, the `[dir="rtl"]` flip, the physical slide
+  keyframes). E2E: `DrawerPositionE2ETests` (WASM lane) measures the panel's bounding box against
+  the viewport at 1440/768/390 px in light and dark, in LTR and RTL, with a custom 600 px width and
+  a width larger than the window, for the inline (non-modal) drawer in its container, for a drawer
+  opened from inside a modal (top layer), plus overlay-click-left-of-panel closes and focus
+  trap/restore; `DrawerPositionServerE2ETests` is the Server smoke. Locator screenshots in
+  `tests/Tempo.Blazor.E2E/TestResults/drawer-position/`. The tracked `tempo-blazor.bundled.css`
+  is regenerated.
+- **JSON documentation / wireframe stencil.** The fix restores the documented `Position`
+  behavior, so the `TmDrawer` overlay, aggregates and `validate --fail-on-drift` are unchanged;
+  the `TmDrawer` wireframe stencil is a schematic placeholder and needs no change.
+
 
 ### Fixed — test suite stability (plan 7ba95ed6, phase FZE-1)
 
@@ -1281,6 +1323,8 @@
 | `TmMemoryPanel` undo bar markup | `.tm-ai-memory__undo` WAS the bar (text + Undo + countdown) | `.tm-ai-memory__undo` is the STACK and every removal is its own `.tm-ai-memory__undo-row` (`data-testid="memory-undo-row"`, `data-item-id`) holding `memory-undo-text` / `memory-undo-action` / `memory-undo-timer` | None for behaviour: in the default `UndoMode="Single"` there is exactly one row, so a selector on `.tm-ai-memory__undo-timer` / `[data-testid='memory-undo-action']` still matches (the first row). A selector that styled `.tm-ai-memory__undo` as a BAR must move its border/padding to `.tm-ai-memory__undo-row` — the container now only stacks |
 | `TmMemoryPanel` root container | The card was a plain flex column that sized from its content | The card declares `container-type: inline-size` + `container-name: tm-memory` (that is what the filter query reads) | None in a block/grid/flex STRETCH context (the normal case). A host that made the card shrink-to-fit (a float, an inline-block, a `width: auto` flex item that relied on the content's intrinsic width) must give it an explicit width — inline-size containment makes the card independent of its contents by design |
 | `TmTopBar` below 480px of the bar's own box | The account name ellipsised at its 12rem cap and the command palette trigger kept its `Ctrl+K` hint, so a bar with the menu button, search, an action and a longer user name overran the right edge (~20px at 390px) | `@container tm-topbar (width < 30rem)` (480px in rem, the component-local threshold convention) hides the Auto account name (the avatar stays) and collapses the trigger to a square icon button; the actions keep one row and the document no longer overflows | None at the API level. A host that needs the name on a phone bar passes the new `UserNameDisplay="Always"` (it ellipsises instead of hiding, at a tighter 8rem cap under 480px so the brand keeps its share of the row); `Never` renders the avatar alone. The visible `Ctrl+K` hint hides under 480px in every mode — the chord stays in `aria-keyshortcuts` + the localized `aria-label` |
+| `TmDrawer` with `Position=Right` (modal popover), LTR, ≥ 641 px | The panel stood at the LEFT window edge (the `inset: 0` popover root stretched across the viewport, the overlay stayed out of flow and the sole flex item defaulted to the inline start) | The panel stands flush at the window's RIGHT edge (`justify-content: flex-end` on `.tm-drawer--right`); `Position=Left` is explicitly `flex-start`; `[dir="rtl"]` flips both back because the position is physical | None for a correct host — the documented behavior is restored. Only a host/test that ASSERTED the misplaced left-standing panel updates its expectation; no API, class or DOM attribute changed |
+| `TmDrawer` with `Position=Left` (modal popover), RTL | The panel stood at the RIGHT window edge (the mirror image of the LTR right-drawer defect) | The panel stands flush at the window's LEFT edge in RTL | None — restores the documented behavior |
 | `TmTopBar` root container | The bar was a plain sticky flex row that sized from its content | The root declares `container-type: inline-size` + `container-name: tm-topbar` (that is what the narrow query reads) and carries `data-user-name-display="auto|always|never"` | None in a block/grid/flex STRETCH context (the normal case). A host that made the bar shrink-to-fit (a float, an inline-block, a `width: auto` flex item relying on the content's intrinsic width) must give it an explicit width. The new attribute is additive — existing selectors are unaffected |
 | Diagram canvas in dark mode (`TmDiagramEditor`, the embedded viewers, `TmModelingViewer`) | The page was a white sheet with dark ink in EVERY theme (the theme-invariant `--tm-paper*` decision) — a white area on a dark page | The page, stencil bodies, edge-label pills, swimlane bands, the collapse toggle, the minimap and the grid flip to the `DiagramSvgPalette.Dark` steps (`#27272a` sheet, `#e5e7eb` ink, `#3f3f46` border/grid) | A host that needs the white sheet in dark mode pins the tokens (globally on `[data-theme="dark"]`/`.tm-dark`, or per canvas): `--tm-canvas-paper: #ffffff; --tm-canvas-paper-ink: #1f2937; --tm-canvas-paper-ink-muted: #4b5563; --tm-canvas-paper-border: #d1d5db` — the per-canvas aliases `--tm-diagram-paper` / `--tm-diagram-node-stroke` / `--tm-diagram-node-ink` work too. The printed surfaces (report designer, document pages) are untouched |
 | Serialized canvas SVG markup (page, backdrop, grid) | The rects/paths carried literal paints (`white`, `#d1d5db`, `#e5e7eb`, `#f3f4f6`) | The attributes carry `var(--tm-diagram-paper)` / `var(--tm-diagram-backdrop)` / `var(--tm-canvas-grid[-strong])` / `var(--tm-canvas-paper-border)` references | A host/test that scraped the literal `fill`/`stroke` ATTRIBUTE reads `getComputedStyle(el).fill`/`.stroke` or matches the `var()` reference. Standalone exports are unaffected — the exporter bakes the computed values onto the clone |
