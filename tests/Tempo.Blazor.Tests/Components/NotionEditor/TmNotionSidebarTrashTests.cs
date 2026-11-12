@@ -74,7 +74,9 @@ public sealed class TmNotionSidebarTrashTests : LocalizationTestBase
 
         cut.Find(".tm-nst-item__btn--delete").Click();
 
-        var actions = cut.Find(".tm-nst-item__confirm-actions");
+        // The confirm UI renders in the batch after the (synchronous) click handler —
+        // wait for it instead of asserting against an unflushed render.
+        var actions = cut.WaitForElement(".tm-nst-item__confirm-actions");
         actions.Children[0].TextContent.Should().Be("Cancel");
         actions.Children[1].TextContent.Should().Be("Yes, delete");
     }
@@ -87,7 +89,9 @@ public sealed class TmNotionSidebarTrashTests : LocalizationTestBase
         cut.WaitForAssertion(() => cut.FindAll(".tm-nst-item").Should().HaveCount(1));
 
         cut.Find(".tm-nst-item__btn--delete").Click();
-        cut.Find(".tm-nst-item__confirm-yes").Click();
+        // Wait for the confirm UI — the render batch after the click may not be
+        // processed yet on a loaded runner (this raced on CI as ElementNotFoundException).
+        cut.WaitForElement(".tm-nst-item__confirm-yes").Click();
 
         cut.WaitForAssertion(() =>
         {
