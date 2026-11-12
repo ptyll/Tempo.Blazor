@@ -5398,6 +5398,7 @@
   "TmTrendList_ColumnLabel": "Élément",
   "TmTrendList_ColumnValue": "Valeur",
   "TmTrendList_ColumnChange": "Variation",
+  "TmBottomNavigation_AriaLabel": "Navigation principale",
   "TmBreakdownCard_AriaLabel": "Répartition",
   "TmBreakdownCard_Loading": "Chargement de la répartition",
   "TmBreakdownCard_Empty": "Aucune donnée à afficher",

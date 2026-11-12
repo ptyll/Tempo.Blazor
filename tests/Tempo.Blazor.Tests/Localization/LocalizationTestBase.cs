@@ -1404,7 +1404,7 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmRating_AriaLabel"] = "Rating",
 
         // TmBottomNavigation
-        ["TmBottomNavigation_AriaLabel"] = "Bottom navigation",
+        ["TmBottomNavigation_AriaLabel"] = "Main navigation",
         ["TmMap_AriaLabel"] = "Interactive map",
         ["TmMap_Loading"] = "Loading map…",
         ["TmMap_Attribution"] = "&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors",
@@ -10877,7 +10877,7 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmRating_AriaLabel"] = "HodnocenA-",
 
         // TmBottomNavigation
-        ["TmBottomNavigation_AriaLabel"] = "SpodnA- navigace",
+        ["TmBottomNavigation_AriaLabel"] = "Hlavní navigace",
         ["TmMap_AriaLabel"] = "Interaktivní mapa",
         ["TmMap_Loading"] = "Načítání mapy…",
         ["TmMap_Attribution"] = "&copy; přispěvatelé <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a>",

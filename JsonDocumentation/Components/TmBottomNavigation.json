@@ -31,6 +31,13 @@
       "type": "string?",
       "isRequired": false,
       "description": "Additional CSS classes."
+    },
+    {
+      "name": "AriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "default": "Localized TmBottomNavigation_AriaLabel resource (\"Main navigation\")",
+      "description": "Accessible name of the navigation bar. Defaults to the localized resource; set to override it (e.g. when the bar navigates a subsection rather than the application's top-level destinations)."
     }
   ],
   "cssClasses": [

@@ -24,6 +24,17 @@ public partial class TmBottomNavigation : ComponentBase
     /// <summary>Additional CSS classes.</summary>
     [Parameter] public string? AdditionalCssClass { get; set; }
 
+    /// <summary>
+    /// Accessible name of the navigation bar. Defaults to the localized
+    /// <c>TmBottomNavigation_AriaLabel</c> resource ("Main navigation"); set to override it
+    /// (e.g. when the bar navigates a subsection rather than the application's top-level
+    /// destinations).
+    /// </summary>
+    [Parameter] public string? AriaLabel { get; set; }
+
+    private string? ResolvedAriaLabel
+        => !string.IsNullOrWhiteSpace(AriaLabel) ? AriaLabel : Loc["TmBottomNavigation_AriaLabel"];
+
     private async Task HandleClick(BottomNavItem item)
     {
         if (item.Disabled)

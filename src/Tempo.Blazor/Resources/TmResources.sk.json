@@ -5447,6 +5447,7 @@
   "TmTrendList_ColumnLabel": "Položka",
   "TmTrendList_ColumnValue": "Hodnota",
   "TmTrendList_ColumnChange": "Zmena",
+  "TmBottomNavigation_AriaLabel": "Hlavná navigácia",
   "TmBreakdownCard_AriaLabel": "Rozloženie",
   "TmBreakdownCard_Loading": "Načítavanie rozloženia",
   "TmBreakdownCard_Empty": "Žiadne dáta na zobrazenie",

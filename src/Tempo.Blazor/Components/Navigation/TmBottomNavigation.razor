@@ -1,6 +1,6 @@
 @namespace Tempo.Blazor.Components.Navigation
 
-<nav class="tm-bottom-nav @AdditionalCssClass" role="navigation" aria-label="@Loc["TmBottomNavigation_AriaLabel"]">
+<nav class="tm-bottom-nav @AdditionalCssClass" role="navigation" aria-label="@ResolvedAriaLabel">
     @foreach (var item in Items)
     {
         var isActive = SelectedItem == item;

@@ -5447,6 +5447,7 @@
   "TmTrendList_ColumnLabel": "Položka",
   "TmTrendList_ColumnValue": "Hodnota",
   "TmTrendList_ColumnChange": "Změna",
+  "TmBottomNavigation_AriaLabel": "Hlavní navigace",
   "TmBreakdownCard_AriaLabel": "Rozložení",
   "TmBreakdownCard_Loading": "Načítání rozložení",
   "TmBreakdownCard_Empty": "Žádná data k zobrazení",

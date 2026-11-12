@@ -1,6 +1,7 @@
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.DependencyInjection;
 using Tempo.Blazor.Components.Navigation;
 using Tempo.Blazor.Tests.Localization;
 
@@ -70,5 +71,67 @@ public class TmBottomNavigationTests : LocalizationTestBase
             .Add(x => x.Items, items));
 
         cut.Find("a.tm-bottom-nav__link").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void TmBottomNavigation_AriaLabel_Defaults_To_Localized_Main_Navigation()
+    {
+        var cut = Render<TmBottomNavigation>(p => p
+            .Add(x => x.Items, new[] { new BottomNavItem { Text = "Home", Icon = "home" } }));
+
+        cut.Find("nav.tm-bottom-nav").GetAttribute("aria-label").Should().Be("Main navigation");
+    }
+
+    [Fact]
+    public void TmBottomNavigation_Does_Not_Render_Raw_Resource_Key_In_AriaLabel_Or_Text()
+    {
+        var cut = Render<TmBottomNavigation>(p => p
+            .Add(x => x.Items, new[] { new BottomNavItem { Text = "Home", Icon = "home" } }));
+
+        var nav = cut.Find("nav.tm-bottom-nav");
+        nav.GetAttribute("aria-label").Should().NotBe("TmBottomNavigation_AriaLabel");
+        cut.Markup.Should().NotContain("TmBottomNavigation_AriaLabel");
+    }
+
+    [Fact]
+    public void TmBottomNavigation_AriaLabel_Falls_Back_To_Localized_Value_When_Parameter_Null()
+    {
+        var cut = Render<TmBottomNavigation>(p => p
+            .Add(x => x.Items, new[] { new BottomNavItem { Text = "Home", Icon = "home" } })
+            .Add(x => x.AriaLabel, (string?)null));
+
+        cut.Find("nav.tm-bottom-nav").GetAttribute("aria-label").Should().Be("Main navigation");
+    }
+
+    [Fact]
+    public void TmBottomNavigation_AriaLabel_Uses_Czech_Localized_Value_In_Cs_Culture()
+    {
+        Services.AddSingleton<Tempo.Blazor.Localization.ITmLocalizer>(BuildCzechLocalizer());
+
+        var cut = Render<TmBottomNavigation>(p => p
+            .Add(x => x.Items, new[] { new BottomNavItem { Text = "Domů", Icon = "home" } }));
+
+        cut.Find("nav.tm-bottom-nav").GetAttribute("aria-label").Should().Be("Hlavní navigace");
+        cut.Markup.Should().NotContain("TmBottomNavigation_AriaLabel");
+    }
+
+    [Fact]
+    public void TmBottomNavigation_AriaLabel_Whitespace_Falls_Back_To_Localized_Value()
+    {
+        var cut = Render<TmBottomNavigation>(p => p
+            .Add(x => x.Items, new[] { new BottomNavItem { Text = "Home", Icon = "home" } })
+            .Add(x => x.AriaLabel, "  "));
+
+        cut.Find("nav.tm-bottom-nav").GetAttribute("aria-label").Should().Be("Main navigation");
+    }
+
+    [Fact]
+    public void TmBottomNavigation_AriaLabel_Parameter_Overrides_Localized_Default()
+    {
+        var cut = Render<TmBottomNavigation>(p => p
+            .Add(x => x.Items, new[] { new BottomNavItem { Text = "Home", Icon = "home" } })
+            .Add(x => x.AriaLabel, "Section navigation"));
+
+        cut.Find("nav.tm-bottom-nav").GetAttribute("aria-label").Should().Be("Section navigation");
     }
 }

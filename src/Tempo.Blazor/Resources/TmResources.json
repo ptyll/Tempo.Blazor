@@ -5349,6 +5349,7 @@
   "TmTrendList_ColumnLabel": "Item",
   "TmTrendList_ColumnValue": "Value",
   "TmTrendList_ColumnChange": "Change",
+  "TmBottomNavigation_AriaLabel": "Main navigation",
   "TmBreakdownCard_AriaLabel": "Breakdown",
   "TmBreakdownCard_Loading": "Loading breakdown",
   "TmBreakdownCard_Empty": "No data to show",

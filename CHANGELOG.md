@@ -340,6 +340,27 @@
   download payload, with `TmQRCodeServerE2ETests` / `TmQRCodeInteractiveAutoE2ETests` smoke runs.
 
 
+### Fixed — `TmBottomNavigation` accessible name (plan 92e96b25, phase 1 / TG-001)
+
+- **The bar no longer exposes a raw resource key.** `TmBottomNavigation` rendered
+  `aria-label="@Loc["TmBottomNavigation_AriaLabel"]"` while the key did not exist in any resource
+  table, so screen readers announced the literal string "TmBottomNavigation_AriaLabel". The key now
+  exists in all four tables — en "Main navigation", cs "Hlavní navigace", sk "Hlavná navigácia", fr
+  "Navigation principale" — and the bar announces the localized name.
+- **`AriaLabel` parameter (additive, opt-in).** Hosts can override the accessible name (e.g. a bar
+  navigating a subsection); `null` (the default) keeps the localized resource. No DOM or CSS change
+  beyond the attribute's value source, so no migration is needed. The wireframe stencil
+  (`bottom-navigation` role in `tempo.stencil.json`) is a visual placeholder and is unchanged.
+- **Tests:** `TmBottomNavigationTests` (bUnit, TDD RED first: the en/cs localized names, the raw-key
+  absence in `aria-label` and markup, the `null` fallback and the parameter override) and
+  `TmResourceCompletenessTests`; the JSON documentation overlay documents the parameter and
+  `validate --fail-on-drift` is clean. E2E: `TmBottomNavigationE2ETests` (WASM — localized name, dark
+  mode, the 375 px phone fit, item-click selection; screenshots in
+  `tests/Tempo.Blazor.E2E/TestResults/bottom-navigation/`) with
+  `TmBottomNavigationServerE2ETests` / `TmBottomNavigationInteractiveAutoE2ETests` smoke runs; the
+  `/new-components` demo section carries a `data-testid="bottom-navigation-section"` hook.
+
+
 ### Fixed — test suite stability (plan 7ba95ed6, phase FZE-1)
 
 - **No production behavior change.** `Tempo.Blazor.Tests` (21 331 tests) is green 3× consecutively
