@@ -1,0 +1,10 @@
+{
+  "kind": "Record",
+  "category": "Interfaces",
+  "namespace": "Tempo.Blazor.Interfaces",
+  "description": "Concrete, ready-to-use ICommandPaletteAction implementation with all metadata (icon, shortcut, category, badge, code, badge tone) in one positional record; Execute defaults to a no-op. Hosts and demos no longer need a private copy of this class.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Interfaces/CommandPaletteAction.cs",
+  "documentationStatus": "generated",
+  "itemName": "CommandPaletteAction"
+}

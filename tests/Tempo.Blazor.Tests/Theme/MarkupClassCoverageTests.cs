@@ -511,7 +511,10 @@ public sealed class MarkupClassCoverageTests
             // Plan 4ebadc60 phase 2 (TmOtpInput): RootCssClass builds its modifiers by StringBuilder
             // concatenation instead of one interpolated string, so the bare "tm-otp-input" stem
             // left the scanned population (the modifiers are literal) — 71 → 70.
-            ExpectedUnmeasurableStems: 70),
+            // Plan 92e96b25 phase 12 (TmCommandPalette): its @code moved to a .razor.cs, so the two
+            // per-instance id prefixes ("tm-palette-group-{Guid…}", "tm-palette-list-{Guid…}") joined
+            // the scanned population (already emitted, only invisible in the .razor) — 70 → 72.
+            ExpectedUnmeasurableStems: 72),
         new Scope("Signing", "Tempo.Blazor.Signing", UnstyledSigningMarkupClasses,
             MinRazorFiles: 28, MinMarkupClasses: 400, InheritsCoreCss: true,
             // Signing redesign phase 2 (B25): the runner's single step panel id

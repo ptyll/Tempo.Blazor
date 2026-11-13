@@ -97,6 +97,25 @@ close path where focus could have been inside the popup (Escape, item select, co
 toggle-close), and call `FocusAsync(preventScroll: true)` from `OnAfterRenderAsync` — the pattern
 `TmColorPicker` established and 2.8.25 extended to `TmFilterableDropdown` and `TmMultiSelect`.
 
+## Closing on Enter: why TmCommandPalette yields one task
+
+The palette runs the highlighted action on Enter from the search input's `keydown`. Enter's
+`keydown` is followed by a `keypress` in the **same** browser task; closing synchronously restores
+focus to the opener (a native `<button>`) before that `keypress` lands, and the button's own Enter
+activation re-opens the palette the key just closed. Decision (`await Task.Delay(1)` before
+`ExecuteAsync`): yield one task so the `keypress` finishes on the input first.
+
+Alternatives considered and rejected:
+
+- **`preventDefault` on `keydown`** — Blazor decides `preventDefault` synchronously at dispatch
+  time per element, not per key, so it would also swallow typing in the input.
+- **A JS-side close / deferred focus restore** — a second module and a second timing contract for one
+  key; the managed yield is simpler and testable with a plain `Task`.
+- **Handling Enter on `keyup`** — a held key repeats, and the `keyup` would land on the restored
+  opener anyway.
+
+Cost: the action runs about 1 ms later; nothing observable. Hosts closing a popup from an Enter
+handler on a text input should follow the same pattern.
 ## bUnit testing
 
 bUnit does **not** synthesize the native keyboard→click sequence, so tests must dispatch the real

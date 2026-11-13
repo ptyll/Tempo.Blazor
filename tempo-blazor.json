@@ -24438,7 +24438,7 @@
       "kind": "Component",
       "category": "Layout",
       "namespace": "Tempo.Blazor.Components.Layout",
-      "description": "Searchable command palette overlay (Cmd+K style) with filterable actions, descriptions, and keyboard shortcut hints. Supports two-way binding on open state; the backdrop dismisses on a click whose press started on it (a drag-select from the input that ends over the backdrop keeps it open). GroupByCategory adds a heading per category and a divider (CSS border) between groups; SplitShortcuts renders one kbd per key. Both default off, which keeps the flat list and the single shortcut kbd.",
+      "description": "Searchable command palette overlay (Cmd+K style) with filterable actions, descriptions, keyboard shortcut hints and item icons. Supports two-way binding on open state; the backdrop dismisses on a click whose press started on it (a drag-select from the input that ends over the backdrop keeps it open). Local Actions filter synchronously (title, description, code); an optional asynchronous SearchProvider extends the list with remote results (local first), with debounce, cancellation of superseded requests, loading skeleton, empty and transient-error-with-retry states and a polite result-count announcement. GroupByCategory adds a heading per category and a divider (CSS border) between groups; SplitShortcuts renders one kbd per key; ShowIcons (default true) renders the action icon with an empty placeholder slot for actions without one; the trailing slot shows a Badge + Code by default; ShowFooter renders the keyboard-hint footer. All new capabilities except ShowIcons are opt-in.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Layout/TmCommandPalette.razor",
       "documentationStatus": "merged",
@@ -24460,10 +24460,41 @@
           "description": "Additional CSS class for the root element."
         },
         {
+          "name": "DebounceMs",
+          "type": "int",
+          "isRequired": false,
+          "default": "300",
+          "description": "Debounce delay in milliseconds from the last keystroke before the provider runs. 0 calls it immediately. Defaults to 300."
+        },
+        {
+          "name": "EmptyTemplate",
+          "type": "RenderFragment<string>?",
+          "isRequired": false,
+          "description": "Overrides the empty state; receives the current query."
+        },
+        {
+          "name": "FooterTemplate",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Overrides the footer content; renders even without ShowFooter."
+        },
+        {
           "name": "GroupByCategory",
           "type": "bool",
           "isRequired": false,
           "description": "Groups actions by Category: a heading per category and a divider (CSS border) between groups. A null/empty category renders its options without a group wrapper (a role=group must be named). Defaults to false."
+        },
+        {
+          "name": "HighlightMatches",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Marks the query in the title and the code via TmHighlightedText. Defaults to false."
+        },
+        {
+          "name": "IsLoading",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Host-driven loading state (for hosts that fill Actions themselves); ORs with the internal provider state."
         },
         {
           "name": "IsOpen",
@@ -24478,10 +24509,60 @@
           "description": "Fires when IsOpen should change (two-way binding)."
         },
         {
+          "name": "ItemTemplate",
+          "type": "RenderFragment<ICommandPaletteAction>?",
+          "isRequired": false,
+          "description": "Overrides the whole content of each item; the option wrapper (role=option, id, aria-selected, click) stays the component's."
+        },
+        {
+          "name": "ItemTrailingTemplate",
+          "type": "RenderFragment<ICommandPaletteAction>?",
+          "isRequired": false,
+          "description": "Overrides the trailing slot of each item (badge + code by default)."
+        },
+        {
+          "name": "LoadingTemplate",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Overrides the default loading rows (three TmSkeleton bars) shown while a search runs."
+        },
+        {
+          "name": "MinChars",
+          "type": "int",
+          "isRequired": false,
+          "default": "1",
+          "description": "Minimum query length that triggers SearchProvider. 0 calls the provider even for the empty query (e.g. 'recent items'). Defaults to 1."
+        },
+        {
+          "name": "SearchProvider",
+          "type": "Func<string, CancellationToken, Task<CommandPaletteSearchResult>>?",
+          "isRequired": false,
+          "description": "Asynchronous search source: invoked with the debounced query and a cancellation token that is cancelled when the query changes, the palette closes or the component disposes. Results are appended after the local Actions matches. Null (the default) keeps the palette purely local."
+        },
+        {
+          "name": "ShowFooter",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Renders the keyboard-hint footer (up/down navigate, enter select, esc close). Defaults to false."
+        },
+        {
+          "name": "ShowIcons",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Renders ICommandPaletteAction.Icon through TmIcon at the leading edge of each item; an item without an icon gets an empty slot of the same width so titles line up. Defaults to true (since 2.11.0 — a visual breaking change; see the CHANGELOG Breaking/Migration section)."
+        },
+        {
           "name": "SplitShortcuts",
           "type": "bool",
           "isRequired": false,
           "description": "Renders each '+'-separated part of a shortcut as its own kbd. Defaults to false."
+        },
+        {
+          "name": "TransientErrorTemplate",
+          "type": "RenderFragment<Func<Task>>?",
+          "isRequired": false,
+          "description": "Overrides the inline transient-error state; receives the retry callback."
         }
       ],
       "cssClasses": [
@@ -24497,12 +24578,27 @@
         "tm-command-palette-item",
         "tm-command-palette-title",
         "tm-command-palette-description",
-        "tm-command-palette-shortcut"
+        "tm-command-palette-shortcut",
+        "tm-command-palette-icon",
+        "tm-command-palette-trailing",
+        "tm-command-palette-code",
+        "tm-command-palette-loading",
+        "tm-command-palette-loading-row",
+        "tm-command-palette-error",
+        "tm-command-palette-error-text",
+        "tm-command-palette-retry",
+        "tm-command-palette-footer",
+        "tm-command-palette-footer-hint",
+        "tm-command-palette-status"
       ],
       "examples": [
         {
           "title": "Basic command palette",
           "code": "<TmCommandPalette @bind-IsOpen=\"paletteOpen\" Actions=\"commandActions\" />"
+        },
+        {
+          "title": "Entity search over an async source",
+          "code": "<TmCommandPalette @bind-IsOpen=\"paletteOpen\"\n                  Actions=\"localCommands\"\n                  SearchProvider=\"SearchEntitiesAsync\"\n                  GroupByCategory=\"true\"\n                  ShowFooter=\"true\"\n                  HighlightMatches=\"true\" />"
         }
       ]
     },

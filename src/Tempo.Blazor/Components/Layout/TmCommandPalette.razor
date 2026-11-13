@@ -1,9 +1,10 @@
 @namespace Tempo.Blazor.Components.Layout
 @using Tempo.Blazor.Interfaces
 @using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Components.DataDisplay
+@using Tempo.Blazor.Components.Icons
 @using Tempo.Blazor.Helpers
 @using Microsoft.AspNetCore.Components.Web
-@implements IAsyncDisposable
 @inject IJSRuntime JS
 
 @if (IsOpen)
@@ -37,8 +38,9 @@
                           AriaLabel="@Loc["TmCommandPalette_Aria"]">
             <div class="tm-command-palette-header">
                 <input class="tm-command-palette-input"
+                       @ref="_input"
                        value="@_query"
-                       @oninput="HandleInput"
+                       @oninput="HandleInputAsync"
                        @onkeydown="HandleInputKeyDownAsync"
                        placeholder="@Loc["TmCommandPalette_Placeholder"]"
                        aria-label="@Loc["TmCommandPalette_SearchAria"]"
@@ -50,308 +52,241 @@
                        autocomplete="off" />
                 <button class="tm-command-palette-close" aria-label="@Loc["TmCommandPalette_Close"]" @onclick="CloseAsync">×</button>
             </div>
-            @if (_filtered.Count == 0)
+            @if (_fetchState == CommandPaletteFetchState.Transient)
             {
-                <div class="tm-command-palette-empty">@Loc["TmCommandPalette_NoResults"]</div>
+                @* The search itself failed (not "no matches"): the list/empty state is replaced by
+                   an inline alert with a retry. The retry is a native button — Tab reaches it and
+                   Enter/Space are its own native activation, so it sits OUTSIDE the arrow-key
+                   navigation (docs/keyboard-activation-convention.md). *@
+                <div class="tm-command-palette-error" role="alert">
+                    @if (TransientErrorTemplate is not null)
+                    {
+                        @TransientErrorTemplate(RetrySearchAsync)
+                    }
+                    else
+                    {
+                        <span class="tm-command-palette-error-text">@Loc["TmCommandPalette_SearchError"]</span>
+                        <button type="button" class="tm-command-palette-retry" @onclick="RetrySearchAsync">@Loc["TmCommandPalette_Retry"]</button>
+                    }
+                </div>
             }
             else
             {
-                <ul class="tm-command-palette-list" role="listbox" id="@_listId" aria-label="@Loc["TmCommandPalette_Aria"]">
-                    @if (GroupByCategory)
+                @if (_filtered.Count == 0)
+                {
+                    if (Loading)
                     {
-                        @* A listbox's children must be options or groups. `group` is not an allowed
-                           role for `li` (ec0299b9 #1), so each category is a presentational row
-                           hosting a named div group; the divider is a border, not a role=separator,
-                           which a listbox may not contain. A group must be NAMED: a null/empty
-                           category renders no group wrapper at all — its options sit directly in
-                           the presentational row instead of an unnamed group. *@
-                        var groupNumber = 0;
-                        @foreach (var group in GroupedActions())
+                        @RenderLoading()
+                    }
+                    else if (EmptyTemplate is not null)
+                    {
+                        @* The host owns the whole empty state — the wrapper deliberately carries no
+                           tm-command-palette-empty class so default-empty styling/selector never
+                           reaches the custom content. *@
+                        <div class="tm-command-palette-empty-slot">@EmptyTemplate(_query)</div>
+                    }
+                    else
+                    {
+                        <div class="tm-command-palette-empty">@Loc["TmCommandPalette_NoResults"]</div>
+                    }
+                }
+                else
+                {
+                    <ul class="tm-command-palette-list" role="listbox" id="@_listId" aria-label="@Loc["TmCommandPalette_Aria"]"
+                        aria-busy="@(Loading ? "true" : null)">
+                        @if (GroupByCategory)
                         {
-                            var labelId = $"{_groupLabelPrefix}-{groupNumber++}";
-                            <li role="none" class="tm-command-palette-group-item">
-                                @if (string.IsNullOrEmpty(group.Label))
-                                {
-                                    <ul role="none">
-                                        @foreach (var index in group.Indexes)
-                                        {
-                                            @RenderItem(index)
-                                        }
-                                    </ul>
-                                }
-                                else
-                                {
-                                    <div class="tm-command-palette-group" role="group"
-                                         aria-labelledby="@labelId">
-                                        <span id="@labelId" class="tm-command-palette-group-label">@group.Label</span>
+                            @* A listbox's children must be options or groups. `group` is not an allowed
+                               role for `li` (ec0299b9 #1), so each category is a presentational row
+                               hosting a named div group; the divider is a border, not a role=separator,
+                               which a listbox may not contain. A group must be NAMED: a null/empty
+                               category renders no group wrapper at all — its options sit directly in
+                               the presentational row instead of an unnamed group. *@
+                            var groupNumber = 0;
+                            @foreach (var group in GroupedActions())
+                            {
+                                var labelId = $"{_groupLabelPrefix}-{groupNumber++}";
+                                <li role="none" class="tm-command-palette-group-item">
+                                    @if (string.IsNullOrEmpty(group.Label))
+                                    {
                                         <ul role="none">
                                             @foreach (var index in group.Indexes)
                                             {
                                                 @RenderItem(index)
                                             }
                                         </ul>
-                                    </div>
-                                }
-                            </li>
+                                    }
+                                    else
+                                    {
+                                        <div class="tm-command-palette-group" role="group"
+                                             aria-labelledby="@labelId">
+                                            <span id="@labelId" class="tm-command-palette-group-label">@group.Label</span>
+                                            <ul role="none">
+                                                @foreach (var index in group.Indexes)
+                                                {
+                                                    @RenderItem(index)
+                                                }
+                                            </ul>
+                                        </div>
+                                    }
+                                </li>
+                            }
                         }
+                        else
+                        {
+                            @for (var i = 0; i < _filtered.Count; i++)
+                            {
+                                @RenderItem(i)
+                            }
+                        }
+                    </ul>
+                    @* Loading keeps the visible results in place (no flicker) and appends the
+                       skeleton block below them; the block is aria-hidden so the busy listbox does
+                       not own non-option children. *@
+                    @if (Loading)
+                    {
+                        @RenderLoading()
+                    }
+                }
+            }
+            @if (ShowFooter || FooterTemplate is not null)
+            {
+                @* Keyboard hint strip. Purely visual help — NOT a live region — and hidden on a
+                   coarse pointer via CSS, where arrows/Enter are not the input model. *@
+                <footer class="tm-command-palette-footer">
+                    @if (FooterTemplate is not null)
+                    {
+                        @FooterTemplate
                     }
                     else
                     {
-                        @for (var i = 0; i < _filtered.Count; i++)
-                        {
-                            @RenderItem(i)
-                        }
+                        <span class="tm-command-palette-footer-hint"><kbd>↑</kbd><kbd>↓</kbd> @Loc["TmCommandPalette_FooterNavigate"]</span>
+                        <span class="tm-command-palette-footer-hint"><kbd>↵</kbd> @Loc["TmCommandPalette_FooterSelect"]</span>
+                        <span class="tm-command-palette-footer-hint"><kbd>Esc</kbd> @Loc["TmCommandPalette_FooterClose"]</span>
                     }
-                </ul>
+                </footer>
             }
+            @* One polite live region for the whole search lifecycle: "searching" while a fetch
+               runs, then the result count. Rendered EMPTY from the moment the palette opens (a
+               region that is inserted together with its text is not announced reliably) and only
+               its text is set at fetch boundaries, so it is inherently debounced — never per
+               keystroke. *@
+            <div class="tm-sr-only tm-command-palette-status" role="status" aria-live="polite" aria-atomic="true">@_liveMessage</div>
         </TmFocusScope>
         </div>
     </div>
 }
 
 @code {
-    private string _query = string.Empty;
-    private List<ICommandPaletteAction> _filtered = new();
-    private int _highlightedIndex;
+    // The item template stays in the razor file (it IS markup); all state, parameters and the
+    // async search pipeline live in TmCommandPalette.razor.cs.
+    private string ItemClass(int index) => index == _highlightedIndex
+        ? "tm-command-palette-item tm-command-palette-item-focused"
+        : "tm-command-palette-item";
 
-    // Stable per instance so a group's aria-labelledby survives re-renders and two palettes on one
-    // page never share label ids.
-    private readonly string _groupLabelPrefix = $"tm-palette-group-{Guid.NewGuid():N}";
-
-    // Combobox wiring (cluster-B §12, f4057a47): the input is a role=combobox whose
-    // aria-activedescendant names the highlighted option, so the options need stable ids.
-    private readonly string _listId = $"tm-palette-list-{Guid.NewGuid():N}";
-
-    private string OptionId(int index) => $"{_listId}-opt-{index}";
-
-    private RenderFragment RenderItem(int index) => @<li class="tm-command-palette-item @(index == _highlightedIndex ? "tm-command-palette-item-focused" : "")"
+    private RenderFragment RenderItem(int index) => @<li class="@ItemClass(index)"
                                                          id="@OptionId(index)"
                                                          role="option"
                                                          aria-selected="@(index == _highlightedIndex ? "true" : "false")"
                                                          @onclick="() => ExecuteAsync(_filtered[index])">
-        <span class="tm-command-palette-title">@_filtered[index].Title</span>
-        @if (!string.IsNullOrEmpty(_filtered[index].Description))
-        {
-            <span class="tm-command-palette-description">@_filtered[index].Description</span>
+        @{
+            var action = _filtered[index];
         }
-        @if (!string.IsNullOrEmpty(_filtered[index].Shortcut))
+        @if (ItemTemplate is not null)
         {
-            if (SplitShortcuts)
+            @* The host owns the content only; the li, role=option, id, aria-selected and the
+               click-to-execute wiring stay the component's. *@
+            @ItemTemplate(action)
+        }
+        else
+        {
+            @* ShowIcons (default true, DEC-CMDPALETTE-ASYNC O2) renders the model's Icon. While
+               at least one visible item has an icon every item carries the slot — an item without
+               one gets an empty span of the same width so the titles line up; when no visible
+               item has an icon the slot is dropped altogether (no dead gutter). The slot is aria-hidden: the icon decorates, it does
+               not name the option (title + description + badge + code do). *@
+            @if (ShowIcons && _anyIcon)
             {
-                <span class="tm-command-palette-shortcut">
-                    @foreach (var part in SplitShortcut(_filtered[index].Shortcut!))
+                <span class="tm-command-palette-icon" aria-hidden="true">
+                    @if (!string.IsNullOrEmpty(action.Icon))
                     {
-                        <kbd>@part</kbd>
+                        <TmIcon Name="@action.Icon" Size="IconSize.Sm" />
                     }
                 </span>
             }
-            else
+            <span class="tm-command-palette-title">
+                @if (HighlightMatches)
+                {
+                    <TmHighlightedText Text="@action.Title" Query="@_query" />
+                }
+                else
+                {
+                    @action.Title
+                }
+            </span>
+            @if (!string.IsNullOrEmpty(action.Description))
             {
-                <kbd class="tm-command-palette-shortcut">@_filtered[index].Shortcut</kbd>
+                <span class="tm-command-palette-description">@action.Description</span>
+            }
+            @* The trailing slot holds the entity badge + code (default, O4) or the host's
+               ItemTrailingTemplate. It renders before the shortcut, which keeps its end
+               alignment through the auto margin. *@
+            <span class="tm-command-palette-trailing">
+                @if (ItemTrailingTemplate is not null)
+                {
+                    @ItemTrailingTemplate(action)
+                }
+                else
+                {
+                    @if (!string.IsNullOrEmpty(action.Badge))
+                    {
+                        <TmBadge Variant="@BadgeVariantFor(action.BadgeTone)" BadgeStyle="BadgeStyle.Subtle" Size="BadgeSize.Sm">@action.Badge</TmBadge>
+                    }
+                    @if (!string.IsNullOrEmpty(action.Code))
+                    {
+                        <code class="tm-command-palette-code">
+                            @if (HighlightMatches)
+                            {
+                                <TmHighlightedText Text="@action.Code" Query="@_query" />
+                            }
+                            else
+                            {
+                                @action.Code
+                            }
+                        </code>
+                    }
+                }
+            </span>
+            @if (!string.IsNullOrEmpty(action.Shortcut))
+            {
+                if (SplitShortcuts)
+                {
+                    <span class="tm-command-palette-shortcut">
+                        @foreach (var part in SplitShortcut(action.Shortcut!))
+                        {
+                            <kbd>@part</kbd>
+                        }
+                    </span>
+                }
+                else
+                {
+                    <kbd class="tm-command-palette-shortcut">@action.Shortcut</kbd>
+                }
             }
         }
     </li>;
 
-    private IEnumerable<(string Label, List<int> Indexes)> GroupedActions()
-    {
-        var groups = new List<(string Label, List<int> Indexes)>();
-        for (var i = 0; i < _filtered.Count; i++)
+    private RenderFragment RenderLoading() => @<div class="tm-command-palette-loading" aria-hidden="true">
+        @if (LoadingTemplate is not null)
         {
-            var label = GroupOf(_filtered[i]);
-            if (groups.Count == 0 || groups[^1].Label != label)
+            @LoadingTemplate
+        }
+        else
+        {
+            @for (var i = 0; i < 3; i++)
             {
-                groups.Add((label, new List<int>()));
-            }
-
-            groups[^1].Indexes.Add(i);
-        }
-
-        return groups;
-    }
-
-    private TmFocusScope? _scope;
-    private ElementReference _backdrop;
-    private PromotedScopeGate? _gate;
-    private bool _wasOpen;
-
-    // Where the active press started. The backdrop sets it on its own pointerdown; the element
-    // fence around the panel resets it (and stops the event), so the click handler below can tell
-    // an outside click from the end of a drag-select that started on the panel.
-    private bool _pressOnBackdrop;
-
-    /// <summary>Whether the command palette is visible.</summary>
-    [Parameter] public bool IsOpen { get; set; }
-
-    /// <summary>Fires when IsOpen should change (two-way binding).</summary>
-    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
-
-    /// <summary>Actions available in the palette.</summary>
-    [Parameter] public IEnumerable<ICommandPaletteAction>? Actions { get; set; }
-
-    /// <summary>
-    /// Groups actions by <see cref="ICommandPaletteAction.Category"/>: a heading per category and
-    /// a divider (CSS border) between groups. A null/empty category renders its options without a
-    /// group wrapper, because a <c>role=group</c> must be named. Defaults to false, which keeps the
-    /// historical flat list.
-    /// </summary>
-    [Parameter] public bool GroupByCategory { get; set; }
-
-    /// <summary>
-    /// Renders each <c>+</c>-separated part of a shortcut as its own <c>kbd</c>. Defaults to false,
-    /// which keeps the shortcut in a single <c>kbd</c>.
-    /// </summary>
-    [Parameter] public bool SplitShortcuts { get; set; }
-
-    /// <summary>Additional CSS class for the root element.</summary>
-    [Parameter] public string? Class { get; set; }
-
-    /// <summary>Additional HTML attributes for the root element.</summary>
-    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
-
-    /// <inheritdoc />
-    protected override async Task OnParametersSetAsync()
-    {
-        if (IsOpen && !_wasOpen)
-        {
-            _wasOpen = true;
-            // Fresh state every time the palette opens: empty query, first item highlighted.
-            _query = string.Empty;
-            _highlightedIndex = 0;
-        }
-        else if (!IsOpen && _wasOpen)
-        {
-            _wasOpen = false;
-        }
-
-        RecomputeFiltered();
-    }
-
-    private void HandleInput(ChangeEventArgs e)
-    {
-        _query = e.Value?.ToString() ?? string.Empty;
-        _highlightedIndex = 0;
-        RecomputeFiltered();
-    }
-
-    private void RecomputeFiltered()
-    {
-        var source = Actions ?? Enumerable.Empty<ICommandPaletteAction>();
-        var matched = string.IsNullOrWhiteSpace(_query)
-            ? source
-            : source.Where(a => a.Title.Contains(_query, StringComparison.OrdinalIgnoreCase)
-                             || (a.Description?.Contains(_query, StringComparison.OrdinalIgnoreCase) == true));
-
-        // Grouping keeps the caller's order and only pulls a category's items together, so a list
-        // that already arrives grouped does not get reordered.
-        _filtered = GroupByCategory
-            ? matched.GroupBy(GroupOf).SelectMany(group => group).ToList()
-            : matched.ToList();
-
-        if (_highlightedIndex >= _filtered.Count)
-        {
-            _highlightedIndex = Math.Max(0, _filtered.Count - 1);
-        }
-    }
-
-    // Escape is the focus scope's, document-level, so it closes the palette wherever focus sits.
-    // A container-level Escape handler on top of it closed the palette twice. Arrow/Enter
-    // navigation stays on the search input: the close control is a native <button>, and a
-    // container-level Enter case ran the highlighted action when the user pressed Enter on "close".
-    // Arrow/Enter keydowns inside a text input produce no native click, so
-    // this input-level handler is where list navigation + execution belong.
-    private async Task HandleInputKeyDownAsync(KeyboardEventArgs e)
-    {
-        switch (e.Key)
-        {
-            case "ArrowDown":
-                if (_filtered.Count > 0)
-                {
-                    _highlightedIndex = (_highlightedIndex + 1) % _filtered.Count;
-                }
-                break;
-            case "ArrowUp":
-                if (_filtered.Count > 0)
-                {
-                    _highlightedIndex = (_highlightedIndex - 1 + _filtered.Count) % _filtered.Count;
-                }
-                break;
-            case "Enter":
-                if (_highlightedIndex >= 0 && _highlightedIndex < _filtered.Count)
-                {
-                    await ExecuteAsync(_filtered[_highlightedIndex]);
-                }
-                break;
-        }
-    }
-
-    private async Task ExecuteAsync(ICommandPaletteAction action)
-    {
-        await IsOpenChanged.InvokeAsync(false);
-        await action.Execute();
-    }
-
-    private Task CloseAsync() => IsOpenChanged.InvokeAsync(false);
-
-    // The click-to-dismiss path. A click lands on the backdrop both for a plain outside click AND
-    // for a drag-select that started on the input and released over the backdrop; only the former
-    // may close (review, phase 7), and the flag says which one this is.
-    private Task HandleBackdropClickAsync()
-    {
-        if (!_pressOnBackdrop)
-        {
-            return Task.CompletedTask;
-        }
-
-        _pressOnBackdrop = false;
-        return CloseAsync();
-    }
-
-    private static string GroupOf(ICommandPaletteAction action) => action.Category ?? string.Empty;
-
-    // "Ctrl++" is Ctrl and the plus key: a trailing separator is itself a key, so only the empty
-    // parts that a doubled separator leaves in the MIDDLE are dropped.
-    private static IEnumerable<string> SplitShortcut(string shortcut)
-    {
-        var parts = shortcut.Split('+');
-        for (var i = 0; i < parts.Length; i++)
-        {
-            var part = parts[i].Trim();
-            if (part.Length > 0)
-            {
-                yield return part;
-            }
-            else if (i == parts.Length - 1 && parts.Length > 1)
-            {
-                yield return "+";
+                <div class="tm-command-palette-loading-row tm-skeleton"></div>
             }
         }
-    }
-
-    /// <inheritdoc />
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            // Cold start: import the focus-trap module and install its document-level opener
-            // records NOW, so the FIRST open of the session restores its opener.
-            await FocusTrap.EnsureLoadedAsync(JS);
-        }
-
-        // U1: promote the backdrop right after the render that inserted it. Closing unmounts the
-        // whole subtree, and a detached top-layer element is hidden by the browser automatically —
-        // no demote call is needed. The gate also holds the trap back until the promote completed
-        // (c51ddf81 #1) and drops a promote that finished after the close (c51ddf81 #2).
-        _gate ??= new PromotedScopeGate(JS);
-        if (await _gate.AfterRenderAsync(IsOpen, () => IsOpen, _backdrop))
-        {
-            StateHasChanged();
-        }
-    }
-
-    /// <inheritdoc />
-    public async ValueTask DisposeAsync()
-    {
-        if (_scope is not null) await _scope.DisposeAsync();
-        if (_gate is not null) await _gate.DisposeAsync();
-    }
+    </div>;
 }

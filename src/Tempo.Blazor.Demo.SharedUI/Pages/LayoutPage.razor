@@ -307,6 +307,45 @@
                           GroupByCategory="true"
                           SplitShortcuts="true" />
     </div>
+
+    @* TG-010: entity search over a simulated server — an asynchronous SearchProvider with debounce
+       and cancellation, a transient-failure toggle, sections by entity type (Category), badge +
+       code chips and the keyboard-hint footer. Local commands render first; server results follow. *@
+    <div class="showcase-card mt-4" data-testid="command-palette-entity-demo">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+            <div>
+                <h3 class="text-base font-semibold text-slate-900 dark:text-white">Entity search</h3>
+                <p class="text-sm text-slate-500 dark:text-slate-400">
+                    Server-side search with debounce, cancellation, transient failures and sections — the PromptHelper
+                    "search entities by type + commands" scenario built directly on TmCommandPalette.
+                </p>
+            </div>
+            <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300"
+                   data-testid="entity-fail-toggle">
+                <input type="checkbox" @bind="_entityRandomFailures" />
+                Simulate random failures
+            </label>
+            <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300"
+                   data-testid="entity-bulk-toggle">
+                <input type="checkbox" @bind="_entityIncludeBulk" />
+                Include 200 bulk rows
+            </label>
+        </div>
+        <TmButton Variant="ButtonVariant.Secondary" OnClick="() => _entityPaletteOpen = true"
+                  data-testid="command-palette-entity-open">
+            Open entity search
+        </TmButton>
+    </div>
+
+    <TmCommandPalette @bind-IsOpen="_entityPaletteOpen"
+                      Actions="_entityLocalActions"
+                      SearchProvider="SearchEntitiesAsync"
+                      GroupByCategory="true"
+                      ShowFooter="true"
+                      HighlightMatches="true"
+                      MinChars="0"
+                      EmptyTemplate="EntityEmptyTemplate"
+                      data-testid="command-palette-entity" />
 </section>
 
 <!-- Combined Layout Demo -->
@@ -599,16 +638,97 @@
 
         _availableActions = new List<ICommandPaletteAction>
         {
-            new CommandPaletteAction("home", "Go to Dashboard", "Navigate to home page", "home", async () => await ExecuteCommand("home", "/")),
-            new CommandPaletteAction("users", "Go to Users", "View user list", "users", async () => await ExecuteCommand("users", "/datatable")),
-            new CommandPaletteAction("forms", "Go to Forms", "Form components demo", "file-text", async () => await ExecuteCommand("forms", "/forms")),
-            new CommandPaletteAction("feedback", "Go to Feedback", "Alerts, toasts, and notifications", "bell", async () => await ExecuteCommand("feedback", "/feedback")),
-            new CommandPaletteAction("pickers", "Go to Pickers", "Date and time pickers", "calendar", async () => await ExecuteCommand("pickers", "/pickers")),
-            new CommandPaletteAction("richtext", "Go to Rich Text", "Text editors", "type", async () => await ExecuteCommand("richtext", "/richtext")),
-            new CommandPaletteAction("gallery", "Go to Gallery", "Image gallery", "image", async () => await ExecuteCommand("gallery", "/gallery")),
-            new CommandPaletteAction("layout", "Go to Layout", "Layout components", "layout", async () => await ExecuteCommand("layout", "/layout")),
-            new CommandPaletteAction("toast", "Show Toast Notification", "Display a sample toast", "bell", async () => await ShowToastCommand()),
+            new CommandPaletteAction("home", "Go to Dashboard", "Navigate to home page", "home", Execute: async () => await ExecuteCommand("home", "/")),
+            new CommandPaletteAction("users", "Go to Users", "View user list", "users", Execute: async () => await ExecuteCommand("users", "/datatable")),
+            new CommandPaletteAction("forms", "Go to Forms", "Form components demo", "file-text", Execute: async () => await ExecuteCommand("forms", "/forms")),
+            new CommandPaletteAction("feedback", "Go to Feedback", "Alerts, toasts, and notifications", "bell", Execute: async () => await ExecuteCommand("feedback", "/feedback")),
+            new CommandPaletteAction("pickers", "Go to Pickers", "Date and time pickers", "calendar", Execute: async () => await ExecuteCommand("pickers", "/pickers")),
+            new CommandPaletteAction("richtext", "Go to Rich Text", "Text editors", "type", Execute: async () => await ExecuteCommand("richtext", "/richtext")),
+            new CommandPaletteAction("gallery", "Go to Gallery", "Image gallery", "image", Execute: async () => await ExecuteCommand("gallery", "/gallery")),
+            new CommandPaletteAction("layout", "Go to Layout", "Layout components", "layout", Execute: async () => await ExecuteCommand("layout", "/layout")),
+            new CommandPaletteAction("toast", "Show Toast Notification", "Display a sample toast", "bell", Execute: async () => await ShowToastCommand()),
         };
+
+        _entityLocalActions = new List<ICommandPaletteAction>
+        {
+            new CommandPaletteAction("entity-new", "New entity", "Create a new entity", "plus",
+                Category: "Commands", Badge: "Cmd", Code: "CMD-NEW",
+                Execute: () => EntityChosen("New entity", "CMD-NEW")),
+            new CommandPaletteAction("entity-import", "Import entities", "Upload a CSV of entities", "upload",
+                Category: "Commands", Badge: "Cmd", Code: "CMD-IMP",
+                Execute: () => EntityChosen("Import entities", "CMD-IMP")),
+        };
+
+        _entityCatalog =
+        [
+            new CommandPaletteAction("uc-042", "Command palette async source", "Server search with debounce and cancellation", "search",
+                Category: "Use cases", Badge: "UC", Code: "UC-042",
+                Execute: () => EntityChosen("Command palette async source", "UC-042")),
+            new CommandPaletteAction("uc-017", "Decision matrix editor", "Compare options in a grid", "grid",
+                Category: "Use cases", Badge: "UC", Code: "UC-017",
+                Execute: () => EntityChosen("Decision matrix editor", "UC-017")),
+            new CommandPaletteAction("dec-009", "Dark theme for diagrams", "Decision: canvas colors come from design tokens", "moon",
+                Category: "Decisions", Badge: "DEC", Code: "DEC-009",
+                Execute: () => EntityChosen("Dark theme for diagrams", "DEC-009")),
+            new CommandPaletteAction("dec-002", "Localization resource format", "Decision: flat JSON resource files", "globe",
+                Category: "Decisions", Badge: "DEC", Code: "DEC-002",
+                Execute: () => EntityChosen("Localization resource format", "DEC-002")),
+            new CommandPaletteAction("dec-007", "Diagram canvas colors", "Decision record without an icon — the empty icon slot keeps the titles aligned", null,
+                Category: "Decisions", Badge: "DEC", Code: "DEC-007",
+                Execute: () => EntityChosen("Diagram canvas colors", "DEC-007")),
+            new CommandPaletteAction("req-201", "WCAG AA contrast", "Requirement: text keeps 4.5:1 in both themes", "shield",
+                Category: "Requirements", Badge: "REQ", Code: "REQ-201",
+                Execute: () => EntityChosen("WCAG AA contrast", "REQ-201")),
+            new CommandPaletteAction("req-209", "An entity with an exceptionally long display title that must clip with an ellipsis instead of overflowing the palette panel",
+                "Edge case: a very long description rides behind the title and clips too without breaking the trailing layout", "file-text",
+                Category: "Requirements", Badge: "REQ", Code: "REQ-209-EXCEPTIONALLY-LONG-CODE-THAT-CLIPS",
+                Execute: () => EntityChosen("Long title entity", "REQ-209")),
+            new CommandPaletteAction("inv-88", "Invoice export", "Customer invoice as PDF/XLSX", "file",
+                Category: "Attachments", Badge: "ATT", Code: "ATT-088",
+                Execute: () => EntityChosen("Invoice export", "ATT-088")),
+        ];
+
+        // Edge-case volume: 200 generated rows so the list's max-height scrolling can be exercised.
+        _entityBulk = Enumerable.Range(1, 200).Select(i => (ICommandPaletteAction)new CommandPaletteAction(
+            $"bulk-{i}", $"Bulk attachment row number {i} for the scroll stress case", "Generated volume entry", "paperclip",
+            Category: "Attachments", Badge: "ATT", Code: $"ATT-B{i:D3}",
+            Execute: () => EntityChosen($"Bulk attachment row number {i}", $"ATT-B{i:D3}"))).ToList();
+    }
+
+    private Task EntityChosen(string title, string code)
+    {
+        Toast.ShowInfo($"Selected {code}: {title}");
+        return Task.CompletedTask;
+    }
+
+    private RenderFragment<string> EntityEmptyTemplate => query => builder =>
+        builder.AddContent(0, $"No entities match \"{query}\". Try UC-042, decision or invoice.");
+
+    /// <summary>The simulated entity server: a fixed delay (the component cancels it when the query
+    /// changes), an optional transient failure (random, and always for a query containing "fail"), and a title/description/code filter.</summary>
+    private async Task<CommandPaletteSearchResult> SearchEntitiesAsync(string query, CancellationToken cancellationToken)
+    {
+        await Task.Delay(600, cancellationToken);
+
+        if (_entityRandomFailures && (query.Contains("fail", StringComparison.OrdinalIgnoreCase) || Random.Shared.NextDouble() < 0.35))
+        {
+            return CommandPaletteSearchResult.Failed;
+        }
+
+        var matches = _entityCatalog.Where(a =>
+            a.Title.Contains(query, StringComparison.OrdinalIgnoreCase)
+            || (a.Description?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false)
+            || (a.Code?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false));
+
+        var items = matches.ToList();
+        if (_entityIncludeBulk)
+        {
+            items.AddRange(_entityBulk.Where(a =>
+                a.Title.Contains(query, StringComparison.OrdinalIgnoreCase)
+                || (a.Code?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false)));
+        }
+
+        return items.Count == 0 ? CommandPaletteSearchResult.NoResults : CommandPaletteSearchResult.Found(items);
     }
 
     private async Task ExecuteCommand(string name, string url)
@@ -667,26 +787,14 @@
         public Func<Task> Execute { get; } = () => Task.CompletedTask;
     }
 
-    // Simple implementation of ICommandPaletteAction
-    private class CommandPaletteAction : ICommandPaletteAction
-    {
-        public string Id { get; }
-        public string Title { get; }
-        public string? Description { get; }
-        public string? Icon { get; }
-        public string? Shortcut { get; }
-        public string? Category { get; }
-        public Func<Task> Execute { get; }
-
-        public CommandPaletteAction(string id, string title, string? description = null, string? icon = null, Func<Task>? execute = null)
-        {
-            Id = id;
-            Title = title;
-            Description = description;
-            Icon = icon;
-            Execute = execute ?? (() => Task.CompletedTask);
-        }
-    }
+    // TG-010 entity-search demo state: the local commands shown before server results, the
+    // simulated entity catalog, the failure toggle and the palette open flag.
+    private bool _entityPaletteOpen;
+    private bool _entityRandomFailures;
+    private bool _entityIncludeBulk;
+    private List<ICommandPaletteAction> _entityLocalActions = new();
+    private List<ICommandPaletteAction> _entityCatalog = new();
+    private List<ICommandPaletteAction> _entityBulk = new();
 
     // Simple implementation of ISidebarNavItem
     private class SidebarNavItem : ISidebarNavItem

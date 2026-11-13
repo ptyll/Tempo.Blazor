@@ -1,0 +1,10 @@
+{
+  "kind": "Record",
+  "category": "Interfaces",
+  "namespace": "Tempo.Blazor.Interfaces",
+  "description": "Result of a TmCommandPalette SearchProvider invocation: the matching items plus the fetch state (Ok / Empty / Transient). Lives in Abstractions (no UI dependency) so a backend or API project can return it without referencing the Blazor package; the Found/NoResults/Failed factories cover the three states.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Interfaces/CommandPaletteSearchResult.cs",
+  "documentationStatus": "generated",
+  "itemName": "CommandPaletteSearchResult"
+}

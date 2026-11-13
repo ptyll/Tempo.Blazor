@@ -24440,7 +24440,7 @@
           "kind": "Component",
           "category": "Layout",
           "namespace": "Tempo.Blazor.Components.Layout",
-          "description": "Searchable command palette overlay (Cmd+K style) with filterable actions, descriptions, and keyboard shortcut hints. Supports two-way binding on open state; the backdrop dismisses on a click whose press started on it (a drag-select from the input that ends over the backdrop keeps it open). GroupByCategory adds a heading per category and a divider (CSS border) between groups; SplitShortcuts renders one kbd per key. Both default off, which keeps the flat list and the single shortcut kbd.",
+          "description": "Searchable command palette overlay (Cmd+K style) with filterable actions, descriptions, keyboard shortcut hints and item icons. Supports two-way binding on open state; the backdrop dismisses on a click whose press started on it (a drag-select from the input that ends over the backdrop keeps it open). Local Actions filter synchronously (title, description, code); an optional asynchronous SearchProvider extends the list with remote results (local first), with debounce, cancellation of superseded requests, loading skeleton, empty and transient-error-with-retry states and a polite result-count announcement. GroupByCategory adds a heading per category and a divider (CSS border) between groups; SplitShortcuts renders one kbd per key; ShowIcons (default true) renders the action icon with an empty placeholder slot for actions without one; the trailing slot shows a Badge + Code by default; ShowFooter renders the keyboard-hint footer. All new capabilities except ShowIcons are opt-in.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Layout/TmCommandPalette.razor",
           "documentationStatus": "merged",
@@ -24462,10 +24462,41 @@
               "description": "Additional CSS class for the root element."
             },
             {
+              "name": "DebounceMs",
+              "type": "int",
+              "isRequired": false,
+              "default": "300",
+              "description": "Debounce delay in milliseconds from the last keystroke before the provider runs. 0 calls it immediately. Defaults to 300."
+            },
+            {
+              "name": "EmptyTemplate",
+              "type": "RenderFragment<string>?",
+              "isRequired": false,
+              "description": "Overrides the empty state; receives the current query."
+            },
+            {
+              "name": "FooterTemplate",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Overrides the footer content; renders even without ShowFooter."
+            },
+            {
               "name": "GroupByCategory",
               "type": "bool",
               "isRequired": false,
               "description": "Groups actions by Category: a heading per category and a divider (CSS border) between groups. A null/empty category renders its options without a group wrapper (a role=group must be named). Defaults to false."
+            },
+            {
+              "name": "HighlightMatches",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Marks the query in the title and the code via TmHighlightedText. Defaults to false."
+            },
+            {
+              "name": "IsLoading",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Host-driven loading state (for hosts that fill Actions themselves); ORs with the internal provider state."
             },
             {
               "name": "IsOpen",
@@ -24480,10 +24511,60 @@
               "description": "Fires when IsOpen should change (two-way binding)."
             },
             {
+              "name": "ItemTemplate",
+              "type": "RenderFragment<ICommandPaletteAction>?",
+              "isRequired": false,
+              "description": "Overrides the whole content of each item; the option wrapper (role=option, id, aria-selected, click) stays the component's."
+            },
+            {
+              "name": "ItemTrailingTemplate",
+              "type": "RenderFragment<ICommandPaletteAction>?",
+              "isRequired": false,
+              "description": "Overrides the trailing slot of each item (badge + code by default)."
+            },
+            {
+              "name": "LoadingTemplate",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Overrides the default loading rows (three TmSkeleton bars) shown while a search runs."
+            },
+            {
+              "name": "MinChars",
+              "type": "int",
+              "isRequired": false,
+              "default": "1",
+              "description": "Minimum query length that triggers SearchProvider. 0 calls the provider even for the empty query (e.g. 'recent items'). Defaults to 1."
+            },
+            {
+              "name": "SearchProvider",
+              "type": "Func<string, CancellationToken, Task<CommandPaletteSearchResult>>?",
+              "isRequired": false,
+              "description": "Asynchronous search source: invoked with the debounced query and a cancellation token that is cancelled when the query changes, the palette closes or the component disposes. Results are appended after the local Actions matches. Null (the default) keeps the palette purely local."
+            },
+            {
+              "name": "ShowFooter",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Renders the keyboard-hint footer (up/down navigate, enter select, esc close). Defaults to false."
+            },
+            {
+              "name": "ShowIcons",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Renders ICommandPaletteAction.Icon through TmIcon at the leading edge of each item; an item without an icon gets an empty slot of the same width so titles line up. Defaults to true (since 2.11.0 — a visual breaking change; see the CHANGELOG Breaking/Migration section)."
+            },
+            {
               "name": "SplitShortcuts",
               "type": "bool",
               "isRequired": false,
               "description": "Renders each '+'-separated part of a shortcut as its own kbd. Defaults to false."
+            },
+            {
+              "name": "TransientErrorTemplate",
+              "type": "RenderFragment<Func<Task>>?",
+              "isRequired": false,
+              "description": "Overrides the inline transient-error state; receives the retry callback."
             }
           ],
           "cssClasses": [
@@ -24499,12 +24580,27 @@
             "tm-command-palette-item",
             "tm-command-palette-title",
             "tm-command-palette-description",
-            "tm-command-palette-shortcut"
+            "tm-command-palette-shortcut",
+            "tm-command-palette-icon",
+            "tm-command-palette-trailing",
+            "tm-command-palette-code",
+            "tm-command-palette-loading",
+            "tm-command-palette-loading-row",
+            "tm-command-palette-error",
+            "tm-command-palette-error-text",
+            "tm-command-palette-retry",
+            "tm-command-palette-footer",
+            "tm-command-palette-footer-hint",
+            "tm-command-palette-status"
           ],
           "examples": [
             {
               "title": "Basic command palette",
               "code": "<TmCommandPalette @bind-IsOpen=\"paletteOpen\" Actions=\"commandActions\" />"
+            },
+            {
+              "title": "Entity search over an async source",
+              "code": "<TmCommandPalette @bind-IsOpen=\"paletteOpen\"\n                  Actions=\"localCommands\"\n                  SearchProvider=\"SearchEntitiesAsync\"\n                  GroupByCategory=\"true\"\n                  ShowFooter=\"true\"\n                  HighlightMatches=\"true\" />"
             }
           ]
         },
@@ -101581,6 +101677,108 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "CommandPaletteAction",
+          "kind": "Record",
+          "category": "Interfaces",
+          "namespace": "Tempo.Blazor.Interfaces",
+          "description": "Concrete, ready-to-use ICommandPaletteAction implementation with all metadata (icon, shortcut, category, badge, code, badge tone) in one positional record; Execute defaults to a no-op. Hosts and demos no longer need a private copy of this class.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Interfaces/CommandPaletteAction.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Badge",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Short badge text shown at the trailing edge of the item."
+            },
+            {
+              "name": "BadgeTone",
+              "kind": "Property",
+              "type": "CommandPaletteBadgeTone",
+              "description": "Tone of the trailing badge."
+            },
+            {
+              "name": "Category",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Optional category for grouping actions."
+            },
+            {
+              "name": "Code",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Code/identifier shown monospace at the trailing edge; also matched by the local filter."
+            },
+            {
+              "name": "Description",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Optional secondary description."
+            },
+            {
+              "name": "Execute",
+              "kind": "Property",
+              "type": "Func<Task>?",
+              "description": "The async action to execute when selected; defaults to a no-op."
+            },
+            {
+              "name": "Icon",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Optional icon name from IconNames constants."
+            },
+            {
+              "name": "Id",
+              "kind": "Property",
+              "type": "string",
+              "description": "Unique identifier for the action."
+            },
+            {
+              "name": "Shortcut",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Optional keyboard shortcut hint to display."
+            },
+            {
+              "name": "Title",
+              "kind": "Property",
+              "type": "string",
+              "description": "Primary display title shown in the command palette."
+            }
+          ]
+        },
+        {
+          "itemName": "CommandPaletteBadgeTone",
+          "kind": "Enum",
+          "category": "Interfaces",
+          "namespace": "Tempo.Blazor.Interfaces",
+          "description": "Tone of the trailing Badge on an ICommandPaletteAction (Neutral, Primary, Success, Warning, Danger, Info). Declared UI-free in Abstractions so a backend can compose palette items; TmCommandPalette maps the tone to the TmBadge variants.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Interfaces/ICommandPaletteAction.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "CommandPaletteFetchState",
+          "kind": "Enum",
+          "category": "Interfaces",
+          "namespace": "Tempo.Blazor.Interfaces",
+          "description": "Outcome of a TmCommandPalette SearchProvider fetch. Empty (the fetch succeeded and found nothing) and Transient (the fetch itself failed and may succeed on retry) are deliberately distinct states — conflating them hides outages behind a silent 'no results' message.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Interfaces/CommandPaletteSearchResult.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "CommandPaletteSearchResult",
+          "kind": "Record",
+          "category": "Interfaces",
+          "namespace": "Tempo.Blazor.Interfaces",
+          "description": "Result of a TmCommandPalette SearchProvider invocation: the matching items plus the fetch state (Ok / Empty / Transient). Lives in Abstractions (no UI dependency) so a backend or API project can return it without referencing the Blazor package; the Found/NoResults/Failed factories cover the three states.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Interfaces/CommandPaletteSearchResult.cs",
+          "documentationStatus": "merged"
+        },
+        {
           "itemName": "IBreadcrumbItem",
           "kind": "Interface",
           "category": "Interfaces",
@@ -101595,7 +101793,7 @@
           "kind": "Interface",
           "category": "Interfaces",
           "namespace": "Tempo.Blazor.Interfaces",
-          "description": "Represents an action available in TmCommandPalette (Ctrl+K).",
+          "description": "Represents an action available in TmCommandPalette (Ctrl+K). Since 2.11.0 the contract carries opt-in default members for the trailing item metadata — Badge (short badge text), Code (monospace identifier, also matched by the local filter) and BadgeTone (mapped to the TmBadge variants by the component) — so pre-2.11 implementations compile and behave unchanged.",
           "packageId": "Tempo.Blazor.Abstractions",
           "sourcePath": "src/Tempo.Blazor.Abstractions/Interfaces/ICommandPaletteAction.cs",
           "documentationStatus": "merged"
@@ -130258,12 +130456,12 @@
       ],
       "libraryExamples": [],
       "summary": {
-        "itemCount": 1708,
-        "manualItemCount": 1708,
-        "generatedItemCount": 1692,
+        "itemCount": 1712,
+        "manualItemCount": 1712,
+        "generatedItemCount": 1696,
         "generatedOnlyItemCount": 0,
         "componentCount": 0,
-        "publicApiTypeCount": 1692
+        "publicApiTypeCount": 1696
       }
     },
     {
@@ -147303,10 +147501,10 @@
   ],
   "summary": {
     "packageCount": 29,
-    "itemCount": 3738,
-    "manualItemCount": 3738,
+    "itemCount": 3742,
+    "manualItemCount": 3742,
     "generatedOnlyItemCount": 0,
     "componentCount": 565,
-    "publicApiTypeCount": 3121
+    "publicApiTypeCount": 3125
   }
 }

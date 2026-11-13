@@ -177,7 +177,9 @@ public class TmCommandPaletteTests : LocalizationTestBase
         cut.Find(".tm-command-palette-input").KeyDown(new KeyboardEventArgs { Key = "ArrowDown" });
         cut.Find(".tm-command-palette-input").KeyDown(new KeyboardEventArgs { Key = "Enter" });
 
-        executed.Should().Be("Second");
+        // Enter yields one browser task before closing/executing (the keypress of the same press
+        // must finish on the input, not on the restored opener button).
+        cut.WaitForAssertion(() => executed.Should().Be("Second"), TimeSpan.FromSeconds(2));
     }
 
     [Fact]

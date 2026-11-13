@@ -2,7 +2,7 @@
   "kind": "Interface",
   "category": "Interfaces",
   "namespace": "Tempo.Blazor.Interfaces",
-  "description": "Represents an action available in TmCommandPalette (Ctrl+K).",
+  "description": "Represents an action available in TmCommandPalette (Ctrl+K). Since 2.11.0 the contract carries opt-in default members for the trailing item metadata — Badge (short badge text), Code (monospace identifier, also matched by the local filter) and BadgeTone (mapped to the TmBadge variants by the component) — so pre-2.11 implementations compile and behave unchanged.",
   "packageId": "Tempo.Blazor.Abstractions",
   "sourcePath": "src/Tempo.Blazor.Abstractions/Interfaces/ICommandPaletteAction.cs",
   "documentationStatus": "generated",

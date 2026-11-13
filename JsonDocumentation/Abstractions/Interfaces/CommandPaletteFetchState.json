@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Interfaces",
+  "namespace": "Tempo.Blazor.Interfaces",
+  "description": "Outcome of a TmCommandPalette SearchProvider fetch. Empty (the fetch succeeded and found nothing) and Transient (the fetch itself failed and may succeed on retry) are deliberately distinct states — conflating them hides outages behind a silent 'no results' message.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Interfaces/CommandPaletteSearchResult.cs",
+  "documentationStatus": "generated",
+  "itemName": "CommandPaletteFetchState"
+}

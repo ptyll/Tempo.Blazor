@@ -969,6 +969,85 @@ visual paint, a markup addition or localization. What a 2.10.0 host can notice, 
 | RTE over-limit counter | `--tm-color-danger` (4.39:1 on the footer) | `--tm-color-danger-text` | Visual only; the `tm-rte-char-count-over` class is unchanged |
 | `TmMultiSelect` wireframe stencil (disabled) | Group opacity 0.45 multiplied with the fieldBox part's 0.45 (≈ 0.2 overall) | Single 0.45 dim of the box; chips paint full | Sketch-only; no migration |
 
+### Added — `TmCommandPalette` async search source, item icons, badge/code trailing slot, keyboard-hint footer (plan 92e96b25, phase 12 / TG-010)
+
+PromptHelper's "search entities by type + commands" palette becomes a host of `TmCommandPalette`
+directly — its own `CommandPalette.razor` can be replaced (handoff note for Fáze 10, backlog item
+6ff45c74-dee5-4955-a639-d8aef506154d closed). Decisions DEC-CMDPALETTE-ASYNC (O2–O6) recorded in
+PromptHelper.
+
+- **`ICommandPaletteAction` gains opt-in default members `Badge`, `Code` and `BadgeTone`.**
+  Source- and binary-compatible: every pre-2.11 implementation compiles unchanged and sees the
+  neutral defaults (no badge, no code, `Neutral` tone). `Code` renders monospace in the item's
+  trailing slot and is matched by the local filter. `BadgeTone` (`Neutral`/`Primary`/`Success`/
+  `Warning`/`Danger`/`Info`) is declared UI-free in Abstractions and maps to the `TmBadge`
+  variants in the component.
+- **New concrete model types in `Tempo.Blazor.Abstractions`.** `CommandPaletteAction` — the
+  sealed record every demo used to write privately (one positional record with icon, shortcut,
+  category, badge, code, tone, `Execute` defaulting to a no-op). `CommandPaletteSearchResult` +
+  `CommandPaletteFetchState` (`Ok`/`Empty`/`Transient` with `Found`/`NoResults`/`Failed`
+  factories) — the async source's return type lives UI-free so a backend can return it without a
+  Blazor package reference.
+- **Async `SearchProvider` on `TmCommandPalette`.**
+  `Func<string, CancellationToken, Task<CommandPaletteSearchResult>>?` (null = today's purely
+  local palette). Local `Actions` filter synchronously and render **first** (O3); async results
+  append after them; `GroupByCategory` groups the combined list (O6 — the "sections of similar
+  results" are the category groups, no separate section concept). Debounced on the injectable
+  `TimeProvider` (`DebounceMs`, default **300**, `0` = immediate; `MinChars`, default **1**, `0` =
+  the provider runs even for the empty query). Every query change cancels the previous
+  `CancellationTokenSource` (timer *and* in-flight request) and a stale response is dropped by a
+  monotonic request sequence even when the provider ignored the token; `OperationCanceledException`
+  is swallowed and any other exception renders the **transient** state. Closing the palette or
+  disposing cancels the request; reopening starts fresh. The component never retries on its own —
+  the retry button (or the host) does. New opt-in parameters: `IsLoading` (host-driven loading
+  that ORs with the internal state), `LoadingTemplate`, `EmptyTemplate` (receives the query),
+  `TransientErrorTemplate` (receives the retry callback), `ItemTrailingTemplate`, `ItemTemplate`
+  (content only — `li role=option`, stable id, `aria-selected` and the click stay the component's),
+  `HighlightMatches` (`TmHighlightedText` marks the query in the title and the code) and
+  `ShowFooter`/`FooterTemplate`.
+- **States and accessibility.** While loading, current results stay visible (no flicker), the
+  listbox carries `aria-busy="true"` and three `TmSkeleton` rows render below (`aria-hidden`);
+  with nothing to show the skeleton replaces the empty state. Empty ≠ outage: `Empty` renders the
+  localized "No commands found" (or `EmptyTemplate`), `Transient` renders an inline `role="alert"`
+  row with a localized retry button that is a native `<button>` (Tab-reachable, outside the
+  arrow-key navigation). One polite `role="status"` live region announces "Searching…" then the
+  result count through the new plural family `TmCommandPalette_ResultCount` (en/cs/sk/fr). The
+  highlighted option follows the action `Id` across result refreshes. The footer (↑↓ Navigate, ↵
+  Select, Esc Close as `<kbd>` chips, localized `TmCommandPalette_Footer*`) is not a live region
+  and hides on a `(pointer: coarse)` device.
+- **Enter no longer re-opens the palette.** Executing the highlighted action on Enter yields one browser task before closing: the same key press's `keypress` finished on the restored opener button (a native `<button>`) and re-opened the palette that Enter had just closed (docs/keyboard-activation-convention.md). Observable only as "the action runs ~1 ms later".
+- **Docs/demo/tests.** New [docs/command-palette.md](docs/command-palette.md); the JSON
+  documentation overlays (component + the four new Abstractions types) regenerated,
+  `validate --fail-on-drift` clean; AGENTS.md Layout row; the wireframe stencil now sketches the
+  icon, the trailing code chip and the footer hints. Demo `/layout` gained an **Entity search**
+  sample — a simulated server (600 ms delay, a random-failure toggle, a 200-row bulk toggle) over
+  use cases / decisions / requirements with badges, codes, category sections and the footer;
+  pre-existing samples unchanged. bUnit TDD RED first: `TmCommandPaletteFeaturesTests`
+  (default-markup snapshot, icons, badge/code + tone mapping, trailing/item templates, local
+  filter on `Code`, `HighlightMatches`, footer, model defaults — 22 tests) and
+  `TmCommandPaletteAsyncTests` (FakeTimeProvider debounce/cancellation/stale-drop/`MinChars`/
+  transient+retry/empty/loading/live-region/highlight-preservation/close+dispose reset — 23
+  tests). CSS guards: `CommandPaletteContrastTests` pins the title/description/code/error/retry/
+  footer paints at ≥ 4.5:1 in BOTH themes through the token graph. E2E: `CommandPaletteE2ETests`
+  (12 WASM tests: debounce→sections, keyboard execute, custom empty, transient+retry, Escape
+  during loading, long-title clipping, 200-row scroll, rapid typing, icon-less alignment, cs
+  culture, 390 px fine/coarse, dark) + `CommandPaletteServerE2ETests` (Server smoke); screenshots
+  in `tests/Tempo.Blazor.E2E/TestResults/command-palette/`.
+
+#### Breaking / Migration (TG-010)
+
+No member was removed or re-signed — the extension is additive default interface members and new
+opt-in parameters. The one visual breaking change (owner decision O2) and the DOM additions a
+2.10.0 host can notice:
+
+| Change | Before (2.10.0) | After (2.11.0) | Migration |
+|---|---|---|---|
+| Item icons | `ICommandPaletteAction.Icon` existed since 2.0 but was silently ignored — an item rendered title (+ description) only | `ShowIcons` defaults to **true**: every item renders a leading icon slot via `TmIcon` (`aria-hidden`); an item WITHOUT an icon gets an empty span of the same width so titles line up | Visual. A host that does not want icons sets `ShowIcons="false"` (the icon slot is removed entirely). A host CSS rule for `.tm-command-palette-title`/`__description` keeps working; a rule that assumed the title is the first child of the item must now account for the `.tm-command-palette-icon` slot |
+| Item DOM | `li > span.title (+ span.description, kbd.shortcut)` | `li > span.tm-command-palette-icon + span.title (+ span.description) + span.tm-command-palette-trailing (+ kbd.shortcut)`; the trailing span holds the `TmBadge` + `code.tm-command-palette-code` when the action carries `Badge`/`Code` | A host test that selected `.tm-command-palette-item > :first-child` or asserted the item's full child list must expect the two new spans (empty when no icon/badge/code). Structure-only: all 2.10.0 classes and their order are unchanged |
+| Local filter | Matched `Title` + `Description` | Also matches `Code` | Behavioral: a query that coincidentally matches an action's `Code` now returns that action. A host that relied on code-like substrings NOT matching must rename the code or filter client-side |
+| Highlight after typing | Every keystroke reset the highlight to the first item | The highlight follows the action `Id` while it survives the query change; first item only when the highlighted action fell out of the list | Behavioral (arguably the intended combobox contract). A host test that typed after ArrowDown and expected the highlight back on item 0 must ArrowUp/Home or assert by action |
+| New public type `CommandPaletteAction` | The host's own class/record named `CommandPaletteAction` was the only one in scope | `Tempo.Blazor.Abstractions` now exports a public sealed record `CommandPaletteAction` (namespace `Tempo.Blazor.Interfaces`). A host that declares a same-name type and imports `Tempo.Blazor.Interfaces` gets **CS0104** (ambiguous reference) where it uses the bare name | Compile-time. Rename the host type, delete it in favour of the shipped record, or alias it (`using HostAction = My.App.CommandPaletteAction;` / fully qualify). Hosts without such a type are unaffected |
+
 
 ### Fixed — test suite stability (plan 7ba95ed6, phase FZE-1)
 

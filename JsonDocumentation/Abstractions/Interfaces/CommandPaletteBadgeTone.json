@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Interfaces",
+  "namespace": "Tempo.Blazor.Interfaces",
+  "description": "Tone of the trailing Badge on an ICommandPaletteAction (Neutral, Primary, Success, Warning, Danger, Info). Declared UI-free in Abstractions so a backend can compose palette items; TmCommandPalette maps the tone to the TmBadge variants.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Interfaces/ICommandPaletteAction.cs",
+  "documentationStatus": "generated",
+  "itemName": "CommandPaletteBadgeTone"
+}

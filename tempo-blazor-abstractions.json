@@ -16308,6 +16308,108 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "CommandPaletteAction",
+      "kind": "Record",
+      "category": "Interfaces",
+      "namespace": "Tempo.Blazor.Interfaces",
+      "description": "Concrete, ready-to-use ICommandPaletteAction implementation with all metadata (icon, shortcut, category, badge, code, badge tone) in one positional record; Execute defaults to a no-op. Hosts and demos no longer need a private copy of this class.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Interfaces/CommandPaletteAction.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Badge",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Short badge text shown at the trailing edge of the item."
+        },
+        {
+          "name": "BadgeTone",
+          "kind": "Property",
+          "type": "CommandPaletteBadgeTone",
+          "description": "Tone of the trailing badge."
+        },
+        {
+          "name": "Category",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Optional category for grouping actions."
+        },
+        {
+          "name": "Code",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Code/identifier shown monospace at the trailing edge; also matched by the local filter."
+        },
+        {
+          "name": "Description",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Optional secondary description."
+        },
+        {
+          "name": "Execute",
+          "kind": "Property",
+          "type": "Func<Task>?",
+          "description": "The async action to execute when selected; defaults to a no-op."
+        },
+        {
+          "name": "Icon",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Optional icon name from IconNames constants."
+        },
+        {
+          "name": "Id",
+          "kind": "Property",
+          "type": "string",
+          "description": "Unique identifier for the action."
+        },
+        {
+          "name": "Shortcut",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Optional keyboard shortcut hint to display."
+        },
+        {
+          "name": "Title",
+          "kind": "Property",
+          "type": "string",
+          "description": "Primary display title shown in the command palette."
+        }
+      ]
+    },
+    {
+      "itemName": "CommandPaletteBadgeTone",
+      "kind": "Enum",
+      "category": "Interfaces",
+      "namespace": "Tempo.Blazor.Interfaces",
+      "description": "Tone of the trailing Badge on an ICommandPaletteAction (Neutral, Primary, Success, Warning, Danger, Info). Declared UI-free in Abstractions so a backend can compose palette items; TmCommandPalette maps the tone to the TmBadge variants.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Interfaces/ICommandPaletteAction.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "CommandPaletteFetchState",
+      "kind": "Enum",
+      "category": "Interfaces",
+      "namespace": "Tempo.Blazor.Interfaces",
+      "description": "Outcome of a TmCommandPalette SearchProvider fetch. Empty (the fetch succeeded and found nothing) and Transient (the fetch itself failed and may succeed on retry) are deliberately distinct states — conflating them hides outages behind a silent 'no results' message.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Interfaces/CommandPaletteSearchResult.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "CommandPaletteSearchResult",
+      "kind": "Record",
+      "category": "Interfaces",
+      "namespace": "Tempo.Blazor.Interfaces",
+      "description": "Result of a TmCommandPalette SearchProvider invocation: the matching items plus the fetch state (Ok / Empty / Transient). Lives in Abstractions (no UI dependency) so a backend or API project can return it without referencing the Blazor package; the Found/NoResults/Failed factories cover the three states.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Interfaces/CommandPaletteSearchResult.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "IBreadcrumbItem",
       "kind": "Interface",
       "category": "Interfaces",
@@ -16322,7 +16424,7 @@
       "kind": "Interface",
       "category": "Interfaces",
       "namespace": "Tempo.Blazor.Interfaces",
-      "description": "Represents an action available in TmCommandPalette (Ctrl+K).",
+      "description": "Represents an action available in TmCommandPalette (Ctrl+K). Since 2.11.0 the contract carries opt-in default members for the trailing item metadata — Badge (short badge text), Code (monospace identifier, also matched by the local filter) and BadgeTone (mapped to the TmBadge variants by the component) — so pre-2.11 implementations compile and behave unchanged.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Interfaces/ICommandPaletteAction.cs",
       "documentationStatus": "merged"
@@ -44985,11 +45087,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1708,
-    "manualItemCount": 1708,
-    "generatedItemCount": 1692,
+    "itemCount": 1712,
+    "manualItemCount": 1712,
+    "generatedItemCount": 1696,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1692
+    "publicApiTypeCount": 1696
   }
 }
