@@ -369,6 +369,23 @@
 }
 
 /* ═══════════════════════════════════════════════════════
+   Interface density (TG-007)
+   ═══════════════════════════════════════════════════════
+   The row metrics are custom properties ON .tm-tabs (see the container
+   block at the top), so the compact density must re-declare them here —
+   an inherited [data-tm-density] value would lose to the element's own
+   declaration. The (0,2,0) scope out-specifies every variant's (0,1,0)
+   metric declaration ON PURPOSE: density re-metrics the tab row of ALL
+   variants, the same way --tm-input-height-md re-heights every control.
+   What the variants own — the pill tray, the enclosed borders, the
+   radii — is untouched. --tm-tab-row-height on .tm-tabs recomputes
+   from these inputs on its own. */
+[data-tm-density="compact"] .tm-tabs {
+    --tm-tab-padding-y: 0.375rem;
+    --tm-tab-padding-x: 0.875rem;
+}
+
+/* ═══════════════════════════════════════════════════════
    Reduced motion
    ═══════════════════════════════════════════════════════ */
 @media (prefers-reduced-motion: reduce) {

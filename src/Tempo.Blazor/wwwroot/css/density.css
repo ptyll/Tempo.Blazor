@@ -1,0 +1,70 @@
+/* ═══════════════════════════════════════════════════════════════
+   Tempo.Blazor — Interface density (TG-007, plan 92e96b25)
+   ═══════════════════════════════════════════════════════════════
+   A host opts a whole subtree into the compact density with
+   `data-tm-density="compact"` on any ancestor (typically the app
+   root next to data-theme). Comfortable — the default, no attribute —
+   renders byte-identical metrics to the pre-TG-007 look: every token
+   below defaults to the exact value its component used before.
+
+   This is a SEPARATE FILE on purpose. The compact scope re-declares
+   tokens that are also declared in tokens.css (:root) — :root and
+   [data-tm-density="compact"] carry the same (0,1,0) specificity, so
+   this file must be imported AFTER tokens.css: import order is what
+   lets the attribute scope win. Keeping it out of tokens.css also
+   keeps the flat "last declaration wins" token readers
+   (ThemeCss.TokenGraph, the documented-token drift guard, the
+   button-height sweep) resolving the comfortable :root value — the
+   compact re-declaration applies only where the attribute matches,
+   which those flat readers intentionally do not model.
+
+   The compact scope re-declares the tokens the base chrome is built
+   from, so the component stylesheets need no density rules of their
+   own:
+     - --tm-input-height-md      control height (TmButton, TmTextInput,
+                                 TmSelect, TmSearchInput and every other
+                                 control reading the token)
+     - --tm-data-table-cell-py/px table cell padding (TmDataTable)
+     - --tm-card-*-padding       TmCard header/content/footer padding
+     - --tm-sidebar-item-padding TmSidebar nav item padding
+
+   --tm-density-scale is the published multiplier (1 comfortable,
+   0.85 compact) for hosts that derive their OWN density-aware metrics
+   from one knob. It is deliberately not consumed by the library
+   stylesheets: the library tokens above are the resolved values, so
+   a host override of one concrete token is never fought by a scale
+   it did not expect.
+
+   Two things this scope does NOT touch:
+     - --tm-touch-target (44 px) and every (pointer: coarse) rule —
+       compact is a desktop data-density opt-in, touch layouts keep
+       their target sizes.
+     - The per-component --compact modifiers that predate TG-007
+       (.tm-usage-meter--compact, .tm-approval-card--compact, …) —
+       they stay local overrides, combinable with the global scope.
+
+   The :root-level derived reserves (--tm-form-action-bar-reserve-block-size,
+   --tm-mobile-action-bar-reserve-block-size) evaluate --tm-input-height-md
+   with the :root value by design, so under compact they reserve the
+   comfortable height — a slightly larger reserve, never an overlap.
+   A host that wants a compact-exact reserve re-declares the reserve
+   on its own wrapper. */
+
+:root {
+  --tm-density-scale:         1;
+  --tm-card-header-padding:   var(--tm-space-4) var(--tm-space-5);
+  --tm-card-content-padding:  var(--tm-space-5);
+  --tm-card-footer-padding:   var(--tm-space-3) var(--tm-space-5);
+  --tm-sidebar-item-padding:  var(--tm-space-2) var(--tm-space-3);
+}
+
+[data-tm-density="compact"] {
+  --tm-density-scale:         0.85;
+  --tm-input-height-md:       2rem;
+  --tm-data-table-cell-py:    var(--tm-space-2);
+  --tm-data-table-cell-px:    var(--tm-space-3);
+  --tm-card-header-padding:   var(--tm-space-3) var(--tm-space-4);
+  --tm-card-content-padding:  var(--tm-space-4);
+  --tm-card-footer-padding:   var(--tm-space-2) var(--tm-space-4);
+  --tm-sidebar-item-padding:  var(--tm-space-1-5) var(--tm-space-3);
+}

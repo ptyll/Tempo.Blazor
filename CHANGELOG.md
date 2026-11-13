@@ -827,6 +827,65 @@
   one `TmStatCard` renders. Only consumers enumerating the duplicate row can notice.
 
 
+### Added — interface density `data-tm-density` (plan 92e96b25, phase 9 / TG-007)
+
+- **`data-tm-density="comfortable|compact"`** on any ancestor (typically the app root next to
+  `data-theme`) opts the whole subtree into the compact density. Comfortable — the default, no
+  attribute — renders byte-identical metrics to the pre-TG-007 look. The compact scope
+  re-declares the density tokens in the new `density.css` (imported right after `tokens.css`;
+  the equal-specificity override wins by import order); no component stylesheet carries a
+  density rule.
+- **Tokens.** `--tm-density-scale` (1 / 0.85) — a **host-only** knob: no library stylesheet
+  reads it, so overriding it changes nothing inside Tempo components; a host derives its own
+  density-aware metrics from it while the library keeps reading the resolved tokens below.
+  Also `--tm-input-height-md` (2.375rem / 2rem), `--tm-data-table-cell-py/px`
+  (space-3/4 / space-2/3), and the new `--tm-card-header-padding`, `--tm-card-content-padding`,
+  `--tm-card-footer-padding`, `--tm-sidebar-item-padding` (comfortable defaults equal the
+  pre-TG-007 values). Consumed by `TmButton`, `TmTextInput`, `TmSelect`, `TmSearchInput` (and
+  every other control reading `--tm-input-height-md`), `TmDataTable` cells, `TmCard`,
+  `TmTabs` (row padding re-metered for every variant, Line row 42 → 34 px; variant chrome
+  untouched) and `TmSidebar` nav items.
+- **No breaking change.** Without the attribute nothing moves: every comfortable token resolves
+  to the exact pre-TG-007 value (bUnit + E2E guards). The pre-existing per-component `--compact`
+  modifiers (`tm-usage-meter--compact`, `tm-approval-card--compact`, `tm-calendar-view--compact`)
+  stay as local overrides, combinable with the global scope. `:root`-level derived reserves
+  (`--tm-form-action-bar-reserve-block-size`, `--tm-mobile-action-bar-reserve-block-size`)
+  evaluate `--tm-input-height-md` with the `:root` value by design — under compact they reserve
+  the comfortable height (a slightly larger reserve, never an overlap). Touch layouts are
+  untouched: `--tm-touch-target` and every `(pointer: coarse)` rule keep their 44 px targets.
+- **Migration note (PromptHelper and similar hosts).** A host that today writes
+  `--ph-user-density-scale` on `:root` already has the user preference — Tempo components never
+  read `--ph-*` tokens. Map the preference to the attribute:
+  `document.documentElement.dataset.tmDensity = scale < 1 ? "compact" : "comfortable"` — see
+  *Mapping a user's density preference* in [docs/density.md](docs/density.md).
+- **Demo.** New `/density` page (nav *Design System → Interface Density*) — a
+  Comfortable/Compact `TmSegmentedControl` switcher above a form, a data table, a card, tabs and
+  a sidebar rendered inside the scoped region. New `TmDensityDemo_*` keys in all four
+  `DemoResources` tables.
+- **Tests.** bUnit (TDD, RED first): `InterfaceDensityTests` — token contract (comfortable
+  equals pre-TG-007 metrics, compact redeclares them only under the attribute, ordering guard),
+  base-control/table/card/sidebar token consumption, the `_tabs.css` compact scope, the
+  preserved per-component `--compact` modifiers, an allow-list guard on every `:root` token
+  derived from `--tm-input-height-md`, and a documentation ratchet for the new tokens.
+  E2E: `DensityTG007E2ETests` (WASM lane, 6 tests) measures the real-browser computed metrics on
+  both sides of the switch (38 px → 32 px controls, 12/16 → 8/12 px cells, 42 → 34 px tab row,
+  sidebar items 8 → 6 px, and an exact restore when switching back), guards reduced motion and
+  the 390 px phone stage (no horizontal overflow), adds a `HasTouch` run that asserts the
+  compact metrics hold under `(pointer: coarse)` and the sidebar items keep their >= 44 px
+  min-block-size, and captures locator screenshots — light/dark
+  × comfortable/compact, reduced motion, phone, phone-touch — in
+  `tests/Tempo.Blazor.E2E/__screenshots__/density/tg007/` (UX-reviewed; every capture asserts
+  the Blazor error UI stays hidden).
+- **JSON documentation / docs.** The overlays of `TmButton`, `TmTextInput`, `TmSelect`,
+  `TmSearchInput`, `TmDataTable`, `TmCard`, `TmTabs` and `TmSidebar` document the density
+  contract; the `gettingStarted.json` token table publishes the new tokens; aggregates
+  regenerated and `validate --fail-on-drift` clean; new [docs/density.md](docs/density.md) —
+  the contract, the token table, what does not change, the load-bearing ordering and the
+  user-preference mapping.
+- **Wireframe stencils.** Density changes no component API and no default rendering, so the
+  `TmButton`/`TmTextInput`/`TmSelect`/`TmSearchInput`/`TmDataTable`/`TmCard`/`TmTabs`/`TmSidebar`
+  schemas need no new prop; verified against `BuiltInComponentSchemas`.
+
 ### Fixed — test suite stability (plan 7ba95ed6, phase FZE-1)
 
 - **No production behavior change.** `Tempo.Blazor.Tests` (21 331 tests) is green 3× consecutively

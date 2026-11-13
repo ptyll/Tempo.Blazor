@@ -402,6 +402,16 @@
             "--tm-topbar-height": "3.5rem",
             "--tm-app-shell-main-bg": "var(--tm-bg-surface)"
           }
+        },
+        "density": {
+          "description": "Interface density (TG-007). Set data-tm-density=\"compact\" on any ancestor (typically the app root next to data-theme) to opt the whole subtree into the compact density; the default (no attribute) is comfortable and renders pre-TG-007 metrics. The compact scope re-declares --tm-input-height-md (2rem), --tm-data-table-cell-py/px (space-2/space-3) and the card/sidebar paddings below; every control reading --tm-input-height-md (TmButton, TmTextInput, TmSelect, TmSearchInput, …) and the TmDataTable cells follow. --tm-density-scale is the published multiplier for a host's own density-derived metrics. Touch layouts are untouched: --tm-touch-target and every (pointer: coarse) rule keep their 44 px targets.",
+          "tokens": {
+            "--tm-density-scale": "1",
+            "--tm-card-header-padding": "var(--tm-space-4) var(--tm-space-5)",
+            "--tm-card-content-padding": "var(--tm-space-5)",
+            "--tm-card-footer-padding": "var(--tm-space-3) var(--tm-space-5)",
+            "--tm-sidebar-item-padding": "var(--tm-space-2) var(--tm-space-3)"
+          }
         }
       },
       "customization": {

@@ -148,7 +148,9 @@
   gap: var(--tm-space-3);
   width: 100%;
   min-width: 0;
-  padding: var(--tm-space-2) var(--tm-space-3);
+  /* Density-aware (TG-007): comfortable resolves to the pre-TG-007 space-2/space-3 pair;
+     the (pointer: coarse) min-block-size rule below still wins on touch layouts. */
+  padding: var(--tm-sidebar-item-padding);
   font-size: var(--tm-font-size-sm);
   font-weight: var(--tm-font-weight-medium);
   color: var(--tm-text-secondary);

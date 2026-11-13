@@ -83,7 +83,13 @@ public class DesignTokenDefinitionTests
         var root = RepositoryRoot().FullName;
         var declared = new HashSet<string>(StringComparer.Ordinal);
 
-        foreach (var file in new[] { "tokens.css", "tokens-dark.css" })
+        // density.css is a token file too (TG-007): it carries the interface-density tokens and
+        // the compact scope that re-declares :root tokens under [data-tm-density="compact"]. It
+        // lives in its own file so the flat "last declaration wins" readers (this guard, the
+        // documented-token drift guard, the button-height sweep) keep resolving the comfortable
+        // :root value — the compact re-declaration is scoped to the attribute, which the flat
+        // readers intentionally do not model.
+        foreach (var file in new[] { "tokens.css", "tokens-dark.css", "density.css" })
         {
             var path = Path.Combine(root, "src", "Tempo.Blazor", "wwwroot", "css", file);
             foreach (Match match in TokenDeclaration.Matches(File.ReadAllText(path)))

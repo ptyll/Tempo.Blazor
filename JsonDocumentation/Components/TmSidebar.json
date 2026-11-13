@@ -2,7 +2,7 @@
   "itemName": "TmSidebar",
   "kind": "Component",
   "category": "Layout",
-  "description": "Collapsible sidebar navigation with icon-only collapsed state, optional named sections, nested child items, badge counts, a current-page marker, optional header/footer slots, an opt-out of the header collapse toggle (for a sidebar rendered inside an already-open drawer) and a selection callback a frame uses to close the surface the chosen entry was picked from.",
+  "description": "Collapsible sidebar navigation with icon-only collapsed state, optional named sections, nested child items, badge counts, a current-page marker, optional header/footer slots, an opt-out of the header collapse toggle (for a sidebar rendered inside an already-open drawer) and a selection callback a frame uses to close the surface the chosen entry was picked from. Since TG-007 (2.11.0) the nav items follow the interface density contract: item padding reads --tm-sidebar-item-padding, which the compact density tightens to space-1-5/space-3; the (pointer: coarse) 44 px minimum target keeps winning on touch layouts and comfortable (no attribute) is unchanged.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Layout",
     "@using Tempo.Blazor.Interfaces"

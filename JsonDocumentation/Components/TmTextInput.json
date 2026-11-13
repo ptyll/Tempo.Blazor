@@ -2,7 +2,7 @@
   "itemName": "TmTextInput",
   "kind": "Component",
   "category": "Inputs",
-  "description": "Text input field with label, placeholder, left/right icons, validation state icons (success/error), error message, help text, and full keyboard event support.",
+  "description": "Text input field with label, placeholder, left/right icons, validation state icons (success/error), error message, help text, and full keyboard event support. Since TG-007 (2.11.0) the input follows the interface density contract: inside a data-tm-density=\"compact\" ancestor the box height reads the compact --tm-input-height-md (32 px instead of 38 px); comfortable (no attribute) is unchanged.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Inputs"
   ],

@@ -11,7 +11,9 @@
   display: flex;
   align-items: center;
   gap: var(--tm-space-2);
-  padding: var(--tm-space-4) var(--tm-space-5);
+  /* The density-aware padding pair (TG-007): comfortable resolves to the
+     pre-TG-007 space-4/space-5; [data-tm-density="compact"] re-declares the token. */
+  padding: var(--tm-card-header-padding);
   border-bottom: 1px solid var(--tm-border-color);
   font-weight: var(--tm-font-weight-semibold);
   font-size: var(--tm-font-size-sm);
@@ -22,10 +24,12 @@
   color: var(--tm-text-secondary);
 }
 .tm-card-content {
-  padding: var(--tm-space-5);
+  /* Density-aware (TG-007): comfortable resolves to the pre-TG-007 space-5. */
+  padding: var(--tm-card-content-padding);
 }
 .tm-card-footer {
-  padding: var(--tm-space-3) var(--tm-space-5);
+  /* Density-aware (TG-007): comfortable resolves to the pre-TG-007 space-3/space-5. */
+  padding: var(--tm-card-footer-padding);
   border-top: 1px solid var(--tm-border-color);
   background-color: var(--tm-bg-surface-secondary);
   font-size: var(--tm-font-size-sm);

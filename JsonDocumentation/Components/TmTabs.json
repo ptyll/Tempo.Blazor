@@ -2,7 +2,7 @@
   "itemName": "TmTabs",
   "kind": "Component",
   "category": "Navigation",
-  "description": "Tab strip component with Line, Pill, and Enclosed visual variants. Supports icons, badges, disabled tabs, and keyboard arrow-key navigation. Use with TmTabPanel children.",
+  "description": "Tab strip component with Line, Pill, and Enclosed visual variants. Supports icons, badges, disabled tabs, and keyboard arrow-key navigation. Use with TmTabPanel children. Since TG-007 (2.11.0) the tab strip follows the interface density contract: inside a data-tm-density=\"compact\" ancestor the row padding is re-metered for every variant (Line row 42 px -> 34 px); the variant chrome (tray, borders, radii) is untouched and comfortable (no attribute) is unchanged.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Navigation"
   ],

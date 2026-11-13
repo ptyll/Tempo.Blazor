@@ -190,7 +190,9 @@
 
 /* Select */
 .tm-select-wrapper  { display: flex; flex-direction: column; gap: var(--tm-space-1); }
-.tm-select-label    { font-size: var(--tm-font-size-sm); font-weight: var(--tm-font-weight-medium); color: var(--tm-text-primary); }
+/* The label shares .tm-input-label's tight line box: without it the inherited normal leading
+   makes the label text sit ~2px lower than a TmTextInput label in a bottom-aligned row. */
+.tm-select-label    { font-size: var(--tm-font-size-sm); font-weight: var(--tm-font-weight-medium); color: var(--tm-text-primary); line-height: var(--tm-line-height-tight); }
 .tm-select-container { position: relative; }
 .tm-select {
   width: 100%;

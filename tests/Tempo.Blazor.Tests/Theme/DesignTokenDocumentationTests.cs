@@ -51,10 +51,31 @@ public class DesignTokenDocumentationTests
         return documented;
     }
 
+    /// <summary>Every token the stylesheet declares: tokens.css plus the comfortable :root defaults of density.css (TG-007).</summary>
+    private static Dictionary<string, string> DeclaredTokens()
+    {
+        var declared = ThemeCss.Declarations(ThemeCss.CssPath("tokens.css"));
+
+        // Only the density :root block: the compact scope re-declares the same names with compact
+        // values, and the documented table publishes the comfortable defaults (the compact values
+        // are attribute-scoped, which this flat reader does not model).
+        var densityRoot = ThemeCss.RuleDeclarations(
+            File.ReadAllText(ThemeCss.CssPath("density.css")), ":root");
+        var declaration = new System.Text.RegularExpressions.Regex(
+            @"(?<name>--tm-[\w-]+)\s*:\s*(?<value>[^;{}]+);",
+            System.Text.RegularExpressions.RegexOptions.Compiled, TimeSpan.FromSeconds(5));
+        foreach (System.Text.RegularExpressions.Match match in declaration.Matches(densityRoot))
+        {
+            declared[match.Groups["name"].Value] = ThemeCss.Normalise(match.Groups["value"].Value);
+        }
+
+        return declared;
+    }
+
     [Fact]
     public void EveryDocumentedToken_IsActuallyDeclared_InTokensCss()
     {
-        var declared = ThemeCss.Declarations(ThemeCss.CssPath("tokens.css"));
+        var declared = DeclaredTokens();
 
         var phantom = DocumentedTokens().Keys.Where(token => !declared.ContainsKey(token)).ToList();
 
@@ -65,7 +86,7 @@ public class DesignTokenDocumentationTests
     [Fact]
     public void EveryDocumentedToken_CarriesTheValueTheStylesheetDeclares()
     {
-        var declared = ThemeCss.Declarations(ThemeCss.CssPath("tokens.css"));
+        var declared = DeclaredTokens();
 
         var drifted = DocumentedTokens()
             .Where(entry => declared.TryGetValue(entry.Key, out var value)

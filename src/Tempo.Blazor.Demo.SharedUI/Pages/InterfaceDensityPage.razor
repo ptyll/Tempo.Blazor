@@ -1,0 +1,175 @@
+@page "/density"
+@using Tempo.Blazor.Components.DataTable
+@inject ITmLocalizer Loc
+
+<PageTitle>@Loc["TmDensityDemo_PageTitle"] – Tempo.Blazor</PageTitle>
+
+<!-- Page Header -->
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">@Loc["TmDensityDemo_Heading"]</h1>
+    <p class="text-slate-600 dark:text-slate-400">@Loc["TmDensityDemo_Subtitle"]</p>
+</div>
+
+<!-- Density switcher (outside the scoped region so it keeps its comfortable size) -->
+<section class="demo-section">
+    <div class="showcase-card">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div>
+                <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">@Loc["TmDensityDemo_SwitcherTitle"]</h3>
+                <p class="text-sm text-slate-500 dark:text-slate-400">@Loc["TmDensityDemo_SwitcherHint"]</p>
+            </div>
+            <TmSegmentedControl TValue="string"
+                                Options="_densityOptions"
+                                Value="@_density"
+                                ValueChanged="OnDensityChanged"
+                                AriaLabel="@Loc["TmDensityDemo_SwitcherTitle"]"
+                                DataTestId="density-switcher" />
+        </div>
+    </div>
+</section>
+
+<!-- Everything below renders inside the density scope: the attribute is the whole contract. -->
+<div data-tm-density="@_density" data-testid="density-scope">
+
+    <!-- Form controls -->
+    <section class="demo-section">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">@Loc["TmDensityDemo_FormSection"]</h2>
+        <div class="showcase-card">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                <TmTextInput Label="@Loc["TmDensityDemo_FieldName"]"
+                             Placeholder="@Loc["TmDensityDemo_FieldNamePlaceholder"]"
+                             data-testid="density-input-name" />
+                <TmSelect TValue="string"
+                          Label="@Loc["TmDensityDemo_FieldRole"]"
+                          Options="_roleOptions"
+                          data-testid="density-select-role" />
+                <TmSearchInput Placeholder="@Loc["TmDensityDemo_FieldSearch"]"
+                               data-testid="density-search" />
+                <TmButton Variant="ButtonVariant.Primary" data-testid="density-button">
+                    @Loc["TmDensityDemo_ButtonSave"]
+                </TmButton>
+            </div>
+        </div>
+    </section>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- Data table -->
+        <section class="demo-section">
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">@Loc["TmDensityDemo_TableSection"]</h2>
+            <TmDataTable TItem="DensityEmployee" Items="_employees" ViewContext="density-demo"
+                         ShowPagination="false" ShowToolbar="false"
+                         data-testid="density-table">
+                <TmDataTableColumn TItem="DensityEmployee" Title="@Loc["TmDensityDemo_ColName"]" PropertyName="Name" Field="e => e.Name" />
+                <TmDataTableColumn TItem="DensityEmployee" Title="@Loc["TmDensityDemo_ColRole"]" PropertyName="Role" Field="e => e.Role" />
+                <TmDataTableColumn TItem="DensityEmployee" Title="@Loc["TmDensityDemo_ColDept"]" PropertyName="Dept" Field="e => e.Dept" />
+                <TmDataTableColumn TItem="DensityEmployee" Title="@Loc["TmDensityDemo_ColScore"]" PropertyName="Score" Field="e => e.Score" Align="ColumnAlign.Right" />
+            </TmDataTable>
+        </section>
+
+        <div class="flex flex-col gap-6">
+            <!-- Card -->
+            <section class="demo-section">
+                <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">@Loc["TmDensityDemo_CardSection"]</h2>
+                <TmCard Header="@Loc["TmDensityDemo_CardHeader"]"
+                        HeaderIcon="layers"
+                        Footer="@Loc["TmDensityDemo_CardFooter"]"
+                        data-testid="density-card">
+                    @Loc["TmDensityDemo_CardBody"]
+                </TmCard>
+            </section>
+
+            <!-- Tabs -->
+            <section class="demo-section">
+                <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">@Loc["TmDensityDemo_TabsSection"]</h2>
+                <TmTabs ActiveTabId="@_activeTab" ActiveTabIdChanged="@(v => _activeTab = v)" data-testid="density-tabs">
+                    <TmTabPanel Id="overview" Title="@Loc["TmDensityDemo_TabOverview"]" Icon="info">
+                        <p class="text-sm text-slate-600 dark:text-slate-400">@Loc["TmDensityDemo_TabOverviewBody"]</p>
+                    </TmTabPanel>
+                    <TmTabPanel Id="activity" Title="@Loc["TmDensityDemo_TabActivity"]" Icon="activity">
+                        <p class="text-sm text-slate-600 dark:text-slate-400">@Loc["TmDensityDemo_TabActivityBody"]</p>
+                    </TmTabPanel>
+                </TmTabs>
+            </section>
+        </div>
+    </div>
+
+    <!-- Sidebar items -->
+    <section class="demo-section">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">@Loc["TmDensityDemo_SidebarSection"]</h2>
+        <div class="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden" style="height: 280px;"
+             data-testid="density-sidebar-host">
+            <TmSidebar Items="_sidebarItems"
+                       NavLabel="@Loc["TmDensityDemo_SidebarNavLabel"]"
+                       Collapsed="false"
+                       Class="h-full"
+                       data-testid="density-sidebar">
+                <Header>
+                    <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-200 dark:border-slate-700">
+                        <TmIcon Name="layers" />
+                        <span class="font-semibold">Tempo.Blazor</span>
+                    </div>
+                </Header>
+            </TmSidebar>
+        </div>
+    </section>
+</div>
+
+@code {
+    private string _density = "comfortable";
+    private string _activeTab = "overview";
+
+    private IReadOnlyList<SegmentedOption<string>> _densityOptions = [];
+    private IReadOnlyList<SelectOption<string>> _roleOptions = [];
+    private List<ISidebarNavItem> _sidebarItems = [];
+
+    private readonly List<DensityEmployee> _employees = new()
+    {
+        new("Alice Nováková", "Engineer", "Platform", 94),
+        new("Martin Dvořák", "Designer", "Product", 88),
+        new("Sara Johansson", "Engineer", "Platform", 91),
+        new("Tomáš Svoboda", "Manager", "Operations", 86),
+        new("Elena Rossi", "Analyst", "Growth", 90),
+        new("Peter Horák", "Engineer", "Platform", 82),
+    };
+
+    protected override void OnInitialized()
+    {
+        _densityOptions =
+        [
+            new SegmentedOption<string> { Label = Loc["TmDensityDemo_DensityComfortable"], Value = "comfortable" },
+            new SegmentedOption<string> { Label = Loc["TmDensityDemo_DensityCompact"], Value = "compact" },
+        ];
+
+        _roleOptions =
+        [
+            new SelectOption<string> { Label = Loc["TmDensityDemo_RoleAdmin"], Value = "admin" },
+            new SelectOption<string> { Label = Loc["TmDensityDemo_RoleEditor"], Value = "editor" },
+            new SelectOption<string> { Label = Loc["TmDensityDemo_RoleViewer"], Value = "viewer" },
+        ];
+
+        _sidebarItems =
+        [
+            new SidebarNavItem { Id = "1", Label = Loc["TmDensityDemo_NavDashboard"], Icon = "home", Href = "/" },
+            new SidebarNavItem { Id = "2", Label = Loc["TmDensityDemo_NavProjects"], Icon = "folder", Href = "/density" },
+            new SidebarNavItem
+            {
+                Id = "3", Label = Loc["TmDensityDemo_NavTeam"], Icon = "users", Href = "/density",
+                Children =
+                [
+                    new SidebarNavItem { Id = "3-1", Label = Loc["TmDensityDemo_NavMembers"], Href = "/density" },
+                    new SidebarNavItem { Id = "3-2", Label = Loc["TmDensityDemo_NavGuests"], Href = "/density" },
+                ],
+            },
+            new SidebarNavItem { Id = "4", Label = Loc["TmDensityDemo_NavReports"], Icon = "bar-chart-2", Href = "/density", BadgeCount = 4 },
+            new SidebarNavItem { Id = "5", Label = Loc["TmDensityDemo_NavSettings"], Icon = "settings", Href = "/density" },
+        ];
+    }
+
+    private void OnDensityChanged(string density)
+    {
+        _density = density;
+    }
+
+    private sealed record DensityEmployee(string Name, string Role, string Dept, int Score);
+}

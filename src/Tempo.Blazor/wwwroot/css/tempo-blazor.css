@@ -10,6 +10,9 @@
 @import "tokens-dark.css";
 /* Opt-in theme (decision G4): does nothing until [data-tm-theme="indigo"] is set. */
 @import "theme-indigo.css";
+/* Interface density (TG-007): MUST follow tokens.css — the compact scope re-declares
+   :root tokens at equal specificity, so import order is what lets the attribute win. */
+@import "density.css";
 
 /* 2. Base & Reset */
 @import "base.css";
