@@ -55,9 +55,14 @@
     @if (MaxLength > 0)
     {
         <div class="tm-rte-footer">
-            <span class="tm-rte-char-count @(IsOverLimit ? "tm-rte-char-count-over" : "")">
-                @(_charCount) / @MaxLength
+            @* KG-008: the bare "count / limit" figure is localized too — a culture may reorder or
+               reformat it; the hardcoded "n / m" shape was English punctuation embedded in markup.
+               The visible figure is aria-hidden; the .tm-sr-only span speaks the plural family
+               ("5 / 500 characters") once, the same pattern TmChangeDiff uses for its values. *@
+            <span class="tm-rte-char-count @(IsOverLimit ? "tm-rte-char-count-over" : "")" aria-hidden="true">
+                @Loc["TmRichEditor_CharCount", _charCount, MaxLength]
             </span>
+            <span class="tm-sr-only">@Loc.Plural("TmRichEditor_CharacterCount", _charCount, MaxLength)</span>
         </div>
     }
 

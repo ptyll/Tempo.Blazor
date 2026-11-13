@@ -41,14 +41,17 @@
         <div class="tm-rte-footer">
             @if (ShowWordCount)
             {
+                @* KG-008: localized plural family — "1 word" / "2 words", cs "1 slovo" / "2 slova" /
+                   "5 slov". The hardcoded English suffix was both a localization violation and
+                   part of the contrast audit. *@
                 <span class="tm-rte-word-count">
-                    @_wordCount words
+                    @Loc.Plural("TmRichEditor_Words", _wordCount)
                 </span>
             }
             @if (MaxLength > 0)
             {
                 <span class="tm-rte-char-count @(IsOverLimit ? "tm-rte-char-count-over" : "")">
-                    @_charCount / @MaxLength characters
+                    @Loc.Plural("TmRichEditor_CharacterCount", _charCount, MaxLength)
                 </span>
             }
         </div>

@@ -367,6 +367,16 @@ Swimlane bands paint with the SAME canvas tokens: the header background (a 6 % i
 paper — the light gray band in light mode, a subtly lighter dark band in dark mode), its ink, the
 separators and the node collapse toggle stay legible on the page in both themes.
 
+**Label contrast on a caller-chosen fill (KG-008).** The shipped stencils and the default
+`DiagramStyle` hold WCAG AA: the label ink (`--stencil-text` / `--tm-canvas-paper-ink`) on the
+default fill (`--stencil-fill` / `--tm-canvas-paper`) measures 12:1 in dark, and
+`TmDiagramThemeE2ETests.BpmnCanvas_NodeText_HoldsAa_OnTheNodeFill_In_Dark` pins every label on the
+BPMN scenario to ≥4.5:1 on the real canvas. The one deliberate exception is a **caller-supplied
+`DiagramStyle.Fill`** (and an explicit per-section text colour): once a host picks a node fill, the
+contrast of the label on THAT fill is the host's responsibility — the editor paints the style it
+was given. Choose a light ink on dark fills and a dark ink on light fills (or set the section
+`TextStyle` colour explicitly).
+
 ### Swimlane bands and the drag clamp
 
 `data-swimlane="true"` marks a node whose stencil is a swimlane (a BPMN pool or lane) — a BAND the

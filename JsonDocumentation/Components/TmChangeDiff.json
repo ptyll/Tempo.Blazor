@@ -2,7 +2,7 @@
   "itemName": "TmChangeDiff",
   "kind": "Component",
   "category": "Data Display",
-  "description": "Displays a list of property changes in a before/after diff format, showing old values with strikethrough and new values highlighted, connected by an arrow icon.",
+  "description": "Displays a list of property changes in a before/after diff format, showing old values with strikethrough and new values highlighted, connected by an arrow icon. Since KG-008 both values paint their semantic TEXT tones (--tm-color-success-text / --tm-color-danger-text, WCAG AA on the row surface) and each value carries a localized screen-reader prefix (TmChangeDiff_PreviousValue / TmChangeDiff_NewValue) in a visually hidden span — the visible run is aria-hidden so a reader hears \"Previous value: X, New value: Y\" exactly once.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.DataDisplay"
   ],

@@ -11427,7 +11427,7 @@
           "kind": "Component",
           "category": "Data Display",
           "namespace": "Tempo.Blazor.Components.DataDisplay",
-          "description": "Displays a list of property changes in a before/after diff format, showing old values with strikethrough and new values highlighted, connected by an arrow icon.",
+          "description": "Displays a list of property changes in a before/after diff format, showing old values with strikethrough and new values highlighted, connected by an arrow icon. Since KG-008 both values paint their semantic TEXT tones (--tm-color-success-text / --tm-color-danger-text, WCAG AA on the row surface) and each value carries a localized screen-reader prefix (TmChangeDiff_PreviousValue / TmChangeDiff_NewValue) in a visually hidden span — the visible run is aria-hidden so a reader hears \"Previous value: X, New value: Y\" exactly once.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/TmChangeDiff.razor",
           "documentationStatus": "merged",
@@ -21311,7 +21311,7 @@
               "name": "Disabled",
               "type": "bool",
               "isRequired": false,
-              "description": "Disables the component."
+              "description": "Disables the component. The trigger carries aria-disabled, the cursor turns not-allowed and the box paints the disabled surface (--tm-color-gray-50 / --tm-text-disabled, the same paint as .tm-input[disabled]). Since KG-008 (decision O1) the disabled control does NOT fade: selected chips keep full WCAG AA contrast on the muted box, because a disabled multiselect is used for LOCKED, READABLE content; only the chip remove buttons are not rendered. For an editable-but-blocked field prefer a validation error over Disabled."
             },
             {
               "name": "DisplayField",

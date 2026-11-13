@@ -156,7 +156,7 @@
       "name": "Disabled",
       "type": "bool",
       "isRequired": false,
-      "description": "Disables the component."
+      "description": "Disables the component. The trigger carries aria-disabled, the cursor turns not-allowed and the box paints the disabled surface (--tm-color-gray-50 / --tm-text-disabled, the same paint as .tm-input[disabled]). Since KG-008 (decision O1) the disabled control does NOT fade: selected chips keep full WCAG AA contrast on the muted box, because a disabled multiselect is used for LOCKED, READABLE content; only the chip remove buttons are not rendered. For an editable-but-blocked field prefer a validation error over Disabled."
     },
     {
       "name": "Required",

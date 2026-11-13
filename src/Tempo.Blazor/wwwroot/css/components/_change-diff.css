@@ -30,10 +30,14 @@
     min-width: 0;
 }
 
+/* KG-008 (backlog ca474f34): both values are TEXT — the strikethrough keeps the old value a
+   text, it does not demote it to decoration — so each paints its semantic TEXT tone and holds
+   WCAG AA on the row surface. Was: --tm-color-success (a fill tone) at 2.18:1 and
+   --tm-color-danger under opacity: 0.8 at 3.65:1. State is still carried by more than colour:
+   the old value is struck through, the new value is medium weight. */
 .tm-change-diff-old {
-    color: var(--tm-color-danger, #ef4444);
+    color: var(--tm-color-danger-text);
     text-decoration: line-through;
-    opacity: 0.8;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -47,7 +51,7 @@
 }
 
 .tm-change-diff-new {
-    color: var(--tm-color-success, #22c55e);
+    color: var(--tm-color-success-text);
     font-weight: var(--tm-font-weight-medium, 500);
     overflow: hidden;
     text-overflow: ellipsis;

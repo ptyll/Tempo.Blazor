@@ -7,6 +7,7 @@ using Tempo.Blazor.Components.Inputs;
 using Tempo.Blazor.Components.Overlay;
 using Tempo.Blazor.Models;
 using Tempo.Blazor.Tests.Localization;
+using Tempo.Blazor.Tests.Theme;
 
 namespace Tempo.Blazor.Tests.Components.Inputs;
 
@@ -109,6 +110,42 @@ public class TmMultiSelectTests : LocalizationTestBase
         chips.Count.Should().Be(2);
         chips[0].TextContent.Should().Contain("Apple");
         chips[1].TextContent.Should().Contain("Cherry");
+    }
+
+    [Fact]
+    public void TmMultiSelect_Chip_Mode_Long_Label_Clips_With_An_Ellipsis_And_Keeps_The_Full_Value_In_Title()
+    {
+        // KG-008 review nit: max-width capped the pill's box but not the ink — a long chip's text
+        // painted past the background. The label now renders in the ellipsis-clipping
+        // .tm-multiselect__chip-label span and the chip carries the full value in title.
+        var longLabel = "release-2026-11-cumulativni-balicek-zmen-pro-uzivatele";
+        var options = new List<SelectOption<string>> { SelectOption<string>.From("rel", longLabel) };
+        var cut = Render<TmMultiSelect<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, options)
+            .Add(c => c.DisplayField, Display)
+            .Add(c => c.ValueField, Value)
+            .Add(c => c.Values, new List<string> { "rel" }));
+
+        var chip = cut.Find(".tm-multiselect__chip");
+        chip.GetAttribute("title").Should().Be(longLabel,
+            "the clipped label stays readable on hover / touch through the native tooltip");
+        var label = chip.QuerySelector(".tm-multiselect__chip-label");
+        label.Should().NotBeNull("the label text must live in the ellipsis-clipping span");
+        label!.ClassList.Should().Contain("tm-multiselect__chip-label");
+        label.TextContent.Should().Contain(longLabel);
+    }
+
+    [Fact]
+    public void TmMultiSelect_Chip_Remove_Paints_At_Full_Strength_No_Opacity_Fade()
+    {
+        // KG-008 review nit: the 0.6 opacity fade put the remove glyph under the 3:1 non-text
+        // minimum on enabled chips. The audit pins the declaration block: no opacity property.
+        var body = ThemeCss.RuleDeclarations(ThemeCss.ComponentCss("_multiselect.css"),
+            ".tm-multiselect__chip-remove");
+        body.Should().NotContain("opacity",
+            "the enabled remove glyph must paint the chip's full-strength inherited ink");
+        ThemeCss.Property("_multiselect.css", ".tm-multiselect__chip-remove", "color")
+            .Should().Be("inherit");
     }
 
     [Fact]
@@ -366,6 +403,46 @@ public class TmMultiSelectTests : LocalizationTestBase
             .Add(c => c.Disabled, true));
 
         cut.Find(".tm-multiselect").ClassList.Should().Contain("tm-multiselect--disabled");
+    }
+
+    [Fact]
+    public void TmMultiSelect_Disabled_Exposes_AriaDisabled_OnTheTrigger()
+    {
+        // KG-008 decision O1: a disabled multiselect carries locked, READABLE content, so the
+        // disabled state must be exposed to readers (the CSS no longer fades the control).
+        var cut = Render<TmMultiSelect<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, Display)
+            .Add(c => c.ValueField, Value)
+            .Add(c => c.Disabled, true));
+
+        cut.Find(".tm-multiselect").GetAttribute("aria-disabled").Should().Be("true");
+    }
+
+    [Fact]
+    public void TmMultiSelect_Enabled_Omits_AriaDisabled()
+    {
+        var cut = Render<TmMultiSelect<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, Display)
+            .Add(c => c.ValueField, Value));
+
+        cut.Find(".tm-multiselect").HasAttribute("aria-disabled").Should().BeFalse();
+    }
+
+    [Fact]
+    public void TmMultiSelect_Disabled_Keeps_Chips_Without_RemoveButtons()
+    {
+        // The chip content stays in the DOM (locked readable content); only the affordance goes.
+        var cut = Render<TmMultiSelect<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, Display)
+            .Add(c => c.ValueField, Value)
+            .Add(c => c.Values, new List<string> { "apple", "banana" })
+            .Add(c => c.Disabled, true));
+
+        cut.FindAll(".tm-multiselect__chip").Count.Should().Be(2);
+        cut.FindAll(".tm-multiselect__chip-remove").Should().BeEmpty();
     }
 
     // ── Error / HelpText ───────────────────────────────────────

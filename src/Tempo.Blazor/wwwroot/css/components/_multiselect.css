@@ -29,10 +29,15 @@
 /* ── States ──────────────────────────────────────────── */
 .tm-multiselect--open { border-color: var(--tm-color-primary); box-shadow: var(--tm-focus-ring); }
 .tm-multiselect--error { border-color: var(--tm-color-danger) !important; }
+/* KG-008 (backlog 743dc7bb): the same paint as .tm-input[disabled] — --tm-color-gray-50 is #f9fafb
+   light and #1e293b dark (the gray scale inverts), so ONE declaration paints the muted box in both
+   themes. The old whole-control opacity: 0.6 is gone: a disabled multiselect carries LOCKED,
+   READABLE content (decision O1), so disabledness is signalled by the cursor, aria-disabled and the
+   muted box — never by fading the chips under WCAG AA. */
 .tm-multiselect--disabled {
-    background-color: var(--tm-color-gray-50, #f9fafb);
+    background-color: var(--tm-color-gray-50);
+    color: var(--tm-text-disabled);
     cursor: not-allowed;
-    opacity: 0.6;
 }
 
 /* ── Selections area ─────────────────────────────────── */
@@ -68,6 +73,16 @@
     white-space: nowrap;
     max-width: 10rem;
     line-height: 1.4;
+    /* KG-008 review nit: max-width capped the pill's box but not the ink — a long chip's text
+       painted past the background. The clip also keeps the text inside the border radius. */
+    overflow: hidden;
+    min-width: 0;
+}
+.tm-multiselect__chip-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
 }
 .tm-multiselect__chip-remove {
     display: inline-flex;
@@ -76,15 +91,15 @@
     padding: 0;
     background: transparent;
     border: none;
+    /* KG-008 review nit: the 0.6 opacity fade put the glyph under the 3:1 non-text minimum —
+       full-strength inherited ink, the hover background alone carries the affordance. */
     color: inherit;
-    opacity: 0.6;
     cursor: pointer;
     border-radius: 50%;
-    transition: opacity var(--tm-transition-fast), background-color var(--tm-transition-fast);
+    transition: background-color var(--tm-transition-fast);
     flex-shrink: 0;
 }
 .tm-multiselect__chip-remove:hover {
-    opacity: 1;
     background: rgba(0, 0, 0, 0.1);
 }
 
@@ -359,10 +374,14 @@
 /* ═══════════════════════════════════════════════════════
    Dark mode
    ═══════════════════════════════════════════════════════ */
+/* KG-008: the chip rides the theme-aware primary-subtle wash with the primary-text ink made for
+   text on that wash — the raw rgba(59,130,246,.2) wash + --tm-color-primary-300 measured 1.52:1 on
+   the (then light-painted) disabled box. The wash composites over whatever box the chip sits on
+   (the enabled surface or the disabled gray-50 box) and stays in the primary family in every theme. */
 [data-theme="dark"] .tm-multiselect__chip,
 .tm-dark .tm-multiselect__chip {
-    background: rgba(59, 130, 246, 0.2);
-    color: var(--tm-color-primary-300);
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary-text);
 }
 [data-theme="dark"] .tm-multiselect__chip-remove:hover,
 .tm-dark .tm-multiselect__chip-remove:hover {
@@ -378,7 +397,7 @@
     background: var(--tm-color-primary-400);
     border-color: var(--tm-color-primary-400);
 }
-[data-theme="dark"] .tm-multiselect--disabled,
-.tm-dark .tm-multiselect--disabled {
-    background-color: var(--tm-color-gray-800, #1f2937);
-}
+/* No disabled override: the base rule paints --tm-color-gray-50, which the dark theme already
+   resolves to #1e293b — the same surface .tm-input[disabled] gets. The old override re-pointed the
+   background at --tm-color-gray-800, which the inverted dark gray scale resolves to #f8fafc — a
+   LIGHT surface in dark mode, washing the chips out to 1.52:1 (backlog 743dc7bb). */

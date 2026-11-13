@@ -85,8 +85,10 @@ public class TmChangeDiffTests : LocalizationTestBase
         var cut = Render<TmChangeDiff>(p => p
             .Add(c => c.Changes, changes));
 
-        cut.Find(".tm-change-diff-old").TextContent.Trim().Should().Be("—");
-        cut.Find(".tm-change-diff-new").TextContent.Should().Contain("New");
+        // KG-008: the visible run lives in its own aria-hidden span (the screen-reader text is
+        // the prefixed .tm-sr-only sibling), so the dash fallback is asserted on THAT run.
+        cut.Find(".tm-change-diff-old [aria-hidden='true']").TextContent.Trim().Should().Be("—");
+        cut.Find(".tm-change-diff-new [aria-hidden='true']").TextContent.Should().Contain("New");
     }
 
     [Fact]
@@ -97,5 +99,51 @@ public class TmChangeDiffTests : LocalizationTestBase
             .Add(c => c.Class, "my-diff"));
 
         cut.Find(".tm-change-diff").ClassList.Should().Contain("my-diff");
+    }
+
+    // ── KG-008 (plan 92e96b25, phase 11): screen-reader text alternative ──
+
+    [Fact]
+    public void TmChangeDiff_OldValue_Has_ScreenReaderPrefix()
+    {
+        var cut = Render<TmChangeDiff>(p => p
+            .Add(c => c.Changes, TestChanges()));
+
+        var old = cut.FindAll(".tm-change-diff-old")[0];
+        old.QuerySelector(".tm-sr-only")!.TextContent.Should().Contain("Previous value: Open");
+    }
+
+    [Fact]
+    public void TmChangeDiff_NewValue_Has_ScreenReaderPrefix()
+    {
+        var cut = Render<TmChangeDiff>(p => p
+            .Add(c => c.Changes, TestChanges()));
+
+        var @new = cut.FindAll(".tm-change-diff-new")[0];
+        @new.QuerySelector(".tm-sr-only")!.TextContent.Should().Contain("New value: Closed");
+    }
+
+    [Fact]
+    public void TmChangeDiff_VisibleValues_Are_HiddenFromScreenReaders()
+    {
+        // The visible run is aria-hidden so a reader hears the prefixed text ONCE
+        // ("Previous value: Open → New value: Closed"), not a bare "Open" "Closed" pair.
+        var cut = Render<TmChangeDiff>(p => p
+            .Add(c => c.Changes, TestChanges()));
+
+        cut.FindAll(".tm-change-diff-old")[0].QuerySelector("[aria-hidden='true']")!
+            .TextContent.Should().Contain("Open");
+        cut.FindAll(".tm-change-diff-new")[0].QuerySelector("[aria-hidden='true']")!
+            .TextContent.Should().Contain("Closed");
+    }
+
+    [Fact]
+    public void TmChangeDiff_NullOldValue_ScreenReaderPrefix_Uses_TheDashFallback()
+    {
+        var changes = new[] { new TmChangeInfo("Field", null, "New") };
+        var cut = Render<TmChangeDiff>(p => p
+            .Add(c => c.Changes, changes));
+
+        cut.Find(".tm-change-diff-old .tm-sr-only")!.TextContent.Should().Contain("Previous value: —");
     }
 }

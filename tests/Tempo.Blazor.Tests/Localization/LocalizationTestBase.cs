@@ -1638,6 +1638,17 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmRichEditor_Table"]         = "Table",
         ["TmRichEditor_Video"]         = "Video",
         ["TmRichEditor_RemoveFormat"]  = "Remove formatting",
+        // KG-008 (plan 92e96b25, phase 11): the footer counters are localized plural families —
+        // the razor renders Loc.Plural("TmRichEditor_Words", n) and
+        // Loc.Plural("TmRichEditor_CharacterCount", count, max).
+        ["TmRichEditor_Words_One"] = "{0} word",
+        ["TmRichEditor_Words_Other"] = "{0} words",
+        ["TmRichEditor_CharacterCount_One"] = "{0} / {1} character",
+        ["TmRichEditor_CharacterCount_Other"] = "{0} / {1} characters",
+        ["TmRichEditor_CharCount"] = "{0} / {1}",
+        // KG-008: TmChangeDiff screen-reader prefixes for the old/new values.
+        ["TmChangeDiff_PreviousValue"] = "Previous value: {0}",
+        ["TmChangeDiff_NewValue"] = "New value: {0}",
 
         // TmDashboard
         ["TmDashboard_Edit"]                  = "Edit",
@@ -7884,6 +7895,20 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmRichEditor_Table"]         = "Tabulka",
         ["TmRichEditor_Video"]         = "Video",
         ["TmRichEditor_RemoveFormat"]  = "Odstranit formátování",
+        // KG-008 (plan 92e96b25, phase 11): footer counters — Czech plural family (1 slovo,
+        // 2–4 slova, zlomky slova, 0/5+ slov).
+        ["TmRichEditor_Words_One"] = "{0} slovo",
+        ["TmRichEditor_Words_Few"] = "{0} slova",
+        ["TmRichEditor_Words_Many"] = "{0} slova",
+        ["TmRichEditor_Words_Other"] = "{0} slov",
+        ["TmRichEditor_CharacterCount_One"] = "{0} / {1} znak",
+        ["TmRichEditor_CharacterCount_Few"] = "{0} / {1} znaky",
+        ["TmRichEditor_CharacterCount_Many"] = "{0} / {1} znaku",
+        ["TmRichEditor_CharacterCount_Other"] = "{0} / {1} znaků",
+        ["TmRichEditor_CharCount"] = "{0} / {1}",
+        // KG-008: TmChangeDiff screen-reader prefixes for the old/new values.
+        ["TmChangeDiff_PreviousValue"] = "Původní hodnota: {0}",
+        ["TmChangeDiff_NewValue"] = "Nová hodnota: {0}",
 
         // TmDashboard (DA4: the cs term is unified on „nástěnka“) — aligned with TmResources.cs.json.
         ["TmDashboard_Edit"]                  = "Upravit",

@@ -237,6 +237,57 @@
     </div>
 </section>
 
+<!-- KG-008 (plan 92e96b25 phase 11): the DISABLED states the contrast audit measures in E2E.
+     A disabled multiselect carries LOCKED, READABLE content (decision O1) — the chips keep full
+     contrast on the muted box in both themes. The three cards cover the edge cases: no chip
+     (placeholder only), one long chip, and an overflowing chip count. -->
+<section class="demo-section" data-testid="multiselect-locked-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Multi Select — Locked (Disabled)</h2>
+    <div class="demo-grid demo-grid-2">
+        <div class="showcase-card" data-testid="multiselect-disabled-empty">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Disabled, Nothing Selected</h3>
+            <TmMultiSelect TItem="SelectOption<string>" TValue="string"
+                           Label="Empty locked field"
+                           Items="_fruitOptions"
+                           DisplayField="@(o => o.Label)"
+                           ValueField="@(o => o.Value)"
+                           Disabled="true"
+                           Placeholder="Locked — select in the enabled field above" />
+        </div>
+        <div class="showcase-card" data-testid="multiselect-disabled-single">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Disabled, One Long Chip</h3>
+            <TmMultiSelect TItem="SelectOption<string>" TValue="string"
+                           Label="Locked release tag"
+                           Items="_releaseTagOptions"
+                           DisplayField="@(o => o.Label)"
+                           ValueField="@(o => o.Value)"
+                           Disabled="true"
+                           Values="_lockedSingle" />
+        </div>
+    </div>
+    <div class="demo-grid demo-grid-2 mt-4">
+        <div class="showcase-card" data-testid="multiselect-disabled-many">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Disabled, Overflowing Chips</h3>
+            <TmMultiSelect TItem="SelectOption<string>" TValue="string"
+                           Label="Locked assignees"
+                           Items="_fruitOptions"
+                           DisplayField="@(o => o.Label)"
+                           ValueField="@(o => o.Value)"
+                           Disabled="true"
+                           Values="_lockedMany" />
+        </div>
+        <div class="showcase-card" data-testid="multiselect-error">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Validation Error</h3>
+            <TmMultiSelect TItem="SelectOption<string>" TValue="string"
+                           Label="Required field"
+                           Items="_fruitOptions"
+                           DisplayField="@(o => o.Label)"
+                           ValueField="@(o => o.Value)"
+                           Error="Select at least one fruit." />
+        </div>
+    </div>
+</section>
+
 <!-- Match highlighting and inline create (plan ff043b2e phase 8): both are OPT-IN. The left card marks the
      typed term inside every matching row and offers a create row as the LAST option when nothing matches
      exactly; the right card is the same contract on a single-value combobox. -->
@@ -1011,6 +1062,16 @@
     private IReadOnlyList<string> _selectedTech = [];
     private IReadOnlyList<string> _selectedDelimiter = [];
     private IReadOnlyList<string> _selectedMax = [];
+
+    // KG-008: the locked (disabled) multiselect demo — preselected values the E2E audit renders.
+    private IReadOnlyList<string> _lockedSingle = ["release-2026-11-cumulativni-opravy-a-vylepseni"];
+    private IReadOnlyList<string> _lockedMany = ["apple", "banana", "cherry", "date", "elderberry", "fig"];
+
+    private static readonly List<SelectOption<string>> _releaseTagOptions =
+    [
+        new("release-2026-11-cumulativni-opravy-a-vylepseni",
+            "release-2026-11-cumulativni-opravy-a-vylepseni")
+    ];
 
     // Match highlighting / inline create demo (plan ff043b2e phase 8). The create handler is the HOST's:
     // the component only reports the typed text, so the new option has to be added to the list here.

@@ -80,13 +80,16 @@
   border-top: 1px solid var(--tm-border-color);
 }
 
+/* KG-008 (backlog ca474f34): secondary ink — tertiary on the muted footer measured under AA. */
 .tm-rich-editor-simple .tm-rte-char-count {
   font-size: var(--tm-font-size-xs);
-  color: var(--tm-text-tertiary);
+  color: var(--tm-text-secondary);
 }
 
+/* KG-008: the over-limit figure is error text — see _rich-editor-full.css for the measured 4.39:1
+   on the raw danger fill tone. */
 .tm-rich-editor-simple .tm-rte-char-count-over {
-  color: var(--tm-color-danger);
+  color: var(--tm-color-danger-text);
   font-weight: var(--tm-font-weight-medium);
 }
 

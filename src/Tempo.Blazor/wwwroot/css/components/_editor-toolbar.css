@@ -89,10 +89,11 @@
   font-size: var(--tm-font-size-xs);
 }
 
-/* Clear format button */
+/* Clear format button. KG-008 (backlog ca474f34): the glyph is a labelled control, not a
+   watermark — the old opacity: 0.7 put it at 3.59:1, under WCAG AA. The line-through alone
+   carries the meaning, so the glyph paints the full button ink. */
 .tm-rte-toolbar .tm-rte-clear-format {
   text-decoration: line-through;
-  opacity: 0.7;
 }
 
 /* Color picker wrapper */

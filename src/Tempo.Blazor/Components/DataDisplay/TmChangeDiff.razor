@@ -10,11 +10,21 @@
             <div class="tm-change-diff-row">
                 <span class="tm-change-diff-property">@change.Property</span>
                 <div class="tm-change-diff-values">
-                    <span class="tm-change-diff-old">@(change.OldValue ?? "—")</span>
+                    @* KG-008: the old/new pair is carried by colour + strikethrough for sighted
+                       users, but a screen reader must hear WHICH value is which — the prefixed
+                       span is the text alternative (the visible run is aria-hidden so the value
+                       is announced exactly once). *@
+                    <span class="tm-change-diff-old">
+                        <span class="tm-sr-only">@Loc["TmChangeDiff_PreviousValue", change.OldValue ?? "—"]</span>
+                        <span aria-hidden="true">@(change.OldValue ?? "—")</span>
+                    </span>
                     <span class="tm-change-diff-arrow" aria-hidden="true">
                         <TmIcon Name="@IconNames.ArrowRight" Size="IconSize.Xs" />
                     </span>
-                    <span class="tm-change-diff-new">@(change.NewValue ?? "—")</span>
+                    <span class="tm-change-diff-new">
+                        <span class="tm-sr-only">@Loc["TmChangeDiff_NewValue", change.NewValue ?? "—"]</span>
+                        <span aria-hidden="true">@(change.NewValue ?? "—")</span>
+                    </span>
                 </div>
             </div>
         }

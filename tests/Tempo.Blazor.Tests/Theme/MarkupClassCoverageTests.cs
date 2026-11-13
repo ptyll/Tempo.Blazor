@@ -83,6 +83,10 @@ public sealed class MarkupClassCoverageTests
     /// </summary>
     private static readonly string[] UnstyledMarkupClasses =
     [
+        // KG-008 (plan 92e96b25, phase 11): the rule carrying only `opacity: 0.9` was the defect
+        // itself — the description inherits the variant ink at full strength now, so the class is
+        // a stable hook with no rule of its own (the same shape as tm-comment-internal-toggle-hint).
+        "tm-alert__description",
         "tm-attach-delete-btn",
         "tm-attach-download-link",
         "tm-audit-log__count",

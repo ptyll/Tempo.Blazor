@@ -886,6 +886,90 @@
   `TmButton`/`TmTextInput`/`TmSelect`/`TmSearchInput`/`TmDataTable`/`TmCard`/`TmTabs`/`TmSidebar`
   schemas need no new prop; verified against `BuiltInComponentSchemas`.
 
+### Fixed — WCAG AA contrast audit: `TmMultiSelect` disabled state, `TmChangeDiff`, editor counters, alerts, topbar hint (plan 92e96b25, phase 11 / KG-008)
+
+Backlog items (743dc7bb) (disabled `TmMultiSelect` painted a LIGHT surface in dark mode) and
+(ca474f34) (several text paints under WCAG 2.1 AA). Every audited pair now holds 4.5:1 in light AND
+dark, with colours from `--tm-*` tokens only, and a guard test keeps the regressions out:
+`Kg008ContrastAuditTests` (bUnit, reads the DECLARED value and measures it through the real token
+graph) and `ContrastAuditE2ETests` (Playwright, https API + WASM, measured on the real demo at
+1440 and 390 px in both themes plus `prefers-contrast: more`, locator screenshots in
+`tests/Tempo.Blazor.E2E/TestResults/contrast-audit/`). Decision O1 (user binding): a disabled
+`TmMultiSelect` carries LOCKED, READABLE content, so its chips keep AA — the trigger gains
+`aria-disabled`, the cursor and the muted box carry the state, nothing is faded.
+
+- **`TmMultiSelect`.** The dark override re-pointed the disabled background at
+  `--tm-color-gray-800`, which the INVERTED dark gray scale resolves to `#f8fafc` — a light box;
+  plus `opacity: 0.6` on the whole control sank the chip to 1.52:1. The override is gone and the
+  whole-control opacity removed: the disabled box paints `--tm-color-gray-50` / `--tm-text-disabled`
+  (the exact `.tm-input[disabled]` pair — `#1e293b` box in dark), the dark chip rides the
+  theme-aware `--tm-color-primary-subtle` wash with the `--tm-color-primary-text` ink (was a raw
+  `rgba(59,130,246,.2)` literal), and the placeholder holds AA without any fade. Demo `/forms`
+  gains a "Locked (Disabled)" section: 0 / 1 long / overflowing chips and an error state, all
+  E2E-measured in both themes and viewports.
+- **`TmChangeDiff`.** The new value painted `--tm-color-success` (a FILL tone, 2.18:1) and the old
+  value `--tm-color-danger` under `opacity: 0.8` (3.65:1). Both now paint their semantic TEXT
+  tones (`--tm-color-success-text` / `--tm-color-danger-text`) without opacity; the strikethrough
+  and the medium weight stay, so state never rides on colour alone. Each value gains a localized
+  screen-reader prefix (`TmChangeDiff_PreviousValue` / `TmChangeDiff_NewValue`, en/cs/sk/fr) in a
+  `.tm-sr-only` span — the visible run is `aria-hidden` so a reader hears "Previous value: X →
+  New value: Y" exactly once.
+- **`TmRichEditorFull` / `TmRichEditorSimple` counters.** The footer counters were hardcoded
+  English ("5 words", "12 / 200 characters") painted `--tm-text-tertiary` on the muted footer at
+  4.04–4.34:1 — both defects fixed: the words counter renders a real plural family
+  (`Loc.Plural`, cs "0 slov / 1 slovo / 2 slova / 5 slov"), the character counter a localized
+  `{0} / {1}` template, all four `TmResources` tables + `MockTmLocalizer`; the paint moves to
+  `--tm-text-secondary` (6.87 / 6.97:1). The `.tm-rte-clear-format` glyph lost its `opacity: 0.7`
+  (3.59:1 → 7.56 / 9.85:1; the line-through alone carries the meaning). E2E-only audit find: the
+  over-limit figure (`tm-rte-char-count-over`) painted the raw danger fill tone at 4.39:1 — it now
+  takes `--tm-color-danger-text` (7.55 / 5.46:1).
+- **`TmAlert`.** The description no longer fades at `opacity: 0.9` (best case 4.09:1); it inherits
+  the variant ink at full strength (soft light 6.8–8.0:1). The two pairs that never reached AA even
+  unfaded — white on the light filled success/warning accents (3.30 / 3.20:1) — move to the
+  `-strong` steps like the filled badges did (5.02 / 5.02:1; info 5.17, error 4.83 unchanged). Dark
+  filled keeps dark ink on the brightened accents. The demo `/feedback` grid now actually ships the
+  4 severities × 3 variants its badge promised (filled warning/error, outlined info/success were
+  missing) and the E2E measures the description of all 13 alerts in both themes.
+- **`TmTopBar` search hint.** Verified over the phase-3/4 result: `--tm-text-tertiary` on
+  `--tm-bg-surface-secondary` holds 4.63:1 light / 6.96:1 dark (the audit's 3.8:1 dark reading was
+  pre-tokenization); pinned by the guard.
+- **Diagram node labels (verification over TG-004).** The pre-TG-004 audit read `.tm-diagram-node__text`
+  at 1.94:1 in dark; over the phase-4 canvas tokens the default pair measures 12.03:1 and
+  `TmDiagramThemeE2ETests.BpmnCanvas_NodeText_HoldsAa_OnTheNodeFill_In_Dark` asserts every label on
+  the BPMN scenario ≥ 4.5:1 on the real canvas. The documented exception: a caller-supplied
+  `DiagramStyle.Fill` makes label contrast the host's responsibility — noted in
+  [docs/diagram-editor.md](docs/diagram-editor.md).
+- **Wireframe stencil.** The `TmMultiSelect` stencil dropped its own group opacity (it MULTIPLIED
+  with the shared `fieldBox` part to ≈ 0.2, washing the whole sketch out in dark mode); the disabled
+  box now dims once at the shared-part level and the chips stay full, mirroring the component.
+- **Measured ratios (before → after, light / dark).** disabled chip 1.52 → 5.49 / 6.72 ·
+  placeholder 2.45 → 4.83 / 5.71 · change-diff new 2.18 → 6.82 / 12.71 · change-diff old 3.65 →
+  7.95 / 9.41 · RTE counters 4.04–4.34 → 6.87 / 6.97 · clear-format 3.59 → 7.56 / 9.85 ·
+  over-limit counter 4.39 → 7.55 / 5.46 · alert description 4.09 (worst 3.20) → 4.83–8.01 light,
+  6–9 dark · topbar hint 3.8 → 4.63 / 6.96 · node text 1.94 → 12.03 (default fill, dark).
+- **Tests.** TDD RED first: 20 failing guards before the fix. bUnit: `Kg008ContrastAuditTests`
+  (17 cases), `TmChangeDiffTests` (sr-only prefixes), `TmMultiSelectTests` (`aria-disabled`, chips
+  without remove buttons), `TmRichEditorCounterTests` (en + cs plural families), the wireframe
+  stencil single-dim guard. E2E: `ContrastAuditE2ETests` (9 tests, WASM lane) + the node-text
+  assertion in `TmDiagramThemeE2ETests`. `TmResourceCompletenessTests` green.
+
+#### Breaking / Migration (KG-008)
+
+**No source-breaking change** — no public API member was removed or re-signed; every change is a
+visual paint, a markup addition or localization. What a 2.10.0 host can notice, with before/after:
+
+| Change | Before (2.10.0) | After (2.11.0) | Migration |
+|---|---|---|---|
+| Disabled `TmMultiSelect` look | Whole control at `opacity: 0.6`; in dark the box painted a LIGHT surface (`--tm-color-gray-800` on the inverted scale) and the chip read 1.52:1 | No fade: muted box (`--tm-color-gray-50` → `#1e293b` dark) with full-contrast chips; the trigger carries `aria-disabled="true"`; chip remove buttons are still not rendered | None for a correct host — locked content becomes READABLE (that is the point). A host that styled against the faded look drops its compensations; a host that wants a "clearly inert" field keeps `Disabled` (cursor + muted box) or switches to `ReadOnly` semantics of its own |
+| `TmChangeDiff` value colours | `--tm-color-success` (fill tone) + `--tm-color-danger` at `opacity: 0.8` | `--tm-color-success-text` / `--tm-color-danger-text`, no opacity; strikethrough + weight carry the state with the colour | Visual only; a host CSS override on `.tm-change-diff-new/-old` keeps working (same selectors) |
+| `TmChangeDiff` DOM | `<span class="tm-change-diff-old">Open</span>` | `<span class="tm-change-diff-old"><span class="tm-sr-only">Previous value: Open</span><span aria-hidden="true">Open</span></span>` (same for `-new`) | A host test that asserted the VALUE as the span's whole text content must target the `[aria-hidden='true']` child (or accept the sr-only prefix in `textContent`) |
+| `TmRichEditorFull` / `TmRichEditorSimple` counter text | Hardcoded English: "5 words", "12 / 200 characters", bare "12 / 200" | Localized: en "5 words" / "12 / 200 characters", cs "5 slov" / "12 / 200 znaků", sk, fr; `Loc.Plural` families `TmRichEditor_Words_*` / `TmRichEditor_CharacterCount_*` and the plain `TmRichEditor_CharCount` | A host test scraping the literal "words" / "characters" must assert the localized rendering (or the `tm-rte-word-count` / `tm-rte-char-count` class). Hosts overriding texts override the family keys (see docs/localization-plurals.md) |
+| `TmAlert` filled success/warning (light) | White on `#16a34a` / `#d97706` (3.30 / 3.20:1) | White on `--tm-color-success-strong` / `--tm-color-warning-strong` (#15803d / #b45309, 5.02 / 5.02:1) | Visual only; a host that pinned the old fills sets the two `-strong` tokens back to `#16a34a` / `#d97706` and accepts the sub-AA contrast |
+| `TmAlert` description | `opacity: 0.9` over the variant ink | Full-strength variant ink | Visual only |
+| RTE over-limit counter | `--tm-color-danger` (4.39:1 on the footer) | `--tm-color-danger-text` | Visual only; the `tm-rte-char-count-over` class is unchanged |
+| `TmMultiSelect` wireframe stencil (disabled) | Group opacity 0.45 multiplied with the fieldBox part's 0.45 (≈ 0.2 overall) | Single 0.45 dim of the box; chips paint full | Sketch-only; no migration |
+
+
 ### Fixed — test suite stability (plan 7ba95ed6, phase FZE-1)
 
 - **No production behavior change.** `Tempo.Blazor.Tests` (21 331 tests) is green 3× consecutively

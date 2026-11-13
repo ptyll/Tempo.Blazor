@@ -74,13 +74,18 @@
   border-top: 1px solid var(--tm-border-color);
 }
 
+/* KG-008 (backlog ca474f34): the counters are status text, not decoration — tertiary ink on the
+   muted footer measured 4.04–4.34:1, under WCAG AA. Secondary ink holds AA on --tm-bg-muted in
+   both themes (and in the indigo theme, which keeps the same pair). */
 .tm-rich-editor-full .tm-rte-char-count {
   font-size: var(--tm-font-size-xs);
-  color: var(--tm-text-tertiary);
+  color: var(--tm-text-secondary);
 }
 
+/* KG-008: the over-limit figure is ERROR TEXT — the raw --tm-color-danger fill tone measured
+   4.39:1 on the muted footer, under AA. The danger-text tone is the ink made for text. */
 .tm-rich-editor-full .tm-rte-char-count-over {
-  color: var(--tm-color-danger);
+  color: var(--tm-color-danger-text);
   font-weight: var(--tm-font-weight-medium);
 }
 
@@ -346,7 +351,7 @@
 
 .tm-rich-editor-full .tm-rte-word-count {
   font-size: var(--tm-font-size-xs);
-  color: var(--tm-text-tertiary);
+  color: var(--tm-text-secondary);
 }
 
 /* Nested lists */

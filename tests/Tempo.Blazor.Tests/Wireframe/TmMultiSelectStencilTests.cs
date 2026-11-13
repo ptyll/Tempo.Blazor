@@ -128,6 +128,36 @@ public sealed class TmMultiSelectStencilTests
     }
 
     [Fact]
+    public async Task Disabled_DimsTheBoxOnce_And_KeepsTheChipsAtFullStrength()
+    {
+        // KG-008 (plan 92e96b25 phase 11, decision O1): the real component no longer fades a
+        // disabled multiselect — locked chips stay readable. The stencil mirrors that: the shared
+        // fieldBox part keeps the wireframe-wide single 0.45 dim for the box chrome, but the
+        // entry's own group opacity is gone, so the dim no longer MULTIPLIES (0.45 × 0.45 ≈ 0.2
+        // sank the whole sketch, chips included, into illegibility in dark mode).
+        var def = new BuiltInStencilPackProvider().GetDefinitions()
+            .Single(definition => definition.Type == "TmMultiSelect");
+        var element = new WireframeElement
+        {
+            Id = "sut",
+            Type = "TmMultiSelect",
+            W = def.DefaultWidth,
+            H = def.DefaultHeight
+        };
+        element.SetProp("label", "Roles");
+        element.SetProp("disabled", true);
+
+        var svg = await RenderFragmentAsync(builder => def.RenderSvg(element, builder));
+
+        var opacityGroups = System.Text.RegularExpressions.Regex.Matches(svg, "opacity='0.45'").Count
+            + System.Text.RegularExpressions.Regex.Matches(svg, "opacity=\"0.45\"").Count;
+        opacityGroups.Should().Be(1,
+            "only the shared fieldBox part may dim the disabled box — the multiselect entry's own "
+            + "group opacity must be gone, or the two nested fades multiply and the chips wash out");
+        svg.Should().Contain("Item", "the locked chip stays drawn — content, not chrome");
+    }
+
+    [Fact]
     public async Task BothStatesTogether_DrawTheCreateRowAndTheHighlight()
     {
         var svg = await RenderAsync(("showCreateRow", true), ("highlight", true));

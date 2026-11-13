@@ -23,6 +23,7 @@
          aria-activedescendant="@(!AllowFiltering ? ActiveOptionId : null)"
          aria-required="@(Required ? "true" : null)"
          aria-invalid="@(IsInvalid ? "true" : null)"
+         aria-disabled="@(Disabled ? "true" : null)"
          aria-describedby="@DescribedBy"
          @ref="_triggerRef"
          @onclick="ToggleDropdownAsync"
@@ -34,15 +35,20 @@
                 @foreach (var item in SelectedItems)
                 {
                     var itemVal = ValueField(item);
-                    <span class="tm-multiselect__chip" @key="GetItemId(item)">
-                        @if (ValueTemplate is not null)
-                        {
-                            @ValueTemplate(item)
-                        }
-                        else
-                        {
-                            @DisplayField(item)
-                        }
+                    <span class="tm-multiselect__chip" title="@DisplayField(item)" @key="GetItemId(item)">
+                        @* KG-008 review nit: the label clips with an ellipsis at the pill's max-width
+                           (the bare text used to paint past the background); title carries the full
+                           value for hover / touch. *@
+                        <span class="tm-multiselect__chip-label">
+                            @if (ValueTemplate is not null)
+                            {
+                                @ValueTemplate(item)
+                            }
+                            else
+                            {
+                                @DisplayField(item)
+                            }
+                        </span>
                         @if (!Disabled)
                         {
                             <button type="button"

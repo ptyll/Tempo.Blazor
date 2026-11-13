@@ -329,6 +329,14 @@
             <TmAlert Severity="AlertSeverity.Success" Variant="AlertVariant.Filled" Dismissable="true">
                 Deployment completed successfully.
             </TmAlert>
+            @* KG-008 (plan 92e96b25 phase 11): the full 4 × 3 grid the section badge promises — the
+               contrast audit measures the description of EVERY variant in both themes. *@
+            <TmAlert Severity="AlertSeverity.Warning" Variant="AlertVariant.Filled">
+                Scheduled maintenance starts at 22:00.
+            </TmAlert>
+            <TmAlert Severity="AlertSeverity.Error" Variant="AlertVariant.Filled" Dismissable="true">
+                Payment failed. Update your billing details.
+            </TmAlert>
         </div>
     </div>
 
@@ -336,6 +344,12 @@
     <div class="showcase-card mb-4">
         <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Outlined variant</p>
         <div class="space-y-3">
+            <TmAlert Severity="AlertSeverity.Info" Variant="AlertVariant.Outlined" Title="Heads up">
+                Your trial ends next week.
+            </TmAlert>
+            <TmAlert Severity="AlertSeverity.Success" Variant="AlertVariant.Outlined" Title="All caught up">
+                You have processed every pending item.
+            </TmAlert>
             <TmAlert Severity="AlertSeverity.Warning" Variant="AlertVariant.Outlined" Title="Disk space low">
                 Only 2.1 GB remaining on the primary volume.
             </TmAlert>

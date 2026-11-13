@@ -34,9 +34,10 @@
     margin-bottom: 0.125rem;
 }
 
-.tm-alert__description {
-    opacity: 0.9;
-}
+/* KG-008 (backlog ca474f34): the description carries no rule of its own at all — it is body text
+   of the alert and inherits the variant ink at full strength. The old rule faded it with
+   opacity: 0.9, sinking it to 4.09:1 at best (and lower on the light filled success/warning
+   fills, which never reached AA even unfaded). */
 
 /* ── Actions ───────────────────────────────────────────── */
 .tm-alert__actions {
@@ -103,22 +104,25 @@
    ═══════════════════════════════════════════════════════ */
 .tm-alert--filled.tm-alert--info {
     background-color: var(--tm-color-primary-600);
-    color: #fff;
+    color: var(--tm-color-on-primary);
 }
 
+/* KG-008 (backlog ca474f34): white on the raw success/warning accents measured 3.30 / 3.20:1 —
+   under the 4.5:1 AA asks of text. The fills move to the -strong steps (5.03 / 5.01:1), the same
+   register-C fix the filled badges got; info (5.88:1) and error (4.83:1) already held. */
 .tm-alert--filled.tm-alert--success {
-    background-color: #16a34a;
-    color: #fff;
+    background-color: var(--tm-color-success-strong);
+    color: var(--tm-color-on-primary);
 }
 
 .tm-alert--filled.tm-alert--warning {
-    background-color: #d97706;
-    color: #fff;
+    background-color: var(--tm-color-warning-strong);
+    color: var(--tm-color-on-primary);
 }
 
 .tm-alert--filled.tm-alert--error {
     background-color: #dc2626;
-    color: #fff;
+    color: var(--tm-color-on-primary);
 }
 
 /* ═══════════════════════════════════════════════════════

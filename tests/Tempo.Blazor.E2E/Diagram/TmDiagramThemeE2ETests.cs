@@ -154,6 +154,45 @@ public sealed class TmDiagramThemeE2ETests : WasmTestBase
     }
 
     [TestMethod]
+    public async Task BpmnCanvas_NodeText_HoldsAa_OnTheNodeFill_In_Dark()
+    {
+        // KG-008 (plan 92e96b25 phase 11): the audit read .tm-diagram-node__text at 1.94:1 in
+        // dark BEFORE phase 4 (TG-004) re-tokenized the canvas. The verification above the phase-4
+        // result: every node label on the BPMN scenario must hold AA on the fill its node paints,
+        // measured on the REAL canvas (computed colour composited over the node's background
+        // chain — the shared ContrastProbe arithmetic, so the number compares with the bUnit
+        // guards). The documented exception is a CALLER-supplied DiagramStyle.Fill: text contrast
+        // on a host-chosen fill is the host's responsibility (docs/diagram-editor.md).
+        var page = await OpenAsync();
+        await ToggleDarkAsync(page);
+
+        var texts = page.Locator($"{Canvas} .tm-diagram-node__text, {Canvas} .tm-diagram-node__list-item");
+        var count = await texts.CountAsync();
+        Assert.IsTrue(count > 0, "the BPMN scenario paints node labels to measure");
+
+        double worst = double.MaxValue;
+        var checkedLabels = 0;
+        for (var i = 0; i < count && checkedLabels < 40; i++)
+        {
+            var text = texts.Nth(i);
+            if (!await text.IsVisibleAsync() || (await text.TextContentAsync() ?? string.Empty).Trim().Length == 0)
+            {
+                continue;
+            }
+
+            checkedLabels++;
+            var result = await text.EvaluateAsync<Tempo.Blazor.E2E.Accessibility.ContrastProbe.Result>(
+                Tempo.Blazor.E2E.Accessibility.ContrastProbe.MeasureJs);
+            worst = Math.Min(worst, result.Ratio);
+        }
+
+        Assert.IsTrue(checkedLabels > 0, "at least one non-empty node label must be measurable");
+        Assert.IsTrue(worst >= 4.5,
+            $"every node label must hold AA on its node fill in dark — worst measured {worst:0.00}:1 " +
+            "(the pre-TG-004 audit read 1.94:1 here)");
+    }
+
+    [TestMethod]
     public async Task BpmnCanvas_DarkMode_PhoneEdgeCase_ShowsNoWhiteSheet()
     {
         var page = await OpenAsync(390, 844);
