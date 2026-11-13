@@ -11,6 +11,16 @@
 > core `TmChart` funnel-label work (plan 8fa7319c, phase 1), the `TmScheduler` day-granularity
 > timeline (phase 2) and the `TmQRCode` accessible-name/token/download work (phase 3), none of which
 > depends on the Modeling release gate.
+>
+> It also carries the whole PromptHelper design-gap plan (TG-001..TG-010 + KG-008, plan 92e96b25): chart series
+> tokens (`--tm-chart-series-*`), diagram/stencil tokens (`--stencil-*`, `--tm-canvas-*`), kanban column
+> tokens (`--tm-kanban-column-*`), `TmBottomNavigation` accessible name, `TmTopBar` narrow behaviour
+> (`UserNameDisplay`), `TmDrawer` right edge, `TmAppShell` `ShellVariant.Workspace` +
+> `--tm-app-shell-main-bg`, `TmDashboard` `WidgetChrome`, interface density (`data-tm-density`), the
+> WCAG AA contrast fixes and the `TmCommandPalette` API extension. All of it ships in this one release
+> (owner decision: no separate follow-up version). The per-phase `### Fixed` / `### Added` sections below
+> describe each change; behaviour changes a 2.10.0 host can notice are in the *Breaking changes and
+> migration* table (plus the KG-008 and TG-010 sub-tables in their sections).
 
 ### Added — modeling authoring (`Tempo.Blazor.Abstractions`, `Tempo.Blazor.Modeling`, `Tempo.Blazor.Mcp`)
 
@@ -1684,6 +1694,7 @@ opt-in parameters. The one visual breaking change (owner decision O2) and the DO
 
 - Package versions bumped to `2.11.0` across every packable project so `ReleaseContractTests` (csproj ↔ first CHANGELOG heading) agrees; JSON documentation bundles regenerated; `validate --fail-on-drift` clean.
 - The packages were packed locally and smoke-tested in a clean host implementing `IModelingModelWriter` (Structure + Layout) and `IModelingPropertySchemaProvider` against a BPMN model — see `docs/modeling-hosting-guide.md` §9 for the recipe.
+- The PromptHelper design-gap plan (TG-001..TG-010, KG-008; 92e96b25) is part of this same release — no separate follow-up version. Tagging/publishing is done in the release gate (plan 5b94f69c, phases 6–7: full E2E + tag `v2.11.0`).
 - **To be released.** Tagging `v2.11.0` and publishing to the feed ship together with the BPMN 2.0 XML converter plan (decision Q6, confirmed by the owner on 2026-11-11); the PromptHelper *Upgrade Tempo.Blazor* plan is announced after that release.
 
 ## 2.10.0 (not released separately — shipped in 2.11.0)
