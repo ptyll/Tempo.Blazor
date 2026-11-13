@@ -45,6 +45,9 @@ public class PreviewServerRendererTests : BunitContext
         return doc;
     }
 
+    /// <summary>Hang guard only (an awaited signal that never fires fails instead of blocking the run); not a tuned wait budget.</summary>
+    private static readonly TimeSpan HangGuard = TimeSpan.FromSeconds(30);
+
     private FakePreviewRenderer RegisterRenderer()
     {
         var renderer = new FakePreviewRenderer();
@@ -72,7 +75,7 @@ public class PreviewServerRendererTests : BunitContext
     }
 
     [Fact]
-    public void Preview_SendsTheDocumentVariablesAndCulture()
+    public async Task Preview_SendsTheDocumentVariablesAndCulture()
     {
         var renderer = RegisterRenderer();
         renderer.Enqueue(Rendered("<html>x</html>"));
@@ -81,7 +84,7 @@ public class PreviewServerRendererTests : BunitContext
             .Add(c => c.Document, Doc("Hi {{ name }}", "Hi {{ name }}"))
             .Add(c => c.VariablesJson, "{\"name\":\"Ada\"}"));
 
-        cut.WaitForAssertion(() => renderer.Requests.Should().NotBeEmpty());
+        await renderer.WaitForRequestCountAsync(1);
         var request = renderer.Requests[0];
         request.Document.Subject.Should().Be("Hi {{ name }}");
         request.VariablesJson.Should().Be("{\"name\":\"Ada\"}");
@@ -246,13 +249,13 @@ public class PreviewServerRendererTests : BunitContext
         var renderer = RegisterRenderer();
         var first = renderer.EnqueuePending();
         var cut = Render<TmEmailTemplatePreview>(p => p.Add(c => c.Document, Doc()));
-        cut.WaitForAssertion(() => renderer.Requests.Should().HaveCount(1));
+        await renderer.WaitForRequestCountAsync(1);
 
         var second = renderer.EnqueuePending();
         // Fire-and-forget on the dispatcher: the render is still pending, so awaiting RefreshAsync here
         // would deadlock the test (the answer is handed out below).
         _ = cut.InvokeAsync(() => { _ = cut.Instance.RefreshAsync(); });
-        cut.WaitForAssertion(() => renderer.Requests.Should().HaveCount(2));
+        await renderer.WaitForRequestCountAsync(2);
 
         renderer.Tokens[0].IsCancellationRequested.Should().BeTrue(
             "a newer render cancels the previous CancellationToken");
@@ -333,17 +336,17 @@ public class PreviewServerRendererTests : BunitContext
     // ── substitution switch ──────────────────────────────────────────────────────────────────
 
     [Fact]
-    public void Preview_SubstitutionSwitch_MapsToSubstituteVariables()
+    public async Task Preview_SubstitutionSwitch_MapsToSubstituteVariables()
     {
         var renderer = RegisterRenderer();
         renderer.Enqueue(Rendered("<html>x</html>"));
 
         var cut = Render<TmEmailTemplatePreview>(p => p.Add(c => c.Document, Doc("Hi {{ name }}")));
-        cut.WaitForAssertion(() => renderer.Requests.Should().HaveCount(1));
+        await renderer.WaitForRequestCountAsync(1);
 
         cut.Find("#tab-preview-substitute-off").Click();
 
-        cut.WaitForAssertion(() => renderer.Requests.Count.Should().BeGreaterThan(1));
+        await renderer.WaitForRequestCountAsync(2);
         renderer.Requests[^1].SubstituteVariables.Should().BeFalse();
         cut.Find("#tab-preview-substitute-off").GetAttribute("aria-selected").Should().Be("true");
     }
@@ -369,7 +372,7 @@ public class PreviewServerRendererTests : BunitContext
     }
 
     [Fact]
-    public void Preview_SampleDataEdits_AreDebouncedAndReportedThroughVariablesJsonChanged()
+    public async Task Preview_SampleDataEdits_AreDebouncedAndReportedThroughVariablesJsonChanged()
     {
         var renderer = RegisterRenderer();
         renderer.Enqueue(Rendered("<html>x</html>"));
@@ -385,12 +388,13 @@ public class PreviewServerRendererTests : BunitContext
         cut.Find("[data-tm-preview-data-editor] textarea").Input("{\"name\":\"Bob\"}");
 
         reported.Should().Contain("{\"name\":\"Bob\"}");
+        // The initial render is fire-and-forget: wait for its request (a signal from the fake renderer) so the
+        // post-debounce count below is exact, then fire the debounce by advancing the clock.
+        await renderer.WaitForRequestCountAsync(1);
         var before = renderer.Requests.Count;
         time.Advance(TimeSpan.FromMilliseconds(750));
 
-        cut.WaitForAssertion(
-            () => renderer.Requests.Count.Should().BeGreaterThan(before,
-                "the debounce fires after 750 ms"));
+        await renderer.WaitForRequestCountAsync(before + 1); // the debounce fires after 750 ms
         renderer.Requests[^1].VariablesJson.Should().Contain("Bob");
     }
 
@@ -472,14 +476,14 @@ public class PreviewServerRendererTests : BunitContext
     }
 
     [Fact]
-    public void Preview_ThousandsOfIdenticalParameterSets_RenderOnce()
+    public async Task Preview_ThousandsOfIdenticalParameterSets_RenderOnce()
     {
         var renderer = RegisterRenderer();
         renderer.Enqueue(Rendered("<html>one</html>"));
         var doc = Doc();
 
         var cut = Render<TmEmailTemplatePreview>(p => p.Add(c => c.Document, doc));
-        cut.WaitForAssertion(() => renderer.Requests.Should().HaveCount(1));
+        await renderer.WaitForRequestCountAsync(1);
 
         // The editor re-renders its child on every keystroke: the preview must not re-render the same
         // document through the server for an identical request.
@@ -490,7 +494,7 @@ public class PreviewServerRendererTests : BunitContext
     }
 
     [Fact]
-    public void Preview_RapidExternalVariableChanges_AreDebouncedIntoOneRender()
+    public async Task Preview_RapidExternalVariableChanges_AreDebouncedIntoOneRender()
     {
         var renderer = RegisterRenderer();
         var time = new FakeTimeProvider();
@@ -499,7 +503,7 @@ public class PreviewServerRendererTests : BunitContext
             .Add(c => c.Document, Doc("Hi {{ name }}"))
             .Add(c => c.TimeProvider, time)
             .Add(c => c.VariablesJson, "{\"name\":\"A\"}"));
-        cut.WaitForAssertion(() => renderer.Requests.Should().HaveCount(1));
+        await renderer.WaitForRequestCountAsync(1);
 
         cut.Render(p => p.Add(c => c.VariablesJson, "{\"name\":\"B\"}"));
         cut.Render(p => p.Add(c => c.VariablesJson, "{\"name\":\"C\"}"));
@@ -509,7 +513,8 @@ public class PreviewServerRendererTests : BunitContext
 
         time.Advance(TimeSpan.FromMilliseconds(750));
 
-        cut.WaitForAssertion(() => renderer.Requests.Should().HaveCount(2, "the debounce coalesces the three changes"));
+        await renderer.WaitForRequestCountAsync(2);
+        renderer.Requests.Should().HaveCount(2, "the debounce coalesces the three changes");
         renderer.Requests[^1].VariablesJson.Should().Contain("D", "the newest value wins");
     }
 
@@ -519,7 +524,7 @@ public class PreviewServerRendererTests : BunitContext
         var renderer = RegisterRenderer();
 
         var cut = Render<TmEmailTemplatePreview>(p => p.Add(c => c.Document, Doc()));
-        cut.WaitForAssertion(() => renderer.Requests.Should().HaveCount(1));
+        await renderer.WaitForRequestCountAsync(1);
 
         await cut.InvokeAsync(() => cut.Instance.RefreshAsync());
 
@@ -548,23 +553,38 @@ public class PreviewServerRendererTests : BunitContext
     }
 
     [Fact]
-    public void Preview_RootIsAriaBusy_AndTheStageDimsTheStaleHtml()
+    public async Task Preview_RootIsAriaBusy_AndTheStageDimsTheStaleHtml()
     {
         var renderer = RegisterRenderer();
         var cut = Render<TmEmailTemplatePreview>(p => p.Add(c => c.Document, Doc()));
-        cut.WaitForAssertion(() => cut.Find("[data-tm-preview-frame]"));
 
+        // Settle the initial render deterministically. The component starts it fire-and-forget from
+        // OnParametersSet, so there is no handle to await; a forced refresh IS awaitable (it supersedes the
+        // initial render and completes only once the answer has been applied and the final render is done).
+        await cut.InvokeAsync(() => cut.Instance.RefreshAsync());
+        cut.Find("[data-tm-preview-frame]").Should().NotBeNull();
         cut.Find("[data-tm-preview-root]").GetAttribute("aria-busy").Should().Be("false");
 
         var pending = renderer.EnqueuePending();
-        _ = cut.InvokeAsync(() => { _ = cut.Instance.RefreshAsync(); });
-        cut.WaitForAssertion(() => cut.Find("[data-tm-preview-root]").GetAttribute("aria-busy").Should().Be("true"));
+        var requestsBefore = renderer.Requests.Count;
+        // Keep the task instead of discarding it: the renderer is held open, so it cannot be awaited yet,
+        // but once the answer is handed out below it is the exact "applied and rendered" signal - no
+        // WaitForAssertion racing a thread-pool continuation against a wall-clock budget on a loaded runner.
+        var refresh = cut.InvokeAsync(() => cut.Instance.RefreshAsync());
+        await renderer.WaitForRequestCountAsync(requestsBefore + 1);
+
+        // The Loading render is applied before the renderer is called, so once the request is visible the
+        // busy state is already in the DOM.
+        cut.Find("[data-tm-preview-root]").GetAttribute("aria-busy").Should().Be("true");
         cut.Find("[data-tm-preview-stage]").ClassList.Should()
             .Contain("tm-email-preview__stage--busy", "the stale HTML is dimmed while the new render runs");
 
         pending.SetResult(Rendered("<html>second</html>"));
-        cut.WaitForAssertion(() => cut.Find("[data-tm-preview-root]").GetAttribute("aria-busy").Should().Be("false"));
+        await refresh.WaitAsync(HangGuard);
+
+        cut.Find("[data-tm-preview-root]").GetAttribute("aria-busy").Should().Be("false");
         cut.Find("[data-tm-preview-stage]").ClassList.Should().NotContain("tm-email-preview__stage--busy");
+        cut.Find("[data-tm-preview-frame]").GetAttribute("srcdoc").Should().Contain("second");
     }
 
     [Fact]
@@ -674,6 +694,20 @@ public class PreviewServerRendererTests : BunitContext
 
         public List<CancellationToken> Tokens { get; } = [];
 
+        private readonly List<(int Count, TaskCompletionSource Signal)> _waiters = [];
+
+        /// <summary>Completes once at least <paramref name="count"/> requests reached the renderer (a signal, not a poll).</summary>
+        public Task WaitForRequestCountAsync(int count)
+        {
+            lock (_waiters)
+            {
+                if (Requests.Count >= count) return Task.CompletedTask;
+                var signal = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                _waiters.Add((count, signal));
+                return signal.Task.WaitAsync(HangGuard);
+            }
+        }
+
         public void Enqueue(EmailPreviewResult result) => _answers.Enqueue(result);
 
         public TaskCompletionSource<EmailPreviewResult> EnqueuePending()
@@ -687,8 +721,16 @@ public class PreviewServerRendererTests : BunitContext
 
         public Task<EmailPreviewResult> RenderAsync(EmailPreviewRequest request, CancellationToken cancellationToken = default)
         {
-            Requests.Add(request);
-            Tokens.Add(cancellationToken);
+            lock (_waiters)
+            {
+                Requests.Add(request);
+                Tokens.Add(cancellationToken);
+                foreach (var waiter in _waiters.Where(w => Requests.Count >= w.Count).ToList())
+                {
+                    waiter.Signal.TrySetResult();
+                    _waiters.Remove(waiter);
+                }
+            }
             if (_answers.Count == 0)
             {
                 return Task.FromResult(new EmailPreviewResult(

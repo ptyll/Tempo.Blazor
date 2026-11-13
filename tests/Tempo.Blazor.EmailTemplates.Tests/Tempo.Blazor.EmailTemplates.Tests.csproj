@@ -30,6 +30,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- CF19g — the ONE assembly-init file, linked (internal does not cross assemblies). Without it the
+         job-level TEMPO_BUNIT_WAIT_SECONDS never reaches this assembly and every WaitFor* runs on bUnit's
+         1 s default — the shape of the cs_CZ-lane PreviewServerRendererTests timeout (run 43382805365). -->
+    <Compile Include="..\Shared\TestAssemblyInit.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Using Include="Xunit" />
     <Using Include="Bunit" />
     <Using Include="FluentAssertions" />
