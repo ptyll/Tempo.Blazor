@@ -1,0 +1,945 @@
+{
+  "StartedAt": "2026-11-13T16:00:53.6043001+01:00",
+  "Filter": "TestCategory!=Performance",
+  "ShardCount": 8,
+  "Totals": {
+    "Total": 3779.0,
+    "Passed": 3532.0,
+    "Failed": 65.0,
+    "Skipped": 182.0,
+    "ShardsWithoutResults": 0,
+    "ShardsAborted": 0,
+    "ShardsEmpty": 0,
+    "HostRestarts": 0,
+    "Minutes": 542.3
+  },
+  "Shards": [
+    {
+      "Shard": 1,
+      "Classes": 104,
+      "ExitCode": 1,
+      "Seconds": 10130,
+      "ReapedHosts": 0,
+      "Empty": false,
+      "Aborted": false,
+      "Outcome": "Failed",
+      "NotExecuted": 0,
+      "NoTrx": false,
+      "Total": 574,
+      "Passed": 545,
+      "Failed": 7,
+      "Skipped": 22,
+      "Failures": [
+        {
+          "Test": "Mobile_Card_Action_Bar_Opens_View_And_More",
+          "ClassName": "Tempo.Blazor.E2E.Scheduler.SchedulerResponsiveE2ETests",
+          "MethodName": "Mobile_Card_Action_Bar_Opens_View_And_More",
+          "Fqn": "Tempo.Blazor.E2E.Scheduler.SchedulerResponsiveE2ETests.Mobile_Card_Action_Bar_Opens_View_And_More",
+          "Message": "V testovací metodě Tempo.Blazor.E2E.Scheduler.SchedulerResponsiveE2ETests.Mobile_Card_Action_Bar_Opens_View_And_More došlo k výjimce: \r\nMicrosoft.Playwright.PlaywrightException: Locator expected to be visible \nCall log:\n  -   - LocatorAssertions.ToBeVisibleAsync with timeout 5000ms\n  -   - waiting for Locator(\".tm-dropdown__menu[data-testid='scheduler-view-menu'], [data-testid='scheduler-view-menu']\").Last\n  -     9 × locator resolved to <div data-testid=\"scheduler-view-menu\" class=\"tm-scheduler-toolbar-view-menu\">…</div>\n  -       - unexpected value \"hidden\""
+        },
+        {
+          "Test": "CanvasBackdrop_FollowsTheTheme",
+          "ClassName": "Tempo.Blazor.E2E.ModelingAccessibilityM25E2ETests",
+          "MethodName": "CanvasBackdrop_FollowsTheTheme",
+          "Fqn": "Tempo.Blazor.E2E.ModelingAccessibilityM25E2ETests.CanvasBackdrop_FollowsTheTheme",
+          "Message": "V testovací metodě Tempo.Blazor.E2E.ModelingAccessibilityM25E2ETests.CanvasBackdrop_FollowsTheTheme došlo k výjimce: \r\nSystem.TimeoutException: Timeout 10000ms exceeded.\nCall log:\n  -   - waiting for Locator(\"[data-testid='modeling-open-diagram-editor'] [data-testid='diagram-canvas']\") to be visible\n  -     24 × locator resolved to hidden <div _bl_62=\"\" tabindex=\"0\" id=\"tmd-acpv5nqs3\" data-testid=\"diagram-canvas\" class=\"tm-diagram-canvas tm-diagram-editor__canvas \">…</div>"
+        },
+        {
+          "Test": "Phase7_Tablet_TapSelectsCell_AndDoubleTapStartsEditing",
+          "ClassName": "Tempo.Blazor.E2E.SpreadsheetE2ETests",
+          "MethodName": "Phase7_Tablet_TapSelectsCell_AndDoubleTapStartsEditing",
+          "Fqn": "Tempo.Blazor.E2E.SpreadsheetE2ETests.Phase7_Tablet_TapSelectsCell_AndDoubleTapStartsEditing",
+          "Message": "Assert.Fail selhalo. the long press must make the cell under the finger active Last selection: {\"Active\":\"A1\",\"StartRow\":0,\"StartCol\":0,\"EndRow\":0,\"EndCol\":0}"
+        },
+        {
+          "Test": "Editing_InputsLabeledAndValidationErrorAnnounced",
+          "ClassName": "Tempo.Blazor.E2E.ModelingAccessibilityM25E2ETests",
+          "MethodName": "Editing_InputsLabeledAndValidationErrorAnnounced",
+          "Fqn": "Tempo.Blazor.E2E.ModelingAccessibilityM25E2ETests.Editing_InputsLabeledAndValidationErrorAnnounced",
+          "Message": "V testovací metodě Tempo.Blazor.E2E.ModelingAccessibilityM25E2ETests.Editing_InputsLabeledAndValidationErrorAnnounced došlo k výjimce: \r\nSystem.TimeoutException: Timeout 10000ms exceeded.\nCall log:\n  -   - waiting for Locator(\"[data-testid='modeling-inspector'] .tm-input-error-message\").First to be visible"
+        },
+        {
+          "Test": "CanvasRenderer_JsFormulaReferenceHighlightsRemainVisibleAfterScroll",
+          "ClassName": "Tempo.Blazor.E2E.SpreadsheetE2ETests",
+          "MethodName": "CanvasRenderer_JsFormulaReferenceHighlightsRemainVisibleAfterScroll",
+          "Fqn": "Tempo.Blazor.E2E.SpreadsheetE2ETests.CanvasRenderer_JsFormulaReferenceHighlightsRemainVisibleAfterScroll",
+          "Message": "Assert.AreEqual selhalo. Očekáváno:<1>. Aktuálně:<0>. Expected one highlighted formula reference cell."
+        },
+        {
+          "Test": "Perf_TwoHundredElements_FirstRender_AndRerender",
+          "ClassName": "Tempo.Blazor.E2E.WireframeStencilPackSweepE2ETests",
+          "MethodName": "Perf_TwoHundredElements_FirstRender_AndRerender",
+          "Fqn": "Tempo.Blazor.E2E.WireframeStencilPackSweepE2ETests.Perf_TwoHundredElements_FirstRender_AndRerender",
+          "Message": "Časový limit 'Perf_TwoHundredElements_FirstRender_AndRerender' testu vypršel po 900000ms."
+        },
+        {
+          "Test": "DialogPalette_PinsBpmnStencilsAndInsertsFromThem",
+          "ClassName": "Tempo.Blazor.E2E.ModelingBpmnProfileM17E2ETests",
+          "MethodName": "DialogPalette_PinsBpmnStencilsAndInsertsFromThem",
+          "Fqn": "Tempo.Blazor.E2E.ModelingBpmnProfileM17E2ETests.DialogPalette_PinsBpmnStencilsAndInsertsFromThem",
+          "Message": "V testovací metodě Tempo.Blazor.E2E.ModelingBpmnProfileM17E2ETests.DialogPalette_PinsBpmnStencilsAndInsertsFromThem došlo k výjimce: \r\nMicrosoft.Playwright.PlaywrightException: Locator expected to be visible \nCall log:\n  -   - LocatorAssertions.ToBeVisibleAsync with timeout 15000ms\n  -   - waiting for Locator(\"[data-testid='modeling-open-diagram-editor']\").Locator(\".tm-diagram-toolbox__library[data-library-id='notation-palette']\")"
+        }
+      ]
+    },
+    {
+      "Shard": 2,
+      "Classes": 105,
+      "ExitCode": 1,
+      "Seconds": 3259,
+      "ReapedHosts": 0,
+      "Empty": false,
+      "Aborted": false,
+      "Outcome": "Failed",
+      "NotExecuted": 0,
+      "NoTrx": false,
+      "Total": 503,
+      "Passed": 452,
+      "Failed": 12,
+      "Skipped": 39,
+      "Failures": [
+        {
+          "Test": "Editing_ManualSave_AggregatesAndClears",
+          "ClassName": "Tempo.Blazor.E2E.ModelingEditingF14E2ETests",
+          "MethodName": "Editing_ManualSave_AggregatesAndClears",
+          "Fqn": "Tempo.Blazor.E2E.ModelingEditingF14E2ETests.Editing_ManualSave_AggregatesAndClears",
+          "Message": "StringAssert.Contains selhalo. Řetězec '\n                                            Validate order\n                                                /Order fulfillment/Validate order' neobsahuje řetězec 'Renamed order step'. ."
+        },
+        {
+          "Test": "PdfViewer_Tablet_TouchTargets44",
+          "ClassName": "Tempo.Blazor.E2E.PdfViewerResponsiveE2ETests",
+          "MethodName": "PdfViewer_Tablet_TouchTargets44",
+          "Fqn": "Tempo.Blazor.E2E.PdfViewerResponsiveE2ETests.PdfViewer_Tablet_TouchTargets44",
+          "Message": "Assert.AreEqual selhalo. Očekáváno:<0>. Aktuálně:<1>. the tablet default collapses the thumbnails panel"
+        },
+        {
+          "Test": "Tablet_TouchHold_MovesEvent_AndReportsTheNewTime",
+          "ClassName": "Tempo.Blazor.E2E.Scheduler.SchedulerTouchE2ETests",
+          "MethodName": "Tablet_TouchHold_MovesEvent_AndReportsTheNewTime",
+          "Fqn": "Tempo.Blazor.E2E.Scheduler.SchedulerTouchE2ETests.Tablet_TouchHold_MovesEvent_AndReportsTheNewTime",
+          "Message": "V testovací metodě Tempo.Blazor.E2E.Scheduler.SchedulerTouchE2ETests.Tablet_TouchHold_MovesEvent_AndReportsTheNewTime došlo k výjimce: \r\nMicrosoft.Playwright.PlaywrightException: Locator expected to contain text 'Week'\nBut was: 'Týden' \nCall log:\n  -   - LocatorAssertions.ToContainTextAsync with timeout 10000ms\n  -   - waiting for Locator(\"[data-testid='scheduler-interactive']\").Locator(\"[data-testid='scheduler-view-menu']\").First.Locator(\"button[aria-haspopup='true']\").First\n  -     13 × locator resolved to <button _bl_727=\"\" tabindex=\"0\" type=\"button\" aria-haspopup=\"true\" aria-expanded=\"false\" data-tm-toolbar-control=\"\" class=\"tm-dropdown-trigger \" aria-label=\"Přepnout zobrazení: Týden\">…</button>\n  -        - unexpected value \"Týden\""
+        },
+        {
+          "Test": "PdfAnnotator_Continuous_HighlightOnPage2",
+          "ClassName": "Tempo.Blazor.E2E.PdfAnnotatorResponsiveE2ETests",
+          "MethodName": "PdfAnnotator_Continuous_HighlightOnPage2",
+          "Fqn": "Tempo.Blazor.E2E.PdfAnnotatorResponsiveE2ETests.PdfAnnotator_Continuous_HighlightOnPage2",
+          "Message": "Assert.AreNotEqual selhalo. Nebyla očekávána žádná hodnota kromě:<none>. Aktuálně:<none>. the page-2 layer must have a visible text span"
+        },
+        {
+          "Test": "Tablet_1024_OpenInEditorDialog_MinimapStartsCollapsedAndReopens",
+          "ClassName": "Tempo.Blazor.E2E.ModelingTabletTouchE2ETests",
+          "MethodName": "Tablet_1024_OpenInEditorDialog_MinimapStartsCollapsedAndReopens",
+          "Fqn": "Tempo.Blazor.E2E.ModelingTabletTouchE2ETests.Tablet_1024_OpenInEditorDialog_MinimapStartsCollapsedAndReopens",
+          "Message": "V testovací metodě Tempo.Blazor.E2E.ModelingTabletTouchE2ETests.Tablet_1024_OpenInEditorDialog_MinimapStartsCollapsedAndReopens došlo k výjimce: \r\nSystem.TimeoutException: Timeout 10000ms exceeded.\nCall log:\n  -   - waiting for Locator(\"[data-testid='modeling-open-diagram-editor']\").Locator(\"[data-testid='diagram-editor-minimap-reopen']\").First to be visible\n  -     24 × locator resolved to hidden <button _bl_101=\"\" type=\"button\" title=\"Show minimap\" aria-expanded=\"false\" aria-label=\"Show minimap\" data-testid=\"diagram-editor-minimap-reopen\" class=\"tm-diagram-editor__minimap-overlay-reopen\" aria-controls=\"tm-diagram-editor-minimap-overlay-3f533ac60d724d1fb349b842f8fdaee8\">…</button>"
+        },
+        {
+          "Test": "Tablet_TouchHold_MovesEvent_InTimeline",
+          "ClassName": "Tempo.Blazor.E2E.Scheduler.SchedulerTouchE2ETests",
+          "MethodName": "Tablet_TouchHold_MovesEvent_InTimeline",
+          "Fqn": "Tempo.Blazor.E2E.Scheduler.SchedulerTouchE2ETests.Tablet_TouchHold_MovesEvent_InTimeline",
+          "Message": "V testovací metodě Tempo.Blazor.E2E.Scheduler.SchedulerTouchE2ETests.Tablet_TouchHold_MovesEvent_InTimeline došlo k výjimce: \r\nMicrosoft.Playwright.PlaywrightException: Locator expected to contain text 'Timeline'\nBut was: 'Časová osa' \nCall log:\n  -   - LocatorAssertions.ToContainTextAsync with timeout 10000ms\n  -   - waiting for Locator(\"[data-testid='scheduler-interactive']\").Locator(\"[data-testid='scheduler-view-menu']\").First.Locator(\"button[aria-haspopup='true']\").First\n  -     13 × locator resolved to <button _bl_727=\"\" tabindex=\"0\" type=\"button\" aria-haspopup=\"true\" aria-expanded=\"false\" data-tm-toolbar-control=\"\" class=\"tm-dropdown-trigger \" aria-label=\"Přepnout zobrazení: Časová osa\">…</button>\n  -        - unexpected value \"Časová osa\""
+        },
+        {
+          "Test": "Tablet_TouchHold_OnTheHandle_Resizes_NotMoves",
+          "ClassName": "Tempo.Blazor.E2E.Scheduler.SchedulerTouchE2ETests",
+          "MethodName": "Tablet_TouchHold_OnTheHandle_Resizes_NotMoves",
+          "Fqn": "Tempo.Blazor.E2E.Scheduler.SchedulerTouchE2ETests.Tablet_TouchHold_OnTheHandle_Resizes_NotMoves",
+          "Message": "V testovací metodě Tempo.Blazor.E2E.Scheduler.SchedulerTouchE2ETests.Tablet_TouchHold_OnTheHandle_Resizes_NotMoves došlo k výjimce: \r\nMicrosoft.Playwright.PlaywrightException: Locator expected to contain text 'Week'\nBut was: 'Týden' \nCall log:\n  -   - LocatorAssertions.ToContainTextAsync with timeout 10000ms\n  -   - waiting for Locator(\"[data-testid='scheduler-interactive']\").Locator(\"[data-testid='scheduler-view-menu']\").First.Locator(\"button[aria-haspopup='true']\").First\n  -     13 × locator resolved to <button _bl_727=\"\" tabindex=\"0\" type=\"button\" aria-haspopup=\"true\" aria-expanded=\"false\" data-tm-toolbar-control=\"\" class=\"tm-dropdown-trigger \" aria-label=\"Přepnout zobrazení: Týden\">…</button>\n  -        - unexpected value \"Týden\""
+        },
+        {
+          "Test": "Drag_Shows_A_Live_Time_Label",
+          "ClassName": "Tempo.Blazor.E2E.Scheduler.SchedulerTouchE2ETests",
+          "MethodName": "Drag_Shows_A_Live_Time_Label",
+          "Fqn": "Tempo.Blazor.E2E.Scheduler.SchedulerTouchE2ETests.Drag_Shows_A_Live_Time_Label",
+          "Message": "V testovací metodě Tempo.Blazor.E2E.Scheduler.SchedulerTouchE2ETests.Drag_Shows_A_Live_Time_Label došlo k výjimce: \r\nMicrosoft.Playwright.PlaywrightException: Locator expected to contain text 'Week'\nBut was: 'Týden' \nCall log:\n  -   - LocatorAssertions.ToContainTextAsync with timeout 10000ms\n  -   - waiting for Locator(\"[data-testid='scheduler-interactive']\").Locator(\"[data-testid='scheduler-view-menu']\").First.Locator(\"button[aria-haspopup='true']\").First\n  -     13 × locator resolved to <button _bl_727=\"\" tabindex=\"0\" type=\"button\" aria-haspopup=\"true\" aria-expanded=\"false\" data-tm-toolbar-control=\"\" class=\"tm-dropdown-trigger \" aria-label=\"Přepnout zobrazení: Týden\">…</button>\n  -        - unexpected value \"Týden\""
+        },
+        {
+          "Test": "Mobile_LongPress_MovesEvent_InDayView",
+          "ClassName": "Tempo.Blazor.E2E.Scheduler.SchedulerTouchE2ETests",
+          "MethodName": "Mobile_LongPress_MovesEvent_InDayView",
+          "Fqn": "Tempo.Blazor.E2E.Scheduler.SchedulerTouchE2ETests.Mobile_LongPress_MovesEvent_InDayView",
+          "Message": "V testovací metodě Tempo.Blazor.E2E.Scheduler.SchedulerTouchE2ETests.Mobile_LongPress_MovesEvent_InDayView došlo k výjimce: \r\nMicrosoft.Playwright.PlaywrightException: Locator expected to contain text 'Day'\nBut was: 'Den' \nCall log:\n  -   - LocatorAssertions.ToContainTextAsync with timeout 10000ms\n  -   - waiting for Locator(\"[data-testid='scheduler-interactive']\").Locator(\"[data-testid='scheduler-view-menu']\").First.Locator(\"button[aria-haspopup='true']\").First\n  -     13 × locator resolved to <button _bl_727=\"\" tabindex=\"0\" type=\"button\" aria-haspopup=\"true\" aria-expanded=\"false\" data-tm-toolbar-control=\"\" class=\"tm-dropdown-trigger \" aria-label=\"Přepnout zobrazení: Den\">…</button>\n  -        - unexpected value \"Den\""
+        },
+        {
+          "Test": "Mobile_TouchHold_MovesEvent_InTimeline",
+          "ClassName": "Tempo.Blazor.E2E.Scheduler.SchedulerTouchE2ETests",
+          "MethodName": "Mobile_TouchHold_MovesEvent_InTimeline",
+          "Fqn": "Tempo.Blazor.E2E.Scheduler.SchedulerTouchE2ETests.Mobile_TouchHold_MovesEvent_InTimeline",
+          "Message": "V testovací metodě Tempo.Blazor.E2E.Scheduler.SchedulerTouchE2ETests.Mobile_TouchHold_MovesEvent_InTimeline došlo k výjimce: \r\nMicrosoft.Playwright.PlaywrightException: Locator expected to contain text 'Timeline'\nBut was: 'Časová osa' \nCall log:\n  -   - LocatorAssertions.ToContainTextAsync with timeout 10000ms\n  -   - waiting for Locator(\"[data-testid='scheduler-interactive']\").Locator(\"[data-testid='scheduler-view-menu']\").First.Locator(\"button[aria-haspopup='true']\").First\n  -     13 × locator resolved to <button _bl_727=\"\" tabindex=\"0\" type=\"button\" aria-haspopup=\"true\" aria-expanded=\"false\" data-tm-toolbar-control=\"\" class=\"tm-dropdown-trigger \" aria-label=\"Přepnout zobrazení: Časová osa\">…</button>\n  -        - unexpected value \"Časová osa\""
+        },
+        {
+          "Test": "Scheduler_ViewsWork",
+          "ClassName": "Tempo.Blazor.E2E.InteractiveAutoTests",
+          "MethodName": "Scheduler_ViewsWork",
+          "Fqn": "Tempo.Blazor.E2E.InteractiveAutoTests.Scheduler_ViewsWork",
+          "Message": "V testovací metodě Tempo.Blazor.E2E.InteractiveAutoTests.Scheduler_ViewsWork došlo k výjimce: \r\nSystem.TimeoutException: Timeout 30000ms exceeded.\nCall log:\n  -   - waiting for Locator(\"section.demo-section\").Filter(new() { Has = Locator(\"h2\").Filter(new() { HasText = \"Interactive Demo\" }) }).Locator(\".tm-scheduler\").Locator(\"button[data-view='Week']\")\n  -     - locator resolved to <button role=\"tab\" type=\"button\" tabindex=\"-1\" class=\"tm-tab\" data-view=\"Week\" aria-selected=\"false\" _bl_3001bd12-9a1d-4d13-8d96-c98122cddfe1=\"\" id=\"tab-tm-sched-5b3553e0e00c4ce7a3421e5d9d3cf905-Week\" aria-controls=\"tabpanel-tm-sched-5b3553e0e00c4ce7a3421e5d9d3cf905-Week\">…</button>\n  -   - attempting click action\n  -     2 × waiting for element to be visible, enabled and stable\n  -       - element is not visible\n  -     - retrying click action\n  -     - waiting 20ms\n  -     2 × waiting for element to be visible, enabled and stable\n  -       - element is not visible\n  -     - retrying click action\n  -       - waiting 100ms\n  -     57 × waiting for element to be visible, enabled and stable\n  -        - element is not visible\n  -      - retrying click action\n  -        - waiting 500ms"
+        },
+        {
+          "Test": "Dark_Week_Move_Shows_The_Live_Label",
+          "ClassName": "Tempo.Blazor.E2E.Scheduler.SchedulerTouchE2ETests",
+          "MethodName": "Dark_Week_Move_Shows_The_Live_Label",
+          "Fqn": "Tempo.Blazor.E2E.Scheduler.SchedulerTouchE2ETests.Dark_Week_Move_Shows_The_Live_Label",
+          "Message": "V testovací metodě Tempo.Blazor.E2E.Scheduler.SchedulerTouchE2ETests.Dark_Week_Move_Shows_The_Live_Label došlo k výjimce: \r\nMicrosoft.Playwright.PlaywrightException: Locator expected to contain text 'Week'\nBut was: 'Týden' \nCall log:\n  -   - LocatorAssertions.ToContainTextAsync with timeout 10000ms\n  -   - waiting for Locator(\"[data-testid='scheduler-interactive']\").Locator(\"[data-testid='scheduler-view-menu']\").First.Locator(\"button[aria-haspopup='true']\").First\n  -     13 × locator resolved to <button _bl_727=\"\" tabindex=\"0\" type=\"button\" aria-haspopup=\"true\" aria-expanded=\"false\" data-tm-toolbar-control=\"\" class=\"tm-dropdown-trigger \" aria-label=\"Přepnout zobrazení: Týden\">…</button>\n  -        - unexpected value \"Týden\""
+        }
+      ]
+    },
+    {
+      "Shard": 3,
+      "Classes": 106,
+      "ExitCode": 1,
+      "Seconds": 3046,
+      "ReapedHosts": 0,
+      "Empty": false,
+      "Aborted": false,
+      "Outcome": "Failed",
+      "NotExecuted": 0,
+      "NoTrx": false,
+      "Total": 423,
+      "Passed": 404,
+      "Failed": 17,
+      "Skipped": 2,
+      "Failures": [
+        {
+          "Test": "Scheduler_Touch_SwipeFromEventCentre_Scrolls_AndDoesNotResize (390)",
+          "ClassName": "Tempo.Blazor.E2E.PointerDragE2ETests",
+          "MethodName": "Scheduler_Touch_SwipeFromEventCentre_Scrolls_AndDoesNotResize",
+          "Fqn": "Tempo.Blazor.E2E.PointerDragE2ETests.Scheduler_Touch_SwipeFromEventCentre_Scrolls_AndDoesNotResize",
+          "Message": "V testovací metodě Tempo.Blazor.E2E.PointerDragE2ETests.Scheduler_Touch_SwipeFromEventCentre_Scrolls_AndDoesNotResize došlo k výjimce: \r\nMicrosoft.Playwright.PlaywrightException: Locator expected to contain text 'Day'\nBut was: 'Den' \nCall log:\n  -   - LocatorAssertions.ToContainTextAsync with timeout 10000ms\n  -   - waiting for Locator(\"[data-testid='scheduler-interactive']\").Locator(\"[data-testid='scheduler-view-menu']\").First.Locator(\"button[aria-haspopup='true']\").First\n  -     13 × locator resolved to <button _bl_727=\"\" tabindex=\"0\" type=\"button\" aria-haspopup=\"true\" aria-expanded=\"false\" data-tm-toolbar-control=\"\" class=\"tm-dropdown-trigger \" aria-label=\"Přepnout zobrazení: Den\">…</button>\n  -        - unexpected value \"Den\""
+        },
+        {
+          "Test": "Scheduler_Touch_HoldThenDrag_ResizesAndCommits (768)",
+          "ClassName": "Tempo.Blazor.E2E.PointerDragE2ETests",
+          "MethodName": "Scheduler_Touch_HoldThenDrag_ResizesAndCommits",
+          "Fqn": "Tempo.Blazor.E2E.PointerDragE2ETests.Scheduler_Touch_HoldThenDrag_ResizesAndCommits",
+          "Message": "V testovací metodě Tempo.Blazor.E2E.PointerDragE2ETests.Scheduler_Touch_HoldThenDrag_ResizesAndCommits došlo k výjimce: \r\nMicrosoft.Playwright.PlaywrightException: Locator expected to contain text 'Day'\nBut was: 'Den' \nCall log:\n  -   - LocatorAssertions.ToContainTextAsync with timeout 10000ms\n  -   - waiting for Locator(\"[data-testid='scheduler-interactive']\").Locator(\"[data-testid='scheduler-view-menu']\").First.Locator(\"button[aria-haspopup='true']\").First\n  -     13 × locator resolved to <button _bl_727=\"\" tabindex=\"0\" type=\"button\" aria-haspopup=\"true\" aria-expanded=\"false\" data-tm-toolbar-control=\"\" class=\"tm-dropdown-trigger \" aria-label=\"Přepnout zobrazení: Den\">…</button>\n  -        - unexpected value \"Den\""
+        },
+        {
+          "Test": "Scheduler_Touch_HoldThenDrag_ResizesAndCommits (390)",
+          "ClassName": "Tempo.Blazor.E2E.PointerDragE2ETests",
+          "MethodName": "Scheduler_Touch_HoldThenDrag_ResizesAndCommits",
+          "Fqn": "Tempo.Blazor.E2E.PointerDragE2ETests.Scheduler_Touch_HoldThenDrag_ResizesAndCommits",
+          "Message": "V testovací metodě Tempo.Blazor.E2E.PointerDragE2ETests.Scheduler_Touch_HoldThenDrag_ResizesAndCommits došlo k výjimce: \r\nMicrosoft.Playwright.PlaywrightException: Locator expected to contain text 'Day'\nBut was: 'Den' \nCall log:\n  -   - LocatorAssertions.ToContainTextAsync with timeout 10000ms\n  -   - waiting for Locator(\"[data-testid='scheduler-interactive']\").Locator(\"[data-testid='scheduler-view-menu']\").First.Locator(\"button[aria-haspopup='true']\").First\n  -     13 × locator resolved to <button _bl_727=\"\" tabindex=\"0\" type=\"button\" aria-haspopup=\"true\" aria-expanded=\"false\" data-tm-toolbar-control=\"\" class=\"tm-dropdown-trigger \" aria-label=\"Přepnout zobrazení: Den\">…</button>\n  -        - unexpected value \"Den\""
+        },
+        {
+          "Test": "Escape_with_open_view_menu_closes_the_menu_and_keeps_the_dialog",
+          "ClassName": "Tempo.Blazor.E2E.ModelingOpenInEditorDialogE2ETests",
+          "MethodName": "Escape_with_open_view_menu_closes_the_menu_and_keeps_the_dialog",
+          "Fqn": "Tempo.Blazor.E2E.ModelingOpenInEditorDialogE2ETests.Escape_with_open_view_menu_closes_the_menu_and_keeps_the_dialog",
+          "Message": "V testovací metodě Tempo.Blazor.E2E.ModelingOpenInEditorDialogE2ETests.Escape_with_open_view_menu_closes_the_menu_and_keeps_the_dialog došlo k výjimce: \r\nSystem.TimeoutException: Timeout 10000ms exceeded.\nCall log:\n  -   - waiting for Locator(\"[data-testid='modeling-open-diagram-editor']\").Locator(\"[data-testid='diagram-editor-more']\")\n  -     - locator resolved to <button _bl_41=\"\" type=\"button\" aria-expanded=\"false\" title=\"View settings\" aria-label=\"View settings\" data-testid=\"diagram-editor-more\" class=\"tm-diagram-editor__more-btn\" aria-controls=\"tm-diagram-editor-view-menu-2fa07492be3b4b40b8a761a90d7a89f1\">…</button>\n  -   - attempting click action\n  -     2 × waiting for element to be visible, enabled and stable\n  -       - element is not visible\n  -     - retrying click action\n  -     - waiting 20ms\n  -     2 × waiting for element to be visible, enabled and stable\n  -       - element is not visible\n  -     - retrying click action\n  -       - waiting 100ms\n  -     18 × waiting for element to be visible, enabled and stable\n  -        - element is not visible\n  -      - retrying click action\n  -        - waiting 500ms"
+        },
+        {
+          "Test": "Escape_while_editing_edge_label_cancels_edit_and_keeps_dialog",
+          "ClassName": "Tempo.Blazor.E2E.ModelingOpenInEditorDialogE2ETests",
+          "MethodName": "Escape_while_editing_edge_label_cancels_edit_and_keeps_dialog",
+          "Fqn": "Tempo.Blazor.E2E.ModelingOpenInEditorDialogE2ETests.Escape_while_editing_edge_label_cancels_edit_and_keeps_dialog",
+          "Message": "V testovací metodě Tempo.Blazor.E2E.ModelingOpenInEditorDialogE2ETests.Escape_while_editing_edge_label_cancels_edit_and_keeps_dialog došlo k výjimce: \r\nSystem.TimeoutException: Timeout 10000ms exceeded.\nCall log:\n  -   - waiting for Locator(\"[data-testid='modeling-open-diagram-editor']\").Locator(\".tm-diagram-editor__context-menu\").Locator(\"[data-action='edit-edge-label']\")"
+        },
+        {
+          "Test": "FacetSheet_ScrollsItsBodyUnderAPinnedFooter_AndASwipeBackDownDismissesIt",
+          "ClassName": "Tempo.Blazor.E2E.Fze12TouchEmulationSweepE2ETests",
+          "MethodName": "FacetSheet_ScrollsItsBodyUnderAPinnedFooter_AndASwipeBackDownDismissesIt",
+          "Fqn": "Tempo.Blazor.E2E.Fze12TouchEmulationSweepE2ETests.FacetSheet_ScrollsItsBodyUnderAPinnedFooter_AndASwipeBackDownDismissesIt",
+          "Message": "Assert.AreEqual selhalo. Očekáván rozdíl, který není větší jak <1,5> mezi očekávanou hodnotou <595,2498168945312> a aktuální hodnotou <542>. the confirmation footer is pinned: scrolling the body must not move it"
+        },
+        {
+          "Test": "Demo_Dark_And_Indigo_PaintTheShellSurfaces",
+          "ClassName": "Tempo.Blazor.E2E.EditorShellE2ETests",
+          "MethodName": "Demo_Dark_And_Indigo_PaintTheShellSurfaces",
+          "Fqn": "Tempo.Blazor.E2E.EditorShellE2ETests.Demo_Dark_And_Indigo_PaintTheShellSurfaces",
+          "Message": "Assert.IsTrue selhalo. dark panel surface must be dark, was rgb(255, 255, 255)"
+        },
+        {
+          "Test": "CircuitReconnect_RestoredPopoverRoots_StayPromoted_AndANewSurfacePaintsOnTop",
+          "ClassName": "Tempo.Blazor.E2E.ServerOverlayTopLayerE2ETests",
+          "MethodName": "CircuitReconnect_RestoredPopoverRoots_StayPromoted_AndANewSurfacePaintsOnTop",
+          "Fqn": "Tempo.Blazor.E2E.ServerOverlayTopLayerE2ETests.CircuitReconnect_RestoredPopoverRoots_StayPromoted_AndANewSurfacePaintsOnTop",
+          "Message": "V testovací metodě Tempo.Blazor.E2E.ServerOverlayTopLayerE2ETests.CircuitReconnect_RestoredPopoverRoots_StayPromoted_AndANewSurfacePaintsOnTop došlo k výjimce: \r\nSystem.TimeoutException: Timeout 60000ms exceeded."
+        },
+        {
+          "Test": "ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+          "ClassName": "Tempo.Blazor.E2E.SortableListInteractiveAutoE2ETests",
+          "MethodName": "ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+          "Fqn": "Tempo.Blazor.E2E.SortableListInteractiveAutoE2ETests.ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+          "Message": "Assert.AreEqual selhalo. Očekáváno:<0>. Aktuálně:<1>. axe: serious: color-contrast - Elements must meet minimum color contrast ratio thresholds (.py-0\\.5; section[data-testid=\"sortable-basic-section\"] > .mb-4:nth-child(2); #tm-sortable-list-content-8da5bacf-0 > .flex-col[data-testid=\"sortable-step\"] > .text-slate-500.text-xs.dark\\:text-slate-400; #tm-sortable-list-content-8da5bacf-1 > .flex-col[data-testid=\"sortable-step\"] > .text-slate-500.text-xs.dark\\:text-slate-400)"
+        },
+        {
+          "Test": "Scheduler_Touch_ResizeAt390_StillResizes_AndThePageStillScrolls",
+          "ClassName": "Tempo.Blazor.E2E.PointerDragE2ETests",
+          "MethodName": "Scheduler_Touch_ResizeAt390_StillResizes_AndThePageStillScrolls",
+          "Fqn": "Tempo.Blazor.E2E.PointerDragE2ETests.Scheduler_Touch_ResizeAt390_StillResizes_AndThePageStillScrolls",
+          "Message": "V testovací metodě Tempo.Blazor.E2E.PointerDragE2ETests.Scheduler_Touch_ResizeAt390_StillResizes_AndThePageStillScrolls došlo k výjimce: \r\nMicrosoft.Playwright.PlaywrightException: Locator expected to contain text 'Day'\nBut was: 'Den' \nCall log:\n  -   - LocatorAssertions.ToContainTextAsync with timeout 10000ms\n  -   - waiting for Locator(\"[data-testid='scheduler-interactive']\").Locator(\"[data-testid='scheduler-view-menu']\").First.Locator(\"button[aria-haspopup='true']\").First\n  -     13 × locator resolved to <button _bl_727=\"\" tabindex=\"0\" type=\"button\" aria-haspopup=\"true\" aria-expanded=\"false\" data-tm-toolbar-control=\"\" class=\"tm-dropdown-trigger \" aria-label=\"Přepnout zobrazení: Den\">…</button>\n  -        - unexpected value \"Den\""
+        },
+        {
+          "Test": "Scheduler_Touch_PointerCancel_RestoresTheEvent_WithoutNotifying",
+          "ClassName": "Tempo.Blazor.E2E.PointerDragE2ETests",
+          "MethodName": "Scheduler_Touch_PointerCancel_RestoresTheEvent_WithoutNotifying",
+          "Fqn": "Tempo.Blazor.E2E.PointerDragE2ETests.Scheduler_Touch_PointerCancel_RestoresTheEvent_WithoutNotifying",
+          "Message": "V testovací metodě Tempo.Blazor.E2E.PointerDragE2ETests.Scheduler_Touch_PointerCancel_RestoresTheEvent_WithoutNotifying došlo k výjimce: \r\nMicrosoft.Playwright.PlaywrightException: Locator expected to contain text 'Day'\nBut was: 'Den' \nCall log:\n  -   - LocatorAssertions.ToContainTextAsync with timeout 10000ms\n  -   - waiting for Locator(\"[data-testid='scheduler-interactive']\").Locator(\"[data-testid='scheduler-view-menu']\").First.Locator(\"button[aria-haspopup='true']\").First\n  -     13 × locator resolved to <button _bl_727=\"\" tabindex=\"0\" type=\"button\" aria-haspopup=\"true\" aria-expanded=\"false\" data-tm-toolbar-control=\"\" class=\"tm-dropdown-trigger \" aria-label=\"Přepnout zobrazení: Den\">…</button>\n  -        - unexpected value \"Den\""
+        },
+        {
+          "Test": "ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+          "ClassName": "Tempo.Blazor.E2E.TraceWaterfallPageServerE2ETests",
+          "MethodName": "ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+          "Fqn": "Tempo.Blazor.E2E.TraceWaterfallPageServerE2ETests.ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+          "Message": "Assert.AreEqual selhalo. Očekáváno:<0>. Aktuálně:<1>. axe: serious: color-contrast - Elements must meet minimum color contrast ratio thresholds (.py-0\\.5; span[data-testid=\"trace-page-summary\"]; span[data-testid=\"trace-page-live-state\"]; .mb-4:nth-child(2))"
+        },
+        {
+          "Test": "Escape_with_open_search_closes_the_search_first_and_the_dialog_second",
+          "ClassName": "Tempo.Blazor.E2E.ModelingOpenInEditorDialogE2ETests",
+          "MethodName": "Escape_with_open_search_closes_the_search_first_and_the_dialog_second",
+          "Fqn": "Tempo.Blazor.E2E.ModelingOpenInEditorDialogE2ETests.Escape_with_open_search_closes_the_search_first_and_the_dialog_second",
+          "Message": "V testovací metodě Tempo.Blazor.E2E.ModelingOpenInEditorDialogE2ETests.Escape_with_open_search_closes_the_search_first_and_the_dialog_second došlo k výjimce: \r\nSystem.TimeoutException: Timeout 10000ms exceeded.\nCall log:\n  -   - waiting for Locator(\"[data-testid='modeling-open-diagram-editor']\").Locator(\"[data-tm-group='search'] button\")\n  -     - locator resolved to <button type=\"button\" title=\"Search\" aria-label=\"Search\" aria-pressed=\"false\" class=\"tm-diagram-editor__panel-toggle \">…</button>\n  -   - attempting click action\n  -     2 × waiting for element to be visible, enabled and stable\n  -       - element is not visible\n  -     - retrying click action\n  -     - waiting 20ms\n  -     2 × waiting for element to be visible, enabled and stable\n  -       - element is not visible\n  -     - retrying click action\n  -       - waiting 100ms\n  -     18 × waiting for element to be visible, enabled and stable\n  -        - element is not visible\n  -      - retrying click action\n  -        - waiting 500ms"
+        },
+        {
+          "Test": "Dialog_toolbox_pins_notation_palette_and_inserts_from_it",
+          "ClassName": "Tempo.Blazor.E2E.ModelingOpenInEditorDialogE2ETests",
+          "MethodName": "Dialog_toolbox_pins_notation_palette_and_inserts_from_it",
+          "Fqn": "Tempo.Blazor.E2E.ModelingOpenInEditorDialogE2ETests.Dialog_toolbox_pins_notation_palette_and_inserts_from_it",
+          "Message": "V testovací metodě Tempo.Blazor.E2E.ModelingOpenInEditorDialogE2ETests.Dialog_toolbox_pins_notation_palette_and_inserts_from_it došlo k výjimce: \r\nMicrosoft.Playwright.PlaywrightException: Locator expected to be visible \nCall log:\n  -   - LocatorAssertions.ToBeVisibleAsync with timeout 15000ms\n  -   - waiting for Locator(\"[data-testid='modeling-open-diagram-editor']\").Locator(\".tm-diagram-toolbox__library[data-library-id='notation-palette']\")"
+        },
+        {
+          "Test": "Escape_with_context_menu_and_search_open_closes_menu_then_search_then_dialog",
+          "ClassName": "Tempo.Blazor.E2E.ModelingOpenInEditorDialogE2ETests",
+          "MethodName": "Escape_with_context_menu_and_search_open_closes_menu_then_search_then_dialog",
+          "Fqn": "Tempo.Blazor.E2E.ModelingOpenInEditorDialogE2ETests.Escape_with_context_menu_and_search_open_closes_menu_then_search_then_dialog",
+          "Message": "V testovací metodě Tempo.Blazor.E2E.ModelingOpenInEditorDialogE2ETests.Escape_with_context_menu_and_search_open_closes_menu_then_search_then_dialog došlo k výjimce: \r\nSystem.TimeoutException: Timeout 10000ms exceeded.\nCall log:\n  -   - waiting for Locator(\"[data-testid='modeling-open-diagram-editor']\").Locator(\"[data-tm-group='search'] button\")\n  -     - locator resolved to <button type=\"button\" title=\"Search\" aria-label=\"Search\" aria-pressed=\"false\" class=\"tm-diagram-editor__panel-toggle \">…</button>\n  -   - attempting click action\n  -     2 × waiting for element to be visible, enabled and stable\n  -       - element is not visible\n  -     - retrying click action\n  -     - waiting 20ms\n  -     2 × waiting for element to be visible, enabled and stable\n  -       - element is not visible\n  -     - retrying click action\n  -       - waiting 100ms\n  -     18 × waiting for element to be visible, enabled and stable\n  -        - element is not visible\n  -      - retrying click action\n  -        - waiting 500ms"
+        },
+        {
+          "Test": "Scheduler_Touch_ResizeBottomHandle_Works_OnATablet",
+          "ClassName": "Tempo.Blazor.E2E.PointerDragE2ETests",
+          "MethodName": "Scheduler_Touch_ResizeBottomHandle_Works_OnATablet",
+          "Fqn": "Tempo.Blazor.E2E.PointerDragE2ETests.Scheduler_Touch_ResizeBottomHandle_Works_OnATablet",
+          "Message": "V testovací metodě Tempo.Blazor.E2E.PointerDragE2ETests.Scheduler_Touch_ResizeBottomHandle_Works_OnATablet došlo k výjimce: \r\nMicrosoft.Playwright.PlaywrightException: Locator expected to contain text 'Day'\nBut was: 'Den' \nCall log:\n  -   - LocatorAssertions.ToContainTextAsync with timeout 10000ms\n  -   - waiting for Locator(\"[data-testid='scheduler-interactive']\").Locator(\"[data-testid='scheduler-view-menu']\").First.Locator(\"button[aria-haspopup='true']\").First\n  -     13 × locator resolved to <button _bl_727=\"\" tabindex=\"0\" type=\"button\" aria-haspopup=\"true\" aria-expanded=\"false\" data-tm-toolbar-control=\"\" class=\"tm-dropdown-trigger \" aria-label=\"Přepnout zobrazení: Den\">…</button>\n  -        - unexpected value \"Den\""
+        },
+        {
+          "Test": "Scheduler_Touch_SwipeFromEventCentre_Scrolls_AndDoesNotResize (768)",
+          "ClassName": "Tempo.Blazor.E2E.PointerDragE2ETests",
+          "MethodName": "Scheduler_Touch_SwipeFromEventCentre_Scrolls_AndDoesNotResize",
+          "Fqn": "Tempo.Blazor.E2E.PointerDragE2ETests.Scheduler_Touch_SwipeFromEventCentre_Scrolls_AndDoesNotResize",
+          "Message": "V testovací metodě Tempo.Blazor.E2E.PointerDragE2ETests.Scheduler_Touch_SwipeFromEventCentre_Scrolls_AndDoesNotResize došlo k výjimce: \r\nMicrosoft.Playwright.PlaywrightException: Locator expected to contain text 'Day'\nBut was: 'Den' \nCall log:\n  -   - LocatorAssertions.ToContainTextAsync with timeout 10000ms\n  -   - waiting for Locator(\"[data-testid='scheduler-interactive']\").Locator(\"[data-testid='scheduler-view-menu']\").First.Locator(\"button[aria-haspopup='true']\").First\n  -     13 × locator resolved to <button _bl_727=\"\" tabindex=\"0\" type=\"button\" aria-haspopup=\"true\" aria-expanded=\"false\" data-tm-toolbar-control=\"\" class=\"tm-dropdown-trigger \" aria-label=\"Přepnout zobrazení: Den\">…</button>\n  -        - unexpected value \"Den\""
+        }
+      ]
+    },
+    {
+      "Shard": 4,
+      "Classes": 107,
+      "ExitCode": 1,
+      "Seconds": 3615,
+      "ReapedHosts": 0,
+      "Empty": false,
+      "Aborted": false,
+      "Outcome": "Failed",
+      "NotExecuted": 0,
+      "NoTrx": false,
+      "Total": 413,
+      "Passed": 406,
+      "Failed": 5,
+      "Skipped": 2,
+      "Failures": [
+        {
+          "Test": "Editor_1440_IsDesktopWithUsableCanvasAndDock",
+          "ClassName": "Tempo.Blazor.E2E.ModelingPhase5ReviewE2ETests",
+          "MethodName": "Editor_1440_IsDesktopWithUsableCanvasAndDock",
+          "Fqn": "Tempo.Blazor.E2E.ModelingPhase5ReviewE2ETests.Editor_1440_IsDesktopWithUsableCanvasAndDock",
+          "Message": "Assert.IsTrue selhalo. The dock must fit two full issue rows (list 133px, two rows need 146px)."
+        },
+        {
+          "Test": "ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+          "ClassName": "Tempo.Blazor.E2E.SortableListServerE2ETests",
+          "MethodName": "ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+          "Fqn": "Tempo.Blazor.E2E.SortableListServerE2ETests.ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+          "Message": "Assert.AreEqual selhalo. Očekáváno:<0>. Aktuálně:<1>. axe: serious: color-contrast - Elements must meet minimum color contrast ratio thresholds (#tm-sortable-list-content-99316d3d-0 > .flex-col[data-testid=\"sortable-step\"] > .text-slate-500.text-xs.dark\\:text-slate-400; #tm-sortable-list-content-99316d3d-1 > .flex-col[data-testid=\"sortable-step\"] > .text-slate-500.text-xs.dark\\:text-slate-400; #tm-sortable-list-content-99316d3d-2 > .flex-col[data-testid=\"sortable-step\"] > .text-slate-500.text-xs.dark\\:text-slate-400; #tm-sortable-list-content-99316d3d-3 > .flex-col[data-testid=\"sortable-step\"] > .text-slate-500.text-xs.dark\\:text-slate-400)"
+        },
+        {
+          "Test": "EveryBaselineGeneratorInheritsTheOptInGate",
+          "ClassName": "Tempo.Blazor.E2E.BaselineGeneratorGateTests",
+          "MethodName": "EveryBaselineGeneratorInheritsTheOptInGate",
+          "Fqn": "Tempo.Blazor.E2E.BaselineGeneratorGateTests.EveryBaselineGeneratorInheritsTheOptInGate",
+          "Message": "Assert.AreEqual selhalo. Očekáváno:<0>. Aktuálně:<1>. these classes rewrite baselines without inheriting BaselineGeneratorTestBase, so an ordinary `dotnet test` would overwrite them: NotionPhase1BaselineScreenshots"
+        },
+        {
+          "Test": "CodeBlock_PreviewToggleHiddenForOtherLanguages",
+          "ClassName": "Tempo.Blazor.E2E.NotionCodeBlockMarkdownPreviewE2ETests",
+          "MethodName": "CodeBlock_PreviewToggleHiddenForOtherLanguages",
+          "Fqn": "Tempo.Blazor.E2E.NotionCodeBlockMarkdownPreviewE2ETests.CodeBlock_PreviewToggleHiddenForOtherLanguages",
+          "Message": "Assert.IsTrue selhalo. The new block must be empty before the slash trigger, but it held 'The block below shows the Spreadsheet editor. Click Create Spreadsheet to open the full-screen editor. After saving, an embedded live spreadsheet is shown inline.'."
+        },
+        {
+          "Test": "Editor_1440_MixedScenarioDockFitsTwoRows",
+          "ClassName": "Tempo.Blazor.E2E.ModelingPhase5ReviewE2ETests",
+          "MethodName": "Editor_1440_MixedScenarioDockFitsTwoRows",
+          "Fqn": "Tempo.Blazor.E2E.ModelingPhase5ReviewE2ETests.Editor_1440_MixedScenarioDockFitsTwoRows",
+          "Message": "Assert.IsTrue selhalo. The dock must fit two full mixed-scenario rows (list 133px, two rows need 146px)."
+        }
+      ]
+    },
+    {
+      "Shard": 5,
+      "Classes": 107,
+      "ExitCode": 1,
+      "Seconds": 3007,
+      "ReapedHosts": 0,
+      "Empty": false,
+      "Aborted": false,
+      "Outcome": "Failed",
+      "NotExecuted": 0,
+      "NoTrx": false,
+      "Total": 473,
+      "Passed": 428,
+      "Failed": 6,
+      "Skipped": 39,
+      "Failures": [
+        {
+          "Test": "Dark_MoreMenuAndButtons_UseThemeSurfaces",
+          "ClassName": "Tempo.Blazor.E2E.ToolbarOverflowE2ETests",
+          "MethodName": "Dark_MoreMenuAndButtons_UseThemeSurfaces",
+          "Fqn": "Tempo.Blazor.E2E.ToolbarOverflowE2ETests.Dark_MoreMenuAndButtons_UseThemeSurfaces",
+          "Message": "Assert.AreNotEqual selhalo. Nebyla očekávána žádná hodnota kromě:<rgb(255, 255, 255)>. Aktuálně:<rgb(255, 255, 255)>. the dark surface is not the light one"
+        },
+        {
+          "Test": "DialogPalette_PinsUmlStencils",
+          "ClassName": "Tempo.Blazor.E2E.ModelingUmlProfileM18E2ETests",
+          "MethodName": "DialogPalette_PinsUmlStencils",
+          "Fqn": "Tempo.Blazor.E2E.ModelingUmlProfileM18E2ETests.DialogPalette_PinsUmlStencils",
+          "Message": "V testovací metodě Tempo.Blazor.E2E.ModelingUmlProfileM18E2ETests.DialogPalette_PinsUmlStencils došlo k výjimce: \r\nMicrosoft.Playwright.PlaywrightException: Locator expected to be visible \nCall log:\n  -   - LocatorAssertions.ToBeVisibleAsync with timeout 15000ms\n  -   - waiting for Locator(\"[data-testid='modeling-open-diagram-editor']\").Locator(\".tm-diagram-toolbox__library[data-library-id='notation-palette']\")"
+        },
+        {
+          "Test": "Axe_Scoped_To_TheNewSections_FindsNoCriticalOrSeriousViolation",
+          "ClassName": "Tempo.Blazor.E2E.DataDisplayKpiServerE2ETests",
+          "MethodName": "Axe_Scoped_To_TheNewSections_FindsNoCriticalOrSeriousViolation",
+          "Fqn": "Tempo.Blazor.E2E.DataDisplayKpiServerE2ETests.Axe_Scoped_To_TheNewSections_FindsNoCriticalOrSeriousViolation",
+          "Message": "Assert.AreEqual selhalo. Očekáváno:<0>. Aktuálně:<1>. axe [KPI cards]: serious: color-contrast - Elements must meet minimum color contrast ratio thresholds (div[data-testid=\"stat-cards-kpi\"] > .tm-stat-card--has-icon.tm-stat-card:nth-child(1) > .tm-stat-label; .tm-stat-card--has-icon.tm-stat-card:nth-child(1) > .tm-stat-card__trend--positive.tm-stat-card__trend[data-testid=\"stat-card-trend\"] > .tm-stat-card__delta; .tm-stat-card--has-icon.tm-stat-card:nth-child(1) > .tm-stat-card__trend--positive.tm-stat-card__trend[data-testid=\"stat-card-trend\"] > .tm-stat-card__comparison; div[data-testid=\"stat-cards-kpi\"] > .tm-stat-card--has-icon.tm-stat-card:nth-child(2) > .tm-stat-label)"
+        },
+        {
+          "Test": "NoSpecKeepsALocalColdBootRecoveryCopy",
+          "ClassName": "Tempo.Blazor.E2E.ReadinessInfrastructureTests",
+          "MethodName": "NoSpecKeepsALocalColdBootRecoveryCopy",
+          "Fqn": "Tempo.Blazor.E2E.ReadinessInfrastructureTests.NoSpecKeepsALocalColdBootRecoveryCopy",
+          "Message": "Assert.AreEqual selhalo. Očekáváno:<0>. Aktuálně:<1>. cold-boot recovery must be centralized in PlaywrightTestBase.GotoAppReadyAsync; local copies in: NotionPhase1BaselineScreenshots.cs"
+        },
+        {
+          "Test": "ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+          "ClassName": "Tempo.Blazor.E2E.AnalyticsKitInteractiveAutoE2ETests",
+          "MethodName": "ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+          "Fqn": "Tempo.Blazor.E2E.AnalyticsKitInteractiveAutoE2ETests.ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+          "Message": "Assert.AreEqual selhalo. Očekáváno:<0>. Aktuálně:<1>. axe [analytics-kit-kpis]: serious: color-contrast - Elements must meet minimum color contrast ratio thresholds (section[data-testid=\"analytics-kit-kpis\"] > .space-x-2.mb-4 > .py-0\\.5.bg-primary-100.dark\\:bg-primary-900\\/30; section[data-testid=\"analytics-kit-kpis\"] > .mb-4:nth-child(2); .tm-stat-card.tm-stat-card--has-icon:nth-child(1) > .tm-stat-label; .tm-stat-card.tm-stat-card--has-icon:nth-child(1) > .tm-stat-card__trend--negative.tm-stat-card__trend[data-testid=\"stat-card-trend\"] > .tm-stat-card__delta)"
+        },
+        {
+          "Test": "ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+          "ClassName": "Tempo.Blazor.E2E.TraceWaterfallInteractiveAutoE2ETests",
+          "MethodName": "ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+          "Fqn": "Tempo.Blazor.E2E.TraceWaterfallInteractiveAutoE2ETests.ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+          "Message": "Assert.AreEqual selhalo. Očekáváno:<0>. Aktuálně:<1>. axe: serious: color-contrast - Elements must meet minimum color contrast ratio thresholds (.tm-trace-waterfall__window; .tm-trace-waterfall__tick:nth-child(1) > .tm-trace-waterfall__tick-label; .tm-trace-waterfall__tick:nth-child(2) > .tm-trace-waterfall__tick-label; .tm-trace-waterfall__tick:nth-child(3) > .tm-trace-waterfall__tick-label)"
+        }
+      ]
+    },
+    {
+      "Shard": 6,
+      "Classes": 107,
+      "ExitCode": 1,
+      "Seconds": 3408,
+      "ReapedHosts": 0,
+      "Empty": false,
+      "Aborted": false,
+      "Outcome": "Failed",
+      "NotExecuted": 0,
+      "NoTrx": false,
+      "Total": 488,
+      "Passed": 417,
+      "Failed": 8,
+      "Skipped": 63,
+      "Failures": [
+        {
+          "Test": "Chart_IsNamedByItsHeading_ThroughTheAriaLabelParameter",
+          "ClassName": "Tempo.Blazor.E2E.AnalyticsKitServerE2ETests",
+          "MethodName": "Chart_IsNamedByItsHeading_ThroughTheAriaLabelParameter",
+          "Fqn": "Tempo.Blazor.E2E.AnalyticsKitServerE2ETests.Chart_IsNamedByItsHeading_ThroughTheAriaLabelParameter",
+          "Message": "Assert.AreEqual selhalo. Očekáváno:<0>. Aktuálně:<1>. axe [analytics-kit-chart]: serious: color-contrast - Elements must meet minimum color contrast ratio thresholds (section[data-testid=\"analytics-kit-chart\"] > .mb-4; button[data-testid=\"chart-legend-0\"] > .tm-chart__legend-label; button[data-testid=\"chart-legend-1\"] > .tm-chart__legend-label)"
+        },
+        {
+          "Test": "QrCode_Is_A_Named_Graphic_Without_Inline_Style",
+          "ClassName": "Tempo.Blazor.E2E.TmQRCodeE2ETests",
+          "MethodName": "QrCode_Is_A_Named_Graphic_Without_Inline_Style",
+          "Fqn": "Tempo.Blazor.E2E.TmQRCodeE2ETests.QrCode_Is_A_Named_Graphic_Without_Inline_Style",
+          "Message": "Assert.AreEqual selhalo. Očekáváno:<QR code>. Aktuálně:<QR kód>. without AriaLabel the localized default names the graphic"
+        },
+        {
+          "Test": "MediaLibrary_SelectItem_SetsImageOnBlock",
+          "ClassName": "Tempo.Blazor.E2E.NotionMediaBlocksE2ETests",
+          "MethodName": "MediaLibrary_SelectItem_SetsImageOnBlock",
+          "Fqn": "Tempo.Blazor.E2E.NotionMediaBlocksE2ETests.MediaLibrary_SelectItem_SetsImageOnBlock",
+          "Message": "V testovací metodě Tempo.Blazor.E2E.NotionMediaBlocksE2ETests.MediaLibrary_SelectItem_SetsImageOnBlock došlo k výjimce: \r\nSystem.TimeoutException: Timeout 5000ms exceeded.\nCall log:\n  -   - waiting for Locator(\"[data-block-id='b5da40b4-cf84-461c-b134-5af7250577ab']\").First.Locator(\".tm-notion-image-block__img\") to be visible\n  -     15 × locator resolved to hidden <img alt=\"\" loading=\"lazy\" b-cpb9vjfg3r=\"\" draggable=\"false\" class=\"tm-notion-image-block__img\" src=\"https://picsum.photos/seed/1/1200/800\"/>"
+        },
+        {
+          "Test": "ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+          "ClassName": "Tempo.Blazor.E2E.TraceWaterfallPageInteractiveAutoE2ETests",
+          "MethodName": "ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+          "Fqn": "Tempo.Blazor.E2E.TraceWaterfallPageInteractiveAutoE2ETests.ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+          "Message": "Assert.AreEqual selhalo. Očekáváno:<0>. Aktuálně:<1>. axe: serious: color-contrast - Elements must meet minimum color contrast ratio thresholds (span[data-testid=\"trace-page-live-state\"]; .tm-trace-waterfall__window; .tm-trace-waterfall__tick:nth-child(1) > .tm-trace-waterfall__tick-label; .tm-trace-waterfall__tick:nth-child(2) > .tm-trace-waterfall__tick-label)"
+        },
+        {
+          "Test": "ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+          "ClassName": "Tempo.Blazor.E2E.AnalyticsKitServerE2ETests",
+          "MethodName": "ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+          "Fqn": "Tempo.Blazor.E2E.AnalyticsKitServerE2ETests.ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+          "Message": "Assert.AreEqual selhalo. Očekáváno:<0>. Aktuálně:<1>. axe [analytics-kit-kpis]: serious: color-contrast - Elements must meet minimum color contrast ratio thresholds (section[data-testid=\"analytics-kit-kpis\"] > .space-x-2.mb-4 > .py-0\\.5.bg-primary-100.dark\\:bg-primary-900\\/30; section[data-testid=\"analytics-kit-kpis\"] > .mb-4:nth-child(2); .tm-stat-card__trend--positive > .tm-stat-card__delta)"
+        },
+        {
+          "Test": "QrCode_Download_Link_Carries_A_Standalone_Svg",
+          "ClassName": "Tempo.Blazor.E2E.TmQRCodeE2ETests",
+          "MethodName": "QrCode_Download_Link_Carries_A_Standalone_Svg",
+          "Fqn": "Tempo.Blazor.E2E.TmQRCodeE2ETests.QrCode_Download_Link_Carries_A_Standalone_Svg",
+          "Message": "StringAssert.Contains selhalo. Řetězec 'Stáhnout SVG' neobsahuje řetězec 'Download'. the action carries a localized label."
+        },
+        {
+          "Test": "ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+          "ClassName": "Tempo.Blazor.E2E.SortableListE2ETests",
+          "MethodName": "ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+          "Fqn": "Tempo.Blazor.E2E.SortableListE2ETests.ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+          "Message": "Assert.AreEqual selhalo. Očekáváno:<0>. Aktuálně:<1>. axe: serious: color-contrast - Elements must meet minimum color contrast ratio thresholds (.py-0\\.5; section[data-testid=\"sortable-basic-section\"] > .mb-4:nth-child(2); #tm-sortable-list-content-10d11352-0 > .flex-col[data-testid=\"sortable-step\"] > .text-slate-500.text-xs.dark\\:text-slate-400; #tm-sortable-list-content-10d11352-1 > .flex-col[data-testid=\"sortable-step\"] > .text-slate-500.text-xs.dark\\:text-slate-400)"
+        },
+        {
+          "Test": "Layout_MovingATaskBetweenLanesChangesTheParent",
+          "ClassName": "Tempo.Blazor.E2E.ModelingLayoutPhase4E2ETests",
+          "MethodName": "Layout_MovingATaskBetweenLanesChangesTheParent",
+          "Fqn": "Tempo.Blazor.E2E.ModelingLayoutPhase4E2ETests.Layout_MovingATaskBetweenLanesChangesTheParent",
+          "Message": "Assert.IsNotNull selhalo. the Sales task must expose a pressable body point"
+        }
+      ]
+    },
+    {
+      "Shard": 7,
+      "Classes": 107,
+      "ExitCode": 1,
+      "Seconds": 3215,
+      "ReapedHosts": 0,
+      "Empty": false,
+      "Aborted": false,
+      "Outcome": "Failed",
+      "NotExecuted": 0,
+      "NoTrx": false,
+      "Total": 463,
+      "Passed": 446,
+      "Failed": 7,
+      "Skipped": 10,
+      "Failures": [
+        {
+          "Test": "ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+          "ClassName": "Tempo.Blazor.E2E.UsageMeterInteractiveAutoE2ETests",
+          "MethodName": "ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+          "Fqn": "Tempo.Blazor.E2E.UsageMeterInteractiveAutoE2ETests.ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+          "Message": "Assert.AreEqual selhalo. Očekáváno:<0>. Aktuálně:<1>. axe: serious: color-contrast - Elements must meet minimum color contrast ratio thresholds (#tm-usage-meter-title-49a2afdd; .gap-3.flex-col.flex > .tm-usage-meter.tm-usage-meter--warning[data-testid=\"usage-meter\"] > .tm-usage-meter__readout > .tm-usage-meter__percent; #tm-usage-meter-reset-49a2afdd; .tm-usage-meter__table > thead > tr > th[scope=\"col\"]:nth-child(1))"
+        },
+        {
+          "Test": "TheSlidingStripIsMeasuredAndClaimed",
+          "ClassName": "Tempo.Blazor.E2E.SegmentedControlInteractiveAutoE2ETests",
+          "MethodName": "TheSlidingStripIsMeasuredAndClaimed",
+          "Fqn": "Tempo.Blazor.E2E.SegmentedControlInteractiveAutoE2ETests.TheSlidingStripIsMeasuredAndClaimed",
+          "Message": "Assert.IsTrue selhalo. the strip was measured to the selected segment (width 2)"
+        },
+        {
+          "Test": "SheetRoots_ResetUaPopoverDefaults",
+          "ClassName": "Tempo.Blazor.E2E.OverlayRound2FixE2ETests",
+          "MethodName": "SheetRoots_ResetUaPopoverDefaults",
+          "Fqn": "Tempo.Blazor.E2E.OverlayRound2FixE2ETests.SheetRoots_ResetUaPopoverDefaults",
+          "Message": "Assert.AreEqual selhalo. Očekáváno:<none>. Aktuálně:<844px>. the sheet root max-height must be none"
+        },
+        {
+          "Test": "Tablet_Overlay_Dark_RidesTheTokens",
+          "ClassName": "Tempo.Blazor.E2E.EditorShellTabletOverlayE2ETests",
+          "MethodName": "Tablet_Overlay_Dark_RidesTheTokens",
+          "Fqn": "Tempo.Blazor.E2E.EditorShellTabletOverlayE2ETests.Tablet_Overlay_Dark_RidesTheTokens",
+          "Message": "Assert.AreNotEqual selhalo. Nebyla očekávána žádná hodnota kromě:<rgb(255, 255, 255)>. Aktuálně:<rgb(255, 255, 255)>. the dark surface is not the light white"
+        },
+        {
+          "Test": "DiagramScreenshots_CaptureLightAndDarkThemeBaselines",
+          "ClassName": "Tempo.Blazor.E2E.DiagramWorkflowPhase11E2ETests",
+          "MethodName": "DiagramScreenshots_CaptureLightAndDarkThemeBaselines",
+          "Fqn": "Tempo.Blazor.E2E.DiagramWorkflowPhase11E2ETests.DiagramScreenshots_CaptureLightAndDarkThemeBaselines",
+          "Message": "Assert.IsTrue selhalo. Diagram node text should stay dark on the light diagram page, got rgb(161, 161, 170)."
+        },
+        {
+          "Test": "gantt (control) 390 touch",
+          "ClassName": "Tempo.Blazor.E2E.Feedback.OverlayInitialFocusE2ETests",
+          "MethodName": "InitialFocus_LandsInside_OnRepeatedOpens",
+          "Fqn": "Tempo.Blazor.E2E.Feedback.OverlayInitialFocusE2ETests.InitialFocus_LandsInside_OnRepeatedOpens",
+          "Message": "V testovací metodě Tempo.Blazor.E2E.Feedback.OverlayInitialFocusE2ETests.InitialFocus_LandsInside_OnRepeatedOpens došlo k výjimce: \r\nSystem.TimeoutException: Timeout 30000ms exceeded.\nCall log:\n  -   - waiting for Locator(\"button[data-testid='gantt-import-btn']\").First"
+        },
+        {
+          "Test": "ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+          "ClassName": "Tempo.Blazor.E2E.SegmentedControlInteractiveAutoE2ETests",
+          "MethodName": "ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+          "Fqn": "Tempo.Blazor.E2E.SegmentedControlInteractiveAutoE2ETests.ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+          "Message": "Assert.AreEqual selhalo. Očekáváno:<0>. Aktuálně:<1>. axe: serious: color-contrast - Elements must meet minimum color contrast ratio thresholds (#tm-segmented-5e2efb5-label; #tm-segmented-5e2efb5-opt-0 > .tm-segmented__option-label; #tm-segmented-5e2efb5-opt-2 > .tm-segmented__option-label; #tm-segmented-5e2efb5-opt-2 > .tm-segmented__count)"
+        }
+      ]
+    },
+    {
+      "Shard": 8,
+      "Classes": 106,
+      "ExitCode": 1,
+      "Seconds": 2847,
+      "ReapedHosts": 0,
+      "Empty": false,
+      "Aborted": false,
+      "Outcome": "Failed",
+      "NotExecuted": 0,
+      "NoTrx": false,
+      "Total": 442,
+      "Passed": 434,
+      "Failed": 3,
+      "Skipped": 5,
+      "Failures": [
+        {
+          "Test": "Chat_RenderWindow_Server_TailOnly_DeepLink_Trim",
+          "ClassName": "Tempo.Blazor.E2E.Chat.ChatRenderWindowServerE2ETests",
+          "MethodName": "Chat_RenderWindow_Server_TailOnly_DeepLink_Trim",
+          "Fqn": "Tempo.Blazor.E2E.Chat.ChatRenderWindowServerE2ETests.Chat_RenderWindow_Server_TailOnly_DeepLink_Trim",
+          "Message": "V testovací metodě Tempo.Blazor.E2E.Chat.ChatRenderWindowServerE2ETests.Chat_RenderWindow_Server_TailOnly_DeepLink_Trim došlo k výjimce: \r\nSystem.TimeoutException: Timeout 60000ms exceeded."
+        },
+        {
+          "Test": "NotificationBell_At390_Touch_OpensAsTitledSheet_InnerTitleDrops_EscapeReturnsFocus",
+          "ClassName": "Tempo.Blazor.E2E.MobilePresentationOptInE2ETests",
+          "MethodName": "NotificationBell_At390_Touch_OpensAsTitledSheet_InnerTitleDrops_EscapeReturnsFocus",
+          "Fqn": "Tempo.Blazor.E2E.MobilePresentationOptInE2ETests.NotificationBell_At390_Touch_OpensAsTitledSheet_InnerTitleDrops_EscapeReturnsFocus",
+          "Message": "Assert.IsTrue selhalo. the duplicated in-panel title must be hidden inside the sheet"
+        },
+        {
+          "Test": "ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+          "ClassName": "Tempo.Blazor.E2E.SegmentedControlServerE2ETests",
+          "MethodName": "ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+          "Fqn": "Tempo.Blazor.E2E.SegmentedControlServerE2ETests.ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+          "Message": "Assert.AreEqual selhalo. Očekáváno:<0>. Aktuálně:<1>. axe: serious: color-contrast - Elements must meet minimum color contrast ratio thresholds (#tm-segmented-7f2c71d-label; #tm-segmented-7f2c71d-opt-0 > .tm-segmented__option-label; #tm-segmented-7f2c71d-opt-2 > .tm-segmented__option-label; #tm-segmented-7f2c71d-opt-2 > .tm-segmented__count)"
+        }
+      ]
+    }
+  ],
+  "AbortedShards": [],
+  "Failures": [
+    {
+      "Test": "Mobile_Card_Action_Bar_Opens_View_And_More",
+      "Message": "V testovací metodě Tempo.Blazor.E2E.Scheduler.SchedulerResponsiveE2ETests.Mobile_Card_Action_Bar_Opens_View_And_More došlo k výjimce: \r\nMicrosoft.Playwright.PlaywrightException: Locator expected to be visible \nCall log:\n  -   - LocatorAssertions.ToBeVisibleAsync with timeout 5000ms\n  -   - waiting for Locator(\".tm-dropdown__menu[data-testid='scheduler-view-menu'], [data-testid='scheduler-view-menu']\").Last\n  -     9 × locator resolved to <div data-testid=\"scheduler-view-menu\" class=\"tm-scheduler-toolbar-view-menu\">…</div>\n  -       - unexpected value \"hidden\"",
+      "Verdict": null
+    },
+    {
+      "Test": "CanvasBackdrop_FollowsTheTheme",
+      "Message": "V testovací metodě Tempo.Blazor.E2E.ModelingAccessibilityM25E2ETests.CanvasBackdrop_FollowsTheTheme došlo k výjimce: \r\nSystem.TimeoutException: Timeout 10000ms exceeded.\nCall log:\n  -   - waiting for Locator(\"[data-testid='modeling-open-diagram-editor'] [data-testid='diagram-canvas']\") to be visible\n  -     24 × locator resolved to hidden <div _bl_62=\"\" tabindex=\"0\" id=\"tmd-acpv5nqs3\" data-testid=\"diagram-canvas\" class=\"tm-diagram-canvas tm-diagram-editor__canvas \">…</div>",
+      "Verdict": null
+    },
+    {
+      "Test": "Phase7_Tablet_TapSelectsCell_AndDoubleTapStartsEditing",
+      "Message": "Assert.Fail selhalo. the long press must make the cell under the finger active Last selection: {\"Active\":\"A1\",\"StartRow\":0,\"StartCol\":0,\"EndRow\":0,\"EndCol\":0}",
+      "Verdict": null
+    },
+    {
+      "Test": "Editing_InputsLabeledAndValidationErrorAnnounced",
+      "Message": "V testovací metodě Tempo.Blazor.E2E.ModelingAccessibilityM25E2ETests.Editing_InputsLabeledAndValidationErrorAnnounced došlo k výjimce: \r\nSystem.TimeoutException: Timeout 10000ms exceeded.\nCall log:\n  -   - waiting for Locator(\"[data-testid='modeling-inspector'] .tm-input-error-message\").First to be visible",
+      "Verdict": null
+    },
+    {
+      "Test": "CanvasRenderer_JsFormulaReferenceHighlightsRemainVisibleAfterScroll",
+      "Message": "Assert.AreEqual selhalo. Očekáváno:<1>. Aktuálně:<0>. Expected one highlighted formula reference cell.",
+      "Verdict": null
+    },
+    {
+      "Test": "Perf_TwoHundredElements_FirstRender_AndRerender",
+      "Message": "Časový limit 'Perf_TwoHundredElements_FirstRender_AndRerender' testu vypršel po 900000ms.",
+      "Verdict": null
+    },
+    {
+      "Test": "DialogPalette_PinsBpmnStencilsAndInsertsFromThem",
+      "Message": "V testovací metodě Tempo.Blazor.E2E.ModelingBpmnProfileM17E2ETests.DialogPalette_PinsBpmnStencilsAndInsertsFromThem došlo k výjimce: \r\nMicrosoft.Playwright.PlaywrightException: Locator expected to be visible \nCall log:\n  -   - LocatorAssertions.ToBeVisibleAsync with timeout 15000ms\n  -   - waiting for Locator(\"[data-testid='modeling-open-diagram-editor']\").Locator(\".tm-diagram-toolbox__library[data-library-id='notation-palette']\")",
+      "Verdict": null
+    },
+    {
+      "Test": "Editing_ManualSave_AggregatesAndClears",
+      "Message": "StringAssert.Contains selhalo. Řetězec '\n                                            Validate order\n                                                /Order fulfillment/Validate order' neobsahuje řetězec 'Renamed order step'. .",
+      "Verdict": null
+    },
+    {
+      "Test": "PdfViewer_Tablet_TouchTargets44",
+      "Message": "Assert.AreEqual selhalo. Očekáváno:<0>. Aktuálně:<1>. the tablet default collapses the thumbnails panel",
+      "Verdict": null
+    },
+    {
+      "Test": "Tablet_TouchHold_MovesEvent_AndReportsTheNewTime",
+      "Message": "V testovací metodě Tempo.Blazor.E2E.Scheduler.SchedulerTouchE2ETests.Tablet_TouchHold_MovesEvent_AndReportsTheNewTime došlo k výjimce: \r\nMicrosoft.Playwright.PlaywrightException: Locator expected to contain text 'Week'\nBut was: 'Týden' \nCall log:\n  -   - LocatorAssertions.ToContainTextAsync with timeout 10000ms\n  -   - waiting for Locator(\"[data-testid='scheduler-interactive']\").Locator(\"[data-testid='scheduler-view-menu']\").First.Locator(\"button[aria-haspopup='true']\").First\n  -     13 × locator resolved to <button _bl_727=\"\" tabindex=\"0\" type=\"button\" aria-haspopup=\"true\" aria-expanded=\"false\" data-tm-toolbar-control=\"\" class=\"tm-dropdown-trigger \" aria-label=\"Přepnout zobrazení: Týden\">…</button>\n  -        - unexpected value \"Týden\"",
+      "Verdict": null
+    },
+    {
+      "Test": "PdfAnnotator_Continuous_HighlightOnPage2",
+      "Message": "Assert.AreNotEqual selhalo. Nebyla očekávána žádná hodnota kromě:<none>. Aktuálně:<none>. the page-2 layer must have a visible text span",
+      "Verdict": null
+    },
+    {
+      "Test": "Tablet_1024_OpenInEditorDialog_MinimapStartsCollapsedAndReopens",
+      "Message": "V testovací metodě Tempo.Blazor.E2E.ModelingTabletTouchE2ETests.Tablet_1024_OpenInEditorDialog_MinimapStartsCollapsedAndReopens došlo k výjimce: \r\nSystem.TimeoutException: Timeout 10000ms exceeded.\nCall log:\n  -   - waiting for Locator(\"[data-testid='modeling-open-diagram-editor']\").Locator(\"[data-testid='diagram-editor-minimap-reopen']\").First to be visible\n  -     24 × locator resolved to hidden <button _bl_101=\"\" type=\"button\" title=\"Show minimap\" aria-expanded=\"false\" aria-label=\"Show minimap\" data-testid=\"diagram-editor-minimap-reopen\" class=\"tm-diagram-editor__minimap-overlay-reopen\" aria-controls=\"tm-diagram-editor-minimap-overlay-3f533ac60d724d1fb349b842f8fdaee8\">…</button>",
+      "Verdict": null
+    },
+    {
+      "Test": "Tablet_TouchHold_MovesEvent_InTimeline",
+      "Message": "V testovací metodě Tempo.Blazor.E2E.Scheduler.SchedulerTouchE2ETests.Tablet_TouchHold_MovesEvent_InTimeline došlo k výjimce: \r\nMicrosoft.Playwright.PlaywrightException: Locator expected to contain text 'Timeline'\nBut was: 'Časová osa' \nCall log:\n  -   - LocatorAssertions.ToContainTextAsync with timeout 10000ms\n  -   - waiting for Locator(\"[data-testid='scheduler-interactive']\").Locator(\"[data-testid='scheduler-view-menu']\").First.Locator(\"button[aria-haspopup='true']\").First\n  -     13 × locator resolved to <button _bl_727=\"\" tabindex=\"0\" type=\"button\" aria-haspopup=\"true\" aria-expanded=\"false\" data-tm-toolbar-control=\"\" class=\"tm-dropdown-trigger \" aria-label=\"Přepnout zobrazení: Časová osa\">…</button>\n  -        - unexpected value \"Časová osa\"",
+      "Verdict": null
+    },
+    {
+      "Test": "Tablet_TouchHold_OnTheHandle_Resizes_NotMoves",
+      "Message": "V testovací metodě Tempo.Blazor.E2E.Scheduler.SchedulerTouchE2ETests.Tablet_TouchHold_OnTheHandle_Resizes_NotMoves došlo k výjimce: \r\nMicrosoft.Playwright.PlaywrightException: Locator expected to contain text 'Week'\nBut was: 'Týden' \nCall log:\n  -   - LocatorAssertions.ToContainTextAsync with timeout 10000ms\n  -   - waiting for Locator(\"[data-testid='scheduler-interactive']\").Locator(\"[data-testid='scheduler-view-menu']\").First.Locator(\"button[aria-haspopup='true']\").First\n  -     13 × locator resolved to <button _bl_727=\"\" tabindex=\"0\" type=\"button\" aria-haspopup=\"true\" aria-expanded=\"false\" data-tm-toolbar-control=\"\" class=\"tm-dropdown-trigger \" aria-label=\"Přepnout zobrazení: Týden\">…</button>\n  -        - unexpected value \"Týden\"",
+      "Verdict": null
+    },
+    {
+      "Test": "Drag_Shows_A_Live_Time_Label",
+      "Message": "V testovací metodě Tempo.Blazor.E2E.Scheduler.SchedulerTouchE2ETests.Drag_Shows_A_Live_Time_Label došlo k výjimce: \r\nMicrosoft.Playwright.PlaywrightException: Locator expected to contain text 'Week'\nBut was: 'Týden' \nCall log:\n  -   - LocatorAssertions.ToContainTextAsync with timeout 10000ms\n  -   - waiting for Locator(\"[data-testid='scheduler-interactive']\").Locator(\"[data-testid='scheduler-view-menu']\").First.Locator(\"button[aria-haspopup='true']\").First\n  -     13 × locator resolved to <button _bl_727=\"\" tabindex=\"0\" type=\"button\" aria-haspopup=\"true\" aria-expanded=\"false\" data-tm-toolbar-control=\"\" class=\"tm-dropdown-trigger \" aria-label=\"Přepnout zobrazení: Týden\">…</button>\n  -        - unexpected value \"Týden\"",
+      "Verdict": null
+    },
+    {
+      "Test": "Mobile_LongPress_MovesEvent_InDayView",
+      "Message": "V testovací metodě Tempo.Blazor.E2E.Scheduler.SchedulerTouchE2ETests.Mobile_LongPress_MovesEvent_InDayView došlo k výjimce: \r\nMicrosoft.Playwright.PlaywrightException: Locator expected to contain text 'Day'\nBut was: 'Den' \nCall log:\n  -   - LocatorAssertions.ToContainTextAsync with timeout 10000ms\n  -   - waiting for Locator(\"[data-testid='scheduler-interactive']\").Locator(\"[data-testid='scheduler-view-menu']\").First.Locator(\"button[aria-haspopup='true']\").First\n  -     13 × locator resolved to <button _bl_727=\"\" tabindex=\"0\" type=\"button\" aria-haspopup=\"true\" aria-expanded=\"false\" data-tm-toolbar-control=\"\" class=\"tm-dropdown-trigger \" aria-label=\"Přepnout zobrazení: Den\">…</button>\n  -        - unexpected value \"Den\"",
+      "Verdict": null
+    },
+    {
+      "Test": "Mobile_TouchHold_MovesEvent_InTimeline",
+      "Message": "V testovací metodě Tempo.Blazor.E2E.Scheduler.SchedulerTouchE2ETests.Mobile_TouchHold_MovesEvent_InTimeline došlo k výjimce: \r\nMicrosoft.Playwright.PlaywrightException: Locator expected to contain text 'Timeline'\nBut was: 'Časová osa' \nCall log:\n  -   - LocatorAssertions.ToContainTextAsync with timeout 10000ms\n  -   - waiting for Locator(\"[data-testid='scheduler-interactive']\").Locator(\"[data-testid='scheduler-view-menu']\").First.Locator(\"button[aria-haspopup='true']\").First\n  -     13 × locator resolved to <button _bl_727=\"\" tabindex=\"0\" type=\"button\" aria-haspopup=\"true\" aria-expanded=\"false\" data-tm-toolbar-control=\"\" class=\"tm-dropdown-trigger \" aria-label=\"Přepnout zobrazení: Časová osa\">…</button>\n  -        - unexpected value \"Časová osa\"",
+      "Verdict": null
+    },
+    {
+      "Test": "Scheduler_ViewsWork",
+      "Message": "V testovací metodě Tempo.Blazor.E2E.InteractiveAutoTests.Scheduler_ViewsWork došlo k výjimce: \r\nSystem.TimeoutException: Timeout 30000ms exceeded.\nCall log:\n  -   - waiting for Locator(\"section.demo-section\").Filter(new() { Has = Locator(\"h2\").Filter(new() { HasText = \"Interactive Demo\" }) }).Locator(\".tm-scheduler\").Locator(\"button[data-view='Week']\")\n  -     - locator resolved to <button role=\"tab\" type=\"button\" tabindex=\"-1\" class=\"tm-tab\" data-view=\"Week\" aria-selected=\"false\" _bl_3001bd12-9a1d-4d13-8d96-c98122cddfe1=\"\" id=\"tab-tm-sched-5b3553e0e00c4ce7a3421e5d9d3cf905-Week\" aria-controls=\"tabpanel-tm-sched-5b3553e0e00c4ce7a3421e5d9d3cf905-Week\">…</button>\n  -   - attempting click action\n  -     2 × waiting for element to be visible, enabled and stable\n  -       - element is not visible\n  -     - retrying click action\n  -     - waiting 20ms\n  -     2 × waiting for element to be visible, enabled and stable\n  -       - element is not visible\n  -     - retrying click action\n  -       - waiting 100ms\n  -     57 × waiting for element to be visible, enabled and stable\n  -        - element is not visible\n  -      - retrying click action\n  -        - waiting 500ms",
+      "Verdict": null
+    },
+    {
+      "Test": "Dark_Week_Move_Shows_The_Live_Label",
+      "Message": "V testovací metodě Tempo.Blazor.E2E.Scheduler.SchedulerTouchE2ETests.Dark_Week_Move_Shows_The_Live_Label došlo k výjimce: \r\nMicrosoft.Playwright.PlaywrightException: Locator expected to contain text 'Week'\nBut was: 'Týden' \nCall log:\n  -   - LocatorAssertions.ToContainTextAsync with timeout 10000ms\n  -   - waiting for Locator(\"[data-testid='scheduler-interactive']\").Locator(\"[data-testid='scheduler-view-menu']\").First.Locator(\"button[aria-haspopup='true']\").First\n  -     13 × locator resolved to <button _bl_727=\"\" tabindex=\"0\" type=\"button\" aria-haspopup=\"true\" aria-expanded=\"false\" data-tm-toolbar-control=\"\" class=\"tm-dropdown-trigger \" aria-label=\"Přepnout zobrazení: Týden\">…</button>\n  -        - unexpected value \"Týden\"",
+      "Verdict": null
+    },
+    {
+      "Test": "Scheduler_Touch_SwipeFromEventCentre_Scrolls_AndDoesNotResize (390)",
+      "Message": "V testovací metodě Tempo.Blazor.E2E.PointerDragE2ETests.Scheduler_Touch_SwipeFromEventCentre_Scrolls_AndDoesNotResize došlo k výjimce: \r\nMicrosoft.Playwright.PlaywrightException: Locator expected to contain text 'Day'\nBut was: 'Den' \nCall log:\n  -   - LocatorAssertions.ToContainTextAsync with timeout 10000ms\n  -   - waiting for Locator(\"[data-testid='scheduler-interactive']\").Locator(\"[data-testid='scheduler-view-menu']\").First.Locator(\"button[aria-haspopup='true']\").First\n  -     13 × locator resolved to <button _bl_727=\"\" tabindex=\"0\" type=\"button\" aria-haspopup=\"true\" aria-expanded=\"false\" data-tm-toolbar-control=\"\" class=\"tm-dropdown-trigger \" aria-label=\"Přepnout zobrazení: Den\">…</button>\n  -        - unexpected value \"Den\"",
+      "Verdict": null
+    },
+    {
+      "Test": "Scheduler_Touch_HoldThenDrag_ResizesAndCommits (768)",
+      "Message": "V testovací metodě Tempo.Blazor.E2E.PointerDragE2ETests.Scheduler_Touch_HoldThenDrag_ResizesAndCommits došlo k výjimce: \r\nMicrosoft.Playwright.PlaywrightException: Locator expected to contain text 'Day'\nBut was: 'Den' \nCall log:\n  -   - LocatorAssertions.ToContainTextAsync with timeout 10000ms\n  -   - waiting for Locator(\"[data-testid='scheduler-interactive']\").Locator(\"[data-testid='scheduler-view-menu']\").First.Locator(\"button[aria-haspopup='true']\").First\n  -     13 × locator resolved to <button _bl_727=\"\" tabindex=\"0\" type=\"button\" aria-haspopup=\"true\" aria-expanded=\"false\" data-tm-toolbar-control=\"\" class=\"tm-dropdown-trigger \" aria-label=\"Přepnout zobrazení: Den\">…</button>\n  -        - unexpected value \"Den\"",
+      "Verdict": null
+    },
+    {
+      "Test": "Scheduler_Touch_HoldThenDrag_ResizesAndCommits (390)",
+      "Message": "V testovací metodě Tempo.Blazor.E2E.PointerDragE2ETests.Scheduler_Touch_HoldThenDrag_ResizesAndCommits došlo k výjimce: \r\nMicrosoft.Playwright.PlaywrightException: Locator expected to contain text 'Day'\nBut was: 'Den' \nCall log:\n  -   - LocatorAssertions.ToContainTextAsync with timeout 10000ms\n  -   - waiting for Locator(\"[data-testid='scheduler-interactive']\").Locator(\"[data-testid='scheduler-view-menu']\").First.Locator(\"button[aria-haspopup='true']\").First\n  -     13 × locator resolved to <button _bl_727=\"\" tabindex=\"0\" type=\"button\" aria-haspopup=\"true\" aria-expanded=\"false\" data-tm-toolbar-control=\"\" class=\"tm-dropdown-trigger \" aria-label=\"Přepnout zobrazení: Den\">…</button>\n  -        - unexpected value \"Den\"",
+      "Verdict": null
+    },
+    {
+      "Test": "Escape_with_open_view_menu_closes_the_menu_and_keeps_the_dialog",
+      "Message": "V testovací metodě Tempo.Blazor.E2E.ModelingOpenInEditorDialogE2ETests.Escape_with_open_view_menu_closes_the_menu_and_keeps_the_dialog došlo k výjimce: \r\nSystem.TimeoutException: Timeout 10000ms exceeded.\nCall log:\n  -   - waiting for Locator(\"[data-testid='modeling-open-diagram-editor']\").Locator(\"[data-testid='diagram-editor-more']\")\n  -     - locator resolved to <button _bl_41=\"\" type=\"button\" aria-expanded=\"false\" title=\"View settings\" aria-label=\"View settings\" data-testid=\"diagram-editor-more\" class=\"tm-diagram-editor__more-btn\" aria-controls=\"tm-diagram-editor-view-menu-2fa07492be3b4b40b8a761a90d7a89f1\">…</button>\n  -   - attempting click action\n  -     2 × waiting for element to be visible, enabled and stable\n  -       - element is not visible\n  -     - retrying click action\n  -     - waiting 20ms\n  -     2 × waiting for element to be visible, enabled and stable\n  -       - element is not visible\n  -     - retrying click action\n  -       - waiting 100ms\n  -     18 × waiting for element to be visible, enabled and stable\n  -        - element is not visible\n  -      - retrying click action\n  -        - waiting 500ms",
+      "Verdict": null
+    },
+    {
+      "Test": "Escape_while_editing_edge_label_cancels_edit_and_keeps_dialog",
+      "Message": "V testovací metodě Tempo.Blazor.E2E.ModelingOpenInEditorDialogE2ETests.Escape_while_editing_edge_label_cancels_edit_and_keeps_dialog došlo k výjimce: \r\nSystem.TimeoutException: Timeout 10000ms exceeded.\nCall log:\n  -   - waiting for Locator(\"[data-testid='modeling-open-diagram-editor']\").Locator(\".tm-diagram-editor__context-menu\").Locator(\"[data-action='edit-edge-label']\")",
+      "Verdict": null
+    },
+    {
+      "Test": "FacetSheet_ScrollsItsBodyUnderAPinnedFooter_AndASwipeBackDownDismissesIt",
+      "Message": "Assert.AreEqual selhalo. Očekáván rozdíl, který není větší jak <1,5> mezi očekávanou hodnotou <595,2498168945312> a aktuální hodnotou <542>. the confirmation footer is pinned: scrolling the body must not move it",
+      "Verdict": null
+    },
+    {
+      "Test": "Demo_Dark_And_Indigo_PaintTheShellSurfaces",
+      "Message": "Assert.IsTrue selhalo. dark panel surface must be dark, was rgb(255, 255, 255)",
+      "Verdict": null
+    },
+    {
+      "Test": "CircuitReconnect_RestoredPopoverRoots_StayPromoted_AndANewSurfacePaintsOnTop",
+      "Message": "V testovací metodě Tempo.Blazor.E2E.ServerOverlayTopLayerE2ETests.CircuitReconnect_RestoredPopoverRoots_StayPromoted_AndANewSurfacePaintsOnTop došlo k výjimce: \r\nSystem.TimeoutException: Timeout 60000ms exceeded.",
+      "Verdict": null
+    },
+    {
+      "Test": "ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+      "Message": "Assert.AreEqual selhalo. Očekáváno:<0>. Aktuálně:<1>. axe: serious: color-contrast - Elements must meet minimum color contrast ratio thresholds (.py-0\\.5; section[data-testid=\"sortable-basic-section\"] > .mb-4:nth-child(2); #tm-sortable-list-content-8da5bacf-0 > .flex-col[data-testid=\"sortable-step\"] > .text-slate-500.text-xs.dark\\:text-slate-400; #tm-sortable-list-content-8da5bacf-1 > .flex-col[data-testid=\"sortable-step\"] > .text-slate-500.text-xs.dark\\:text-slate-400)",
+      "Verdict": null
+    },
+    {
+      "Test": "Scheduler_Touch_ResizeAt390_StillResizes_AndThePageStillScrolls",
+      "Message": "V testovací metodě Tempo.Blazor.E2E.PointerDragE2ETests.Scheduler_Touch_ResizeAt390_StillResizes_AndThePageStillScrolls došlo k výjimce: \r\nMicrosoft.Playwright.PlaywrightException: Locator expected to contain text 'Day'\nBut was: 'Den' \nCall log:\n  -   - LocatorAssertions.ToContainTextAsync with timeout 10000ms\n  -   - waiting for Locator(\"[data-testid='scheduler-interactive']\").Locator(\"[data-testid='scheduler-view-menu']\").First.Locator(\"button[aria-haspopup='true']\").First\n  -     13 × locator resolved to <button _bl_727=\"\" tabindex=\"0\" type=\"button\" aria-haspopup=\"true\" aria-expanded=\"false\" data-tm-toolbar-control=\"\" class=\"tm-dropdown-trigger \" aria-label=\"Přepnout zobrazení: Den\">…</button>\n  -        - unexpected value \"Den\"",
+      "Verdict": null
+    },
+    {
+      "Test": "Scheduler_Touch_PointerCancel_RestoresTheEvent_WithoutNotifying",
+      "Message": "V testovací metodě Tempo.Blazor.E2E.PointerDragE2ETests.Scheduler_Touch_PointerCancel_RestoresTheEvent_WithoutNotifying došlo k výjimce: \r\nMicrosoft.Playwright.PlaywrightException: Locator expected to contain text 'Day'\nBut was: 'Den' \nCall log:\n  -   - LocatorAssertions.ToContainTextAsync with timeout 10000ms\n  -   - waiting for Locator(\"[data-testid='scheduler-interactive']\").Locator(\"[data-testid='scheduler-view-menu']\").First.Locator(\"button[aria-haspopup='true']\").First\n  -     13 × locator resolved to <button _bl_727=\"\" tabindex=\"0\" type=\"button\" aria-haspopup=\"true\" aria-expanded=\"false\" data-tm-toolbar-control=\"\" class=\"tm-dropdown-trigger \" aria-label=\"Přepnout zobrazení: Den\">…</button>\n  -        - unexpected value \"Den\"",
+      "Verdict": null
+    },
+    {
+      "Test": "ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+      "Message": "Assert.AreEqual selhalo. Očekáváno:<0>. Aktuálně:<1>. axe: serious: color-contrast - Elements must meet minimum color contrast ratio thresholds (.py-0\\.5; span[data-testid=\"trace-page-summary\"]; span[data-testid=\"trace-page-live-state\"]; .mb-4:nth-child(2))",
+      "Verdict": null
+    },
+    {
+      "Test": "Escape_with_open_search_closes_the_search_first_and_the_dialog_second",
+      "Message": "V testovací metodě Tempo.Blazor.E2E.ModelingOpenInEditorDialogE2ETests.Escape_with_open_search_closes_the_search_first_and_the_dialog_second došlo k výjimce: \r\nSystem.TimeoutException: Timeout 10000ms exceeded.\nCall log:\n  -   - waiting for Locator(\"[data-testid='modeling-open-diagram-editor']\").Locator(\"[data-tm-group='search'] button\")\n  -     - locator resolved to <button type=\"button\" title=\"Search\" aria-label=\"Search\" aria-pressed=\"false\" class=\"tm-diagram-editor__panel-toggle \">…</button>\n  -   - attempting click action\n  -     2 × waiting for element to be visible, enabled and stable\n  -       - element is not visible\n  -     - retrying click action\n  -     - waiting 20ms\n  -     2 × waiting for element to be visible, enabled and stable\n  -       - element is not visible\n  -     - retrying click action\n  -       - waiting 100ms\n  -     18 × waiting for element to be visible, enabled and stable\n  -        - element is not visible\n  -      - retrying click action\n  -        - waiting 500ms",
+      "Verdict": null
+    },
+    {
+      "Test": "Dialog_toolbox_pins_notation_palette_and_inserts_from_it",
+      "Message": "V testovací metodě Tempo.Blazor.E2E.ModelingOpenInEditorDialogE2ETests.Dialog_toolbox_pins_notation_palette_and_inserts_from_it došlo k výjimce: \r\nMicrosoft.Playwright.PlaywrightException: Locator expected to be visible \nCall log:\n  -   - LocatorAssertions.ToBeVisibleAsync with timeout 15000ms\n  -   - waiting for Locator(\"[data-testid='modeling-open-diagram-editor']\").Locator(\".tm-diagram-toolbox__library[data-library-id='notation-palette']\")",
+      "Verdict": null
+    },
+    {
+      "Test": "Escape_with_context_menu_and_search_open_closes_menu_then_search_then_dialog",
+      "Message": "V testovací metodě Tempo.Blazor.E2E.ModelingOpenInEditorDialogE2ETests.Escape_with_context_menu_and_search_open_closes_menu_then_search_then_dialog došlo k výjimce: \r\nSystem.TimeoutException: Timeout 10000ms exceeded.\nCall log:\n  -   - waiting for Locator(\"[data-testid='modeling-open-diagram-editor']\").Locator(\"[data-tm-group='search'] button\")\n  -     - locator resolved to <button type=\"button\" title=\"Search\" aria-label=\"Search\" aria-pressed=\"false\" class=\"tm-diagram-editor__panel-toggle \">…</button>\n  -   - attempting click action\n  -     2 × waiting for element to be visible, enabled and stable\n  -       - element is not visible\n  -     - retrying click action\n  -     - waiting 20ms\n  -     2 × waiting for element to be visible, enabled and stable\n  -       - element is not visible\n  -     - retrying click action\n  -       - waiting 100ms\n  -     18 × waiting for element to be visible, enabled and stable\n  -        - element is not visible\n  -      - retrying click action\n  -        - waiting 500ms",
+      "Verdict": null
+    },
+    {
+      "Test": "Scheduler_Touch_ResizeBottomHandle_Works_OnATablet",
+      "Message": "V testovací metodě Tempo.Blazor.E2E.PointerDragE2ETests.Scheduler_Touch_ResizeBottomHandle_Works_OnATablet došlo k výjimce: \r\nMicrosoft.Playwright.PlaywrightException: Locator expected to contain text 'Day'\nBut was: 'Den' \nCall log:\n  -   - LocatorAssertions.ToContainTextAsync with timeout 10000ms\n  -   - waiting for Locator(\"[data-testid='scheduler-interactive']\").Locator(\"[data-testid='scheduler-view-menu']\").First.Locator(\"button[aria-haspopup='true']\").First\n  -     13 × locator resolved to <button _bl_727=\"\" tabindex=\"0\" type=\"button\" aria-haspopup=\"true\" aria-expanded=\"false\" data-tm-toolbar-control=\"\" class=\"tm-dropdown-trigger \" aria-label=\"Přepnout zobrazení: Den\">…</button>\n  -        - unexpected value \"Den\"",
+      "Verdict": null
+    },
+    {
+      "Test": "Scheduler_Touch_SwipeFromEventCentre_Scrolls_AndDoesNotResize (768)",
+      "Message": "V testovací metodě Tempo.Blazor.E2E.PointerDragE2ETests.Scheduler_Touch_SwipeFromEventCentre_Scrolls_AndDoesNotResize došlo k výjimce: \r\nMicrosoft.Playwright.PlaywrightException: Locator expected to contain text 'Day'\nBut was: 'Den' \nCall log:\n  -   - LocatorAssertions.ToContainTextAsync with timeout 10000ms\n  -   - waiting for Locator(\"[data-testid='scheduler-interactive']\").Locator(\"[data-testid='scheduler-view-menu']\").First.Locator(\"button[aria-haspopup='true']\").First\n  -     13 × locator resolved to <button _bl_727=\"\" tabindex=\"0\" type=\"button\" aria-haspopup=\"true\" aria-expanded=\"false\" data-tm-toolbar-control=\"\" class=\"tm-dropdown-trigger \" aria-label=\"Přepnout zobrazení: Den\">…</button>\n  -        - unexpected value \"Den\"",
+      "Verdict": null
+    },
+    {
+      "Test": "Editor_1440_IsDesktopWithUsableCanvasAndDock",
+      "Message": "Assert.IsTrue selhalo. The dock must fit two full issue rows (list 133px, two rows need 146px).",
+      "Verdict": null
+    },
+    {
+      "Test": "ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+      "Message": "Assert.AreEqual selhalo. Očekáváno:<0>. Aktuálně:<1>. axe: serious: color-contrast - Elements must meet minimum color contrast ratio thresholds (#tm-sortable-list-content-99316d3d-0 > .flex-col[data-testid=\"sortable-step\"] > .text-slate-500.text-xs.dark\\:text-slate-400; #tm-sortable-list-content-99316d3d-1 > .flex-col[data-testid=\"sortable-step\"] > .text-slate-500.text-xs.dark\\:text-slate-400; #tm-sortable-list-content-99316d3d-2 > .flex-col[data-testid=\"sortable-step\"] > .text-slate-500.text-xs.dark\\:text-slate-400; #tm-sortable-list-content-99316d3d-3 > .flex-col[data-testid=\"sortable-step\"] > .text-slate-500.text-xs.dark\\:text-slate-400)",
+      "Verdict": null
+    },
+    {
+      "Test": "EveryBaselineGeneratorInheritsTheOptInGate",
+      "Message": "Assert.AreEqual selhalo. Očekáváno:<0>. Aktuálně:<1>. these classes rewrite baselines without inheriting BaselineGeneratorTestBase, so an ordinary `dotnet test` would overwrite them: NotionPhase1BaselineScreenshots",
+      "Verdict": null
+    },
+    {
+      "Test": "CodeBlock_PreviewToggleHiddenForOtherLanguages",
+      "Message": "Assert.IsTrue selhalo. The new block must be empty before the slash trigger, but it held 'The block below shows the Spreadsheet editor. Click Create Spreadsheet to open the full-screen editor. After saving, an embedded live spreadsheet is shown inline.'.",
+      "Verdict": null
+    },
+    {
+      "Test": "Editor_1440_MixedScenarioDockFitsTwoRows",
+      "Message": "Assert.IsTrue selhalo. The dock must fit two full mixed-scenario rows (list 133px, two rows need 146px).",
+      "Verdict": null
+    },
+    {
+      "Test": "Dark_MoreMenuAndButtons_UseThemeSurfaces",
+      "Message": "Assert.AreNotEqual selhalo. Nebyla očekávána žádná hodnota kromě:<rgb(255, 255, 255)>. Aktuálně:<rgb(255, 255, 255)>. the dark surface is not the light one",
+      "Verdict": null
+    },
+    {
+      "Test": "DialogPalette_PinsUmlStencils",
+      "Message": "V testovací metodě Tempo.Blazor.E2E.ModelingUmlProfileM18E2ETests.DialogPalette_PinsUmlStencils došlo k výjimce: \r\nMicrosoft.Playwright.PlaywrightException: Locator expected to be visible \nCall log:\n  -   - LocatorAssertions.ToBeVisibleAsync with timeout 15000ms\n  -   - waiting for Locator(\"[data-testid='modeling-open-diagram-editor']\").Locator(\".tm-diagram-toolbox__library[data-library-id='notation-palette']\")",
+      "Verdict": null
+    },
+    {
+      "Test": "Axe_Scoped_To_TheNewSections_FindsNoCriticalOrSeriousViolation",
+      "Message": "Assert.AreEqual selhalo. Očekáváno:<0>. Aktuálně:<1>. axe [KPI cards]: serious: color-contrast - Elements must meet minimum color contrast ratio thresholds (div[data-testid=\"stat-cards-kpi\"] > .tm-stat-card--has-icon.tm-stat-card:nth-child(1) > .tm-stat-label; .tm-stat-card--has-icon.tm-stat-card:nth-child(1) > .tm-stat-card__trend--positive.tm-stat-card__trend[data-testid=\"stat-card-trend\"] > .tm-stat-card__delta; .tm-stat-card--has-icon.tm-stat-card:nth-child(1) > .tm-stat-card__trend--positive.tm-stat-card__trend[data-testid=\"stat-card-trend\"] > .tm-stat-card__comparison; div[data-testid=\"stat-cards-kpi\"] > .tm-stat-card--has-icon.tm-stat-card:nth-child(2) > .tm-stat-label)",
+      "Verdict": null
+    },
+    {
+      "Test": "NoSpecKeepsALocalColdBootRecoveryCopy",
+      "Message": "Assert.AreEqual selhalo. Očekáváno:<0>. Aktuálně:<1>. cold-boot recovery must be centralized in PlaywrightTestBase.GotoAppReadyAsync; local copies in: NotionPhase1BaselineScreenshots.cs",
+      "Verdict": null
+    },
+    {
+      "Test": "ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+      "Message": "Assert.AreEqual selhalo. Očekáváno:<0>. Aktuálně:<1>. axe [analytics-kit-kpis]: serious: color-contrast - Elements must meet minimum color contrast ratio thresholds (section[data-testid=\"analytics-kit-kpis\"] > .space-x-2.mb-4 > .py-0\\.5.bg-primary-100.dark\\:bg-primary-900\\/30; section[data-testid=\"analytics-kit-kpis\"] > .mb-4:nth-child(2); .tm-stat-card.tm-stat-card--has-icon:nth-child(1) > .tm-stat-label; .tm-stat-card.tm-stat-card--has-icon:nth-child(1) > .tm-stat-card__trend--negative.tm-stat-card__trend[data-testid=\"stat-card-trend\"] > .tm-stat-card__delta)",
+      "Verdict": null
+    },
+    {
+      "Test": "ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+      "Message": "Assert.AreEqual selhalo. Očekáváno:<0>. Aktuálně:<1>. axe: serious: color-contrast - Elements must meet minimum color contrast ratio thresholds (.tm-trace-waterfall__window; .tm-trace-waterfall__tick:nth-child(1) > .tm-trace-waterfall__tick-label; .tm-trace-waterfall__tick:nth-child(2) > .tm-trace-waterfall__tick-label; .tm-trace-waterfall__tick:nth-child(3) > .tm-trace-waterfall__tick-label)",
+      "Verdict": null
+    },
+    {
+      "Test": "Chart_IsNamedByItsHeading_ThroughTheAriaLabelParameter",
+      "Message": "Assert.AreEqual selhalo. Očekáváno:<0>. Aktuálně:<1>. axe [analytics-kit-chart]: serious: color-contrast - Elements must meet minimum color contrast ratio thresholds (section[data-testid=\"analytics-kit-chart\"] > .mb-4; button[data-testid=\"chart-legend-0\"] > .tm-chart__legend-label; button[data-testid=\"chart-legend-1\"] > .tm-chart__legend-label)",
+      "Verdict": null
+    },
+    {
+      "Test": "QrCode_Is_A_Named_Graphic_Without_Inline_Style",
+      "Message": "Assert.AreEqual selhalo. Očekáváno:<QR code>. Aktuálně:<QR kód>. without AriaLabel the localized default names the graphic",
+      "Verdict": null
+    },
+    {
+      "Test": "MediaLibrary_SelectItem_SetsImageOnBlock",
+      "Message": "V testovací metodě Tempo.Blazor.E2E.NotionMediaBlocksE2ETests.MediaLibrary_SelectItem_SetsImageOnBlock došlo k výjimce: \r\nSystem.TimeoutException: Timeout 5000ms exceeded.\nCall log:\n  -   - waiting for Locator(\"[data-block-id='b5da40b4-cf84-461c-b134-5af7250577ab']\").First.Locator(\".tm-notion-image-block__img\") to be visible\n  -     15 × locator resolved to hidden <img alt=\"\" loading=\"lazy\" b-cpb9vjfg3r=\"\" draggable=\"false\" class=\"tm-notion-image-block__img\" src=\"https://picsum.photos/seed/1/1200/800\"/>",
+      "Verdict": null
+    },
+    {
+      "Test": "ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+      "Message": "Assert.AreEqual selhalo. Očekáváno:<0>. Aktuálně:<1>. axe: serious: color-contrast - Elements must meet minimum color contrast ratio thresholds (span[data-testid=\"trace-page-live-state\"]; .tm-trace-waterfall__window; .tm-trace-waterfall__tick:nth-child(1) > .tm-trace-waterfall__tick-label; .tm-trace-waterfall__tick:nth-child(2) > .tm-trace-waterfall__tick-label)",
+      "Verdict": null
+    },
+    {
+      "Test": "ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+      "Message": "Assert.AreEqual selhalo. Očekáváno:<0>. Aktuálně:<1>. axe [analytics-kit-kpis]: serious: color-contrast - Elements must meet minimum color contrast ratio thresholds (section[data-testid=\"analytics-kit-kpis\"] > .space-x-2.mb-4 > .py-0\\.5.bg-primary-100.dark\\:bg-primary-900\\/30; section[data-testid=\"analytics-kit-kpis\"] > .mb-4:nth-child(2); .tm-stat-card__trend--positive > .tm-stat-card__delta)",
+      "Verdict": null
+    },
+    {
+      "Test": "QrCode_Download_Link_Carries_A_Standalone_Svg",
+      "Message": "StringAssert.Contains selhalo. Řetězec 'Stáhnout SVG' neobsahuje řetězec 'Download'. the action carries a localized label.",
+      "Verdict": null
+    },
+    {
+      "Test": "ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+      "Message": "Assert.AreEqual selhalo. Očekáváno:<0>. Aktuálně:<1>. axe: serious: color-contrast - Elements must meet minimum color contrast ratio thresholds (.py-0\\.5; section[data-testid=\"sortable-basic-section\"] > .mb-4:nth-child(2); #tm-sortable-list-content-10d11352-0 > .flex-col[data-testid=\"sortable-step\"] > .text-slate-500.text-xs.dark\\:text-slate-400; #tm-sortable-list-content-10d11352-1 > .flex-col[data-testid=\"sortable-step\"] > .text-slate-500.text-xs.dark\\:text-slate-400)",
+      "Verdict": null
+    },
+    {
+      "Test": "Layout_MovingATaskBetweenLanesChangesTheParent",
+      "Message": "Assert.IsNotNull selhalo. the Sales task must expose a pressable body point",
+      "Verdict": null
+    },
+    {
+      "Test": "ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+      "Message": "Assert.AreEqual selhalo. Očekáváno:<0>. Aktuálně:<1>. axe: serious: color-contrast - Elements must meet minimum color contrast ratio thresholds (#tm-usage-meter-title-49a2afdd; .gap-3.flex-col.flex > .tm-usage-meter.tm-usage-meter--warning[data-testid=\"usage-meter\"] > .tm-usage-meter__readout > .tm-usage-meter__percent; #tm-usage-meter-reset-49a2afdd; .tm-usage-meter__table > thead > tr > th[scope=\"col\"]:nth-child(1))",
+      "Verdict": null
+    },
+    {
+      "Test": "TheSlidingStripIsMeasuredAndClaimed",
+      "Message": "Assert.IsTrue selhalo. the strip was measured to the selected segment (width 2)",
+      "Verdict": null
+    },
+    {
+      "Test": "SheetRoots_ResetUaPopoverDefaults",
+      "Message": "Assert.AreEqual selhalo. Očekáváno:<none>. Aktuálně:<844px>. the sheet root max-height must be none",
+      "Verdict": null
+    },
+    {
+      "Test": "Tablet_Overlay_Dark_RidesTheTokens",
+      "Message": "Assert.AreNotEqual selhalo. Nebyla očekávána žádná hodnota kromě:<rgb(255, 255, 255)>. Aktuálně:<rgb(255, 255, 255)>. the dark surface is not the light white",
+      "Verdict": null
+    },
+    {
+      "Test": "DiagramScreenshots_CaptureLightAndDarkThemeBaselines",
+      "Message": "Assert.IsTrue selhalo. Diagram node text should stay dark on the light diagram page, got rgb(161, 161, 170).",
+      "Verdict": null
+    },
+    {
+      "Test": "gantt (control) 390 touch",
+      "Message": "V testovací metodě Tempo.Blazor.E2E.Feedback.OverlayInitialFocusE2ETests.InitialFocus_LandsInside_OnRepeatedOpens došlo k výjimce: \r\nSystem.TimeoutException: Timeout 30000ms exceeded.\nCall log:\n  -   - waiting for Locator(\"button[data-testid='gantt-import-btn']\").First",
+      "Verdict": null
+    },
+    {
+      "Test": "ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+      "Message": "Assert.AreEqual selhalo. Očekáváno:<0>. Aktuálně:<1>. axe: serious: color-contrast - Elements must meet minimum color contrast ratio thresholds (#tm-segmented-5e2efb5-label; #tm-segmented-5e2efb5-opt-0 > .tm-segmented__option-label; #tm-segmented-5e2efb5-opt-2 > .tm-segmented__option-label; #tm-segmented-5e2efb5-opt-2 > .tm-segmented__count)",
+      "Verdict": null
+    },
+    {
+      "Test": "Chat_RenderWindow_Server_TailOnly_DeepLink_Trim",
+      "Message": "V testovací metodě Tempo.Blazor.E2E.Chat.ChatRenderWindowServerE2ETests.Chat_RenderWindow_Server_TailOnly_DeepLink_Trim došlo k výjimce: \r\nSystem.TimeoutException: Timeout 60000ms exceeded.",
+      "Verdict": null
+    },
+    {
+      "Test": "NotificationBell_At390_Touch_OpensAsTitledSheet_InnerTitleDrops_EscapeReturnsFocus",
+      "Message": "Assert.IsTrue selhalo. the duplicated in-panel title must be hidden inside the sheet",
+      "Verdict": null
+    },
+    {
+      "Test": "ScopedAxeScan_HasNoCriticalOrSeriousViolations",
+      "Message": "Assert.AreEqual selhalo. Očekáváno:<0>. Aktuálně:<1>. axe: serious: color-contrast - Elements must meet minimum color contrast ratio thresholds (#tm-segmented-7f2c71d-label; #tm-segmented-7f2c71d-opt-0 > .tm-segmented__option-label; #tm-segmented-7f2c71d-opt-2 > .tm-segmented__option-label; #tm-segmented-7f2c71d-opt-2 > .tm-segmented__count)",
+      "Verdict": null
+    }
+  ]
+}

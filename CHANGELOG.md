@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.11.0 (unreleased)
+## 2.11.0 - 2026-11-14
 
 > Modeling **full BPMN authoring** plan (eadbf967, phases 2–7). The release ships together with the
 > separate BPMN 2.0 XML converter plan (decision Q6, confirmed by the owner on 2026-11-11); the

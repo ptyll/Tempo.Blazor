@@ -303,7 +303,12 @@ jobs:
       # JSON is written by the recorded run (scripts/run-e2e-full.ps1 shape); this refuses a
       # release whose evidence is missing, stale, carries unresolved serial reds, or is
       # internally inconsistent — BEFORE anything is built or pushed.
+      #
+      # WAIVER (owner decision ptyll, 2026-11-14): ONLY the tag v2.11.0 is published without a new full E2E run,
+      # recorded in eng/release-evidence/waiver-v2.11.0.md. The step still runs for every other ref and version;
+      # deleting the waiver file re-arms it for v2.11.0 too.
       - name: Verify the release evidence (DEC-TEMPO-RELEASE-GATE)
+        if: ${{ !(github.ref == 'refs/tags/v2.11.0' && hashFiles('eng/release-evidence/waiver-v2.11.0.md') != '') }}
         run: bash eng/verify-release-evidence.sh
 
       - name: Build
