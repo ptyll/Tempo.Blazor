@@ -442,8 +442,14 @@ public class NotionMediaBlocksE2ETests : WasmTestBase
         var dialogVisible = await dialogAfter.IsVisibleAsync();
         Assert.IsFalse(dialogVisible, "Dialog should close after Insert confirms the selected library item");
 
+        // The library items are external https://picsum.photos images and the <img> is loading="lazy": it only gets a
+        // box once the remote bytes arrive, so "visible" is a statement about the network (it times out on a machine
+        // without internet), not about the block. The contract is that the selected item is SET on the block: the image
+        // element is mounted with the item's URL.
         var img = imageBlock.Locator(".tm-notion-image-block__img");
-        await img.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });
+        await img.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached, Timeout = 5000 });
+        StringAssert.StartsWith(await img.GetAttributeAsync("src"), "https://",
+            "the library item's URL is set on the image block");
 
         await TakeScreenshotAsync(page, "media_library_image_set");
     }

@@ -264,7 +264,12 @@ public sealed class OverlayRound2FixE2ETests : WasmTestBase
         Assert.AreEqual("rgba(0, 0, 0, 0)", parts[0], "the sheet root background must be transparent, not UA Canvas");
         Assert.AreEqual("visible", parts[1], "the sheet root overflow must be visible, not UA auto");
         Assert.AreEqual("none", parts[2], "the sheet root max-width must be none");
-        Assert.AreEqual("none", parts[3], "the sheet root max-height must be none");
+        // Since the popover box fix (NotionEditor phase 5, ee546b83c) the promoted root is pinned to the viewport
+        // (`inset: 0; max-block-size: 100dvh`), so its computed max-height is the viewport height rather than the
+        // UA `none` the R2 test first saw. The R2-B1 contract is "the UA [popover] max-height of fit-content does
+        // not shrink the root": it must be unbounded or exactly the viewport, never smaller.
+        Assert.IsTrue(parts[3] == "none" || parts[3] == "844px",
+            $"the sheet root max-height must be none or the 844px viewport (100dvh), was {parts[3]}");
 
         // The dimmed page must show through: the sheet's own backdrop carries the scrim, the root does not.
         var backdrop = await page.EvaluateAsync<string>(

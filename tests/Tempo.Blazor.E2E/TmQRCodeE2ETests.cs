@@ -42,8 +42,13 @@ public sealed class TmQRCodeE2ETests : WasmTestBase
         var context = await Browser.NewContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
+            // The assertions read the ENGLISH default label / action text: pin the browser locale and the demo
+            // culture (the demo otherwise follows the host machine's language, e.g. cs-CZ).
+            Locale = "en-US",
             IgnoreHTTPSErrors = true,
         });
+        await context.AddInitScriptAsync(
+            "localStorage.setItem('tm-demo-culture', 'en'); document.cookie = 'tm-demo-culture=en;path=/;max-age=31536000;samesite=lax';");
         RegisterContext(context);
         var page = await context.NewPageAsync();
         await page.GotoAsync($"{BaseUrl}{Route}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });

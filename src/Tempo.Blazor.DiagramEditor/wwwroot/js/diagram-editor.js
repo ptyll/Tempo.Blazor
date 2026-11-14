@@ -482,6 +482,12 @@ window.tmDiagramEditor = {
         if (nodeEl) { const id = nodeEl.getAttribute('data-node-id'); return id ? { kind: 'node', id } : null; }
         const edgeEl = target.closest('.tm-diagram-edge-hit-path');
         if (edgeEl) { const id = edgeEl.getAttribute('data-edge-id'); return id ? { kind: 'edge', id } : null; }
+        // The press that opens the menu has already selected the edge, and a selected edge paints its
+        // control-point / segment / virtual-bend handles (pointer-events: all) - one sits exactly at the
+        // midpoint of a straight edge, i.e. under a press at the middle of the edge. A right-click on such a
+        // handle belongs to its edge, not to the empty canvas.
+        const handleEl = target.closest('.tm-diagram-edge-handle');
+        if (handleEl) { const id = handleEl.getAttribute('data-edge-id'); if (id) return { kind: 'edge', id }; }
         return { kind: 'canvas' };
     },
 
@@ -1032,8 +1038,12 @@ window.tmDiagramEditor = {
         // another control (a resize/rotate handle hit, a node body, …) is that control's
         // gesture, and a port buried deeper in the stack under it is COVERED, not pressed.
         var rawHit = e.target && e.target.closest ? e.target : null;
-        var stackAllowed = !!rawHit && (!!(rawHit.closest('.tm-diagram-port, .tm-diagram-port-hit, .tm-diagram-connection-point'))
+        let stackAllowed = !!rawHit && (!!(rawHit.closest('.tm-diagram-port, .tm-diagram-port-hit, .tm-diagram-connection-point'))
             || !!(rawHit.closest('.tm-diagram-edge-hit-path, .tm-diagram-edge-label-group')));
+        // Only the PRIMARY button draws from a port / connection point: a right-click on one (the centre
+        // connection point sits exactly under a press at the middle of a BPMN event / task) is the context
+        // menu gesture of the node, not the start of an edge drag.
+        if (isRightClick) stackAllowed = false;
         var portEl = stackAllowed ? this._firstWithClass(e.target, pointerStack, 'tm-diagram-port') : null;
         // A `.tm-diagram-port-hit` circle may stand in for a CONNECTION POINT (data-cp-*): only a
         // real port carries data-port-id — let the connection-point branch handle the rest.

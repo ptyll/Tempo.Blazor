@@ -647,9 +647,27 @@ public sealed class WireframeStencilPackSweepE2ETests : WasmTestBase
         "TmActivityLog", "TmCalendarHeatmap", "TmRichEditorFull", "TmDataTable", "TmButton",
     ];
 
+    /// <summary>
+    /// The full 200-element benchmark. Every insert re-renders the whole canvas, so the cost per insert grows with the
+    /// element count (about 4 s per insert at n=60 on the Debug WASM host) and the whole run measured ~41 min
+    /// (<c>perf-200.phase3-after.json</c>) - far beyond what the shared full lane can host. It is therefore a
+    /// <c>Performance</c>-lane spec (docs/e2e-test-lanes.md, DEC-TEMPO-PERF-LANE-BUDGETS): excluded from the full lane,
+    /// run serially on an idle machine by <c>scripts/run-e2e-perf.ps1</c>. The same invariants hold on the normal lane
+    /// through <see cref="Perf_ThirtyElements_FirstRender_AndRerender"/>.
+    /// </summary>
     [TestMethod]
-    [Timeout(900_000)] // 15 min backstop — the per-call guards below should fail a wedge long before this.
-    public async Task Perf_TwoHundredElements_FirstRender_AndRerender()
+    [TestCategory("Performance")]
+    [Timeout(5_400_000)] // 90 min backstop - the per-call guards below fail a wedge long before this.
+    public async Task Perf_TwoHundredElements_FirstRender_AndRerender() => await RunInsertPerfAsync(200);
+
+    /// <summary>The same flow at a size the normal lane can afford: every insert must succeed, nothing may fail, the
+    /// re-render of one moved element must complete. Keeps the invariants covered while the 200-element benchmark
+    /// runs in the performance lane.</summary>
+    [TestMethod]
+    [Timeout(900_000)] // 15 min backstop - the per-call guards below should fail a wedge long before this.
+    public async Task Perf_ThirtyElements_FirstRender_AndRerender() => await RunInsertPerfAsync(30);
+
+    private async Task RunInsertPerfAsync(int count)
     {
         await using var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
@@ -677,7 +695,7 @@ public sealed class WireframeStencilPackSweepE2ETests : WasmTestBase
         var inserted = 0;
         string? firstError = null;
         var t0 = await now();
-        for (var i = 0; i < 200 && firstError is null; i++)
+        for (var i = 0; i < count && firstError is null; i++)
         {
             var type = PerfMix[i % PerfMix.Length];
             var call = page.EvaluateAsync<string>(insertJs,
@@ -705,9 +723,9 @@ public sealed class WireframeStencilPackSweepE2ETests : WasmTestBase
                 firstError = $"insert #{i} ({type}): {ex.GetType().Name}: {ex.Message.Split('\n')[0]}";
             }
 
-            if (i % 50 == 49)
+            if (i % 50 == 49 || (count < 50 && i % 10 == 9))
             {
-                TestContext.WriteLine($"[{SweepLabel}] perf: inserted {inserted}/200");
+                TestContext.WriteLine($"[{SweepLabel}] perf: inserted {inserted}/{count}");
             }
         }
 
@@ -778,7 +796,7 @@ public sealed class WireframeStencilPackSweepE2ETests : WasmTestBase
             rerenderMs,
         });
 
-        var dir = Path.Combine(OutputDir, "perf");
+        var dir = Path.Combine(OutputDir, count == 200 ? "perf" : $"perf-{count}");
         Directory.CreateDirectory(dir);
         await File.WriteAllTextAsync(Path.Combine(dir, "perf-200.json"),
             JsonSerializer.Serialize(new { label = SweepLabel, host = "wasm", raw = JsonSerializer.Deserialize<JsonObject>(payload) },
@@ -786,8 +804,8 @@ public sealed class WireframeStencilPackSweepE2ETests : WasmTestBase
         TestContext.WriteLine($"[{SweepLabel}] perf: {payload}");
 
         var perf = JsonSerializer.Deserialize<JsonObject>(payload)!;
-        Assert.AreEqual(200, perf["inserted"]!.GetValue<int>(), $"all 200 elements must insert (was: {payload})");
-        Assert.AreEqual(perf["beforeCount"]!.GetValue<int>() + 200, perf["afterCount"]!.GetValue<int>());
+        Assert.AreEqual(count, perf["inserted"]!.GetValue<int>(), $"all {count} elements must insert (was: {payload})");
+        Assert.AreEqual(perf["beforeCount"]!.GetValue<int>() + count, perf["afterCount"]!.GetValue<int>());
         Assert.IsNull(perf["firstError"], $"no interop call may fail: {payload}");
     }
 }

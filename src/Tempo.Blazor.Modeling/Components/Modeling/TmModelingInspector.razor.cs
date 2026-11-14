@@ -58,6 +58,15 @@ public partial class TmModelingInspector
     private string _nameDraft = string.Empty;
     private string _descriptionDraft = string.Empty;
     private Dictionary<string, string> _scalarDrafts = new(StringComparer.Ordinal);
+
+    // The COMMITTED values the drafts were last seeded from. The re-seed decision compares the incoming
+    // committed values with these - never with the drafts: a draft differs from the committed value for the
+    // whole time the user is typing, and any unrelated parent render (the editor root's Delete key handler
+    // re-renders the editor on every Delete pressed in a text field) would otherwise wipe the keystrokes.
+    private string _seededName = string.Empty;
+    private string _seededDescription = string.Empty;
+    private Dictionary<string, string> _seededScalars = new(StringComparer.Ordinal);
+
     /// <summary>Localized name-required message; null while the name is valid.</summary>
     private string? _nameErrorText;
 
@@ -101,9 +110,9 @@ public partial class TmModelingInspector
         if (Element is not null)
         {
             var reseed = !ReferenceEquals(Element, _draftElement)
-                || !string.Equals(Element.Name, _nameDraft, StringComparison.Ordinal)
-                || !string.Equals(Element.Description, _descriptionDraft, StringComparison.Ordinal)
-                || !ScalarDraftsMatch(Element.Properties);
+                || !string.Equals(Element.Name, _seededName, StringComparison.Ordinal)
+                || !string.Equals(Element.Description, _seededDescription, StringComparison.Ordinal)
+                || !SeededScalarsMatch(Element.Properties);
 
             if (reseed)
             {
@@ -114,6 +123,9 @@ public partial class TmModelingInspector
                 _scalarDrafts = Element.Properties
                     .Where(property => IsScalarEditable(property.Value))
                     .ToDictionary(property => property.Key, property => FormatPropertyValue(property.Value), StringComparer.Ordinal);
+                _seededName = Element.Name;
+                _seededDescription = Element.Description;
+                _seededScalars = new Dictionary<string, string>(_scalarDrafts, StringComparer.Ordinal);
                 _nameErrorText = null;
             }
 
@@ -123,8 +135,8 @@ public partial class TmModelingInspector
         if (Relationship is not null)
         {
             var reseed = !ReferenceEquals(Relationship, _draftRelationship)
-                || !string.Equals(Relationship.Name, _nameDraft, StringComparison.Ordinal)
-                || !ScalarDraftsMatch(Relationship.Properties);
+                || !string.Equals(Relationship.Name, _seededName, StringComparison.Ordinal)
+                || !SeededScalarsMatch(Relationship.Properties);
 
             if (reseed)
             {
@@ -135,9 +147,35 @@ public partial class TmModelingInspector
                 _scalarDrafts = Relationship.Properties
                     .Where(property => IsScalarEditable(property.Value))
                     .ToDictionary(property => property.Key, property => FormatPropertyValue(property.Value), StringComparer.Ordinal);
+                _seededName = Relationship.Name;
+                _seededDescription = string.Empty;
+                _seededScalars = new Dictionary<string, string>(_scalarDrafts, StringComparer.Ordinal);
                 _nameErrorText = null;
             }
         }
+    }
+
+    /// <summary>Whether the incoming committed scalars equal the ones the drafts were seeded from (the
+    /// re-seed gate - see the seeded-values note above).</summary>
+    private bool SeededScalarsMatch(IReadOnlyDictionary<string, JsonElement> properties)
+    {
+        var scalars = 0;
+        foreach (var property in properties)
+        {
+            if (!IsScalarEditable(property.Value))
+            {
+                continue;
+            }
+
+            scalars++;
+            if (!_seededScalars.TryGetValue(property.Key, out var seeded)
+                || seeded != FormatPropertyValue(property.Value))
+            {
+                return false;
+            }
+        }
+
+        return scalars == _seededScalars.Count;
     }
 
     private bool ScalarDraftsMatch(IReadOnlyDictionary<string, JsonElement> properties)

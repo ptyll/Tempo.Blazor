@@ -128,13 +128,19 @@ public abstract class SegmentedControlE2EBase : PlaywrightTestBase
             ".getAttribute('data-tm-indicator') === 'sliding'",
             null, new PageWaitForFunctionOptions { Timeout = 5000 });
 
+        // The strip's width / height / transform TRANSITION from the unmeasured 0 box to the segment (the sliding
+        // indicator), so the geometry is only the segment's once the running transition has ended: wait for that
+        // state first (a read taken mid-slide sees the 2 px border box and is a race, not a contract).
+        await page.WaitForFunctionAsync(
+            "() => (document.querySelector(\"[data-testid='segmented-period'] .tm-segmented__indicator\")?.getBoundingClientRect().width ?? 0) > 10",
+            null, new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForLayoutToSettleAsync(page, "[data-testid='segmented-period']");
         var geometry = await track.Locator(".tm-segmented__indicator").EvaluateAsync<double[]>(
             "el => { const s = getComputedStyle(el); return [el.getBoundingClientRect().width, parseFloat(s.opacity)]; }");
         Assert.IsTrue(geometry[0] > 10, $"the strip was measured to the selected segment (width {geometry[0]})");
         Assert.AreEqual(1d, geometry[1], "and it is actually painted");
 
         // It follows the selection: the strip must sit over the segment it marks.
-        await WaitForLayoutToSettleAsync(page, "[data-testid='segmented-period']");
         var selected = track.Locator("[aria-checked='true']");
         var strip = track.Locator(".tm-segmented__indicator");
         var selectedBox = await selected.BoundingBoxAsync();
@@ -327,6 +333,13 @@ public abstract class SegmentedControlE2EBase : PlaywrightTestBase
             """
             async (selector) => {
                 const host = document.querySelector(selector);
+                // axe samples the RESOLVED colours: a finite CSS animation/transition still running (the demo's fade-in, a colour
+                // transition, the segmented indicator) paints a blended, low-contrast frame. Wait for them (looping ones,
+                // like the skeleton shimmer, never finish and are not waited for).
+                await Promise.all(document.getAnimations()
+                    .filter(a => a.effect && a.effect.getComputedTiming().iterations !== Infinity)
+                    .map(a => a.finished.catch(() => { })));
+                await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
                 const result = await axe.run(host, {
                     runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa'] },
                     resultTypes: ['violations']

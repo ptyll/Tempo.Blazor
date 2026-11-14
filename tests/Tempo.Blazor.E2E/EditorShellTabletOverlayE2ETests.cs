@@ -46,7 +46,8 @@ public sealed class EditorShellTabletOverlayE2ETests : WasmTestBase
         {
             Content = "aside.fixed { display: none !important; } main { margin-left: 0 !important; width: 100vw !important; max-width: 100vw !important; }",
         });
-        if (dark) await page.EvaluateAsync("() => document.documentElement.setAttribute('data-theme', 'dark')");
+        // The demo frame owns the theme: its own data-theme island would re-pin the light tokens under a bare <html> attribute.
+        if (dark) await EnsureDemoThemeAsync(page, "dark");
         await page.Locator(Host).ScrollIntoViewIfNeededAsync();
         await page.WaitForTimeoutAsync(500);
         return page;

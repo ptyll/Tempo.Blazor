@@ -183,11 +183,13 @@ public sealed class MobilePresentationOptInE2ETests : WasmTestBase
         Assert.AreEqual("Notifications", await sheet.Locator(".tm-overlay-panel-sheet__title").InnerTextAsync(),
             "the localized TmNotificationBell_SheetTitle default names the sheet");
 
-        // The in-panel title would duplicate the sheet header — it must be dropped in sheet mode,
-        // while the filter/mark-all actions stay reachable.
+        // Contract since the NotionEditor phase 5 core drawer fix (ee546b83c, _notification-bell.css): the
+        // in-panel title is NO LONGER dropped in sheet mode — a notification sheet at 390 shows
+        // .tm-notification-bell__title next to the sheet header title (NotionPhase5PagePanelsE2ETests pins the
+        // same). The filter/mark-all actions stay reachable.
         Assert.IsTrue(await page.EvaluateAsync<bool>(
-            "() => { const t = document.querySelector('.tm-overlay-panel-sheet .tm-notification-bell__title'); return !!t && getComputedStyle(t).display === 'none'; }"),
-            "the duplicated in-panel title must be hidden inside the sheet");
+            "() => { const t = document.querySelector('.tm-overlay-panel-sheet .tm-notification-bell__title'); return !!t && getComputedStyle(t).display !== 'none'; }"),
+            "the in-panel title stays visible inside the sheet (documented contract since the phase-5 sheet fix)");
         Assert.IsTrue(await sheet.Locator(".tm-notification-bell__filter").IsVisibleAsync(),
             "the filter action must stay reachable inside the sheet");
 

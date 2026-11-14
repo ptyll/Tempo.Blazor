@@ -96,7 +96,9 @@ internal static class OverlayTopLayerScenarios
 
     internal static async Task CircuitReconnectRestoredPopoverRootsStayPromotedAndANewSurfacePaintsOnTop(IPage page)
     {
-        // The demo _Host.cshtml defines no custom reconnect UI, so blazor.web.js drives its default.
+        // blazor.web.js drives the reconnect UI: the .NET 9/10 default (a shadow-root overlay), or - on the Server demo,
+        // whose _Host.cshtml defines its own bar - the page-defined one (state classes on #components-reconnect-modal).
+        // The probe below handles every shape.
         // .NET 9/10 default UI: a host <div id="components-reconnect-modal"> carrying a SHADOW ROOT
         // whose .components-reconnect-overlay gets .components-reconnect-visible while rejoining and
         // loses it again after a successful rejoin (host.style.display flips block/none). The legacy
@@ -150,7 +152,10 @@ internal static class OverlayTopLayerScenarios
             if (overlay) {
                 return ('hidden' === '{{expectedState}}') !== overlay.classList.contains('components-reconnect-visible');
             }
-            return ('hidden' === '{{expectedState}}') === (modal.style.display === 'none');
+            // Page-defined UI whose state classes are gone again (the Server demo's _Host.cshtml defines its own
+            // reconnect bar, hidden by a utility class and shown only while -show / -failed is set): the rendered
+            // box is the state - not displayed = hidden.
+            return ('hidden' === '{{expectedState}}') === (getComputedStyle(modal).display === 'none');
         }
         """;
 }

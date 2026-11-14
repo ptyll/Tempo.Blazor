@@ -525,7 +525,8 @@ public class ToolbarOverflowE2ETests : WasmTestBase
     public async Task Dark_MoreMenuAndButtons_UseThemeSurfaces()
     {
         var page = await OpenAsync(1024, 768, touch: false);
-        await page.EvaluateAsync("() => { document.documentElement.setAttribute('data-theme', 'dark'); document.documentElement.classList.add('tm-dark'); }");
+        // The demo frame owns the theme (its own data-theme island): switch it through the real toggle.
+        await EnsureDemoThemeAsync(page, "dark");
         await SettleAsync(page, "toolbar-overflow-380");
         var bar = Bar(page, "toolbar-overflow-380");
         await bar.Locator("button.tm-toolbar-more").ClickAsync();
@@ -564,6 +565,8 @@ public class ToolbarOverflowE2ETests : WasmTestBase
         {
             var context = await Browser.NewContextAsync(new BrowserNewContextOptions
             {
+                // Pin the locale: the demo follows the browser language, and a context without one inherits the host machine's (cs-CZ on the dev box) while the specs read English labels.
+                Locale = "en-US",
                 ViewportSize = new ViewportSize { Width = width, Height = height },
                 HasTouch = touch,
                 IsMobile = touch,
@@ -900,6 +903,8 @@ public class ToolbarOverflowE2ETests : WasmTestBase
     {
         var context = await Browser.NewContextAsync(new BrowserNewContextOptions
         {
+            // Pin the locale: the demo follows the browser language, and a context without one inherits the host machine's (cs-CZ on the dev box) while the specs read English labels.
+            Locale = "en-US",
             ViewportSize = new ViewportSize { Width = 1440, Height = 900 },
             IgnoreHTTPSErrors = true,
         });
@@ -1058,6 +1063,13 @@ public class ToolbarOverflowE2ETests : WasmTestBase
             """
             async (hostSelector) => {
                 const host = document.querySelector(hostSelector) || document.body;
+                // axe samples the RESOLVED colours: a finite CSS animation/transition still running (the demo's fade-in, a colour
+                // transition, the segmented indicator) paints a blended, low-contrast frame. Wait for them (looping ones,
+                // like the skeleton shimmer, never finish and are not waited for).
+                await Promise.all(document.getAnimations()
+                    .filter(a => a.effect && a.effect.getComputedTiming().iterations !== Infinity)
+                    .map(a => a.finished.catch(() => { })));
+                await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
                 const result = await axe.run(host, {
                     runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa'] },
                     resultTypes: ['violations']

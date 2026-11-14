@@ -11,7 +11,7 @@ namespace Tempo.Blazor.E2E;
 /// </summary>
 [TestClass]
 [TestCategory("NotionUxBaseline")]
-public sealed class NotionPhase1BaselineScreenshots : NotionE2ETestBase
+public sealed class NotionPhase1EvidenceScreenshots : NotionE2ETestBase
 {
     private static string ShotDir(string area)
     {
@@ -187,8 +187,9 @@ public sealed class NotionPhase1BaselineScreenshots : NotionE2ETestBase
                 await rowMenu.ClickAsync(new LocatorClickOptions { Timeout = 2000 });
                 break;
             }
-            catch (TimeoutException) when (attempt < 5)
+            catch (TimeoutException)
             {
+                if (attempt >= 5) throw;
                 await page.WaitForTimeoutAsync(200);
             }
         }

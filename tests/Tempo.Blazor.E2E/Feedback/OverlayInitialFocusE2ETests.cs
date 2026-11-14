@@ -29,6 +29,9 @@ public sealed class OverlayInitialFocusE2ETests : WasmTestBase
     private const string Dialog = "dialog,/modal-dialog,[data-testid='open-long-dialog'],.tm-modal-overlay,.tm-dialog-btn-cancel";
     private const string Drawer = "drawer,/feedback,[data-testid='open-right-drawer'],.tm-drawer--right,.tm-drawer__close";
     private const string GanttControl = "gantt-control,/gantt,button[data-testid='gantt-import-btn'],.tm-modal-overlay.tm-gantt__import-dialog,.tm-modal-close";
+    // A MOBILE Gantt container is read-mostly (docs/gantt.md, G2): its compact chrome offers no export/import, so the same
+    // control row opens the dialog the mobile chrome DOES have - the filter dialog (a TmModal like the import one).
+    private const string GanttControlMobile = "gantt-control,/gantt,button[data-testid='gantt-filter-btn'],.tm-modal-overlay:has(.tm-gantt__filter-panel-inner--dialog),.tm-modal-close";
 
     private async Task<IBrowserContext> NewContextAsync(int width, int height, bool touch)
     {
@@ -68,7 +71,7 @@ public sealed class OverlayInitialFocusE2ETests : WasmTestBase
     [DataRow(Drawer, 1440, 900, false, DisplayName = "drawer 1440")]
     [DataRow(Drawer, 390, 844, true, DisplayName = "drawer 390 touch")]
     [DataRow(GanttControl, 1440, 900, false, DisplayName = "gantt (control) 1440")]
-    [DataRow(GanttControl, 390, 844, true, DisplayName = "gantt (control) 390 touch")]
+    [DataRow(GanttControlMobile, 390, 844, true, DisplayName = "gantt (control) 390 touch")]
     public async Task InitialFocus_LandsInside_OnRepeatedOpens(
         string spec, int width, int height, bool touch)
     {

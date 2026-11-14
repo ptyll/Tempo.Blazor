@@ -163,6 +163,9 @@ public class Fze12TouchEmulationSweepE2ETests : PlaywrightTestBase
         Assert.IsTrue(measured,
             "the sheet's body is the scroll owner: on a 390×640 phone the groups do not fit the half snap");
 
+        // The sheet slides in: measuring while the slide-in is still running reads a footer that is lower than its final
+        // position (595 vs 542 px) and mistakes the settling for the body scroll moving it.
+        await WaitForLayoutToSettleAsync(page, ".tm-drawer--bottom .tm-drawer__panel, .tm-drawer--bottom .tm-drawer__footer");
         var footerBefore = await BoxAsync(footer);
         var panelBefore = await BoxAsync(drawer.Locator(".tm-drawer__panel"));
 

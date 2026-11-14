@@ -218,7 +218,9 @@ public class InteractiveAutoTests : InteractiveAutoTestBase
             Assert.AreEqual(0, await targetView.CountAsync(),
                 $".{expectedClass} must not exist inside the interactive scheduler before switching to {view}");
 
-            await interactiveScheduler.Locator($"button[data-view='{view}']").ClickAsync();
+            // The pill tablist is only drawn while the toolbar's own container is >= 60rem; the demo column is narrower
+            // than that, so the view switches through the toolbar's compact view dropdown (the shared helper covers both).
+            await Tempo.Blazor.E2E.Scheduler.SchedulerViewSwitcher.SwitchViewAsync(interactiveScheduler, view);
 
             await Assertions.Expect(targetView.First)
                 .ToBeVisibleAsync(new() { Timeout = 15000 });

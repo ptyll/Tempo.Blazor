@@ -67,7 +67,8 @@ public sealed class ModelingBpmnProfileM17E2ETests : WasmTestBase
     [Description("Fáze 15: the dialog palette pins the BPMN profile stencils first and inserting from it creates a diagram node")]
     public async Task DialogPalette_PinsBpmnStencilsAndInsertsFromThem()
     {
-        var page = await OpenLoadedModelingPageAsync("?notation=bpmn2&viewpoint=Process&scenario=bpmn2-generated");
+        // Since modeling authoring phase 3 (50bf4ace7) the dialog toolbox is an AUTHORING surface: it renders only while the host opted into editing and the writer advertises Structure (CanEditModelStructure), so the palette tests opt in with ?editing=1 (the demo's documented opt-in).
+        var page = await OpenLoadedModelingPageAsync("?notation=bpmn2&viewpoint=Process&scenario=bpmn2-generated&editing=1");
 
         await page.Locator("[data-testid='modeling-open-in-editor-button']")
             .ClickAsync(new LocatorClickOptions { Timeout = 10000 });

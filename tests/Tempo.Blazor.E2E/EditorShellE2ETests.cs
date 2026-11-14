@@ -179,6 +179,8 @@ public partial class EditorShellE2ETests : WasmTestBase
         // path returns focus to a working toggle (keyboard).
         var context = await Browser.NewContextAsync(new BrowserNewContextOptions
         {
+            // Pin the locale: the demo follows the browser language, and a context without one inherits the host machine's (cs-CZ on the dev box) while the specs read English labels.
+            Locale = "en-US",
             ViewportSize = new ViewportSize { Width = 1440, Height = 900 },
             IgnoreHTTPSErrors = true,
         });
@@ -448,15 +450,16 @@ public partial class EditorShellE2ETests : WasmTestBase
         await WaitForAppReadyAsync(page);
         var panel = "[data-testid='editor-shell'] [data-region='left']";
 
-        await page.EvaluateAsync("() => document.documentElement.setAttribute('data-theme', 'dark')");
-        await page.WaitForTimeoutAsync(300);
+        // The demo frame owns the theme (its own data-theme island re-pins the light tokens under a bare <html> attribute).
+        await EnsureDemoThemeAsync(page, "dark");
         var darkBg = await page.EvaluateAsync<string>($"() => getComputedStyle(document.querySelector(\"{panel}\")).backgroundColor");
         var darkCanvas = await page.EvaluateAsync<string>("() => getComputedStyle(document.querySelector(\"[data-testid='editor-shell']\")).backgroundColor");
         Assert.IsTrue(Luminance(darkBg) < 0.25, $"dark panel surface must be dark, was {darkBg}");
         Assert.IsTrue(Luminance(darkCanvas) < 0.25, $"dark shell workspace must be dark, was {darkCanvas}");
         await CaptureViewportOnlyAsync(page, "1440-dark");
 
-        await page.EvaluateAsync("() => { document.documentElement.setAttribute('data-theme', 'light'); document.documentElement.setAttribute('data-tm-theme', 'indigo'); }");
+        await EnsureDemoThemeAsync(page, "light");
+        await page.EvaluateAsync("() => document.documentElement.setAttribute('data-tm-theme', 'indigo')");
         await page.WaitForTimeoutAsync(300);
         var indigoShell = await page.EvaluateAsync<string>("() => getComputedStyle(document.querySelector(\"[data-testid='editor-shell']\")).backgroundColor");
         Assert.IsTrue(Luminance(indigoShell) > 0.85, $"indigo workspace is the off-white, was {indigoShell}");

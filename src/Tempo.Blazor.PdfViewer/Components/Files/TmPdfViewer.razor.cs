@@ -370,6 +370,9 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     private bool _thumbnailsCollapsed;
     private string? _loadError;
     private string? _lastUrl;
+
+    /// <summary>The <see cref="ThumbnailsCollapsed"/> parameter value of the previous parameter pass (see OnParametersSet).</summary>
+    private bool _lastThumbnailsCollapsedParam;
     /// <summary>
     /// Incremented on every <see cref="Url"/> change. The OnAfterRenderAsync pass that starts
     /// <c>tmPdfViewer.init</c> captures the current generation and only ends the loading state
@@ -599,7 +602,10 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
                     }
                 }
             }
-            if (ThumbnailsCollapsed != _thumbnailsCollapsed)
+            // Compared with the LAST SEEN PARAMETER, never with the state: the state also carries the layout's own default (a tablet
+            // starts collapsed) and the user's toggles, and any parent re-render re-delivers the unchanged parameter - comparing
+            // it with the state re-applied the stale `false` and re-opened the tablet's collapsed thumbnails.
+            if (ThumbnailsCollapsed != _lastThumbnailsCollapsedParam)
             {
                 _thumbnailsCollapsed = ThumbnailsCollapsed;
                 if (!ThumbnailsCollapsed)
@@ -619,6 +625,8 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
                 }
             }
         }
+
+        _lastThumbnailsCollapsedParam = ThumbnailsCollapsed;
     }
 
     /// <inheritdoc />

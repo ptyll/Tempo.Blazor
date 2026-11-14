@@ -512,6 +512,25 @@ public class ChatRenderWindowServerE2ETests : ServerTestBase
             "sel => document.querySelectorAll(sel + ' [data-message-id=\"rw-10\"]').length", Scroller),
             "the deep-linked row stays mounted");
 
+        // The trim-back flow is the AWAY-APPEND one, so the reader must really SIT on the anchor first. Over a circuit
+        // the focus lands before the restore scroll has finished (the scroller is still travelling between the bottom and
+        // the anchor), and an append injected mid-flight is a different scenario - the window then never reclaims the
+        // rows. Wait until the viewport rests on the anchor row (scroll position stable, anchor inside the viewport).
+        await page.WaitForFunctionAsync(
+            @"sel => {
+                const s = document.querySelector(sel);
+                const row = s && s.querySelector('[data-message-id=""rw-10""]');
+                if (!s || !row) return false;
+                const key = Math.round(s.scrollTop) + '|' + s.querySelectorAll('.tm-chat__item').length;
+                const now = performance.now();
+                const prev = window.__tmChatRest;
+                if (!prev || prev.key !== key) { window.__tmChatRest = { key, since: now }; return false; }
+                const inView = row.offsetTop >= s.scrollTop && row.offsetTop <= s.scrollTop + s.clientHeight;
+                return inView && now - prev.since >= 800;
+            }",
+            Scroller,
+            new PageWaitForFunctionOptions { Timeout = 60000, PollingInterval = 100 });
+
         // The trim-back flow is the AWAY-APPEND one: an incoming message arrives while the
         // reader sits on the deep-linked anchor, the jump button counts it, and the click
         // returns to the tail — the scroller reports at-bottom and the window trims to size.

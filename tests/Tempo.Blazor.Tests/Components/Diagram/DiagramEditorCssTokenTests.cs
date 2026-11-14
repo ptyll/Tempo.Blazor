@@ -42,6 +42,27 @@ public class DiagramEditorCssTokenTests
     }
 
     [Fact]
+    public void DiagramEditorCss_ShellInsideTheEditorIsNotASecondSizeContainer()
+    {
+        // The editor root is the tm-diagram-editor size container; the TmEditorShell inside it is a
+        // tm-layout container by default. Two nested inline-size containers around the same box made
+        // Chromium intermittently drop the layout of the shell's header/main/status regions (the
+        // modeling "Open in editor" dialog rendered a toolbar over a blank body). The editor opts the
+        // shell out - guard the opt-out and that the root stays the container the queries ask.
+        var css = Css();
+
+        var root = System.Text.RegularExpressions.Regex.Match(css, @"\.tm-diagram-editor\s*\{([^}]*container-name:\s*tm-diagram-editor[^}]*)\}");
+        root.Success.Should().BeTrue();
+        ThemeCss.Normalise(root.Groups[1].Value)
+            .Should().Contain("container-type: inline-size").And.Contain("container-name: tm-diagram-editor");
+
+        var shell = System.Text.RegularExpressions.Regex.Match(
+            css, @"\.tm-diagram-editor\s+\.tm-layout\.tm-diagram-editor__shell\s*\{([^}]*)\}");
+        shell.Success.Should().BeTrue("the shell inside the editor must reset its own containment");
+        var body = ThemeCss.Normalise(shell.Groups[1].Value);
+        body.Should().Contain("container-type: normal").And.Contain("container-name: none");
+    }
+    [Fact]
     public void DiagramEditorPackage_NoZIndexLiteralsOutsideTheTokenScale()
     {
         // Explicit allowlist of three-digit-or-higher z-index literals, per file, each with a

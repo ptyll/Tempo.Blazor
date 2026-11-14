@@ -480,6 +480,25 @@ public abstract class PlaywrightTestBase
     }
 
     /// <summary>
+    /// Puts the demo shell into <paramref name="theme"/> (<c>light</c>/<c>dark</c>) through the real header toggle.
+    /// The demo frame carries its own <c>data-theme</c> (ThemeService), and a nested <c>[data-theme="light"]</c> is
+    /// the documented light island that re-pins every token - so setting the attribute on <c>&lt;html&gt;</c> from
+    /// outside never darkens the page content; the shell's own theme is the contract.
+    /// </summary>
+    protected static async Task EnsureDemoThemeAsync(IPage page, string theme)
+    {
+        var shell = page.Locator(".demo-shell").First;
+        if (!string.Equals(await shell.GetAttributeAsync("data-theme"), theme, StringComparison.Ordinal))
+        {
+            // dispatch in-page: a top-layer popover/sheet or a hidden-per-band toggle must not block it
+            await page.EvaluateAsync("() => { const t = [...document.querySelectorAll('[data-testid=theme-toggle]')].find(e => e.offsetParent !== null) ?? document.querySelector('[data-testid=theme-toggle]'); t?.click(); }");
+        }
+
+        await Assertions.Expect(shell).ToHaveAttributeAsync("data-theme", theme,
+            new LocatorAssertionsToHaveAttributeOptions { Timeout = 15000 });
+        await page.WaitForTimeoutAsync(400);
+    }
+    /// <summary>
     /// Toggles dark mode and verifies the theme changed.
     /// </summary>
     protected async Task ToggleDarkModeAsync(IPage page)

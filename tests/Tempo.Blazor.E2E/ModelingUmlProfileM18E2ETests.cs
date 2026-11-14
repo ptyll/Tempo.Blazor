@@ -71,7 +71,8 @@ public sealed class ModelingUmlProfileM18E2ETests : WasmTestBase
     [Description("Fáze 15: the dialog palette pins the UML profile stencils first (per-notation palette)")]
     public async Task DialogPalette_PinsUmlStencils()
     {
-        var page = await OpenLoadedModelingPageAsync("?notation=uml25&viewpoint=ClassDiagram&scenario=uml25-class");
+        // Since modeling authoring phase 3 (50bf4ace7) the dialog toolbox is an AUTHORING surface: it renders only while the host opted into editing and the writer advertises Structure (CanEditModelStructure), so the palette tests opt in with ?editing=1 (the demo's documented opt-in).
+        var page = await OpenLoadedModelingPageAsync("?notation=uml25&viewpoint=ClassDiagram&scenario=uml25-class&editing=1");
 
         await page.Locator("[data-testid='modeling-open-in-editor-button']")
             .ClickAsync(new LocatorClickOptions { Timeout = 10000 });

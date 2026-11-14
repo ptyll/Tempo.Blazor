@@ -461,6 +461,26 @@ public partial class TmPdfViewerTests
         cut.Find(".tm-drawer--right .tm-pdf-annotation-panel").Should().NotBeNull();
     }
 
+    // ── Tablet: the collapsed-thumbnails DEFAULT survives an unrelated parent render ────────
+
+    [Fact]
+    public void LayoutTablet_ThumbnailsStayCollapsed_AfterAnUnrelatedParentRender()
+    {
+        // The tablet layout starts with the docked thumbnails collapsed. A parent that re-renders the viewer with the
+        // SAME (default false) ThumbnailsCollapsed parameter - the demo page does on every state change - must not
+        // read that as "the host asked to expand": the parameter is compared with its previous value, not with the
+        // layout-defaulted state.
+        var cut = RenderInLayout(TmLayoutMode.Tablet, p => p.Add(c => c.ShowThumbnails, true));
+
+        cut.FindAll("[data-testid='pdf-thumbnails-panel']").Should().BeEmpty("the tablet default collapses the panel");
+        cut.Find("[data-testid='pdf-thumbnails-expand']").Should().NotBeNull();
+
+        cut.Render(); // unrelated re-render, parameters unchanged
+        cut.Render(p => p.Add(c => c.ShowToolbar, true)); // and one that re-delivers the whole set
+
+        cut.FindAll("[data-testid='pdf-thumbnails-panel']").Should().BeEmpty("a re-render must not re-open the panel");
+        cut.Find("[data-testid='pdf-thumbnails-expand']").Should().NotBeNull();
+    }
     // ── Mobile: the comments panel presents as a bottom sheet ────────────────
 
     [Fact]

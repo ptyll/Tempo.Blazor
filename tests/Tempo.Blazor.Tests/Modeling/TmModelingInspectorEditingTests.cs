@@ -152,6 +152,45 @@ public sealed class TmModelingInspectorEditingTests : LocalizationTestBase
     }
 
     [Fact]
+    public void An_unrelated_parent_render_keeps_the_typed_draft_and_the_empty_name_error()
+    {
+        // The editor root re-renders the inspector on events that are NOT edits (a Delete pressed in the
+        // name field reaches the root key handler, which awaits a JS probe). The re-seed gate compares the
+        // incoming COMMITTED values with the values the drafts were seeded from - never with the drafts - so
+        // that render cannot wipe the typed text or the validation message.
+        var element = CreateElement();
+        using var cut = Render<TmModelingInspector>(parameters => parameters
+            .Add(p => p.Element, element)
+            .Add(p => p.ReadOnly, false));
+
+        var name = cut.Find("#modeling-inspector-name");
+        name.Input("");
+        cut.Render(); // an unrelated parent render with the SAME committed element
+        cut.Find("#modeling-inspector-name").GetAttribute("value").Should().BeNullOrEmpty("the cleared draft survives the render");
+
+        cut.Find("#modeling-inspector-name").KeyDown("Enter");
+        cut.Render();
+        cut.Find(".tm-modeling-inspector").TextContent.Should().Contain("required");
+        cut.Find("#modeling-inspector-name").GetAttribute("aria-invalid").Should().Be("true");
+    }
+
+    [Fact]
+    public void A_new_committed_name_still_reseeds_the_draft()
+    {
+        var element = CreateElement();
+        using var cut = Render<TmModelingInspector>(parameters => parameters
+            .Add(p => p.Element, element)
+            .Add(p => p.ReadOnly, false));
+        cut.Find("#modeling-inspector-name").Input("half typed");
+
+        // An undo / reload hands the inspector a changed committed value: the draft follows it.
+        var committed = CreateElement();
+        committed.Name = "Committed elsewhere";
+        cut.Render(parameters => parameters.Add(p => p.Element, committed));
+
+        cut.Find("#modeling-inspector-name").GetAttribute("value").Should().Be("Committed elsewhere");
+    }
+    [Fact]
     public void Number_and_bool_properties_keep_json_kind()
     {
         var changes = new List<ModelingElementChange>();

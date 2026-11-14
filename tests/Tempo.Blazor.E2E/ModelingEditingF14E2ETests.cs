@@ -116,7 +116,9 @@ public sealed class ModelingEditingF14E2ETests : WasmTestBase
     [Description("Manual save sends the aggregated change set (name + property), clears pending and dumps the change set on the demo page")]
     public async Task Editing_ManualSave_AggregatesAndClears()
     {
-        var page = await OpenLoadedEditingPageAsync();
+        // `scenario=layout-persist` is the demo route whose loader serves the DEMO WRITER's persisted model (the
+        // default route's provider always returns the shipped model, so a reload there cannot show a saved edit).
+        var page = await OpenLoadedEditingPageAsync("?editing=1&scenario=layout-persist");
         try
         {
             await page.Locator("[data-testid='modeling-tree-node-bpmn-validate-order']").ClickAsync();
@@ -141,7 +143,8 @@ public sealed class ModelingEditingF14E2ETests : WasmTestBase
             await page.Locator("[data-testid='modeling-inspector-save']")
                 .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached, Timeout = 5000 });
 
-            // The persisted model survives a reload (the demo writer stores it in memory).
+            // The persisted model survives a reload (the demo writer stores it in memory; only the layout-persist route's
+            // loader reads it back - the default route's provider serves the shipped model on every load).
             await page.Locator("[data-testid='modeling-tab-source']").ClickAsync();
             await page.Locator("[data-testid='modeling-source-load-button']").ClickAsync();
             await page.Locator("[data-testid='modeling-tree-node-bpmn-validate-order']")

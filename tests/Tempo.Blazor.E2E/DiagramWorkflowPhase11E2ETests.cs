@@ -104,6 +104,7 @@ public sealed class DiagramWorkflowPhase11E2ETests : PlaywrightTestBase
         await LoadUmlSampleAsync(lightPage);
         await ClearSelectionAsync(lightPage);
         await AssertNoTextOverflowAsync(lightPage);
+        await AssertDiagramNodeTextContrastAsync(lightPage);
         await SaveStableScreenshotAsync(lightPage, "diagram_phase11_theme_light");
         TestContext.WriteLine("UX theme light: toolbar labels and toolbox text fit their containers with readable contrast.");
 
@@ -305,19 +306,35 @@ public sealed class DiagramWorkflowPhase11E2ETests : PlaywrightTestBase
 
     private static async Task AssertDiagramNodeTextContrastAsync(IPage page)
     {
-        var rgb = await page.EvaluateAsync<int[]>(
+        // Plan 92e96b25 TG-004: the diagram canvas is themed (dark paper `--tm-canvas-paper`, light ink in the
+        // dark theme; white paper + dark ink in the light one), so the contract is no longer "text is dark" but
+        // "node text reads on the paper it sits on" - WCAG AA 4.5:1 against the resolved paper token.
+        var colors = await page.EvaluateAsync<int[][]>(
             """
             () => {
                 const text = document.querySelector(".tm-diagram-node[data-node-id='class1'] .tm-diagram-node__text")
                     || document.querySelector(".tm-diagram-node[data-node-id='class1'] .tm-diagram-node__list-item");
-                const color = getComputedStyle(text).color;
-                const match = color.match(/\d+/g) || [];
-                return match.slice(0, 3).map(value => parseInt(value, 10));
+                const probe = document.createElement('span');
+                probe.style.color = 'var(--tm-canvas-paper)';
+                text.parentElement.appendChild(probe);
+                const paper = getComputedStyle(probe).color;
+                probe.remove();
+                const parse = c => (c.match(/[\d.]+/g) || []).slice(0, 3).map(v => Math.round(parseFloat(v)));
+                return [parse(getComputedStyle(text).color), parse(paper)];
             }
             """);
 
-        Assert.AreEqual(3, rgb.Length, "Diagram node text should resolve to an RGB color.");
-        Assert.IsTrue(rgb.Average() < 120, $"Diagram node text should stay dark on the light diagram page, got rgb({string.Join(", ", rgb)}).");
+        Assert.AreEqual(3, colors[0].Length, "Diagram node text should resolve to an RGB color.");
+        Assert.AreEqual(3, colors[1].Length, "The canvas paper token should resolve to an RGB color.");
+        static double Lum(int[] c)
+        {
+            double Ch(int v) { var s = v / 255.0; return s <= 0.03928 ? s / 12.92 : Math.Pow((s + 0.055) / 1.055, 2.4); }
+            return 0.2126 * Ch(c[0]) + 0.7152 * Ch(c[1]) + 0.0722 * Ch(c[2]);
+        }
+        var (hi, lo) = (Math.Max(Lum(colors[0]), Lum(colors[1])), Math.Min(Lum(colors[0]), Lum(colors[1])));
+        var ratio = (hi + 0.05) / (lo + 0.05);
+        Assert.IsTrue(ratio >= 4.5,
+            $"Diagram node text rgb({string.Join(", ", colors[0])}) must read on the canvas paper rgb({string.Join(", ", colors[1])}): {ratio:0.00}:1.");
     }
 
     private static async Task ClearSelectionAsync(IPage page)

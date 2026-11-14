@@ -145,6 +145,8 @@ public partial class EditorShellE2ETests
     {
         var context = await Browser.NewContextAsync(new BrowserNewContextOptions
         {
+            // Pin the locale: the demo follows the browser language, and a context without one inherits the host machine's (cs-CZ on the dev box) while the specs read English labels.
+            Locale = "en-US",
             ViewportSize = new ViewportSize { Width = 1440, Height = 900 },
             IgnoreHTTPSErrors = true,
         });

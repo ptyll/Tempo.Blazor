@@ -991,6 +991,13 @@ test('_contextMenuTarget resolves label group, table cell, node, edge and canvas
     const edge = { getAttribute: n => n === 'data-edge-id' ? 'e1' : null, closest: () => null };
     assert.deepEqual(plain(engine._contextMenuTarget(targetChain({ '.tm-diagram-edge-hit-path': edge }))), { kind: 'edge', id: 'e1' });
 
+    // a handle of the (just selected) edge - the virtual bend / segment / control point under the press
+    const handle = { getAttribute: n => n === 'data-edge-id' ? 'e5' : null, closest: () => null };
+    assert.deepEqual(plain(engine._contextMenuTarget(targetChain({ '.tm-diagram-edge-handle': handle }))), { kind: 'edge', id: 'e5' });
+    // ...without an edge id it is not an edge target
+    const bareHandle = { getAttribute: () => null, closest: () => null };
+    assert.deepEqual(plain(engine._contextMenuTarget(targetChain({ '.tm-diagram-edge-handle': bareHandle }))), { kind: 'canvas' });
+
     // canvas
     assert.deepEqual(plain(engine._contextMenuTarget(targetChain({}))), { kind: 'canvas' });
 
@@ -1088,6 +1095,25 @@ test('a press on a connection point under an edge corridor starts an edge draw, 
     assert.notEqual(inst.isDraggingWholeEdge, true, 'the press is not a whole-edge drag');
     assert.equal(log.filter(entry => entry[0] === 'OnSelectionChanged').length, 0,
         'the edge is not selected by this press');
+});
+
+test('a RIGHT-click on a connection point does not start an edge draw (it is the node context-menu gesture)', () => {
+    const { edgeHitPath, cpCircle, nodeG } = hitStackElements();
+    const engine = loadEngine({ document: { elementsFromPoint: () => [cpCircle, nodeG] } });
+    noHitStubs(engine);
+    const { inst } = corridorInst();
+    engine.instances.set('c1', inst);
+    const edgeDraws = [];
+    engine._startEdgeDraw = (...args) => edgeDraws.push(args);
+
+    engine._onMouseDown({
+        button: 2, clientX: 50, clientY: 60,
+        preventDefault() {}, stopPropagation() {},
+        target: cpCircle,
+    }, inst);
+
+    assert.equal(edgeDraws.length, 0, 'the centre connection point sits under a press at the middle of a node: right-click must not draw');
+    assert.equal(inst.isDrawingEdge === true, false);
 });
 
 test('a port under the corridor still wins', () => {

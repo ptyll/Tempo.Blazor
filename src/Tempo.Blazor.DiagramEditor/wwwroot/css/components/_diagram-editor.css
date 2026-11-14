@@ -200,6 +200,17 @@
     min-height: 0;
 }
 
+/* The editor root is ALREADY the size container (tm-diagram-editor, above) that every query in this
+   package asks, so the shell inside it must not be a SECOND inline-size container around the same
+   box (the shell root is a tm-layout container by default, nothing here queries it). Two nested size
+   containers made Chromium intermittently skip the layout of the shell's header / main / status
+   children - they kept display:block but lost their box (getClientRects() empty), so the open-in-editor
+   dialog of TmModelingEditor showed a toolbar over a blank body in a large share of the loads (no toolbox,
+   no canvas, no page tabs). Measured over repeated loads in the E2E lane: the header went box-less in most loads with both containers, never with this reset. */
+.tm-diagram-editor .tm-layout.tm-diagram-editor__shell {
+    container-type: normal;
+    container-name: none;
+}
 .tm-diagram-editor .tm-editor-shell__main {
     flex: 1 1 auto;
     min-height: 0;

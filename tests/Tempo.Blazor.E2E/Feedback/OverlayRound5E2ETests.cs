@@ -22,6 +22,8 @@ public sealed class OverlayRound5E2ETests : WasmTestBase
     {
         var context = await Browser.NewContextAsync(new BrowserNewContextOptions
         {
+            // Pin the locale: the demo follows the browser language, and a context without one inherits the host machine's (cs-CZ on the dev box) while the specs read English labels.
+            Locale = "en-US",
             HasTouch = width < 1024,
             ViewportSize = new ViewportSize { Width = width, Height = height },
             IgnoreHTTPSErrors = true,

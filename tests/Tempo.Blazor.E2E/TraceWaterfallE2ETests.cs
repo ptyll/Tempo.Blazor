@@ -354,6 +354,13 @@ public abstract class TraceWaterfallE2EBase : PlaywrightTestBase
             """
             async (selector) => {
                 const host = document.querySelector(selector);
+                // axe samples the RESOLVED colours: a finite CSS animation/transition still running (the demo's fade-in, a colour
+                // transition, the segmented indicator) paints a blended, low-contrast frame. Wait for them (looping ones,
+                // like the skeleton shimmer, never finish and are not waited for).
+                await Promise.all(document.getAnimations()
+                    .filter(a => a.effect && a.effect.getComputedTiming().iterations !== Infinity)
+                    .map(a => a.finished.catch(() => { })));
+                await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
                 const result = await axe.run(host, {
                     runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa'] },
                     resultTypes: ['violations']

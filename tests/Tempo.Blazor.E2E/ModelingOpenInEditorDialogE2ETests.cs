@@ -304,7 +304,8 @@ public sealed class ModelingOpenInEditorDialogE2ETests : WasmTestBase
     public async Task Dialog_toolbox_pins_notation_palette_and_inserts_from_it()
     {
         // The demo deep link pins the notation — the palette follows the ACTIVE notation.
-        var page = await OpenPageWithDialogAsync(query: "?notation=bpmn");
+        // Since modeling authoring phase 3 (50bf4ace7) the dialog toolbox is an AUTHORING surface: it renders only while the host opted into editing and the writer advertises Structure (CanEditModelStructure), so the palette tests opt in with ?editing=1 (the demo's documented opt-in).
+        var page = await OpenPageWithDialogAsync(query: "?notation=bpmn&editing=1");
 
         var dialog = page.Locator("[data-testid='modeling-open-diagram-editor']");
         var pinned = dialog.Locator(".tm-diagram-toolbox__library[data-library-id='notation-palette']");
@@ -367,8 +368,26 @@ public sealed class ModelingOpenInEditorDialogE2ETests : WasmTestBase
             .ClickAsync(new LocatorClickOptions { Timeout = 10000 });
         await page.Locator("[data-testid='modeling-open-diagram-editor'] .tm-modal")
             .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
+        await WaitForDialogDiagramReadyAsync(page);
         return page;
     }
+
+    /// <summary>Waits until the dialog's diagram editor has attached its JS instance (selection, context menu and
+    /// keyboard handling live there): a right-click or Escape fired before that reaches only the Blazor fallback
+    /// (the canvas menu, no selection), which is a race of the test, not a contract of the editor.</summary>
+    private static Task WaitForDialogDiagramReadyAsync(IPage page)
+        => page.WaitForFunctionAsync(
+            """
+            () => {
+                const canvas = document.querySelector("[data-testid='modeling-open-diagram-editor'] [data-testid='diagram-canvas']");
+                if (!canvas || !canvas.id || canvas.getBoundingClientRect().width === 0) return false;
+                const editor = window.tmDiagramEditor;
+                const instance = editor && editor.instances && editor.instances.get(canvas.id);
+                return !!(instance && instance.dotNetRef && instance.container && instance.container.isConnected);
+            }
+            """,
+            null,
+            new PageWaitForFunctionOptions { Timeout = 20000 });
 
     /// <summary>Presses <paramref name="tabs"/> Tabs from inside the dialog and reports whether
     /// the focus returned into the overlay (the trap walked the cycle).</summary>

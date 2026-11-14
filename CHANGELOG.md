@@ -284,6 +284,22 @@
 - **Swimlane clamp rule** — a node inside a container whose stencil is a pool/lane BAND is no longer clamped to that band while dragging (the band is a container the user drags ACROSS; the drop re-resolves the lane). The canvas marks such nodes with `data-swimlane="true"`. A logical group still clamps.
 - **`--tm-diagram-node-stroke`** — a new component-local token on the diagram root (`var(--tm-paper-ink)` by default) that the BPMN node stencils and the editor chrome read, so a host or a high-contrast theme recolours node outlines without editing the package. Paper-token swimlane headers/toggles and the `bpmn2` marker SVG re-shown behind a transparent native primitive arrived with the same phase.
 
+### Fixed — release-gate E2E findings (2.11.0 verification)
+
+- **`TmPdfViewer` re-opened the tablet's collapsed thumbnails.** The `ThumbnailsCollapsed` parameter was compared with the
+  viewer's *state*, which also carries the layout default (a tablet starts collapsed) — any parent re-render that re-delivered the
+  unchanged `false` re-applied it and re-opened the panel. The parameter is now compared with its previous value.
+- **`TmModelingInspector` wiped the typed name on an unrelated render.** The draft re-seed gate compared the incoming committed value
+  with the *draft*; the editor root re-renders on a Delete pressed in a text field, which reset the field and lost the pending
+  "name required" message. The gate now compares with the values the drafts were seeded from.
+- **`TmDiagramEditor` right-click on a node centre.** A right-click on a connection point (the centre one sits exactly under a press
+  at the middle of a BPMN event or task) started an edge drag instead of the node context menu, and a right-click on the handles of
+  the just-selected edge resolved to the empty canvas. Right-clicks no longer start an edge draw, and a handle belongs to its edge.
+- **`TmDiagramEditor` inside a `TmModal`/modeling dialog intermittently rendered no body.** The editor root and its `TmEditorShell` were
+  *both* inline-size containers around the same box (`tm-diagram-editor` and `tm-layout`); Chromium sometimes skipped layout of the shell's
+  header / main / status regions. The shell now resets its own containment inside the editor.
+- **`TmModelingEditor` issues dock.** The dock floor (14rem) predates the phase-11 filter bar (≈41 px), leaving room for less than two
+  issue rows; the floor is 15rem.
 ### Added — core (`Tempo.Blazor`)
 
 - **`TmMultiSelect.SingleSelection`** (`bool`, opt-in) — the same combobox in single-value mode: one stored value, a pick replaces the selection and closes the list, the chip set renders the one value. The modeling inspector uses it for `EntityReference` fields (the stored display snapshot must render before any lookup call), and it is a public core knob rather than an inspector-private hack.

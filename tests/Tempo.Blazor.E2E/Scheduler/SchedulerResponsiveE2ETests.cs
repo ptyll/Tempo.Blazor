@@ -235,7 +235,10 @@ public sealed class SchedulerResponsiveE2ETests : WasmTestBase
         await card.Locator("[data-action-id='scheduler-add']").ClickAsync();
         await card.Locator("[data-action-id='scheduler-today']").ClickAsync();
         await card.Locator("[data-action-id='scheduler-view']").ClickAsync();
-        var viewMenu = page.Locator(".tm-dropdown__menu[data-testid='scheduler-view-menu'], [data-testid='scheduler-view-menu']").Last;
+        // Since the toolbar gave BOTH presentations the stable `scheduler-view-menu` id (the wrapper region of the view
+        // switcher, 238cfa1b4) that id names a layout wrapper - hidden here, the dropdown's panel is a sheet/popover
+        // outside it. The open menu is the one that offers the views: wait for its options, not for the wrapper.
+        var viewMenu = page.Locator("[role='menu'] [data-view='Week'], [role='menuitem'][data-view='Week'], [role='menuitemradio'][data-view='Week']").Last;
         await Assertions.Expect(viewMenu).ToBeVisibleAsync();
         await page.Keyboard.PressAsync("Escape");
         await card.Locator(".tm-mobile-action-bar__more").ClickAsync();
@@ -268,6 +271,13 @@ public sealed class SchedulerResponsiveE2ETests : WasmTestBase
             """
             async () => {
                 const host = document.querySelector("[data-testid='scheduler-mobile-plain'] .tm-scheduler");
+                // axe samples the RESOLVED colours: a finite CSS animation/transition still running (the demo's fade-in, a colour
+                // transition, the segmented indicator) paints a blended, low-contrast frame. Wait for them (looping ones,
+                // like the skeleton shimmer, never finish and are not waited for).
+                await Promise.all(document.getAnimations()
+                    .filter(a => a.effect && a.effect.getComputedTiming().iterations !== Infinity)
+                    .map(a => a.finished.catch(() => { })));
+                await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
                 const result = await axe.run(host, {
                     runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa'] },
                     resultTypes: ['violations']
@@ -410,6 +420,8 @@ public sealed class SchedulerResponsiveE2ETests : WasmTestBase
     {
         var context = await Browser.NewContextAsync(new BrowserNewContextOptions
         {
+            // Pin the locale: the demo follows the browser language, and a context without one inherits the host machine's (cs-CZ on the dev box) while the specs read English labels.
+            Locale = "en-US",
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = touch,
             ColorScheme = dark ? ColorScheme.Dark : ColorScheme.Light,
