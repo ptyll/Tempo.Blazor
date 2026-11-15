@@ -918,4 +918,159 @@ public class TmToastTests : LocalizationTestBase
         cut.FindAll(".tm-toast-spinner").Should().BeEmpty("the spinner is gone after the promise settled");
         cut.Find(".tm-toast").ClassList.Should().Contain("tm-toast--success");
     }
+
+    // ── 2.11.1: OnAfterRenderAsync is re-entrant — dismissing the last toast must not end the circuit ──
+    // The dismiss click removes the last card; the demote branch of OnAfterRenderAsync awaits the
+    // module's unwatch(). The removed card's focusout/mouseleave (and the announce clear/refill)
+    // render the container AGAIN while that await is pending, and the second OnAfterRenderAsync
+    // used to walk the same teardown over the same fields: the first continuation then
+    // dereferenced a module field the second had already nulled (NullReferenceException on a
+    // Blazor Server circuit, measured 6/6 in an application e2e).
+
+    [Fact]
+    public async Task Container_DismissingTheLastToast_WhileUnwatchIsInFlight_DoesNotThrow_AndRecovers()
+    {
+        var visibility = JSInterop.SetupModule("./_content/Tempo.Blazor/js/tm-toast-visibility.js");
+        visibility.Setup<bool>("watch", _ => true).SetResult(false);
+        // No result: every unwatch() stays pending until the test completes it, which is the
+        // interleaving a real circuit produces (a JS round trip between the two renders).
+        var unwatch = visibility.SetupVoid("unwatch", _ => true);
+        var toastJs = JSInterop.SetupModule("./_content/Tempo.Blazor/js/tm-toast.js");
+        toastJs.SetupVoid("attach", _ => true).SetVoidResult();
+        var detach = toastJs.SetupVoid("detach", _ => true);
+        var swipe = JSInterop.SetupModule("./_content/Tempo.Blazor/js/tm-toast-swipe.js");
+        swipe.SetupVoid("attachSwipe", _ => true).SetVoidResult();
+        var detachSwipe = swipe.SetupVoid("detachSwipe", _ => true);
+
+        var cut = Render<TmToastContainer>();
+        var svc = Services.GetRequiredService<ToastService>();
+        svc.ShowSuccess("Bye");
+        cut.Render();
+        cut.WaitForAssertion(() => visibility.Invocations.Count(i => i.Identifier == "watch").Should().Be(1));
+
+        // The dismiss click: the last card leaves, the demote branch parks on the pending unwatch.
+        cut.Find(".tm-toast-dismiss").Click();
+        cut.WaitForAssertion(() => cut.FindAll(".tm-toast").Should().BeEmpty());
+        cut.WaitForAssertion(() => visibility.Invocations.Count(i => i.Identifier == "unwatch").Should().BeGreaterThan(0));
+
+        // Re-render while the first teardown is still parked (what the removed card's
+        // focusout / mouseleave do on a real circuit).
+        await cut.InvokeAsync(() => { });
+        cut.Render();
+        cut.Render();
+
+        // The JS round trips complete in the order they were issued; with the defect the second
+        // teardown walks the same fields and the first continuation dereferences a null module.
+        unwatch.SetVoidResult();
+        detach.SetVoidResult();
+        detachSwipe.SetVoidResult();
+        await cut.InvokeAsync(() => { });
+        cut.Render();
+
+        // The container must still work: a new toast watches again and the card renders.
+        svc.ShowInfo("Again");
+        cut.Render();
+        cut.WaitForAssertion(() =>
+        {
+            cut.FindAll(".tm-toast").Should().HaveCount(1);
+            visibility.Invocations.Count(i => i.Identifier == "watch").Should().Be(2,
+                "a container that tore down cleanly watches again for the next toast");
+        });
+    }
+
+    /// <summary>The three toast modules, every call answered at once except <c>watch</c>, which stays pending.</summary>
+    private (BunitJSModuleInterop Visibility, JSRuntimeInvocationHandler<bool> Watch, BunitJSModuleInterop Toast, BunitJSModuleInterop Swipe)
+        SetupToastModulesWithPendingWatch()
+    {
+        var visibility = JSInterop.SetupModule("./_content/Tempo.Blazor/js/tm-toast-visibility.js");
+        var watch = visibility.Setup<bool>("watch", _ => true);   // pending until the test completes it
+        visibility.SetupVoid("unwatch", _ => true).SetVoidResult();
+        var toast = JSInterop.SetupModule("./_content/Tempo.Blazor/js/tm-toast.js");
+        toast.SetupVoid("attach", _ => true).SetVoidResult();
+        toast.SetupVoid("detach", _ => true).SetVoidResult();
+        var swipe = JSInterop.SetupModule("./_content/Tempo.Blazor/js/tm-toast-swipe.js");
+        swipe.SetupVoid("attachSwipe", _ => true).SetVoidResult();
+        swipe.SetupVoid("detachSwipe", _ => true).SetVoidResult();
+        return (visibility, watch, toast, swipe);
+    }
+
+    [Fact]
+    public void Container_RenderWhileWatchIsPending_DoesNotIssueASecondWatch()
+    {
+        // Single-flight, measured at the call: a second toast renders the container again while the
+        // first pass is parked on watch(). Without the guard that second pass sees
+        // _watchingVisibility still false and issues a SECOND watch for the same handle.
+        var (visibility, watch, _, _) = SetupToastModulesWithPendingWatch();
+
+        var cut = Render<TmToastContainer>();
+        var svc = Services.GetRequiredService<ToastService>();
+        svc.ShowSuccess("One");
+        cut.Render();
+        visibility.Invocations.Count(i => i.Identifier == "watch").Should().Be(1);
+
+        svc.ShowInfo("Two");
+        cut.Render();
+        visibility.Invocations.Count(i => i.Identifier == "watch").Should().Be(1,
+            "single-flight: a render while watch() is pending must not issue a second watch");
+
+        watch.SetResult(false);
+        cut.WaitForAssertion(() => cut.FindAll(".tm-toast").Should().HaveCount(2));
+    }
+
+    [Fact]
+    public void Container_DismissingTheToast_WhileWatchIsInFlight_UnwatchesAfterWatchReturned()
+    {
+        // The other half of the same re-entrancy: the toast leaves while the FIRST pass is still
+        // parked on watch(). Single-flight serves the second render by a re-run AFTER watch()
+        // returned; that re-run sees the final state (no toast) and unwatches exactly once.
+        // What this test measures: the unwatch count and the absence of an exception from the
+        // parked pass. Without the guard (the locals alone) the second pass runs at once, finds
+        // _watchingVisibility still false, issues no unwatch and disposes the module under the
+        // pending watch; bUnit then faults that watch (the red reason measured by mutation).
+        var (visibility, watch, _, _) = SetupToastModulesWithPendingWatch();
+
+        var cut = Render<TmToastContainer>();
+        var svc = Services.GetRequiredService<ToastService>();
+        svc.ShowSuccess("Bye");
+        cut.Render();
+        visibility.Invocations.Count(i => i.Identifier == "watch").Should().Be(1);
+
+        svc.Remove(svc.Toasts.Single().Id);   // the last toast leaves while watch() is still pending
+        cut.Render();
+        cut.FindAll(".tm-toast").Should().BeEmpty();
+        visibility.Invocations.Count(i => i.Identifier == "unwatch").Should().Be(0,
+            "the demote pass is deferred until watch() returned");
+
+        watch.SetResult(false);
+
+        cut.WaitForAssertion(() => visibility.Invocations.Count(i => i.Identifier == "unwatch").Should().Be(1,
+            "a toast-less container must not keep a visibility watcher registered"));
+    }
+
+    [Fact]
+    public async Task Container_DisposedWhileWatchIsPending_AttachesNothingWhenWatchResolves()
+    {
+        // Dispose racing a PARKED pass: the pass is awaiting watch() when the component is torn
+        // down. When watch() resolves afterwards the pass must stop: no import of tm-toast.js /
+        // tm-toast-swipe.js, no attach, no attachSwipe, and the watcher flag is not set for a
+        // module DisposeAsync already released. NOT covered here: DisposeAsync racing a pass that
+        // is parked in the demote branch (detach/detachSwipe pending) or in pin/raise.
+        var (visibility, watch, toast, swipe) = SetupToastModulesWithPendingWatch();
+
+        var cut = Render<TmToastContainer>();
+        var svc = Services.GetRequiredService<ToastService>();
+        svc.ShowSuccess("One");
+        cut.Render();
+        visibility.Invocations.Count(i => i.Identifier == "watch").Should().Be(1);
+
+        await cut.Instance.DisposeAsync();
+        watch.SetResult(false);
+        await Task.Delay(100);   // let the parked pass resume; there is nothing to wait FOR
+
+        JSInterop.Invocations.Where(i => i.Identifier == "import"
+                && i.Arguments.OfType<string>().Any(a => a.EndsWith("/tm-toast.js") || a.EndsWith("/tm-toast-swipe.js")))
+            .Should().BeEmpty("a pass that resumed after DisposeAsync must not import further modules");
+        toast.Invocations.Where(i => i.Identifier == "attach").Should().BeEmpty();
+        swipe.Invocations.Where(i => i.Identifier == "attachSwipe").Should().BeEmpty();
+    }
 }

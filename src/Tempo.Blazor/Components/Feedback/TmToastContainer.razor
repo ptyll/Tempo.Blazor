@@ -166,6 +166,10 @@
     private bool _promoted;
     private bool _pinned;
     private bool _disposed;
+    /// <summary>True while an <see cref="OnAfterRenderAsync"/> pass is awaiting JS (single-flight guard).</summary>
+    private bool _afterRenderRunning;
+    /// <summary>A render arrived while a pass was in flight: the running pass repeats once more.</summary>
+    private bool _afterRenderRerun;
 
     protected override void OnInitialized()
     {
@@ -200,8 +204,49 @@
     }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// SINGLE-FLIGHT. This method awaits JS round trips (unwatch, detach, raise, ...) and the render
+    /// it follows can be followed by ANOTHER render while those awaits are pending: the card the
+    /// dismiss click removed fires focusout/mouseleave, and the live-region announce renders twice.
+    /// Two runs interleaved over the same module fields — the first run's continuation then
+    /// dereferenced a field the second run had already nulled (NullReferenceException that ends a
+    /// Blazor Server circuit, 2.11.0 regression). A render that arrives while a run is in flight
+    /// only asks for one more pass (<see cref="_afterRenderRerun"/>); the running pass repeats until
+    /// no request is left, so the final pass always sees the final visible set and the JS calls
+    /// (watch/unwatch share ONE per-handle state in the module) can never overlap.
+    /// </remarks>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (_afterRenderRunning)
+        {
+            _afterRenderRerun = true;
+            return;
+        }
+
+        _afterRenderRunning = true;
+        try
+        {
+            do
+            {
+                _afterRenderRerun = false;
+                await RunAfterRenderAsync();
+            }
+            while (_afterRenderRerun && !_disposed);
+        }
+        finally
+        {
+            _afterRenderRunning = false;
+        }
+    }
+
+    private async Task RunAfterRenderAsync()
+    {
+        // A pass that starts (or resumes after an await) on a disposed component must not import,
+        // attach or watch anything: DisposeAsync has already torn down what existed, and a module
+        // created afterwards would never be released.
+        if (_disposed)
+            return;
+
         // The container persists in the DOM (unlike a modal, it does not unmount on close), so it
         // demotes when the last toast leaves. A push re-raises: hidePopover + showPopover in one
         // synchronous step lands the container above every sheet and dialog promoted before it.
@@ -220,8 +265,12 @@
                 {
                     _pinned = true;
                     await _topLayer.PinAsync(_root);
+                    if (_disposed)
+                        return;
                 }
                 await _topLayer.RaiseAsync(_root);
+                if (_disposed)
+                    return;
                 _promoted = true;
                 _lastNewestId = newestId;
             }
@@ -235,12 +284,20 @@
                 _visibility ??= new LazyJsModule(JS, "./_content/Tempo.Blazor/js/tm-toast-visibility.js");
                 _dotNetRef ??= DotNetObjectReference.Create(this);
                 var (ok, _) = await _visibility.TryInvokeAsync<bool>("watch", _dotNetRef);
+                // watch() resolved after DisposeAsync: the flag would describe a module Dispose
+                // already released, and the attach calls below must not run at all.
+                if (_disposed)
+                    return;
                 _watchingVisibility = ok;
             }
 
             // Browser-owned behaviors: Escape dismissal, focus return on card removal, Alt+T.
+            if (_disposed)
+                return;
             _toastJs ??= new LazyJsModule(JS, "./_content/Tempo.Blazor/js/tm-toast.js");
             await _toastJs.TryInvokeVoidAsync("attach", _root, _dotNetRef ??= DotNetObjectReference.Create(this));
+            if (_disposed)
+                return;
 
             // Swipe-to-dismiss rides the shared pointer-drag helper (touch/pen only); the gesture
             // asks for dismissal through the same DismissToast entry point as Escape, and the close
@@ -250,27 +307,34 @@
         }
         else
         {
-            if (_visibility is not null)
+            // Each module field is CAPTURED into a local and NULLED before the first await: a
+            // concurrent DisposeAsync (the single-flight guard above already excludes a second
+            // pass) then finds nothing to tear down twice and nothing it can dereference as null.
+            var visibility = _visibility;
+            var watching = _watchingVisibility;
+            _visibility = null;
+            _watchingVisibility = false;
+            if (visibility is not null)
             {
-                if (_watchingVisibility)
-                    await _visibility.TryInvokeVoidAsync("unwatch", _dotNetRef);
-                _watchingVisibility = false;
-                await _visibility.DisposeAsync();
-                _visibility = null;
+                if (watching)
+                    await visibility.TryInvokeVoidAsync("unwatch", _dotNetRef);
+                await visibility.DisposeAsync();
             }
 
-            if (_toastJs is not null)
+            var toastJs = _toastJs;
+            _toastJs = null;
+            if (toastJs is not null)
             {
-                await _toastJs.TryInvokeVoidAsync("detach", _root);
-                await _toastJs.DisposeAsync();
-                _toastJs = null;
+                await toastJs.TryInvokeVoidAsync("detach", _root);
+                await toastJs.DisposeAsync();
             }
 
-            if (_swipeJs is not null)
+            var swipeJs = _swipeJs;
+            _swipeJs = null;
+            if (swipeJs is not null)
             {
-                await _swipeJs.TryInvokeVoidAsync("detachSwipe", _root);
-                await _swipeJs.DisposeAsync();
-                _swipeJs = null;
+                await swipeJs.TryInvokeVoidAsync("detachSwipe", _root);
+                await swipeJs.DisposeAsync();
             }
 
             if (_promoted)
@@ -296,6 +360,8 @@
         // removed card may have held. restoreTrapFocusIfLost itself acts only when an
         // inert-exempt surface actually held focus, so an ask for a card nobody focused is a
         // harmless no-op; a push (pure id addition) never asks.
+        if (_disposed)
+            return;
         var ids = new HashSet<string>(VisibleToasts.Select(t => t.Id));
         if (_lastIds.Any(id => !ids.Contains(id)))
         {
@@ -443,25 +509,32 @@
             await _focusIfLost.DisposeAsync();
             _focusIfLost = null;
         }
-        if (_visibility is not null)
+        // Same capture-and-null-before-await as the demote branch: an after-render pass still
+        // parked on a JS round trip when the component is torn down must not meet a field this
+        // method nulled underneath it (nor tear the same module down a second time).
+        var visibility = _visibility;
+        var watching = _watchingVisibility;
+        _visibility = null;
+        _watchingVisibility = false;
+        if (visibility is not null)
         {
-            if (_watchingVisibility)
-                await _visibility.TryInvokeVoidAsync("unwatch", _dotNetRef);
-            _watchingVisibility = false;
-            await _visibility.DisposeAsync();
-            _visibility = null;
+            if (watching)
+                await visibility.TryInvokeVoidAsync("unwatch", _dotNetRef);
+            await visibility.DisposeAsync();
         }
-        if (_toastJs is not null)
+        var toastJs = _toastJs;
+        _toastJs = null;
+        if (toastJs is not null)
         {
-            await _toastJs.TryInvokeVoidAsync("detach", _root);
-            await _toastJs.DisposeAsync();
-            _toastJs = null;
+            await toastJs.TryInvokeVoidAsync("detach", _root);
+            await toastJs.DisposeAsync();
         }
-        if (_swipeJs is not null)
+        var swipeJs = _swipeJs;
+        _swipeJs = null;
+        if (swipeJs is not null)
         {
-            await _swipeJs.TryInvokeVoidAsync("detachSwipe", _root);
-            await _swipeJs.DisposeAsync();
-            _swipeJs = null;
+            await swipeJs.TryInvokeVoidAsync("detachSwipe", _root);
+            await swipeJs.DisposeAsync();
         }
         _dotNetRef?.Dispose();
         if (_topLayer is not null)

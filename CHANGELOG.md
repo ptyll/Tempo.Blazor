@@ -1,5 +1,26 @@
 # Changelog
 
+## 2.11.1 - 2026-11-15
+
+> Patch release over 2.11.0: two defects found by a host application while moving to 2.11.0.
+> No API, parameter or localization key changes. Only `Tempo.Blazor` changes (`TmToastContainer`,
+> `TmDataTable`); every other packable project moves to 2.11.1 with a version bump alone, because
+> `ReleaseContractTests` requires one version for all of them.
+
+### Fixed
+
+- **`TmToastContainer` — dismissing the last toast ended the Blazor Server circuit with a `NullReferenceException` (2.11.0 regression; 2.8.18 has no `OnAfterRenderAsync` here).** Clicking `.tm-toast-dismiss` removed the last card and `OnAfterRenderAsync` entered its demote branch, which awaits `unwatch()` (and `detach` / `detachSwipe`) before it nulls the module fields. The removed card's `focusout` / `mouseleave` and the live-region announce render the container AGAIN while that await is pending, so a second `OnAfterRenderAsync` ran the same teardown over the same fields and the first continuation dereferenced a module field the second had already nulled (`await _visibility.DisposeAsync()`). Measured 6 out of 6 in a host's Server-circuit e2e; reproduced here in bUnit by holding `unwatch()` pending across a second render (`TmToastTests.Container_DismissingTheLastToast_WhileUnwatchIsInFlight_DoesNotThrow_AndRecovers`, red on the NRE at that line before the fix). The pass is now single-flight: a render that arrives while one is in flight asks for ONE more pass and the running pass repeats until no request is left (so `watch` / `unwatch`, which share one per-handle state in the module, can never overlap and kill the next watch); the demote branch and `DisposeAsync` additionally capture each of the three module fields (`_visibility`, `_toastJs`, `_swipeJs`) into a local and null the field before the first await.
+- **`TmDataTable` `CardMode` never switched to cards at any width (regression since 2.11.0; 2.9.0 and earlier gated the card rules on the viewport, `@media (max-width: 640px)`).** With `CardMode="true"` (and `MobileLayout` left at `None`) the wrapper carried only `tm-data-table-wrapper--card`, but the card rules sit under `@container tm-data-table (width < 640px)` and only `tm-data-table-wrapper--container` declares that container, so the rules never applied. `CardMode` now adds `tm-data-table-wrapper--container` too (`TmDataTableMobileLayoutTests.CardMode_KeepsTheCardWrapperWithoutCardCellChrome_AndDeclaresTheContainerTheCardRulesNeed` flipped from asserting its absence).
+
+### Behaviour change a 2.11.0 host can notice
+
+| Surface | 2.11.0 | 2.11.1 |
+|---|---|---|
+| `TmDataTable CardMode="true"` | Card wrapper class, no container: the table stays a table at every width. | The wrapper declares the `tm-data-table` container (`container-type: inline-size; inline-size: 100%`), so rows collapse into labeled cards when the TABLE is narrower than 640px. The switch follows the wrapper width, NOT the viewport: a `CardMode` table in a narrow panel or drawer shows cards on a wide screen, and a table that is still 640px wide on a phone stays a table. `inline-size: 100%` makes a `CardMode` table in a shrink-to-fit parent fill the available inline size. Under 640px of wrapper width the toolbar now stacks too (`_data-table.css`, the `@container tm-data-table (width < 640px)` block that starts at the toolbar rules), which a `CardMode` table never did in 2.11.0. Containment: `container-type: inline-size` makes the wrapper the containing block and a stacking context for any NON-top-layer `position: fixed` / `absolute` descendant (a popover or dialog in the browser top layer is unaffected; a custom fixed cell template is positioned against the wrapper instead of the viewport). |
+| `TmToastContainer` dismiss | NRE on a Server circuit when the last toast is dismissed. | No exception; the container watches again for the next toast. |
+
+The approved default-markup snapshot of the `CardMode` table (`golden/dt-cardmode.approved.html`) gains the `tm-data-table-wrapper--container` class. <!-- snapshot:dt-cardmode -->
+
 ## 2.11.0 - 2026-11-14
 
 > Modeling **full BPMN authoring** plan (eadbf967, phases 2–7). The release ships together with the

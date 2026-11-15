@@ -52,7 +52,7 @@ public class TmDataTableMobileLayoutTests : LocalizationTestBase
     }
 
     [Fact]
-    public void CardMode_KeepsTheCardWrapperWithoutCardCellChrome()
+    public void CardMode_KeepsTheCardWrapperWithoutCardCellChrome_AndDeclaresTheContainerTheCardRulesNeed()
     {
         var cut = Render<TmDataTable<BasicPerson>>(p => p
             .Add(c => c.Items, new List<BasicPerson> { new("Ada", 37, "Engineer") })
@@ -66,7 +66,10 @@ public class TmDataTableMobileLayoutTests : LocalizationTestBase
         cut.Markup.Should().NotContain("tm-data-table-cell--card");
         cut.Markup.Should().NotContain("data-card-role");
         cut.Find("td[data-label=\"Name\"]").Should().NotBeNull();
-        cut.Markup.Should().NotContain("tm-data-table-wrapper--container");
+        // The card rules live under @container tm-data-table; only the --container class declares
+        // that container, so CardMode must carry it or the card layout never engages. Cards switch
+        // on the WRAPPER width, not the viewport.
+        cut.Find(".tm-data-table-wrapper--card.tm-data-table-wrapper--container").Should().NotBeNull();
         cut.Markup.Should().NotContain("tm-data-table-wrapper--responsive");
     }
 

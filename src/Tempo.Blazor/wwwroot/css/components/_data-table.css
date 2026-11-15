@@ -1178,8 +1178,9 @@
   }
 }
 
-/* Cards and Scroll only: the opt-in wrapper is the container, so the same
-   stacking follows the table's own width instead of the viewport. */
+/* Cards, Scroll and CardMode: the opt-in wrapper (--container) is the container, so the same
+   stacking follows the table's own width instead of the viewport. CardMode declares the
+   container since 2.11.1; until then its wrapper never matched this query. */
 @container tm-data-table (width < 640px) {
   .tm-data-table-toolbar {
     flex-direction: column;

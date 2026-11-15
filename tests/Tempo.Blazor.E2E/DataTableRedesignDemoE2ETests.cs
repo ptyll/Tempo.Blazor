@@ -86,6 +86,34 @@ public class DataTableRedesignDemoE2ETests : WasmTestBase
 
     [TestMethod]
     [TestCategory("WASM")]
+    public async Task CardMode_SwitchesToCards_OnTheWrapperWidth_NotOnTheViewport()
+    {
+        // 2.11.1: CardMode used to add only tm-data-table-wrapper--card; the card rules sit under
+        // @container tm-data-table (width < 640px) and only --container declares that container, so
+        // the table stayed a table at every width. This measures the BROWSER's computed styles.
+        var narrow = await OpenDataTableAsync(390, 844);
+        var narrowTable = narrow.Locator("[data-testid='dt-card-section'] .tm-data-table-wrapper--card");
+        await narrowTable.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+        await narrowTable.ScrollIntoViewIfNeededAsync();
+        Assert.IsTrue((await narrowTable.BoundingBoxAsync())!.Width < 640,
+            "the demo wrapper must be narrower than the 640px container breakpoint at a 390px viewport");
+        Assert.AreEqual("block", await narrowTable.Locator("tbody tr").First.EvaluateAsync<string>("e => getComputedStyle(e).display"),
+            "below 640px of wrapper width every row collapses into a block card");
+        Assert.AreEqual("1px", await narrowTable.Locator("thead").EvaluateAsync<string>("e => getComputedStyle(e).width"),
+            "the header row is visually clipped (labels move into each cell)");
+
+        var wide = await OpenDataTableAsync(1440, 1100);
+        var wideTable = wide.Locator("[data-testid='dt-card-section'] .tm-data-table-wrapper--card");
+        await wideTable.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+        await wideTable.ScrollIntoViewIfNeededAsync();
+        Assert.IsTrue((await wideTable.BoundingBoxAsync())!.Width >= 640,
+            "the demo wrapper must be at least 640px wide at a 1440px viewport");
+        Assert.AreEqual("table-row", await wideTable.Locator("tbody tr").First.EvaluateAsync<string>("e => getComputedStyle(e).display"),
+            "at 640px of wrapper width or more the table stays a table");
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
     public async Task ExportSelected_WithEmptySelection_IsAriaDisabled_AndExplainsWhy()
     {
         var page = await OpenDataTableAsync(1440, 1100);

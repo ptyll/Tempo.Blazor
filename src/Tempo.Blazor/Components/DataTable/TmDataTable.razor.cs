@@ -1107,7 +1107,11 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
     /// Opt-in responsive card mode. When true, the wrapper gains the
     /// <c>tm-data-table-wrapper--card</c> class and every data cell carries a
     /// <c>data-label</c> attribute (the owning column's <see cref="TmDataTableColumn{TItem}.Title"/>),
-    /// which the scoped CSS uses on narrow viewports to stack each row into a labeled card.
+    /// which the scoped CSS uses to stack each row into a labeled card when the table is narrower
+    /// than 640px. The switch follows the WRAPPER width (a CSS container query on the
+    /// <c>tm-data-table-wrapper--container</c> class, which CardMode adds), not the viewport width:
+    /// a table inside a narrow panel or drawer shows cards on a wide screen, and a full-width
+    /// table on a phone shows cards because the table itself is narrow.
     /// It aliases Cards only when MobileLayout is None; explicit Scroll wins.
     /// Default: false — the rendered markup is unchanged from a non-card table, so existing
     /// consumers are unaffected. Fully compatible with server-side data (<see cref="DataProvider"/>)
@@ -1127,7 +1131,10 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
         WrapperCssClass,
         IsRedesigned ? "tm-data-table-wrapper--card-surface" : null,
         MobileLayout == DataTableMobileLayout.Scroll ? "tm-data-table-wrapper--responsive" : null,
-        MobileLayout != DataTableMobileLayout.None ? "tm-data-table-wrapper--container" : null,
+        // The card rules sit under `@container tm-data-table (width < 640px)`, and ONLY this class
+        // declares that container: without it a CardMode table (MobileLayout None) kept the card
+        // wrapper but never switched to cards at any width (2.11.0 defect, fixed in 2.11.1).
+        MobileLayout != DataTableMobileLayout.None || CardMode ? "tm-data-table-wrapper--container" : null,
         IsMobileCards ? "tm-data-table-wrapper--cards" : null,
         Class,
     }.Where(part => !string.IsNullOrEmpty(part)));

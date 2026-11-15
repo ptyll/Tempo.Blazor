@@ -42,6 +42,8 @@ Do not change these defaults as part of consumer adoption. Set an opt-in only wh
 
 The legacy `CardMode` parameter is an alias for cards only when `MobileLayout` is `None`. If `MobileLayout` is explicitly `Scroll` or `Cards`, that choice takes precedence. Virtualized card rows render in a single column.
 
+Cards switch on the table's OWN width, not the viewport: the card rules sit under `@container tm-data-table (width < 640px)`, and the wrapper declares that container through `tm-data-table-wrapper--container`. Since 2.11.1 `CardMode` adds that class too (2.11.0 added only `tm-data-table-wrapper--card`, so a `CardMode` table never switched to cards at any width). The consequence for a host: a `CardMode` table inside a narrow panel or drawer now shows cards on a wide screen, and a wide table on a phone that is still at least 640px wide stays a table. The wrapper also gains `container-type: inline-size; inline-size: 100%`, so a `CardMode` table that sat in a shrink-to-fit parent now fills the available inline size.
+
 Example:
 
 ```razor

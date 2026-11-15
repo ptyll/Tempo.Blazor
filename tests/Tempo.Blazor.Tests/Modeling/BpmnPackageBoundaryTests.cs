@@ -67,7 +67,7 @@ public sealed class BpmnPackageBoundaryTests
     {
         ProjectMetadata("src/Tempo.Blazor.Modeling.BpmnXml/Tempo.Blazor.Modeling.BpmnXml.csproj")
             .Should().Be(ProjectMetadata("src/Tempo.Blazor.Modeling/Tempo.Blazor.Modeling.csproj"),
-                "the converter ships in the same 2.11.0 modeling release");
+                "the converter ships in the same modeling release, so both carry one version");
     }
 
     [Fact]
