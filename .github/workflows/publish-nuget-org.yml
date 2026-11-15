@@ -306,8 +306,10 @@ jobs:
       # WAIVER (owner decision ptyll, 2026-11-14): ONLY the tag v2.11.0 is published without a new full E2E run,
       # recorded in eng/release-evidence/waiver-v2.11.0.md. The step still runs for every other ref and version;
       # deleting the waiver file re-arms it for v2.11.0 too.
+      # WAIVER (owner decision ptyll, 2026-11-15): likewise ONLY the tag v2.11.1, recorded in
+      # eng/release-evidence/waiver-v2.11.1.md; deleting that file re-arms the step for v2.11.1.
       - name: Verify the release evidence (DEC-TEMPO-RELEASE-GATE)
-        if: ${{ !(github.ref == 'refs/tags/v2.11.0' && hashFiles('eng/release-evidence/waiver-v2.11.0.md') != '') }}
+        if: ${{ !((github.ref == 'refs/tags/v2.11.0' && hashFiles('eng/release-evidence/waiver-v2.11.0.md') != '') || (github.ref == 'refs/tags/v2.11.1' && hashFiles('eng/release-evidence/waiver-v2.11.1.md') != '')) }}
         run: bash eng/verify-release-evidence.sh
 
       - name: Build
