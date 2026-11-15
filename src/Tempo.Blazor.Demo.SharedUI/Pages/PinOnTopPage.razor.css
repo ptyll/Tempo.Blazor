@@ -1,0 +1,75 @@
+/* /pin-on-top demo: a fixed bottom bar that is pinned on top. Colours come from the library tokens
+   only (both themes), so the demo proves that the tm-pin-on-top reset leaves the host's own surface
+   alone. The dark warning-subtle tint is translucent, so it is layered over the opaque surface. */
+
+::deep .demo-pin-banner {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background:
+        linear-gradient(var(--tm-color-warning-subtle), var(--tm-color-warning-subtle)),
+        var(--tm-color-surface);
+    color: var(--tm-color-warning-text);
+    border-top: 1px solid var(--tm-color-warning);
+    box-shadow: var(--tm-shadow-lg);
+    z-index: var(--tm-z-toast);
+}
+
+::deep .demo-pin-banner__inner {
+    max-width: 80rem;
+    margin: 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-3);
+    padding: var(--tm-space-3) var(--tm-space-4);
+    font-size: var(--tm-font-size-sm);
+}
+
+::deep .demo-pin-banner__icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex: none;
+    color: var(--tm-color-warning-strong);
+}
+
+::deep .demo-pin-banner__text {
+    flex: 1 1 16rem;
+    font-weight: var(--tm-font-weight-medium);
+}
+
+::deep .demo-pin-banner__action {
+    min-height: var(--tm-touch-target);
+    padding: 0 var(--tm-space-3);
+    border: 1px solid var(--tm-color-warning-strong);
+    border-radius: var(--tm-radius-md);
+    background: var(--tm-color-surface);
+    color: var(--tm-color-warning-text);
+    font-weight: var(--tm-font-weight-semibold);
+    cursor: pointer;
+}
+
+::deep .demo-pin-banner__action:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
+}
+
+.demo-pin-native-dialog {
+    max-width: 28rem;
+    padding: var(--tm-space-6);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-lg);
+    background: var(--tm-color-surface);
+    color: var(--tm-text-primary);
+    box-shadow: var(--tm-shadow-lg);
+}
+
+.demo-pin-native-dialog::backdrop {
+    background: var(--tm-modal-stacked-scrim);
+}
+
+.demo-pin-native-dialog__close {
+    color: var(--tm-text-primary);
+    border-color: var(--tm-border-color);
+}

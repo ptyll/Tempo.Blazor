@@ -234,6 +234,7 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmSpinner"] = ["spinner"],
             ["TmSkeleton"] = ["skeleton"],
             ["TmToastContainer"] = ["toast-container"],
+            ["TmPinnedOnTop"] = ["pinned-on-top"],
             ["TmAutoSaveIndicator"] = ["badge"],
             ["TmNotificationBell"] = ["notification-bell"],
             ["TmFormSection"] = ["form-section"],
@@ -1965,6 +1966,19 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("position",   "Position",   PropType.Enum, "topRight", cat: "Appearance",
                     opts: ["topRight","topLeft","bottomRight","bottomLeft"]),
                 P("maxVisible", "Max Visible", PropType.Int, 3,          cat: "Appearance"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmPinnedOnTop", Category = "Feedback", DisplayName = "Pinned On Top",
+            DefaultWidth = 480, DefaultHeight = 44,
+            Props =
+            [
+                P("message",   "Message",   PropType.String, "Connection lost — reconnecting…", cat: "Content"),
+                P("placement", "Placement", PropType.Enum,   "bottom", cat: "Appearance", opts: ["top", "bottom"]),
+                P("priority",  "Priority",  PropType.Int,    0,        cat: "Behavior"),
+                P("visible",   "Visible",   PropType.Bool,   true,     cat: "State"),
             ]
         };
 

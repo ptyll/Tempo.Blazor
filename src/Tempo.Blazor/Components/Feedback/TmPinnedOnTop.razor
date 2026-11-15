@@ -1,0 +1,124 @@
+@namespace Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Services
+@using Microsoft.JSInterop
+@using Microsoft.Extensions.DependencyInjection
+@inherits TmComponentBase
+@inject IServiceProvider ServiceProvider
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+@* Decision TOP-LAYER-PIN (docs/top-layer-pin.md): the root carries data-tm-pin-on-top, so the
+   module recognises it even in prerendered markup, and the tm-pin-on-top class carries the
+   zero-specificity popover-default reset. Visibility is the signal: Visible=false renders the
+   hidden attribute and the module demotes the root on its own. No interop per toggle. *@
+<div class="tm-pin-on-top @Class"
+     data-tm-pin-on-top
+     data-tm-pin-priority="@Priority"
+     data-testid="@RootTestId("pinned-on-top")"
+     hidden="@(!Visible)"
+     @attributes="AdditionalAttributes"
+     @ref="_root">
+    @ChildContent
+</div>
+
+@code {
+    /// <summary>
+    /// The pinned content: a status banner, a connection strip, an error bar. It paints above every
+    /// Tempo top-layer surface (modal, dialog, drawer, sheet, popover) while <see cref="Visible"/>.
+    /// </summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>
+    /// Whether the content is shown. <c>false</c> renders the root with the <c>hidden</c> attribute,
+    /// and the pin module hands it back as a plain, hidden element. Defaults to <c>true</c>.
+    /// </summary>
+    [Parameter] public bool Visible { get; set; } = true;
+
+    /// <summary>
+    /// Order between pinned elements. A higher value paints higher, and equal values keep render
+    /// order. Defaults to 0, which is the band of the toast containers. Use 100 to paint above
+    /// toasts.
+    /// </summary>
+    [Parameter] public int Priority { get; set; }
+
+    /// <summary>Additional CSS classes for the root. Position the element here (for example a fixed bottom bar).</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Additional attributes splatted onto the root (role, aria-live, id, …).</summary>
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private ElementReference _root;
+    private TopLayerPinService? _service;
+    private bool _ownsService;
+    private TopLayerPin? _pin;
+    private Task? _pinning;
+    private int _pinnedPriority;
+    private bool _disposed;
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_disposed)
+            return;
+
+        if (firstRender)
+        {
+            _service = ServiceProvider.GetService<TopLayerPinService>();
+            if (_service is null)
+            {
+                // A host that never called AddTempoBlazor(): the component owns a private service.
+                _service = new TopLayerPinService(JS);
+                _ownsService = true;
+            }
+
+            _pinnedPriority = Priority;
+            var pinning = PinAsync(_service, _pinnedPriority);
+            _pinning = pinning;
+            await pinning;
+            return;
+        }
+
+        if (_pin is { IsActive: true } pin && Priority != _pinnedPriority)
+        {
+            _pinnedPriority = Priority;
+            await pin.SetPriorityAsync(Priority);
+        }
+    }
+
+    private async Task PinAsync(TopLayerPinService service, int priority)
+    {
+        var pin = await service.PinAsync(_root, new TopLayerPinOptions { Priority = priority });
+        if (_disposed)
+        {
+            // The pin landed after the component was disposed. Release it here, because
+            // DisposeAsync found no handle to release.
+            await pin.DisposeAsync();
+            if (_ownsService)
+                await service.DisposeAsync();
+            return;
+        }
+
+        _pin = pin;
+    }
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed)
+            return;
+        _disposed = true;
+
+        // Capture and clear before the first await, so an after-render pass that is still parked on
+        // the pin call never meets a field this method released underneath it. That was the 2.11.0
+        // TmToastContainer lesson.
+        var pin = _pin;
+        _pin = null;
+        if (pin is not null)
+            await pin.DisposeAsync();
+
+        // When a first pin is still in flight, its continuation (PinAsync) releases the late pin
+        // and the private service.
+        if (_ownsService && (_pinning is null || _pinning.IsCompleted) && _service is not null)
+            await _service.DisposeAsync();
+    }
+}

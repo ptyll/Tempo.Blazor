@@ -239,6 +239,46 @@ public class TmToastTests : LocalizationTestBase
             cut.Find("[data-toast-live='polite']").TextContent.Trim().Should().Be("Backup: Saved"));
     }
 
+    // Plan 4ce1b994 (TOP-LAYER-PIN §4.2): while a native modal <dialog> is open the registry defers
+    // the container's first show, so the announcement happened in a display:none container and was
+    // never spoken. When the deferred show lands, tm-toast.js calls OnPinShown: every toast still
+    // visible is announced again — in the region of its own politeness.
+    [Fact]
+    public async Task Container_OnPinShown_ReAnnouncesTheVisibleToasts()
+    {
+        var cut = Render<TmToastContainer>();
+        var svc = Services.GetRequiredService<ToastService>();
+        svc.ShowInfo("Saved", "Backup");
+        svc.ShowError("Failed");
+        cut.Render();
+        // Each push announces only its NEW text, so after the error push the polite region is empty:
+        // the precondition the re-announce has to repair.
+        cut.WaitForAssertion(() =>
+        {
+            cut.Find("[data-toast-live='assertive']").TextContent.Trim().Should().Be("Failed");
+            cut.Find("[data-toast-live='polite']").TextContent.Trim().Should().BeEmpty();
+        });
+
+        await cut.InvokeAsync(() => cut.Instance.OnPinShown());
+
+        cut.WaitForAssertion(() =>
+        {
+            cut.Find("[data-toast-live='polite']").TextContent.Trim().Should().Be("Backup: Saved");
+            cut.Find("[data-toast-live='assertive']").TextContent.Trim().Should().Be("Failed");
+        });
+    }
+
+    [Fact]
+    public async Task Container_OnPinShown_WithoutToasts_AnnouncesNothing()
+    {
+        var cut = Render<TmToastContainer>();
+
+        await cut.InvokeAsync(() => cut.Instance.OnPinShown());
+
+        cut.Find("[data-toast-live='polite']").TextContent.Trim().Should().BeEmpty();
+        cut.Find("[data-toast-live='assertive']").TextContent.Trim().Should().BeEmpty();
+    }
+
     [Fact]
     public void Container_Error_AnnouncesInTheAssertiveRegion()
     {

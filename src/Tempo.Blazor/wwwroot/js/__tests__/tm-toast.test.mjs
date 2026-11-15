@@ -234,3 +234,23 @@ test('detach removes every listener and the observer; re-attach replaces wiring'
     container.keydown(e);
     assert.equal(e.prevented, false, 'nothing fires after detach');
 });
+
+// Plan 4ce1b994 (TOP-LAYER-PIN §4.2): a container whose first show a native modal <dialog>
+// deferred was display:none while the dialog was open, so its live regions were never spoken. The
+// registry dispatches tm-pin-shown when the deferred show lands; the module forwards it to .NET,
+// which re-announces the toasts that are still visible.
+test('tm-pin-shown on the container asks .NET to re-announce, and detach removes the listener', () => {
+    const doc = makeDoc();
+    const container = makeContainer(doc);
+    const listeners = new Map();
+    container.addEventListener = (type, fn) => listeners.set(type, fn);
+    container.removeEventListener = (type) => listeners.delete(type);
+    const dotNet = dotnetStub();
+    attach(container, dotNet, doc, CapturingObserver);
+
+    listeners.get('tm-pin-shown')?.({ type: 'tm-pin-shown' });
+    assert.deepEqual(dotNet.calls, [{ method: 'OnPinShown', args: [] }]);
+
+    detach(container, doc);
+    assert.equal(listeners.has('tm-pin-shown'), false);
+});

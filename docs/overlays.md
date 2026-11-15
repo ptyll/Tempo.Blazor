@@ -202,7 +202,14 @@ editor) keeps focus.
    pinned-on-top registry while they hold toasts and re-raise on every push *and* after every
    promotion of another surface, so a toast that is already on screen is never covered by a
    drawer, sheet or dialog opened after it, and a toast pushed at the `MaxVisible` cap (count
-   unchanged) still lands above. Render **one `TmToastContainer` per app** (in the layout); two
+   unchanged) still lands above. **Hosts pin their own status UI through the same registry**
+   (2.12.0, decision `TOP-LAYER-PIN`, [top-layer-pin.md](top-layer-pin.md)):
+   - the `data-tm-pin-on-top` attribute together with `tm-pin-on-top.js` for markup no component
+     owns (`#blazor-error-ui`);
+   - `TopLayerPinService` or `<TmPinnedOnTop>` for components.
+
+   Pins are ordered by priority. Toasts sit at `0`, and a higher priority paints higher. While a
+   native modal `<dialog>` is open, no pin is raised above it. Render **one `TmToastContainer` per app** (in the layout); two
    containers sharing a `ToastService` both promote and every toast paints twice. Tooltips stay
    z-index painted *inside* their own surface (`TmTooltip`'s content is a DOM child of its
    trigger): a tooltip inside a promoted surface paints with it — no extra promotion — and a
@@ -212,8 +219,9 @@ editor) keeps focus.
    zeroed), so the page behind stays dimmed through the surface's own scrim and themed colours
    inherit into the body. Two contracts ride on this rule:
    - **`data-tm-inert-exempt`** is the attribute a modal trap's inert walk skips exactly like
-     `data-tm-backdrop`. Only the toast containers (`TmToastContainer`,
-     `TmNotificationToastContainer`) carry it — status UI a user must reach under any modal (a
+     `data-tm-backdrop`. The toast containers (`TmToastContainer`,
+     `TmNotificationToastContainer`) carry it, and so does every element pinned on top (the pin
+     module adds it) — status UI a user must reach under any modal (a
      dismiss click, an `role=alert` announcement). **Placement rule: render toast containers as
      layout-level siblings, outside `@Body` wrappers.** The walk inerts every sibling of the
      trap's ancestors; a container nested inside a `@Body` wrapper is inerted with the wrapper

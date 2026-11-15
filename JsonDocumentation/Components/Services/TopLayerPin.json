@@ -1,0 +1,36 @@
+{
+  "kind": "Class",
+  "category": "Services",
+  "namespace": "Tempo.Blazor.Services",
+  "description": "One pin created by TopLayerPinService.PinAsync. Dispose it to unpin. The dispose is idempotent and never throws, also during prerender or after the circuit is gone. IsActive is false when the pin could not be registered or was disposed.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Services/TopLayerPinService.cs",
+  "documentationStatus": "authored",
+  "members": [
+    {
+      "name": "IsActive",
+      "kind": "Property",
+      "type": "bool",
+      "description": "True while the element is registered in the pinned-on-top registry."
+    },
+    {
+      "name": "Priority",
+      "kind": "Property",
+      "type": "int",
+      "description": "The priority the pin was last registered with. A higher value paints higher, and 0 is the toast band."
+    },
+    {
+      "name": "SetPriorityAsync",
+      "kind": "Method",
+      "type": "Task",
+      "description": "Changes the order of this pin relative to the other pins. A no-op once the pin is inactive."
+    },
+    {
+      "name": "DisposeAsync",
+      "kind": "Method",
+      "type": "ValueTask",
+      "description": "Unpins the element. Idempotent and exception-safe."
+    }
+  ],
+  "itemName": "TopLayerPin"
+}

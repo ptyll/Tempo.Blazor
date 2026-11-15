@@ -1,0 +1,52 @@
+/* Pin on top (decision TOP-LAYER-PIN, docs/top-layer-pin.md §4.4).
+   An element pinned through [data-tm-pin-on-top], TopLayerPinService or TmPinnedOnTop rides the
+   browser top layer as popover="manual" while it is visible. The UA [popover] defaults would turn a
+   bottom bar into a centered, shrink-wrapped, bordered Canvas box (margin:auto, inset:0,
+   width/height:fit-content, a solid border, padding, the Canvas background and CanvasText color).
+   This reset uses zero specificity, mirroring :where(.tm-toast-container), so every host rule wins:
+   `position: fixed; bottom: 0; left: 0; right: 0` keeps the bar a bar, because top resets to auto
+   instead of the UA 0 and width:auto spans the left/right edges. `position` is never reset, since the
+   top layer computes fixed/absolute on its own.
+   The reset sets NO colour and introduces no token. Background and text stay the host's own, so
+   light and dark themes are unaffected, and there is no motion to reduce. It also applies while the
+   element is not a popover, which is harmless: a div's defaults are already 0 / none / auto. */
+:where([data-tm-pin-on-top]) {
+    inset: auto;
+    width: auto;
+    height: auto;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    border: none;
+    padding: 0;
+    background: transparent;
+    color: inherit;
+    overflow: visible;
+}
+
+/* The same reset for the class form (TmPinnedOnTop's root, a service-pinned element). Two rules,
+   not one :where() with a selector list: the repository's selector audits read one simple
+   selector per :where(). */
+:where(.tm-pin-on-top) {
+    inset: auto;
+    width: auto;
+    height: auto;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    border: none;
+    padding: 0;
+    background: transparent;
+    color: inherit;
+    overflow: visible;
+}
+
+/* The Popover API's own ::backdrop never dims anything for a manual popover; keep it so even under
+   UA styles that give popover backdrops a tint. */
+:where([data-tm-pin-on-top])::backdrop {
+    background: transparent;
+}
+
+:where(.tm-pin-on-top)::backdrop {
+    background: transparent;
+}

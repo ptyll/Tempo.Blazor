@@ -98,7 +98,8 @@ public sealed class UiRoleVocabularyTests
         // then 143 for `agent-badge` (plan d67b33af phase 1).
         // then 147 for `fan-out-grid` and `parallel-attempts` (plan d67b33af phase 4).
         // then 159 for `app-shell` and `user-menu` (plan 7ba95ed6 phase 8 — the frame and its account menu).
-        vocabulary.GetAll().Should().HaveCountLessThanOrEqualTo(159); // + agent-handoff, fallback-chain (phase 5); autonomy-dial, memory-panel (phase 6); delegate-board, scheduled-runs (phase 7); conflict-radar, agent-presence-overlay (phase 8); modeling-viewer (plan eadbf967 phase 6)
+        // then 160 for `pinned-on-top` (plan 4ce1b994 phase 2 — TmPinnedOnTop, decision TOP-LAYER-PIN).
+        vocabulary.GetAll().Should().HaveCountLessThanOrEqualTo(160); // + agent-handoff, fallback-chain (phase 5); autonomy-dial, memory-panel (phase 6); delegate-board, scheduled-runs (phase 7); conflict-radar, agent-presence-overlay (phase 8); modeling-viewer (plan eadbf967 phase 6)
 
 
         vocabulary.Find("search-input")!.Slug.Should().Be("search-input");

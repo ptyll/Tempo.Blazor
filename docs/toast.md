@@ -143,7 +143,12 @@ every older card collapses to a thin strip (a pure-CSS depth hint); hovering the
 moving focus inside it expands the deck. Every toast stays in the DOM.
 
 The container rides the browser top layer (`popover="manual"`) and re-raises itself on each
-push, so a toast pushed while a sheet or dialog is open always paints above it.
+push, so a toast pushed while a sheet or dialog is open always paints above it. It is pinned on
+top through the same registry hosts use for their own status UI ([top-layer-pin.md](top-layer-pin.md)),
+at priority `0`, so a host pin with a higher priority, such as an error bar, paints above the toasts.
+While a native modal `<dialog>` (`showModal()`) is open the container is not raised above it,
+because everything outside the dialog is inert. It lands on top when the dialog closes, and it then
+re-announces the toasts that are still visible (2.12.0, see the CHANGELOG Breaking / Migration).
 
 ## Container parameters
 

@@ -105,7 +105,7 @@ scripts/run-e2e-full.ps1    # full lane: entire suite (~1450 tests, ~4h sharded)
 npm ci                         # once: installs esbuild for the document-editor bundle tests
 npm run test:document-editor
 npm run test:reporting-modules
-npm run test:overlay           # core: pointer-drag, pointer-gesture, overlay, workflow/scheduler/dashboard pointer
+npm run test:overlay           # core: pointer-drag, pointer-gesture, overlay, workflow/scheduler/dashboard pointer, the pinned-on-top registry (tm-top-layer.test.mjs) and tm-pin-on-top.js
 npm run test:core-modules      # core: tm-animated-number.js (easing/frame math, formatter cache, cancel idempotency) + TmSegmentedControl.razor.js (indicator place/focusOption/release, ResizeObserver bookkeeping) — pure-logic node tests
 npm run test:signing-runner    # Signing: signing-runner.js + signing-editor.js + pdf-template-designer-pointer.js + coarse-pointer probe
 npm run test:diagram-editor    # DiagramEditor: diagram-editor-touch.js + engine tests
@@ -172,7 +172,7 @@ managed hosts instead, start the four apps above and set
 | DataTable | `TmDataTable`, `TmDataTableColumn`, `TmColumnFilter`, `TmColumnPicker`, `TmPagination`, `TmViewManager`, `TmBulkActionBar` |
 | Spreadsheet | `TmSpreadsheet`, `TmSpreadsheetGrid`, `TmSpreadsheetToolbar`, `TmSpreadsheetFormulaBar`, `TmSpreadsheetSheetTabs` (Excel-like with formulas, styling, XLSX import/export, freeze panes, merge cells) |
 | Dropdowns | `TmDropdown`, `TmDropdownItem`, `TmFilterableDropdown` (opt-in `HighlightMatches` marks the typed term — [docs/combobox-match-highlight.md](docs/combobox-match-highlight.md)) |
-| Feedback | `TmNotificationBell`, `TmSkeleton`, `TmSpinner`, `TmAlert`, `TmDialog`, `TmModal`, `TmProgressBar`, `TmToastContainer`, `TmTooltip`, `TmPopover` |
+| Feedback | `TmNotificationBell`, `TmSkeleton`, `TmSpinner`, `TmAlert`, `TmDialog`, `TmModal`, `TmProgressBar`, `TmToastContainer`, `TmTooltip`, `TmPopover`, `TmPinnedOnTop` (pin on top for host status UI, 2.12.0, decision `TOP-LAYER-PIN`. ONE pinned-on-top registry in `tm-top-layer.js` that the toasts share, ordered by `(priority, registration)` with toasts at 0. It has three front doors: the `data-tm-pin-on-top` (+ `data-tm-pin-priority`) attribute read by the opt-in public module `js/tm-pin-on-top.js` for markup no component owns, such as `#blazor-error-ui`; the scoped `TopLayerPinService.PinAsync(ElementReference, TopLayerPinOptions?)` → `TopLayerPin`; and the declarative `<TmPinnedOnTop Visible Priority>`. Visibility is the signal, and the module owns `popover`. While a native modal `<dialog>` is open, nothing is raised above it and the pins land again on `close`. The `:where([data-tm-pin-on-top], .tm-pin-on-top)` reset keeps a bottom bar a bar. Contract: [docs/top-layer-pin.md](docs/top-layer-pin.md); demo `/pin-on-top`) |
 | Files | `TmAttachmentManager`, `TmFileDropZone`, `TmPdfViewer` (PDF.js v5 powered viewer with thumbnails, search, text layer, rotation, continuous scroll) |
 | Filters | `TmFilterBuilder`, `TmFilterChip` |
 | Forms | `TmFormField`, `TmFormRow`, `TmFormSection`, `TmValidationSummary`, `TmValidatedField`, `TmDynamicFormRenderer`, `TmFormValidationMessage`, `TmInlineEdit` |

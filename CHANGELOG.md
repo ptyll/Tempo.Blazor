@@ -1,5 +1,55 @@
 # Changelog
 
+## 2.12.0 (unreleased)
+
+> Plan "Tempo: public pin-on-top API for host status UI" (4ce1b994; decision `TOP-LAYER-PIN`,
+> [ADR-0006](docs/adr/0006-top-layer-pin.md), contract [docs/top-layer-pin.md](docs/top-layer-pin.md)).
+> New public API, so the release is a minor: **2.12.0**. Only `Tempo.Blazor` changes, plus the
+> role and stencil in `Tempo.Blazor.Abstractions` / `Tempo.Blazor.Wireframe`. Every packable
+> project moves to 2.12.0 together when the release is cut (phase 4).
+
+### Added — pin on top (`Tempo.Blazor`)
+
+- **A public pin-on-top API for host status UI.** A host element pinned on top stays above every Tempo top-layer surface: `TmModal`, `TmDialog`, a modal `TmDrawer`, sheets, `TmOverlayPanel` popovers and the command palette. That includes surfaces opened *after* the element appeared. Before 2.12.0 only the toast containers had this guarantee, through an internal registry. A host bar such as `#blazor-error-ui`, a connection banner or a session strip sat in top-layer open order, so a modal opened later covered it. There is ONE registry with ONE ordering rule, and it has three front doors:
+  - **Attribute** `data-tm-pin-on-top` (+ optional `data-tm-pin-priority`) for markup no component owns, read by the new public ES module `_content/Tempo.Blazor/js/tm-pin-on-top.js` (opt-in `<script type="module">`; no Blazor JS initializer, so a host without pins pays for no observer). Exports: `pin(element, { priority })`, `unpin(element)`, `refresh()`, `start()`.
+  - **`TopLayerPinService`** (scoped, registered by `AddTempoBlazor()`): `PinAsync(ElementReference, TopLayerPinOptions?)` returns a `TopLayerPin : IAsyncDisposable` (`IsActive`, `Priority`, `SetPriorityAsync`); disposing it unpins.
+  - **`<TmPinnedOnTop Visible Priority Class>`** (`Tempo.Blazor.Components.Feedback`): a declarative wrapper that renders `div.tm-pin-on-top[data-tm-pin-on-top]` and pins itself after its first render.
+- **Visibility is the signal.** A host keeps hiding and showing its element the way it always did, through inline `display`, a class or `hidden`. The module promotes the element (`popover="manual"` + `showPopover`) while it is visible and hands it back as a plain element while it is hidden. The module owns the `popover` attribute. Markup that already carries `popover` is explicit and keeps its own show/hide. The MutationObserver never watches the attributes the module writes, discards its own records with `takeRecords()` and runs at most one pass per animation frame, so it cannot loop. An InteractiveAuto handoff that swaps the element pins the new one.
+- **Order between pins:** an integer priority (default `0`, the band of the toasts; `100` and up paints above toasts). Equal priorities keep registration order. A push (`raise`) lands on top of its own band but never above a higher one.
+- **Native modal `<dialog>` (`showModal`).** While one is open, no pin is promoted or re-raised. Everything outside the dialog is inert, so a pin above it would cover it while being unusable. The pins land again, in registry order, when the dialog closes (a capture-phase `close` listener, with the `open` attribute as fallback). This one rule also applies to the toast containers, see Breaking / Migration.
+- **Inert:** a pinned element is exempt from a Tempo modal trap's inert background (`data-tm-inert-exempt`, removed again only when the module added it). Render pinned elements at layout level, outside the `@Body` wrapper ([overlays.md](docs/overlays.md), rule 8).
+- **CSS utility** `:where([data-tm-pin-on-top], .tm-pin-on-top)` (`_pin-on-top.css`): a zero-specificity reset of the UA `[popover]` defaults (inset, margin, border, padding, width/height, background, color, overflow), so a fixed bottom bar stays a bar. It sets no colour and adds no token, so dark mode is untouched.
+- **Without the Popover API** registering is a no-op. **During prerender** nothing is invoked. Every interop is guarded, and a dispose that races an in-flight pin call never throws (the 2.11.0 `TmToastContainer` lesson).
+- **Wireframe:** new UI role `pinned-on-top` (synonyms "error bar", "connection banner", "status banner") and a `TmPinnedOnTop` stencil (props `message`, `placement`, `priority`, `visible`) with a textual "Pinned on top" marker.
+- **Demo** `/pin-on-top`: a connection banner (`Priority=100`) over a modal or drawer opened before and after it, a toast below it, and a native `<dialog>` that defers the pin. The WASM and Server demo hosts' `#blazor-error-ui` now carry `data-tm-pin-on-top data-tm-pin-priority="200"`.
+
+### Changed — toast containers on the same registry
+
+- `TmToastContainer` and `TmNotificationToastContainer` keep their internal `TopLayerInterop` path (unchanged surface, priority `0`), so the pinned-on-top rule exists exactly once. `tm-top-layer.js` keeps `promote`, `demote`, `raise`, `pinRoot` and `unpinRoot` with their 2.11 signatures. `pinRoot` takes an optional `{ priority }`. Two copies of the modules (a script tag next to an import map's fingerprinted import) share one registry through `globalThis`.
+- `TmToastContainer` re-announces the visible toasts once a show deferred by a native modal dialog lands (a `tm-pin-shown` event → `[JSInvokable] OnPinShown`). The live regions of a container that was `display:none` were never spoken.
+- `TmNotificationToastContainer.OnAfterRenderAsync` is single-flight like `TmToastContainer` 2.11.1. A render during a pending pin/raise round trip used to start a second pass that pinned and raised again over the same fields. A pass that resumes on a disposed container stops.
+
+### Breaking / Migration
+
+| Surface | 2.11.x | 2.12.0 | Migration |
+|---|---|---|---|
+| A toast pushed while a native modal `<dialog>` (`showModal()`, e.g. the Blazor reconnect modal) is open | The toast container was re-raised ABOVE the dialog, where it was inert: cards covered the dialog and could not be dismissed. | The container stays below the dialog (if it was already up) or stays hidden (if it was not), and lands on top when the dialog closes. Its live regions announce the still-visible toasts then. A promotion of a Tempo surface during the dialog no longer re-raises toasts above the dialog either. | Nothing to change for the usual case. A host that relied on toasts painting above its own native modal dialog should show the message inside the dialog, or use a Tempo `TmModal` (whose open order the registry respects) instead of `showModal()`. |
+| Order between pinned roots | Insertion order only. | `(priority, insertion order)`. The toast containers pin at `0`, so two containers keep their 2.11 order. | None, unless you call `pinRoot` from your own JS: pass `{ priority }` to rank a root above or below the toasts. |
+
+Before (a host script, EmusCz `emus-error-ui.js`):
+
+```html
+<div id="blazor-error-ui">…</div>
+<script src="js/emus-error-ui.js"></script>   <!-- own popover + MutationObserver + dialog:modal checks -->
+```
+
+After:
+
+```html
+<div id="blazor-error-ui" data-tm-pin-on-top data-tm-pin-priority="200">…</div>
+<script type="module" src="_content/Tempo.Blazor/js/tm-pin-on-top.js"></script>
+```
+
 ## 2.11.1 - 2026-11-15
 
 > Patch release over 2.11.0: two defects found by a host application while moving to 2.11.0.

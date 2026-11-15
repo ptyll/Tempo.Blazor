@@ -10,3 +10,4 @@ Report Server. Formát: kontext → rozhodnutí → důsledky → zamítnuté al
 | [0003](0003-document-library-query-scope.md) | Explicitní rozsah dotazu do knihovny dokumentů (DOCLIB-QUERY-SCOPE) | Přijato | 2026-10-23 |
 | [0004](0004-toolbar-file-button.md) | Tlačítko pro výběr souboru v toolbaru (TOOLBAR-FILE-BUTTON) | Přijato | 2026-10-23 |
 | [0005](0005-editor-shell-tablet-presentation.md) | Prezentace panelů editorového rámce na tabletu (EDITOR-SHELL-TABLET-PRESENTATION) | Přijato | 2026-10-24 |
+| [0006](0006-top-layer-pin.md) | Veřejné API „pin on top“ pro stavové UI hostitele (TOP-LAYER-PIN) | Přijato | 2026-11-15 |

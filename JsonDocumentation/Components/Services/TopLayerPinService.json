@@ -1,0 +1,24 @@
+{
+  "kind": "Class",
+  "category": "Services",
+  "namespace": "Tempo.Blazor.Services",
+  "description": "Pins host elements above every Tempo top-layer surface (TmModal, TmDialog, a modal TmDrawer, sheets, TmOverlayPanel popovers, the command palette), including surfaces opened after the element appeared. It is the C# front door of the one pinned-on-top registry the toast containers use (decision TOP-LAYER-PIN, docs/top-layer-pin.md). AddTempoBlazor() registers it scoped. Call PinAsync from OnAfterRenderAsync and dispose the returned TopLayerPin to unpin. Visibility is the signal: hide and show the element the way you already do, and do not put popover on it. While a native modal <dialog> is open nothing is promoted above it. Every interop is guarded, so prerender, missing JS and a torn-down circuit make the calls no-ops.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Services/TopLayerPinService.cs",
+  "documentationStatus": "authored",
+  "members": [
+    {
+      "name": "PinAsync",
+      "kind": "Method",
+      "type": "Task<TopLayerPin>",
+      "description": "Pins the element on top with the given options (null pins at priority 0). It returns an inactive handle for an element that has not rendered, when JS is unavailable, or after the service was disposed."
+    }
+  ],
+  "examples": [
+    {
+      "title": "Pin a component's own root",
+      "code": "@inject TopLayerPinService Pins\n<div @ref=\"_bar\" class=\"tm-pin-on-top my-bar\" hidden=\"@(!_show)\">…</div>\n@code {\n    ElementReference _bar; TopLayerPin? _pin;\n    protected override async Task OnAfterRenderAsync(bool first)\n    {\n        if (first) _pin = await Pins.PinAsync(_bar, new TopLayerPinOptions { Priority = 100 });\n    }\n    public async ValueTask DisposeAsync() { if (_pin is not null) await _pin.DisposeAsync(); }\n}"
+    }
+  ],
+  "itemName": "TopLayerPinService"
+}

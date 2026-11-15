@@ -1,4 +1,4 @@
-﻿namespace Tempo.Blazor.Components.Wireframe;
+namespace Tempo.Blazor.Components.Wireframe;
 
 /// <summary>Built-in Tempo UI role vocabulary used as the global baseline.</summary>
 public sealed class BuiltInUiRoleVocabularySource : IUiRoleVocabularySource
@@ -104,6 +104,7 @@ public sealed class BuiltInUiRoleVocabularySource : IUiRoleVocabularySource
         R("spinner", "Spinner", "Shows an indeterminate loading state.", "loading spinner", "nacitani", "TmSpinner"),
         R("skeleton", "Skeleton", "Shows placeholder shapes while content loads.", "loading placeholder", "kostra", "TmSkeleton"),
         R("toast-container", "Toast container", "Hosts transient toast notifications.", "toasts", "toast zpravy", "TmToastContainer"),
+        R("pinned-on-top", "Pinned on top", "Keeps host status UI, such as an error bar or a connection banner, above every modal, drawer and popover.", "error bar", "connection banner", "status banner", "pripichnuta lista", "TmPinnedOnTop"),
         R("notification-bell", "Notification bell", "Shows notification count and list access.", "notifications", "oznameni", "TmNotificationBell"),
         R("tabs", "Tabs", "Switches between panels in the same area.", "tab strip", "zalozky", "TmTabs", "TmTabPanel"),
         R("breadcrumbs", "Breadcrumbs", "Shows hierarchical navigation path.", "breadcrumb trail", "drobeckova navigace", "TmBreadcrumbs"),

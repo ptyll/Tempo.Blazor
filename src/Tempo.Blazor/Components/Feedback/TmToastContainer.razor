@@ -444,6 +444,21 @@
     }
 
     /// <summary>
+    /// Called by the tm-toast module when the pinned-on-top registry finally shows the container
+    /// after a native modal <c>&lt;dialog&gt;</c> deferred the show (decision TOP-LAYER-PIN). Until
+    /// then the container was <c>display:none</c>, so its live regions were never spoken. Every
+    /// toast that is still visible is announced again, in the region of its own politeness.
+    /// </summary>
+    [JSInvokable]
+    public async Task OnPinShown()
+    {
+        if (_disposed)
+            return;
+        _announcedTexts.Clear();
+        await AnnounceTextChangesAsync();
+    }
+
+    /// <summary>
     /// Called by the tm-toast module when Escape dismisses a card: the service owns the state, JS
     /// only asks.
     /// </summary>

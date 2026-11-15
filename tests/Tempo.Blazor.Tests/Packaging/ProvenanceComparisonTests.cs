@@ -237,7 +237,9 @@ public class ProvenanceComparisonTests
         // every excluded file under src/Tempo.Blazor/wwwroot is a *.test.mjs / __tests__ / *.md item, none other).
         // tm-kanban.test.mjs (plan 92e96b25 phase 5 / TG-005, decision O7: the kanban touch-drag module tests) —
         // the same Pack=false treatment, one more excluded file.
-        denominator.PackExcludedFiles.Should().Be(37);
+        // tm-top-layer.test.mjs + tm-pin-on-top.test.mjs (plan 4ce1b994 phase 2, decision TOP-LAYER-PIN:
+        // the pinned-on-top registry and the public pin module) — two more excluded files.
+        denominator.PackExcludedFiles.Should().Be(39);
     }
 
     /// <summary>

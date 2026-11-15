@@ -3091,6 +3091,10 @@ to{transform:scaleX(0);}
 .tm-toast-container--top-center,.tm-toast-container--bottom-center{transform:none;}
 .tm-toast{width:100%;}
 }
+:where([data-tm-pin-on-top]){inset:auto;width:auto;height:auto;max-width:none;max-height:none;margin:0;border:none;padding:0;background:transparent;color:inherit;overflow:visible;}
+:where(.tm-pin-on-top){inset:auto;width:auto;height:auto;max-width:none;max-height:none;margin:0;border:none;padding:0;background:transparent;color:inherit;overflow:visible;}
+:where([data-tm-pin-on-top])::backdrop{background:transparent;}
+:where(.tm-pin-on-top)::backdrop{background:transparent;}
 .tm-alert{display:flex;align-items:flex-start;gap:0.75rem;padding:0.875rem 1rem;border-radius:var(--tm-radius-lg);font-size:0.875rem;line-height:1.5;position:relative;transition:opacity 0.2s ease,transform 0.2s ease;}
 .tm-alert__icon{display:flex;align-items:center;flex-shrink:0;margin-top:0.0625rem;}
 .tm-alert__body{flex:1;min-width:0;}

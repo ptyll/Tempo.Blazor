@@ -55,6 +55,10 @@
     private bool _promoted;
     private bool _pinned;
     private bool _disposed;
+    /// <summary>True while an <see cref="OnAfterRenderAsync"/> pass is awaiting JS (single-flight guard).</summary>
+    private bool _afterRenderRunning;
+    /// <summary>A render arrived while a pass was in flight: the running pass repeats once more.</summary>
+    private bool _afterRenderRerun;
 
     protected override async Task OnInitializedAsync()
     {
@@ -146,8 +150,42 @@
     }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// SINGLE-FLIGHT, mirroring TmToastContainer 2.11.1 (plan 4ce1b994 phase 2). This method awaits
+    /// JS round trips, and the render it follows can be followed by ANOTHER render while they are
+    /// pending. Two interleaved passes pinned and raised twice over the same fields. A render that
+    /// arrives while a pass is in flight only asks for one more pass, and the running pass repeats
+    /// until no request is left.
+    /// </remarks>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (_afterRenderRunning)
+        {
+            _afterRenderRerun = true;
+            return;
+        }
+
+        _afterRenderRunning = true;
+        try
+        {
+            do
+            {
+                _afterRenderRerun = false;
+                await RunAfterRenderAsync();
+            }
+            while (_afterRenderRerun && !_disposed);
+        }
+        finally
+        {
+            _afterRenderRunning = false;
+        }
+    }
+
+    private async Task RunAfterRenderAsync()
+    {
+        if (_disposed)
+            return;
+
         // Pinned-on-top status UI (V2): promote on the first toast, re-raise on every push (keyed
         // on the newest id — the visible count can stay unchanged at the cap), demote and unpin
         // when the last toast leaves. Mirrors TmToastContainer.
@@ -161,8 +199,12 @@
                 {
                     _pinned = true;
                     await _topLayer.PinAsync(_root);
+                    if (_disposed)
+                        return;
                 }
                 await _topLayer.RaiseAsync(_root);
+                if (_disposed)
+                    return;
                 _promoted = true;
                 _lastNewestId = newestId;
             }
@@ -181,6 +223,9 @@
                 }
             }
         }
+
+        if (_disposed)
+            return;
 
         // F6 follow-up (c51ddf81 #4), review round: keyed on the VISIBLE ID SET, not the count —
         // the cap-3 queue refill closes one toast and dequeues the next in one render, so the

@@ -1,0 +1,52 @@
+{
+  "itemName": "TmPinnedOnTop",
+  "kind": "Component",
+  "category": "Feedback",
+  "description": "Keeps host status UI, such as a connection banner, an error bar or a session-expiry strip, above every Tempo top-layer surface (TmModal, TmDialog, a modal TmDrawer, sheets, TmOverlayPanel popovers, the command palette). That includes surfaces opened after the content appeared. It is the declarative wrapper over TopLayerPinService, and it shares one pinned-on-top registry with the toast containers (decision TOP-LAYER-PIN, docs/top-layer-pin.md). Visibility is the signal: Visible=false renders the hidden attribute and the pin module hands the element back as a plain, hidden element, with no interop call per toggle. While a native modal <dialog> is open nothing is promoted above it, and the pin lands when the dialog closes. The root is exempt from a Tempo modal trap's inert background, so render it at layout level, outside the @Body wrapper. Position it through Class. The tm-pin-on-top class resets the browser popover defaults at zero specificity, so a fixed bottom bar stays a bar.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Feedback"
+  ],
+  "parameters": [
+    {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "default": "null",
+      "description": "The pinned content: a status banner, a connection strip or an error bar."
+    },
+    {
+      "name": "Visible",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the content is shown. false renders the root with the hidden attribute, and the pin module demotes it."
+    },
+    {
+      "name": "Priority",
+      "type": "int",
+      "isRequired": false,
+      "default": "0",
+      "description": "Order between pinned elements. A higher value paints higher, and equal values keep render order. 0 is the band of the toast containers. Use 100 to paint above toasts."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "default": "null",
+      "description": "Additional CSS classes for the root. Position the element here (for example a fixed bottom bar)."
+    }
+  ],
+  "cssClasses": [
+    "tm-pin-on-top"
+  ],
+  "examples": [
+    {
+      "title": "Connection banner above every modal",
+      "code": "<TmPinnedOnTop Visible=\"@_offline\" Priority=\"100\" Class=\"my-offline-bar\" role=\"status\">You are offline. Changes are saved locally.</TmPinnedOnTop>"
+    },
+    {
+      "title": "Pin markup no component owns (blazor-error-ui)",
+      "code": "<div id=\"blazor-error-ui\" data-tm-pin-on-top data-tm-pin-priority=\"100\">…</div>\n<script type=\"module\" src=\"_content/Tempo.Blazor/js/tm-pin-on-top.js\"></script>"
+    }
+  ]
+}

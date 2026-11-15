@@ -16240,6 +16240,62 @@
           ]
         },
         {
+          "itemName": "TmPinnedOnTop",
+          "kind": "Component",
+          "category": "Feedback",
+          "namespace": "Tempo.Blazor.Components.Feedback",
+          "description": "Keeps host status UI, such as a connection banner, an error bar or a session-expiry strip, above every Tempo top-layer surface (TmModal, TmDialog, a modal TmDrawer, sheets, TmOverlayPanel popovers, the command palette). That includes surfaces opened after the content appeared. It is the declarative wrapper over TopLayerPinService, and it shares one pinned-on-top registry with the toast containers (decision TOP-LAYER-PIN, docs/top-layer-pin.md). Visibility is the signal: Visible=false renders the hidden attribute and the pin module hands the element back as a plain, hidden element, with no interop call per toggle. While a native modal <dialog> is open nothing is promoted above it, and the pin lands when the dialog closes. The root is exempt from a Tempo modal trap's inert background, so render it at layout level, outside the @Body wrapper. Position it through Class. The tm-pin-on-top class resets the browser popover defaults at zero specificity, so a fixed bottom bar stays a bar.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Feedback/TmPinnedOnTop.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Feedback"
+          ],
+          "parameters": [
+            {
+              "name": "ChildContent",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "The pinned content: a status banner, a connection strip or an error bar.",
+              "default": "null"
+            },
+            {
+              "name": "Class",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Additional CSS classes for the root. Position the element here (for example a fixed bottom bar).",
+              "default": "null"
+            },
+            {
+              "name": "Priority",
+              "type": "int",
+              "isRequired": false,
+              "description": "Order between pinned elements. A higher value paints higher, and equal values keep render order. 0 is the band of the toast containers. Use 100 to paint above toasts.",
+              "default": "0"
+            },
+            {
+              "name": "Visible",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the content is shown. false renders the root with the hidden attribute, and the pin module demotes it."
+            }
+          ],
+          "cssClasses": [
+            "tm-pin-on-top"
+          ],
+          "examples": [
+            {
+              "title": "Connection banner above every modal",
+              "code": "<TmPinnedOnTop Visible=\"@_offline\" Priority=\"100\" Class=\"my-offline-bar\" role=\"status\">You are offline. Changes are saved locally.</TmPinnedOnTop>"
+            },
+            {
+              "title": "Pin markup no component owns (blazor-error-ui)",
+              "code": "<div id=\"blazor-error-ui\" data-tm-pin-on-top data-tm-pin-priority=\"100\">…</div>\n<script type=\"module\" src=\"_content/Tempo.Blazor/js/tm-pin-on-top.js\"></script>"
+            }
+          ]
+        },
+        {
           "itemName": "TmPopover",
           "kind": "Component",
           "category": "Feedback",
@@ -33631,6 +33687,84 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "TopLayerPin",
+          "kind": "Class",
+          "category": "Services",
+          "namespace": "Tempo.Blazor.Services",
+          "description": "One pin created by TopLayerPinService.PinAsync. Dispose it to unpin. The dispose is idempotent and never throws, also during prerender or after the circuit is gone. IsActive is false when the pin could not be registered or was disposed.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Services/TopLayerPinService.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "IsActive",
+              "kind": "Property",
+              "type": "bool",
+              "description": "True while the element is registered in the pinned-on-top registry."
+            },
+            {
+              "name": "Priority",
+              "kind": "Property",
+              "type": "int",
+              "description": "The priority the pin was last registered with. A higher value paints higher, and 0 is the toast band."
+            },
+            {
+              "name": "SetPriorityAsync",
+              "kind": "Method",
+              "type": "Task",
+              "description": "Changes the order of this pin relative to the other pins. A no-op once the pin is inactive."
+            },
+            {
+              "name": "DisposeAsync",
+              "kind": "Method",
+              "type": "ValueTask",
+              "description": "Unpins the element. Idempotent and exception-safe."
+            }
+          ]
+        },
+        {
+          "itemName": "TopLayerPinOptions",
+          "kind": "Record",
+          "category": "Services",
+          "namespace": "Tempo.Blazor.Services",
+          "description": "Options of a pin created by TopLayerPinService.PinAsync.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Services/TopLayerPinService.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Priority",
+              "kind": "Property",
+              "type": "int",
+              "description": "Order between pins. A higher value paints higher, and equal values keep registration order. Defaults to 0, the band of the toast containers. Use 100 for a framework error bar so it lands above toasts."
+            }
+          ]
+        },
+        {
+          "itemName": "TopLayerPinService",
+          "kind": "Class",
+          "category": "Services",
+          "namespace": "Tempo.Blazor.Services",
+          "description": "Pins host elements above every Tempo top-layer surface (TmModal, TmDialog, a modal TmDrawer, sheets, TmOverlayPanel popovers, the command palette), including surfaces opened after the element appeared. It is the C# front door of the one pinned-on-top registry the toast containers use (decision TOP-LAYER-PIN, docs/top-layer-pin.md). AddTempoBlazor() registers it scoped. Call PinAsync from OnAfterRenderAsync and dispose the returned TopLayerPin to unpin. Visibility is the signal: hide and show the element the way you already do, and do not put popover on it. While a native modal <dialog> is open nothing is promoted above it. Every interop is guarded, so prerender, missing JS and a torn-down circuit make the calls no-ops.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Services/TopLayerPinService.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "PinAsync",
+              "kind": "Method",
+              "type": "Task<TopLayerPin>",
+              "description": "Pins the element on top with the given options (null pins at priority 0). It returns an inactive handle for an element that has not rendered, when JS is unavailable, or after the service was disposed."
+            }
+          ],
+          "examples": [
+            {
+              "title": "Pin a component's own root",
+              "code": "@inject TopLayerPinService Pins\n<div @ref=\"_bar\" class=\"tm-pin-on-top my-bar\" hidden=\"@(!_show)\">…</div>\n@code {\n    ElementReference _bar; TopLayerPin? _pin;\n    protected override async Task OnAfterRenderAsync(bool first)\n    {\n        if (first) _pin = await Pins.PinAsync(_bar, new TopLayerPinOptions { Priority = 100 });\n    }\n    public async ValueTask DisposeAsync() { if (_pin is not null) await _pin.DisposeAsync(); }\n}"
+            }
+          ]
+        },
+        {
           "itemName": "SpreadsheetCell",
           "kind": "Class",
           "category": "Spreadsheet",
@@ -36039,6 +36173,10 @@
           "kind": "Css"
         },
         {
+          "path": "src/Tempo.Blazor/wwwroot/css/components/_pin-on-top.css",
+          "kind": "Css"
+        },
+        {
           "path": "src/Tempo.Blazor/wwwroot/css/components/_pivot-table.css",
           "kind": "Css"
         },
@@ -36439,6 +36577,10 @@
           "kind": "JavaScript"
         },
         {
+          "path": "src/Tempo.Blazor/wwwroot/js/tm-pin-on-top.js",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor/wwwroot/js/tm-rtl.js",
           "kind": "JavaScript"
         },
@@ -36595,6 +36737,10 @@
           "kind": "JavaScript"
         },
         {
+          "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-pin-on-top.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-sheet.test.mjs",
           "kind": "JavaScript"
         },
@@ -36627,6 +36773,10 @@
           "kind": "JavaScript"
         },
         {
+          "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-top-layer.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-user-zone.test.mjs",
           "kind": "JavaScript"
         },
@@ -36636,12 +36786,12 @@
         }
       ],
       "summary": {
-        "itemCount": 458,
-        "manualItemCount": 458,
-        "generatedItemCount": 450,
+        "itemCount": 462,
+        "manualItemCount": 462,
+        "generatedItemCount": 454,
         "generatedOnlyItemCount": 0,
-        "componentCount": 237,
-        "publicApiTypeCount": 213
+        "componentCount": 238,
+        "publicApiTypeCount": 216
       }
     },
     {
@@ -147501,10 +147651,10 @@
   ],
   "summary": {
     "packageCount": 29,
-    "itemCount": 3742,
-    "manualItemCount": 3742,
+    "itemCount": 3746,
+    "manualItemCount": 3746,
     "generatedOnlyItemCount": 0,
-    "componentCount": 565,
-    "publicApiTypeCount": 3125
+    "componentCount": 566,
+    "publicApiTypeCount": 3128
   }
 }

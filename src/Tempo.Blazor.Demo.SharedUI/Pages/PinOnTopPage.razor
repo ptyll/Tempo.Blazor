@@ -1,0 +1,161 @@
+@page "/pin-on-top"
+@using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Components.Layout
+@using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Services
+@using Microsoft.JSInterop
+@inject ToastService ToastService
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<PageTitle>Pin on top – Tempo.Blazor</PageTitle>
+
+@* One root element: the scoped ::deep rules need an ancestor that carries the page's scope
+   attribute. The banner, the modal and the drawer stay siblings inside it, so the modal trap's
+   inert walk still visits the banner and honours its exemption. *@
+<div class="demo-pin-page">
+<!-- Page Header -->
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">Pin on top</h1>
+    <p class="text-slate-600 dark:text-slate-400">
+        <code class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">&lt;TmPinnedOnTop /&gt;</code>,
+        <code class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">TopLayerPinService</code> and the
+        <code class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">data-tm-pin-on-top</code> attribute keep
+        host status UI above every modal, drawer and popover, including ones opened <strong>after</strong> the banner appeared.
+        Toasts share the same registry. A higher <code class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">Priority</code>
+        paints higher, and the toasts sit at 0.
+    </p>
+</div>
+
+<!-- Component banner -->
+<section class="demo-section" data-testid="pin-component">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Connection banner: TmPinnedOnTop</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">Priority=100 · bottom bar</span>
+    </div>
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            Show the banner, then open a modal or a drawer. The banner stays on top and its <em>Retry</em> button stays
+            clickable, because a pinned element is exempt from the modal's inert background. Open the modal first and show
+            the banner from inside it, and it lands on top as well.
+        </p>
+        <div class="flex flex-wrap gap-3">
+            <TmButton Variant="ButtonVariant.Primary" data-testid="pin-toggle-banner" OnClick="ToggleBanner">
+                @(_bannerVisible ? "Hide banner" : "Show banner")
+            </TmButton>
+            <TmButton Variant="ButtonVariant.Outline" data-testid="pin-open-modal" OnClick="() => _showModal = true">Open modal</TmButton>
+            <TmButton Variant="ButtonVariant.Outline" data-testid="pin-open-drawer" OnClick="() => _showDrawer = true">Open drawer</TmButton>
+            <TmButton Variant="ButtonVariant.Ghost" data-testid="pin-push-toast" OnClick="PushToast">Push a toast</TmButton>
+        </div>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-3" data-testid="pin-retry-count">Retry clicked: @_retries×</p>
+    </div>
+</section>
+
+<!-- Native dialog -->
+<section class="demo-section" data-testid="pin-native-dialog">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Native modal &lt;dialog&gt;</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-full">pins wait until it closes</span>
+    </div>
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            A native <code class="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">showModal()</code> dialog, such as
+            the Blazor reconnect modal, makes everything outside it inert. A pin painted above it would cover it and still be
+            unusable, so the pins stay below the dialog and land on top again when it closes. The button below opens a native
+            dialog and shows the banner from inside it.
+        </p>
+        <TmButton Variant="ButtonVariant.Outline" data-testid="pin-open-native-dialog" OnClick="OpenNativeDialogAsync">Open native dialog + show banner</TmButton>
+    </div>
+</section>
+
+<!-- Attribute front door -->
+<section class="demo-section" data-testid="pin-attribute">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Markup no component owns: the attribute</h2>
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-3">
+            The framework error bar is rendered by the host page, not by a component. Mark it and load the module once:
+        </p>
+        <pre class="text-xs bg-slate-100 dark:bg-slate-800 rounded p-3 overflow-x-auto"><code>&lt;div id="blazor-error-ui" data-tm-pin-on-top data-tm-pin-priority="200"&gt;…&lt;/div&gt;
+&lt;script type="module" src="_content/Tempo.Blazor/js/tm-pin-on-top.js"&gt;&lt;/script&gt;</code></pre>
+        <p class="text-sm text-slate-600 dark:text-slate-400 mt-3">
+            Visibility is the signal: <code class="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">blazor.web.js</code>
+            sets an inline <code class="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">display</code>, and the module
+            follows it. Leave <code class="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">popover</code> off the markup,
+            because the module owns it. The demo hosts' own error bars use exactly this markup.
+        </p>
+    </div>
+</section>
+
+<TmPinnedOnTop Visible="_bannerVisible" Priority="100" Class="demo-pin-banner" role="status" data-testid="pin-banner">
+    <div class="demo-pin-banner__inner">
+        <svg class="demo-pin-banner__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z" />
+        </svg>
+        <span class="demo-pin-banner__text">Connection lost. Changes are kept locally and sent when you are back online.</span>
+        <button type="button" class="demo-pin-banner__action" data-testid="pin-banner-retry" @onclick="Retry">Retry</button>
+        <button type="button" class="demo-pin-banner__action" data-testid="pin-banner-dismiss" @onclick="() => _bannerVisible = false">Dismiss</button>
+    </div>
+</TmPinnedOnTop>
+
+<TmModal Show="_showModal"
+         OnClose="() => _showModal = false"
+         Title="Modal opened after the banner"
+         ShowDefaultFooterButtons="true"
+         ShowCancelButton="false"
+         data-testid="pin-modal">
+    <p>The banner at the bottom edge paints above this modal and its backdrop.</p>
+    <div class="mt-4 flex flex-wrap gap-3">
+        <TmButton Variant="ButtonVariant.Secondary" data-testid="pin-modal-toggle-banner" OnClick="ToggleBanner">
+            @(_bannerVisible ? "Hide banner" : "Show banner from here")
+        </TmButton>
+        <TmButton Variant="ButtonVariant.Ghost" data-testid="pin-modal-push-toast" OnClick="PushToast">Push a toast</TmButton>
+    </div>
+</TmModal>
+
+<TmDrawer IsOpen="_showDrawer" IsOpenChanged="open => _showDrawer = open" Position="DrawerPosition.Right" Title="Drawer opened after the banner">
+    <p class="text-sm">A modal drawer promotes itself to the top layer when it opens. Its promotion re-raises every pin above it.</p>
+</TmDrawer>
+
+<dialog class="demo-pin-native-dialog" data-testid="pin-native-dialog-element" @ref="_nativeDialog">
+    <h3 class="text-base font-semibold mb-2">Native modal dialog</h3>
+    <p class="text-sm mb-4">The banner was shown from inside this dialog. It waits below and lands on top when the dialog closes.</p>
+    <form method="dialog"><button class="demo-pin-banner__action demo-pin-native-dialog__close" data-testid="pin-native-dialog-close">Close dialog</button></form>
+</dialog>
+</div>
+
+@code {
+    private bool _bannerVisible;
+    private bool _showModal;
+    private bool _showDrawer;
+    private int _retries;
+    private ElementReference _nativeDialog;
+    private IJSObjectReference? _module;
+
+    private void ToggleBanner() => _bannerVisible = !_bannerVisible;
+
+    private void Retry() => _retries++;
+
+    private void PushToast() => ToastService.ShowInfo("Saved — a toast pins at priority 0, below the banner.", "Pin on top");
+
+    private async Task OpenNativeDialogAsync()
+    {
+        _module ??= await JS.InvokeAsync<IJSObjectReference>("import", "./_content/Tempo.Blazor.Demo.SharedUI/js/pin-on-top-demo.js");
+        await _module.InvokeVoidAsync("showModal", _nativeDialog);
+        _bannerVisible = true;
+    }
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        if (_module is null)
+            return;
+        try
+        {
+            await _module.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit is gone. There is nothing left to release.
+        }
+    }
+}

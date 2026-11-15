@@ -72,8 +72,20 @@ export function attach(container, dotNet, doc = container.ownerDocument ?? docum
         actions[actions.length - 1].focus();
     };
 
+    // 4. RE-ANNOUNCE — the pinned-on-top registry dispatches tm-pin-shown when a show that a
+    //    native modal <dialog> deferred finally lands (decision TOP-LAYER-PIN §4.2). The container
+    //    was display:none until then, so its live regions were never spoken: .NET re-announces.
+    state.onPinShown = () => {
+        try {
+            Promise.resolve(dotNet.invokeMethodAsync('OnPinShown')).catch(() => { });
+        } catch {
+            // disposed reference: the container is going away anyway
+        }
+    };
+
     container.addEventListener('keydown', state.onKeyDown);
     container.addEventListener('focusin', state.onFocusIn);
+    container.addEventListener('tm-pin-shown', state.onPinShown);
     doc.addEventListener('keydown', state.onDocKeyDown);
 
     if (typeof ObserverImpl === 'function') {
@@ -109,6 +121,7 @@ export function detach(container, doc = container.ownerDocument ?? document) {
         return;
     container.removeEventListener('keydown', state.onKeyDown);
     container.removeEventListener('focusin', state.onFocusIn);
+    container.removeEventListener('tm-pin-shown', state.onPinShown);
     doc.removeEventListener('keydown', state.onDocKeyDown);
     state.observer?.disconnect();
     instances.delete(container);

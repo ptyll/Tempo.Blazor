@@ -1,0 +1,18 @@
+{
+  "kind": "Record",
+  "category": "Services",
+  "namespace": "Tempo.Blazor.Services",
+  "description": "Options of a pin created by TopLayerPinService.PinAsync.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Services/TopLayerPinService.cs",
+  "documentationStatus": "authored",
+  "members": [
+    {
+      "name": "Priority",
+      "kind": "Property",
+      "type": "int",
+      "description": "Order between pins. A higher value paints higher, and equal values keep registration order. Defaults to 0, the band of the toast containers. Use 100 for a framework error bar so it lands above toasts."
+    }
+  ],
+  "itemName": "TopLayerPinOptions"
+}

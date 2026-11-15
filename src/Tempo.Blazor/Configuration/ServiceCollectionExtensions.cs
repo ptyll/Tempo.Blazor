@@ -95,6 +95,12 @@ public static class ServiceCollectionExtensions
         // ToastService: scoped so each circuit/tab gets its own toast queue.
         services.TryAddScoped<ToastService>();
 
+        // TopLayerPinService: scoped — its JS module reference belongs to one browser page.
+        // A factory with an OPTIONAL IJSRuntime: non-Blazor hosts (an API, a worker) call
+        // AddTempoBlazor() for the localizer and validate the container on build. Without a JS
+        // runtime the service stays inert (every pin is inactive).
+        services.TryAddScoped<TopLayerPinService>(sp => new TopLayerPinService(sp.GetService<IJSRuntime>()));
+
         // DragDropService carries dragged IDs between sibling components.
         services.TryAddScoped<DragDropService>();
 

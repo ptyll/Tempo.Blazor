@@ -102,6 +102,50 @@ public class TmNotificationToastContainerTests : LocalizationTestBase
             "the closed card left the visible set although the count never dropped");
     }
 
+    // Plan 4ce1b994 (TOP-LAYER-PIN, phase 2): the same single-flight discipline as TmToastContainer
+    // 2.11.1. A render that arrives while the pin/raise round trip is pending used to start a
+    // SECOND after-render pass that pinned and raised again, so two passes interleaved over the
+    // same _pinned/_promoted fields.
+    [Fact]
+    public void Container_RenderWhileThePinIsInFlight_PinsAndRaisesExactlyOnce()
+    {
+        var topLayer = JSInterop.SetupModule("./_content/Tempo.Blazor/js/tm-top-layer.js");
+        var pin = topLayer.SetupVoid("pinRoot", _ => true);   // pending until completed below
+        topLayer.SetupVoid("raise", _ => true).SetVoidResult();
+
+        var cut = Render<TmNotificationToastContainer>();
+        _store.PublishAsync(MakeNotification("alice", "Hello")).Wait();
+        cut.WaitForAssertion(() => topLayer.Invocations.Count(i => i.Identifier == "pinRoot").Should().Be(1));
+
+        cut.Render();
+        cut.Render();
+        pin.SetVoidResult();
+
+        cut.WaitForAssertion(() => topLayer.Invocations.Count(i => i.Identifier == "raise").Should().Be(1));
+        topLayer.Invocations.Count(i => i.Identifier == "pinRoot").Should().Be(1,
+            "a render during the pending pin asks for one more pass; it must not pin a second time");
+    }
+
+    [Fact]
+    public async Task Container_DisposedWhileThePinIsInFlight_DoesNotThrow_AndDoesNotRaiseAfterwards()
+    {
+        var topLayer = JSInterop.SetupModule("./_content/Tempo.Blazor/js/tm-top-layer.js");
+        var pin = topLayer.SetupVoid("pinRoot", _ => true);
+        topLayer.SetupVoid("unpinRoot", _ => true).SetVoidResult();
+        topLayer.SetupVoid("raise", _ => true).SetVoidResult();
+
+        var cut = Render<TmNotificationToastContainer>();
+        _store.PublishAsync(MakeNotification("alice", "Hello")).Wait();
+        cut.WaitForAssertion(() => topLayer.Invocations.Count(i => i.Identifier == "pinRoot").Should().Be(1));
+
+        await DisposeComponentsAsync();
+        pin.SetVoidResult();
+        await cut.InvokeAsync(() => { });
+
+        topLayer.Invocations.Count(i => i.Identifier == "raise").Should().Be(0,
+            "a pass that resumes on a disposed container must not raise a root that is going away");
+    }
+
     [Fact]
     public void Container_UnreadCountFailure_DoesNotTakeDownTheHost()
     {

@@ -20,6 +20,7 @@ public class StencilPackFeedbackFormsTests
         "TmSpinner",
         "TmSkeleton",
         "TmToastContainer",
+        "TmPinnedOnTop",
         "TmAutoSaveIndicator",
         "TmNotificationBell",
         "TmFormSection",
@@ -62,7 +63,7 @@ public class StencilPackFeedbackFormsTests
     [Fact]
     public void FeedbackFormTypeList_CoversPlanScope()
     {
-        FeedbackFormTypes.Should().HaveCount(35);
+        FeedbackFormTypes.Should().HaveCount(36);
         FeedbackFormTypes.Should().Contain(["TmAlert", "TmProgressBar", "TmNotificationBell", "TmFormField", "TmColorGradient"]);
     }
 
