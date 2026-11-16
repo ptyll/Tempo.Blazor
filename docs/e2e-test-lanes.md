@@ -71,7 +71,9 @@ nightly — today no scheduled workflow exists, so it runs manually via
 ## Performance lane
 
 `scripts/run-e2e-perf.ps1` runs `TestCategory=Performance` serially in ONE process: the Modeling M26 budgets
-(LCP, large model load/generate, tree filter, scroll jank, notation switch - `ModelingPerformanceM26E2ETests`), the
+(LCP, large model load/generate, tree filter, scroll jank, notation switch - `ModelingPerformanceM26E2ETests` - and the
+500-issue filter budget `ModelingIssueFilterPhase11E2ETests.FiveHundredIssues_FilterNarrowsWithinBudget`, moved here
+in 2.12.0 after it went red serially under the full lane on two commits with no product change), the
 Spreadsheet budget specs (`BenchmarkPage_Phase11ReadinessMetricsPass` - only its wall-clock budgets - and the other `BenchmarkPage_*` budget specs; its deterministic counter contract is `BenchmarkPage_Phase11StructuralCountersHold`, which runs in the normal lanes) and the Email editor's 50+ block keystroke bound
 (`EmailEditorCanvasWysiwygF9AE2ETests.Typing_in_the_inspector_repaints_only_the_edited_block`).
 

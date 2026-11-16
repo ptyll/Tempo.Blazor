@@ -29,6 +29,11 @@
 - `TmToastContainer` re-announces the visible toasts once a show deferred by a native modal dialog lands (a `tm-pin-shown` event → `[JSInvokable] OnPinShown`). The live regions of a container that was `display:none` were never spoken.
 - `TmNotificationToastContainer.OnAfterRenderAsync` is single-flight like `TmToastContainer` 2.11.1. A render during a pending pin/raise round trip used to start a second pass that pinned and raised again over the same fields. A pass that resumes on a disposed container stops.
 
+### Tests and lanes
+
+- `ModelingIssueFilterPhase11E2ETests.FiveHundredIssues_FilterNarrowsWithinBudget` (a 350 ms wall-clock budget) now carries `TestCategory("Performance")`, so it runs in `run-e2e-perf.ps1` on an idle machine and no longer in the full lane. In the full lane it went red when run serially on `edb5bf3fe` and on `94f18bb18` (433–737 ms), with no product change between them. The budget itself is unchanged. This was the owner's decision on 2026-11-16 ([docs/e2e-test-lanes.md](docs/e2e-test-lanes.md)).
+- `OverlayInitialFocusE2ETests` (slow promote) stubs the boot-time `tm-pin-on-top.js` in its own browser context. That keeps the click-time request for the promote module, which the test delays, from becoming vacuous. `DashboardF6SelectorE2ETests` asserts the English labels its pinned `en-US` locale renders.
+
 ### Breaking / Migration
 
 | Surface | 2.11.x | 2.12.0 | Migration |

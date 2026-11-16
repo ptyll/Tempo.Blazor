@@ -259,7 +259,12 @@ public sealed class ModelingIssueFilterPhase11E2ETests : WasmTestBase
 
     // ── 500-issue latency (M26 budget for the filter) ────────────────────────
 
+    // A wall-clock budget (350 ms), so it lives in the Performance lane (run-e2e-perf.ps1, idle
+    // machine) and not in the full lane (docs/e2e-test-lanes.md). Under the full lane it measured
+    // 433-737 ms on edb5bf3 and on 94f18bb, red serially on both with no product change: it was
+    // measuring machine load. The budget is unchanged (owner decision, 2026-11-16).
     [TestMethod]
+    [TestCategory("Performance")]
     [Description("500-issue scenario: a text filter narrows the list within the 150ms debounce + 200ms processing budget and the chips report counts")]
     public async Task FiveHundredIssues_FilterNarrowsWithinBudget()
     {
