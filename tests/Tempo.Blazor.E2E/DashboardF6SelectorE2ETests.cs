@@ -9,7 +9,7 @@ namespace Tempo.Blazor.E2E;
 /// widths: desktop 1440 (sidebar), tablet 900 touch (sidebar + two columns — 1024 itself sits on
 /// desktop per <c>TmBreakpoints.Lg</c>, so the capture names its real viewport) and mobile 390/320
 /// (bottom sheet with the category chip toggle group). Covers the DA1 CloseOnSelect=false flow
-/// (the selector stays open, the added card flips to the "Přidáno" state) and keyboard-only
+/// (the selector stays open, the added card flips to the "Added" state) and keyboard-only
 /// operation. Screenshots land in <c>__screenshots__/dashboard/f6/</c> for the UX review against
 /// output/imagegen/tempo-reimagined/TmDashboard/widget-selector--{desktop,tablet,mobile}.png.
 /// Every open-selector capture waits out the overlay's 0.3 s fade first: a shot taken mid-fade
@@ -47,7 +47,7 @@ public sealed class DashboardF6SelectorE2ETests : WasmTestBase
         await CloseSelectorAsync(page);
 
         // DA1: with CloseOnSelect=false an add keeps the selector open and the card flips to
-        // the green "Přidáno" state with the live announcement. The checkbox input is visually
+        // the green "Added" state with the live announcement. The checkbox input is visually
         // hidden behind the switch track — click the label (the visible switch).
         await page.Locator("[data-testid='dashboard-close-on-select'] .tm-toggle-label").ClickAsync();
         await Assertions.Expect(page.Locator("[data-testid='dashboard-close-on-select'] input"))
@@ -61,9 +61,11 @@ public sealed class DashboardF6SelectorE2ETests : WasmTestBase
             .ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 10000 });
         await ShotAsync(page, "desktop-1440-added-state");
 
-        // The live region announces the addition politely (the demo defaults to the Czech UI).
+        // The live region announces the addition politely. The context pins Locale = "en-US"
+        // (OpenDashboardAsync), so the text is the English TmWidgetSelector_Added family; the
+        // Czech literal used to be asserted here and failed on every run since the locale pin.
         var live = await page.Locator(".tm-widget-selector-live").TextContentAsync();
-        StringAssert.Contains(live, "Přidáno");
+        StringAssert.Contains(live, "Added");
 
         // Keyboard only: focus a card and activate it with Enter — a native button, so the
         // browser's own key handling produces exactly one activation (keyboard convention).
@@ -74,8 +76,8 @@ public sealed class DashboardF6SelectorE2ETests : WasmTestBase
         await Assertions.Expect(page.Locator(".tm-widget-card-badge--added").First)
             .ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 10000 });
 
-        // Done closes the selector (the demo defaults to the Czech UI: "Hotovo").
-        await page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Hotovo" }).ClickAsync();
+        // Done closes the selector (English: the context pins Locale = "en-US").
+        await page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Done" }).ClickAsync();
         await Assertions.Expect(page.Locator(".tm-widget-selector-modal"))
             .ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 10000 });
         await page.CloseAsync();
@@ -162,7 +164,7 @@ public sealed class DashboardF6SelectorE2ETests : WasmTestBase
         Assert.IsTrue(Math.Abs(widths[1] - widths[0]) <= 2,
             $"the mobile Done button spans the footer width (footer {widths[0]:F1}px, button {widths[1]:F1}px)");
 
-        await page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Hotovo" }).ClickAsync();
+        await page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Done" }).ClickAsync();
         await Assertions.Expect(page.Locator(".tm-widget-selector-modal"))
             .ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 10000 });
         await page.CloseAsync();

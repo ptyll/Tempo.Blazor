@@ -153,6 +153,19 @@ public sealed class OverlayInitialFocusE2ETests : WasmTestBase
         // click-time load was actually intercepted (otherwise the delay is vacuous).
         var delayedHits = 0;
         var openerClicked = false;
+        // Since 2.12.0 the demo hosts load the public pin module (tm-pin-on-top.js, which keeps
+        // #blazor-error-ui on top) as a boot-time <script type="module">, and it imports
+        // tm-top-layer.js. The promote module would then be cached before the click, the
+        // click-time request this test delays would never happen, and the run would be vacuous.
+        // That is a test-setup change, not a product one: this scenario needs no pinned error
+        // bar, so the boot-time pin module is replaced with an empty one, and the promote module
+        // is again first requested by the click.
+        await context.RouteAsync("**/tm-pin-on-top*.js*", r => r.FulfillAsync(new RouteFulfillOptions
+        {
+            Status = 200,
+            ContentType = "text/javascript",
+            Body = "// stubbed by OverlayInitialFocusE2ETests: no boot-time import of tm-top-layer.js",
+        }));
         await context.RouteAsync("**/tm-top-layer*.js*", async r =>
         {
             if (!openerClicked)
