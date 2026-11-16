@@ -8,11 +8,14 @@
    hidden label, so the change never rests on colour alone; in Review mode each change additionally
    carries a marker button that opens a non-modal popover with the two decisions. The popover is a
    SIBLING of the marker inside the change span — the diff must stay one flowing text, and a wrapper
-   element per change would break the line. *@
+   element per change would break the line. In the stacked layout the marker rides the insertion row
+   (inside the <ins>); a pure deletion has no insertion row, so its marker stays the sibling after
+   the <del> (the inline placement), and no change is left without its decision. *@
 <div @ref="_rootElement"
      class="@RootClass"
      data-testid="@RootTestId("inline-diff")"
      data-mode="@ModeName"
+     data-layout="@LayoutName"
      data-granularity="@GranularityName"
      data-fallback="@FallbackName"
      data-readonly="@(ReadOnly ? "true" : "false")"
@@ -89,19 +92,22 @@
                       data-testid="@TestId("inline-diff-change")"
                       data-hunk-id="@hunk.Id"
                       data-kind="@KindName(hunk.Kind)"
-                      data-state="@StateName(hunk.Id)">
-                    @if (hunk.Kind != TextDiffHunkKind.Insert)
-                    {
-                        <span class="tm-sr-only">@Loc["TmInlineDiff_Removed"]</span>
-                        <del class="tm-inline-diff__del" data-testid="@TestId("inline-diff-del")">@hunk.OldText</del>
-                    }
-                    @if (hunk.Kind != TextDiffHunkKind.Delete)
-                    {
-                        <span class="tm-sr-only">@Loc["TmInlineDiff_Inserted"]</span>
-                        <ins class="tm-inline-diff__ins" data-testid="@TestId("inline-diff-ins")">@hunk.NewText</ins>
-                    }
-
-                    @if (IsReview)
+                      data-state="@StateName(hunk.Id)">@if (hunk.Kind != TextDiffHunkKind.Insert)
+                    {<span class="tm-sr-only">@Loc["TmInlineDiff_Removed"]</span><del class="tm-inline-diff__del" data-testid="@TestId("inline-diff-del")">@hunk.OldText</del>}@if (hunk.Kind != TextDiffHunkKind.Delete)
+                    {<span class="tm-sr-only">@Loc["TmInlineDiff_Inserted"]</span><ins class="tm-inline-diff__ins" data-testid="@TestId("inline-diff-ins")">@hunk.NewText@if (IsReview && Layout == InlineDiffLayout.Stacked)
+                    {<button type="button"
+                            class="tm-inline-diff__marker"
+                            data-testid="@TestId("inline-diff-marker")"
+                            aria-haspopup="true"
+                            aria-expanded="@(isOpen ? "true" : "false")"
+                            aria-controls="@(isOpen ? PopoverId(hunk.Id) : null)"
+                            aria-label="@MarkerLabel(entry.ChangeIndex, hunk)"
+                            @ref="_markerRefs[hunk.Id]"
+                            @onclick="() => TogglePopover(hunk.Id)"
+                            @onclick:stopPropagation="true">
+                            <TmIcon Name="@IconNames.Pencil" Size="IconSize.Xs" />
+                        </button>
+                    }</ins>}@if (IsReview && (Layout != InlineDiffLayout.Stacked || hunk.Kind == TextDiffHunkKind.Delete))
                     {
                         <button type="button"
                                 class="tm-inline-diff__marker"
@@ -115,41 +121,38 @@
                                 @onclick:stopPropagation="true">
                             <TmIcon Name="@IconNames.Pencil" Size="IconSize.Xs" />
                         </button>
-
-                        @if (isOpen)
-                        {
-                            <span class="tm-inline-diff__popover"
-                                  id="@PopoverId(hunk.Id)"
-                                  role="group"
-                                  aria-label="@PopoverLabel(entry.ChangeIndex)"
-                                  data-testid="@TestId("inline-diff-popover")"
-                                  @onclick:stopPropagation="true"
-                                  @onkeydown="HandlePopoverKeyDown"
-                                  @onkeydown:stopPropagation="true">
-                                <button type="button"
-                                        @ref="_popoverAcceptElement"
-                                        class="tm-btn tm-btn-primary tm-btn-sm tm-inline-diff__popover-action"
-                                        data-testid="@TestId("inline-diff-accept")"
-                                        aria-keyshortcuts="@AcceptShortcuts"
-                                        disabled="@_deciding"
-                                        @onclick="() => DecideHunkAsync(hunk.Id, true)"
-                                        @onkeydown="args => HandlePopoverTab(args, isFirst: true, isLast: false)">
-                                    <span class="tm-btn-label">@Loc["TmInlineDiff_Accept"]</span>
-                                </button>
-                                <button type="button"
-                                        class="tm-btn tm-btn-ghost tm-btn-sm tm-inline-diff__popover-action"
-                                        data-testid="@TestId("inline-diff-reject")"
-                                        aria-keyshortcuts="@RejectShortcuts"
-                                        disabled="@_deciding"
-                                        @onclick="() => DecideHunkAsync(hunk.Id, false)"
-                                        @onkeydown="args => HandlePopoverTab(args, isFirst: false, isLast: true)">
-                                    <span class="tm-btn-label">@Loc["TmInlineDiff_Reject"]</span>
-                                </button>
-                                <span class="tm-inline-diff__hint">@Loc["TmInlineDiff_ShortcutsHint"]</span>
-                            </span>
-                        }
-                    }
-                </span>
+                    }@if (isOpen)
+                    {
+                        <span class="tm-inline-diff__popover"
+                              id="@PopoverId(hunk.Id)"
+                              role="group"
+                              aria-label="@PopoverLabel(entry.ChangeIndex)"
+                              data-testid="@TestId("inline-diff-popover")"
+                              @onclick:stopPropagation="true"
+                              @onkeydown="HandlePopoverKeyDown"
+                              @onkeydown:stopPropagation="true">
+                            <button type="button"
+                                    @ref="_popoverAcceptElement"
+                                    class="tm-btn tm-btn-primary tm-btn-sm tm-inline-diff__popover-action"
+                                    data-testid="@TestId("inline-diff-accept")"
+                                    aria-keyshortcuts="@AcceptShortcuts"
+                                    disabled="@_deciding"
+                                    @onclick="() => DecideHunkAsync(hunk.Id, true)"
+                                    @onkeydown="args => HandlePopoverTab(args, isFirst: true, isLast: false)">
+                                <span class="tm-btn-label">@Loc["TmInlineDiff_Accept"]</span>
+                            </button>
+                            <button type="button"
+                                    class="tm-btn tm-btn-ghost tm-btn-sm tm-inline-diff__popover-action"
+                                    data-testid="@TestId("inline-diff-reject")"
+                                    aria-keyshortcuts="@RejectShortcuts"
+                                    disabled="@_deciding"
+                                    @onclick="() => DecideHunkAsync(hunk.Id, false)"
+                                    @onkeydown="args => HandlePopoverTab(args, isFirst: false, isLast: true)">
+                                <span class="tm-btn-label">@Loc["TmInlineDiff_Reject"]</span>
+                            </button>
+                            <span class="tm-inline-diff__hint">@Loc["TmInlineDiff_ShortcutsHint"]</span>
+                        </span>
+                    }</span>
             }
         }
     </div>

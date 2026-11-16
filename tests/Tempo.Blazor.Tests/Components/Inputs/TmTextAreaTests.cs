@@ -1,6 +1,7 @@
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.DependencyInjection;
 using Tempo.Blazor.Components.Inputs;
 using Tempo.Blazor.Tests.Localization;
 
@@ -124,6 +125,35 @@ public class TmTextAreaTests : LocalizationTestBase
         captured.Should().Be("hello world");
     }
 
+    /// <summary>
+    /// Fáze 3 (plan 98c80bc3) binds the value as the <c>value</c> ATTRIBUTE, never as child text. A
+    /// textarea's displayed value lives in the DOM <c>value</c> property — text between the tags is only
+    /// the initial default — so a host that re-renders with a new bound value (a loaded draft, a reset,
+    /// a simulated stream) used to leave the visible text stale, and hosts needed a keyed remount
+    /// workaround to show it. The attribute form lets Blazor sync the property on every render.
+    /// </summary>
+    [Fact]
+    public void TmTextArea_RendersTheBoundValueAsTheValueAttributeNotChildText()
+    {
+        var cut = Render<TmTextArea>(p => p.Add(c => c.Value, "draft text"));
+
+        var textarea = cut.Find("textarea");
+        textarea.GetAttribute("value").Should().Be("draft text",
+            "the bound value rides the value attribute so Blazor can sync the DOM value property");
+        textarea.TextContent.Should().BeEmpty(
+            "child text is only the initial default and never updates — the value must not be there");
+    }
+
+    [Fact]
+    public void TmTextArea_ExternalValueChangeReachesTheValueAttribute()
+    {
+        var cut = Render<TmTextArea>(p => p.Add(c => c.Value, "first"));
+
+        cut.Render(p => p.Add(c => c.Value, "second"));
+
+        cut.Find("textarea").GetAttribute("value").Should().Be("second");
+    }
+
     // ── Required (accessibility) ─────────────────────────────────
 
     [Fact]
@@ -182,5 +212,135 @@ public class TmTextAreaTests : LocalizationTestBase
         var cut = Render<TmTextArea>(p => p.Add(c => c.Label, "Comment"));
 
         cut.Find("textarea").GetAttribute("aria-invalid").Should().BeNull();
+    }
+
+    // ── ReadOnly, stable id, AriaDescribedBy, LabelTrailing (plan 98c80bc3, Fáze 3) ──
+
+    /// <summary>
+    /// Fáze 3: <c>ReadOnly</c> is the readable "locked value" state — the native textarea carries the
+    /// <c>readonly</c> attribute plus the readable <c>tm-input-readonly</c> surface, and it is NOT the
+    /// disabled presentation (no <c>disabled</c> attribute, no disabled gray).
+    /// </summary>
+    [Fact]
+    public void TmTextArea_ReadOnly_IsReadableAndNotDisabled()
+    {
+        var cut = Render<TmTextArea>(p => p
+            .Add(c => c.Value, "Locked draft")
+            .Add(c => c.ReadOnly, true));
+
+        var textarea = cut.Find("textarea");
+        textarea.HasAttribute("readonly").Should().BeTrue();
+        textarea.ClassList.Should().Contain("tm-input-readonly");
+        textarea.ClassList.Should().NotContain("tm-input-disabled");
+        textarea.HasAttribute("disabled").Should().BeFalse(
+            "readonly text stays readable and focusable — disabled is the different, gray state");
+    }
+
+    [Fact]
+    public void TmTextArea_NotReadOnly_HasNoReadonlyState()
+    {
+        var cut = Render<TmTextArea>();
+
+        var textarea = cut.Find("textarea");
+        textarea.HasAttribute("readonly").Should().BeFalse();
+        textarea.ClassList.Should().NotContain("tm-input-readonly");
+    }
+
+    [Fact]
+    public void TmTextArea_DefaultId_IsPrefixedAndStableForTheInstance()
+    {
+        var cut = Render<TmTextArea>();
+
+        var first = cut.Instance.Id;
+        first.Should().MatchRegex("^tm-textarea-\\d+$",
+            "the default id is the component prefix plus a sequence number, not a GUID fragment");
+
+        cut.Render(p => p.Add(c => c.Value, "changed"));
+        cut.Instance.Id.Should().Be(first, "the id never churns between parameter snapshots");
+
+        Render<TmTextArea>().Instance.Id.Should().NotBe(first, "two instances still get distinct ids");
+    }
+
+    /// <summary>
+    /// Fáze 3: <c>AriaDescribedBy</c> names extra ids the control must reference. The ids are APPENDED
+    /// to the component's own chain (own error first, then the field cascade, then the host ids) and
+    /// duplicates are dropped.
+    /// </summary>
+    [Fact]
+    public void TmTextArea_AriaDescribedBy_AppendsToTheOwnChain()
+    {
+        var cut = Render<TmTextArea>(p => p.Add(c => c.AriaDescribedBy, "length-counter"));
+
+        cut.Find("textarea").GetAttribute("aria-describedby").Should().Be("length-counter");
+
+        var withError = Render<TmTextArea>(p => p
+            .Add(c => c.Error, "Required")
+            .Add(c => c.AriaDescribedBy, "length-counter"));
+
+        withError.Find("textarea").GetAttribute("aria-describedby")
+            .Should().Be($"{withError.Instance.Id}-error length-counter",
+                "the own chain stays first, the host ids follow");
+    }
+
+    /// <summary>
+    /// Fáze 3: the <c>LabelTrailing</c> slot renders at the end of the label row — the slot for the
+    /// counter or the status chip a host used to overlay absolutely over the field. Without the slot
+    /// the label markup is unchanged.
+    /// </summary>
+    [Fact]
+    public void TmTextArea_LabelTrailing_RendersAtTheEndOfTheLabelRow()
+    {
+        var cut = Render<TmTextArea>(p => p
+            .Add(c => c.Label, "Description")
+            .Add(c => c.LabelTrailing, "<span id='desc-counter'>42</span>"));
+
+        var row = cut.Find(".tm-input-label-row");
+        row.Should().NotBeNull();
+        row.QuerySelector("label")!.TextContent.Trim().Should().Be("Description");
+        row.QuerySelector("#desc-counter")!.TextContent.Should().Be("42",
+            "the slot content sits at the end of the label row");
+    }
+
+    [Fact]
+    public void TmTextArea_WithoutLabelTrailing_KeepsThePlainLabelMarkup()
+    {
+        var cut = Render<TmTextArea>(p => p.Add(c => c.Label, "Description"));
+
+        cut.FindAll(".tm-input-label-row").Should().BeEmpty(
+            "no slot, no wrapper — the label markup is unchanged for hosts that do not use it");
+    }
+
+    /// <summary>
+    /// Review round (plan 98c80bc3, Fáze 3, S3): the PRERENDERED markup must carry the bound value
+    /// too. <see cref="Microsoft.AspNetCore.Components.Web.HtmlRenderer"/> is the headless static
+    /// renderer an InteractiveAuto host prerenders with — no JS, no bUnit — and its output is the
+    /// first HTML the browser paints before the circuit arrives. The bound value rides the
+    /// <c>value</c> attribute there as well, so form.reset() and the browser restore the prerender
+    /// value (CHANGELOG 2.12, "Test-visible changes", item 4).
+    /// </summary>
+    [Fact]
+    public async Task TmTextArea_PrerenderedMarkupCarriesTheBoundValue()
+    {
+        var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton<Tempo.Blazor.Localization.ITmLocalizer>(BuildEnglishLocalizer());
+        await using var provider = services.BuildServiceProvider();
+
+        await using var htmlRenderer = new Microsoft.AspNetCore.Components.Web.HtmlRenderer(
+            provider, provider.GetRequiredService<Microsoft.Extensions.Logging.ILoggerFactory>());
+
+        var html = await htmlRenderer.Dispatcher.InvokeAsync(async () =>
+        {
+            var output = await htmlRenderer.RenderComponentAsync<TmTextArea>(
+                Microsoft.AspNetCore.Components.ParameterView.FromDictionary(
+                    new Dictionary<string, object?> { [nameof(TmTextArea.Value)] = "prerender draft" }));
+            return output.ToHtmlString();
+        });
+
+        // The headless static renderer paints a textarea's "value" attribute as its initial CONTENT
+        // (the HTML defaultValue) — exactly what the browser shows before the interactive circuit
+        // arrives and what form.reset() restores.
+        html.Should().Contain(">prerender draft</textarea>",
+            "the prerendered textarea must already show the bound value");
     }
 }

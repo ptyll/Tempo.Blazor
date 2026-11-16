@@ -2,16 +2,28 @@
 @inherits Tempo.Blazor.Components.TmComponentBase
 
 <div class="tm-input-wrapper @Class">
-    @if (!string.IsNullOrEmpty(Label))
+    @if (LabelTrailing is not null)
+    {
+        <span class="tm-input-label-row">
+            @if (!string.IsNullOrEmpty(Label))
+            {
+                <label for="@Id" class="tm-input-label @(Required ? "tm-input-label-required" : "")">@Label</label>
+            }
+            <span class="tm-input-label-trailing">@LabelTrailing</span>
+        </span>
+    }
+    else if (!string.IsNullOrEmpty(Label))
     {
         <label for="@Id" class="tm-input-label @(Required ? "tm-input-label-required" : "")">@Label</label>
     }
     <textarea @ref="_element"
               id="@Id"
+              value="@Value"
               placeholder="@Placeholder"
               rows="@Rows"
               maxlength="@MaxLength"
               disabled="@Disabled"
+              readonly="@ReadOnly"
               required="@Required"
               tabindex="@TabIndex"
               autocomplete="@AutoComplete"
@@ -21,7 +33,7 @@
               class="@InputCssClass"
               @attributes="AdditionalAttributes"
               @onchange="HandleOnChange"
-              @oninput="HandleOnInput">@Value</textarea>
+              @oninput="HandleOnInput"></textarea>
     @if (!string.IsNullOrEmpty(Error))
     {
         <div id="@ErrorId" data-testid="@TestId("error-message")" class="tm-input-error-message" role="@(AnnounceError ? "alert" : null)">@Error</div>
@@ -37,6 +49,13 @@
 
     /// <summary>Label shown above the textarea.</summary>
     [Parameter] public string? Label { get; set; }
+
+    /// <summary>
+    /// Content rendered at the END of the label row (a character counter, a status chip) — the inline
+    /// slot a host used to overlay absolutely over the field. Rendered only with the slot set; without
+    /// it the label markup is unchanged.
+    /// </summary>
+    [Parameter] public RenderFragment? LabelTrailing { get; set; }
 
     /// <summary>Placeholder text.</summary>
     [Parameter] public string? Placeholder { get; set; }
@@ -71,14 +90,35 @@
     /// <summary>Disables the textarea.</summary>
     [Parameter] public bool Disabled { get; set; }
 
+    /// <summary>
+    /// Locks the value against edits while keeping it readable: the native textarea carries the
+    /// <c>readonly</c> attribute and the readable <c>tm-input-readonly</c> surface (not the disabled
+    /// gray), so a reader can still select and copy the text. Use it instead of
+    /// <see cref="Disabled"/> whenever the value itself is the content a user must see but not change.
+    /// </summary>
+    [Parameter] public bool ReadOnly { get; set; }
+
     /// <summary>Marks the textarea as required. Shows a required marker on the label and sets aria-required on the &lt;textarea&gt; element.</summary>
     [Parameter] public bool Required { get; set; }
 
     /// <summary>Tab index.</summary>
     [Parameter] public int TabIndex { get; set; } = 0;
 
-    /// <summary>HTML id attribute.</summary>
-    [Parameter] public string Id { get; set; } = Guid.NewGuid().ToString("n")[..8];
+    /// <summary>
+    /// HTML id attribute. Defaults to a readable sequential id (<c>tm-textarea-{n}</c>), unique per
+    /// process; a new instance (remount) gets a new id — pass <c>Id</c> for a stable one; not stable
+    /// between prerender and interactive render, don't persist it. Within one instance the label's
+    /// <c>for</c> and the derived error id never churn between parameter snapshots.
+    /// </summary>
+    [Parameter]
+    public string Id
+    {
+        get => _idOverride ?? _generatedId;
+        set => _idOverride = value;
+    }
+
+    private string? _idOverride;
+    private readonly string _generatedId = $"tm-textarea-{Tempo.Blazor.Components.TmSequentialId.Next()}";
 
     /// <summary>HTML autocomplete attribute. Common values: "on", "off".</summary>
     [Parameter] public string? AutoComplete { get; set; }
@@ -110,7 +150,22 @@
     [CascadingParameter(Name = Tempo.Blazor.Components.Forms.TmFormField.ErrorIdCascadingName)]
     private string? FormFieldErrorId { get; set; }
 
-    private string? DescribedBy => !string.IsNullOrEmpty(Error) ? ErrorId : FormFieldErrorId;
+    /// <summary>
+    /// Ids a surrounding <c>TmFormField</c> publishes for its own help text (cascaded as
+    /// <c>TmFormField.DescribedByIdsCascadingName</c>; null while the field shows no help). Appended to
+    /// the described-by chain, so a wrapped textarea with no help text of its own still references the
+    /// field-level help.
+    /// </summary>
+    [CascadingParameter(Name = Tempo.Blazor.Components.Forms.TmFormField.DescribedByIdsCascadingName)]
+    private string? FormFieldDescribedByIds { get; set; }
+
+    /// <summary>Extra ids (a hint counter, a host description) appended to the described-by chain.</summary>
+    [Parameter] public string? AriaDescribedBy { get; set; }
+
+    private string? DescribedBy => Tempo.Blazor.Components.Forms.TmDescribedBy.Join(
+        !string.IsNullOrEmpty(Error) ? ErrorId : FormFieldErrorId,
+        FormFieldDescribedByIds,
+        AriaDescribedBy);
 
     private ElementReference _element;
 
@@ -127,7 +182,7 @@
     }
 
     private string InputCssClass =>
-        $"tm-input tm-textarea{(string.IsNullOrEmpty(Error) ? "" : " tm-input-error")}{(Disabled ? " tm-input-disabled" : "")}";
+        $"tm-input tm-textarea{(string.IsNullOrEmpty(Error) ? "" : " tm-input-error")}{(Disabled ? " tm-input-disabled" : "")}{(ReadOnly ? " tm-input-readonly" : "")}";
 
     private async Task HandleOnChange(ChangeEventArgs e)
     {

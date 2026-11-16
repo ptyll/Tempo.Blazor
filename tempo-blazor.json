@@ -2875,6 +2875,13 @@
           "description": "Comparison granularity. Words (the default) gives one decision per changed word, Lines one per changed line."
         },
         {
+          "name": "Layout",
+          "type": "InlineDiffLayout",
+          "isRequired": false,
+          "default": "InlineDiffLayout.Inline",
+          "description": "How the changes sit in the text. Inline (the default) keeps them flowing with their context; Stacked gives each hunk its own row, so the deletion and the insertion of a change read one below the other — the presentation for a one-hunk proposal of a whole value (an assistant suggesting the complete replacement text of a field). The comparison and every decision surface are unchanged."
+        },
+        {
           "name": "Mode",
           "type": "InlineDiffMode",
           "isRequired": false,
@@ -2949,6 +2956,7 @@
         "tm-inline-diff",
         "tm-inline-diff--review",
         "tm-inline-diff--lines",
+        "tm-inline-diff--stacked",
         "tm-inline-diff--degraded",
         "tm-inline-diff__toolbar",
         "tm-inline-diff__count",
@@ -2985,7 +2993,8 @@
       ],
       "notes": [
         "AcceptedHunkIds lists the ids of CHANGES only. The unchanged hunks are part of the applied set internally, because the separator between two changes belongs to the hunk before it.",
-        "A change above TextDiffOptions.MaxTokens / MaxCells degrades to the engine's fallback (line level, then a single whole-text change) and reports it through the data-fallback attribute and a localized note."
+        "A change above TextDiffOptions.MaxTokens / MaxCells degrades to the engine's fallback (line level, then a single whole-text change) and reports it through the data-fallback attribute and a localized note.",
+        "The diff segments (the equal text and the ins/del sides) render with white-space: pre-wrap so multi-line hunks keep their newlines; the content wrapper itself stays at the normal value, so markup whitespace between the elements collapses and never paints a gap inside a change."
       ]
     },
     {
@@ -15281,6 +15290,12 @@
           "description": "When true (default), filtering ignores diacritics via FormD normalization — e.g. \"usti\" matches \"Ústí\" and \"práha\" matches \"Praha\". Set to false for accent-sensitive (but still case-insensitive) filtering."
         },
         {
+          "name": "AriaDescribedBy",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Ids (a hint, a host description) the combobox trigger references through aria-describedby. They are APPENDED to the ids the trigger picks up from a surrounding TmFormField (its error and its help text — both cascades, merged through the internal TmDescribedBy.Join, duplicates dropped, the field ids first). Null keeps the markup unchanged beyond that contract."
+        },
+        {
           "name": "AriaLabel",
           "type": "string?",
           "isRequired": false,
@@ -15367,6 +15382,12 @@
           "description": "Placeholder text when no item is selected. When null, falls back to the localized default."
         },
         {
+          "name": "ReadOnly",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Locks the value against changes while keeping it readable: the combobox trigger stays focusable with readable text and carries aria-readonly=\"true\" plus the tm-filterable-dropdown-readonly root class — NOT the disabled presentation (no -disabled class, no disabled gray). The popup never opens, the clear button is hidden and a value cannot be picked or cleared; aria-haspopup and aria-controls are dropped because the trigger has no popup to point at. A host-driven Value still works."
+        },
+        {
           "name": "ShowClearButton",
           "type": "bool",
           "isRequired": false,
@@ -15399,7 +15420,8 @@
         "tm-filterable-dropdown-loading",
         "tm-filterable-dropdown-empty",
         "tm-filterable-dropdown-error",
-        "tm-filterable-dropdown-disabled"
+        "tm-filterable-dropdown-disabled",
+        "tm-filterable-dropdown-readonly"
       ],
       "usedAbstractions": [
         {
@@ -18211,7 +18233,7 @@
       "kind": "Component",
       "category": "Forms",
       "namespace": "Tempo.Blazor.Components.Forms",
-      "description": "Generic form field wrapper providing a label (with optional required marker), help text, error message display, and a slot for any form control. Supports automatic EditContext validation via the ValidationFor parameter — when inside an EditForm, errors from the validation system appear automatically. Applies error styling whenever an error is active (from ErrorMessage or EditContext).",
+      "description": "Generic form field wrapper providing a label (with optional required marker), help text, error message display, and a slot for any form control. Supports automatic EditContext validation via the ValidationFor parameter — when inside an EditForm, errors from the validation system appear automatically. Applies error styling whenever an error is active (from ErrorMessage or EditContext). The field cascades TWO references to the controls inside it: the error paragraph's id (TmFormFieldErrorId) and the help paragraph's id (TmFormFieldDescribedByIds). The inputs that read the described-by cascade today: TmTextInput, TmTextArea, TmSelect, TmNumberInput, TmDecimalInput, TmMultiSelect, TmEntityPicker, TmRadioGroup, TmCodeEditor and TmExpressionEditor — plus TmFilterableDropdown, which reads BOTH cascades. AriaDescribedBy (the host's extra ids) exists on exactly TmTextInput, TmTextArea, TmSelect, TmNumberInput and TmFilterableDropdown; LabelTrailing exists on exactly TmTextInput, TmTextArea, TmSelect and TmNumberInput. The ids are merged through the internal TmDescribedBy.Join helper (duplicates dropped, split on any whitespace).",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Forms/TmFormField.razor",
       "documentationStatus": "merged",
@@ -18260,7 +18282,7 @@
           "name": "HelpText",
           "type": "string?",
           "isRequired": false,
-          "description": "Helper text shown below the field when there is no error."
+          "description": "Helper text shown below the field when there is no error. The paragraph carries the stable id {Id}-field-help and is published to the wrapped control through the TmFormFieldDescribedByIds cascade, so a wrapped input with no help text of its own still references the field-level help through aria-describedby. Read today by TmTextInput, TmTextArea, TmSelect, TmNumberInput, TmDecimalInput, TmMultiSelect, TmEntityPicker, TmRadioGroup, TmCodeEditor, TmExpressionEditor and TmFilterableDropdown; every other component ignores the cascade."
         },
         {
           "name": "Id",
@@ -21701,6 +21723,12 @@
           "description": "When true (default), the error message renders with role=\"alert\" so screen readers announce it assertively the moment it appears. Set false when the host moves focus to the invalid field after submit — the error is then read through aria-describedby on the control and the live region would announce the same text a second time. Only the role attribute is dropped; the message, its styling and the aria-describedby link remain. Only safe when the same render that shows the error also moves focus to this control. Keep the default for validation on blur or on input, async/server validation, or when focus stays on the submit button — otherwise the error is not announced at all. With several invalid fields, pair it with a summary (e.g. TmValidationSummary) or focus the first invalid field."
         },
         {
+          "name": "AriaDescribedBy",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Extra ids (a hint, a host description) appended to the input's aria-describedby chain. The component's own chain stays first (its error, its help text, then a surrounding TmFormField's cascaded help and error), duplicates are dropped."
+        },
+        {
           "name": "AutoComplete",
           "type": "string?",
           "isRequired": false,
@@ -21731,17 +21759,16 @@
           "description": "Help text below the input."
         },
         {
-          "name": "Id",
-          "type": "string",
-          "isRequired": false,
-          "default": "Guid.NewGuid().ToString(\"n\")[..8]",
-          "description": "Id of the input, so the rendered Label can point at it with for and the error and help text can be referenced. Defaults to a generated value."
-        },
-        {
           "name": "Label",
           "type": "string?",
           "isRequired": false,
           "description": "Field label."
+        },
+        {
+          "name": "LabelTrailing",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Content rendered at the END of the label row (a unit chip, a status) — the inline slot a host used to overlay absolutely over the field. Rendered only with the slot set; without it the label markup is unchanged."
         },
         {
           "name": "Max",
@@ -21804,6 +21831,13 @@
           "type": "EventCallback<int?>",
           "isRequired": false,
           "description": "Fires when value changes."
+        },
+        {
+          "name": "Id",
+          "type": "string",
+          "isRequired": false,
+          "default": "Guid.NewGuid().ToString(\"n\")[..8]",
+          "description": "Id of the input, so the rendered Label can point at it with for and the error and help text can be referenced. Defaults to a generated value."
         }
       ],
       "cssClasses": [
@@ -22787,6 +22821,12 @@
           "description": "When true (default), the error message renders with role=\"alert\" so screen readers announce it assertively the moment it appears. Set false when the host moves focus to the invalid field after submit — the error is then read through aria-describedby on the control and the live region would announce the same text a second time. Only the role attribute is dropped; the message, its styling and the aria-describedby link remain. Only safe when the same render that shows the error also moves focus to this control. Keep the default for validation on blur or on input, async/server validation, or when focus stays on the submit button — otherwise the error is not announced at all. With several invalid fields, pair it with a summary (e.g. TmValidationSummary) or focus the first invalid field."
         },
         {
+          "name": "AriaDescribedBy",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Extra ids (a hint counter, a host description) appended to the select's aria-describedby chain. The component's own chain stays first (its error, its help text, then a surrounding TmFormField's cascaded help and error), duplicates are dropped. A host that needs full control still has SelectAttributes, which splats over the component's own attributes."
+        },
+        {
           "name": "AriaLabel",
           "type": "string?",
           "isRequired": false,
@@ -22823,17 +22863,16 @@
           "description": "Help text shown below the select when no error is present."
         },
         {
-          "name": "Id",
-          "type": "string",
-          "isRequired": false,
-          "default": "Guid.NewGuid().ToString(\"n\")[..8]",
-          "description": "HTML id attribute."
-        },
-        {
           "name": "Label",
           "type": "string?",
           "isRequired": false,
           "description": "Label shown above the select."
+        },
+        {
+          "name": "LabelTrailing",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Content rendered at the END of the label row (a status chip, a host counter) — the inline slot a host used to overlay absolutely over the field. Rendered only with the slot set; without it the label markup is unchanged."
         },
         {
           "name": "Options",
@@ -22853,6 +22892,12 @@
           "isRequired": false,
           "description": "When true and Placeholder is set, the placeholder is rendered as a selectable (not disabled) <option value=\"\"> mapped to default(TValue) — typically null for nullable types — so the user can explicitly clear the selection back to empty. When false (default), the placeholder is a disabled, purely decorative option. Accessibility: a selectable placeholder is a real empty choice, not a name for the control — it is NOT used as the <select> aria-label, so set Label whenever this is true to keep an accessible name. Validation: with Required set, picking the selectable placeholder submits the empty value, so native validation reports the field as missing.",
           "default": "False"
+        },
+        {
+          "name": "ReadOnly",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Locks the value against changes while keeping it readable: the select stays focusable with readable text and carries aria-readonly=\"true\" plus the tm-select-readonly surface (a native <select> has no readonly attribute, so the ARIA state is what names the locked value). It is NOT the disabled presentation — no disabled attribute and no disabled gray. Every option that is not the locked value renders disabled (the selectable placeholder too once a value is set) and the decorative chevron is hidden, so neither a pointer pick nor a typeahead can move the visible selection; a change attempt on a raw ChildContent option is refused and the select remounts from the rendered value. A host-driven Value still works."
         },
         {
           "name": "Required",
@@ -22877,15 +22922,25 @@
           "type": "EventCallback<TValue?>",
           "isRequired": false,
           "description": "Fires when the selection changes."
+        },
+        {
+          "name": "Id",
+          "type": "string",
+          "isRequired": false,
+          "default": "tm-select-{n} (sequential, stable for the component instance)",
+          "description": "HTML id attribute. Defaults to a generated sequential id that is stable for the lifetime of the component instance, so the label's for attribute and the derived error/help ids never churn between parameter snapshots."
         }
       ],
       "cssClasses": [
         "tm-select-wrapper",
         "tm-select-label",
+        "tm-input-label-row",
+        "tm-input-label-trailing",
         "tm-select-container",
         "tm-select",
         "tm-select-error",
         "tm-select-disabled",
+        "tm-select-readonly",
         "tm-select-arrow",
         "tm-select-error-message",
         "tm-select-help-text"
@@ -23354,6 +23409,12 @@
           "description": "When true (default), the error message renders with role=\"alert\" so screen readers announce it assertively the moment it appears. Set false when the host moves focus to the invalid field after submit — the error is then read through aria-describedby on the control and the live region would announce the same text a second time. Only the role attribute is dropped; the message, its styling and the aria-describedby link remain. Only safe when the same render that shows the error also moves focus to this control. Keep the default for validation on blur or on input, async/server validation, or when focus stays on the submit button — otherwise the error is not announced at all. With several invalid fields, pair it with a summary (e.g. TmValidationSummary) or focus the first invalid field."
         },
         {
+          "name": "AriaDescribedBy",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Extra ids (a hint counter, a host description) appended to the textarea's aria-describedby chain. The component's own chain stays first (its error message, then a surrounding TmFormField's cascaded help and error), duplicates are dropped."
+        },
+        {
           "name": "AutoComplete",
           "type": "string?",
           "isRequired": false,
@@ -23378,13 +23439,6 @@
           "description": "Validation error message."
         },
         {
-          "name": "Id",
-          "type": "string",
-          "isRequired": false,
-          "default": "Guid.NewGuid().ToString(\"n\")[..8]",
-          "description": "HTML id attribute."
-        },
-        {
           "name": "Immediate",
           "type": "bool",
           "isRequired": false,
@@ -23397,6 +23451,12 @@
           "description": "Label shown above the textarea."
         },
         {
+          "name": "LabelTrailing",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Content rendered at the END of the label row (a character counter, a status chip) — the inline slot a host used to overlay absolutely over the field. Rendered only with the slot set; without it the label markup is unchanged."
+        },
+        {
           "name": "MaxLength",
           "type": "int?",
           "isRequired": false,
@@ -23407,6 +23467,12 @@
           "type": "string?",
           "isRequired": false,
           "description": "Placeholder text."
+        },
+        {
+          "name": "ReadOnly",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Locks the value against edits while keeping it readable: the native textarea carries the readonly attribute and the readable tm-input-readonly surface (not the disabled gray), so a reader can still select and copy the text. Use it instead of Disabled whenever the value itself is the content a user must see but not change."
         },
         {
           "name": "Required",
@@ -23440,15 +23506,25 @@
           "type": "EventCallback<string>",
           "isRequired": false,
           "description": "Fires when the value changes."
+        },
+        {
+          "name": "Id",
+          "type": "string",
+          "isRequired": false,
+          "default": "tm-textarea-{n} (sequential, stable for the component instance)",
+          "description": "HTML id attribute. Defaults to a generated sequential id that is stable for the lifetime of the component instance, so the label's for attribute and the derived error id never churn between parameter snapshots."
         }
       ],
       "cssClasses": [
         "tm-input-wrapper",
         "tm-input-label",
+        "tm-input-label-row",
+        "tm-input-label-trailing",
         "tm-input",
         "tm-textarea",
         "tm-input-error",
         "tm-input-disabled",
+        "tm-input-readonly",
         "tm-input-error-message"
       ],
       "methods": [
@@ -23490,6 +23566,12 @@
           "description": "When true (default), the error message renders with role=\"alert\" so screen readers announce it assertively the moment it appears. Set false when the host moves focus to the invalid field after submit — the error is then read through aria-describedby on the control and the live region would announce the same text a second time. Only the role attribute is dropped; the message, its styling and the aria-describedby link remain. Covers only this input's own Error message — TmFormField and TmFormValidationMessage (and the range pickers' own field errors) keep role=\"alert\". Only safe when the same render that shows the error also moves focus to this control. Keep the default for validation on blur or on input, async/server validation, or when focus stays on the submit button — otherwise the error is not announced at all. With several invalid fields, pair it with a summary (e.g. TmValidationSummary) or focus the first invalid field."
         },
         {
+          "name": "AriaDescribedBy",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Extra ids (a hint counter, a host description) appended to the input's aria-describedby chain. The component's own chain stays first (its error, its help text, then a surrounding TmFormField's cascaded help and error), duplicates are dropped."
+        },
+        {
           "name": "AutoComplete",
           "type": "string?",
           "isRequired": false,
@@ -23526,13 +23608,6 @@
           "description": "Help text shown below the input when no error is present."
         },
         {
-          "name": "Id",
-          "type": "string",
-          "isRequired": false,
-          "default": "Guid.NewGuid().ToString(\"n\")[..8]",
-          "description": "HTML id attribute. Defaults to a generated unique id."
-        },
-        {
           "name": "IsValid",
           "type": "bool?",
           "isRequired": false,
@@ -23543,6 +23618,12 @@
           "type": "string?",
           "isRequired": false,
           "description": "Label shown above the input."
+        },
+        {
+          "name": "LabelTrailing",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Content rendered at the END of the label row (a character counter, a status chip) — the inline slot a host used to overlay absolutely over the field. Rendered only with the slot set; without it the label markup is unchanged."
         },
         {
           "name": "LeftIcon",
@@ -23636,6 +23717,13 @@
           "type": "EventCallback<string>",
           "isRequired": false,
           "description": "Fires when the value changes."
+        },
+        {
+          "name": "Id",
+          "type": "string",
+          "isRequired": false,
+          "default": "Guid.NewGuid().ToString(\"n\")[..8]",
+          "description": "HTML id attribute. Defaults to a generated unique id."
         }
       ],
       "cssClasses": [

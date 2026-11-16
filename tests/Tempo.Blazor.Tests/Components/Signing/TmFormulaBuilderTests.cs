@@ -190,7 +190,9 @@ public class TmFormulaBuilderTests : LocalizationTestBase
         cut.Find("[data-field-uuid='subtotal']").Click();
 
         captured.Should().Contain("{{Subtotal}}");
-        cut.Find(".tm-formula-builder__textarea textarea").TextContent.Should().Contain("{{Subtotal}}");
+        // Fáze 3 (plan 98c80bc3): the bound value rides the textarea's value ATTRIBUTE — child text is
+        // only an initial default and never reflects a host-driven update.
+        cut.Find(".tm-formula-builder__textarea textarea").GetAttribute("value").Should().Contain("{{Subtotal}}");
     }
 
     [Fact]
@@ -317,7 +319,7 @@ public class TmFormulaBuilderTests : LocalizationTestBase
 
         cut.Render(parameters => parameters.Add(p => p.Culture, "cs-CZ"));
 
-        cut.Find(".tm-formula-builder__textarea textarea").TextContent.Should().Be("{{Subtotal}}");
+        cut.Find(".tm-formula-builder__textarea textarea").GetAttribute("value").Should().Be("{{Subtotal}}");
         cut.Find("[data-field-uuid='subtotal'] .tm-formula-builder__token-label").TextContent
             .Should().Contain("Mezisoučet");
     }

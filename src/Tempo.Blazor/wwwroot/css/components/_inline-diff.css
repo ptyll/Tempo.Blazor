@@ -53,15 +53,19 @@
 }
 
 /* ── Content: one flowing text, changes inline ─────────── */
+/* The wrapper stays at the normal white-space: markup whitespace between the elements collapses, so
+   the only rendered whitespace is the diff text itself. The segments below carry the pre-wrap — the
+   text they hold keeps its own newlines (multi-line hunks) without the wrapper rendering every stray
+   inter-element space a literal. (Plan 98c80bc3, Fáze 3.) */
 .tm-inline-diff__content {
     display: block;
-    white-space: pre-wrap;
     overflow-wrap: anywhere;
 }
 
 /* Unchanged context around a change — the text the two inputs share. */
 .tm-inline-diff__equal {
     color: inherit;
+    white-space: pre-wrap;
 }
 
 /* The review presentation adds the toolbar above the text; the pure display one is the bare diff. */
@@ -83,6 +87,26 @@
     gap: var(--tm-space-1);
 }
 
+/* A stacked layout gives each side of a change its own row (Layout=Stacked): the proposal of a whole
+   value reads with the deletion and the insertion one below the other instead of interleaved inline.
+   The content wrapper stays a plain BLOCK, never a flex column — a flex column would turn every
+   equal fragment into a row of its own. Only the change hunks break: the change span becomes a
+   block (so equal text AFTER a change starts on a new line — a block ends the line it sits on) and
+   each side becomes a block inside it. */
+.tm-inline-diff--stacked .tm-inline-diff__content {
+    display: block;
+}
+
+.tm-inline-diff--stacked .tm-inline-diff__change {
+    display: block;
+    max-inline-size: 100%;
+}
+
+.tm-inline-diff--stacked .tm-inline-diff__del,
+.tm-inline-diff--stacked .tm-inline-diff__ins {
+    display: block;
+}
+
 /* A change span is inline-block only on a coarse pointer and in line mode, where the marker needs its
    own hit area; in word mode the span must keep the text flowing, so it stays inline. */
 .tm-inline-diff__change {
@@ -102,6 +126,7 @@
 .tm-inline-diff__del {
     padding: 0 var(--tm-space-0-5);
     border-radius: var(--tm-radius-md);
+    white-space: pre-wrap;
 }
 
 .tm-inline-diff__ins {
@@ -153,6 +178,7 @@
     inline-size: var(--tm-space-5);
     block-size: var(--tm-space-5);
     margin-inline-start: var(--tm-space-1);
+    margin-inline-end: var(--tm-space-1);
     padding: 0;
     vertical-align: baseline;
     color: var(--tm-color-primary);

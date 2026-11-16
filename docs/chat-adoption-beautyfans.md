@@ -333,9 +333,11 @@ private async Task SendViaComposerAsync(ChatComposerContext composer)
     catch (ApiException) { /* actionError už zobrazuje SendViaChatAsync */ }
 }
 ```
-- **Remount trik zmizí:** dnešní `@key="composerVersion"` + `composerGeneration` existují kvůli
-  `TmTextArea`, který píše value jako child content. S `composer.SetTextAsync("")` (komponenta
-  čistí sama) a `AttachAsync` na stejném elementu trik odpadá — element přežije re-render.
+- **Remount trik zmizí:** dnešní `@key="composerVersion"` + `composerGeneration` existovaly kvůli
+  `TmTextArea`, který psal value jako child content. Od Tempo 2.12 (plan 98c80bc3, Fáze 3) píše
+  `TmTextArea` value přes `value` atribut (Blazor synchronizuje DOM property), takže externí změna
+  hodnoty se projeví i bez remountu; s `composer.SetTextAsync("")` (komponenta čistí sama) a
+  `AttachAsync` na stejném elementu trik odpadá — element přežije re-render.
 - **PAST s `ComposerAddon`:** `ComposerAddon` a `ComposerFooter` se renderují POUZE s vestavěným
   composerem — s nastaveným `ComposerTemplate` se **celé vynechávají** (ověřeno v
   `TmChat.razor`: `stacked = !custom && …`). Tudíž kombinace „owner note do `ComposerAddon`,

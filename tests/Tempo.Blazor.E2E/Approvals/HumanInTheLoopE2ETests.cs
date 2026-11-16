@@ -250,6 +250,65 @@ public sealed class HumanInTheLoopE2ETests : WasmTestBase
 
     // ── Permission request (on the AI conversation page) ─────────────────────────────────
 
+    /// <summary>
+    /// Fáze 3 (plan 98c80bc3): the stacked layout is the presentation for a one-hunk proposal of a
+    /// whole value — the page's second diff card carries <c>data-layout="stacked"</c>, shows exactly one
+    /// change and its decisions work in a real browser.
+    /// </summary>
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task Diff_StackedLayoutRendersTheWholeValueProposal()
+    {
+        var page = await OpenPageAsync();
+
+        var stacked = page.Locator("[data-testid='hitl-diff-stacked']");
+        await Microsoft.Playwright.Assertions.Expect(stacked).ToHaveAttributeAsync("data-layout", "stacked");
+        await Microsoft.Playwright.Assertions.Expect(
+                stacked.Locator("[data-testid='inline-diff-change']"))
+            .ToHaveCountAsync(1);
+        // The whole-value proposal shares NO context with the original — every byte of the value is
+        // part of the one replacement, so no equal fragment may render.
+        await Microsoft.Playwright.Assertions.Expect(
+                stacked.Locator("[data-testid='inline-diff-equal']"))
+            .ToHaveCountAsync(0);
+
+        // The decision surface works in the stacked presentation too.
+        await stacked.Locator("[data-testid='inline-diff-marker']").ClickAsync();
+        await stacked.Locator("[data-testid='inline-diff-accept']").ClickAsync();
+        await Microsoft.Playwright.Assertions.Expect(stacked.Locator("[data-testid='inline-diff-change']"))
+            .ToHaveAttributeAsync("data-state", "accepted");
+
+        // Review round: the two sides are stacked rows in a REAL browser — the deletion sits fully
+        // above the insertion and the decision marker rides the insertion row. Playwright bounding
+        // boxes are VIEWPORT-relative, so all three boxes are measured in ONE stable scroll state
+        // (a measurement taken before the click's auto-scroll would mix two frames).
+        await stacked.Locator("[data-testid='inline-diff-change']").ScrollIntoViewIfNeededAsync();
+        var deleted = await stacked.Locator("[data-testid='inline-diff-del']").BoundingBoxAsync();
+        var inserted = await stacked.Locator("[data-testid='inline-diff-ins']").BoundingBoxAsync();
+        var marker = await stacked.Locator("[data-testid='inline-diff-marker']").BoundingBoxAsync();
+        Assert.IsNotNull(deleted);
+        Assert.IsNotNull(inserted);
+        Assert.IsNotNull(marker);
+
+        Assert.IsTrue(inserted.Y >= deleted.Y + deleted.Height - 0.5,
+            $"the insertion must start below the deletion (ins.y={inserted.Y}, "
+            + $"del.y={deleted.Y}, del.height={deleted.Height}) — the stacked layout puts them one "
+            + "below the other");
+
+        // The ins is a full-width block, so "its row" is the band it occupies: the marker's vertical
+        // band must overlap that band and stay clear of the deletion band above.
+        Assert.IsTrue(marker.Y < inserted.Y + inserted.Height && marker.Y + marker.Height > inserted.Y,
+            $"the decision marker belongs to the insertion row (marker y={marker.Y}..{marker.Y + marker.Height}, "
+            + $"ins y={inserted.Y}..{inserted.Y + inserted.Height})");
+        Assert.IsTrue(marker.Y >= deleted.Y + deleted.Height - 1.5,
+            $"the decision marker must stay clear of the deletion row above it (marker y={marker.Y}, "
+            + $"del ends at {deleted.Y + deleted.Height})");
+
+        AssertNoClientErrors();
+    }
+
+    // ── Permission request (on the AI conversation page) ─────────────────────────────────
+
     [TestMethod]
     [TestCategory("WASM")]
     public async Task Permission_GrantForADurationThenRevoke()
@@ -327,6 +386,7 @@ public sealed class HumanInTheLoopE2ETests : WasmTestBase
                      ("[data-testid='hitl-approval']", 1),
                      ("[data-testid='hitl-queue']", 1),
                      ("[data-testid='hitl-diff']", 1),
+                     ("[data-testid='hitl-diff-stacked']", 1),
                      ("[data-testid='hitl-suggestion']", 1),
                  })
         {
@@ -339,7 +399,7 @@ public sealed class HumanInTheLoopE2ETests : WasmTestBase
         var pageRegions = await page.EvaluateAsync<int>(
             LiveRegionCountScript,
             RootSelector);
-        Assert.AreEqual(4, pageRegions, "the page announces nothing itself — the four components do");
+        Assert.AreEqual(5, pageRegions, "the page announces nothing itself — the five decision surfaces do");
 
         AssertNoClientErrors();
     }

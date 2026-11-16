@@ -40,6 +40,24 @@
       "description": "Disables the select."
     },
     {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Locks the value against changes while keeping it readable: the select stays focusable with readable text and carries aria-readonly=\"true\" plus the tm-select-readonly surface (a native <select> has no readonly attribute, so the ARIA state is what names the locked value). It is NOT the disabled presentation — no disabled attribute and no disabled gray. Every option that is not the locked value renders disabled (the selectable placeholder too once a value is set) and the decorative chevron is hidden, so neither a pointer pick nor a typeahead can move the visible selection; a change attempt on a raw ChildContent option is refused and the select remounts from the rendered value. A host-driven Value still works."
+    },
+    {
+      "name": "AriaDescribedBy",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Extra ids (a hint counter, a host description) appended to the select's aria-describedby chain. The component's own chain stays first (its error, its help text, then a surrounding TmFormField's cascaded help and error), duplicates are dropped. A host that needs full control still has SelectAttributes, which splats over the component's own attributes."
+    },
+    {
+      "name": "LabelTrailing",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Content rendered at the END of the label row (a status chip, a host counter) — the inline slot a host used to overlay absolutely over the field. Rendered only with the slot set; without it the label markup is unchanged."
+    },
+    {
       "name": "Error",
       "type": "string?",
       "isRequired": false,
@@ -55,8 +73,8 @@
       "name": "Id",
       "type": "string",
       "isRequired": false,
-      "default": "Guid.NewGuid().ToString(\"n\")[..8]",
-      "description": "HTML id attribute."
+      "default": "tm-select-{n} (sequential, stable for the component instance)",
+      "description": "HTML id attribute. Defaults to a generated sequential id that is stable for the lifetime of the component instance, so the label's for attribute and the derived error/help ids never churn between parameter snapshots."
     },
     {
       "name": "Label",
@@ -111,10 +129,13 @@
   "cssClasses": [
     "tm-select-wrapper",
     "tm-select-label",
+    "tm-input-label-row",
+    "tm-input-label-trailing",
     "tm-select-container",
     "tm-select",
     "tm-select-error",
     "tm-select-disabled",
+    "tm-select-readonly",
     "tm-select-arrow",
     "tm-select-error-message",
     "tm-select-help-text"

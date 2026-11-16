@@ -339,3 +339,71 @@ public class TmTextInputTests : LocalizationTestBase
             </div>");
     }
 }
+
+// ── AriaDescribedBy + LabelTrailing (plan 98c80bc3, Fáze 3) ─────────────────
+
+/// <summary>
+/// Fáze 3: <c>AriaDescribedBy</c> names extra ids (a hint counter, a host description) the input must
+/// reference — appended to the component's own chain, duplicates dropped — and the
+/// <c>LabelTrailing</c> slot renders at the end of the label row.
+/// </summary>
+public class TmTextInputAriaAndLabelSlotTests : LocalizationTestBase
+{
+    [Fact]
+    public void AriaDescribedBy_AppendsToTheOwnChain()
+    {
+        var cut = Render<TmTextInput>(p => p.Add(c => c.AriaDescribedBy, "length-counter"));
+
+        cut.Find("input").GetAttribute("aria-describedby").Should().Be("length-counter");
+
+        var withError = Render<TmTextInput>(p => p
+            .Add(c => c.Error, "Required")
+            .Add(c => c.AriaDescribedBy, "length-counter"));
+
+        withError.Find("input").GetAttribute("aria-describedby")
+            .Should().Be($"{withError.Instance.Id}-error length-counter",
+                "the own chain stays first, the host ids follow");
+    }
+
+    [Fact]
+    public void LabelTrailing_RendersAtTheEndOfTheLabelRow()
+    {
+        var cut = Render<TmTextInput>(p => p
+            .Add(c => c.Label, "Name")
+            .Add(c => c.LabelTrailing, "<span id='name-counter'>12</span>"));
+
+        var row = cut.Find(".tm-input-label-row");
+        row.QuerySelector("label")!.TextContent.Trim().Should().Be("Name");
+        row.QuerySelector("#name-counter")!.TextContent.Should().Be("12");
+    }
+
+    [Fact]
+    public void WithoutLabelTrailing_KeepsThePlainLabelMarkup()
+    {
+        var cut = Render<TmTextInput>(p => p.Add(c => c.Label, "Name"));
+
+        cut.FindAll(".tm-input-label-row").Should().BeEmpty(
+            "no slot, no wrapper — the label markup is unchanged for hosts that do not use it");
+    }
+
+    /// <summary>
+    /// Review round (plan 98c80bc3, Fáze 3, S2): the generated default id is the readable sequential
+    /// <c>tm-textinput-{n}</c> — the same scheme as the textarea and the select, no GUID fragment —
+    /// sharing the process-wide counter with TmNumberInput, so the two never collide on one page.
+    /// </summary>
+    [Fact]
+    public void DefaultId_IsSequentialAndSharedWithNumberInput()
+    {
+        var first = Render<TmTextInput>().Instance.Id;
+        first.Should().MatchRegex("^tm-textinput-\\d+$",
+            "the default id is the component prefix plus a sequence number");
+
+        Render<TmTextInput>().Instance.Id.Should().NotBe(first, "two instances get distinct ids");
+
+        var numberOfSameProcess = Render<TmNumberInput>(p => p.Add(x => x.Value, 1)).Instance.Id;
+        numberOfSameProcess.Should().MatchRegex("^tm-numberinput-\\d+$");
+        long.Parse(first["tm-textinput-".Length..]).Should().BeLessThanOrEqualTo(
+            long.Parse(numberOfSameProcess["tm-numberinput-".Length..]),
+            "both components draw from the same process-wide counter");
+    }
+}

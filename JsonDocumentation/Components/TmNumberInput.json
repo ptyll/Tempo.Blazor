@@ -45,6 +45,12 @@
       "description": "Field label."
     },
     {
+      "name": "LabelTrailing",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Content rendered at the END of the label row (a unit chip, a status) — the inline slot a host used to overlay absolutely over the field. Rendered only with the slot set; without it the label markup is unchanged."
+    },
+    {
       "name": "Id",
       "type": "string",
       "isRequired": false,
@@ -81,6 +87,12 @@
       "type": "string?",
       "isRequired": false,
       "description": "Help text below the input."
+    },
+    {
+      "name": "AriaDescribedBy",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Extra ids (a hint, a host description) appended to the input's aria-describedby chain. The component's own chain stays first (its error, its help text, then a surrounding TmFormField's cascaded help and error), duplicates are dropped."
     },
     {
       "name": "Disabled",

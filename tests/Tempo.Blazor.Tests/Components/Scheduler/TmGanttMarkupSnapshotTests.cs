@@ -37,6 +37,11 @@ public class TmGanttMarkupSnapshotTests : LocalizationTestBase
     private static readonly Regex RandomElementId = new(@"\bid=""[0-9a-f]{8}""", RegexOptions.Compiled, TimeSpan.FromSeconds(5));
     // TmDecimalInput (the task panel hour fields) generates a "tm-decimal-<guid>" id per instance; the portfolio card body id carries a per-instance token.
     private static readonly Regex GeneratedGuidId = new(@"(tm-decimal-|gantt-portfolio-)[0-9a-f]{8,32}", RegexOptions.Compiled, TimeSpan.FromSeconds(5));
+    // TmSelect / TmTextArea / TmTextInput / TmNumberInput generate the sequential
+    // "tm-{component}-<n>" default ids per instance (Fáze 3, plan 98c80bc3 + review round S2); the
+    // number is process-global, so it is not part of the markup contract — the eight-hex GUID ids
+    // the task panel used to render are gone.
+    private static readonly Regex SequentialSelectId = new(@"tm-(select|textarea|textinput|numberinput)-\d+", RegexOptions.Compiled, TimeSpan.FromSeconds(5));
     // Core toolbar items carry per-instance GUID ids (data-tm-toolbar-group, data-tm-toolbar-item).
     private static readonly Regex ToolbarId = new(@"(data-tm-toolbar-(?:group|item))=""[a-z-]*[0-9a-f]{32}""", RegexOptions.Compiled, TimeSpan.FromSeconds(5));
     // TmLayoutObserver (the Gantt measures its own container) carries a per-instance "tm-layout-<guid>" id.
@@ -98,6 +103,7 @@ public class TmGanttMarkupSnapshotTests : LocalizationTestBase
         text = EventHandlerId.Replace(text, "blazor:on$1=\"H\"");
         text = RandomElementId.Replace(text, "id=\"G\"");
         text = GeneratedGuidId.Replace(text, "$1G");
+        text = SequentialSelectId.Replace(text, "tm-$1-N");
         text = ToolbarId.Replace(text, "$1=\"T\"");
         text = LayoutObserverId.Replace(text, "tm-layout-L");
         // The avatar hue is string.GetHashCode(), randomised per process.

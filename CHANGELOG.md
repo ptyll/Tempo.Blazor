@@ -112,6 +112,123 @@ All four items are additive; the user bubble restyle is a visual change, not a b
   A host that themed the bubble by overriding `--tm-bg-surface-secondary` overrides
   `--tm-ai-user-bubble-bg` instead. There is no 2.12 Breaking / Migration entry for this surface.
 
+### Added — approvals and inputs (`Tempo.Blazor`, EmusCz 2.12 Fáze 3)
+
+All items are additive; every default keeps the pre-2.12 behaviour.
+
+- **`TmInlineDiff.Layout` (`InlineDiffLayout`, new enum in `Tempo.Blazor.Abstractions.Models.Diffs`).**
+  `Inline` (the default) is today's presentation — the changes flow inside the text.
+  `Stacked` gives each hunk its own row (`tm-inline-diff--stacked`, `data-layout="stacked"`), so the
+  deletion and the insertion of a change read one below the other — the presentation for a one-hunk
+  proposal of a whole value (an assistant suggesting the complete replacement text of a field), where
+  the inline interleave of two full-length sides is hard to read. The comparison, the decisions and
+  the `Apply` output are exactly the ones the inline layout renders
+  ([docs/inline-diff.md](docs/inline-diff.md) §Layout).
+- **`ReadOnly` on `TmTextArea`, `TmSelect` and `TmFilterableDropdown`** — the readable "locked value"
+  state the disabled presentation never was. The textarea carries the native `readonly` attribute;
+  the native `<select>` (which has no readonly attribute) and the combobox trigger carry
+  `aria-readonly="true"`; every control keeps readable primary-ink text on the
+  `tm-input-readonly` / `tm-select-readonly` / `tm-filterable-dropdown-readonly` surface instead of
+  the disabled gray, and stays focusable so a reader can still select and copy the value. A
+  host-driven `Value` still works; only the user's own change is ignored (the select never raises
+  `ValueChanged` from the user, the dropdown never opens and hides its clear button).
+  Review round: on a read-only select every option that is not the locked value renders
+  `disabled` (the selectable placeholder too once a value is set), the decorative chevron is hidden
+  (`tm-select-readonly ~ .tm-select-arrow`), and a change attempt on a raw `ChildContent` option —
+  which the component cannot disable itself — is refused and the select remounts from the rendered
+  value, so the attempt never stays on screen; the post-remount focus restore fires only while the
+  user is actually on the select (tracked through `@onfocus`/`@onblur`). On a read-only combobox the
+  popup attributes (`aria-haspopup`, `aria-controls`) are dropped.
+- **The disabled `TmFilterableDropdown` trigger carries its own presentation.** The off combobox
+  previously rendered the plain enabled trigger under the `tm-filterable-dropdown-disabled` root —
+  same surface, same cursor, and it stayed in the tab order. The trigger now announces
+  `aria-disabled="true"`, leaves the tab order (`tabindex="-1"`; the enabled trigger keeps
+  `tabindex="0"` with no `aria-disabled` attribute), and the stylesheet paints the disabled state:
+  the `--tm-color-gray-50` surface, the `--tm-text-disabled` ink and the not-allowed cursor, with
+  the hover keeping the neutral border instead of the primary one (both tokens resolve in the dark
+  theme; pinned by `FormsReadOnlySurfaceCssTests`).
+- **`AriaDescribedBy` on `TmTextInput`, `TmTextArea`, `TmSelect`, `TmNumberInput` and
+  `TmFilterableDropdown`** — extra ids (a hint counter, a host description) appended to the
+  control's `aria-describedby` chain. The component's own chain stays first (its error, its help
+  text, then a surrounding `TmFormField`'s cascaded help and error); duplicates are dropped and the
+  ids are merged through the internal `TmDescribedBy.Join` helper (split on any whitespace).
+- **`TmFormField` publishes its help text to the wrapped control.** The help paragraph now carries the
+  stable id `{Id}-field-help` and cascades it under the name `TmFormFieldDescribedByIds` (the
+  error-id cascade `TmFormFieldErrorId` is unchanged). The inputs that read the cascade today:
+  TmTextInput, TmTextArea, TmSelect, TmNumberInput, TmDecimalInput, TmMultiSelect, TmEntityPicker,
+  TmRadioGroup, TmCodeEditor and TmExpressionEditor — plus TmFilterableDropdown, which reads both
+  cascades (error and described-by) through `TmDescribedBy.Join`. So a wrapped control with no help
+  text of its own references the field-level help through `aria-describedby` — the same contract the
+  error cascade already had. Every other component ignores the new cascade and is unchanged.
+- **`LabelTrailing` slot on `TmTextInput`, `TmTextArea`, `TmSelect` and `TmNumberInput`** — content
+  rendered at the END of the label row (`tm-input-label-row` / `tm-input-label-trailing`): the
+  character counter or status chip a host used to overlay absolutely over the field with a measured
+  reserve now has an inline slot in the row. Rendered only with the slot set; without it the label
+  markup is byte-identical to 2.11. (The slot is deliberately NOT extended to the other inputs;
+  `AriaDescribedBy` exists on exactly the five components named above.)
+
+### Fixed — approvals and inputs (`Tempo.Blazor`, EmusCz 2.12 Fáze 3)
+
+- **`TmInlineDiff` no longer paints whitespace gaps inside a change.** The hidden label and the
+  `<del>` / `<ins>` sides are emitted adjacent, and `white-space: pre-wrap` moved from the content
+  wrapper onto the diff segments themselves — multi-line hunks keep their newlines while any stray
+  whitespace-only text node between the elements collapses instead of rendering a visible gap inside
+  every change (`AChangeSpanCarriesNoWhitespaceOnlyTextNodesBetweenItsElements` was red on the old
+  markup: `found at least one item AngleSharp.Dom.TextNode`).
+- **`TmTextArea` renders the bound value through the `value` attribute, not as child text.** A
+  textarea's displayed value lives in the DOM `value` property — text between the tags is only the
+  initial default — so a host that re-rendered with a new bound value (a loaded draft, a reset, a
+  simulated stream) left the visible text stale, and hosts needed a keyed remount workaround to show
+  it. The attribute form lets Blazor sync the property on every render.
+- **`Layout="Stacked"` on `TmInlineDiff` stacks only the change sides, never the equal text (review
+  round).** The stacked modifier used to turn the content wrapper into a flex column, which promoted
+  every unchanged-context fragment into a row of its own and shredded the shared sentence into
+  pieces; and the two sides of a change stayed interleaved on one row anyway. The content wrapper is
+  a plain block again — a flex column would turn every equal fragment into a row of its own, while
+  the block form adds no breaks of its own: only the change span and its `<del>` / `<ins>` sides
+  become block rows, so equal text after a change starts on a new line purely because a block span
+  ends the line it sits on (`ins.y >= del.y + del.height` pinned by the `HumanInTheLoop` E2E
+  geometry assertion). The decision marker rides the insertion row (rendered inside the `<ins>` in
+  stacked; a pure deletion has no insertion row, so its marker stays the sibling after the `<del>` —
+  the inline placement), and the demo sample is a real whole-value replacement without a shared
+  prefix or a stray trailing period
+  ("Contoso Services s.r.o." → "Northwind Traders Limited").
+- **`TmInlineDiff` no longer leaves a stacked DELETE without its decision.** The review marker of a
+  stacked hunk rendered inside the `<ins>` row — a hunk that has no insertion (a pure deletion)
+  rendered no marker at all, so the change was undecidable. The sibling marker now also renders in
+  the stacked layout when the hunk has no `<ins>` to carry it
+  (`StackedLayout_APureDeleteChangeStillCarriesItsDecisionMarker`).
+- **`TmSelect` restores focus after a refused read-only change only while the user is on the select.**
+  The post-remount `FocusAsync` used to fire for every refused change — a programmatic or UA-quirk
+  change that happened while the pointer/keyboard was elsewhere yanked focus onto the control. The
+  component now tracks the focus state through `@onfocus`/`@onblur` and the restore fires only while
+  it holds (`TmSelect_ReadOnly_RestoresFocusAfterARemountOnlyWhileTheUserIsOnTheSelect`).
+
+### Changed — approvals and inputs (`Tempo.Blazor`, EmusCz 2.12 Fáze 3)
+
+- The generated default `Id` of `TmTextArea` and `TmSelect` (and the generated listbox id of
+  `TmFilterableDropdown`; now also `TmTextInput` → `tm-textinput-{n}` and `TmNumberInput` →
+  `tm-numberinput-{n}`) is a readable sequential id, unique per process; a new instance (remount)
+  gets a new id — pass `Id` for a stable one; not stable between prerender and interactive render,
+  don't persist it. Auto-generated ids were always documented as generated, so no id contract
+  changes; hosts that pass an explicit `Id` are untouched. The counter is process-wide, shared
+  across the closed generic types (`TmSelect<string>` / `<enum>` / `<decimal?>` never share an id —
+  pinned by `TmSelect_DefaultId_IsUniqueAcrossClosedGenericTypes`, caught by the Gantt markup
+  snapshot) and held in a `long`, so a long-lived process cannot wrap the 32-bit range.
+
+  **Test-visible changes (not breaking):**
+  1. bUnit: the textarea value is in the `value` attribute, not in the text content
+     (`TmTextArea_RendersTheBoundValueAsTheValueAttributeNotChildText`).
+  2. Snapshot normalizers now strip `tm-(select|textarea|textinput|numberinput)-\d+` instead of the
+     eight-hex GUID ids those components used to render
+     (`TmGanttMarkupSnapshotTests.SequentialSelectId`, `__snapshots__/WithTaskPanel.html`).
+  3. The help text of `TmFormField` carries a stable id (`{Id}-field-help`) and the wrapped inputs
+     gain an `aria-describedby` referencing it; a control with no help of its own now renders the
+     attribute.
+  4. `form.reset()` returns the textarea to the value the prerender painted (the static renderer
+     emits it as the textarea's initial content — the DOM defaultValue). Pinned by
+     `TmTextArea_PrerenderedMarkupCarriesTheBoundValue` (`HtmlRenderer`).
+
 ## 2.11.1 - 2026-11-15
 
 > Patch release over 2.11.0: two defects found by a host application while moving to 2.11.0.

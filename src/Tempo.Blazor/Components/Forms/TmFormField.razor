@@ -17,13 +17,15 @@
 
     <div class="tm-form-field-control">
         <CascadingValue Value="@CascadedErrorId" Name="@ErrorIdCascadingName" IsFixed="false">
-            @ChildContent
+            <CascadingValue Value="@CascadedDescribedByIds" Name="@DescribedByIdsCascadingName" IsFixed="false">
+                @ChildContent
+            </CascadingValue>
         </CascadingValue>
     </div>
 
     @if (!string.IsNullOrEmpty(HelpText) && string.IsNullOrEmpty(EffectiveErrorMessage))
     {
-        <p class="tm-form-field-help">@HelpText</p>
+        <p id="@HelpId" class="tm-form-field-help">@HelpText</p>
     }
 
     @if (!string.IsNullOrEmpty(EffectiveErrorMessage))
@@ -42,6 +44,19 @@
     /// Wrapped Tm inputs add it to their <c>aria-describedby</c>.
     /// </summary>
     public const string ErrorIdCascadingName = "TmFormFieldErrorId";
+
+    /// <summary>
+    /// Cascading-value name under which <see cref="TmFormField"/> publishes the ids of its own help
+    /// text to the controls inside <see cref="ChildContent"/> (null while the field shows no help).
+    /// Wrapped Tm inputs append the ids to their <c>aria-describedby</c>, so a control with no help
+    /// text of its own still references the field-level help — the same contract the error-id
+    /// cascade has. The inputs that read it today: TmTextInput, TmTextArea, TmSelect, TmNumberInput,
+    /// TmDecimalInput, TmMultiSelect, TmEntityPicker, TmRadioGroup, TmCodeEditor and
+    /// TmExpressionEditor (plus TmFilterableDropdown, which also reads the error cascade). Every
+    /// other component ignores the cascade and stays unchanged; the ids are merged through the
+    /// internal <see cref="TmDescribedBy.Join"/> helper.
+    /// </summary>
+    public const string DescribedByIdsCascadingName = "TmFormFieldDescribedByIds";
 
     /// <summary>Label text displayed above the field.</summary>
     [Parameter] public string? Label { get; set; }
@@ -126,8 +141,21 @@
     /// </summary>
     public string ErrorId => $"{EffectiveId}-field-error";
 
+    /// <summary>
+    /// Stable DOM id of the field's help text ("<c>{Id}-field-help</c>"). Published to
+    /// <see cref="ChildContent"/> as a cascading value named
+    /// <see cref="DescribedByIdsCascadingName"/> while the help paragraph renders, so a wrapped
+    /// control references the field-level help through <c>aria-describedby</c>.
+    /// </summary>
+    public string HelpId => $"{EffectiveId}-field-help";
+
     /// <summary>The cascaded reference: <see cref="ErrorId"/> while the error paragraph renders, otherwise null.</summary>
     private string? CascadedErrorId => string.IsNullOrEmpty(EffectiveErrorMessage) ? null : ErrorId;
+
+    /// <summary>The cascaded reference: <see cref="HelpId"/> while the help paragraph renders, otherwise null.</summary>
+    private string? CascadedDescribedByIds => string.IsNullOrEmpty(HelpText) || !string.IsNullOrEmpty(EffectiveErrorMessage)
+        ? null
+        : HelpId;
 
     private string? EffectiveErrorMessage => !string.IsNullOrEmpty(ErrorMessage)
         ? ErrorMessage

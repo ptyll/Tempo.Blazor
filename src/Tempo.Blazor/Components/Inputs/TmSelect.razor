@@ -5,7 +5,17 @@
 @typeparam TValue
 
 <div class="tm-select-wrapper @Class" @attributes="AdditionalAttributes">
-    @if (!string.IsNullOrEmpty(Label))
+    @if (LabelTrailing is not null)
+    {
+        <span class="tm-input-label-row">
+            @if (!string.IsNullOrEmpty(Label))
+            {
+                <label for="@Id" class="tm-select-label @(Required ? "tm-input-label-required" : "")">@Label</label>
+            }
+            <span class="tm-input-label-trailing">@LabelTrailing</span>
+        </span>
+    }
+    else if (!string.IsNullOrEmpty(Label))
     {
         <label for="@Id" class="tm-select-label @(Required ? "tm-input-label-required" : "")">@Label</label>
     }
@@ -17,22 +27,27 @@
                 value="@SelectedValueString"
                 disabled="@Disabled"
                 required="@Required"
+                aria-readonly="@(ReadOnly ? "true" : null)"
                 class="@SelectCssClass"
                 aria-required="@(Required ? "true" : null)"
                 aria-invalid="@(IsInvalid ? "true" : null)"
                 aria-describedby="@DescribedBy"
                 aria-label="@(AriaLabel ?? (string.IsNullOrEmpty(Label) && !string.IsNullOrEmpty(Placeholder) && !PlaceholderSelectable ? Placeholder : null))"
+                @key="@_domRevision"
+                @ref="_selectElement"
+                @onfocus="() => _hasFocus = true"
+                @onblur="() => _hasFocus = false"
                 @onchange="HandleChangeAsync"
                 @attributes="NativeSelectAttributes">
             @if (!string.IsNullOrEmpty(Placeholder))
             {
-                <option value="" disabled="@(!PlaceholderSelectable)" selected="@IsDefaultSelection">@Placeholder</option>
+                <option value="" disabled="@(!PlaceholderSelectable || (ReadOnly && !IsDefaultSelection))" selected="@IsDefaultSelection">@Placeholder</option>
             }
             @if (Options is not null)
             {
                 @foreach (var opt in Options)
                 {
-                    <option value="@FormatOptionValue(opt.Value)" disabled="@opt.IsDisabled" selected="@IsSelected(opt.Value)">@opt.Label</option>
+                    <option value="@FormatOptionValue(opt.Value)" disabled="@(opt.IsDisabled || (ReadOnly && !IsSelected(opt.Value)))" selected="@IsSelected(opt.Value)">@opt.Label</option>
                 }
             }
             @ChildContent
@@ -63,6 +78,13 @@
 
     /// <summary>Label shown above the select.</summary>
     [Parameter] public string? Label { get; set; }
+
+    /// <summary>
+    /// Content rendered at the END of the label row (a status chip, a host counter) — the inline slot
+    /// a host used to overlay absolutely over the field. Rendered only with the slot set; without it
+    /// the label markup is unchanged.
+    /// </summary>
+    [Parameter] public RenderFragment? LabelTrailing { get; set; }
 
     /// <summary>Placeholder option shown when no value is selected. Rendered as <c>&lt;option value=""&gt;</c> mapped to <c>default(TValue)</c> when picked — for a non-nullable TValue that is <c>0</c>/<c>Guid.Empty</c>/..., which can collide with a real option, so use a nullable TValue when the user must be able to clear to empty. A nullable select whose bound <see cref="Value"/> may be null should include a null-valued option or set a Placeholder, otherwise the browser shows the first option.</summary>
     [Parameter] public string? Placeholder { get; set; }
@@ -104,14 +126,47 @@
     /// <summary>Help text shown below the select when no error is present.</summary>
     [Parameter] public string? HelpText { get; set; }
 
-    /// <summary>HTML id attribute.</summary>
-    [Parameter] public string Id { get; set; } = Guid.NewGuid().ToString("n")[..8];
+    /// <summary>
+    /// HTML id attribute. Defaults to a readable sequential id (<c>tm-select-{n}</c>), unique per
+    /// process; a new instance (remount) gets a new id — pass <c>Id</c> for a stable one; not stable
+    /// between prerender and interactive render, don't persist it. Within one instance the label's
+    /// <c>for</c> and the ids derived from it never churn between parameter snapshots.
+    /// </summary>
+    [Parameter]
+    public string Id
+    {
+        get => _idOverride ?? _generatedId;
+        set => _idOverride = value;
+    }
+
+    private string? _idOverride;
+    private readonly string _generatedId = $"tm-select-{Tempo.Blazor.Components.TmSequentialId.Next()}";
 
     /// <summary>Additional CSS class(es).</summary>
     [Parameter] public string? Class { get; set; }
 
     /// <summary>Disables the select.</summary>
     [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>
+    /// Locks the value against changes while keeping it readable: the select stays focusable with
+    /// readable text and carries <c>aria-readonly="true"</c> plus the <c>tm-select-readonly</c>
+    /// surface (a native &lt;select&gt; has no readonly attribute, so the ARIA state is what names
+    /// the locked value). It is NOT the disabled presentation — no <c>disabled</c> attribute and no
+    /// disabled gray. Every option that is not the locked value renders <c>disabled</c> (and the
+    /// placeholder stops being pickable once a value is set), so neither a pointer pick nor a
+    /// typeahead can move the visible selection; the decorative chevron is hidden because the
+    /// control no longer opens a list. A host-driven <see cref="Value"/> still works; only the
+    /// user's own change is ignored.
+    /// <para>
+    /// Raw <c>&lt;option&gt;</c> elements supplied through <see cref="ChildContent"/> cannot be
+    /// disabled by the component — the guard still refuses their change (the value never moves) and
+    /// the select remounts from the rendered value, so a browser attempt does not stay on screen.
+    /// Hosts that need the options themselves locked should render them through <see cref="Options"/>
+    /// or mark them disabled.
+    /// </para>
+    /// </summary>
+    [Parameter] public bool ReadOnly { get; set; }
 
     /// <summary>Marks the select as required. Shows a required marker on the label and sets aria-required on the &lt;select&gt; element. Caveat: every empty option (the placeholder — selectable or not — and any null-valued option) carries the empty wire value, so picking it counts as "no selection" and native validation reports the field as missing.</summary>
     [Parameter] public bool Required { get; set; }
@@ -138,7 +193,17 @@
     /// <summary>Typed option list. When provided, &lt;option&gt; elements are generated automatically.</summary>
     [Parameter] public IReadOnlyList<SelectOption<TValue>>? Options { get; set; }
 
-    /// <summary>&lt;option&gt; elements for the select.</summary>
+    /// <summary>&lt;option&gt; elements for the select.
+    /// <para>
+    /// Limitation: the component renders hand-written options verbatim, so it cannot add
+    /// <c>selected</c> or <c>disabled</c> markers to them — the preselection rides the
+    /// <c>&lt;select value&gt;</c> attribute, and <see cref="ReadOnly"/> does not disable raw
+    /// options the way it disables <see cref="Options"/>-generated ones. A user attempt on a raw
+    /// option still never changes the value (the change guard refuses it and the select remounts
+    /// from the rendered value); hosts that need the options themselves disabled should generate
+    /// them from <see cref="Options"/> or mark them <c>disabled</c> by hand.
+    /// </para>
+    /// </summary>
     [Parameter] public RenderFragment? ChildContent { get; set; }
 
     // ── Accessibility ────────────────────────────────────────────
@@ -155,7 +220,25 @@
     [CascadingParameter(Name = Tempo.Blazor.Components.Forms.TmFormField.ErrorIdCascadingName)]
     private string? FormFieldErrorId { get; set; }
 
-    private string? DescribedBy
+    /// <summary>
+    /// Ids a surrounding <c>TmFormField</c> publishes for its own help text (cascaded as
+    /// <c>TmFormField.DescribedByIdsCascadingName</c>; null while the field shows no help). Appended
+    /// to the described-by chain, so a wrapped select with no help text of its own still references
+    /// the field-level help.
+    /// </summary>
+    [CascadingParameter(Name = Tempo.Blazor.Components.Forms.TmFormField.DescribedByIdsCascadingName)]
+    private string? FormFieldDescribedByIds { get; set; }
+
+    /// <summary>Extra ids (a hint counter, a host description) appended to the described-by chain.</summary>
+    [Parameter] public string? AriaDescribedBy { get; set; }
+
+    private string? DescribedBy => Tempo.Blazor.Components.Forms.TmDescribedBy.Join(
+        DescribedByCore,
+        FormFieldDescribedByIds,
+        AriaDescribedBy);
+
+    /// <summary>The chain the select owned before Fáze 3: own error, then help, then the field error.</summary>
+    private string? DescribedByCore
     {
         get
         {
@@ -259,7 +342,7 @@
                 && SelectAttributes.TryGetValue("class", out var value)
                 ? value?.ToString()
                 : null;
-            var core = $"tm-select{(string.IsNullOrEmpty(Error) ? "" : " tm-select-error")}{(Disabled ? " tm-select-disabled" : "")}";
+            var core = $"tm-select{(string.IsNullOrEmpty(Error) ? "" : " tm-select-error")}{(Disabled ? " tm-select-disabled" : "")}{(ReadOnly ? " tm-select-readonly" : "")}";
             return string.IsNullOrWhiteSpace(extra) ? core : $"{core} {extra}";
         }
     }
@@ -284,8 +367,55 @@
         }
     }
 
+    // Read-only DOM restore (review round, plan 98c80bc3 Fáze 3): the key bumps per refused change,
+    // so Blazor recreates the <select> element and the browser paints the locked value again.
+    // Focus goes back to that new element only while the user is actually working with the select —
+    // tracked through @onfocus/@onblur (a programmatic or UA-quirk change that fires while the user
+    // is elsewhere must not yank focus onto the control). A focused element removed from the DOM
+    // fires no blur, so _hasFocus survives the remount it exists for.
+    private int _domRevision;
+    private bool _restoreSelectFocus;
+    private bool _hasFocus;
+    private ElementReference _selectElement;
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_restoreSelectFocus)
+        {
+            _restoreSelectFocus = false;
+            if (!_hasFocus)
+            {
+                return;
+            }
+
+            try
+            {
+                await _selectElement.FocusAsync();
+            }
+            catch (InvalidOperationException)
+            {
+                // The element reference is no longer attached (the select left the DOM).
+            }
+        }
+    }
+
     private async Task HandleChangeAsync(ChangeEventArgs e)
     {
+        // A read-only select never raises ValueChanged from the user; a host-driven Value still works.
+        // The disabled unselected options keep a pointer/typeahead attempt from happening at all, but
+        // a raw ChildContent <option> is not disabled — and a programmatic or UA quirk can fire a
+        // change regardless — so the DOM may now show an option the value refused. Bump the select's
+        // @key: Blazor remounts the element from the rendered value on the next render, wiping the
+        // attempt, and focus goes back to the select the user was working with.
+        if (ReadOnly)
+        {
+            _domRevision++;
+            _restoreSelectFocus = true;
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
         var raw = e.Value?.ToString();
 
         // An empty selection (the placeholder or a null-valued <option value="">) maps to

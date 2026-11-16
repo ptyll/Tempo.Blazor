@@ -106,6 +106,18 @@
       "description": "Disables the dropdown."
     },
     {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Locks the value against changes while keeping it readable: the combobox trigger stays focusable with readable text and carries aria-readonly=\"true\" plus the tm-filterable-dropdown-readonly root class — NOT the disabled presentation (no -disabled class, no disabled gray). The popup never opens, the clear button is hidden and a value cannot be picked or cleared; aria-haspopup and aria-controls are dropped because the trigger has no popup to point at. A host-driven Value still works."
+    },
+    {
+      "name": "AriaDescribedBy",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Ids (a hint, a host description) the combobox trigger references through aria-describedby. They are APPENDED to the ids the trigger picks up from a surrounding TmFormField (its error and its help text — both cascades, merged through the internal TmDescribedBy.Join, duplicates dropped, the field ids first). Null keeps the markup unchanged beyond that contract."
+    },
+    {
       "name": "AriaLabel",
       "type": "string?",
       "isRequired": false,
@@ -133,7 +145,8 @@
     "tm-filterable-dropdown-loading",
     "tm-filterable-dropdown-empty",
     "tm-filterable-dropdown-error",
-    "tm-filterable-dropdown-disabled"
+    "tm-filterable-dropdown-disabled",
+    "tm-filterable-dropdown-readonly"
   ],
   "usedAbstractions": [
     {

@@ -573,4 +573,112 @@ public class TmFilterableDropdownTests : LocalizationTestBase
         items[0].GetAttribute("aria-selected").Should().Be("false");
     }
 
+    // ── ReadOnly + AriaDescribedBy (plan 98c80bc3, Fáze 3) ───────────────────
+
+    /// <summary>
+    /// Fáze 3: <c>ReadOnly</c> is the readable locked state — the combobox trigger stays focusable with
+    /// readable text and carries <c>aria-readonly="true"</c> plus the
+    /// <c>tm-filterable-dropdown-readonly</c> root class, and it is NOT the disabled presentation
+    /// (no <c>-disabled</c> class, no disabled gray). The popup never opens and a value cannot change.
+    /// </summary>
+    [Fact]
+    public void TmFilterableDropdown_ReadOnly_IsReadableAndDoesNotOpen()
+    {
+        var cut = Render<TmFilterableDropdown<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, o => o.Label)
+            .Add(c => c.Value, FruitOptions[0])
+            .Add(c => c.ReadOnly, true));
+
+        var root = cut.Find(".tm-filterable-dropdown");
+        root.ClassList.Should().Contain("tm-filterable-dropdown-readonly");
+        root.ClassList.Should().NotContain("tm-filterable-dropdown-disabled");
+
+        var trigger = cut.Find(".tm-filterable-dropdown-trigger");
+        trigger.GetAttribute("aria-readonly").Should().Be("true");
+
+        trigger.Click();
+        cut.FindAll(".tm-filterable-dropdown-menu").Should().BeEmpty(
+            "a read-only combobox never opens its popup");
+    }
+
+    [Fact]
+    public void TmFilterableDropdown_ReadOnly_HidesTheClearButtonAndIgnoresSelection()
+    {
+        string? raised = null;
+        var cut = Render<TmFilterableDropdown<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, o => o.Label)
+            .Add(c => c.Value, FruitOptions[0])
+            .Add(c => c.ShowClearButton, true)
+            .Add(c => c.ReadOnly, true)
+            .Add(c => c.ValueChanged, EventCallback.Factory.Create<SelectOption<string>?>(this, v => raised = v?.Value)));
+
+        cut.FindAll(".tm-filterable-dropdown-clear").Should().BeEmpty(
+            "a read-only combobox offers no way to change or clear the value");
+    }
+
+    [Fact]
+    public void TmFilterableDropdown_NotReadOnly_HasNoReadonlyState()
+    {
+        var cut = Render<TmFilterableDropdown<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, o => o.Label));
+
+        var root = cut.Find(".tm-filterable-dropdown");
+        root.ClassList.Should().NotContain("tm-filterable-dropdown-readonly");
+        cut.Find(".tm-filterable-dropdown-trigger").GetAttribute("aria-readonly").Should().BeNull();
+    }
+
+    /// <summary>
+    /// Review round (plan 98c80bc3, Fáze 3): a disabled combobox trigger leaves the tab order
+    /// (<c>tabindex="-1"</c>) and announces the state through <c>aria-disabled="true"</c>; the
+    /// enabled trigger stays a tab stop with no <c>aria-disabled</c> attribute at all.
+    /// </summary>
+    [Fact]
+    public void TmFilterableDropdown_Disabled_TriggerLeavesTheTabOrderAndCarriesAriaDisabled()
+    {
+        var disabled = Render<TmFilterableDropdown<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, o => o.Label)
+            .Add(c => c.Value, FruitOptions[0])
+            .Add(c => c.Disabled, true));
+
+        var trigger = disabled.Find(".tm-filterable-dropdown-trigger");
+        disabled.Find(".tm-filterable-dropdown").ClassList.Should().Contain("tm-filterable-dropdown-disabled");
+        trigger.GetAttribute("tabindex").Should().Be("-1",
+            "an off control is not a keyboard stop");
+        trigger.GetAttribute("aria-disabled").Should().Be("true");
+
+        var enabled = Render<TmFilterableDropdown<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, o => o.Label)
+            .Add(c => c.Value, FruitOptions[0]));
+
+        var enabledTrigger = enabled.Find(".tm-filterable-dropdown-trigger");
+        enabledTrigger.GetAttribute("tabindex").Should().Be("0");
+        enabledTrigger.GetAttribute("aria-disabled").Should().BeNull(
+            "an enabled control does not claim the disabled state");
+    }
+
+    /// <summary>
+    /// Fáze 3: <c>AriaDescribedBy</c> names the ids (a hint, a host description) the combobox trigger
+    /// must reference through <c>aria-describedby</c>; null keeps today's markup unchanged.
+    /// </summary>
+    [Fact]
+    public void TmFilterableDropdown_AriaDescribedBy_ReachesTheTrigger()
+    {
+        var cut = Render<TmFilterableDropdown<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, o => o.Label)
+            .Add(c => c.AriaDescribedBy, "role-hint"));
+
+        cut.Find(".tm-filterable-dropdown-trigger").GetAttribute("aria-describedby").Should().Be("role-hint");
+
+        var without = Render<TmFilterableDropdown<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, o => o.Label));
+
+        without.Find(".tm-filterable-dropdown-trigger").GetAttribute("aria-describedby").Should().BeNull();
+    }
 }

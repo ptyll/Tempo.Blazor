@@ -76,6 +76,14 @@ public partial class TmInlineDiff : TmComponentBase
     /// <summary>How the comparison is presented. Default is <see cref="InlineDiffMode.Display"/>.</summary>
     [Parameter] public InlineDiffMode Mode { get; set; } = InlineDiffMode.Display;
 
+    /// <summary>
+    /// How the changes sit in the text. <see cref="InlineDiffLayout.Inline"/> (the default) keeps them
+    /// flowing with their context; <see cref="InlineDiffLayout.Stacked"/> gives each hunk its own row,
+    /// so the deletion and the insertion of a change read one below the other — the presentation for a
+    /// one-hunk proposal of a whole value. The comparison and every decision surface are unchanged.
+    /// </summary>
+    [Parameter] public InlineDiffLayout Layout { get; set; } = InlineDiffLayout.Inline;
+
     /// <summary>When true, every decision surface is removed even in
     /// <see cref="InlineDiffMode.Review"/> — the diff degrades to the read-only presentation. Default
     /// is false; the effective switch is <see cref="IsReview"/>.</summary>
@@ -628,6 +636,8 @@ public partial class TmInlineDiff : TmComponentBase
 
     private string ModeName => IsReview ? "review" : "display";
 
+    private string LayoutName => Layout == InlineDiffLayout.Stacked ? "stacked" : "inline";
+
     private string GranularityName => _result.Granularity == TextDiffGranularity.Lines ? "lines" : "words";
 
     private string FallbackName => _result.Fallback switch
@@ -662,6 +672,7 @@ public partial class TmInlineDiff : TmComponentBase
     private string RootClass => string.Concat(
         "tm-inline-diff",
         _result.Granularity == TextDiffGranularity.Lines ? " tm-inline-diff--lines" : string.Empty,
+        Layout == InlineDiffLayout.Stacked ? " tm-inline-diff--stacked" : string.Empty,
         IsReview ? " tm-inline-diff--review" : string.Empty,
         _result.IsDegraded ? " tm-inline-diff--degraded" : string.Empty,
         string.IsNullOrWhiteSpace(Class) ? string.Empty : $" {Class}");

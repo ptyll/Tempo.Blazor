@@ -820,6 +820,117 @@ public class TmInlineDiffTests : LocalizationTestBase
         cut.Find("[data-testid='wording-inline-diff-marker']").Should().NotBeNull();
     }
 
+    // ── Whitespace and layout (plan 98c80bc3, Fáze 3) ────────────────────────
+
+    /// <summary>
+    /// Fáze 3 pins the whitespace contract of the diff text: the change segments render with
+    /// <c>white-space: pre-wrap</c> (multi-line hunks must keep their own newlines), so a
+    /// whitespace-only text node between the visually hidden label and the <c>&lt;del&gt;</c> /
+    /// <c>&lt;ins&gt;</c> elements would paint a visible gap inside EVERY change. The markup must
+    /// emit the label and the two sides adjacent — no whitespace-only node between them, and none
+    /// between the hunks of the flowing text either.
+    /// </summary>
+    [Fact]
+    public void AChangeSpanCarriesNoWhitespaceOnlyTextNodesBetweenItsElements()
+    {
+        var cut = RenderDiff(parameters => parameters.Add(diff => diff.Mode, InlineDiffMode.Review));
+
+        foreach (var testId in new[] { "inline-diff-content", "inline-diff-change" })
+        {
+            var hosts = cut.FindAll($"[data-testid='{testId}']");
+            hosts.Should().NotBeEmpty();
+
+            foreach (var host in hosts)
+            {
+                var stray = host.ChildNodes
+                    .OfType<AngleSharp.Dom.IText>()
+                    .Where(node => node.Text.Length > 0 && string.IsNullOrWhiteSpace(node.Text))
+                    .ToList();
+                stray.Should().BeEmpty(
+                    $"{testId} must not carry a whitespace-only text node: with pre-wrap on the diff "
+                    + "segments it would paint a visible gap between the elements");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Fáze 3 adds <see cref="InlineDiffLayout"/>: the default <see cref="InlineDiffLayout.Inline"/>
+    /// renders the changes flowing inside the text (today's presentation), and
+    /// <see cref="InlineDiffLayout.Stacked"/> presents each side of a change as its own row — the
+    /// presentation for a one-hunk proposal of a whole value, where inline deletion+insertion reads
+    /// as a jumble. The layout is a root modifier (<c>tm-inline-diff--stacked</c> plus
+    /// <c>data-layout</c>), the hunks and the decision surfaces stay exactly the same.
+    /// </summary>
+    [Fact]
+    public void StackedLayoutNamesItselfOnTheRootWithoutChangingTheHunks()
+    {
+        var inline = RenderDiff();
+        inline.Find(".tm-inline-diff").ClassList.Should().NotContain("tm-inline-diff--stacked");
+        inline.Find(".tm-inline-diff").GetAttribute("data-layout").Should().Be("inline");
+        inline.FindAll("[data-testid='inline-diff-change']").Should().HaveCount(2);
+
+        var stacked = RenderDiff(parameters => parameters.Add(diff => diff.Layout, InlineDiffLayout.Stacked));
+        var root = stacked.Find(".tm-inline-diff");
+        root.ClassList.Should().Contain("tm-inline-diff--stacked");
+        root.GetAttribute("data-layout").Should().Be("stacked");
+        stacked.FindAll("[data-testid='inline-diff-change']").Should().HaveCount(2,
+            "the layout changes the presentation, never the comparison");
+        stacked.Instance.ResultText.Should().Be(inline.Instance.ResultText);
+    }
+
+    /// <summary>
+    /// Review round on <see cref="InlineDiffLayout.Stacked"/>: the sides are block rows, so a marker
+    /// rendered AFTER the <c>&lt;ins&gt;</c> would drop onto a row of its own below the insertion.
+    /// The stacked layout therefore renders the decision marker INSIDE the <c>&lt;ins&gt;</c> — it
+    /// belongs to the insertion row. The inline layout keeps the marker as the following sibling,
+    /// exactly the pre-2.12 markup.
+    /// </summary>
+    [Fact]
+    public void StackedLayout_RendersTheDecisionMarkerInsideTheInsertionRow_InlineKeepsItAsASibling()
+    {
+        var stacked = RenderDiff(parameters => parameters
+            .Add(diff => diff.Mode, InlineDiffMode.Review)
+            .Add(diff => diff.Layout, InlineDiffLayout.Stacked));
+        stacked.FindAll(".tm-inline-diff__ins [data-testid='inline-diff-marker']").Should().HaveCount(
+            stacked.FindAll("[data-testid='inline-diff-change']").Count,
+            "in stacked every change carries its marker inside the <ins> row");
+
+        var inline = RenderDiff(parameters => parameters.Add(diff => diff.Mode, InlineDiffMode.Review));
+        inline.FindAll(".tm-inline-diff__ins [data-testid='inline-diff-marker']").Should().BeEmpty(
+            "the inline layout keeps the pre-2.12 markup: the marker follows the <ins> as a sibling");
+        inline.FindAll("[data-testid='inline-diff-marker']").Should().HaveCount(
+            inline.FindAll("[data-testid='inline-diff-change']").Count);
+    }
+
+    /// <summary>
+    /// Review round (plan 98c80bc3, Fáze 3): a stacked DELETE hunk renders no <c>&lt;ins&gt;</c>, so
+    /// the marker-inside-the-insertion placement leaves it with NO decision surface at all. The
+    /// sibling marker therefore renders in the stacked layout too — for every hunk that has no
+    /// insertion row to carry its marker. Review+Stacked over a pure deletion: exactly one change,
+    /// of kind <c>delete</c>, and that change carries its marker.
+    /// </summary>
+    [Fact]
+    public void StackedLayout_APureDeleteChangeStillCarriesItsDecisionMarker()
+    {
+        var cut = RenderDiff("alpha beta gamma", "alpha gamma", parameters => parameters
+            .Add(diff => diff.Mode, InlineDiffMode.Review)
+            .Add(diff => diff.Layout, InlineDiffLayout.Stacked));
+
+        var changes = cut.FindAll("[data-testid='inline-diff-change']");
+        changes.Should().ContainSingle("the fixture is one whole-hunk deletion");
+        changes.Single().GetAttribute("data-kind").Should().Be("delete");
+        cut.FindAll("[data-testid='inline-diff-del']").Should().ContainSingle();
+        cut.FindAll("[data-testid='inline-diff-ins']").Should().BeEmpty(
+            "a pure deletion renders no insertion row");
+        Markers(cut).Should().ContainSingle(
+            "every reviewable change must carry a decision marker — including a stacked delete");
+
+        // The marker opens the same decision popover as everywhere else.
+        cut.Instance.Diff.Changes.Should().ContainSingle();
+        Markers(cut)[0].ClickAsync(new MouseEventArgs()).Wait();
+        cut.Find("[data-testid='inline-diff-popover']").Should().NotBeNull();
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private static IReadOnlyList<string> topLevelLabels(IRenderedComponent<TmInlineDiff> cut)

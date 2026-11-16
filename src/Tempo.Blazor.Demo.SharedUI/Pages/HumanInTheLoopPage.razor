@@ -43,6 +43,13 @@
         font-weight: var(--tm-font-weight-semibold);
     }
 
+    .hitl-card-heading {
+        margin: 0 0 var(--tm-space-2);
+        color: var(--tm-text-primary);
+        font-size: var(--tm-font-size-md);
+        font-weight: var(--tm-font-weight-semibold);
+    }
+
     .hitl-demo-actions {
         display: flex;
         flex-wrap: wrap;
@@ -284,6 +291,18 @@
             </div>
 
             <p class="hitl-demo-result" data-testid="hitl-diff-result">@_diffResult</p>
+        </div>
+
+        @* Layout=Stacked: a one-hunk proposal of a whole value reads with the deletion and the
+           insertion stacked, not interleaved inline (plan 98c80bc3, Fáze 3). *@
+        <div class="showcase-card" data-testid="hitl-diff-stacked-card">
+            <h3 class="hitl-card-heading">@Loc["TmDemo_HumanInTheLoop_DiffStackedHeading"]</h3>
+            <TmInlineDiff DataTestId="hitl-diff-stacked"
+                          OldText="@HumanInTheLoopPageSamples.StackedOriginalValue"
+                          NewText="@HumanInTheLoopPageSamples.StackedProposedValue"
+                          Mode="InlineDiffMode.Review"
+                          Layout="InlineDiffLayout.Stacked" />
+            <p class="hitl-demo-hint" data-testid="hitl-diff-stacked-hint">@Loc["TmDemo_HumanInTheLoop_DiffStackedHint"]</p>
         </div>
     </section>
 

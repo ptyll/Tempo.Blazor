@@ -220,4 +220,58 @@ public class TmNumberInputTests : LocalizationTestBase
         cut.Find("input").GetAttribute("aria-describedby").Should().Be("retention-days-error");
         cut.Find(".tm-input-error-message").GetAttribute("id").Should().Be("retention-days-error");
     }
+
+    // ── AriaDescribedBy + LabelTrailing (plan 98c80bc3, Fáze 3) ─────────────
+
+    [Fact]
+    public void NumberInput_AriaDescribedBy_AppendsToTheOwnChain()
+    {
+        var cut = Render<TmNumberInput>(p => p
+            .Add(x => x.Value, 1)
+            .Add(x => x.AriaDescribedBy, "days-hint"));
+
+        cut.Find("input").GetAttribute("aria-describedby").Should().Be("days-hint");
+
+        var withError = Render<TmNumberInput>(p => p
+            .Add(x => x.Value, 1)
+            .Add(x => x.Error, "Too small")
+            .Add(x => x.AriaDescribedBy, "days-hint"));
+
+        withError.Find("input").GetAttribute("aria-describedby")
+            .Should().Be($"{withError.Instance.Id}-error days-hint",
+                "the own chain stays first, the host ids follow");
+    }
+
+    [Fact]
+    public void NumberInput_LabelTrailing_RendersAtTheEndOfTheLabelRow()
+    {
+        var cut = Render<TmNumberInput>(p => p
+            .Add(x => x.Value, 1)
+            .Add(x => x.Label, "Retention")
+            .Add(x => x.LabelTrailing, "<span id='retention-unit'>days</span>"));
+
+        var row = cut.Find(".tm-input-label-row");
+        row.QuerySelector("label")!.TextContent.Trim().Should().Be("Retention");
+        row.QuerySelector("#retention-unit")!.TextContent.Should().Be("days");
+    }
+
+    /// <summary>
+    /// Review round (plan 98c80bc3, Fáze 3, S2): the generated default id is the readable sequential
+    /// <c>tm-numberinput-{n}</c>, stable for the instance and distinct per instance — the scheme
+    /// TmTextInput and TmSelect already use.
+    /// </summary>
+    [Fact]
+    public void NumberInput_DefaultId_IsSequentialAndStableForTheInstance()
+    {
+        var cut = Render<TmNumberInput>(p => p.Add(x => x.Value, 1));
+
+        var first = cut.Instance.Id;
+        first.Should().MatchRegex("^tm-numberinput-\\d+$",
+            "the default id is the component prefix plus a sequence number, not a GUID fragment");
+
+        cut.Render(p => p.Add(x => x.Value, 2));
+        cut.Instance.Id.Should().Be(first, "the id never churns between parameter snapshots");
+
+        Render<TmNumberInput>(p => p.Add(x => x.Value, 1)).Instance.Id.Should().NotBe(first);
+    }
 }

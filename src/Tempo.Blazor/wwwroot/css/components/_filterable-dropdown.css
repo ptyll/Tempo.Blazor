@@ -20,6 +20,24 @@
 }
 .tm-filterable-dropdown-trigger:hover { border-color: var(--tm-color-primary); }
 
+/* The readable locked state (plan 98c80bc3, Fáze 3): the surface tint and the default cursor say
+   "locked", the text keeps the primary ink — never the disabled gray a Disabled control reads as. */
+.tm-filterable-dropdown-readonly .tm-filterable-dropdown-trigger {
+  background: var(--tm-bg-surface-secondary);
+  cursor: default;
+}
+.tm-filterable-dropdown-readonly .tm-filterable-dropdown-trigger:hover { border-color: var(--tm-border-color); }
+
+/* The off state (plan 98c80bc3, Fáze 3): the gray surface and the disabled ink read as "switched
+   off" — the deliberate contrast to the readonly locked state above, which keeps the primary ink.
+   Both tokens resolve in the dark theme too (--tm-color-gray-50 becomes a dark surface there). */
+.tm-filterable-dropdown-disabled .tm-filterable-dropdown-trigger {
+  background: var(--tm-color-gray-50);
+  color: var(--tm-text-disabled);
+  cursor: not-allowed;
+}
+.tm-filterable-dropdown-disabled .tm-filterable-dropdown-trigger:hover { border-color: var(--tm-border-color); }
+
 .tm-filterable-dropdown-placeholder { color: var(--tm-text-tertiary); }
 
 .tm-filterable-dropdown-value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

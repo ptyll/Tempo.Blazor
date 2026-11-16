@@ -331,7 +331,9 @@ public sealed class TmModelingInspectorEditingTests : LocalizationTestBase
         description.Input("Typed draft");
         description.KeyDown("Escape");
 
-        cut.Find("#modeling-inspector-description").TextContent.Should().Be("Original description",
+        // Fáze 3 (plan 98c80bc3): the bound value rides the textarea's value ATTRIBUTE (Blazor syncs
+        // the DOM value property from it), so the committed value is what the attribute carries.
+        cut.Find("#modeling-inspector-description").GetAttribute("value").Should().Be("Original description",
             "the textarea is a controlled component — the re-render pushes the committed value back");
     }
 

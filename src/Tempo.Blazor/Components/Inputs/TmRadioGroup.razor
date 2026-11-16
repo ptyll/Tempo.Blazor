@@ -128,9 +128,20 @@
     [CascadingParameter(Name = Tempo.Blazor.Components.Forms.TmFormField.ErrorIdCascadingName)]
     private string? FormFieldErrorId { get; set; }
 
+    /// <summary>
+    /// Ids a surrounding <c>TmFormField</c> publishes for its own help text (cascaded as
+    /// <c>TmFormField.DescribedByIdsCascadingName</c>; null while the field shows no help). Appended
+    /// to the described-by chain, so a wrapped radio group with no help text of its own still
+    /// references the field-level help.
+    /// </summary>
+    [CascadingParameter(Name = Tempo.Blazor.Components.Forms.TmFormField.DescribedByIdsCascadingName)]
+    private string? FormFieldDescribedByIds { get; set; }
+
     private bool IsInvalid => !string.IsNullOrEmpty(Error);
 
-    private string? DescribedBy => !string.IsNullOrEmpty(Error) ? ErrorId : FormFieldErrorId;
+    private string? DescribedBy => Tempo.Blazor.Components.Forms.TmDescribedBy.Join(
+        !string.IsNullOrEmpty(Error) ? ErrorId : FormFieldErrorId,
+        FormFieldDescribedByIds);
 
     /// <summary>Additional CSS class(es) for the root element.</summary>
     [Parameter] public string? Class { get; set; }

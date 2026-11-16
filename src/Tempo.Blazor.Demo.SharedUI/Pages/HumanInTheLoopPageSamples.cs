@@ -34,6 +34,18 @@ internal static class HumanInTheLoopPageSamples
         "The team reviewed the draft and agreed to delay the launch until the documentation is complete.";
 
     /// <summary>
+    /// The field value before the assistant's whole-value proposal — the sample the stacked inline diff
+    /// (<c>Layout="Stacked"</c>) compares. One change over the complete text is exactly the shape the
+    /// stacked layout is for: the deletion and the insertion read one below the other. The two values
+    /// share NO context (different supplier words too), so the diff is a single full-value replacement
+    /// hunk instead of a word-level interleave over a common prefix.
+    /// </summary>
+    internal const string StackedOriginalValue = "Contoso Services s.r.o.";
+
+    /// <summary>The field value the whole-value proposal suggests — a single one-hunk replacement.</summary>
+    internal const string StackedProposedValue = "Northwind Traders Limited";
+
+    /// <summary>
     /// The twelve invoices the queue reviews. Risk and priority deliberately disagree, so switching
     /// <c>SortMode</c> is visible and a test cannot pass on an accidentally ordered list.
     /// </summary>

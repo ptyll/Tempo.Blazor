@@ -55,7 +55,7 @@
 | TmTextArea: hodnota jako `value` atribut, ne child text | `Components/Inputs/TmTextArea.razor:24` (`@oninput="HandleOnInput">@Value</textarea>`) | OPEN | Fáze 3 | — |
 | `ReadOnly` na TmTextArea/TmSelect/TmFilterableDropdown + stabilní výchozí `Id` | `TmTextArea.razor:81`, `TmSelect.razor:108` (`Id = Guid.NewGuid()[..8]`), `TmFilterableDropdown.razor:197` (`_listboxId`); **z trojice TmTextArea/TmSelect/TmFilterableDropdown `ReadOnly` nemá žádná** — param `ReadOnly` už mají i jiné vstupy: `TmTextInput.razor:133`, `TmCurrencyInput.razor:143`, `TmDecimalInput.razor:199`, `TmMaskedTextBox.razor.cs:50`, `TmCodeEditor.razor:113`, buňky `TmOtpInput.razor.cs:49` a `TmRating` | OPEN | Fáze 3 | — |
 | `AriaDescribedBy` na vstupy + kaskáda z TmFormField + slot `LabelTrailing` | Param `AriaDescribedBy` už mají `TmToggle.razor:65`, `TmOtpInput.razor.cs:106`, `TmMultiSelect.razor.cs:121`, `TmMarkdownEditor.razor:117`, `TmFocusScope.razor:72`, `TmModal.razor:272` a `TmChat.razor.cs:283` (`ComposerDescribedBy`) — **z trojice `TmTextArea`/`TmSelect`/`TmFilterableDropdown` ho nemá žádná** (stejně tak `TmTextInput`/`TmNumberInput`); kaskáda z `TmFormField` nese jen `FormFieldErrorId` (`TmTextArea.razor:105-113`); `LabelTrailing` nikde | ČÁSTEČNĚ UPSTREAM (vzor existuje) | Fáze 3 (zúžit: jádrové vstupy + kaskáda + slot) | — |
-| Volitelně `TmInputOptions.ImmediateByDefault` | Typ neexistuje (0 výskytů v repu) | OPEN (volitelná) | Fáze 3 | — |
+| Volitelně `TmInputOptions.ImmediateByDefault` | Typ neexistuje (0 výskytů v repu) | BACKLOG (mimo 2.12) — backlog item 83bd9915-a8cf-46a4-957c-dfeba51cc209 | Fáze 3 | — |
 
 ### Fáze 4 — Tlačítka, dialogy, kontextové menu
 
@@ -108,7 +108,7 @@
 
 ## Souhrn (přepočteno po recenzních opravách N1–N12)
 
-- **33 položek přeměřeno.** Rozpad: **OPEN 25 · ČÁSTEČNĚ 4 · ODLOŽENO 2 · UPSTREAM 2**
+- **33 položek přeměřeno.** Rozpad: **OPEN 24 · ČÁSTEČNĚ 4 · ODLOŽENO 2 · UPSTREAM 2 · BACKLOG 1**
   (=33). Před recenzními opravami bylo rozdělení **OPEN 25 · ČÁSTEČNĚ 3 · UPSTREAM 5**
   (=33); po opravách N1–N12 **OPEN 25 · ČÁSTEČNĚ 6 · UPSTREAM 2** a teprve oddělením
   ODLOŽENO vznikla dnešní podoba. Které položky přešly kam:
@@ -120,13 +120,15 @@
   - **ČÁSTEČNĚ → ODLOŽENO (2):** inert sestup `markBackgroundInert` a Escape capture —
     nerušeny, jen odloženy decisionem `EMUSCZ-2.12-UPSTREAM-PRUNING` (podmínku ověří
     navazující EmusCz plán).
-  - **Beze změny:** OPEN 25; ČÁSTEČNĚ 1 (vzor AriaDescribedBy, Fáze 3); UPSTREAM 2
+  - **OPEN → BACKLOG (1):** volitelné `TmInputOptions.ImmediateByDefault` (Fáze 3) —
+    mimo 2.12, backlog item 83bd9915-a8cf-46a4-957c-dfeba51cc209.
+  - **Beze změny:** OPEN 24; ČÁSTEČNĚ 1 (vzor AriaDescribedBy, Fáze 3); UPSTREAM 2
     (pin-on-top Fáze 6, CardMode container Fáze 7).
-- Rozpad po fázích: **Fáze 2** — OPEN 4. **Fáze 3** — OPEN 4, ČÁSTEČNĚ 1 (AriaDescribedBy
-  vzor). **Fáze 4** — OPEN 4. **Fáze 5** — OPEN 2. **Fáze 6** — ČÁSTEČNĚ 1 (footer),
-  ODLOŽENO 2 (inert, Escape), UPSTREAM 1 (pin-on-top). **Fáze 7** — OPEN 8,
-  ČÁSTEČNĚ 1 (PageSize), UPSTREAM 1 (CardMode container). **Fáze 8** — OPEN 3, ČÁSTEČNĚ 1
-  (token deprekace).
+- Rozpad po fázích: **Fáze 2** — OPEN 4. **Fáze 3** — OPEN 3, ČÁSTEČNĚ 1 (AriaDescribedBy
+  vzor), BACKLOG 1 (`ImmediateByDefault`). **Fáze 4** — OPEN 4. **Fáze 5** — OPEN 2.
+  **Fáze 6** — ČÁSTEČNĚ 1 (footer), ODLOŽENO 2 (inert, Escape), UPSTREAM 1 (pin-on-top).
+  **Fáze 7** — OPEN 8, ČÁSTEČNĚ 1 (PageSize), UPSTREAM 1 (CardMode container). **Fáze 8** —
+  OPEN 3, ČÁSTEČNĚ 1 (token deprekace).
 - Co se proti první revizi změnilo: TmModal footer UPSTREAM → **ČÁSTEČNĚ** (`column-reverse`
   ≠ pořadí DOM, scrollovatelná patička s max-height chybí → Fáze 6); PageSize UPSTREAM →
   **ČÁSTEČNĚ** (`DefaultPageSize` se nekontroluje → bugfix ve Fázi 7); sestup inert walku a

@@ -1,7 +1,17 @@
 @namespace Tempo.Blazor.Components.Inputs
 
 <div class="tm-input-wrapper @Class">
-    @if (!string.IsNullOrEmpty(Label))
+    @if (LabelTrailing is not null)
+    {
+        <span class="tm-input-label-row">
+            @if (!string.IsNullOrEmpty(Label))
+            {
+                <label for="@Id" class="tm-input-label @(Required ? "tm-input-label-required" : "")">@Label</label>
+            }
+            <span class="tm-input-label-trailing">@LabelTrailing</span>
+        </span>
+    }
+    else if (!string.IsNullOrEmpty(Label))
     {
         <label for="@Id" class="tm-input-label @(Required ? "tm-input-label-required" : "")">@Label</label>
     }
@@ -90,10 +100,27 @@
     [Parameter] public string? Label { get; set; }
 
     /// <summary>
-    /// Id of the input, so the rendered <see cref="Label"/> can point at it with <c>for</c> and the error
-    /// and help text can be referenced. Defaults to a generated value.
+    /// Content rendered at the END of the label row (a unit chip, a status) — the inline slot a host
+    /// used to overlay absolutely over the field. Rendered only with the slot set; without it the
+    /// label markup is unchanged.
     /// </summary>
-    [Parameter] public string Id { get; set; } = Guid.NewGuid().ToString("n")[..8];
+    [Parameter] public RenderFragment? LabelTrailing { get; set; }
+
+    /// <summary>
+    /// Id of the input, so the rendered <see cref="Label"/> can point at it with <c>for</c> and the error
+    /// and help text can be referenced. Defaults to a readable sequential id (<c>tm-numberinput-{n}</c>),
+    /// unique per process; a new instance (remount) gets a new id — pass <c>Id</c> for a stable one; not
+    /// stable between prerender and interactive render, don't persist it.
+    /// </summary>
+    [Parameter]
+    public string Id
+    {
+        get => _idOverride ?? _generatedId;
+        set => _idOverride = value;
+    }
+
+    private string? _idOverride;
+    private readonly string _generatedId = $"tm-numberinput-{Tempo.Blazor.Components.TmSequentialId.Next()}";
 
     /// <summary>
     /// Marks the field required: the asterisk on the label (<c>tm-input-label-required</c>, the marker the
@@ -164,7 +191,25 @@
     [CascadingParameter(Name = Tempo.Blazor.Components.Forms.TmFormField.ErrorIdCascadingName)]
     private string? FormFieldErrorId { get; set; }
 
-    private string? DescribedBy
+    /// <summary>
+    /// Ids a surrounding <c>TmFormField</c> publishes for its own help text (cascaded as
+    /// <c>TmFormField.DescribedByIdsCascadingName</c>; null while the field shows no help). Appended
+    /// to the described-by chain, so a wrapped input with no help text of its own still references
+    /// the field-level help.
+    /// </summary>
+    [CascadingParameter(Name = Tempo.Blazor.Components.Forms.TmFormField.DescribedByIdsCascadingName)]
+    private string? FormFieldDescribedByIds { get; set; }
+
+    /// <summary>Extra ids (a hint, a host description) appended to the described-by chain.</summary>
+    [Parameter] public string? AriaDescribedBy { get; set; }
+
+    private string? DescribedBy => Tempo.Blazor.Components.Forms.TmDescribedBy.Join(
+        DescribedByCore,
+        FormFieldDescribedByIds,
+        AriaDescribedBy);
+
+    /// <summary>The chain the input owned before Fáze 3: own error, then help, then the field error.</summary>
+    private string? DescribedByCore
     {
         get
         {

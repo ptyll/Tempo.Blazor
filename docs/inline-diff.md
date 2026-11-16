@@ -30,8 +30,30 @@ Models: `Tempo.Blazor.Abstractions.Models.Diffs` (`InlineDiffMode`, `InlineDiffD
 | `InlineDiffMode.Review` | The same diff plus the toolbar (`Changes: N`, Accept all, Reject all, Undo), one marker button per change and the non-modal Accept / Reject popover. |
 | `ReadOnly="true"` | Removes every decision surface even in `Review` — the effective switch is `IsReview` (public), and the root carries `data-readonly="true"`. |
 
-The root carries `data-mode` (`display` / `review`), `data-granularity` (`words` / `lines` — the
-granularity the engine actually used) and `data-fallback` (`none` / `line-level` / `single-change`).
+The root carries `data-mode` (`display` / `review`), `data-layout` (`inline` / `stacked`),
+`data-granularity` (`words` / `lines` — the granularity the engine actually used) and `data-fallback`
+(`none` / `line-level` / `single-change`).
+
+## Layout
+
+`Layout` (`InlineDiffLayout`, default `Inline`) decides how the changes sit in the text:
+
+| Layout | What it does |
+|---|---|
+| `InlineDiffLayout.Inline` (default) | The changes flow inside the surrounding text — the deletion and the insertion of a change sit one after another in the line, with the decision marker following the insertion. |
+| `InlineDiffLayout.Stacked` | Only the change hunks break onto their own rows (`tm-inline-diff--stacked`): the change span becomes a block and its `<del>` / `<ins>` sides become block rows, so the deletion and the insertion read one below the other. Equal text after a change starts on a new line — a block span ends the line it sits on, so the unchanged context following a change is never glued to the row above it. The content wrapper itself stays a plain block, never a flex column: the layout adds no row breaks between two equal fragments, it only inherits the break each change already introduces. The decision marker rides the insertion row (it renders inside the `<ins>`); a pure deletion has no insertion row, so its marker stays the sibling after the `<del>` — the inline placement, the pre-2.12 markup — so a stacked delete keeps its decision. Meant for a one-hunk proposal of a whole value (an assistant suggesting the complete replacement text of a field), where the inline interleave of two full-length sides is hard to read. The geometry is pinned by the HumanInTheLoop E2E (`ins.y >= del.y + del.height`) and the stylesheet by `TheStackedLayoutPresentsEachSideOfAChangeAsItsOwnRow`. |
+
+The layout is presentation only: the hunks, the decisions and the `Apply` output are exactly the ones
+the inline layout renders.
+
+## Whitespace contract
+
+The diff segments — the equal text and the `<ins>` / `<del>` sides — render with
+`white-space: pre-wrap`, so a multi-line hunk keeps its own newlines. The content wrapper itself stays
+at the normal `white-space`, and the markup emits the hidden label and the two sides **adjacent** (no
+whitespace-only text node between elements), so a stray space in the markup can never paint a visible
+gap inside a change. Pinned by `AChangeSpanCarriesNoWhitespaceOnlyTextNodesBetweenItsElements` and by
+the stylesheet test `PreWrapLivesOnTheDiffSegmentsNotOnTheContent`.
 
 ## Every change is one decision
 
@@ -134,6 +156,7 @@ such an input: it renders the coarser hunks, sets `data-fallback` and shows a lo
 ## Demo and tests
 
 The demo page is `/human-in-the-loop` (demo `HumanInTheLoopPage`): the "AI rewrite of one paragraph"
-diff with three changes, the per-change decisions and the resulting text. Component contract:
+diff with three changes, the per-change decisions and the resulting text, plus the stacked one-hunk
+proposal of a whole value (`Layout="InlineDiffLayout.Stacked"`). Component contract:
 `tests/Tempo.Blazor.Tests/Approvals/TmInlineDiffTests.cs`; demo contract:
 `HumanInTheLoopDemoPageTests`; browser lane: `HumanInTheLoopE2ETests` (WASM).

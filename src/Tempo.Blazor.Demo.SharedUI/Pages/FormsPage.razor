@@ -60,7 +60,7 @@
 </section>
 
 <!-- Text Area -->
-<section class="demo-section">
+<section class="demo-section" data-testid="textarea-section">
     <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Text Area</h2>
     <div class="demo-grid demo-grid-2">
         <div class="showcase-card">
@@ -69,8 +69,34 @@
         </div>
         <div class="showcase-card">
             <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">With Character Limit</h3>
-            <TmTextArea Label="Limited Input" MaxLength="100" Placeholder="Type here (max 100 chars)..." @bind-Value="_limited" />
-            <p class="text-xs text-slate-500 mt-2">@(_limited?.Length ?? 0) / 100 characters</p>
+            @* LabelTrailing (plan 98c80bc3, Fáze 3): the counter lives IN the label row now — the inline
+               slot a host used to overlay absolutely over the field. Immediate makes the row counter
+               follow the typing instead of waiting for the blur commit. Review round: the counter span
+               carries an id and the textarea points at it through AriaDescribedBy, so the live count is
+               part of the textarea's description, not stray text in the row. *@
+            <TmTextArea Label="Limited Input" MaxLength="100" Placeholder="Type here (max 100 chars)..."
+                        Immediate="true" AriaDescribedBy="limited-counter" @bind-Value="_limited">
+                <LabelTrailing>
+                    <span id="limited-counter" data-testid="textarea-label-trailing-counter">@(_limited?.Length ?? 0) / 100</span>
+                </LabelTrailing>
+            </TmTextArea>
+        </div>
+        <div class="showcase-card" data-testid="textarea-readonly-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">@Loc["TmFormsDemo_TextAreaReadOnly"]</h3>
+            <TmTextArea Label="@Loc["TmFormsDemo_TextAreaReadOnly"]" Rows="3"
+                        Value="@Loc["TmFormsDemo_TextAreaLockedDraft"]" ReadOnly="true" />
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-3">@Loc["TmFormsDemo_TextAreaReadOnlyHint"]</p>
+        </div>
+        <div class="showcase-card" data-testid="textarea-states-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">@Loc["TmFormsDemo_StateCompareHeading"]</h3>
+            @* Review round (plan 98c80bc3, Fáze 3, B3): the three states side by side, so the readable
+               locked surface and the gray disabled surface can be told apart at a glance. *@
+            <TmTextArea Label="@Loc["TmFormsDemo_StateCompareEditable"]" Rows="2" Placeholder="Type here..." @bind-Value="_statesEditable" />
+            <TmTextArea Label="@Loc["TmFormsDemo_StateCompareReadonly"]" Rows="2"
+                        Value="@Loc["TmFormsDemo_TextAreaLockedDraft"]" ReadOnly="true" />
+            <TmTextArea Label="@Loc["TmFormsDemo_StateCompareDisabled"]" Rows="2"
+                        Value="@Loc["TmFormsDemo_TextAreaLockedDraft"]" Disabled="true" />
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-3">@Loc["TmFormsDemo_StateCompareHint"]</p>
         </div>
     </div>
 </section>
@@ -130,6 +156,36 @@
             <p class="text-xs text-slate-500 dark:text-slate-400 mt-3">
                 Bound value: <strong class="font-mono" data-testid="select-clearable-value">@FormatNullableInt(_selectedPriority)</strong>
             </p>
+        </div>
+        <div class="showcase-card" data-testid="select-readonly-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">@Loc["TmFormsDemo_SelectReadOnly"]</h3>
+            <TmSelect TValue="string"
+                      Label="@Loc["TmFormsDemo_SelectReadOnly"]"
+                      Value="@("locked-contract")"
+                      ReadOnly="true"
+                      Options="@_readonlyStatusOptions" />
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-3">@Loc["TmFormsDemo_SelectReadOnlyHint"]</p>
+        </div>
+        <div class="showcase-card" data-testid="select-states-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">@Loc["TmFormsDemo_StateCompareHeading"]</h3>
+            @* Review round (plan 98c80bc3, Fáze 3, B3): editable vs readonly vs disabled. A read-only
+               select keeps the value readable (every other option disabled, no chevron), while the
+               disabled one reads as switched off. *@
+            <TmSelect TValue="string"
+                      Label="@Loc["TmFormsDemo_StateCompareEditable"]"
+                      Options="@_roleOptions"
+                      @bind-Value="_selectedRole" />
+            <TmSelect TValue="string"
+                      Label="@Loc["TmFormsDemo_StateCompareReadonly"]"
+                      Value="@("locked-contract")"
+                      ReadOnly="true"
+                      Options="@_readonlyStatusOptions" />
+            <TmSelect TValue="string"
+                      Label="@Loc["TmFormsDemo_StateCompareDisabled"]"
+                      Value="@("locked-contract")"
+                      Disabled="true"
+                      Options="@_readonlyStatusOptions" />
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-3">@Loc["TmFormsDemo_StateCompareHint"]</p>
         </div>
     </div>
 </section>
@@ -327,6 +383,38 @@
                                   HighlightMatches="true"
                                   @bind-Value="_highlightedTech"
                                   Placeholder="Select technologies..." />
+        </div>
+        <div class="showcase-card" data-testid="dropdown-states-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">@Loc["TmFormsDemo_StateCompareHeading"]</h3>
+            @* Review round (plan 98c80bc3, Fáze 3, B3): the combobox in all three states, one under the
+               other like the select comparison — each wrapped in a TmFormField so the card carries the
+               same Editable / Read-only / Disabled captions. The popup never opens on the read-only
+               trigger and it drops aria-haspopup/aria-controls; disabled paints the gray and leaves
+               the tab order. *@
+            <TmFormField Label="@Loc["TmFormsDemo_StateCompareEditable"]">
+                <TmFilterableDropdown TItem="SelectOption<string>" TValue="string"
+                                      Items="_techOptions"
+                                      DisplayField="@(o => o.Label)"
+                                      @bind-Value="_highlightedTech"
+                                      Placeholder="Select technologies..." />
+            </TmFormField>
+            <TmFormField Label="@Loc["TmFormsDemo_StateCompareReadonly"]">
+                <TmFilterableDropdown TItem="SelectOption<string>" TValue="string"
+                                      Items="_techOptions"
+                                      DisplayField="@(o => o.Label)"
+                                      Value="@_techOptions[0]"
+                                      ReadOnly="true"
+                                      Placeholder="Select technologies..." />
+            </TmFormField>
+            <TmFormField Label="@Loc["TmFormsDemo_StateCompareDisabled"]">
+                <TmFilterableDropdown TItem="SelectOption<string>" TValue="string"
+                                      Items="_techOptions"
+                                      DisplayField="@(o => o.Label)"
+                                      Value="@_techOptions[0]"
+                                      Disabled="true"
+                                      Placeholder="Select technologies..." />
+            </TmFormField>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-3">@Loc["TmFormsDemo_StateCompareHint"]</p>
         </div>
     </div>
     @* Plan 7ba95ed6 phase 9: /forms is the COMPONENT-LEVEL REFERENCE for the input vocabulary, so the
@@ -1134,6 +1222,9 @@
     private string _description = string.Empty;
     private string _limited = string.Empty;
     private string? _selectedRole;
+    // The state-comparison card (plan 98c80bc3, Fáze 3, review round B3): the editable twin of the
+    // read-only and the disabled samples in the same card.
+    private string _statesEditable = string.Empty;
     private bool _accepted;
     private bool _subscribed;
     private bool _notifications = true;
@@ -1249,6 +1340,13 @@
         new("admin", "Admin"),
         new("editor", "Editor"),
         new("viewer", "Viewer"),
+    };
+
+    // The read-only select demo (plan 98c80bc3, Fáze 3): a locked workflow status.
+    private List<SelectOption<string>> _readonlyStatusOptions = new()
+    {
+        new("locked-contract", "Locked — contract signed"),
+        new("archived", "Archived"),
     };
 
     // Demo sample data, not library copy: the showcase labels below are English on purpose.

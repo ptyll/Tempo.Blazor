@@ -133,4 +133,50 @@ public sealed class TmInlineDiffCssTests
                     + "both themes (WCAG 2.2 SC 1.4.11)");
         }
     }
+
+    [Fact]
+    public void PreWrapLivesOnTheDiffSegmentsNotOnTheContent()
+    {
+        // Plan 98c80bc3 (Fáze 3): `white-space: pre-wrap` used to sit on `.tm-inline-diff__content`,
+        // so EVERY whitespace text node the markup emitted — between the hidden label and the
+        // <del>/<ins> of a change — painted a visible gap inside the flowing text. pre-wrap belongs
+        // on the SEGMENTS that carry the diff text (they keep their own newlines), while the content
+        // wrapper stays at the normal value so stray inter-element whitespace collapses.
+        ThemeCss.TryProperty(Stylesheet, ".tm-inline-diff__content", "white-space")
+            .Should().BeNull("the content wrapper must not render markup whitespace literally");
+
+        foreach (var segment in new[] { ".tm-inline-diff__equal", ".tm-inline-diff__del", ".tm-inline-diff__ins" })
+        {
+            ThemeCss.Property(Stylesheet, segment, "white-space")
+                .Should().Be("pre-wrap",
+                    $"{segment} carries the diff text, so it keeps its own newlines through pre-wrap");
+        }
+    }
+
+    [Fact]
+    public void TheStackedLayoutPresentsEachSideOfAChangeAsItsOwnRow()
+    {
+        // Plan 98c80bc3 (Fáze 3, review round): Layout=Stacked — the deletion and the insertion of a
+        // change each become their own block row, while the content wrapper stays a plain block so
+        // the UNCHANGED context keeps flowing inline (a flex column would turn every equal fragment
+        // into a row of its own and shred the shared sentence).
+        ThemeCss.Property(Stylesheet, ".tm-inline-diff--stacked .tm-inline-diff__content", "display")
+            .Should().Be("block",
+                "equal context must keep flowing — only the change hunks break onto their own rows");
+        ThemeCss.Property(Stylesheet, ".tm-inline-diff--stacked .tm-inline-diff__change", "display")
+            .Should().Be("block", "the change span owns the stacked rows");
+        ThemeCss.Property(Stylesheet, ".tm-inline-diff--stacked .tm-inline-diff__del", "display")
+            .Should().Be("block", "the deleted side is its own row");
+        ThemeCss.Property(Stylesheet, ".tm-inline-diff--stacked .tm-inline-diff__ins", "display")
+            .Should().Be("block", "the inserted side is its own row");
+    }
+
+    [Fact]
+    public void TheDecisionMarkerKeepsTrailingSpaceInTheInlineRun()
+    {
+        // Review round: the marker rides the insertion row (in stacked it renders INSIDE the block
+        // <ins>), so it needs the trailing inline gap its start margin alone never gave it.
+        ThemeCss.Property(Stylesheet, ".tm-inline-diff__marker", "margin-inline-end")
+            .Should().Be("var(--tm-space-1)");
+    }
 }

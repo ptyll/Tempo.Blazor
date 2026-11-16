@@ -14,6 +14,21 @@
   content: ' *';
   color: var(--tm-color-danger);
 }
+/* The label row (plan 98c80bc3, Fáze 3): TmTextInput / TmTextArea / TmSelect / TmNumberInput render
+   it only when the host fills the LabelTrailing slot, so the label and the slot content (a counter,
+   a status chip) share one inline row instead of the host overlaying absolutely over the field.
+   Shared by the inputs that use the .tm-input-label or .tm-select-label mark. */
+.tm-input-label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--tm-space-2);
+}
+.tm-input-label-trailing {
+  color: var(--tm-text-secondary);
+  font-size: var(--tm-font-size-xs);
+  line-height: var(--tm-line-height-tight);
+}
 .tm-input-container {
   position: relative;
   display: flex;
@@ -214,6 +229,12 @@
 .tm-select-error   { border-color: var(--tm-color-danger) !important; }
 .tm-select-error:focus { box-shadow: var(--tm-focus-ring-danger); }
 .tm-select-disabled, .tm-select[disabled] { background-color: var(--tm-color-gray-50); cursor: not-allowed; }
+/* The readable locked state: surface tint + default cursor, the text keeps the primary ink — the
+   disabled gray above is the different, "this control is off" reading (plan 98c80bc3, Fáze 3).
+   Review round: the decorative chevron is hidden too — a locked select does not open a list, so the
+   arrow would advertise an affordance the control does not have. */
+.tm-select.tm-select-readonly { background-color: var(--tm-bg-surface-secondary); cursor: default; }
+.tm-select.tm-select-readonly ~ .tm-select-arrow { display: none; }
 .tm-select-arrow {
   position: absolute;
   right: var(--tm-space-3);

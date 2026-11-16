@@ -22858,6 +22858,16 @@
       ]
     },
     {
+      "itemName": "InlineDiffLayout",
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models.Diffs",
+      "description": "How TmInlineDiff places the changes inside the text: Inline flows them with their context (the presentation the component always had), Stacked gives each hunk its own row so the deletion and the insertion of a change read one below the other - the presentation for a one-hunk proposal of a whole value. The layout is about the user interface only - both layouts show exactly the same hunks and the same TextDiffResult.Apply output, and every decision surface keeps working.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Diffs/InlineDiffLayout.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "InlineDiffMode",
       "kind": "Enum",
       "category": "Models",
@@ -45087,11 +45097,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1712,
-    "manualItemCount": 1712,
-    "generatedItemCount": 1696,
+    "itemCount": 1713,
+    "manualItemCount": 1713,
+    "generatedItemCount": 1697,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1696
+    "publicApiTypeCount": 1697
   }
 }

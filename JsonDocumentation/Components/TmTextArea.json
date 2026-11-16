@@ -65,6 +65,12 @@
       "description": "Disables the textarea."
     },
     {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Locks the value against edits while keeping it readable: the native textarea carries the readonly attribute and the readable tm-input-readonly surface (not the disabled gray), so a reader can still select and copy the text. Use it instead of Disabled whenever the value itself is the content a user must see but not change."
+    },
+    {
       "name": "Required",
       "type": "bool",
       "isRequired": false,
@@ -81,8 +87,8 @@
       "name": "Id",
       "type": "string",
       "isRequired": false,
-      "default": "Guid.NewGuid().ToString(\"n\")[..8]",
-      "description": "HTML id attribute."
+      "default": "tm-textarea-{n} (sequential, stable for the component instance)",
+      "description": "HTML id attribute. Defaults to a generated sequential id that is stable for the lifetime of the component instance, so the label's for attribute and the derived error id never churn between parameter snapshots."
     },
     {
       "name": "AutoComplete",
@@ -97,6 +103,18 @@
       "description": "When true, fires ValueChanged on every keystroke instead of on blur."
     },
     {
+      "name": "AriaDescribedBy",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Extra ids (a hint counter, a host description) appended to the textarea's aria-describedby chain. The component's own chain stays first (its error message, then a surrounding TmFormField's cascaded help and error), duplicates are dropped."
+    },
+    {
+      "name": "LabelTrailing",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Content rendered at the END of the label row (a character counter, a status chip) — the inline slot a host used to overlay absolutely over the field. Rendered only with the slot set; without it the label markup is unchanged."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,
@@ -106,10 +124,13 @@
   "cssClasses": [
     "tm-input-wrapper",
     "tm-input-label",
+    "tm-input-label-row",
+    "tm-input-label-trailing",
     "tm-input",
     "tm-textarea",
     "tm-input-error",
     "tm-input-disabled",
+    "tm-input-readonly",
     "tm-input-error-message"
   ],
   "methods": [

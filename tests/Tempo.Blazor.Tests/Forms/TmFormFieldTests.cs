@@ -2,6 +2,7 @@ using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components.Forms;
 using Tempo.Blazor.Components.Forms;
+using Tempo.Blazor.Components.Inputs;
 using Tempo.Blazor.Tests.Localization;
 
 namespace Tempo.Blazor.Tests.Forms;
@@ -133,6 +134,58 @@ public class TmFormFieldTests : LocalizationTestBase
         editContext.NotifyValidationStateChanged();
 
         cut.FindAll(".tm-form-field-help").Should().BeEmpty();
+    }
+
+    // ── Described-by cascade (plan 98c80bc3, Fáze 3) ─────────────────────────
+
+    /// <summary>
+    /// Fáze 3: the field's help text carries a stable id ("<c>{Id}-field-help</c>", mirroring the error
+    /// paragraph's <c>{Id}-field-error</c>) and is published to the wrapped control through the
+    /// <c>TmFormFieldDescribedByIds</c> cascade, so a wrapped input with no help text of its own
+    /// references the field-level help through <c>aria-describedby</c> — the same contract the error-id
+    /// cascade already has.
+    /// </summary>
+    [Fact]
+    public void FormField_HelpText_CarriesAStableIdAndIsCascadedToTheWrappedInput()
+    {
+        var cut = Render<TmFormField>(p => p
+            .Add(c => c.Label, "Region")
+            .Add(c => c.Id, "region-field")
+            .Add(c => c.HelpText, "Pick the closest region.")
+            .AddChildContent<TmTextInput>(child => child
+                .Add(x => x.Label, "City")));
+
+        var help = cut.Find(".tm-form-field-help");
+        help.GetAttribute("id").Should().Be("region-field-field-help");
+
+        var described = cut.Find("input").GetAttribute("aria-describedby");
+        described.Should().Be("region-field-field-help",
+            "the wrapped input references the field-level help even though it shows none of its own");
+    }
+
+    [Fact]
+    public void FormField_WithoutHelpText_CascadesNothingAndTheInputShowsNoDescribedBy()
+    {
+        var cut = Render<TmFormField>(p => p
+            .Add(c => c.Label, "Region")
+            .AddChildContent<TmTextInput>(child => child
+                .Add(x => x.Label, "City")));
+
+        cut.Find("input").GetAttribute("aria-describedby").Should().BeNull();
+    }
+
+    [Fact]
+    public void FormField_HelpWithExplicitInputId_ProducesAStableReference()
+    {
+        var cut = Render<TmFormField>(p => p
+            .Add(c => c.Label, "Region")
+            .Add(c => c.Id, "region-field")
+            .Add(c => c.HelpText, "Pick the closest region.")
+            .AddChildContent<TmTextInput>(child => child
+                .Add(x => x.Id, "city-input")
+                .Add(x => x.Label, "City")));
+
+        cut.Find("input").GetAttribute("aria-describedby").Should().Be("region-field-field-help");
     }
 
     private class TestModel

@@ -153,6 +153,15 @@ public partial class TmMultiSelect<TItem, TValue> : TmComponentBase
     [CascadingParameter(Name = Tempo.Blazor.Components.Forms.TmFormField.ErrorIdCascadingName)]
     private string? FormFieldErrorId { get; set; }
 
+    /// <summary>
+    /// Ids a surrounding <c>TmFormField</c> publishes for its own help text (cascaded as
+    /// <c>TmFormField.DescribedByIdsCascadingName</c>; null while the field shows no help). Appended
+    /// to the described-by chain, so a wrapped multi-select with no help text of its own still
+    /// references the field-level help.
+    /// </summary>
+    [CascadingParameter(Name = Tempo.Blazor.Components.Forms.TmFormField.DescribedByIdsCascadingName)]
+    private string? FormFieldDescribedByIds { get; set; }
+
     private string? DescribedBy
     {
         get
@@ -163,8 +172,10 @@ public partial class TmMultiSelect<TItem, TValue> : TmComponentBase
                     ? (!string.IsNullOrEmpty(HelpText) ? $"{HelpId} {fieldError}" : fieldError)
                     : (!string.IsNullOrEmpty(HelpText) ? HelpId : null);
 
-            if (string.IsNullOrWhiteSpace(AriaDescribedBy)) return own;
-            return string.IsNullOrEmpty(own) ? AriaDescribedBy : $"{own} {AriaDescribedBy}";
+            return Tempo.Blazor.Components.Forms.TmDescribedBy.Join(
+                own,
+                FormFieldDescribedByIds,
+                AriaDescribedBy);
         }
     }
 

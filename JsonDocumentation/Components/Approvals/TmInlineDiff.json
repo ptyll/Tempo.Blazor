@@ -34,6 +34,12 @@
       "description": "How the comparison is presented. Default is Display."
     },
     {
+      "name": "Layout",
+      "type": "InlineDiffLayout",
+      "isRequired": false,
+      "description": "How the changes sit in the text. Inline (the default) keeps them flowing with their context; Stacked gives each hunk its own row, so the deletion and the insertion of a change read one below the other — the presentation for a one-hunk proposal of a whole value (an assistant suggesting the complete replacement text of a field). The comparison and every decision surface are unchanged."
+    },
+    {
       "name": "ReadOnly",
       "type": "bool",
       "isRequired": false,
@@ -119,6 +125,7 @@
     "tm-inline-diff",
     "tm-inline-diff--review",
     "tm-inline-diff--lines",
+    "tm-inline-diff--stacked",
     "tm-inline-diff--degraded",
     "tm-inline-diff__toolbar",
     "tm-inline-diff__count",
@@ -155,6 +162,7 @@
   ],
   "notes": [
     "AcceptedHunkIds lists the ids of CHANGES only. The unchanged hunks are part of the applied set internally, because the separator between two changes belongs to the hunk before it.",
-    "A change above TextDiffOptions.MaxTokens / MaxCells degrades to the engine's fallback (line level, then a single whole-text change) and reports it through the data-fallback attribute and a localized note."
+    "A change above TextDiffOptions.MaxTokens / MaxCells degrades to the engine's fallback (line level, then a single whole-text change) and reports it through the data-fallback attribute and a localized note.",
+    "The diff segments (the equal text and the ins/del sides) render with white-space: pre-wrap so multi-line hunks keep their newlines; the content wrapper itself stays at the normal value, so markup whitespace between the elements collapses and never paints a gap inside a change."
   ]
 }

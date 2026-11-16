@@ -384,7 +384,9 @@ public class TmDocumentCommentsTests : LocalizationTestBase
         cut.Find(".tm-comment-composer textarea").Input("Hello @al");
         cut.Find(".tm-comment-composer__mention-option").Click();
 
-        cut.Find(".tm-comment-composer textarea").TextContent.Should().Contain("Hello @Alice Johnson");
+        // Fáze 3 (plan 98c80bc3): the bound value rides the textarea's value ATTRIBUTE — child text
+        // is only an initial default and never reflects a host-driven update.
+        cut.Find(".tm-comment-composer textarea").GetAttribute("value").Should().Contain("Hello @Alice Johnson");
         mentions.Should().ContainSingle(mention => mention.UserId == "u1");
     }
 
@@ -400,7 +402,7 @@ public class TmDocumentCommentsTests : LocalizationTestBase
         cut.Find(".tm-comment-composer textarea").KeyDown(new KeyboardEventArgs { Key = "ArrowDown" });
         cut.Find(".tm-comment-composer textarea").KeyDown(new KeyboardEventArgs { Key = "Enter" });
 
-        cut.Find(".tm-comment-composer textarea").TextContent.Should().Contain("@Bob Stone");
+        cut.Find(".tm-comment-composer textarea").GetAttribute("value").Should().Contain("@Bob Stone");
         mentions.Should().ContainSingle(mention => mention.UserId == "u2");
     }
 

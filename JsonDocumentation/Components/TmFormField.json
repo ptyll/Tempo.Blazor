@@ -2,7 +2,7 @@
   "itemName": "TmFormField",
   "kind": "Component",
   "category": "Forms",
-  "description": "Generic form field wrapper providing a label (with optional required marker), help text, error message display, and a slot for any form control. Supports automatic EditContext validation via the ValidationFor parameter — when inside an EditForm, errors from the validation system appear automatically. Applies error styling whenever an error is active (from ErrorMessage or EditContext).",
+  "description": "Generic form field wrapper providing a label (with optional required marker), help text, error message display, and a slot for any form control. Supports automatic EditContext validation via the ValidationFor parameter — when inside an EditForm, errors from the validation system appear automatically. Applies error styling whenever an error is active (from ErrorMessage or EditContext). The field cascades TWO references to the controls inside it: the error paragraph's id (TmFormFieldErrorId) and the help paragraph's id (TmFormFieldDescribedByIds). The inputs that read the described-by cascade today: TmTextInput, TmTextArea, TmSelect, TmNumberInput, TmDecimalInput, TmMultiSelect, TmEntityPicker, TmRadioGroup, TmCodeEditor and TmExpressionEditor — plus TmFilterableDropdown, which reads BOTH cascades. AriaDescribedBy (the host's extra ids) exists on exactly TmTextInput, TmTextArea, TmSelect, TmNumberInput and TmFilterableDropdown; LabelTrailing exists on exactly TmTextInput, TmTextArea, TmSelect and TmNumberInput. The ids are merged through the internal TmDescribedBy.Join helper (duplicates dropped, split on any whitespace).",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Forms"
   ],
@@ -23,7 +23,7 @@
       "name": "HelpText",
       "type": "string?",
       "isRequired": false,
-      "description": "Helper text shown below the field when there is no error."
+      "description": "Helper text shown below the field when there is no error. The paragraph carries the stable id {Id}-field-help and is published to the wrapped control through the TmFormFieldDescribedByIds cascade, so a wrapped input with no help text of its own still references the field-level help through aria-describedby. Read today by TmTextInput, TmTextArea, TmSelect, TmNumberInput, TmDecimalInput, TmMultiSelect, TmEntityPicker, TmRadioGroup, TmCodeEditor, TmExpressionEditor and TmFilterableDropdown; every other component ignores the cascade."
     },
     {
       "name": "ErrorMessage",

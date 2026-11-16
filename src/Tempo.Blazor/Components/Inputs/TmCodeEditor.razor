@@ -182,7 +182,18 @@
     [CascadingParameter(Name = Tempo.Blazor.Components.Forms.TmFormField.ErrorIdCascadingName)]
     private string? FormFieldErrorId { get; set; }
 
-    private string? DescribedBy => HasError ? ErrorId : FormFieldErrorId;
+    /// <summary>
+    /// Ids a surrounding <c>TmFormField</c> publishes for its own help text (cascaded as
+    /// <c>TmFormField.DescribedByIdsCascadingName</c>; null while the field shows no help). Appended
+    /// to the described-by chain, so a wrapped code editor with no help text of its own still
+    /// references the field-level help.
+    /// </summary>
+    [CascadingParameter(Name = Tempo.Blazor.Components.Forms.TmFormField.DescribedByIdsCascadingName)]
+    private string? FormFieldDescribedByIds { get; set; }
+
+    private string? DescribedBy => Tempo.Blazor.Components.Forms.TmDescribedBy.Join(
+        HasError ? ErrorId : FormFieldErrorId,
+        FormFieldDescribedByIds);
     private string HighlightLanguageClass => string.IsNullOrEmpty(Language) ? string.Empty : $"language-{Language}";
 
     /// <summary>False when <see cref="ValidateJson"/> is on and the current value is not parseable JSON.</summary>
