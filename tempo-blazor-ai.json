@@ -1600,7 +1600,7 @@
       "kind": "Component",
       "category": "AI",
       "namespace": "Tempo.Blazor.Components.AI",
-      "description": "The transcript of an AI conversation plus the streaming machinery around it: a focusable role=log live region that renders the host's turns through TmAiMessage (or a host MessageTemplate), the empty state with the host's suggestion prompts, an optional render window for a very long history, the \"Load older messages\" control, the floating \"New messages\" and \"Stop generating\" pills, and the polite completion note. StreamAsync folds an IAsyncEnumerable<AiStreamDelta> into the message the host appended, throttles the renders through the injected TimeProvider (a Server circuit must not re-render per token), keeps the partial answer on Stop and marks the turn Completed, Stopped or Failed. Auto-scroll follows new content only while the reader is at the bottom — a detached reader gets the \"New messages\" pill instead of a moving viewport — and the scrolling surface is the package's ES module ai-conversation.js (scroll tracking plus a ResizeObserver on the content), so smooth scrolling follows prefers-reduced-motion.",
+      "description": "The transcript of an AI conversation plus the streaming machinery around it: a focusable role=log live region that renders the host's turns through TmAiMessage (or a host MessageTemplate), the empty state with the host's suggestion prompts, an optional render window for a very long history, the \"Load older messages\" control, the floating \"New messages\" and \"Stop generating\" pills, and the polite completion note. StreamAsync folds an IAsyncEnumerable<AiStreamDelta> into the message the host appended, throttles the renders through the injected TimeProvider (a Server circuit must not re-render per token), keeps the partial answer on Stop and marks the turn Completed, Stopped or Failed; a host whose generation does not travel through StreamAsync binds Generating instead and gets the same busy state, Stop notification and completion announcement. Auto-scroll follows new content only while the reader is at the bottom — a detached reader gets the \"New messages\" pill instead of a moving viewport — the log box's own resizes keep a bottom-riding reader pinned, and the scrolling surface is the package's ES module ai-conversation.js (scroll tracking plus a ResizeObserver on the content and the box), so smooth scrolling follows prefers-reduced-motion.",
       "packageId": "Tempo.Blazor.AI",
       "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmAiConversation.razor",
       "documentationStatus": "merged",
@@ -1622,10 +1622,22 @@
           "description": "Additional CSS class(es) for the root element."
         },
         {
+          "name": "Generating",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the host's OWN generation — one that does not travel through StreamAsync — is running right now. The host sets it when it submits its request and clears it when the answer arrived; the component treats that window exactly like a stream: IsGenerating becomes true (the root's data-generating, the log's aria-busy and the built-in Stop pill follow), the true→false edge announces the completed answer when the last turn is Completed, and StopAsync raises OnStop so the host can cancel its own work. Default false: a host that streams through StreamAsync binds nothing — the component drives the state itself and the edge stays silent, so a completion is never announced twice."
+        },
+        {
           "name": "Height",
           "type": "string?",
           "isRequired": false,
           "description": "CSS length of the transcript (for example \"32rem\" or \"100%\"). Default null uses the stylesheet's height."
+        },
+        {
+          "name": "MessagePendingText",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Text of the placeholder a turn with no content yet renders while it waits for its first part (status Pending). The value flows to the built-in TmAiMessage as its PendingText; a host with its own MessageTemplate passes PendingText itself. Default null renders no placeholder — the turn is simply empty until its first token arrives (the pre-2.12 behaviour; a localized default is planned for 3.0, where it becomes a deliberate visual change)."
         },
         {
           "name": "Messages",
@@ -1643,7 +1655,7 @@
           "name": "OnStop",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised once after a running generation was stopped — by the built-in Stop control or by a host calling StopAsync(). The component cancels the token it handed to the stream itself, so this is a notification, not a request: a handler must not call StopAsync() again (it is a no-op, so it cannot loop)."
+          "description": "Raised once after a running generation was stopped — by the built-in Stop control or by a host calling StopAsync(). The component cancels the token it handed to the stream itself, so this is a notification, not a request: a handler must not call StopAsync() again (it is a no-op, so it cannot loop). During a host-driven window (Generating set, no stream) the raised stop asks the host to cancel its own work instead, once per generation window."
         },
         {
           "name": "OnSuggestion",
@@ -1676,7 +1688,7 @@
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "Offer the built-in \"Stop generating\" control while a stream runs. Default true; a host that renders its own stop control (a composer, a toolbar) turns it off and calls StopAsync() itself."
+          "description": "Offer the built-in \"Stop generating\" control while a stream or a Generating window runs — and only while it can act: an uncancelled stream, or a window whose one stop has not been delivered yet (a pill that cannot act must not render). Default true; a host that renders its own stop control (a composer, a toolbar) turns it off and calls StopAsync() itself."
         },
         {
           "name": "Suggestions",
@@ -1705,7 +1717,7 @@
       "kind": "Component",
       "category": "AI",
       "namespace": "Tempo.Blazor.Components.AI",
-      "description": "One turn of an AI conversation (a user prompt or the model's answer): the ordered parts rendered through the safe markdown view, the citation chips with a source preview, the source cards, the follow-up chips and the action toolbar (copy as plain text, regenerate with a version switcher, thumbs up/down with an optional reason, read aloud). A reasoning part renders through TmReasoningPanel (collapsed summary, live counter, steps and inspected sources) and consecutive tool-call parts collapse into one TmToolCallGroup (a single call renders as its own TmToolCallCard). The bubble mirrors itself for a user turn, and the three lifecycle states read differently: streaming streams with the package caret and marks the body busy, stopped shows a localized label, failed shows the error with Retry.",
+      "description": "One turn of an AI conversation (a user prompt or the model's answer): the ordered parts rendered through the safe markdown view, the citation chips with a source preview, the source cards, the follow-up chips and the action toolbar (copy as plain text, regenerate with a version switcher, thumbs up/down with an optional reason, read aloud). A reasoning part renders through TmReasoningPanel (collapsed summary, live counter, steps and inspected sources) and consecutive tool-call parts collapse into one TmToolCallGroup (a single call renders as its own TmToolCallCard). The user turn paints its own bubble token (--tm-ai-user-bubble-bg, a primary tint with a dark counterpart) instead of the neutral secondary surface, and the lifecycle states read differently: streaming streams with the package caret and marks the body busy, a queued turn with no part yet can carry an opt-in PendingText placeholder (aria-busy), stopped shows a localized label, failed shows the error with Retry.",
       "packageId": "Tempo.Blazor.AI",
       "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmAiMessage.razor",
       "documentationStatus": "merged",
@@ -1779,6 +1791,12 @@
           "type": "EventCallback<AiToolCall>",
           "isRequired": false,
           "description": "Raised with the tool call the reader asked to run again, from a failed call's Retry button — inside a single call's card or inside a grouped run. The buttons render only when a handler is bound, so no host gets a button that does nothing."
+        },
+        {
+          "name": "PendingText",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Text of the placeholder the turn renders while its status is Pending and it carries no part yet — the \"the answer is on its way\" line of a turn the host created but has not started streaming. Default null renders nothing (the body stays empty until the first part arrives — the pre-2.12 behaviour). The placeholder carries aria-busy=\"true\", so assistive technology treats the wait as busy; the caret animation belongs to the streaming placeholder instead."
         },
         {
           "name": "ReadAloud",
