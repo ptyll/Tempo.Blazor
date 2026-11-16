@@ -1,5 +1,6 @@
 using Microsoft.Playwright;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Text.Json;
 
 namespace Tempo.Blazor.E2E.AI;
 
@@ -254,6 +255,254 @@ public sealed class AiConversationE2ETests : WasmTestBase
         AssertNoClientErrors();
     }
 
+    // ── Host-driven generation and the pending placeholder (2.12.0) ────────────────────────
+
+    /// <summary>
+    /// The demo's "host-driven generation" card runs a generation with NO stream: the page appends a
+    /// Pending turn, opens the <c>Generating</c> window, produces the answer itself and closes the
+    /// window. The browser proof: the busy state follows (<c>data-generating</c>), the opt-in wait line
+    /// renders while the turn has no content, the answer completes on the host's own write, the
+    /// completion is announced exactly once, and "scroll to the first turn" moves only the transcript.
+    /// </summary>
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task HostDrivenGeneration_RunsTheBusyWindowWithoutAStream()
+    {
+        var page = await OpenPageAsync();
+
+        // The static half: the standalone Pending sample carries the wait line with aria-busy at load.
+        await Microsoft.Playwright.Assertions.Expect(
+                page.Locator("[data-testid='ai-message-pending-sample'] .tm-ai-message__pending"))
+            .ToHaveAttributeAsync("aria-busy", "true");
+
+        await page.Locator("[data-testid='ai-demo-simulate-busy']").ClickAsync();
+
+        // The wait line renders in the SAME render that flips data-generating, and the window is finite —
+        // so the FIRST wait goes to the line (its appearance), not to the attribute (whose polling could
+        // burn the whole window on a slow first WASM render).
+        var waitLine = page.Locator(".tm-ai-conversation .tm-ai-message__pending");
+        await Microsoft.Playwright.Assertions.Expect(waitLine).ToBeVisibleAsync(
+            new LocatorAssertionsToBeVisibleOptions { Timeout = 10000 });
+
+        var conversation = page.Locator("[data-testid='ai-conversation']");
+        await Microsoft.Playwright.Assertions.Expect(conversation)
+            .ToHaveAttributeAsync("data-generating", "true",
+                new LocatorAssertionsToHaveAttributeOptions { Timeout = 10000 });
+
+        // While the turn has no content, the wait line is marked busy (the host named it through
+        // MessagePendingText).
+        await Microsoft.Playwright.Assertions.Expect(waitLine).ToHaveAttributeAsync("aria-busy", "true");
+
+        // The host completes the turn itself; the window closes, the turn reads Completed and the one
+        // completion announcement is on the transcript.
+        await Microsoft.Playwright.Assertions.Expect(conversation)
+            .ToHaveAttributeAsync("data-generating", "false",
+                new LocatorAssertionsToHaveAttributeOptions { Timeout = 15000 });
+        await Microsoft.Playwright.Assertions.Expect(
+                page.Locator($"{AnswerSelector}[data-status='completed']"))
+            .ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 15000 });
+        await Microsoft.Playwright.Assertions.Expect(waitLine)
+            .ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 10000 });
+        await Microsoft.Playwright.Assertions.Expect(
+                page.Locator("[data-testid='ai-conversation-announcement']"))
+            .ToHaveTextAsync("Answer complete", new LocatorAssertionsToHaveTextOptions { Timeout = 10000 });
+
+        // "Scroll to the first turn": the module's scrollToMessage moves ONLY the transcript (the smooth
+        // scroll lands near its top); the page itself does not scroll along. The sample answer is tall
+        // enough to overflow the transcript, so the bottom-riding scroll position is real.
+        var logScrollBefore = await page.EvaluateAsync<double>(
+            "() => document.querySelector('.tm-ai-conversation__log').scrollTop");
+        Assert.IsTrue(logScrollBefore > 100,
+            $"the transcript follows the answer, so it must be scrolled down — was {logScrollBefore}");
+        var pageScrollBefore = await page.EvaluateAsync<double>(
+            "() => document.scrollingElement.scrollTop");
+
+        await page.Locator("[data-testid='ai-demo-scroll-first']").ClickAsync();
+
+        var landedNearTop = false;
+        for (var attempt = 0; attempt < 50 && !landedNearTop; attempt++)
+        {
+            await Task.Delay(100);
+            var scrollTop = await page.EvaluateAsync<double>(
+                "() => document.querySelector('.tm-ai-conversation__log').scrollTop");
+            landedNearTop = scrollTop < 40;
+        }
+
+        Assert.IsTrue(landedNearTop,
+            $"scrollToMessageAsync must bring the first turn into view — log is still at " +
+            $"{await page.EvaluateAsync<double>("() => document.querySelector('.tm-ai-conversation__log').scrollTop")}");
+        var pageScrollAfter = await page.EvaluateAsync<double>(
+            "() => document.scrollingElement.scrollTop");
+        Assert.AreEqual(pageScrollBefore, pageScrollAfter,
+            "scrollToMessageAsync moves the transcript only — the page never scrolls along");
+
+        AssertNoClientErrors();
+    }
+
+    /// <summary>
+    /// Stop during a HOST-DRIVEN window (the demo's simulate control, no stream): the built-in pill asks
+    /// the page through <c>OnStop</c>, the page cancels its own window, and the busy state closes while
+    /// the queued answer is marked <c>stopped</c> — <c>data-generating=false</c> and the pill gone, once
+    /// per window.
+    /// </summary>
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task HostDrivenStop_ClosesTheWindowAndMarksTheAnswerStopped()
+    {
+        var page = await OpenPageAsync();
+        await page.Locator("[data-testid='ai-demo-simulate-busy']").ClickAsync();
+
+        var stop = page.Locator("[data-testid='ai-conversation-stop']");
+        await stop.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000, State = WaitForSelectorState.Visible });
+        await stop.ClickAsync();
+
+        var conversation = page.Locator("[data-testid='ai-conversation']");
+        await Microsoft.Playwright.Assertions.Expect(conversation)
+            .ToHaveAttributeAsync("data-generating", "false",
+                new LocatorAssertionsToHaveAttributeOptions { Timeout = 15000 });
+        await Microsoft.Playwright.Assertions.Expect(
+                page.Locator($"{AnswerSelector}[data-status='stopped']"))
+            .ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 15000 });
+        await Microsoft.Playwright.Assertions.Expect(stop)
+            .ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 10000 });
+        await Microsoft.Playwright.Assertions.Expect(
+                page.Locator(".tm-ai-conversation .tm-ai-message__pending"))
+            .ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 10000 });
+
+        AssertNoClientErrors();
+    }
+
+    /// <summary>
+    /// A reader parked at the bottom stays there when the host shrinks the transcript box: the module's
+    /// box report re-aligns the follow and the re-asserting jump (no animation) keeps the scroll gap
+    /// inside the 48 px band.
+    /// </summary>
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task BoxShrink_AtTheBottom_KeepsTheReaderAtTheBottom()
+    {
+        var page = await OpenPageAsync();
+        await StartAnswerAsync(page);
+        await WaitForCompletedAnswerAsync(page);
+
+        await page.EvaluateAsync<string>(
+            "() => { document.querySelector('.tm-ai-conversation').style.blockSize = '20rem'; }");
+
+        var atBottom = false;
+        string? lastGap = null;
+        for (var attempt = 0; attempt < 50 && !atBottom; attempt++)
+        {
+            await Task.Delay(100);
+            lastGap = await page.EvaluateAsync<string>(
+                "() => { const log = document.querySelector('.tm-ai-conversation__log'); " +
+                "return String(log.scrollHeight - log.scrollTop - log.clientHeight); }");
+            atBottom = double.Parse(lastGap, System.Globalization.CultureInfo.InvariantCulture) <= 48;
+        }
+
+        Assert.IsTrue(atBottom,
+            $"the shrink must leave the bottom-riding reader at the new bottom — last gap {lastGap}px");
+
+        AssertNoClientErrors();
+    }
+
+    /// <summary>
+    /// A reader who scrolled UP is not dragged anywhere by a box shrink and gets no "New messages" pill:
+    /// the shrink is not new content (nothing is generating), so their position and their reading state
+    /// are left alone.
+    /// </summary>
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task BoxShrink_WithTheReaderScrolledUp_DoesNotMoveThemAndPopsNoPill()
+    {
+        var page = await OpenPageAsync();
+        await StartAnswerAsync(page);
+        await WaitForCompletedAnswerAsync(page);
+
+        // A real scroll (not a forced property write alone): the module's scroll handler sees the
+        // crossing and reports the reader as detached.
+        await page.EvaluateAsync<string>(
+            "() => { const log = document.querySelector('.tm-ai-conversation__log'); log.scrollTop = 0; }");
+        var detached = false;
+        for (var attempt = 0; attempt < 30 && !detached; attempt++)
+        {
+            await Task.Delay(100);
+            detached = await page.EvaluateAsync<bool>(
+                "() => { const log = document.querySelector('.tm-ai-conversation__log'); return log.scrollTop < 50; }");
+        }
+
+        Assert.IsTrue(detached, "the reader must actually sit at the top before the shrink");
+        var scrollTopBefore = await page.EvaluateAsync<double>(
+            "() => document.querySelector('.tm-ai-conversation__log').scrollTop");
+
+        await page.EvaluateAsync<string>(
+            "() => { document.querySelector('.tm-ai-conversation').style.blockSize = '20rem'; }");
+        await Task.Delay(600);
+
+        var scrollTopAfter = await page.EvaluateAsync<double>(
+            "() => document.querySelector('.tm-ai-conversation__log').scrollTop");
+        Assert.AreEqual(scrollTopBefore, scrollTopAfter,
+            "a detached reader is never dragged to the bottom by the host resizing the box");
+        await Microsoft.Playwright.Assertions.Expect(
+                page.Locator("[data-testid='ai-conversation-new-messages']"))
+            .ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 5000 });
+
+        AssertNoClientErrors();
+    }
+
+    /// <summary>
+    /// The user turn paints its OWN token (`--tm-ai-user-bubble-bg`) with the 1 px subtle border — never
+    /// again the neutral secondary surface, which IS the page colour in the dark theme. The resolved
+    /// computed style is read in BOTH themes straight from the running page.
+    /// </summary>
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task UserBubble_PaintsItsOwnToken_WithTheSubtleBorder_InBothThemes()
+    {
+        var page = await OpenPageAsync();
+        await StartAnswerAsync(page);
+        await WaitForCompletedAnswerAsync(page);
+
+        async Task<(string Bubble, string Surface, string Border)> ReadBubblePaintAsync()
+        {
+            var json = await page.EvaluateAsync<string>(
+                """
+                () => {
+                    const bubble = document.querySelector(".tm-ai-message--user .tm-ai-message__body");
+                    if (!bubble) {
+                        return "{}";
+                    }
+                    const style = getComputedStyle(bubble);
+                    return JSON.stringify({
+                        bubble: style.backgroundColor,
+                        surface: getComputedStyle(document.querySelector("[data-testid='ai-demo-conversation-host']")).backgroundColor,
+                        border: style.borderTopWidth,
+                    });
+                }
+                """);
+            using var document = JsonDocument.Parse(json);
+            return (document.RootElement.GetProperty("bubble").GetString() ?? "",
+                document.RootElement.GetProperty("surface").GetString() ?? "",
+                document.RootElement.GetProperty("border").GetString() ?? "");
+        }
+
+        var (bubble, surface, border) = await ReadBubblePaintAsync();
+        Assert.AreNotEqual(surface, bubble,
+            $"the light bubble must not paint the neutral surface colour (bubble {bubble}, surface {surface})");
+        Assert.AreEqual("1px", border, "the bubble carries the 1 px subtle border in light");
+
+        await ToggleDarkModeAsync(page);
+        await Microsoft.Playwright.Assertions.Expect(page.Locator(".tm-ai-message--user .tm-ai-message__body"))
+            .ToBeVisibleAsync();
+
+        var (darkBubble, darkSurface, darkBorder) = await ReadBubblePaintAsync();
+        Assert.AreNotEqual(darkSurface, darkBubble,
+            $"the dark bubble must differ from the surface — and from the page, which the old default was " +
+            $"(bubble {darkBubble}, surface {darkSurface})");
+        Assert.AreEqual("1px", darkBorder, "the bubble keeps the 1 px subtle border in dark");
+
+        AssertNoClientErrors();
+    }
+
     // ── Accessibility ──────────────────────────────────────────────────────────────────────
 
     [TestMethod]
@@ -354,6 +603,55 @@ public sealed class AiConversationE2ETests : WasmTestBase
         await page.Locator("[data-testid='ai-conversation']").ScreenshotAsync(new LocatorScreenshotOptions
         {
             Path = Path.Combine(directory, "ai-conversation-dark-375.png"),
+        });
+
+        AssertNoClientErrors();
+    }
+
+    /// <summary>
+    /// Visual review of the HOST-DRIVEN window (2.12.0): the wait line, the busy conversation and the
+    /// built-in Stop pill in light and dark at 1440 px. The review wants the host's CARD — the showcase
+    /// card that carries the simulate control above the transcript — not the whole page. Each theme opens
+    /// its own window, so neither shot races the 2.5 s one.
+    /// </summary>
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task Screenshots_GeneratingWindowLightDark1440()
+    {
+        var page = await OpenPageAsync(1440, 1000);
+        var directory = Path.Combine(FindRepoRoot().FullName, "tests", "Tempo.Blazor.E2E", "__screenshots__", "ai-conversation");
+        Directory.CreateDirectory(directory);
+        var hostCard = page.Locator("[data-testid='ai-conversation-demo'] .showcase-card");
+        var conversation = page.Locator("[data-testid='ai-conversation']");
+
+        await page.Locator("[data-testid='ai-demo-simulate-busy']").ClickAsync();
+        await page.Locator(".tm-ai-conversation .tm-ai-message__pending")
+            .WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+        await Microsoft.Playwright.Assertions.Expect(conversation)
+            .ToHaveAttributeAsync("data-generating", "true",
+                new LocatorAssertionsToHaveAttributeOptions { Timeout = 10000 });
+        await WaitForLayoutToSettleAsync(page, "[data-testid='ai-conversation-demo']");
+        await hostCard.ScreenshotAsync(new LocatorScreenshotOptions
+        {
+            Path = Path.Combine(directory, "ai-conversation-generating-light-1440.png"),
+        });
+
+        // The first window closes on its own (the simulated host answer); the dark shot gets its own
+        // window so both captures show the SAME phase of the contract.
+        await Microsoft.Playwright.Assertions.Expect(conversation)
+            .ToHaveAttributeAsync("data-generating", "false",
+                new LocatorAssertionsToHaveAttributeOptions { Timeout = 15000 });
+        await ToggleDarkModeAsync(page);
+        await page.Locator("[data-testid='ai-demo-simulate-busy']").ClickAsync();
+        await page.Locator(".tm-ai-conversation .tm-ai-message__pending")
+            .WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+        await Microsoft.Playwright.Assertions.Expect(conversation)
+            .ToHaveAttributeAsync("data-generating", "true",
+                new LocatorAssertionsToHaveAttributeOptions { Timeout = 10000 });
+        await WaitForLayoutToSettleAsync(page, "[data-testid='ai-conversation-demo']");
+        await hostCard.ScreenshotAsync(new LocatorScreenshotOptions
+        {
+            Path = Path.Combine(directory, "ai-conversation-generating-dark-1440.png"),
         });
 
         AssertNoClientErrors();

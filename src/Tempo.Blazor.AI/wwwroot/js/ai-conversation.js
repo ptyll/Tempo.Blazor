@@ -7,19 +7,23 @@
 //   detach(root)                      -> stop reporting and release the observers
 //   isNearBottom(root)                -> whether the reader is close enough to the bottom to follow content
 //   scrollToBottom(root, smooth)      -> follow the newest turn (smooth only when motion is allowed)
+//   scrollToMessage(root, id, smooth) -> bring the turn with data-message-id="id" into view
 //
 // Two things are reported back to .NET:
-//   OnScrollStateAsync(bool)      when the reader crosses the near-bottom band themselves
-//   OnContentResizedAsync(bool)   when the transcript's CONTENT changes size (a streamed token, an image
-//                                 that finished loading, an expanded panel) — a scroll handler cannot see
-//                                 that, and it is exactly the case where a detached reader must not be
-//                                 dragged to the bottom.
+//   OnScrollStateAsync(bool)      when the reader crosses the near-bottom band themselves, or when one of
+//                                 the module's own landing resyncs lands on a position .NET does not know
+//                                 (the `scrollToMessage` jump, see below)
+//   OnContentResizedAsync(bool)   when the transcript's geometry changes size — the CONTENT (a streamed
+//                                 token, an image that finished loading, an expanded panel) or the LOG BOX
+//                                 ITSELF (a host resized the panel; height changes only) — a scroll handler
+//                                 cannot see either, and it is exactly the case where a detached reader
+//                                 must not be dragged to the bottom.
 //
 // The resize report carries the position the reader had BEFORE this growth, not the one measured after it:
 // a reader sitting at the bottom is no longer "near the bottom" the instant a token makes the content
 // taller, so a fresh measurement would answer "detached" and pop a "new messages" pill at the very reader
-// who is watching the answer arrive. The tracked state is updated by the reader's own scroll crossings and
-// by this module's own scrollToBottom, which is exactly the state the next growth should react to.
+// who is watching the answer arrive. The tracked state is updated by the reader's own scroll crossings,
+// by this module's own scrollToBottom, and by the detached baseline `scrollToMessage` sets for itself.
 //
 // Following the newest turn is the ONE scroll this module performs itself, and a smooth one fires frames
 // that are still far from the bottom (it starts where the reader was, while the content already grew). Those
@@ -27,11 +31,13 @@
 // still arriving. `scrollToBottom` therefore marks the scroll as its own and stays silent until it lands —
 // released by `scrollend`, by the landing frame, or by a fallback timer — while the first real gesture
 // (wheel, touch, pointer, key) releases the mark immediately, so a reader who takes over is never ignored.
+// `scrollToMessage` shares the mark, but detaches the baseline BEFORE its animation starts: its landing
+// (usually away from the bottom, occasionally right at it) is the honest state, and the release resync
+// reports it when it differs from the baseline .NET was left with.
 //
 // The module is a plain ES module (no eval, no inline handler), imported through IJSObjectReference, so a
 // host Content-Security-Policy needs no 'unsafe-inline' for it. Every entry point is null-safe: a component
 // that lost its root element (a circuit that went away mid-render) gets a quiet false, never a throw.
-
 /**
  * How close to the bottom still counts as "at the bottom", in CSS pixels. A little slack is deliberate:
  * sub-pixel layout rounding otherwise leaves the scroller a few pixels short of the end after every
@@ -100,6 +106,12 @@ function beginProgrammatic(entry, root) {
  * module's own scroll wants: neither the middle of the animation nor its landing is a crossing to report.
  * A reader gesture passes `false`, keeping `lastNear` where the reader left it, so the scroll they cause is
  * still reported as a crossing.
+ *
+ * When the resync lands on a position DIFFERENT from the baseline .NET last knew, the resync itself is
+ * reported: the measured position is the honest state of record and a differing one means .NET's follow
+ * state (`_stickToBottom`) is wrong — the case that matters is `scrollToMessage`, which detaches the
+ * baseline BEFORE its animation starts and whose landing (usually away from the bottom, sometimes right at
+ * it) must reach .NET once it settles.
  */
 function endProgrammatic(entry, root, resync) {
     entry.programmatic = false;
@@ -115,7 +127,12 @@ function endProgrammatic(entry, root, resync) {
     }
 
     if (resync) {
-        entry.lastNear = nearBottom(root);
+        const near = nearBottom(root);
+        const changed = near !== entry.lastNear;
+        entry.lastNear = near;
+        if (changed) {
+            report(entry.dotNetRef, 'OnScrollStateAsync', near);
+        }
     }
 }
 
@@ -136,6 +153,7 @@ export function attach(root, content, dotNetRef) {
         onGesture: null,
         observer: null,
         lastNear: nearBottom(root),
+        boxHeight: null,
         programmatic: false,
         scrollEnd: null,
         releaseTimer: null,
@@ -173,13 +191,43 @@ export function attach(root, content, dotNetRef) {
         root.addEventListener(type, entry.onGesture, { passive: true });
     }
 
-    if (typeof ResizeObserver === 'function' && content) {
-        // Reports `entry.lastNear` — the position before the growth — and not a fresh `nearBottom(root)`:
-        // the growth itself is what pushed the reader out of the bottom band, and a component that hears
-        // "detached" from a reader who never scrolled would offer them the "new messages" pill for the
-        // answer they are watching.
-        entry.observer = new ResizeObserver(() => report(dotNetRef, 'OnContentResizedAsync', entry.lastNear));
-        entry.observer.observe(content);
+    if (typeof ResizeObserver === 'function') {
+        // ONE observer for both surfaces the transcript's geometry lives on: the CONTENT (a streamed
+        // token, an image that finished loading, an expanded panel) and the LOG BOX ITSELF (the host
+        // resized the side panel, a layout split moved, the host's own height binding changed). The BOX
+        // half filters on the box's own HEIGHT: a width-only resize (a scrollbar appearing, a panel
+        // dragging wider) reflows the same number of lines and must not disturb the reader's position.
+        // When the box SHRINKS, `scrollTop` stays where it is while the bottom moves away — a scroll
+        // handler cannot see that either — so a bottom-riding reader is re-aligned by the report: it
+        // carries `entry.lastNear` (the position BEFORE the change), .NET follows the new bottom, and the
+        // jump that re-asserts it runs without animation. A DETACHED reader is never dragged and never
+        // pill-ed: the report carries their position, not the new one. The report carries the position
+        // BEFORE the change for the same reason the content report does: the change itself is what pushed
+        // a bottom-riding reader out of the band, and a fresh measurement would answer "detached" for the
+        // reader who is watching the answer arrive.
+        entry.observer = new ResizeObserver((observed) => {
+            const contentChanged = content !== null && content !== undefined
+                && observed.some((item) => item.target === content);
+            const box = observed.find((item) => item.target === root);
+            let boxHeightChanged = false;
+            if (box && box.contentRect) {
+                const height = box.contentRect.height;
+                boxHeightChanged = entry.boxHeight === null
+                    || Math.abs(height - entry.boxHeight) > 0.5;
+                entry.boxHeight = height;
+            }
+
+            if (!contentChanged && !boxHeightChanged) {
+                return;
+            }
+
+            report(dotNetRef, 'OnContentResizedAsync', entry.lastNear);
+        });
+        if (content) {
+            entry.observer.observe(content);
+        }
+
+        entry.observer.observe(root);
     }
 
     attached.set(root, entry);
@@ -240,6 +288,80 @@ export function scrollToBottom(root, smooth) {
     } catch {
         // A browser without scroll options still gets the jump.
         root.scrollTop = root.scrollHeight;
+    }
+
+    return true;
+}
+
+/**
+ * Escapes an id for an attribute-selector string — inside a quoted CSS string only a backslash and the
+ * quote itself need it. `CSS.escape` would also work, but it escapes for IDENTIFIERS and is not available
+ * in every engine this module is node-tested in.
+ */
+function attributeValueEscape(value) {
+    return value.replace(/["\\]/g, '\\$&');
+}
+
+/**
+ * The log's `padding-top` (in CSS pixels), which sits between the root's border edge and the first
+ * scrollable pixel: `scrollToMessage` measures the target against the border edge, so the padding has to
+ * come off or the turn lands lower than the top by exactly that much. Engines without `getComputedStyle`
+ * (the node tests) get 0 and the border-edge measurement stands.
+ */
+function paddingBoxTop(root) {
+    try {
+        const padding = globalThis.getComputedStyle?.(root)?.paddingTop;
+        return Number.parseFloat(padding ?? '') || 0;
+    } catch {
+        return 0;
+    }
+}
+
+/**
+ * Brings the turn with `data-message-id="messageId"` into view. The scroll moves ONLY the transcript —
+ * the target's offset is measured against the root itself (minus the log's `padding-top`), never through
+ * `scrollIntoView`, which would also scroll the page the component sits on. Like `scrollToBottom`, the
+ * scroll is marked as the module's own (its frames are not reported as a reader crossing) — but the
+ * baseline is detached BEFORE the animation starts (`lastNear = false`: .NET unsticks its follow for a
+ * target that is not the newest turn), and the mark's RELEASE re-syncs `lastNear` to wherever the turn
+ * actually left the reader and REPORTS it when that differs from the detached baseline — the honest
+ * position for the next growth. Returns whether a matching turn was found; a turn outside the render
+ * window (or an empty id) scrolls nothing.
+ */
+export function scrollToMessage(root, messageId, smooth) {
+    if (!root || typeof messageId !== 'string' || messageId.length === 0) {
+        return false;
+    }
+
+    let target = null;
+    try {
+        target = root.querySelector('[data-message-id="' + attributeValueEscape(messageId) + '"]');
+    } catch {
+        return false;
+    }
+
+    if (!target) {
+        return false;
+    }
+
+    const entry = attached.get(root);
+    if (entry) {
+        beginProgrammatic(entry, root);
+        // The jump is the module's own motion, but its DESTINATION is not the bottom: from the moment the
+        // animation starts, "detached" is the state both halves of the package work from, and the landing
+        // resync reports the truth if it differs (a turn near the bottom reports `true` again).
+        entry.lastNear = false;
+    }
+
+    const rootTop = root.getBoundingClientRect().top;
+    const targetTop = target.getBoundingClientRect().top;
+    const top = root.scrollTop + (targetTop - rootTop) - paddingBoxTop(root);
+    const behavior = smooth === true && !prefersReducedMotion() ? 'smooth' : 'auto';
+    try {
+        root.scrollTo({ top, behavior });
+    } catch {
+        // A browser without scroll options still gets the jump.
+        root.scrollTop = top;
     }
 
     return true;

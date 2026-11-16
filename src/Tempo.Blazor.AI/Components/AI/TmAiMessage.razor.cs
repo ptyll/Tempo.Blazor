@@ -140,6 +140,16 @@ public partial class TmAiMessage
     /// <summary>Additional CSS class(es) for the root element.</summary>
     [Parameter] public string? Class { get; set; }
 
+    /// <summary>
+    /// Text of the placeholder the turn renders while its status is <see cref="AiMessageStatus.Pending"/>
+    /// and it carries no part yet — the "the answer is on its way" line of a turn the host created but has
+    /// not started streaming. Default null renders nothing (the body stays empty until the first part
+    /// arrives — the pre-2.12 behaviour; a localized default is planned for 3.0 as a deliberate visual
+    /// change). The placeholder carries <c>aria-busy="true"</c>, so assistive technology treats the wait as
+    /// busy; the caret animation belongs to the streaming placeholder instead.
+    /// </summary>
+    [Parameter] public string? PendingText { get; set; }
+
     /// <summary>Additional HTML attributes applied to the root element.</summary>
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
@@ -181,6 +191,8 @@ public partial class TmAiMessage
     private IReadOnlyList<string> FollowUps => Message is null ? Array.Empty<string>() : (IReadOnlyList<string>)Message.FollowUps.ToList();
 
     private bool IsStreaming => Message?.Status == AiMessageStatus.Streaming;
+
+    private bool IsPending => Message?.Status == AiMessageStatus.Pending;
 
     private int VersionCount => Message?.VersionCount ?? 1;
 

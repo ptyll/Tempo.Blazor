@@ -55,6 +55,63 @@ After:
 <script type="module" src="_content/Tempo.Blazor/js/tm-pin-on-top.js"></script>
 ```
 
+### Added — AI conversation and messages (`Tempo.Blazor.AI`, EmusCz 2.12 Fáze 2)
+
+All four items are additive; the user bubble restyle is a visual change, not a breaking one (see Changed below).
+
+- **`TmAiConversation.Generating` (bool, default `false`) — a busy window for a host-driven generation.**
+  A host whose answer does not travel through `StreamAsync` (its own HTTP call, its own agent loop — the
+  EmusCz assistant panel used to fake this with its own `setBusy`/`SyncBusyAsync` bookkeeping and a hidden
+  completion note) sets `Generating` when it submits its request and clears it when the answer arrived.
+  The component treats the window exactly like a stream: `IsGenerating` follows (the root's
+  `data-generating`, the transcript's `aria-busy` and the built-in "Stop generating" pill), `StopAsync()`
+  raises `OnStop` **once per window** so the host can cancel its own work, and the true→false edge
+  announces "Answer complete" when the last turn is `Completed`. A window whose answer already arrived
+  through `StreamAsync` stays silent on the edge, so a host that binds both hears the completion exactly
+  once (`TmAiConversationGeneratingTests`).
+- **`TmAiConversation.ScrollToBottomAsync()` and `ScrollToMessageAsync(string messageId)`** — the public
+  counterparts of the built-in scrolling. `ScrollToBottomAsync` performs the same guarded,
+  reduced-motion-aware follow the "New messages" pill uses; `ScrollToMessageAsync` brings the turn with
+  `data-message-id` into view, measured against the transcript itself (the page the component sits on
+  never moves) and marked as the module's own scroll, so no animation frame is reported as the reader
+  detaching. Both are quiet no-ops without the browser module (`AutoScroll="false"`, static rendering).
+- **Stick-to-bottom survives a resize of the LOG BOX ITSELF.** The package's `ai-conversation.js` ran its
+  ResizeObserver on the transcript's content only, so a host that resized the panel (a layout split, a
+  host height binding) left a bottom-riding reader stranded above the new bottom and no scroll event ever
+  reported it. One observer now watches the content AND the box; the report still carries the position
+  the reader had BEFORE the change, so a detached reader is never dragged and never pill-ed without a
+  reason.
+- **`TmAiMessage.PendingText` and the `TmAiConversation.MessagePendingText` pass-through** (decision
+  `EMUSCZ-2.12-BREAKING-POINTS` (a)). A turn whose status is `Pending` with no part yet — the host
+  created it but has not started streaming — renders the named wait line with `aria-busy="true"`.
+  Default `null` keeps the pre-2.12 empty body; a localized default is planned for 3.0 as a deliberate
+  visual change (the caret animation stays on the streaming placeholder).
+
+### Changed — the user bubble paints its own token (`Tempo.Blazor.AI`)
+
+- `TmAiMessage`'s user turn filled from `--tm-bg-surface-secondary` — which **is** `--tm-bg-page` in the
+  dark theme (both `#0f172a`, tokens-dark.css), so the dark user bubble was invisible against the
+  transcript. It now paints the new `--tm-ai-user-bubble-bg` token (light: `--tm-color-primary-100`
+  tint; dark: `--tm-color-primary-900`, the `--tm-control-hover-fill` convention) plus a 1 px
+  `--tm-color-border-subtle` boundary. The answer's ink stays the page's own text tokens; body text,
+  secondary text and the markdown-link `--tm-color-primary-text` hold ≥ 4.5:1 on the fill in light, dark
+  and indigo (`TokenContrastTests.AiUserBubbleFill_HoldsTheAnswerInk_AndStaysDistinguishable`).
+  Visual change, not breaking: no parameter, class or DOM changed (decision
+  `EMUSCZ-2.12-BREAKING-POINTS`). To keep the 2.11 look:
+
+  ```css
+  :root {
+      --tm-ai-user-bubble-bg: var(--tm-bg-surface-secondary);
+  }
+
+  .tm-ai-message--user .tm-ai-message__body {
+      border: 0;
+  }
+  ```
+
+  A host that themed the bubble by overriding `--tm-bg-surface-secondary` overrides
+  `--tm-ai-user-bubble-bg` instead. There is no 2.12 Breaking / Migration entry for this surface.
+
 ## 2.11.1 - 2026-11-15
 
 > Patch release over 2.11.0: two defects found by a host application while moving to 2.11.0.

@@ -39,6 +39,13 @@
             {
                 <p class="tm-ai-message__pending tm-ai-streaming">@Loc["TmAiMessage_Generating"]</p>
             }
+            else if (Parts.Count == 0 && IsPending && !string.IsNullOrWhiteSpace(PendingText))
+            {
+                @* A turn the host created but has not started streaming yet. Opt-in through PendingText
+                   (null keeps the pre-2.12 empty body); the placeholder itself is the busy marker, because
+                   the body-level aria-busy only follows the streaming state. *@
+                <p class="tm-ai-message__pending" aria-busy="true">@PendingText</p>
+            }
             @for (var index = 0; index < Parts.Count; index++)
             {
                 var part = Parts[index];

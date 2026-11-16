@@ -187,4 +187,43 @@ public sealed class TmAiMessageCssTests
         css.Should().NotContain("@keyframes");
         css.Should().NotContain("transition:", "nothing in this component animates, so no reduce block is needed here");
     }
+
+    /// <summary>
+    /// 2.12 EmusCz item: the user bubble paints its own token (<c>--tm-ai-user-bubble-bg</c>, a primary
+    /// tint with a dark counterpart in <c>tokens-dark.css</c>) instead of <c>--tm-bg-surface-secondary</c>,
+    /// which IS the page colour in the dark theme — and carries the 1 px
+    /// <c>--tm-color-border-subtle</c> boundary. The declarations are pinned, so a revert to the neutral
+    /// surface (or a dropped border) fails on the string; the contrast and distinguishability of the pair
+    /// are measured by <c>TokenContrastTests.AiUserBubbleFill_HoldsTheAnswerInk_AndStaysDistinguishable</c>.
+    /// </summary>
+    [Fact]
+    public void TheUserBubble_PaintsItsOwnToken_WithTheSubtleBorder()
+    {
+        var bubble = ThemeCss.Normalise(ForRule(".tm-ai-message--user .tm-ai-message__body"));
+
+        bubble.Should().Contain("background-color: var(--tm-ai-user-bubble-bg)",
+            "the neutral --tm-bg-surface-secondary is the PAGE colour in dark — the bubble needs its own token");
+        bubble.Should().Contain("border: var(--tm-border-width) solid var(--tm-color-border-subtle)",
+            "the 1 px subtle border is the bubble's boundary against the transcript");
+    }
+
+    /// <summary>The declarations of the rule whose selector is exactly <paramref name="selector"/>.</summary>
+    private static string ForRule(string selector)
+    {
+        var css = Stylesheet();
+        var start = css.IndexOf(selector + " {", StringComparison.Ordinal);
+        start.Should().BeGreaterThanOrEqualTo(0, $"the stylesheet must keep its {selector} rule");
+        var opened = css.IndexOf('{', start);
+        var depth = 0;
+        for (var index = opened; index < css.Length; index++)
+        {
+            depth += css[index] switch { '{' => 1, '}' => -1, _ => 0 };
+            if (depth == 0)
+            {
+                return css[(opened + 1)..index];
+            }
+        }
+
+        return css[(opened + 1)..];
+    }
 }

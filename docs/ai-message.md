@@ -40,12 +40,25 @@ references them without Blazor or Markdig.
 | `OnRetry` | `EventCallback` | — | Raised when the reader retries a failed generation. |
 | `OnToolCallRetry` | `EventCallback<AiToolCall>` | — | Raised with the tool call the reader asked to run again, from a failed call's Retry button (inside a single card or a grouped run). The buttons render only when a handler is bound. |
 | `ActiveVersionIndexChanged` | `EventCallback<int>` | — | Raised with the target zero-based version index. The component never mutates the model. |
+| `PendingText` | `string?` | `null` | **2.12.0** Text of the placeholder a turn renders while its status is `Pending` and it carries no part yet — the "the answer is on its way" line of a turn the host created but has not started streaming. The placeholder carries `aria-busy="true"`; the caret belongs to the streaming placeholder instead. `null` keeps the pre-2.12 empty body (decision `EMUSCZ-2.12-BREAKING-POINTS` (a); a localized default is planned for 3.0 as a deliberate visual change). |
 | `Class` | `string?` | `null` | Extra CSS class(es) on the root `.tm-ai-message`. |
 | `DataTestId` / `TestIdPrefix` | `string?` | `null` | Inherited from `TmComponentBase`; the default root test id is `ai-message`. |
 
 The root element carries `data-role` (`user`, `assistant`, `system`, `tool`) and `data-status`
 (`pending`, `streaming`, `completed`, `stopped`, `failed`), which is the stable hook for a host's own
 styling and for E2E.
+
+## The user bubble
+
+The user turn paints its own token, `--tm-ai-user-bubble-bg` (2.12.0), instead of
+`--tm-bg-surface-secondary` — which **is** `--tm-bg-page` in the dark theme (both `#0f172a`), so the
+old neutral default left the dark bubble indistinguishable from the transcript around it. Light rides
+the `--tm-color-primary-100` tint, dark lifts to `--tm-color-primary-900` (the
+`--tm-control-hover-fill` convention), and the bubble carries a 1 px `--tm-color-border-subtle`
+boundary. The answer's ink stays the page's own tokens (body text, secondary text and the
+`--tm-color-primary-text` the markdown links paint hold ≥ 4.5:1 on the fill — measured by
+`TokenContrastTests` in light, dark and the indigo theme); a host repoints the token to restyle the
+bubble without touching the transcript.
 
 ## Parts
 
@@ -140,7 +153,8 @@ surviving link gets `target="_blank"` with `rel="noopener noreferrer nofollow"`.
 
 | Status | Rendering |
 |--------|-----------|
-| `Pending`, `Streaming` | The body is `aria-busy="true"`, the last text part carries the package's `.tm-ai-streaming` caret, an empty streaming message shows the localized "Generating an answer" line, and the action bar is not offered (there is nothing to copy or rate yet). |
+| `Pending` | The body carries **no** `aria-busy` — a queued turn is not generating. The only busy marker is the opt-in `PendingText` placeholder (see the parameter table), which itself renders `aria-busy="true"`; `null` renders an empty body (the pre-2.12 behaviour). The action bar is not offered (there is nothing to copy or rate yet). |
+| `Streaming` | The body is `aria-busy="true"`, the last text part carries the package's `.tm-ai-streaming` caret, and an empty streaming message shows the localized "Generating an answer" line (also with the caret). The action bar is not offered. |
 | `Completed` | The action bar with copy, regenerate, read aloud and the thumbs. |
 | `Stopped` | The answer stays, plus the localized "Generation stopped" label. The transition from streaming is announced through the message's live region (a reader waiting on the answer is not touching the page). No retry (the reader stopped it on purpose). |
 | `Failed` | `role="alert"` error block with `Message.Error` (or the localized fallback) and a Retry action when `OnRetry` is bound. The action bar stays next to it: Retry lives in the error block, and a partial answer is still worth copying. |

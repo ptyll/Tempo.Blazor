@@ -37,6 +37,9 @@ public partial class TmAiConversation
     private IReadOnlyList<AiMessage>? _lastMessages;
     private int _lastMessageCount = -1;
     private string? _lastTailId;
+    private bool _generating;
+    private bool _completionAnnounced;
+    private bool _hostStopRaised;
 
     private CancellationTokenSource? _streamCts;
     private string? _announcement;
@@ -80,9 +83,33 @@ public partial class TmAiConversation
     /// Raised once after a running generation was stopped — by the built-in Stop control or by a host calling
     /// <see cref="StopAsync"/>. The component cancels the token it handed to the stream itself, so this is a
     /// notification, not a request: a handler must not call <see cref="StopAsync"/> again (it is a no-op, so
-    /// it cannot loop).
+    /// it cannot loop). While a host-driven generation runs (<see cref="Generating"/> with no stream), the
+    /// raised stop asks the host to cancel its own work instead, once per generation window.
     /// </summary>
     [Parameter] public EventCallback OnStop { get; set; }
+
+    /// <summary>
+    /// Whether the host's OWN generation — one that does not travel through <see cref="StreamAsync"/> — is
+    /// running right now. The host sets it when it submits its request and clears it when the answer
+    /// arrived; the component treats that window exactly like a stream: <see cref="IsGenerating"/> becomes
+    /// true (the root's <c>data-generating</c>, the log's <c>aria-busy</c> and the built-in Stop pill
+    /// follow), the true→false edge announces the completed answer when the last turn is
+    /// <see cref="AiMessageStatus.Completed"/>, and <see cref="StopAsync"/> raises <see cref="OnStop"/> so
+    /// the host can cancel its own work. Default false: a host that streams through
+    /// <see cref="StreamAsync"/> binds nothing — the component drives the state itself and the edge stays
+    /// silent, so a completion is never announced twice.
+    /// </summary>
+    [Parameter] public bool Generating { get; set; }
+
+    /// <summary>
+    /// Text of the placeholder a turn with no content yet renders while it waits for its first part
+    /// (<see cref="AiMessageStatus.Pending"/>). The value flows to the built-in <see cref="TmAiMessage"/>
+    /// as its <c>PendingText</c>; a host with its own <see cref="MessageTemplate"/> passes
+    /// <c>PendingText</c> itself. Default null renders no placeholder — the turn is simply empty until its
+    /// first token arrives (the pre-2.12 behaviour; a localized default is planned for 3.0, where it
+    /// becomes a deliberate visual change).
+    /// </summary>
+    [Parameter] public string? MessagePendingText { get; set; }
 
     /// <summary>
     /// How many of the newest turns are rendered; <see langword="null"/> (the default) renders every turn.
@@ -104,8 +131,10 @@ public partial class TmAiConversation
     [Parameter] public TimeSpan RenderThrottle { get; set; } = TimeSpan.FromMilliseconds(50);
 
     /// <summary>
-    /// Offer the built-in "Stop generating" control while a stream runs. Default true; a host that renders
-    /// its own stop control (a composer, a toolbar) turns it off and calls <see cref="StopAsync"/> itself.
+    /// Offer the built-in "Stop generating" control while a stream or a Generating window runs. Default
+    /// true; a host that renders its own stop control (a composer, a toolbar) turns it off and calls
+    /// <see cref="StopAsync"/> itself. The pill renders only while it can act — an uncancelled stream, or
+    /// a host-driven window whose one stop has not been delivered yet.
     /// </summary>
     [Parameter] public bool ShowStop { get; set; } = true;
 
@@ -134,16 +163,26 @@ public partial class TmAiConversation
 
     private bool ShowLoadOlder => _windowStart > 0;
 
+    /// <summary>
+    /// Whether the built-in Stop affordance can DO something right now: an uncancelled stream token, or a
+    /// host-driven window whose one stop has not been delivered yet. A pill that cannot act must not
+    /// render — a control the reader can press but that does nothing is worse than a missing control.
+    /// </summary>
+    private bool CanStop => _streamCts is { IsCancellationRequested: false }
+        || (_streamCts is null && Generating && OnStop.HasDelegate && !_hostStopRaised);
+
     /// <summary>Whether the floating bar (the "New messages" and "Stop generating" pills) renders.</summary>
-    private bool ShowOverlayBar => _hasNewMessages || (IsGenerating && ShowStop);
+    private bool ShowOverlayBar => _hasNewMessages || (CanStop && ShowStop);
 
     private string? HeightStyle => string.IsNullOrWhiteSpace(Height) ? null : $"block-size: {Height}";
 
     /// <summary>
-    /// Whether a generation is running right now. The host reads it to disable a send button or to render
-    /// its own stop affordance; the value is also published on the root as <c>data-generating</c>.
+    /// Whether a generation is running right now — a stream the component folded itself
+    /// (<see cref="StreamAsync"/>) or a host-driven one (<see cref="Generating"/>). The host reads it to
+    /// disable a send button or to render its own stop affordance; the value is also published on the root
+    /// as <c>data-generating</c>.
     /// </summary>
-    public bool IsGenerating => _streamCts is not null;
+    public bool IsGenerating => _streamCts is not null || Generating;
 
     /// <summary>
     /// The clock behind the render throttle. Resolved through the service provider so a host that never
@@ -164,6 +203,7 @@ public partial class TmAiConversation
             || !string.Equals(tailId, _lastTailId, StringComparison.Ordinal);
 
         SyncRenderWindow(messages, contentChanged);
+        SyncGeneratingWindow(messages);
 
         if (contentChanged)
         {
@@ -173,6 +213,31 @@ public partial class TmAiConversation
         _lastMessages = messages;
         _lastMessageCount = messages.Count;
         _lastTailId = tailId;
+    }
+
+    /// <summary>
+    /// The bookkeeping of a host-driven generation window. Opening one resets the two once-per-window
+    /// flags; closing one announces the completed answer — the same note <see cref="StreamAsync"/> speaks,
+    /// so a screen reader hears "Answer complete" no matter which half of the package drove the generation.
+    /// A window whose answer already arrived through <see cref="StreamAsync"/> stays silent: the stream
+    /// announced the completion, and <see cref="_completionAnnounced"/> is how the edge knows.
+    /// </summary>
+    private void SyncGeneratingWindow(IReadOnlyList<AiMessage> messages)
+    {
+        if (Generating && !_generating)
+        {
+            _completionAnnounced = false;
+            _hostStopRaised = false;
+        }
+        else if (!Generating && _generating
+            && !_completionAnnounced
+            && messages.Count > 0
+            && messages[^1].Status == AiMessageStatus.Completed)
+        {
+            Announce(Loc["TmAiConversation_Completed"]);
+        }
+
+        _generating = Generating;
     }
 
     /// <inheritdoc />
@@ -217,7 +282,7 @@ public partial class TmAiConversation
         {
             // A conversation opens at its latest turn; the reader never has to scroll down to find it.
             _stickToBottom = true;
-            await ScrollToBottomAsync(smooth: false);
+            await ScrollToBottomCoreAsync(smooth: false);
             return;
         }
 
@@ -245,7 +310,7 @@ public partial class TmAiConversation
                 await InvokeAsync(StateHasChanged);
             }
 
-            await ScrollToBottomAsync(smooth: true);
+            await ScrollToBottomCoreAsync(smooth: true);
             return;
         }
 
@@ -376,6 +441,8 @@ public partial class TmAiConversation
         var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _streamCts = cts;
         _announcement = null;
+        _completionAnnounced = false;
+        _hostStopRaised = false;
         _contentDirty = true;
 
         var throttle = RenderThrottle > TimeSpan.Zero ? RenderThrottle : TimeSpan.Zero;
@@ -454,6 +521,7 @@ public partial class TmAiConversation
         if (failure is null && !stopped && message.Status == AiMessageStatus.Completed)
         {
             Announce(Loc["TmAiConversation_Completed"]);
+            _completionAnnounced = true;
         }
 
         _contentDirty = true;
@@ -466,19 +534,40 @@ public partial class TmAiConversation
     }
 
     /// <summary>
-    /// Stops the running generation: the token handed to the host's stream is cancelled, the partial answer
-    /// is kept and marked <see cref="AiMessageStatus.Stopped"/>, and <see cref="OnStop"/> is raised once. A
-    /// call while nothing is running is a no-op, so a host may call it defensively.
+    /// Stops the running generation. With a stream running, the token handed to the host's stream is
+    /// cancelled, the partial answer is kept and marked <see cref="AiMessageStatus.Stopped"/>, and
+    /// <see cref="OnStop"/> is raised once. When that stream runs inside a host-driven window
+    /// (<see cref="Generating"/> set), the raise consumes the window's one stop
+    /// (<c>_hostStopRaised</c>), so a host that keeps its flag up after the stream ends is never asked a
+    /// second time — and the pill loses its action and disappears with it. With a host-driven generation
+    /// instead (<see cref="Generating"/> set, no stream), there is no token to cancel — the raised
+    /// <see cref="OnStop"/> IS the stop: it asks the host to cancel its own work, once per generation
+    /// window. A call while nothing is running is a no-op, so a host may call it defensively.
     /// </summary>
-    /// <returns>A task that completes when the cancellation was requested.</returns>
+    /// <returns>A task that completes when the cancellation was requested (or the stop was delivered).</returns>
     public async Task StopAsync()
     {
         var cts = _streamCts;
-        if (cts is null || cts.IsCancellationRequested)
+        if (cts is null)
+        {
+            if (Generating && !_hostStopRaised && OnStop.HasDelegate)
+            {
+                _hostStopRaised = true;
+                await OnStop.InvokeAsync();
+            }
+
+            return;
+        }
+
+        if (cts.IsCancellationRequested)
         {
             return;
         }
 
+        // The raise below is the window's ONE stop when the host drives Generating as well: mark it as
+        // spent BEFORE the cancellation lands, so a host still busy-flagged after the stream ends cannot
+        // be asked again (and the pill's guard turns off in the same render).
+        _hostStopRaised = true;
         cts.Cancel();
 
         if (OnStop.HasDelegate)
@@ -533,14 +622,17 @@ public partial class TmAiConversation
     });
 
     /// <summary>
-    /// Called by the package's ES module when the transcript's content changed size (a streamed token, an
-    /// image that finished loading, an expanded panel). While a generation runs and the reader is away from
-    /// the bottom, the growth is reported as new content instead of pulling the viewport away.
+    /// Called by the package's ES module when the transcript's geometry changed size — the CONTENT (a
+    /// streamed token, an image that finished loading, an expanded panel) or, since the box-own observer,
+    /// the LOG BOX ITSELF (the host resized the panel, a layout split moved). While a generation runs and
+    /// the reader is away from the bottom, the growth is reported as new content instead of pulling the
+    /// viewport away.
     /// </summary>
     /// <remarks>
-    /// The value is the position the reader had BEFORE the growth, which is the module's contract: a reader
-    /// sitting at the bottom is outside the bottom band the instant a token makes the content taller, so a
-    /// post-growth measurement would answer "detached" for the reader who is watching the answer arrive.
+    /// The value is the position the reader had BEFORE the change, which is the module's contract: a reader
+    /// sitting at the bottom is outside the bottom band the instant a token makes the content taller (or a
+    /// shrink moves the bottom), so a post-change measurement would answer "detached" for the reader who is
+    /// watching the answer arrive.
     /// </remarks>
     /// <param name="isNearBottom">Whether the scroll position was within the module's bottom tolerance.</param>
     /// <returns>A task that completes when the state was applied.</returns>
@@ -562,7 +654,9 @@ public partial class TmAiConversation
                 StateHasChanged();
             }
 
-            await ScrollToBottomAsync(smooth: true);
+            // A box resize is a one-off correction, not an animation the reader is watching: jump to the
+            // new bottom instead of flying there (a smooth scroll during a shrink reads as judder).
+            await ScrollToBottomCoreAsync(smooth: false);
             return;
         }
 
@@ -589,9 +683,101 @@ public partial class TmAiConversation
     {
         _hasNewMessages = false;
         _stickToBottom = true;
-        await ScrollToBottomAsync(smooth: true);
+        await ScrollToBottomCoreAsync(smooth: true);
         await InvokeAsync(StateHasChanged);
     }
+
+    /// <summary>
+    /// Follows the newest turn on the host's behalf — the SAME jump the built-in "New messages" pill
+    /// performs, not just another scroll probe: the pill (if it was up) is dismissed and the follow is
+    /// re-armed, so the next appended turn is followed again instead of pill-ed. A host calls it when its
+    /// own state says the reader should be at the bottom (its own "jump to latest" control, or after it
+    /// finished a host-driven <see cref="Generating"/> window it kept off the bottom). Without the browser
+    /// module (<c>AutoScroll="false"</c>, static rendering) the call is a quiet no-op: the host that owns
+    /// the scrolling surface owns the scrolling.
+    /// </summary>
+    /// <returns>A task that completes when the jump was applied.</returns>
+    public Task ScrollToBottomAsync() => InvokeAsync(async () =>
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        await JumpToLatestCoreAsync();
+    });
+
+    /// <summary>
+    /// Brings the turn with <paramref name="messageId"/> into view — the row the transcript rendered with
+    /// <c>data-message-id</c>. The module scrolls ONLY the transcript (the page the component sits on never
+    /// moves), marks the scroll as its own so the animation cannot be reported as the reader detaching, and
+    /// honours reduced motion; the mark's release reports the honest position when it differs from the
+    /// detached baseline the jump set. Unless the named turn IS the newest one, the jump also detaches the
+    /// follow: the next appended turn is news for a reader who was just taken somewhere else, so it pops
+    /// the "New messages" pill instead of being followed. The method answers whether the named turn
+    /// actually moved: <see langword="false"/> for an empty id, without the browser module
+    /// (<c>AutoScroll="false"</c>, static rendering), for an id the transcript cannot resolve, or when the
+    /// interop failed.
+    /// </summary>
+    /// <param name="messageId">The <see cref="AiMessage.Id"/> of the turn to show.</param>
+    /// <returns>Whether the transcript scrolled to the named turn.</returns>
+    public Task<bool> ScrollToMessageAsync(string messageId)
+    {
+        // ComponentBase.InvokeAsync has no value-returning overload, so the dispatcher hop carries the
+        // answer out through a completion source: the work (and the module call inside it) still runs on
+        // the component's dispatcher — the same thread the scroll state lives on.
+        var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _ = InvokeAsync(async () =>
+        {
+            try
+            {
+                completion.TrySetResult(await ScrollToMessageCoreAsync(messageId));
+            }
+            catch (Exception exception)
+            {
+                completion.TrySetException(exception);
+            }
+        });
+
+        return completion.Task;
+    }
+
+    /// <summary>Runs on the component's dispatcher — the guarded body of <see cref="ScrollToMessageAsync"/>.</summary>
+    private async Task<bool> ScrollToMessageCoreAsync(string messageId)
+    {
+        if (_disposed || string.IsNullOrWhiteSpace(messageId))
+        {
+            return false;
+        }
+
+        var module = _module;
+        if (module is null || !_attached)
+        {
+            return false;
+        }
+
+        try
+        {
+            var moved = await module.InvokeAsync<bool>("scrollToMessage", _logRef, messageId, true);
+            if (moved && !IsLastTurn(messageId))
+            {
+                // The reader was taken AWAY from the bottom: the honest baseline for the next growth is
+                // detached, and the module's own release report keeps its internal state in sync.
+                _stickToBottom = false;
+                _scrollReported = true;
+            }
+
+            return moved;
+        }
+        catch (Exception exception) when (IsInteropFailure(exception))
+        {
+            return false;
+        }
+    }
+
+    /// <summary>Whether <paramref name="messageId"/> names the newest turn of the host's list.</summary>
+    private bool IsLastTurn(string messageId)
+        => MessageList.Count > 0 && string.Equals(MessageList[^1].Id, messageId, StringComparison.Ordinal);
 
     // ── Interop plumbing ──────────────────────────────────────────────────────────────────────
 
@@ -633,7 +819,7 @@ public partial class TmAiConversation
         }
     }
 
-    private async Task ScrollToBottomAsync(bool smooth)
+    private async Task ScrollToBottomCoreAsync(bool smooth)
     {
         var module = _module;
         if (module is null || !_attached)

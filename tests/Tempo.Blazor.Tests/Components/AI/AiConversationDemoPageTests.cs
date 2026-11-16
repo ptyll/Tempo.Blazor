@@ -2,6 +2,7 @@ using System.Globalization;
 using AngleSharp.Dom;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 using Tempo.Blazor.AI.Models;
 using Tempo.Blazor.Components.AI;
 using Tempo.Blazor.Demo.SharedUI.Pages;
@@ -22,7 +23,9 @@ namespace Tempo.Blazor.Tests.Components.AI;
 /// The stream is the page's own <c>IAsyncEnumerable</c> generator, so a scenario runs exactly like a host's:
 /// a suggestion click or a composer submit appends the user turn, appends the pending assistant turn and
 /// awaits <c>StreamAsync</c>. bUnit awaits the event handler, which means the assertions run on a finished
-/// generation — no polling helper is needed here.
+/// generation — no polling helper is needed here. The host-driven simulation waits on the INJECTED
+/// <see cref="TimeProvider"/> (a <see cref="FakeTimeProvider"/> here), so its window is opened, advanced
+/// and stopped deterministically instead of by sleeping.
 /// </remarks>
 public class AiConversationDemoPageTests : DemoPageLocalizationTestBase
 {
@@ -31,13 +34,21 @@ public class AiConversationDemoPageTests : DemoPageLocalizationTestBase
     private const string MessageModulePath = "./_content/Tempo.Blazor.AI/js/ai-message.js";
     private const string MarkdownModulePath = "./_content/Tempo.Blazor.AI/js/ai-markdown.js";
 
+    /// <summary>Mirrors the page's <c>HostDrivenBusyMs</c> — how long the simulated window stays open.</summary>
+    private static readonly TimeSpan HostDrivenBusy = TimeSpan.FromMilliseconds(2_500);
+
+    private readonly FakeTimeProvider _clock = new();
+
     public AiConversationDemoPageTests()
     {
+        Services.AddSingleton<TimeProvider>(_clock);
+
         var conversation = JSInterop.SetupModule(ConversationModulePath);
         conversation.SetupVoid("attach", _ => true).SetVoidResult();
         conversation.SetupVoid("detach", _ => true).SetVoidResult();
         conversation.Setup<bool>("isNearBottom", _ => true).SetResult(true);
         conversation.SetupVoid("scrollToBottom", _ => true).SetVoidResult();
+        conversation.Setup<bool>("scrollToMessage", _ => true).SetResult(true);
 
         var composer = JSInterop.SetupModule(ComposerModulePath);
         composer.SetupVoid("attach", _ => true).SetVoidResult();
@@ -249,6 +260,102 @@ public class AiConversationDemoPageTests : DemoPageLocalizationTestBase
 
         // …and the sample still renders as readable text, so the demo shows WHAT was neutralized.
         hostile.TextContent.Should().Contain("script");
+    }
+
+    [Fact]
+    public void PendingPlaceholderCard_RendersTheOptInWaitLine()
+    {
+        var cut = Render<AiConversationPage>();
+
+        var card = cut.Find("[data-testid='ai-pending-demo']");
+        var placeholder = card.QuerySelector(".tm-ai-message__pending");
+        placeholder.Should().NotBeNull("the Pending sample turn carries the opt-in wait line");
+        placeholder!.GetAttribute("aria-busy").Should().Be("true");
+        placeholder.TextContent.Trim().Should().NotBeEmpty();
+        placeholder.ClassList.Should().NotContain("tm-ai-streaming",
+            "the caret belongs to a streaming answer; the queued turn waits without one");
+    }
+
+    /// <summary>
+    /// The host-driven simulation opens NO stream: it flips <c>Generating</c>, produces the answer itself
+    /// and closes the window. The window's wait runs on the injected fake clock, so the test parks the
+    /// click, asserts the OPEN window, then advances and asserts the finished answer
+    /// (<c>Completed</c>, window closed, the "scroll to the first turn" control appears — it exercises
+    /// <c>ScrollToMessageAsync</c>).
+    /// </summary>
+    [Fact]
+    public async Task HostDrivenSimulation_CompletesTheAnswerWithoutAStream()
+    {
+        var cut = Render<AiConversationPage>();
+
+        cut.Find("[data-testid='ai-demo-busy-window']").TextContent.Trim().Should().Be("closed");
+        cut.FindAll("[data-testid='ai-demo-scroll-first']").Should().BeEmpty(
+            "a scroll control without a turn to scroll to would be a dead button");
+
+        // The handler parks on the fake clock's delay: start the click without awaiting the whole window.
+        var window = cut.InvokeAsync(() => cut.Find("[data-testid='ai-demo-simulate-busy']").Click());
+        cut.WaitForState(() => cut.Find(".tm-ai-conversation").GetAttribute("data-generating") == "true");
+
+        cut.FindAll("[data-testid='ai-message']").Count.Should().Be(2,
+            "the simulation appends the user prompt and its answer");
+        cut.Find(".tm-ai-conversation").GetAttribute("data-generating").Should().Be("true");
+        cut.Find("[data-testid='ai-demo-simulate-busy']").GetAttribute("aria-disabled").Should().Be("true",
+            "aria-disabled (not the native attribute) marks the busy window");
+        cut.Find("[data-testid='ai-demo-busy-window']").TextContent.Trim().Should().Be("open");
+        cut.FindAll(".tm-ai-conversation .tm-ai-message__pending").Should().ContainSingle(
+            "the queued turn names its wait through the template's PendingText");
+
+        // Advance ON THE DISPATCHER: the delay's continuation (and the handler's StateHasChanged) must run
+        // on the renderer's thread — advancing from the test thread would resume the handler on the wrong
+        // thread and the render would never flush.
+        await cut.InvokeAsync(() => _clock.Advance(HostDrivenBusy));
+        await window;
+
+        var answer = cut.FindAll("[data-testid='ai-message'][data-role='assistant']")[0];
+        answer.GetAttribute("data-status").Should().Be("completed",
+            "the host completed the turn itself; no StreamAsync ran");
+        answer.TextContent.Should().Contain("retry budget");
+        cut.Find("[data-testid='ai-demo-busy-window']").TextContent.Trim().Should().Be("closed",
+            "the window closed once the host's answer arrived");
+        cut.Find(".tm-ai-conversation").GetAttribute("data-generating").Should().Be("false");
+        cut.Find("[data-testid='ai-demo-simulate-busy']").GetAttribute("aria-disabled").Should().Be("false");
+
+        await cut.Find("[data-testid='ai-demo-scroll-first']").ClickAsync();
+    }
+
+    /// <summary>
+    /// The built-in Stop pill during the host-driven window raises <c>OnStop</c> once; the page's handler
+    /// cancels the window's own delay, marks the answer <c>Stopped</c> and closes the busy flag — the
+    /// whole chain a real host runs against its own HTTP call.
+    /// </summary>
+    [Fact]
+    public async Task HostDrivenStop_CancelsTheWindowAndMarksTheAnswerStopped()
+    {
+        var cut = Render<AiConversationPage>();
+
+        var window = cut.InvokeAsync(() => cut.Find("[data-testid='ai-demo-simulate-busy']").Click());
+        cut.WaitForState(() => cut.Find(".tm-ai-conversation").GetAttribute("data-generating") == "true");
+        cut.FindAll("[data-testid='ai-conversation-stop']").Should().ContainSingle(
+            "a host-driven window is a running generation");
+
+        await cut.Find("[data-testid='ai-conversation-stop']").ClickAsync();
+        await window;
+
+        var answer = cut.FindAll("[data-testid='ai-message'][data-role='assistant']")[0];
+        answer.GetAttribute("data-status").Should().Be("stopped", "the host's stop marks the queued turn");
+        answer.TextContent.Should().NotContain("retry budget", "the cancelled window never wrote the answer");
+        cut.Find(".tm-ai-conversation").GetAttribute("data-generating").Should().Be("false");
+        cut.Find("[data-testid='ai-demo-busy-window']").TextContent.Trim().Should().Be("closed");
+        cut.FindAll("[data-testid='ai-conversation-stop']").Should().BeEmpty(
+            "the window's one stop is spent");
+        cut.FindAll("[data-testid='ai-conversation-announcement']").Should().BeEmpty(
+            "a stopped window is not announced as a completed answer");
+
+        // The window is spent: the pill is gone, and a defensive second StopAsync raises nothing.
+        var conversation = cut.FindComponent<TmAiConversation>().Instance;
+        await cut.InvokeAsync(() => conversation.StopAsync());
+        answer.GetAttribute("data-status").Should().Be("stopped");
+        cut.FindAll("[data-testid='ai-conversation-announcement']").Should().BeEmpty();
     }
 
     [Fact]

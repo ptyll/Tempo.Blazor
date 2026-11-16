@@ -155,6 +155,31 @@ public sealed class TmAiConversationTests : LocalizationTestBase
         cut.FindComponents<TmAiMessage>().Should().BeEmpty("the host template owns the whole turn");
     }
 
+    /// <summary>
+    /// The pending placeholder is opt-in at the conversation level too: a host without a
+    /// <see cref="TmAiConversation.MessageTemplate"/> names the placeholder through
+    /// <see cref="TmAiConversation.MessagePendingText"/> and the built-in <see cref="TmAiMessage"/> receives
+    /// it as its <c>PendingText</c> — the host does not have to template the whole turn to get the wait
+    /// line (decision EMUSCZ-2.12-BREAKING-POINTS (a); null = today's behaviour).
+    /// </summary>
+    [Fact]
+    public void MessagePendingText_FlowsToTheBuiltInMessage()
+    {
+        var pending = new AiMessage { Id = "answer-1", Role = AiMessageRole.Assistant, Status = AiMessageStatus.Pending };
+        var cut = Render<TmAiConversation>(parameters => parameters
+            .Add(component => component.Messages, new List<AiMessage> { pending })
+            .Add(component => component.MessagePendingText, "Waiting for the first token"));
+
+        var placeholder = cut.Find(".tm-ai-message__pending");
+        placeholder.TextContent.Should().Be("Waiting for the first token");
+        placeholder.GetAttribute("aria-busy").Should().Be("true");
+
+        var withoutText = Render<TmAiConversation>(parameters => parameters
+            .Add(component => component.Messages, new List<AiMessage> { pending }));
+
+        withoutText.FindAll(".tm-ai-message__pending").Should().BeEmpty("null keeps the pre-2.12 empty body");
+    }
+
     // ── Empty state ──────────────────────────────────────────────────────────────────────────────
 
     [Fact]

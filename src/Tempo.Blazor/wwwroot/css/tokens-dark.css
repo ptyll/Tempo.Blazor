@@ -16,6 +16,11 @@
   --tm-bg-surface:           #1e293b;
   --tm-bg-surface-secondary: #0f172a;
   --tm-bg-muted:             #334155;
+  /* TmAiMessage user bubble — see tokens.css. The light alias points at primary-100, which would stay
+     a near-white pill on the dark transcript; the dark fill takes the 900 step (the
+     --tm-control-hover-fill convention): opaque, clearly off both --tm-bg-page and --tm-bg-surface,
+     and ≥4.5:1 under the page's own ink (measured by TokenContrastTests in both themes). */
+  --tm-ai-user-bubble-bg:    var(--tm-color-primary-900);
   --tm-bg-overlay:           rgba(0, 0, 0, 0.7);
   /* See tokens.css: the stacked-modal scrim is a share of the page scrim, and the dark page scrim is
      0.7, so the derived cue is 0.28 — still clearly lighter than a second full scrim. */
@@ -419,6 +424,7 @@
   --tm-bg-surface:                  var(--tm-color-white);
   --tm-bg-surface-secondary:        var(--tm-color-gray-50);
   --tm-bg-muted:                    var(--tm-color-gray-100);
+  --tm-ai-user-bubble-bg:           var(--tm-color-primary-100);
   --tm-bg-overlay:                  rgba(0, 0, 0, 0.5);
   --tm-modal-stacked-scrim:         color-mix(in srgb, var(--tm-bg-overlay) 40%, transparent);
   --tm-border-color:                var(--tm-color-gray-200);

@@ -4,6 +4,7 @@
 @using Tempo.Blazor.AI.Services
 @using Tempo.Blazor.Components.AI
 @inject ITmLocalizer Loc
+@inject TimeProvider Clock
 
 <PageTitle>@Loc["TmDemo_AiConversation_Title"] - Tempo.Blazor</PageTitle>
 
@@ -142,11 +143,48 @@
             <span class="ai-demo-hint">@Loc["TmDemo_AiConversation_KeyboardHint"]</span>
         </div>
 
+        @* The host-driven controls live ON the conversation's card (above the transcript): a host-driven
+           window is a property of THIS conversation, not a separate surface. aria-disabled instead of the
+           native attribute keeps the button reachable while the window is open — the handler guards a
+           second start anyway. *@
+        <h3 class="ai-demo-subheading">@Loc["TmDemo_AiConversation_HostDrivenHeading"]</h3>
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-3">
+            @Loc["TmDemo_AiConversation_HostDrivenIntro"]
+        </p>
+        <div class="ai-demo-actions mb-3">
+            <button type="button"
+                    class="ai-demo-button"
+                    data-testid="ai-demo-simulate-busy"
+                    aria-disabled="@(_isGenerating ? "true" : "false")"
+                    @onclick="SimulateHostDrivenAnswerAsync">
+                @Loc["TmDemo_AiConversation_SimulateBusy"]
+            </button>
+            @if (_messages.Count > 0)
+            {
+                <button type="button"
+                        class="ai-demo-button"
+                        data-testid="ai-demo-scroll-first"
+                        @onclick="ScrollToFirstTurnAsync">
+                    @Loc["TmDemo_AiConversation_ScrollToFirst"]
+                </button>
+            }
+        </div>
+
         <div class="ai-demo-conversation" data-testid="ai-demo-conversation-host">
+            @* The page owns the per-turn template, so the pending placeholder rides the template's
+               PendingText — a host with its own MessageTemplate passes PendingText itself; the
+               conversation-level MessagePendingText pass-through is for hosts WITHOUT a template (the
+               placeholder shows while a turn is Pending with no parts). Generating binds the page's own
+               busy flag: the streamed answers announce their completion inside StreamAsync, so the
+               Generating edge stays silent (never two announcements for one answer). OnStop is the
+               host-driven stop path: the built-in pill raises it ONCE per window, and the page cancels
+               the window's own delay, marks the answer Stopped and closes the flag. *@
             <TmAiConversation @ref="_conversation"
                               Messages="_messages"
+                              Generating="_isGenerating"
                               Suggestions="_suggestions"
                               OnSuggestion="SendPromptAsync"
+                              OnStop="StopHostDrivenGenerationAsync"
                               Height="34rem">
                 <MessageTemplate Context="message">
                     @* The host owns the per-turn actions: the built-in TmAiMessage renders the content and the
@@ -156,6 +194,7 @@
                     @if (message.Role == AiMessageRole.Assistant)
                     {
                         <TmAiMessage Message="message"
+                                     PendingText="@Loc["TmDemo_AiConversation_PendingText"]"
                                      OnRegenerate="() => RegenerateAsync(message)"
                                      OnFeedback="feedback => HandleFeedbackAsync(message, feedback)"
                                      OnRetry="() => RetryAnswerAsync(message)"
@@ -166,7 +205,9 @@
                     }
                     else
                     {
-                        <TmAiMessage Message="message" OnCitationClick="HandleCitationClickAsync" />
+                        <TmAiMessage Message="message"
+                                     PendingText="@Loc["TmDemo_AiConversation_PendingText"]"
+                                     OnCitationClick="HandleCitationClickAsync" />
                     }
                 </MessageTemplate>
             </TmAiConversation>
@@ -219,6 +260,10 @@
                 <dt>@Loc["TmDemo_AiConversation_LastRetry"]</dt>
                 <dd data-testid="ai-demo-last-retry">@(_lastRetry ?? Loc["TmDemo_AiConversation_None"])</dd>
             </div>
+            <div class="ai-demo-status__item">
+                <dt>@Loc["TmDemo_AiConversation_BusyWindow"]</dt>
+                <dd data-testid="ai-demo-busy-window">@(_isGenerating ? Loc["TmDemo_AiConversation_Busy"] : Loc["TmDemo_AiConversation_Idle"])</dd>
+            </div>
         </dl>
     </div>
 </section>
@@ -261,6 +306,19 @@
         </div>
     </div>
 
+    <div class="showcase-card mt-4" data-testid="ai-pending-demo">
+        <h3 class="ai-demo-subheading">@Loc["TmDemo_AiConversation_PendingHeading"]</h3>
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-3">
+            @Loc["TmDemo_AiConversation_PendingIntro"]
+        </p>
+        @* Its own test id: the transcript selectors ([data-testid='ai-message'], usually scoped to
+           .tm-ai-conversation, but the bUnit page tests also count them page-wide) must not see this
+           standalone sample as a transcript turn. *@
+        <TmAiMessage Message="_pendingSample"
+                    PendingText="@Loc["TmDemo_AiConversation_PendingText"]"
+                    DataTestId="ai-message-pending-sample" />
+    </div>
+
     <div class="showcase-card mt-4" data-testid="ai-reasoning-demo">
         <h3 class="ai-demo-subheading">@Loc["TmDemo_AiConversation_ReasoningHeading"]</h3>
         <p class="text-sm text-slate-600 dark:text-slate-400 mb-3">
@@ -292,9 +350,44 @@
     /// <summary>The blank line that separates two markdown blocks streamed into the same text part.</summary>
     private const string BlockSeparator = "\n\n";
 
+    /// <summary>How long the host-driven simulation keeps the Generating window open. Long enough for a
+    /// browser lane to catch the wait line after the click's first WASM render.</summary>
+    private const int HostDrivenBusyMs = 2500;
+
+    /// <summary>
+    /// Sample CONTENT of the simulated host-driven prompt — English on purpose, like every other sample
+    /// answer of this page (the LABELS are the localized half). Tall on purpose: the answer has to
+    /// overflow the 34rem transcript, or "scroll to the first turn" has nothing to climb back through.
+    /// </summary>
+    private const string HostDrivenPrompt = "What changed since the last run?";
+
+    private const string HostDrivenAnswer =
+        "The stream stayed green and two things changed: the retry budget moved from three attempts to "
+        + "five, and the warm-up stage now runs before the first real request.\n\n"
+        + "The rest of this answer is padding with a purpose: the transcript has to overflow, so the "
+        + "scroll-to-first control demonstrates a real climb and the stick-to-bottom has a real bottom to "
+        + "hold while the window is open.\n\n"
+        + "| Area | Before | Now |\n"
+        + "| --- | --- | --- |\n"
+        + "| Retry budget | 3 attempts | 5 attempts |\n"
+        + "| Warm-up stage | off | before the first request |\n"
+        + "| Deploy windows | nightly | nightly (unchanged) |\n\n"
+        + "The warm-up call the agent now issues before its first request:\n\n"
+        + "```text\nGET /warmup?tenant=current\nAuthorization: Bearer <token>\n```\n\n"
+        + "Nothing else moved — the API keys and the tenant quotas are the same as yesterday, and the "
+        + "on-call rota kept its shape, so no further review is needed before the next release.";
+
     private readonly List<AiMessage> _messages = [];
     private readonly DemoMentionProvider _mentions = new();
     private readonly string[] _models = ["gpt-4o", "o3-mini", "tempo-local"];
+
+    /// <summary>The static Pending turn of the standalone placeholder card (never streams).</summary>
+    private readonly AiMessage _pendingSample = new()
+    {
+        Id = "pending-sample",
+        Role = AiMessageRole.Assistant,
+        Status = AiMessageStatus.Pending,
+    };
 
     private DemoSlashCommands _commands = null!;
     private IReadOnlyList<string> _suggestions = [];
@@ -309,6 +402,12 @@
     private string? _lastRetry;
     private AiFeedback? _feedback;
     private LastSubmission _lastSubmission = LastSubmission.Empty;
+
+    /// <summary>The cancellation of the host-driven window's own delay — what the stop path flips.</summary>
+    private CancellationTokenSource? _hostDrivenCts;
+
+    /// <summary>The Pending answer of the open host-driven window; it is what a stop marks Stopped.</summary>
+    private AiMessage? _hostDrivenAnswer;
 
     /// <inheritdoc />
     protected override void OnInitialized()
@@ -393,6 +492,104 @@
         if (_conversation is not null)
         {
             await _conversation.StopAsync();
+        }
+    }
+
+    /// <summary>
+    /// A host-driven generation the way EmusCz used to fake it with its own busy bookkeeping: the page
+    /// opens NO stream — it appends a Pending turn, flips the <c>Generating</c> window on, produces the
+    /// answer itself and flips the window off. The conversation owns the busy state, the wait line, the
+    /// Stop notification and the one completion announcement. The wait runs on the INJECTED
+    /// <see cref="TimeProvider"/> (so tests drive it with a fake clock) and carries a token the stop path
+    /// cancels: the built-in pill raises <c>OnStop</c> once per window and this page honours it.
+    /// </summary>
+    private async Task SimulateHostDrivenAnswerAsync()
+    {
+        if (_isGenerating)
+        {
+            // aria-disabled keeps the control reachable while the window is open — the guard is the
+            // actual "one window at a time" rule.
+            return;
+        }
+
+        var answer = new AiMessage
+        {
+            Role = AiMessageRole.Assistant,
+            Status = AiMessageStatus.Pending,
+        };
+
+        _messages.Add(new AiMessage(AiMessageRole.User, HostDrivenPrompt) { Status = AiMessageStatus.Completed });
+        _messages.Add(answer);
+        _isGenerating = true;
+        _hostDrivenAnswer = answer;
+
+        var cts = new CancellationTokenSource();
+        _hostDrivenCts = cts;
+        StateHasChanged();
+
+        try
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(HostDrivenBusyMs), Clock, cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // The stop path already flipped the state (the answer is Stopped, the window closed) and
+            // rendered; this continuation only cleans up.
+            return;
+        }
+        finally
+        {
+            if (ReferenceEquals(_hostDrivenCts, cts))
+            {
+                _hostDrivenCts = null;
+            }
+
+            cts.Dispose();
+        }
+
+        answer.Parts.Add(new AiTextPart(HostDrivenAnswer));
+        answer.Status = AiMessageStatus.Completed;
+        _hostDrivenAnswer = null;
+        _isGenerating = false;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// The <c>OnStop</c> handler of the conversation — the ONE stop of the host-driven window, raised by
+    /// the built-in pill (or a host calling <see cref="TmAiConversation.StopAsync"/>). It cancels the
+    /// window's delay, marks the answer <see cref="AiMessageStatus.Stopped"/> and closes the busy flag,
+    /// exactly what a real host does to its own HTTP call.
+    /// </summary>
+    private Task StopHostDrivenGenerationAsync()
+    {
+        var cts = _hostDrivenCts;
+        if (cts is null)
+        {
+            // A stop raised while a STREAM runs belongs to the stream (StopGenerationAsync's path); the
+            // host-driven window has nothing to cancel.
+            return Task.CompletedTask;
+        }
+
+        _hostDrivenCts = null;
+        cts.Cancel();
+        cts.Dispose();
+
+        if (_hostDrivenAnswer is { Status: AiMessageStatus.Pending } answer)
+        {
+            answer.Status = AiMessageStatus.Stopped;
+        }
+
+        _hostDrivenAnswer = null;
+        _isGenerating = false;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>The public scroll API: brings the transcript's first turn into view (no page scroll).</summary>
+    private async Task ScrollToFirstTurnAsync()
+    {
+        if (_conversation is not null && _messages.Count > 0)
+        {
+            await _conversation.ScrollToMessageAsync(_messages[0].Id);
         }
     }
 
@@ -500,6 +697,16 @@
 
     private Task ResetAsync()
     {
+        if (_hostDrivenCts is { } windowCts)
+        {
+            // A reset during an open host-driven window cancels the window without marking anything —
+            // the list it would describe is being emptied.
+            _hostDrivenCts = null;
+            windowCts.Cancel();
+            windowCts.Dispose();
+        }
+
+        _hostDrivenAnswer = null;
         _messages.Clear();
         _generation = 0;
         _toolCallRetries = 0;

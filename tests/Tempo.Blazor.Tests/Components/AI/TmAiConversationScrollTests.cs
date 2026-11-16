@@ -28,6 +28,7 @@ public sealed class TmAiConversationScrollTests : LocalizationTestBase
         module.SetupVoid("detach", _ => true).SetVoidResult();
         module.Setup<bool>("isNearBottom", _ => true).SetResult(nearBottom);
         module.SetupVoid("scrollToBottom", _ => true).SetVoidResult();
+        module.Setup<bool>("scrollToMessage", _ => true).SetResult(true);
         return module;
     }
 
@@ -243,6 +244,194 @@ public sealed class TmAiConversationScrollTests : LocalizationTestBase
         await cut.InvokeAsync(() => cut.Instance.DisposeAsync().AsTask());
 
         TmAiConversationTests.Count(module, "detach").Should().Be(1);
+    }
+
+    // ── Host-initiated scrolling ─────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// A host that reacts to its own state (its "jump to latest" toolbar item, its own busy handling) asks
+    /// the component instead of poking the DOM: the public <see cref="TmAiConversation.ScrollToBottomAsync"/>
+    /// runs the same guarded, reduced-motion-aware follow the built-in pill uses.
+    /// </summary>
+    [Fact]
+    public async Task ScrollToBottomAsync_PublicMethod_FollowsTheTranscript()
+    {
+        var module = SetupInterop(nearBottom: true);
+        var cut = Render<TmAiConversation>(parameters => parameters.Add(component => component.Messages, Conversation(2)));
+        var before = TmAiConversationTests.Count(module, "scrollToBottom");
+
+        await cut.InvokeAsync(() => cut.Instance.ScrollToBottomAsync());
+
+        TmAiConversationTests.Count(module, "scrollToBottom").Should().Be(before + 1);
+    }
+
+    /// <summary>A caller without the module (AutoScroll off, static rendering) gets a quiet no-op.</summary>
+    [Fact]
+    public async Task ScrollToBottomAsync_WithoutTheModule_IsANoOp()
+    {
+        var module = SetupInterop(nearBottom: true);
+        var cut = Render<TmAiConversation>(parameters => parameters
+            .Add(component => component.Messages, Conversation(2))
+            .Add(component => component.AutoScroll, false));
+        var before = TmAiConversationTests.Count(module, "scrollToBottom");
+
+        await cut.InvokeAsync(() => cut.Instance.ScrollToBottomAsync());
+
+        TmAiConversationTests.Count(module, "scrollToBottom").Should().Be(before);
+    }
+
+    /// <summary>
+    /// The public <see cref="TmAiConversation.ScrollToBottomAsync"/> is the same jump the "New messages"
+    /// pill performs, not just another scroll probe: it dismisses the pill AND re-arms the follow, so the
+    /// next appended turn is followed again instead of pill-ed. (The pre-fix version called the bare
+    /// scrollToBottom interop, which left the pill on screen and the follow detached.)
+    /// </summary>
+    [Fact]
+    public async Task ScrollToBottomAsync_DismissesThePill_AndReArmsTheFollow()
+    {
+        var module = SetupInterop(nearBottom: false);
+        var messages = Conversation(2);
+        var cut = Render<TmAiConversation>(parameters => parameters
+            .Add(component => component.Messages, messages)
+            .Add(component => component.Generating, true));
+
+        await cut.InvokeAsync(() => cut.Instance.OnScrollStateAsync(false));
+        messages.Add(TmAiConversationTests.Message("m-2"));
+        cut.Render(parameters => parameters.Add(component => component.Messages, messages));
+        cut.FindAll(NewMessages).Should().ContainSingle("the reader is detached while the generation runs");
+        var before = TmAiConversationTests.Count(module, "scrollToBottom");
+
+        await cut.InvokeAsync(() => cut.Instance.ScrollToBottomAsync());
+
+        cut.FindAll(NewMessages).Should().BeEmpty("the public jump dismisses the pill like the built-in one");
+        TmAiConversationTests.Count(module, "scrollToBottom").Should().Be(before + 1);
+
+        messages.Add(TmAiConversationTests.Message("m-3"));
+        cut.Render(parameters => parameters.Add(component => component.Messages, messages));
+
+        TmAiConversationTests.Count(module, "scrollToBottom").Should().Be(before + 2,
+            "the follow is re-armed: the next turn is followed again");
+        cut.FindAll(NewMessages).Should().BeEmpty();
+    }
+
+    /// <summary>
+    /// A host can name a turn (its "go to the answer" link, an error anchor): the public
+    /// <see cref="TmAiConversation.ScrollToMessageAsync"/> asks the module to bring that row into view
+    /// through the same programmatic-scroll contract (the module owns the geometry and the smooth/reduced
+    /// motion decision) and answers whether the named turn actually moved.
+    /// </summary>
+    [Fact]
+    public async Task ScrollToMessageAsync_AsksTheModuleToBringTheTurnIntoView_AndAnswersTrue()
+    {
+        var module = SetupInterop(nearBottom: true);
+        var cut = Render<TmAiConversation>(parameters => parameters.Add(component => component.Messages, Conversation(3)));
+
+        var moved = await cut.InvokeAsync(() => cut.Instance.ScrollToMessageAsync("m-1"));
+
+        moved.Should().BeTrue("the module reported a matching turn");
+        var calls = module.Invocations.Where(invocation => invocation.Identifier == "scrollToMessage").ToList();
+        calls.Should().ContainSingle();
+        calls[0].Arguments.Should().HaveCount(3);
+        calls[0].Arguments[1].Should().Be("m-1");
+    }
+
+    /// <summary>The module answers false for a turn it cannot find — the host gets the honest false.</summary>
+    [Fact]
+    public async Task ScrollToMessageAsync_UnknownTurn_AnswersFalse()
+    {
+        var module = SetupInterop(nearBottom: true);
+        module.Setup<bool>("scrollToMessage", _ => true).SetResult(false);
+        var cut = Render<TmAiConversation>(parameters => parameters.Add(component => component.Messages, Conversation(2)));
+
+        var moved = await cut.InvokeAsync(() => cut.Instance.ScrollToMessageAsync("m-missing"));
+
+        moved.Should().BeFalse("an id the transcript cannot resolve moved nothing");
+        TmAiConversationTests.Count(module, "scrollToMessage").Should().Be(1, "the usable id still reached the browser");
+    }
+
+    /// <summary>An interop failure (a gone circuit, a module that threw) is a quiet false.</summary>
+    [Fact]
+    public async Task ScrollToMessageAsync_InteropFailure_AnswersFalse()
+    {
+        var module = SetupInterop(nearBottom: true);
+        module.Setup<bool>("scrollToMessage", _ => true)
+            .SetException(new Microsoft.JSInterop.JSException("circuit gone"));
+        var cut = Render<TmAiConversation>(parameters => parameters.Add(component => component.Messages, Conversation(2)));
+
+        var moved = await cut.InvokeAsync(() => cut.Instance.ScrollToMessageAsync("m-1"));
+
+        moved.Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task ScrollToMessageAsync_WithoutAUsableId_IsANoOpThatAnswersFalse(string? messageId)
+    {
+        var module = SetupInterop(nearBottom: true);
+        var cut = Render<TmAiConversation>(parameters => parameters.Add(component => component.Messages, Conversation(2)));
+
+        var moved = await cut.InvokeAsync(() => cut.Instance.ScrollToMessageAsync(messageId!));
+
+        moved.Should().BeFalse();
+        module.Invocations.Where(invocation => invocation.Identifier == "scrollToMessage")
+            .Should().BeEmpty("an unusable id must not reach the browser");
+    }
+
+    [Fact]
+    public async Task ScrollToMessageAsync_WithoutTheModule_IsANoOpThatAnswersFalse()
+    {
+        var module = SetupInterop(nearBottom: true);
+        var cut = Render<TmAiConversation>(parameters => parameters
+            .Add(component => component.Messages, Conversation(2))
+            .Add(component => component.AutoScroll, false));
+
+        var moved = await cut.InvokeAsync(() => cut.Instance.ScrollToMessageAsync("m-1"));
+
+        moved.Should().BeFalse();
+        module.Invocations.Where(invocation => invocation.Identifier == "scrollToMessage").Should().BeEmpty();
+    }
+
+    /// <summary>
+    /// Scrolling to a turn that is NOT the newest detaches the follow: the next appended turn is news for
+    /// the reader who was just taken somewhere else, so it is not followed and the "New messages" pill
+    /// appears instead.
+    /// </summary>
+    [Fact]
+    public async Task ScrollToMessageAsync_TargetIsNotTheLastTurn_DetachesAndOffersThePill()
+    {
+        var module = SetupInterop(nearBottom: true);
+        var messages = Conversation(3);
+        var cut = Render<TmAiConversation>(parameters => parameters.Add(component => component.Messages, messages));
+
+        var moved = await cut.InvokeAsync(() => cut.Instance.ScrollToMessageAsync("m-1"));
+        moved.Should().BeTrue();
+
+        messages.Add(TmAiConversationTests.Message("m-3"));
+        cut.Render(parameters => parameters.Add(component => component.Messages, messages));
+
+        TmAiConversationTests.Count(module, "scrollToBottom").Should().Be(1,
+            "the only scroll so far is the first-render follow — the turn appended after a targeted scroll is NOT followed");
+        cut.FindAll(NewMessages).Should().ContainSingle();
+    }
+
+    /// <summary>Scrolling to the NEWEST turn keeps the follow semantics intact.</summary>
+    [Fact]
+    public async Task ScrollToMessageAsync_TargetIsTheLastTurn_KeepsFollowing()
+    {
+        var module = SetupInterop(nearBottom: true);
+        var messages = Conversation(3);
+        var cut = Render<TmAiConversation>(parameters => parameters.Add(component => component.Messages, messages));
+
+        var moved = await cut.InvokeAsync(() => cut.Instance.ScrollToMessageAsync("m-2"));
+        moved.Should().BeTrue();
+
+        messages.Add(TmAiConversationTests.Message("m-3"));
+        cut.Render(parameters => parameters.Add(component => component.Messages, messages));
+
+        TmAiConversationTests.Count(module, "scrollToBottom").Should().Be(2, "the follow survives a jump to the newest turn");
+        cut.FindAll(NewMessages).Should().BeEmpty();
     }
 
     private static async IAsyncEnumerable<AiStreamDelta> Parking(

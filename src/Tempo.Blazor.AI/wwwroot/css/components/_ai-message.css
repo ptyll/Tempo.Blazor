@@ -51,11 +51,17 @@
     max-inline-size: 100%;
 }
 
+/* The user turn paints its OWN token (--tm-ai-user-bubble-bg, a primary tint with a dark counterpart in
+   tokens-dark.css) instead of --tm-bg-surface-secondary, which IS the page colour in the dark theme —
+   the 2.12 EmusCz item that made the dark bubble vanish into the transcript. The 1 px subtle border is
+   the bubble's boundary against the transcript. Contrast of the answer's ink on the fill is measured by
+   TokenContrastTests in both themes; forced colors remap the whole rule to Canvas below. */
 .tm-ai-message--user .tm-ai-message__body {
     max-inline-size: min(100%, 42rem);
     padding: var(--tm-space-3);
+    border: var(--tm-border-width) solid var(--tm-color-border-subtle);
     border-radius: var(--tm-radius-lg);
-    background-color: var(--tm-bg-surface-secondary);
+    background-color: var(--tm-ai-user-bubble-bg);
 }
 
 /* The markdown body is a flex child: it has to be allowed to shrink, or a wide table/code block would

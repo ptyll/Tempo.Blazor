@@ -431,6 +431,80 @@ public sealed class TmAiMessageTests : LocalizationTestBase
         pending.TextContent.Should().Contain("Generating an answer");
     }
 
+    // ── The pending placeholder (opt-in through PendingText, 2.12) ─────────────────────────────
+
+    /// <summary>
+    /// A turn the host created but has not started streaming (status <c>Pending</c>, no part) renders the
+    /// placeholder only when the host names it. The placeholder is the wait indicator: it carries
+    /// <c>aria-busy="true"</c> itself, because the body-level busy flag only follows the streaming state.
+    /// </summary>
+    [Fact]
+    public void PendingTurn_WithPendingText_RendersThePlaceholderAsBusy()
+    {
+        var message = new AiMessage { Id = "a", Role = AiMessageRole.Assistant, Status = AiMessageStatus.Pending };
+
+        var cut = Render<TmAiMessage>(parameters => parameters
+            .Add(component => component.Message, message)
+            .Add(component => component.PendingText, "Working on it"));
+
+        var pending = cut.Find(".tm-ai-message__pending");
+        pending.TextContent.Should().Be("Working on it");
+        pending.GetAttribute("aria-busy").Should().Be("true");
+        pending.ClassList.Should().NotContain("tm-ai-streaming", "the caret belongs to a streaming answer, not to a queued turn");
+        cut.Find(".tm-ai-message").GetAttribute("data-status").Should().Be("pending");
+    }
+
+    /// <summary>Null keeps the pre-2.12 behaviour: an empty body, no placeholder line.</summary>
+    [Fact]
+    public void PendingTurn_WithoutPendingText_RendersNoPlaceholder()
+    {
+        var message = new AiMessage { Id = "a", Role = AiMessageRole.Assistant, Status = AiMessageStatus.Pending };
+
+        var cut = Render<TmAiMessage>(parameters => parameters.Add(component => component.Message, message));
+
+        cut.FindAll(".tm-ai-message__pending").Should().BeEmpty();
+        cut.Find(".tm-ai-message__body").GetAttribute("aria-busy").Should().BeNull(
+            "the turn is queued, not generating — only the opt-in placeholder marks the wait");
+    }
+
+    [Fact]
+    public void PendingTurn_WithParts_RendersNoPlaceholder()
+    {
+        var message = new AiMessage { Id = "a", Role = AiMessageRole.Assistant, Status = AiMessageStatus.Pending };
+        message.Parts.Add(new AiTextPart("already has content"));
+
+        var cut = Render<TmAiMessage>(parameters => parameters
+            .Add(component => component.Message, message)
+            .Add(component => component.PendingText, "Working on it"));
+
+        cut.FindAll(".tm-ai-message__pending").Should().BeEmpty("the placeholder is only for a turn without any part");
+    }
+
+    [Theory]
+    [InlineData(AiMessageStatus.Streaming)]
+    [InlineData(AiMessageStatus.Completed)]
+    [InlineData(AiMessageStatus.Stopped)]
+    [InlineData(AiMessageStatus.Failed)]
+    public void NonPendingTurn_IgnoresPendingText(AiMessageStatus status)
+    {
+        var message = new AiMessage { Id = "a", Role = AiMessageRole.Assistant, Status = status };
+
+        var cut = Render<TmAiMessage>(parameters => parameters
+            .Add(component => component.Message, message)
+            .Add(component => component.PendingText, "Working on it"));
+
+        var placeholders = cut.FindAll(".tm-ai-message__pending");
+        if (status == AiMessageStatus.Streaming)
+        {
+            placeholders.Should().ContainSingle().Which.ClassList.Should().Contain("tm-ai-streaming",
+                "the streaming turn keeps its localized placeholder and the caret");
+        }
+        else
+        {
+            placeholders.Should().BeEmpty("the host's PendingText is not a status label for terminal states");
+        }
+    }
+
     [Fact]
     public void CompletedMessage_DoesNotClaimToBeBusyNorStream()
     {

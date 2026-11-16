@@ -474,6 +474,12 @@ public sealed partial class TokenContrastTests
         var intentionalDifferences = new HashSet<string>(StringComparer.Ordinal)
         {
             "--tm-bg-muted", "--tm-bg-page", "--tm-bg-surface", "--tm-bg-surface-secondary",
+            // 2.12 EmusCz item: the TmAiMessage user bubble is a primary TINT — light rides the 100 step
+            // on the light transcript, dark lifts to the 900 step (the control-hover-fill convention),
+            // because the light step would stay a near-white pill on the dark transcript. The difference
+            // IS the point of the token; the contrast is measured by
+            // AiUserBubbleFill_HoldsTheAnswerInk_AndStaysDistinguishable.
+            "--tm-ai-user-bubble-bg",
             "--tm-border-color", "--tm-border-color-control", "--tm-border-color-strong",
             "--tm-cal-range-bg",
             "--tm-cal-comparison-border",

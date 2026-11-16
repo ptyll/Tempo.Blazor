@@ -173,6 +173,14 @@
   --tm-bg-surface:             var(--tm-color-white);
   --tm-bg-surface-secondary:   var(--tm-color-gray-50);
   --tm-bg-muted:               var(--tm-color-gray-100);
+  /* The TmAiMessage USER turn bubble (2.12, EmusCz 2.12 item). A primary tint instead of the neutral
+     --tm-bg-surface-secondary, so the reader's own turns read as authored on their own surface — and
+     because --tm-bg-surface-secondary IS --tm-bg-page in the dark theme (both #0f172a), the neutral
+     default left the dark bubble indistinguishable from the transcript around it. The ink on the fill
+     stays the page's own text tokens (body text, secondary text and the --tm-color-primary-text the
+     markdown links paint hold ≥4.5:1 on it — TokenContrastTests, both themes, indigo included); dark
+     lifts the fill to the 900 step, the same convention as --tm-control-hover-fill. */
+  --tm-ai-user-bubble-bg:      var(--tm-color-primary-100);
   --tm-bg-overlay:             rgba(0, 0, 0, 0.5);
   /* The scrim a SECOND, stacked modal paints (TmModal/TmDialog opened over another one). It is a
      light share of the same scrim colour, not a second full one: without it the page behind two

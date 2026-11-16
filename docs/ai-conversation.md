@@ -40,13 +40,15 @@ model records and `AiMessageStreamApplier` live in `Tempo.Blazor.Abstractions` (
 |-----------|------|---------|-------------|
 | `Messages` | `IReadOnlyList<AiMessage>?` | `null` | The turns, oldest first. The host owns the list: append a turn and the component renders it. Reassigning the property to a **new list instance** counts as loading another conversation (the window snaps to the newest turns); appending to the same instance keeps the window where the reader left it. |
 | `MessageTemplate` | `RenderFragment<AiMessage>?` | `null` | Replaces the built-in `TmAiMessage` of every turn, so a host attaches its own per-turn actions without the conversation re-declaring them. |
+| `MessagePendingText` | `string?` | `null` | **2.12.0** Text of the placeholder a turn with no content yet renders while it waits for its first part (`Pending`). Flows to the built-in `TmAiMessage` as its `PendingText`; a host with its own `MessageTemplate` passes `PendingText` itself. `null` renders no placeholder (the pre-2.12 behaviour; a localized default is planned for 3.0). |
+| `Generating` | `bool` | `false` | **2.12.0** Whether the host's OWN generation — one that does not travel through `StreamAsync` — is running. The component treats the window exactly like a stream: `IsGenerating` follows (the root's `data-generating`, the log's `aria-busy`, the built-in Stop pill), the true→false edge announces the completed answer when the last turn is `Completed`, and `StopAsync` raises `OnStop` so the host can cancel its own work. A host that streams through `StreamAsync` binds nothing — the component drives the state itself and the edge stays silent, so a completion is never announced twice. |
 | `Suggestions` | `IReadOnlyList<string>?` | `null` | Prompts offered by the empty state. They render only while the conversation has no turn **and** `OnSuggestion` is bound. |
 | `OnSuggestion` | `EventCallback<string>` | — | Raised with the text of an activated suggestion prompt. |
-| `OnStop` | `EventCallback` | — | Raised once after a running generation was stopped (by the built-in control or by a host calling `StopAsync`). The component cancels the token itself, so a handler must not call `StopAsync` again — it is a no-op, so it cannot loop. |
+| `OnStop` | `EventCallback` | — | Raised once after a running generation was stopped (by the built-in control or by a host calling `StopAsync`). The component cancels the token itself, so a handler must not call `StopAsync` again — it is a no-op, so it cannot loop. During a host-driven window (`Generating` set, no stream) the raised stop asks the host to cancel its own work, once per window. |
 | `RenderWindowSize` | `int?` | `null` | How many of the newest turns are rendered; `null` renders every turn. Values below 10 are raised to 10. |
 | `RenderWindowStep` | `int` | `50` | How many turns one "Load older messages" activation adds. Raised to at least 10. |
 | `RenderThrottle` | `TimeSpan` | `50 ms` | Minimum time between two renders of a streamed answer. Zero or negative renders every applied delta. |
-| `ShowStop` | `bool` | `true` | Offer the built-in "Stop generating" control while a stream runs. A host with its own stop control passes `false` and calls `StopAsync`. |
+| `ShowStop` | `bool` | `true` | Offer the built-in "Stop generating" control while a stream or a `Generating` window runs — and only while it can act: an uncancelled stream, or a window whose one stop has not been delivered yet. A host with its own stop control passes `false` and calls `StopAsync`. |
 | `AutoScroll` | `bool` | `true` | Follow new content and offer the "New messages" pill. `false` imports no browser module at all — the host owns the scrolling surface. |
 | `Height` | `string?` | `null` | CSS length of the transcript (`"32rem"`, `"100%"`). `null` uses the stylesheet's height. |
 | `Class` | `string?` | `null` | Extra CSS class(es) on the root `.tm-ai-conversation`. |
@@ -56,8 +58,57 @@ The root carries `data-generating` (`true`/`false`), which is the stable hook fo
 styling and for E2E.
 
 Public members: `IsGenerating`, `StreamAsync(AiMessage, IAsyncEnumerable<AiStreamDelta>,
-CancellationToken)`, `StopAsync()`, plus the two `[JSInvokable]` scroll reports `OnScrollStateAsync`
-and `OnContentResizedAsync`.
+CancellationToken)`, `StopAsync()`, `ScrollToBottomAsync()`, `ScrollToMessageAsync(string messageId)`
+(which answers whether the named turn actually moved), plus the two `[JSInvokable]` scroll reports
+`OnScrollStateAsync` and `OnContentResizedAsync`.
+
+## Host-driven generation (`Generating`)
+
+A host whose answer does not arrive as an `IAsyncEnumerable<AiStreamDelta>` — its own HTTP call, its
+own agent loop — binds `Generating` instead of templating its busy state around the component
+(the workaround the EmusCz panel used to do itself: `setBusy`, `SyncBusyAsync` and a hidden
+completion note). While the window is open the component behaves exactly as if its own stream ran:
+
+- `IsGenerating` is true, so `data-generating`, `aria-busy` on the transcript and the built-in
+  "Stop generating" pill all follow.
+- `StopAsync()` (or a click on the pill) raises `OnStop` — there is no token to cancel, so the event is
+  the notification that asks the host to stop its own work. It is raised **once per window**: a handler
+  that calls `StopAsync` again while the window is still open cannot loop.
+- The **true→false edge announces the completed answer** when the last turn is `Completed` — the same
+  keyed "Answer complete" note a stream speaks, so a screen reader hears the completion no matter which
+  half of the package drove the generation. A window whose answer already arrived through
+  `StreamAsync` stays silent (the stream announced it), so a host that binds both — a composer busy
+  flag AND the stream — hears "Answer complete" exactly once.
+
+A `StreamAsync` call inside an open window is allowed: the busy state stays on through both halves and
+the stream owns the announcement.
+
+One flag drives both halves of the package — the composer's send/stop surface and the conversation's
+busy window are two views of the same request:
+
+```razor
+@* Set on submit, cleared when the answer arrived (or was stopped). The composer disables its send
+   control and offers Stop; the conversation opens the busy window — the same busy state, wait line,
+   Stop pill and completion announcement a streamed answer gets. *@
+<TmAiConversation @ref="conversation"
+                 Messages="@messages"
+                 Generating="@isBusy"
+                 OnStop="@CancelRequestAsync"
+                 Height="34rem" />
+<TmAiComposer IsGenerating="@isBusy"
+             OnSubmit="@(async submit => await SendAsync(submit.Text))"
+             OnStop="@CancelRequestAsync" />
+
+@code {
+    private bool isBusy;
+
+    private async Task CancelRequestAsync()
+    {
+        // The one stop of the request: cancel your own work, mark the turn Stopped, clear the flag.
+        isBusy = false;
+    }
+}
+```
 
 ## Streaming
 
@@ -91,17 +142,36 @@ The component owns the scroll container, the browser owns the geometry. The pack
 tag, no `eval`) attaches to the log element and reports two things back:
 
 - `OnScrollStateAsync(bool)` when the reader crosses the near-bottom band themselves, and
-- `OnContentResizedAsync(bool)` when the transcript's **content** changes size (a streamed token, an
-  image that finished loading, an expanded panel) — a scroll handler cannot see that, and it is
-  exactly the case where a detached reader must not be dragged back to the bottom. It reports the
-  position the reader had **before** the growth: a reader sitting at the bottom leaves the bottom band
-  the instant a token makes the content taller, so a measurement taken after the growth would answer
-  "detached" for the reader who is watching the answer arrive.
+- `OnContentResizedAsync(bool)` when the transcript's geometry changes size — the **content** (a
+  streamed token, an image that finished loading, an expanded panel) and, since 2.12.0, **the log box
+  itself** (the host resized the side panel, a layout split moved, the host's own height binding
+  changed). One ResizeObserver watches both surfaces; the BOX half reports only when the box's own
+  **height** changed — a width-only resize (a scrollbar appearing, a panel dragged wider) reflows the
+  same number of lines and never disturbs the reader. When the box SHRINKS, `scrollTop` stays where it
+  is and the bottom moves away (a scroll handler cannot see that), so a reader who is stuck to the
+  bottom is re-aligned by the report: it carries the position the reader had **before** the change, the
+  component follows the new bottom, and the re-asserting jump runs **without** animation. A detached
+  reader is never dragged and never pill-ed. The position is carried **before** the change for the same
+  reason the content report is: a reader sitting at the bottom leaves the bottom band the instant the
+  geometry moves, so a measurement taken after the change would answer "detached" for the reader who is
+  watching the answer arrive.
 
 New content is followed **only while the reader is at the bottom** (a 48 px tolerance, so sub-pixel
 rounding does not read as "scrolled up"). A reader who scrolled back gets the "New messages" pill
 instead of a moving viewport, and is scrolled only when they press it. The pill floats over the
 scroller, so an appearing control never reflows the text being read.
+
+The host can drive the same scrolling from its own state: the public `ScrollToBottomAsync()` performs
+the same jump the built-in pill performs — it dismisses the "New messages" pill and re-arms the follow,
+so the next appended turn is followed again — and `ScrollToMessageAsync(messageId)` brings the turn with
+`data-message-id` into view and answers **whether the turn actually moved** (`false` for an empty id,
+without the module, for an id the transcript cannot resolve, or on an interop failure). The scroll is
+measured against the transcript itself (minus the log's `padding-top`), so the page the component sits
+on never moves, and marked as the module's own scroll, so not one animation frame is reported as the
+reader detaching. Unless the named turn IS the newest one, the jump also detaches the follow: the next
+appended turn pops the "New messages" pill instead of being followed, and the mark's release reports the
+honest landing position to .NET when it differs from the detached baseline (a jump to the newest turn
+reports "at the bottom" again).
 
 Once the module has reported a position, that report is the state of record — re-probing the geometry
 on every render would be a Blazor round-trip per parent render. The probe is the fallback for a
@@ -144,9 +214,10 @@ resets it to the new tail. The default is `null`: no window, every turn rendered
 - **Completion is announced once.** The note ("Answer complete") is a node keyed by an announcement
   sequence, so a second completion replaces the node instead of silently changing the text of an
   existing one (a live region ignores an unchanged text node); a stopped or failed stream announces
-  nothing extra.
-- **`aria-busy`** is set on the transcript while a generation runs, so assistive technology waits for
-  the answer instead of narrating the intermediate renders.
+  nothing extra. A host-driven window (`Generating`) announces on its true→false edge under the same
+  rule — and stays silent when the answer already arrived through `StreamAsync`.
+- **`aria-busy`** is set on the transcript while a generation runs — a stream or a `Generating` window —
+  so assistive technology waits for the answer instead of narrating the intermediate renders.
 - **Keyboard.** The transcript is `tabindex="0"` with its own `:focus-visible` ring — a scroll
   container a keyboard-only reader cannot reach locks them out of every earlier turn (WCAG 2.1.1).
   Every control is a native `<button>` (no emulated key activation, one activation per key press).
@@ -176,10 +247,19 @@ block, two cited sources and the completion, and the page attaches the per-turn 
 conversation's `MessageTemplate` (regenerate with a version switcher, feedback, answer retry, tool-call retry,
 citation preview, follow-up chips). Its composer is wired with three slash commands, an in-memory mention
 provider and attachment limits, and the page reports what a submit carried
-(`data-testid="ai-demo-submission"`). Below the conversation the page renders the same components on their
-own — every tool-call state plus a grouped run, the thinking pill in both states, the reasoning panel
-collapsed and expanded, and a hostile markdown sample that neutralises raw HTML and `javascript:` / `data:` /
-`vbscript:` links.
+(`data-testid="ai-demo-submission"`). The page binds the two 2.12.0 host-facing knobs: `Generating` rides the page's own busy flag,
+and the
+template's `TmAiMessage.PendingText` names the wait line of a turn that has not started (the page owns a
+`MessageTemplate`, so the pending text rides the template — the conversation-level `MessagePendingText`
+pass-through is the path for hosts without one). The host-driven controls live on the conversation's own
+card, above the transcript: a "Simulate a busy answer" button runs a full window with NO stream (busy
+flag, wait line, one completion announcement), the built-in Stop pill raises the page's `OnStop`, which
+cancels the window's delay (it runs on the injected `TimeProvider`), marks the answer `Stopped` and
+closes the flag, and a "scroll to the first turn" button exercises `ScrollToMessageAsync`. Below the
+conversation
+the page renders the same components on their own — every tool-call state plus a grouped run, the thinking
+pill in both states, an opt-in pending placeholder sample, the reasoning panel collapsed and expanded, and a
+hostile markdown sample that neutralises raw HTML and `javascript:` / `data:` / `vbscript:` links.
 
 The page is also the E2E subject: `tests/Tempo.Blazor.E2E/AI/AiConversationE2ETests.cs` (WASM, plus a Server
 smoke) drives the stream, Stop, the citation preview with its focus return, the composer's `/` combobox and
@@ -197,6 +277,9 @@ every other demo page.
 
 Keys in `TmResources{,.cs,.sk,.fr}.json`: `TmAiConversation_Transcript` (the log's accessible name),
 `_EmptyTitle`, `_EmptyDescription`, `_Suggestions`, `_LoadOlder`, `_NewMessages`, `_Stop`, `_Completed`.
+The pending placeholder has NO localized key in 2.12.0 by design — it renders only when the host names it
+through `MessagePendingText`/`PendingText` (decision `EMUSCZ-2.12-BREAKING-POINTS` (a)); the localized
+default is planned for 3.0 as a deliberate visual change.
 
 ## Assets
 
@@ -204,7 +287,9 @@ Keys in `TmResources{,.cs,.sk,.fr}.json`: `TmAiConversation_Transcript` (the log
   `components/_ai-conversation.css` (tokens only — no colour literal, no raw palette step, no
   `[data-theme]` block).
 - `_content/Tempo.Blazor.AI/js/ai-conversation.js` — the ES module: `attach`, `detach`,
-  `isNearBottom`, `scrollToBottom`. Every entry point is null-safe (a component that lost its root
-  element gets a quiet `false`, never a throw), and a host CSP needs no `unsafe-inline` for it. Its
-  Node tests live in `wwwroot/js/__tests__/ai-conversation.test.mjs` (`npm run test:ai`) and cover the
-  own-scroll suppression, the gesture / `scrollend` / fallback release and the `detach` cleanup.
+  `isNearBottom`, `scrollToBottom`, `scrollToMessage`. Every entry point is null-safe (a component that
+  lost its root element gets a quiet `false`, never a throw), and a host CSP needs no `unsafe-inline`
+  for it. Its Node tests live in `wwwroot/js/__tests__/ai-conversation.test.mjs` (`npm run test:ai`) and
+  cover the own-scroll suppression, the gesture / `scrollend` / fallback release, the box-own
+  ResizeObserver (the log box resizing keeps a bottom-riding reader pinned) and the
+  `scrollToMessage` contract.

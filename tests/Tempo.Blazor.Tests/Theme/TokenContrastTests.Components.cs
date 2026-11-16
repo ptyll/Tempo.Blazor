@@ -117,6 +117,41 @@ public sealed partial class TokenContrastTests
     }
 
     /// <summary>
+    /// 2.12 EmusCz item: the <c>TmAiMessage</c> USER bubble is a fill the answer's markdown paints on, and
+    /// it used to read <c>--tm-bg-surface-secondary</c> — which IS <c>--tm-bg-page</c> in the dark theme
+    /// (both <c>#0f172a</c>), so the dark bubble vanished into the transcript. The new
+    /// <c>--tm-ai-user-bubble-bg</c> is measured here the way the turn renders: the page's own ink tokens
+    /// (body text, secondary text, the <c>--tm-color-primary-text</c> the markdown links paint) must hold
+    /// AA on the fill in light, dark and the indigo theme, and the fill must stay distinguishable from the
+    /// page and the surfaces it sits on — the collision that made the old default useless in dark.
+    /// </summary>
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void AiUserBubbleFill_HoldsTheAnswerInk_AndStaysDistinguishable(bool indigo, bool dark)
+    {
+        var tokens = indigo ? IndigoTokens(dark) : ThemeCss.TokenGraph(dark);
+        var theme = $"{(indigo ? "indigo" : "default")} {(dark ? "dark" : "light")}";
+        var bubble = ThemeCss.ResolveColour("var(--tm-ai-user-bubble-bg)", tokens);
+
+        foreach (var ink in new[] { "--tm-color-text", "--tm-color-text-secondary", "--tm-color-primary-text" })
+        {
+            ThemeCss.Contrast(ThemeCss.ResolveColour($"var({ink})", tokens), bubble)
+                .Should().BeGreaterThanOrEqualTo(4.5, "{0} on the user bubble fill ({1})", ink, theme);
+        }
+
+        foreach (var ground in new[] { "--tm-bg-page", "--tm-bg-surface", "--tm-bg-surface-secondary" })
+        {
+            var groundColour = ThemeCss.ResolveColour($"var({ground})", tokens);
+            bubble.Should().NotBe(groundColour,
+                "the user bubble must stay distinguishable from {0} — in the dark theme the old default "
+                + "(--tm-bg-surface-secondary) IS the page ({1})", ground, theme);
+        }
+    }
+
+    /// <summary>
     /// The colour a fill paints over <c>--tm-bg-surface</c>: an <c>rgb(from …)</c> wash goes through
     /// <see cref="PaintedColour"/>, a literal <c>rgba()</c> wash (the dark danger / info subtle) is
     /// composited from its own channels, an opaque token resolves as is.

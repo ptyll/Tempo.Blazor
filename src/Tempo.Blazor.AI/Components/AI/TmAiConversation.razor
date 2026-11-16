@@ -55,7 +55,11 @@
                             }
                             else
                             {
-                                <TmAiMessage Message="message" />
+                                @* MessagePendingText is the conversation-level pass-through of the turn's
+                                   pending placeholder (decision EMUSCZ-2.12-BREAKING-POINTS (a)): a host
+                                   without its own template names the wait line without templating the
+                                   whole turn. Null keeps the pre-2.12 empty body. *@
+                                <TmAiMessage Message="message" PendingText="@MessagePendingText" />
                             }
                         </div>
                     }
@@ -112,7 +116,7 @@
                         @Loc["TmAiConversation_NewMessages"]
                     </button>
                 }
-                @if (IsGenerating && ShowStop)
+                @if (CanStop && ShowStop)
                 {
                     <button type="button"
                             class="tm-ai-conversation__stop"
