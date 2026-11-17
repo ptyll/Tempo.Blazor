@@ -248,6 +248,12 @@ public sealed class NotionPhase2ThemeScreenshots : NotionE2ETestBase
         await para.ClickAsync();
         await page.Keyboard.PressAsync("Control+End");
         await page.Keyboard.PressAsync("Enter");
+        // Enter puts the caret block flush with the editor viewport's bottom edge. The slash
+        // menu anchors to the caret; an anchor that sits even a few pixels below the fold is
+        // "fully out of the viewport" for overlay.js, which then PARKS the panel
+        // (visibility:hidden) until something scrolls — nothing does, so the menu never shows.
+        Assert.IsTrue(await NotionEditorHelper.CenterFocusedParagraphAsync(page),
+            "after Enter the caret must sit in a notion paragraph block (the slash menu anchors to it)");
         await page.WaitForTimeoutAsync(300);
         await page.Keyboard.TypeAsync("/code");
         await page.Locator(".tm-notion-slash").First.WaitForAsync(new LocatorWaitForOptions { Timeout = 8000 });

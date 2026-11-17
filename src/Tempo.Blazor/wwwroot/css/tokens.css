@@ -195,6 +195,11 @@
      behaviour overrides this one token with the full scrim:
      `--tm-modal-stacked-scrim: var(--tm-bg-overlay);` (or `transparent` for none). */
   --tm-modal-stacked-scrim:    color-mix(in srgb, var(--tm-bg-overlay) 40%, transparent);
+  /* Height cap of a STACKED modal footer (TmModal FooterLayout.Stacked / StackedInOrder): a footer
+     taller than the cap scrolls instead of pushing the dialog taller (fze-6). Declared here on
+     :root — not on the footer — so the cap stays inheritable: a host can cap the footer from the
+     modal/panel root, and a footer-targeted override still wins the cascade. */
+  --tm-modal-footer-max-height: 40dvh;
 
   /* ── Border ─────────────────────────────────────────────────── */
   --tm-border-color:           var(--tm-color-gray-200);

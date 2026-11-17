@@ -474,8 +474,6 @@
    CSS); the cap is a component-local knob. */
 .tm-modal-footer--stacked,
 .tm-dialog-footer.tm-modal-footer--stacked {
-  /* Component-local host knob: the stacked footer's height cap. Overridable on the footer. */
-  --tm-modal-footer-max-height: 40dvh;
   flex-direction: column-reverse;
   /* The panel is a flex column, and a scroller loses its content-sized minimum (min-height:auto
      collapses to 0 once overflow leaves visible) — without flex-shrink: 0 the footer would be
@@ -492,6 +490,10 @@
      nothing can scroll to the first actions. `safe` falls back to start exactly when the content
      overflows, and keeps today's bottom-packed look when it fits. */
   justify-content: safe flex-end;
+  /* The cap is the shared :root token (tokens.css, next to --tm-modal-stacked-scrim): no
+     declaration on the element itself keeps the knob inheritable, so a host can cap the footer
+     from the modal/panel root (fze-6 contract, pinned by the E2E) while a footer-targeted
+     override still wins. */
   max-height: var(--tm-modal-footer-max-height);
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -522,6 +524,16 @@
   height: auto;
   min-height: var(--tm-input-height-md);
   overflow-wrap: anywhere;
+}
+
+/* The (0,3,0) min-height above would silently beat the shared (pointer:coarse) footer floor
+   (.tm-dialog-footer .tm-btn → --tm-touch-target), dropping a phone's stacked actions to 38px.
+   Restore the floor at the same specificity — the wrap behaviour and the desktop height stay. */
+@media (pointer: coarse) {
+  .tm-modal-footer--stacked .tm-btn,
+  .tm-dialog-footer.tm-modal-footer--stacked .tm-btn {
+    min-height: var(--tm-touch-target);
+  }
 }
 
 .tm-modal-overlay.tm-modal--sheet .tm-modal-footer--inline > .tm-btn,

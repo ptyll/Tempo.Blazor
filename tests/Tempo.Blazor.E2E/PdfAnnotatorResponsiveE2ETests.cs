@@ -647,12 +647,46 @@ el => {
     /// </summary>
     private static async Task<ILocator> GoToPageAsync(IPage page, ILocator section, int pageNumber)
     {
-        await section.EvaluateAsync(
-            @"(section, target) => {
-                const wrap = section.querySelector('.tm-pdf-viewer__continuous-wrap');
-                wrap?.querySelector('.tm-pdf-viewer__page[data-page=""' + target + '""]')
-                    ?.scrollIntoView({ block: 'start', behavior: 'instant' });
-            }", pageNumber);
+        // Navigate through the toolbar's page input — or, on a phone where the input rides
+        // the compact row's "More" overflow, through the pinned chevrons: both run the
+        // viewer's own recorded navigation (scrollToPage updates state.currentPage
+        // synchronously). A raw wrap.scrollTop / scrollIntoView assignment is UNRECORDED —
+        // the scroll tracker's next visible-page report can land on the pre-jump page and
+        // the viewer then snaps back to it, unmounting the target's overlay slot
+        // mid-interaction (the F13/F14 fight, from the other side).
+        var input = section.Locator(".tm-pdf-viewer__page-input").First;
+        if (await input.IsVisibleAsync())
+        {
+            await input.FillAsync(pageNumber.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            await input.PressAsync("Enter");
+        }
+        else
+        {
+            // Mobile branch: the chevrons run the same NavigateToPageAsync → scrollToPage
+            // path as the input. The (hidden) input's VALUE still tracks the current page,
+            // so the loop steps exactly onto the target and stops there.
+            var next = section.GetByRole(AriaRole.Button, new LocatorGetByRoleOptions { Name = "Next page", Exact = true });
+            var prev = section.GetByRole(AriaRole.Button, new LocatorGetByRoleOptions { Name = "Previous page", Exact = true });
+            for (var guard = 0; guard < 50; guard++)
+            {
+                var current = await input.EvaluateAsync<int>("el => parseInt(el.value, 10) || 1");
+                if (current == pageNumber) break;
+                var step = pageNumber > current ? next : prev;
+                await step.ClickAsync(new LocatorClickOptions { Timeout = 15000 });
+                // The value rides the Blazor round trip — wait for it to move before the
+                // next click, so a slow frame cannot queue a duplicate step.
+                await input.EvaluateAsync<int>(@"(el, from) => new Promise(resolve => {
+                    const started = performance.now();
+                    const poll = () => {
+                        const value = parseInt(el.value, 10) || 1;
+                        if (value !== from || performance.now() - started > 3000) { resolve(value); return; }
+                        requestAnimationFrame(poll);
+                    };
+                    requestAnimationFrame(poll);
+                })", current);
+            }
+        }
+
         var slot = PageSlot(section, pageNumber);
         await PageSurface(section, pageNumber)
             .WaitForAsync(new LocatorWaitForOptions { Timeout = 30000, State = WaitForSelectorState.Attached });
@@ -663,6 +697,31 @@ el => {
             const pageWrap = wrap?.querySelector('.tm-pdf-viewer__page[data-page=""{pageNumber}""]');
             return !!pageWrap?.querySelector('canvas[data-rendered]');
         }}", null, new PageWaitForFunctionOptions { Timeout = 60000 });
+
+        // Park the wrap a quarter-viewport below the top edge. scrollToPage's
+        // scrollIntoView aligns the page top with the VIEWPORT top — under the demo's
+        // sticky header (~72px) — and a click point under a sticky bar can never pass
+        // Playwright's hit-target check (its own auto-scroll cannot fix it either).
+        // The window move does not disturb the wrap's internal scroll, so the tracker
+        // keeps reporting the target page. The move is instant, but Blazor relayouts and
+        // the sticky header can still shift the wrap for a frame or two — wait for the
+        // wrap's top to hold the same value across TWO rAFs instead of sleeping.
+        await section.EvaluateAsync(@"section => new Promise(resolve => {
+            const wrap = section.querySelector('.tm-pdf-viewer__continuous-wrap');
+            if (!wrap) { resolve(false); return; }
+            const delta = wrap.getBoundingClientRect().top - Math.round(window.innerHeight * 0.25);
+            if (delta) window.scrollBy({ top: delta, behavior: 'instant' });
+            const deadline = performance.now() + 2000;
+            let last = null;
+            const tick = () => requestAnimationFrame(() => {
+                const top = wrap.getBoundingClientRect().top;
+                if (last !== null && Math.abs(top - last) < 0.5) { resolve(true); return; }
+                last = top;
+                if (performance.now() > deadline) { resolve(false); return; }
+                tick();
+            });
+            tick();
+        })");
         return slot;
     }
 

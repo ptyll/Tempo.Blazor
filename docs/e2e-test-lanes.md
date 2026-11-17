@@ -396,6 +396,21 @@ configurable:
   only (Development) (`DemoApiHttpHandler`); without it an untrusted dev cert
   turns every such page into a prerender 500. Outside Development the default
   validation applies.
+- **smtp4dev (the delivery lanes) is shared, started on demand and GUARDABLE.**
+  The e-mail delivery specs (the Notifications digest test, the email-template
+  E11_8 send flow) go through one harness, `Smtp4DevHelper` (repo root of the
+  E2E project): it probes `http://localhost:5000`, and when the instance is
+  down it TRIES to start one (docker everywhere, the local
+  `C:\Work\smtp4dev-master\Rnwood.Smtp4dev` project on Windows) and waits up to
+  120 s for the first run to build. The guard `EnsureOrAssertAsync` decides the
+  outcome: **without** the env var a missing instance is
+  `Assert.Inconclusive` (a developer machine without smtp4dev is not a product
+  defect); **with `TM_E2E_REQUIRE_SMTP4DEV=1` it is `Assert.Fail`** — a
+  release-evidence run must never silently skip the delivery proof, so set the
+  variable for those runs (and start/verify smtp4dev first). The probe in
+  `EmailTemplateE2ETestBase.Smtp4DevAvailableAsync` carries a 5 s
+  `CancellationTokenSource` so a half-hung instance cannot eat the test
+  timeout.
 - Delete `tests/Tempo.Blazor.E2E/TestResults` between long runs to keep disk
   usage bounded.
 - **Host resurrections are evidence, not noise (N209):** `PlaywrightTestBase`

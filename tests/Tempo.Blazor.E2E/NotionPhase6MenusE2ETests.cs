@@ -488,6 +488,11 @@ public sealed class NotionPhase6MenusE2ETests : WasmTestBase
         await para.ClickAsync();
         await page.Keyboard.PressAsync("End");
         await page.Keyboard.PressAsync("Enter");
+        // Enter can leave the caret block flush with an editor viewport edge; a slash anchor
+        // fully out of the viewport makes overlay.js PARK the panel invisible (nothing scrolls
+        // it back). Center the focused block — scrollIntoView fixes EVERY scrollable ancestor.
+        Assert.IsTrue(await NotionEditorHelper.CenterFocusedParagraphAsync(page),
+            "after Enter the caret must sit in a notion paragraph block (the slash menu anchors to it)");
         await page.WaitForTimeoutAsync(1000);
         await page.Keyboard.TypeAsync("/");
         await page.WaitForSelectorAsync(".tm-notion-slash", new PageWaitForSelectorOptions

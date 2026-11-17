@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Components;
 using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components.Feedback;
 using Tempo.Blazor.Tests.Localization;
+using Tempo.Blazor.Tests.Theme;
 
 namespace Tempo.Blazor.Tests.Feedback;
 
@@ -190,6 +191,36 @@ public class TmModalPresentationTests : LocalizationTestBase
         return css[open..close];
     }
 
+    /// <summary>
+    /// Finds the at-rule block whose balanced-brace body satisfies <paramref name="predicate"/>.
+    /// The body runs to the at-rule's PAIRED closing brace, so nested media bodies never leak a
+    /// distant match into the wrong block.
+    /// </summary>
+    private static (int start, string body)? MediaBlockOf(string css, string atRule, Func<string, bool> predicate)
+    {
+        var search = 0;
+        while (true)
+        {
+            var start = css.IndexOf(atRule, search, StringComparison.Ordinal);
+            if (start < 0) return null;
+            var open = css.IndexOf('{', start);
+            open.Should().BeGreaterThan(-1, $"the {atRule} block must open a body");
+            var depth = 0;
+            for (var i = open; i < css.Length; i++)
+            {
+                if (css[i] == '{') depth++;
+                else if (css[i] == '}' && --depth == 0)
+                {
+                    var body = css[(open + 1)..i];
+                    if (predicate(body)) return (start, body);
+                    break;
+                }
+            }
+
+            search = start + atRule.Length;
+        }
+    }
+
     [Fact]
     public void StackedInOrderFooter_PinTheOrderTheScrollCapAndTheLabelWrap()
     {
@@ -204,16 +235,60 @@ public class TmModalPresentationTests : LocalizationTestBase
             "StackedInOrder is the DOM-order column; Stacked stays column-reverse");
 
         var stacked = RuleFor(css, ".tm-modal-footer--stacked,");
-        stacked.Should().Contain("max-height: var(--tm-modal-footer-max-height",
+        stacked.Should().Contain("max-height: var(--tm-modal-footer-max-height)",
             "a stacked footer taller than the cap scrolls instead of growing the dialog");
+        // The cap must stay an inherited :root token (tokens.css): a declaration on the footer
+        // itself would shadow the inherited value, so a host capping the footer from the modal /
+        // panel root (fze-6) would silently stop working.
+        stacked.Should().NotContain("--tm-modal-footer-max-height:",
+            "the footer must READ the token, not declare it — an on-element declaration would shadow a host cap inherited from the modal/panel root");
+        var tokens = File.ReadAllText(Path.Combine(FindRoot(), "src", "Tempo.Blazor", "wwwroot", "css", "tokens.css"));
+        tokens.Should().Contain("--tm-modal-footer-max-height: 40dvh",
+            "the cap token ships on :root so the footer's var() resolves at every width and hosts can override it");
+        ThemeCss.BundledCss().Should().Contain("max-height:var(--tm-modal-footer-max-height)",
+            "the committed tempo-blazor.bundled.css must ship the same rule (consumers link the bundle)");
         stacked.Should().Contain("overflow-y: auto");
         stacked.Should().Contain("flex-shrink: 0",
             "a scroller loses its content-sized minimum in the flex column — without it the footer compresses instead of scrolling");
 
-        var stackedBtn = RuleFor(css, ".tm-modal-footer--stacked .tm-btn");
+        // The label-wrap rule, found through its declaration (a later pointer:coarse block reuses
+        // the same selector for the touch floor — see StackedFooterButtons_KeepTheCoarseTouchFloor).
+        var wrap = css.IndexOf("white-space: normal", StringComparison.Ordinal);
+        wrap.Should().BeGreaterThan(-1, "the stylesheet must declare the stacked label wrap");
+        var open = css.LastIndexOf('{', wrap);
+        var close = css.IndexOf('}', open);
+        var stackedBtn = css[open..close];
         stackedBtn.Should().Contain("white-space: normal").And.Contain("overflow-wrap: anywhere")
             .And.Contain("height: auto").And.Contain("min-height: var(--tm-input-height-md)",
                 "a long button label wraps onto its own row instead of truncating — and the fixed .tm-btn height must not clip the second line");
+    }
+
+    [Fact]
+    public void StackedFooterButtons_KeepTheCoarseTouchFloor()
+    {
+        // The label-wrap rule's (0,3,0) min-height silently beat the shared (pointer:coarse)
+        // footer floor (.tm-dialog-footer .tm-btn → --tm-touch-target): a phone's stacked actions
+        // dropped to 38px, pinned red by
+        // DeleteDialog_AtEveryViewport_TrashIcon_DeleteAboveCancelOnMobileSheet (plan 98c80bc3).
+        var css = File.ReadAllText(Path.Combine(FindRoot(), "src", "Tempo.Blazor", "wwwroot", "css", "components", "_modal.css"));
+
+        // The label-wrap rule the floor has to follow in the cascade (equal specificity → later wins).
+        var wrap = css.IndexOf("white-space: normal", StringComparison.Ordinal);
+        wrap.Should().BeGreaterThan(-1, "the stylesheet must declare the stacked label wrap");
+
+        // The stylesheet has several (pointer:coarse) blocks — only the one whose BALANCED body
+        // carries the stacked selectors restores the floor; a distant match in another block would
+        // be dead CSS for the stacked footer.
+        var floor = MediaBlockOf(css, "@media (pointer: coarse)",
+            body => body.Contains(".tm-dialog-footer.tm-modal-footer--stacked .tm-btn", StringComparison.Ordinal));
+        floor.Should().NotBeNull(
+            "the stacked footer needs its own (pointer:coarse) block carrying the stacked selectors");
+        floor!.Value.body.Should().Contain(".tm-modal-footer--stacked .tm-btn",
+            "the floor rides the same stacked selectors — only an equal-or-higher specificity restores it");
+        floor.Value.body.Should().Contain("min-height: var(--tm-touch-target)",
+            "a finger needs the shared 44px target on the stacked footer's actions");
+        floor.Value.start.Should().BeGreaterThan(wrap,
+            "the floor must be declared AFTER the label-wrap rule — same specificity, so the later min-height wins the cascade");
     }
 
     [Fact]

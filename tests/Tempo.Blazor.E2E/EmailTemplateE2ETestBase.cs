@@ -36,6 +36,27 @@ public abstract class EmailTemplateE2ETestBase : WasmTestBase
     private static readonly HttpClient Http = new();
 
     /// <summary>
+    /// Whether the shared smtp4dev answers. The full send flow (E11_8) is the only spec in this
+    /// lane that NEEDS it; when the local container is down (a Docker Desktop restart leaves it
+    /// exited), a red timeout says nothing about the product — the Notifications lane marks the
+    /// same dependency Inconclusive, and so does this probe. The 5 s CancellationTokenSource
+    /// keeps a half-hung instance from eating the whole test timeout.
+    /// </summary>
+    protected static async Task<bool> Smtp4DevAvailableAsync()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        try
+        {
+            using var response = await Http.GetAsync($"{Smtp4DevBase}/api/Messages?pageSize=1", cts.Token);
+            return response.IsSuccessStatusCode;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Puts the demo API's email store back to its seeded templates before EVERY email spec (Fáze 11).
     /// <para>
     /// The lane's specs all open the same seed document and the editor auto-saves, so a spec that imported a

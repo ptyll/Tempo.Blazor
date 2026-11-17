@@ -485,6 +485,11 @@ public sealed class EmailTemplatesE2ETests : EmailTemplateE2ETestBase
     [TestMethod]
     public async Task E11_8_FullSendFlow_DeliversSubstitutedEmail()
     {
+        // The shared guard starts smtp4dev when it is down (docker, or the local dotnet project
+        // on Windows); with TM_E2E_REQUIRE_SMTP4DEV=1 a missing instance FAILS instead of
+        // skipping (release-evidence runs, docs/e2e-test-lanes.md).
+        await Smtp4DevHelper.EnsureOrAssertAsync("email-templates E11_8");
+
         var recipient = UniqueRecipient("order");
         var customerName = $"Customer {Guid.NewGuid():N}";
 
