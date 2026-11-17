@@ -7,6 +7,7 @@
         disabled="@(Disabled || IsLoading)"
         tabindex="@TabIndex"
         aria-label="@AriaLabel"
+        aria-pressed="@PressedText"
         @onclick="HandleClickAsync"
         @attributes="AdditionalAttributes">
 
@@ -52,6 +53,15 @@
 
     /// <summary>Visual style variant. Defaults to Primary.</summary>
     [Parameter] public ButtonVariant Variant { get; set; } = ButtonVariant.Primary;
+
+    /// <summary>
+    /// Toggle state of the button. <see langword="null"/> (default) renders a plain action
+    /// button with no <c>aria-pressed</c> attribute; <c>true</c>/<c>false</c> render
+    /// <c>aria-pressed</c> and the <c>.tm-btn--pressed</c> visual state, turning the button
+    /// into a proper toggle. A host binds the state itself — the button raises
+    /// <see cref="OnClick"/> either way.
+    /// </summary>
+    [Parameter] public bool? Pressed { get; set; }
 
     /// <summary>Size variant. Defaults to Md.</summary>
     [Parameter] public ButtonSize Size { get; set; } = ButtonSize.Md;
@@ -115,6 +125,7 @@
                 ButtonVariant.OutlineSecondary => "tm-btn-outline-secondary",
                 ButtonVariant.Warning          => "tm-btn-warning",
                 ButtonVariant.OutlineWarning   => "tm-btn-outline-warning",
+                ButtonVariant.Soft             => "tm-btn-soft",
                 _                              => "tm-btn-primary"
             };
             var sizeClass = Size switch
@@ -124,10 +135,16 @@
                 ButtonSize.Lg => "tm-btn-lg",
                 _             => "tm-btn-md"
             };
-            var baseClass = $"tm-btn {variantClass} {sizeClass}{(Block ? " tm-btn-block" : "")}";
+            var pressedClass = Pressed == true ? " tm-btn--pressed" : "";
+            var baseClass = $"tm-btn {variantClass} {sizeClass}{pressedClass}{(Block ? " tm-btn-block" : "")}";
             return string.IsNullOrWhiteSpace(Class) ? baseClass : $"{baseClass} {Class}";
         }
     }
+
+    /// <summary>Null removes the attribute; a toggle renders the explicit value (a raw word, never culture-specific).</summary>
+    private string? PressedText => Pressed is null
+        ? null
+        : (Pressed.Value ? "true" : "false");
 
     private async Task HandleClickAsync()
     {

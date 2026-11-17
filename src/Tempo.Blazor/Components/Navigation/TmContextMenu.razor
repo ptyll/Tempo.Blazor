@@ -6,25 +6,40 @@
 @implements IAsyncDisposable
 
 <div @ref="_wrapperRef" class="tm-context-menu-wrapper @Class" @attributes="AdditionalAttributes">
-    <div class="tm-context-menu__trigger"
-         @ref="_triggerRef"
-         role="button"
-         tabindex="@TriggerTabIndexText"
-         aria-haspopup="menu"
-         aria-expanded="@BoolText(_isOpen)"
-         @onclick="ToggleMenu"
-         @onkeydown="HandleTriggerKeyDown"
-         @onkeyup="HandleTriggerKeyUp">
-        @* Fence: the Trigger fragment may contain a native control (e.g. a <button>)
-           whose Enter keydown / Space keyup would otherwise bubble into this emulating
-           container and fire ToggleMenu on top of the child's own click. Both barriers
-           are required — Space activation lives on keyup (N162), so a keydown-only fence
-           would still leak the release (keyboard-activation-convention; TmPopover is the
-           reference implementation). *@
-        <span class="tm-context-menu__trigger-content"
-              @onkeydown:stopPropagation="true"
-              @onkeyup:stopPropagation="true">@Trigger</span>
-    </div>
+    @if (!AsChild)
+    {
+        <div class="tm-context-menu__trigger"
+             @ref="_triggerRef"
+             role="button"
+             tabindex="@TriggerTabIndexText"
+             aria-haspopup="menu"
+             aria-expanded="@BoolText(_isOpen)"
+             aria-label="@TriggerAriaLabel"
+             @onclick="ToggleMenu"
+             @onkeydown="HandleTriggerKeyDown"
+             @onkeyup="HandleTriggerKeyUp">
+            @* Fence: the Trigger fragment may contain a native control (e.g. a <button>)
+               whose Enter keydown / Space keyup would otherwise bubble into this emulating
+               container and fire ToggleMenu on top of the child's own click. Both barriers
+               are required — Space activation lives on keyup (N162), so a keydown-only fence
+               would still leak the release (keyboard-activation-convention; TmPopover is the
+               reference implementation). *@
+            <span class="tm-context-menu__trigger-content"
+                  @onkeydown:stopPropagation="true"
+                  @onkeyup:stopPropagation="true">@Trigger</span>
+        </div>
+    }
+    else
+    {
+        @* AsChild: the wrapper is presentational and carries NO role, NO tab stop and NO
+           handlers — the host's own trigger element (usually a <button> inside @Trigger) gets
+           aria-haspopup/aria-expanded and the activation from the cascaded
+           ContextMenuTriggerContext. This removes the nested-interactive-element defect the
+           emulating div produced whenever the trigger fragment held a real control. *@
+        <CascadingValue Value="TriggerContext" IsFixed="false">
+            @Trigger
+        </CascadingValue>
+    }
 
     @* The menu is a TmOverlayPanel: popover="manual" puts it in the browser top layer, so an
        ancestor's overflow (modal body, scrolling region) can no longer clip it, and overlay.js
@@ -33,7 +48,7 @@
        into the shared bottom sheet on a mobile viewport through MobilePresentation (default
        Popover keeps the anchored popover at every width); the sheet header is titled with
        SheetTitle or the localized TmContextMenu_SheetTitle default. *@
-    <TmOverlayPanel Anchor="_triggerRef"
+    <TmOverlayPanel Anchor="AnchorRef"
                     IsOpen="_isOpen"
                     IsOpenChanged="SetOpenAsync"
                     OnOpened="FocusFirstItemAsync"
@@ -115,6 +130,27 @@
     /// </summary>
     [Parameter] public int? TriggerTabIndex { get; set; } = 0;
 
+    /// <summary>
+    /// Accessible name of the emulating trigger. <c>null</c> (default) keeps the trigger unnamed —
+    /// use it when the trigger fragment itself carries a visible or accessible label; a nameless
+    /// <c>role="button"</c> div with an icon-only fragment is unnamed to a reader.
+    /// IGNORED in AsChild mode — the host's own trigger element carries its own name.
+    /// </summary>
+    [Parameter] public string? TriggerAriaLabel { get; set; }
+
+    /// <summary>
+    /// Renders NO emulating trigger at all: the wrapper becomes presentational and the host's own
+    /// trigger element inside the <see cref="Trigger"/> fragment receives the menu-button semantics
+    /// from the cascaded <see cref="ContextMenuTriggerContext"/> (<c>aria-haspopup</c>,
+    /// <c>aria-expanded</c> via <see cref="ContextMenuTriggerContext.IsOpen"/>, activation via
+    /// <see cref="ContextMenuTriggerContext.ToggleAsync"/>). Use it whenever the trigger fragment
+    /// holds a real interactive control — a div[role=button] wrapped around a button is a nested
+    /// interactive element. The keyboard emulation (Enter keydown / Space keyup) stays the host
+    /// button's native contract; the wrapper keeps the anchor the popover positions against, and
+    /// after an item activation focus returns to the host's own trigger element.
+    /// </summary>
+    [Parameter] public bool AsChild { get; set; }
+
     /// <summary>Additional CSS class for the root element.</summary>
     [Parameter] public string? Class { get; set; }
 
@@ -132,12 +168,45 @@
         StateHasChanged();
     });
 
+    /// <summary>Whether the menu is currently open. In AsChild mode the host's trigger reads this for <c>aria-expanded</c>.</summary>
+    public bool IsOpen => _isOpen;
+
+    /// <summary>The element the popover positions against: the built-in trigger, or in AsChild mode the
+    /// wrapper (the built-in trigger is not rendered there and the host's own element lives in the wrapper).</summary>
+    private ElementReference AnchorRef => AsChild ? _wrapperRef : _triggerRef;
+
+    /// <summary>
+    /// The public toggle for the AsChild trigger contract: the host's own button calls this from
+    /// its click handler and binds <see cref="IsOpen"/> to <c>aria-expanded</c>. Same state path
+    /// as the built-in trigger (<see cref="SetOpenAsync"/>, so <see cref="IsOpenChanged"/> fires).
+    /// </summary>
+    public Task ToggleAsync() => InvokeAsync(async () =>
+    {
+        await SetOpenAsync(!_isOpen);
+        StateHasChanged();
+    });
+
+    /// <summary>The AsChild context handed to the host through a CascadingValue. Cached: a new
+    /// instance per render (with <c>IsFixed="false"</c>) would re-render every consumer on every
+    /// menu render. Safe because <see cref="ContextMenuTriggerContext.IsOpen"/> reads the live
+    /// state and the menu's own re-render repaints the fragment when <c>_isOpen</c> changes.</summary>
+    private ContextMenuTriggerContext? _triggerContext;
+    private ContextMenuTriggerContext TriggerContext => _triggerContext ??= new(this);
+
     /// <summary>
     /// Opens the menu. A host that owns a pointer position uses this after it has decided which
     /// actions apply. The open is applied on the renderer, and <see cref="IsOpenChanged"/> is
     /// awaited before the menu paints, so the callback always observes the new state.
     /// </summary>
     public void Open() => _ = InvokeAsync(OpenAsync);
+
+    /// <summary>
+    /// The trigger-context open path: the same <see cref="OpenAsync"/> state transition, but the
+    /// <c>_isOpen</c> test runs INSIDE <see cref="InvokeAsync"/>, so a host calling
+    /// <see cref="ContextMenuTriggerContext.OpenAsync"/> from outside the dispatcher cannot race
+    /// the state read. Internal: the context class is the only caller.
+    /// </summary>
+    internal Task OpenFromTriggerAsync() => InvokeAsync(OpenAsync);
 
     private async Task OpenAsync()
     {
@@ -152,7 +221,15 @@
 
     internal void CloseMenu() => _ = InvokeAsync(CloseMenuAsync);
 
-    private async Task CloseMenuAsync()
+    /// <summary>
+    /// Closes the menu and AWAITS the full state transition (including <see cref="IsOpenChanged"/>).
+    /// Internal because <see cref="TmContextMenuItem"/> awaits it before its own handler — the
+    /// deterministic close (2.12.0): the menu is down and re-rendered before the item's
+    /// <c>OnClick</c> runs, with no <c>Task.Yield</c> race in between.
+    /// </summary>
+    internal Task CloseMenuAsync() => InvokeAsync(CloseMenuCoreAsync);
+
+    private async Task CloseMenuCoreAsync()
     {
         if (!_isOpen)
         {
@@ -160,8 +237,10 @@
         }
 
         await SetOpenAsync(false);
-        // docs/overlays.md rule 4: an item activation closes without overlay.js's focus restore - return focus to the
-        // trigger (the TmDropdown.SelectItemAsync pattern), or a keyboard activation leaves focus on <body>.
+        // docs/overlays.md rule 4: an item activation closes without overlay.js's focus restore - return focus
+        // to the trigger (the TmDropdown.SelectItemAsync pattern), or a keyboard activation leaves focus on <body>.
+        // In AsChild mode the trigger is the HOST's own element (the wrapper keeps the anchor), so the hand-back
+        // focuses the first focusable descendant of the wrapper that is not inside the menu panel.
         _focusTriggerAfterClose = true;
         StateHasChanged();
     }
@@ -170,7 +249,9 @@
     private Task FocusFirstItemAsync() => _disposed ? Task.CompletedTask : (_menuNav ??= new MenuNavInterop(JS)).FocusFirstAsync(_wrapperRef);
 
     /// <summary>
-    /// Moves focus to the menu trigger. Safe to call after an action replaced or removed the
+    /// Moves focus to the menu trigger — in AsChild mode to the HOST's own trigger element (the first
+    /// focusable descendant of the wrapper that is not inside the menu panel, via tm-menu-nav's
+    /// <c>focusHostTrigger</c>). Safe to call after an action replaced or removed the
     /// row the trigger lives on — a trigger that left the DOM is a no-op, not an exception.
     /// Hosts use it where the built-in close-focus-restore cannot run, e.g. the diagram layers
     /// panel focusing the moved row's "⋯" trigger after a menu-driven reorder.
@@ -180,7 +261,14 @@
         if (_disposed) return;
         try
         {
-            await _triggerRef.FocusAsync(preventScroll: true);
+            if (AsChild)
+            {
+                await (_menuNav ??= new MenuNavInterop(JS)).FocusHostTriggerAsync(_wrapperRef);
+            }
+            else
+            {
+                await _triggerRef.FocusAsync(preventScroll: true);
+            }
         }
         catch (Exception ex) when (ex is InvalidOperationException or JSException)
         {
@@ -193,14 +281,7 @@
     {
         if (!_focusTriggerAfterClose) return;
         _focusTriggerAfterClose = false;
-        try
-        {
-            await _triggerRef.FocusAsync(preventScroll: true);
-        }
-        catch (Exception ex) when (ex is InvalidOperationException or JSException)
-        {
-            // The trigger left the DOM with the close (a conditional host): nothing to focus.
-        }
+        await FocusTriggerAsync();
     }
 
     /// <inheritdoc />

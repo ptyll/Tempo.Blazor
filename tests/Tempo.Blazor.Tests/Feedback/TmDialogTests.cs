@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.JSInterop;
 using NSubstitute;
+using Tempo.Blazor.Components.Buttons;
 using Tempo.Blazor.Components.Feedback;
 using Tempo.Blazor.Tests.Localization;
 
@@ -178,6 +179,71 @@ public class TmDialogTests : LocalizationTestBase
 
         // Assert
         cut.Find("input.tm-dialog-input").GetAttribute("value").Should().Be(defaultValue);
+    }
+
+    #endregion
+
+    #region Footer Button Variant Tests (Fáze 4)
+
+    [Fact]
+    public void ConfirmDialog_CancelButton_DefaultsToGhost()
+    {
+        var cut = Render<TmDialog>(p => p
+            .Add(d => d.Show, true)
+            .Add(d => d.Type, DialogType.Confirm)
+            .Add(d => d.Title, "Confirm"));
+
+        cut.Find(".tm-dialog-btn-cancel").ClassList.Should().Contain("tm-btn-ghost",
+            "null keeps the historical Ghost cancel button");
+    }
+
+    [Fact]
+    public void ConfirmDialog_CancelButtonVariant_OverridesTheDefault()
+    {
+        var cut = Render<TmDialog>(p => p
+            .Add(d => d.Show, true)
+            .Add(d => d.Type, DialogType.Confirm)
+            .Add(d => d.Title, "Confirm")
+            .Add(d => d.CancelButtonVariant, ButtonVariant.Secondary));
+
+        cut.Find(".tm-dialog-btn-cancel").ClassList.Should().Contain("tm-btn-secondary");
+    }
+
+    [Fact]
+    public void ConfirmDialog_OkButtonVariant_OverridesTheVariantImpliedDefault()
+    {
+        var cut = Render<TmDialog>(p => p
+            .Add(d => d.Show, true)
+            .Add(d => d.Type, DialogType.Confirm)
+            .Add(d => d.Title, "Confirm")
+            .Add(d => d.OkButtonVariant, ButtonVariant.Secondary));
+
+        cut.Find(".tm-dialog-btn-ok").ClassList.Should().Contain("tm-btn-secondary",
+            "an explicit OkButtonVariant wins over the dialog-variant-implied Primary");
+    }
+
+    [Fact]
+    public void DangerousConfirmDialog_OkButton_KeepsTheDangerDefault_WhenNoVariantIsPassed()
+    {
+        var cut = Render<TmDialog>(p => p
+            .Add(d => d.Show, true)
+            .Add(d => d.Type, DialogType.Confirm)
+            .Add(d => d.IsDangerous, true)
+            .Add(d => d.Title, "Delete?"));
+
+        cut.Find(".tm-dialog-btn-ok").ClassList.Should().Contain("tm-btn-danger");
+    }
+
+    [Fact]
+    public void AlertDialog_OkButtonVariant_OverridesTheDefault()
+    {
+        var cut = Render<TmDialog>(p => p
+            .Add(d => d.Show, true)
+            .Add(d => d.Type, DialogType.Alert)
+            .Add(d => d.Title, "Alert")
+            .Add(d => d.OkButtonVariant, ButtonVariant.Soft));
+
+        cut.Find(".tm-dialog-btn-ok").ClassList.Should().Contain("tm-btn-soft");
     }
 
     #endregion

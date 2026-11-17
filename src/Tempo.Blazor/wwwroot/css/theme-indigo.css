@@ -72,6 +72,8 @@
   --tm-color-primary-hover:  var(--tm-color-primary-300);
   --tm-color-primary-text:   var(--tm-color-primary-300);
   --tm-color-primary-subtle: rgb(from var(--tm-color-primary-500) r g b / 0.15);
+  /* Soft button hover/pressed fill (2.12.0) — same translucent-500 convention as tokens-dark.css. */
+  --tm-color-primary-subtle-hover: rgb(from var(--tm-color-primary-500) r g b / 0.22);
   --tm-color-primary-500-rgb: 129, 140, 248;
 
   /* Dark slate scale, copied from tokens-dark.css. The light block above declares the

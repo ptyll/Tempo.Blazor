@@ -104,7 +104,7 @@
                     }
                     else if (Type == DialogType.Confirm || Type == DialogType.Prompt)
                     {
-                        <TmButton Variant="ButtonVariant.Ghost"
+                        <TmButton Variant="GetCancelButtonVariant()"
                                   OnClick="OnCancelClick"
                                   Class="tm-dialog-btn-cancel"
                                   AdditionalAttributes="@(FooterButtonAttrs(ResolvedCancelText, _cancelButtonId))">
@@ -138,6 +138,18 @@
     /// <summary>Placeholder of the prompt input. Null falls back to the localized text.</summary>
     [Parameter] public string? PromptPlaceholder { get; set; }
     [Parameter] public bool IsDangerous { get; set; } = false;
+
+    /// <summary>
+    /// Variant of the OK button. Null (default) keeps the variant the dialog implies:
+    /// Danger when <see cref="IsDangerous"/> or <see cref="Variant"/> is Error, Primary otherwise.
+    /// </summary>
+    [Parameter] public ButtonVariant? OkButtonVariant { get; set; }
+
+    /// <summary>
+    /// Variant of the cancel/dismiss button (Confirm and Prompt dialogs). Null (default) keeps
+    /// the historical Ghost style.
+    /// </summary>
+    [Parameter] public ButtonVariant? CancelButtonVariant { get; set; }
 
     /// <summary>
     /// An icon name from the registry. Null keeps the icon the variant and type imply, so an existing
@@ -184,7 +196,7 @@
     
     [Parameter] public RenderFragment? ChildContent { get; set; }
     [Parameter] public RenderFragment? FooterContent { get; set; }
-    
+
     [Parameter] public EventCallback<bool?> OnResult { get; set; }
     [Parameter] public EventCallback<string?> OnPromptResult { get; set; }
 
@@ -498,16 +510,12 @@
     }
     
     private ButtonVariant GetOkButtonVariant()
-    {
-        if (IsDangerous) return ButtonVariant.Danger;
-        
-        return Variant switch
-        {
-            DialogVariant.Success => ButtonVariant.Primary,
-            DialogVariant.Error => ButtonVariant.Danger,
-            _ => ButtonVariant.Primary
-        };
-    }
+        => OkButtonVariant ?? (IsDangerous ? ButtonVariant.Danger
+            : Variant == DialogVariant.Error ? ButtonVariant.Danger
+            : ButtonVariant.Primary);
+
+    private ButtonVariant GetCancelButtonVariant()
+        => CancelButtonVariant ?? ButtonVariant.Ghost;
     
     private bool IsOkDisabled()
     {

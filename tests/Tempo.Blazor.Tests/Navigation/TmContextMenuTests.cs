@@ -1,6 +1,7 @@
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Navigation;
 using Tempo.Blazor.Components.Overlay;
@@ -287,12 +288,14 @@ public class TmContextMenuTests : LocalizationTestBase
     /// <summary>
     /// N319: the menu must close BEFORE the item's <c>OnClick</c> runs — a handler that opens a
     /// dialog would otherwise render it under the still-open top-layer popover (and the first
-    /// Escape would close the menu, not the dialog).
+    /// Escape would close the menu, not the dialog). The deterministic close (2.12.0) awaits the
+    /// full state transition, so the STATE is already closed when the handler runs; the DOM
+    /// render flushes with the same batch, before the next paint.
     /// </summary>
     [Fact]
     public void ContextMenuItem_Click_ClosesMenuBeforeOnClick()
     {
-        var openPanelsDuringHandler = -1;
+        var menuStateDuringHandler = (bool?)null;
         IRenderedComponent<TmContextMenu>? probe = null;
         var cut = Render<TmContextMenu>(p => p
             .Add(x => x.Trigger, (RenderFragment)(b => b.AddMarkupContent(0, "<button>Open</button>")))
@@ -300,14 +303,16 @@ public class TmContextMenuTests : LocalizationTestBase
                 .Add(x => x.Label, "Delete")
                 .Add(x => x.OnClick, EventCallback.Factory.Create(this, () =>
                 {
-                    openPanelsDuringHandler = probe!.FindAll(".tm-overlay-panel").Count;
+                    menuStateDuringHandler = probe!.Instance.IsOpen;
                 }))));
         probe = cut;
 
         cut.Find(".tm-context-menu__trigger").Click();
         cut.Find(".tm-context-menu__item").Click();
 
-        cut.WaitForAssertion(() => openPanelsDuringHandler.Should().Be(0));
+        menuStateDuringHandler.Should().BeFalse(
+            "the deterministic close has flipped the state before the item handler runs");
+        cut.WaitForAssertion(() => probe!.FindAll(".tm-overlay-panel").Count.Should().Be(0));
     }
 
     [Fact]
@@ -396,7 +401,7 @@ public class TmContextMenuTests : LocalizationTestBase
                 .Add(x => x.Label, "Edit")
                 .Add(x => x.OnClick, EventCallback.Factory.Create(this, () =>
                 {
-                    menuOpenWhenClicked = cut!.FindAll("[role='menu']").Count > 0;
+                    menuOpenWhenClicked = cut!.Instance.IsOpen;
                     clicked = true;
                 }))));
 
@@ -408,7 +413,226 @@ public class TmContextMenuTests : LocalizationTestBase
         menuOpenWhenClicked.Should().BeFalse("the parent closes before the item handler runs");
     }
 
+    // ── TriggerAriaLabel + AsChild (Fáze 4) ──────────────────
+
+    [Fact]
+    public void ContextMenu_TriggerAriaLabel_NamesTheTrigger()
+    {
+        var cut = Render<TmContextMenu>(p => p
+            .Add(x => x.Trigger, (RenderFragment)(b => b.AddMarkupContent(0, "<span>⋯</span>")))
+            .Add(x => x.TriggerAriaLabel, "Row actions")
+            .AddChildContent<TmContextMenuItem>(mi => mi.Add(x => x.Label, "Edit")));
+
+        cut.Find(".tm-context-menu__trigger").GetAttribute("aria-label").Should().Be("Row actions");
+    }
+
+    [Fact]
+    public void ContextMenu_WithoutTriggerAriaLabel_TheTriggerCarriesNoAriaLabel()
+    {
+        var cut = RenderOpenMenu();
+
+        cut.Find(".tm-context-menu__trigger").GetAttribute("aria-label").Should().BeNull();
+    }
+
+    [Fact]
+    public void ContextMenu_AsChild_RendersNoEmulatingTrigger()
+    {
+        // The wrapper is presentational: no div[role=button] around the host's own
+        // button — the nested-interactive-element defect AsChild exists to fix.
+        var cut = Render<TmContextMenu>(p => p
+            .Add(x => x.AsChild, true)
+            .Add(x => x.Trigger, (RenderFragment)(b => b.AddMarkupContent(0, "<button class='as-child-trigger'>⋯</button>")))
+            .AddChildContent<TmContextMenuItem>(mi => mi.Add(x => x.Label, "Edit")));
+
+        cut.FindAll(".tm-context-menu__trigger").Should().BeEmpty();
+        cut.Find(".as-child-trigger").Should().NotBeNull();
+        cut.FindAll("[role='menu']").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ContextMenu_AsChild_TriggerContext_TogglesTheMenu()
+    {
+        var cut = Render<TmContextMenu>(p =>
+        {
+            p.AddChildContent<TmContextMenuItem>(mi => mi.Add(x => x.Label, "Edit"));
+            p.Add(x => x.AsChild, true);
+            p.Add(x => x.Trigger, (RenderFragment)(b =>
+            {
+                b.OpenComponent<AsChildHost>(0);
+                b.CloseComponent();
+            }));
+        });
+
+        var host = cut.FindComponent<AsChildHost>();
+        host.Instance.Trigger.Should().NotBeNull();
+        host.Find("button.as-child-trigger").Click();
+
+        cut.Find("[role='menu']").Should().NotBeNull();
+        host.Instance.Trigger!.IsOpen.Should().BeTrue(
+            "the host's button reads aria-expanded from the context");
+    }
+
+    [Fact]
+    public void ContextMenu_AsChild_ItemClick_ClosesMenuAndFiresOnClickDeterministically()
+    {
+        var clicked = false;
+        var cut = Render<TmContextMenu>(p => p
+            .Add(x => x.AsChild, true)
+            .Add(x => x.Trigger, (RenderFragment)(b => b.AddMarkupContent(0, "<button class='as-child-trigger'>⋯</button>")))
+            .AddChildContent<TmContextMenuItem>(mi => mi
+                .Add(x => x.Label, "Edit")
+                .Add(x => x.OnClick, EventCallback.Factory.Create(this, () => clicked = true))));
+
+        cut.InvokeAsync(() => cut.Instance.Open());
+        cut.Find("[role='menuitem']").Click();
+
+        // Deterministic close: no Task.Yield race — the menu is closed and the handler
+        // has run by the time the click dispatch returns.
+        cut.FindAll("[role='menu']").Should().BeEmpty();
+        clicked.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ContextMenuItem_Click_FiresOnClickSynchronouslyWithTheClose()
+    {
+        var clicked = false;
+        var cut = Render<TmContextMenu>(p => p
+            .Add(x => x.Trigger, (RenderFragment)(b => b.AddMarkupContent(0, "<button>Menu</button>")))
+            .AddChildContent<TmContextMenuItem>(mi => mi
+                .Add(x => x.Label, "Action")
+                .Add(x => x.OnClick, EventCallback.Factory.Create(this, () => clicked = true))));
+
+        cut.Find(".tm-context-menu__trigger").Click();
+        cut.Find("[role='menuitem']").Click();
+
+        clicked.Should().BeTrue("the deterministic close must not push OnClick to a later dispatcher turn");
+    }
+
+    [Fact]
+    public void ContextMenu_AsChild_TriggerContext_IsCachedAcrossRenders()
+    {
+        var cut = Render<TmContextMenu>(p =>
+        {
+            p.AddChildContent<TmContextMenuItem>(mi => mi.Add(x => x.Label, "Edit"));
+            p.Add(x => x.AsChild, true);
+            p.Add(x => x.Trigger, (RenderFragment)(b =>
+            {
+                b.OpenComponent<AsChildHost>(0);
+                b.CloseComponent();
+            }));
+        });
+
+        var host = cut.FindComponent<AsChildHost>();
+        var first = host.Instance.Trigger;
+        cut.Render();
+
+        host.Instance.Trigger.Should().BeSameAs(first,
+            "a new context instance per render (IsFixed=false) re-renders every consumer on every menu render");
+    }
+
+    [Fact]
+    public void ContextMenu_AsChild_TriggerContext_OpenAndClose_RideTheDispatcher()
+    {
+        var cut = Render<TmContextMenu>(p =>
+        {
+            p.AddChildContent<TmContextMenuItem>(mi => mi.Add(x => x.Label, "Edit"));
+            p.Add(x => x.AsChild, true);
+            p.Add(x => x.Trigger, (RenderFragment)(b =>
+            {
+                b.OpenComponent<AsChildHost>(0);
+                b.CloseComponent();
+            }));
+        });
+
+        var host = cut.FindComponent<AsChildHost>();
+
+        host.Instance.OpenFromContext();
+        cut.Find("[role='menu']").Should().NotBeNull("OpenAsync opens the menu");
+        host.Instance.Trigger!.IsOpen.Should().BeTrue();
+
+        host.Instance.CloseFromContext();
+        cut.FindAll("[role='menu']").Should().BeEmpty("CloseAsync closes the menu");
+        host.Instance.Trigger!.IsOpen.Should().BeFalse();
+    }
+
+    [Fact]
+    public void ContextMenu_AsChild_PanelAnchorsToTheWrapper_NotTheUnrenderedTrigger()
+    {
+        var cut = Render<TmContextMenu>(p => p
+            .Add(x => x.AsChild, true)
+            .Add(x => x.Trigger, (RenderFragment)(b => b.AddMarkupContent(0, "<button class='as-child-trigger'>⋯</button>")))
+            .AddChildContent<TmContextMenuItem>(mi => mi.Add(x => x.Label, "Edit")));
+
+        cut.InvokeAsync(() => cut.Instance.Open());
+
+        var panel = cut.FindComponent<TmOverlayPanel>();
+        var wrapperRef = (ElementReference)typeof(TmContextMenu)
+            .GetField("_wrapperRef", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+            .GetValue(cut.Instance)!;
+        panel.Instance.Anchor.Id.Should().Be(wrapperRef.Id,
+            "in AsChild mode the built-in trigger element is never rendered — the popover must anchor to the wrapper");
+        wrapperRef.Id.Should().NotBeEmpty("a vacuous empty-vs-empty comparison proves nothing");
+    }
+
+    [Fact]
+    public void ContextMenu_AsChild_ItemActivation_HandsFocusBackToTheHostTrigger()
+    {
+        var nav = JSInterop.SetupModule("./_content/Tempo.Blazor/js/tm-menu-nav.js");
+        nav.Setup<bool>("focusHostTrigger", _ => true).SetResult(true);
+
+        var cut = Render<TmContextMenu>(p => p
+            .Add(x => x.AsChild, true)
+            .Add(x => x.Trigger, (RenderFragment)(b => b.AddMarkupContent(0, "<button class='as-child-trigger'>⋯</button>")))
+            .AddChildContent<TmContextMenuItem>(mi => mi.Add(x => x.Label, "Edit")));
+
+        cut.InvokeAsync(() => cut.Instance.Open());
+        cut.Find("[role='menuitem']").Click();
+
+        cut.WaitForAssertion(() => nav.Invocations["focusHostTrigger"].Should().ContainSingle(
+            "an item activation closes the menu and focus returns to the HOST's own trigger, not <body>"));
+    }
+
+    [Fact]
+    public void ContextMenu_BuiltInTrigger_ItemActivation_DoesNotUseTheHostTriggerHelper()
+    {
+        var nav = JSInterop.SetupModule("./_content/Tempo.Blazor/js/tm-menu-nav.js");
+        nav.Setup<bool>("focusHostTrigger", _ => true).SetResult(true);
+
+        var cut = Render<TmContextMenu>(p => p
+            .Add(x => x.Trigger, (RenderFragment)(b => b.AddMarkupContent(0, "<button>Actions</button>")))
+            .AddChildContent<TmContextMenuItem>(mi => mi.Add(x => x.Label, "Edit")));
+
+        cut.Find(".tm-context-menu__trigger").Click();
+        cut.Find("[role='menuitem']").Click();
+
+        cut.WaitForAssertion(() => JSInterop.Invocations.Count(i => i.Identifier == "Blazor._internal.domWrapper.focus")
+            .Should().BeGreaterThan(0, "the built-in trigger keeps the ElementReference focus hand-back"));
+        nav.Invocations["focusHostTrigger"].Should().BeEmpty(
+            "focusHostTrigger is the AsChild-only path — the built-in trigger focuses its own ref");
+    }
+
     // ── Helper ─────────────────────────────────────────────
+
+    /// <summary>A minimal host that binds the AsChild trigger context like a real trigger button would.</summary>
+    private sealed class AsChildHost : ComponentBase
+    {
+        [CascadingParameter] public ContextMenuTriggerContext? Trigger { get; set; }
+
+        public Task OpenFromContext() => Trigger!.OpenAsync();
+
+        public Task CloseFromContext() => Trigger!.CloseAsync();
+
+        protected override void BuildRenderTree(RenderTreeBuilder builder)
+        {
+            builder.OpenElement(0, "button");
+            builder.AddAttribute(1, "class", "as-child-trigger");
+            builder.AddAttribute(2, "aria-haspopup", "menu");
+            builder.AddAttribute(3, "aria-expanded", Trigger?.IsOpen.ToString().ToLowerInvariant());
+            builder.AddAttribute(4, "onclick", EventCallback.Factory.Create(this, () => Trigger?.ToggleAsync()));
+            builder.AddContent(5, "⋯");
+            builder.CloseElement();
+        }
+    }
 
     private IRenderedComponent<TmContextMenu> RenderOpenMenu()
     {

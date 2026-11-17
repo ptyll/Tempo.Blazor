@@ -66,6 +66,18 @@
       "description": "Dismiss button text. Defaults to the localized Tm_Cancel when not set."
     },
     {
+      "name": "OkButtonVariant",
+      "type": "ButtonVariant?",
+      "isRequired": false,
+      "description": "Variant of the OK button. Null (default) keeps the variant the dialog implies: Danger when IsDangerous or Variant is Error, Primary otherwise (since 2.12.0)."
+    },
+    {
+      "name": "CancelButtonVariant",
+      "type": "ButtonVariant?",
+      "isRequired": false,
+      "description": "Variant of the cancel/dismiss button (Confirm and Prompt dialogs). Null (default) keeps the historical Ghost style (since 2.12.0)."
+    },
+    {
       "name": "ChildContent",
       "type": "RenderFragment?",
       "isRequired": false

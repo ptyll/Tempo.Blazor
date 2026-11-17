@@ -36,6 +36,18 @@ internal sealed class MenuNavInterop : IAsyncDisposable
         await _lazy.TryInvokeVoidAsync("focusLast", host);
     }
 
+    /// <summary>
+    /// Focuses the HOST's own trigger element of an AsChild context menu: the first focusable
+    /// descendant of <paramref name="host"/> (the wrapper) that is not inside the menu panel —
+    /// the element an item activation hands focus back to, matching the close-focus-restore the
+    /// built-in trigger gets through its ElementReference.
+    /// </summary>
+    public async Task FocusHostTriggerAsync(ElementReference host)
+    {
+        if (_disposed) return;
+        await _lazy.TryInvokeVoidAsync("focusHostTrigger", host);
+    }
+
     public async ValueTask DisposeAsync()
     {
         _disposed = true;

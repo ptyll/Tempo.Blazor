@@ -56,11 +56,15 @@ else
         if (!Disabled)
         {
             // N319: close the menu BEFORE the handler runs — the menu is a top-layer popover and
-            // would cover a dialog the handler opens (and steal its first Escape).
-            var click = OnClick;
-            Parent?.CloseMenu();
-            await Task.Yield();
-            await click.InvokeAsync();
+            // would cover a dialog the handler opens (and steal its first Escape). 2.12.0 makes
+            // the close deterministic: the item awaits the parent's full close transition (state
+            // + IsOpenChanged + re-render) instead of firing it fire-and-forget and papering over
+            // the race with Task.Yield. When the click dispatch returns, the menu IS closed.
+            if (Parent is not null)
+            {
+                await Parent.CloseMenuAsync();
+            }
+            await OnClick.InvokeAsync();
         }
     }
 }

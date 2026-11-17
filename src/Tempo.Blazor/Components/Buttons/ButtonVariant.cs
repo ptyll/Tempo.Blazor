@@ -24,5 +24,8 @@ public enum ButtonVariant
     /// <summary>Warning.</summary>
     Warning,
     /// <summary>Warning outline.</summary>
-    OutlineWarning
+    OutlineWarning,
+    /// <summary>Primary-subtle fill with primary ink (2.12.0). The low-key emphasis a toolbar
+    /// or a panel of quiet actions uses instead of a full primary fill.</summary>
+    Soft
 }

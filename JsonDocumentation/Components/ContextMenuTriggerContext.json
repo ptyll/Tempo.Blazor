@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Navigation",
+  "namespace": "Tempo.Blazor.Components.Navigation",
+  "description": "The menu-button contract TmContextMenu hands to a host trigger in AsChild mode (TmContextMenu.AsChild = true). The wrapper is presentational then; the host's own trigger element (usually a native <button> inside the Trigger fragment) binds IsOpen to aria-expanded, declares aria-haspopup=\"menu\" and calls ToggleAsync from its click handler. Activation keys are the native button contract — the menu adds no emulation.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/Navigation/ContextMenuTriggerContext.cs",
+  "documentationStatus": "generated",
+  "itemName": "ContextMenuTriggerContext"
+}

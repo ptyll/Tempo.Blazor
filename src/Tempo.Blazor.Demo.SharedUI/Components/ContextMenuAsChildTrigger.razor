@@ -1,0 +1,16 @@
+@namespace Tempo.Blazor.Demo.SharedUI.Components
+@using Tempo.Blazor.Components.Navigation
+@* The host-side trigger for the TmContextMenu.AsChild demo (/feedback): a native <button> that
+   binds the cascaded ContextMenuTriggerContext — aria-haspopup="menu" (REQUIRED so a reader
+   learns the button opens a menu), aria-expanded from IsOpen, activation from ToggleAsync. *@
+<button type="button" class="tm-btn tm-btn-secondary tm-btn-sm"
+        aria-haspopup="menu"
+        aria-expanded="@(_trigger?.IsOpen == true ? "true" : "false")"
+        @onclick="@(() => _trigger?.ToggleAsync())"
+        data-testid="context-menu-as-child-trigger">@ChildContent</button>
+
+@code {
+    [CascadingParameter] private ContextMenuTriggerContext? _trigger { get; set; }
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

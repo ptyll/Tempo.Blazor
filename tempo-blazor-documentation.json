@@ -3818,6 +3818,12 @@
           "description": "Fired when the button is clicked (and not disabled/loading)."
         },
         {
+          "name": "Pressed",
+          "type": "bool?",
+          "isRequired": false,
+          "description": "Toggle state of the button. Null (default) renders a plain action button with no aria-pressed; true/false render aria-pressed and the .tm-btn--pressed visual state, turning the button into a proper toggle. A host binds the state itself — the button raises OnClick either way (since 2.12.0)."
+        },
+        {
           "name": "Size",
           "type": "ButtonSize",
           "isRequired": false,
@@ -3843,7 +3849,7 @@
           "type": "ButtonVariant",
           "isRequired": false,
           "default": "ButtonVariant.Primary",
-          "description": "Visual style variant. Defaults to Primary."
+          "description": "Visual style variant. Defaults to Primary. Since 2.12.0 Soft renders the primary-subtle fill (quiet emphasis for toolbars and panels of secondary actions)."
         }
       ],
       "cssClasses": [
@@ -3858,6 +3864,8 @@
         "tm-btn-outline-warning",
         "tm-btn-link",
         "tm-btn-default",
+        "tm-btn-soft",
+        "tm-btn--pressed",
         "tm-btn-xs",
         "tm-btn-sm",
         "tm-btn-md",
@@ -3896,6 +3904,10 @@
         {
           "title": "Icon on the right side",
           "code": "<TmButton Icon=\"arrow-right\" IconRight=\"true\">Next</TmButton>"
+        },
+        {
+          "title": "Toggle button (2.12.0)",
+          "code": "<TmButton Variant=\"ButtonVariant.Soft\" Pressed=\"@isPinned\" OnClick=\"() => isPinned = !isPinned\">Pin</TmButton>"
         }
       ]
     },
@@ -6954,6 +6966,42 @@
           "name": "Title",
           "kind": "Property",
           "type": "string"
+        }
+      ]
+    },
+    {
+      "itemName": "ContextMenuTriggerContext",
+      "kind": "Class",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Navigation",
+      "description": "The menu-button contract TmContextMenu hands to a host trigger in AsChild mode (TmContextMenu.AsChild = true). The wrapper is presentational then; the host's own trigger element (usually a native <button> inside the Trigger fragment) binds IsOpen to aria-expanded, declares aria-haspopup=\"menu\" and calls ToggleAsync from its click handler. Activation keys are the native button contract — the menu adds no emulation.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Navigation/ContextMenuTriggerContext.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "CloseAsync",
+          "kind": "Method",
+          "type": "Task",
+          "description": "Closes the menu (no-op while it is already closed). Mirrors OpenAsync for a host that closes the menu from its own action, e.g. a trigger-level \"Done\" command."
+        },
+        {
+          "name": "OpenAsync",
+          "kind": "Method",
+          "type": "Task",
+          "description": "Opens the menu (no-op while it is already open). The open state transition runs on the menu's dispatcher, so a host calling this from outside it cannot race the state read."
+        },
+        {
+          "name": "ToggleAsync",
+          "kind": "Method",
+          "type": "Task",
+          "description": "Opens the menu when it is closed and closes it when it is open."
+        },
+        {
+          "name": "IsOpen",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the menu is currently open — bind to aria-expanded."
         }
       ]
     },
@@ -15656,6 +15704,12 @@
           "description": "Dismiss button text. Defaults to the localized Tm_Cancel when not set."
         },
         {
+          "name": "CancelButtonVariant",
+          "type": "ButtonVariant?",
+          "isRequired": false,
+          "description": "Variant of the cancel/dismiss button (Confirm and Prompt dialogs). Null (default) keeps the historical Ghost style (since 2.12.0)."
+        },
+        {
           "name": "ChildContent",
           "type": "RenderFragment?",
           "isRequired": false
@@ -15747,6 +15801,12 @@
           "type": "string?",
           "isRequired": false,
           "description": "Confirm button text. Defaults to the localized Tm_Ok when not set."
+        },
+        {
+          "name": "OkButtonVariant",
+          "type": "ButtonVariant?",
+          "isRequired": false,
+          "description": "Variant of the OK button. Null (default) keeps the variant the dialog implies: Danger when IsDangerous or Variant is Error, Primary otherwise (since 2.12.0)."
         },
         {
           "name": "OnPromptResult",
@@ -26791,6 +26851,13 @@
       ],
       "parameters": [
         {
+          "name": "AsChild",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Renders no emulating trigger at all: the wrapper becomes presentational and the host's own trigger element inside the Trigger fragment receives the menu-button semantics from the cascaded ContextMenuTriggerContext (aria-haspopup, aria-expanded via IsOpen, activation via ToggleAsync). Use it whenever the trigger fragment holds a real interactive control — a div[role=button] wrapped around a button is a nested interactive element (since 2.12.0).",
+          "default": "false"
+        },
+        {
           "name": "ChildContent",
           "type": "RenderFragment?",
           "isRequired": false,
@@ -26828,6 +26895,12 @@
           "description": "The trigger element that opens the menu."
         },
         {
+          "name": "TriggerAriaLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Accessible name of the emulating trigger. Null (default) keeps the trigger unnamed — use it when the trigger fragment itself carries a visible or accessible label; a nameless role=button div with an icon-only fragment is unnamed to a reader (since 2.12.0)."
+        },
+        {
           "name": "TriggerTabIndex",
           "type": "int?",
           "isRequired": false,
@@ -26848,6 +26921,10 @@
         {
           "title": "Opt-in mobile bottom sheet",
           "code": "<TmContextMenu MobilePresentation=\"PanelPresentation.Auto\" SheetTitle=\"Row actions\">\n    <Trigger>\n        <TmButton Variant=\"ButtonVariant.Ghost\" Size=\"ButtonSize.Sm\">Actions</TmButton>\n    </Trigger>\n    <ChildContent>\n        <TmContextMenuItem Label=\"Edit\" Icon=\"edit\" OnClick=\"EditItem\" />\n    </ChildContent>\n</TmContextMenu>"
+        },
+        {
+          "title": "AsChild trigger (2.12.0) — the host's own button owns the semantics",
+          "code": "// In a host component with [CascadingParameter] ContextMenuTriggerContext? Menu:\n<TmContextMenu AsChild=\"true\">\n    <Trigger>\n        <button type=\"button\" aria-haspopup=\"menu\" aria-expanded=\"@(Menu?.IsOpen == true)\" @onclick=\"@(() => Menu?.ToggleAsync())\">⋯</button>\n    </Trigger>\n    <ChildContent>\n        <TmContextMenuItem Label=\"Edit\" OnClick=\"EditItem\" />\n    </ChildContent>\n</TmContextMenu>"
         }
       ]
     },
@@ -36872,11 +36949,11 @@
     }
   ],
   "summary": {
-    "itemCount": 462,
-    "manualItemCount": 462,
-    "generatedItemCount": 454,
+    "itemCount": 463,
+    "manualItemCount": 463,
+    "generatedItemCount": 455,
     "generatedOnlyItemCount": 0,
     "componentCount": 238,
-    "publicApiTypeCount": 216
+    "publicApiTypeCount": 217
   }
 }

@@ -28,6 +28,12 @@
   --tm-color-primary-hover:    var(--tm-color-primary-700);
   --tm-color-primary-active:   var(--tm-color-primary-800);
   --tm-color-primary-subtle:   var(--tm-color-primary-50);
+  /* Soft button hover/pressed fill (2.12.0): one step stronger than -subtle, still a quiet
+     primary-100 tint. NOT --tm-color-primary-lighter: that alias stays primary-100 in DARK too
+     (the dark theme never re-declares it), so the old hover/pressed rules painted a light
+     pastel fill under light primary ink there. The dark theme re-points this alias to a
+     translucent primary-500 tint (tokens-dark.css) and the ink to --tm-color-primary-hover. */
+  --tm-color-primary-subtle-hover: var(--tm-color-primary-100);
   --tm-color-primary-text:     var(--tm-color-primary-800);
   /* RGB channels of --tm-color-primary-500, for rgba() alpha compositing. A custom property
      cannot extract channels from a hex colour, so the triplet is declared alongside — and

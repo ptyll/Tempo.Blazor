@@ -11,7 +11,7 @@
 <section class="demo-section">
     <div class="flex items-center space-x-2 mb-4">
         <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Button Variants</h2>
-        <span class="px-2 py-0.5 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full">9 styles</span>
+        <span class="px-2 py-0.5 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full">10 styles</span>
     </div>
     <div class="showcase-card" data-testid="buttons-variants-card">
         <div class="flex flex-wrap gap-3">
@@ -21,9 +21,31 @@
             <TmButton Variant="ButtonVariant.Outline">Outline</TmButton>
             <TmButton Variant="ButtonVariant.Warning" data-testid="button-variant-warning">Warning</TmButton>
             <TmButton Variant="ButtonVariant.OutlineWarning" data-testid="button-variant-outline-warning">Outline Warning</TmButton>
+            <TmButton Variant="ButtonVariant.Soft" data-testid="button-variant-soft">Soft</TmButton>
             <TmButton Variant="ButtonVariant.Ghost">Ghost</TmButton>
             <TmButton Variant="ButtonVariant.Danger">Danger</TmButton>
             <TmButton Variant="ButtonVariant.Link">Link</TmButton>
+        </div>
+    </div>
+</section>
+
+<!-- Soft / Toggle (Pressed) -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Soft / Toggle (Pressed)</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full">2.12</span>
+    </div>
+    <div class="showcase-card" data-testid="buttons-soft-card">
+        <div class="flex flex-wrap items-center gap-3">
+            <TmButton Variant="ButtonVariant.Soft" data-testid="button-variant-soft-plain">Soft</TmButton>
+            @* Stable labels (APG): aria-pressed alone carries the state — a label that changes
+               together with the state makes a reader hear both a name change and a state change. *@
+            <TmButton Variant="ButtonVariant.Soft" Pressed="_softPressed"
+                      OnClick="() => _softPressed = !_softPressed"
+                      data-testid="button-soft-pressed">Mute</TmButton>
+            <TmButton Variant="ButtonVariant.Primary" Pressed="_primaryPressed"
+                      OnClick="() => _primaryPressed = !_primaryPressed"
+                      data-testid="button-primary-pressed">Pin</TmButton>
         </div>
     </div>
 </section>
@@ -198,4 +220,6 @@
 
 @code {
     private int _count;
+    private bool _softPressed;
+    private bool _primaryPressed;
 }

@@ -262,6 +262,25 @@ export function focusLast(root) {
     return true;
 }
 
+/**
+ * Focuses the HOST's own trigger element of an AsChild context menu: the first focusable
+ * descendant of the wrapper that is NOT inside the menu panel. An item activation closes the menu
+ * without overlay.js's focus restore, so without this the focus would end on <body> (the host
+ * button is the element the reader expects focus on — the menu-button contract). Mirrors the
+ * close-focus-restore the built-in trigger gets through its ElementReference. Returns whether
+ * something was focused.
+ * @param {ParentNode|null} root the wrapper element that contains both the host trigger and the menu panel
+ */
+export function focusHostTrigger(root) {
+    const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), '
+        + 'select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    const candidates = Array.from(root?.querySelectorAll?.(FOCUSABLE) ?? []);
+    const target = candidates.find(el => !el.closest('[role="menu"]'));
+    if (!target) return false;
+    target.focus();
+    return true;
+}
+
 /** Test seam: forgets every registration. */
 export function __resetForTests() {
     attached = new WeakMap();

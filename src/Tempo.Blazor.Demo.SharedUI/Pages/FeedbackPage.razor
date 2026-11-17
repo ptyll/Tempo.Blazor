@@ -854,7 +854,7 @@
             <!-- Context Menu -->
             <div>
                 <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Context Menu</p>
-                <TmContextMenu>
+                <TmContextMenu TriggerAriaLabel="Row actions">
                     <Trigger>
                         <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm">
                             <span class="flex items-center space-x-1">
@@ -864,6 +864,30 @@
                                 </svg>
                             </span>
                         </TmButton>
+                    </Trigger>
+                    <ChildContent>
+                        <TmContextMenuItem Label="Edit" Icon="edit" OnClick="@(() => Toast.ShowInfo("Edit clicked"))" />
+                        <TmContextMenuItem Label="Duplicate" Icon="copy" OnClick="@(() => Toast.ShowInfo("Duplicate clicked"))" />
+                        <TmContextMenuItem IsDivider="true" />
+                        <TmContextMenuItem Label="Delete" Icon="trash" IsDangerous="true" OnClick="@(() => Toast.ShowError("Delete clicked"))" />
+                    </ChildContent>
+                </TmContextMenu>
+            </div>
+
+            <!-- AsChild trigger (2.12): the host's own native button carries the menu-button
+                 semantics through the cascaded ContextMenuTriggerContext -->
+            <div>
+                <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">AsChild trigger (native button)</p>
+                <TmContextMenu AsChild data-testid="feedback-contextmenu-aschild">
+                    <Trigger>
+                        <ContextMenuAsChildTrigger>
+                            <span class="flex items-center space-x-1">
+                                <span>Actions</span>
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </span>
+                        </ContextMenuAsChildTrigger>
                     </Trigger>
                     <ChildContent>
                         <TmContextMenuItem Label="Edit" Icon="edit" OnClick="@(() => Toast.ShowInfo("Edit clicked"))" />

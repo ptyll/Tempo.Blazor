@@ -541,6 +541,54 @@ public class TmButtonTests : LocalizationTestBase
             "a loading button with no text and no content paints only the spinner");
     }
 
+    // ─── Soft variant (Fáze 4) ────────────────────────────────────────────────
+
+    [Fact]
+    public void TmButton_Soft_Variant_Applies_CssClass()
+    {
+        var cut = Render<TmButton>(p => p
+            .Add(c => c.Variant, ButtonVariant.Soft)
+            .AddChildContent("Click"));
+
+        cut.Find("button").ClassList.Should().Contain("tm-btn-soft");
+    }
+
+    // ─── Pressed (toggle buttons, Fáze 4) ────────────────────────────────────
+
+    [Fact]
+    public void TmButton_PressedTrue_RendersAriaPressedTrue_AndPressedClass()
+    {
+        var cut = Render<TmButton>(p => p
+            .Add(c => c.Pressed, true)
+            .AddChildContent("Pin"));
+
+        var button = cut.Find("button");
+        button.GetAttribute("aria-pressed").Should().Be("true");
+        button.ClassList.Should().Contain("tm-btn--pressed");
+    }
+
+    [Fact]
+    public void TmButton_PressedFalse_RendersAriaPressedFalse_WithoutPressedClass()
+    {
+        var cut = Render<TmButton>(p => p
+            .Add(c => c.Pressed, false)
+            .AddChildContent("Pin"));
+
+        var button = cut.Find("button");
+        button.GetAttribute("aria-pressed").Should().Be("false");
+        button.ClassList.Should().NotContain("tm-btn--pressed");
+    }
+
+    [Fact]
+    public void TmButton_PressedNull_OmitsAriaPressed()
+    {
+        var cut = Render<TmButton>(p => p
+            .AddChildContent("Plain"));
+
+        cut.Find("button").GetAttribute("aria-pressed").Should().BeNull(
+            "a plain action button is not a toggle and carries no aria-pressed");
+    }
+
     [Fact]
     public void TmButton_LoadingWithText_KeepsTheLabelSpan()
     {

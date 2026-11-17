@@ -19,7 +19,13 @@
       "type": "ButtonVariant",
       "isRequired": false,
       "default": "Primary",
-      "description": "Visual style variant. Defaults to Primary."
+      "description": "Visual style variant. Defaults to Primary. Since 2.12.0 Soft renders the primary-subtle fill (quiet emphasis for toolbars and panels of secondary actions)."
+    },
+    {
+      "name": "Pressed",
+      "type": "bool?",
+      "isRequired": false,
+      "description": "Toggle state of the button. Null (default) renders a plain action button with no aria-pressed; true/false render aria-pressed and the .tm-btn--pressed visual state, turning the button into a proper toggle. A host binds the state itself — the button raises OnClick either way (since 2.12.0)."
     },
     {
       "name": "Size",
@@ -108,6 +114,8 @@
     "tm-btn-outline-warning",
     "tm-btn-link",
     "tm-btn-default",
+    "tm-btn-soft",
+    "tm-btn--pressed",
     "tm-btn-xs",
     "tm-btn-sm",
     "tm-btn-md",
@@ -146,6 +154,10 @@
     {
       "title": "Icon on the right side",
       "code": "<TmButton Icon=\"arrow-right\" IconRight=\"true\">Next</TmButton>"
+    },
+    {
+      "title": "Toggle button (2.12.0)",
+      "code": "<TmButton Variant=\"ButtonVariant.Soft\" Pressed=\"@isPinned\" OnClick=\"() => isPinned = !isPinned\">Pin</TmButton>"
     }
   ]
 }

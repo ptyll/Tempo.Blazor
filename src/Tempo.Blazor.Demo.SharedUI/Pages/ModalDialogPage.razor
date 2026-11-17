@@ -248,6 +248,8 @@
           Message="@_confirmMessage"
           IsDangerous="_confirmIsDangerous"
           OkButtonText="@(_confirmIsDangerous ? "Delete" : null)"
+          OkButtonVariant="@(_confirmIsDangerous ? ButtonVariant.Danger : ButtonVariant.Primary)"
+          CancelButtonVariant="ButtonVariant.OutlineSecondary"
           OnResult="OnConfirmResult" />
 
 <!-- Long Custom Dialog: content far taller than the scroller's max height, so the content block

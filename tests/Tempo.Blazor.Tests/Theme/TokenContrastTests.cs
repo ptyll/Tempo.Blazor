@@ -516,6 +516,11 @@ public sealed partial class TokenContrastTests
             "--tm-calendar-view-event-fg", "--tm-calendar-view-highlight",
             "--tm-calendar-view-today-bg", "--tm-calendar-view-today-fg",
             "--tm-color-border-subtle", "--tm-color-primary", "--tm-color-primary-hover",
+            // Fáze 4 Soft button: the hover/pressed fill is a primary TINT — light rides the 100
+            // step, dark a translucent primary-500 wash (like --tm-color-primary-subtle), because
+            // the light primary-100 would stay a light pastel under light dark-theme ink (~2:1).
+            // The contrast is measured by SoftButtonHoverAndPressedInk_HoldsAa_OnTheSubtleHoverFill.
+            "--tm-color-primary-subtle-hover",
             "--tm-color-primary-soft-border", "--tm-color-primary-subtle", "--tm-color-primary-text",
             "--tm-color-surface-elevated", "--tm-color-surface-hover", "--tm-control-hover-fill",
             "--tm-priority-lowest", "--tm-shadow-focus", "--tm-sort-indicator-idle",
