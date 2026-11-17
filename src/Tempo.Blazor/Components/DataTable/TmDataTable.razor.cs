@@ -1162,6 +1162,42 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
     [Parameter] public bool ShowViewManager { get; set; } = true;
 
     /// <summary>
+    /// Opt-in (Fáze 7): table headers wrap onto multiple lines instead of the historical
+    /// <c>nowrap</c>. A column can opt back out with <c>HeaderWrap="false"</c>, or opt in
+    /// individually with <c>HeaderWrap="true"</c> on a nowrap table.
+    /// </summary>
+    [Parameter] public bool WrapHeaders { get; set; }
+
+    /// <summary>
+    /// Direction the FIRST click on a sortable column applies (Fáze 7). Default
+    /// <see cref="DataTableSortDirection.Ascending"/> keeps the historical cycle
+    /// ascending → descending → cleared; <see cref="DataTableSortDirection.Descending"/> restores
+    /// the legacy grids that start at descending. A column's own <c>FirstSortDirection</c> (when
+    /// non-null) wins over this table-wide default.
+    /// </summary>
+    [Parameter] public DataTableSortDirection FirstSortDirection { get; set; } = DataTableSortDirection.Ascending;
+
+    /// <summary>
+    /// Opt-in (Fáze 7, decision EMUSCZ-2.12-BREAKING-POINTS (b)): when the host registers this
+    /// callback — or supplies <see cref="ErrorTemplate"/>/<see cref="ErrorText"/> — an
+    /// <see cref="IDataTableDataProvider{TItem}"/> exception during a load is caught. The previously
+    /// rendered rows and the total count stay untouched, an inline error box with a Retry action is
+    /// rendered and the exception is reported here. <see cref="OperationCanceledException"/> is never
+    /// caught; a superseded response (a newer load has started) is dropped. Without any of the three
+    /// opt-ins the exception propagates exactly as before.
+    /// </summary>
+    [Parameter] public EventCallback<Exception> OnLoadError { get; set; }
+
+    /// <summary>
+    /// Body of the inline load-error box. Overrides the localized default message; the template wins
+    /// over <see cref="ErrorText"/> and receives the caught exception.
+    /// </summary>
+    [Parameter] public RenderFragment<Exception>? ErrorTemplate { get; set; }
+
+    /// <summary>Text of the inline load-error box; the localized default is used when empty.</summary>
+    [Parameter] public string? ErrorText { get; set; }
+
+    /// <summary>
     /// Initial page size, read once during initialization. Default: 25.
     /// Ignored when <see cref="PageSize"/> is supplied, which is the controlled counterpart.
     /// </summary>
@@ -1635,6 +1671,8 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
         // asked for the right page size in its very first query instead of fetching the default first.
         if (PageSize is { } initialPageSize)
             ThrowIfNotPositive(initialPageSize, nameof(PageSize));
+        else
+            ThrowIfNotPositive(DefaultPageSize, nameof(DefaultPageSize)); // the uncontrolled default follows the same strict contract as PageSize
         _pageSize = PageSize ?? DefaultPageSize;
         _lastPageSizeParam = PageSize;
         _reportedPageSize = _pageSize;
@@ -2394,10 +2432,29 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
     /// </summary>
     private int _loadGeneration;
 
+    /// <summary>The provider exception of the latest failed load, while it is the newest one. Null once a load succeeds or is superseded.</summary>
+    private Exception? _loadError;
+
+    /// <summary>
+    /// True when the host opted into the caught-provider-error contract (decision
+    /// EMUSCZ-2.12-BREAKING-POINTS (b)): OnLoadError registered or an error body supplied. Without
+    /// an opt-in the exception propagates exactly as before.
+    /// </summary>
+    private bool CatchesProviderErrors =>
+        OnLoadError.HasDelegate || ErrorTemplate is not null || !string.IsNullOrEmpty(ErrorText);
+
+    /// <summary>The error box's Retry action: a plain, fresh <see cref="LoadFromProviderAsync"/>.</summary>
+    private async Task RetryLoadAsync()
+    {
+        _loadError = null;
+        await LoadFromProviderAsync();
+    }
+
     private async Task LoadFromProviderAsync()
     {
         var generation = ++_loadGeneration;
         _isLoading = true;
+        _loadError = null;
         StateHasChanged();
         try
         {
@@ -2445,6 +2502,15 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
             // result that was not superseded, so the host never hears a stale size.
             await NotifyPageSizeChangedAsync();
         }
+        catch (Exception ex) when (CatchesProviderErrors && ex is not OperationCanceledException)
+        {
+            // Opt-in (Fáze 7): a stale failure (a newer load already started) is dropped; the newest
+            // failed load keeps the previous rows, reports the exception and paints the error box.
+            if (generation != _loadGeneration)
+                return;
+            _loadError = ex;
+            await OnLoadError.InvokeAsync(ex);
+        }
         finally
         {
             // A superseded load must not clear the flag: the load that superseded it owns it now.
@@ -2478,9 +2544,22 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
     // ── Sort ──────────────────────────────────────────────────────
 
     /// <summary>
-    /// Cycles the sort state for a column. A plain click sorts by this column only (asc → desc → none).
-    /// A multi-sort click (Shift) appends or cycles this column as an additional sort key, preserving the
-    /// order in which columns were added.
+    /// The direction the FIRST activation on <paramref name="col"/> applies: the column's
+    /// <c>FirstSortDirection</c> (when set) wins over the table-wide <see cref="FirstSortDirection"/>.
+    /// </summary>
+    private DataTableSortDirection EffectiveFirstSortDirection(TmDataTableColumn<TItem> col)
+        => col.FirstSortDirection ?? FirstSortDirection;
+
+    private static DataTableSortDirection Flipped(DataTableSortDirection direction)
+        => direction == DataTableSortDirection.Ascending
+            ? DataTableSortDirection.Descending
+            : DataTableSortDirection.Ascending;
+
+    /// <summary>
+    /// Cycles the sort state for a column. A plain click sorts by this column only
+    /// (none → <see cref="EffectiveFirstSortDirection"/> → flipped → none). A multi-sort click
+    /// (Shift) appends or cycles this column as an additional sort key, preserving the order in
+    /// which columns were added.
     /// </summary>
     private async Task SortByAsync(TmDataTableColumn<TItem> col, bool multiSort)
     {
@@ -2488,29 +2567,29 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
 
         var key = col.Key;
         var index = _sortDescriptors.FindIndex(s => s.Column == key);
+        var first = EffectiveFirstSortDirection(col);
 
         if (multiSort)
         {
             if (index < 0)
-                _sortDescriptors.Add(new SortDescriptor(key, DataTableSortDirection.Ascending));
-            else if (_sortDescriptors[index].Direction == DataTableSortDirection.Ascending)
-                _sortDescriptors[index] = new SortDescriptor(key, DataTableSortDirection.Descending);
+                _sortDescriptors.Add(new SortDescriptor(key, first));
+            else if (_sortDescriptors[index].Direction == first)
+                _sortDescriptors[index] = new SortDescriptor(key, Flipped(first));
             else
                 _sortDescriptors.RemoveAt(index);
         }
         else
         {
-            var wasSoleAscending = _sortDescriptors.Count == 1 && index == 0
-                && _sortDescriptors[0].Direction == DataTableSortDirection.Ascending;
-            var wasSoleDescending = _sortDescriptors.Count == 1 && index == 0
-                && _sortDescriptors[0].Direction == DataTableSortDirection.Descending;
+            var soleDirection = _sortDescriptors.Count == 1 && index == 0
+                ? _sortDescriptors[0].Direction
+                : (DataTableSortDirection?)null;
 
             _sortDescriptors.Clear();
-            if (wasSoleAscending)
-                _sortDescriptors.Add(new SortDescriptor(key, DataTableSortDirection.Descending));
-            else if (!wasSoleDescending)
-                _sortDescriptors.Add(new SortDescriptor(key, DataTableSortDirection.Ascending));
-            // wasSoleDescending → cleared (no sort)
+            if (soleDirection is null)
+                _sortDescriptors.Add(new SortDescriptor(key, first));
+            else if (soleDirection == first)
+                _sortDescriptors.Add(new SortDescriptor(key, Flipped(first)));
+            // soleDirection == flipped(first) → cleared (no sort)
         }
 
         _currentPage = 1;
@@ -3722,6 +3801,8 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
         // never paints over the label, the sort arrow or the multi-sort index.
         if (ShowColumnMenu && ColumnMenuMode == ColumnMenuMode.Menu) parts.Add("tm-col-has-menu");
         if (col.Sortable) parts.Add("tm-col-sortable");
+        if (col.HeaderWrap == true) parts.Add("tm-col-header--wrap");
+        else if (col.HeaderWrap == false && WrapHeaders) parts.Add("tm-col-header--nowrap");
         if (col.Groupable) parts.Add("tm-col-groupable");
         var headerSort = GetColumnSort(col.Key);
         if (headerSort is not null)
@@ -3836,22 +3917,28 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
     /// <summary>The resource key of the state the next activation on this column reaches.</summary>
     private string NextSortActionKey(TmDataTableColumn<TItem> col)
     {
-        // The tri-state cycle (ascending → descending → cleared) only applies when this column is
+        var first = EffectiveFirstSortDirection(col);
+        var firstKey = first == DataTableSortDirection.Ascending
+            ? "TmDataTable_SortAscending"
+            : "TmDataTable_SortDescending";
+
+        // The tri-state cycle (first direction → flipped → cleared) only applies when this column is
         // the SOLE active sort — SortByAsync's plain-click branch resets every descriptor and sets
-        // just this column ascending whenever more than one is active, regardless of this column's
-        // own current direction (N202, review 2026-09-22).
+        // just this column's first direction whenever more than one is active.
         if (_sortDescriptors.Count == 1)
         {
             var sort = GetColumnSort(col.Key);
             if (sort is not null)
             {
-                return sort.Direction == DataTableSortDirection.Ascending
-                    ? "TmDataTable_SortDescending"
+                return sort.Direction == first
+                    ? (first == DataTableSortDirection.Ascending
+                        ? "TmDataTable_SortDescending"
+                        : "TmDataTable_SortAscending")
                     : "TmDataTable_ClearSort";
             }
         }
 
-        return "TmDataTable_SortAscending";
+        return firstKey;
     }
 
     private string GetRowClass(TItem item) => IsSelected(item) ? "tm-row-selected" : string.Empty;

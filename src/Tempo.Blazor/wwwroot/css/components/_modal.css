@@ -474,6 +474,8 @@
    CSS); the cap is a component-local knob. */
 .tm-modal-footer--stacked,
 .tm-dialog-footer.tm-modal-footer--stacked {
+  /* Component-local host knob: the stacked footer's height cap. Overridable on the footer. */
+  --tm-modal-footer-max-height: 40dvh;
   flex-direction: column-reverse;
   /* The panel is a flex column, and a scroller loses its content-sized minimum (min-height:auto
      collapses to 0 once overflow leaves visible) — without flex-shrink: 0 the footer would be
@@ -490,7 +492,7 @@
      nothing can scroll to the first actions. `safe` falls back to start exactly when the content
      overflows, and keeps today's bottom-packed look when it fits. */
   justify-content: safe flex-end;
-  max-height: var(--tm-modal-footer-max-height, 40dvh);
+  max-height: var(--tm-modal-footer-max-height);
   overflow-y: auto;
   overscroll-behavior: contain;
 }

@@ -1026,6 +1026,8 @@
   "TmDataTable_Cancel": "Zrušit",
   "TmDataTable_CancelEdit": "Zrušit",
   "TmDataTable_CancelInline": "Zrušit úpravy",
+  "TmDataTable_LoadError": "Načtení dat se nepovedlo.",
+  "TmDataTable_Retry": "Zkusit znovu",
   "TmDataTable_ClearAll": "Vymazat vše",
   "TmDataTable_ClearFilters": "Zrušit filtry",
   "TmDataTable_ActiveFilters": "Filtry: {0}",

@@ -37,6 +37,26 @@
       "type": "bool",
       "isRequired": false,
       "description": "Controls visibility when ManualMode is true. Ignored in automatic mode."
+    },
+    {
+      "name": "GroupBy",
+      "type": "Func<string, string>?",
+      "isRequired": false,
+      "default": "null",
+      "description": "Opt-in (2.12.0): groups the messages under a shared title (tm-validation-summary-group / -group-title). The function maps a message to its group title; null keeps the historical flat list. Order follows the first occurrence."
+    },
+    {
+      "name": "OnMessageClick",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Opt-in (2.12.0): when registered, every message renders as a real button (tm-validation-summary-item) and raises the message text on activation — a host typically focuses the offending field. Without the callback the messages stay plain list items."
+    },
+    {
+      "name": "ItemTemplate",
+      "type": "RenderFragment<string>?",
+      "isRequired": false,
+      "default": "null",
+      "description": "Opt-in (2.12.0): replaces the plain text of each message; the template receives the message. Applies to the flat and the grouped list alike."
     }
   ],
   "cssClasses": [
@@ -45,7 +65,10 @@
     "tm-validation-summary-icon",
     "tm-validation-summary-title",
     "tm-validation-summary-body",
-    "tm-validation-summary-list"
+    "tm-validation-summary-list",
+    "tm-validation-summary-group (GroupBy)",
+    "tm-validation-summary-group-title (GroupBy)",
+    "tm-validation-summary-item (OnMessageClick)"
   ],
   "examples": [
     {

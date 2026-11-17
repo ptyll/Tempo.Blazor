@@ -1,0 +1,25 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.DataDisplay",
+  "description": "How the old/new values of a TmChangeDiff row behave when they do not fit the available width. Default Ellipsis keeps the historical single-line truncation; the other values are opt-in (2.12.0, Fáze 7).",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/ChangeDiffEnums.cs",
+  "documentationStatus": "documented",
+  "itemName": "TmChangeDiffOverflow",
+  "members": [
+    {
+      "name": "Ellipsis",
+      "description": "Single line, truncated with an ellipsis (the historical behavior, default). Each value keeps its semantic text colour and the strikethrough on the old value."
+    },
+    {
+      "name": "Wrap",
+      "description": "The value wraps onto multiple lines instead of truncating — long sentences (a renamed title, a long file name) stay readable. Overflow wraps anywhere, so a run with no spaces still breaks."
+    },
+    {
+      "name": "Full",
+      "description": "The value renders in full: no truncation and no wrapping constraint — the row grows with the content. Use for values that must be copied or compared verbatim."
+    }
+  ],
+  "usageExample": "<TmChangeDiff Changes=\"@changes\" ValueOverflow=\"TmChangeDiffOverflow.Wrap\" Compact=\"true\" />"
+}

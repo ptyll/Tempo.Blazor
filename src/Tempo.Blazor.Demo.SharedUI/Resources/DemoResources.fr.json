@@ -329,6 +329,7 @@
   "TmDemo_SheetSection": "Volet, pied de page et focus",
   "TmDemo_OpenSheet": "Ouvrir le volet",
   "TmDemo_StackedFooter": "Pied de page empilé",
+  "TmDemo_StackedFooterInOrder": "Pied de page empilé (dans l'ordre)",
   "TmDemo_InlineSheet": "Volet intégré",
   "TmDemo_InlineSheetNoDismiss": "Volet intégré, sans balayage",
   "TmDemo_CanvasBehind": "Canevas derrière le volet",

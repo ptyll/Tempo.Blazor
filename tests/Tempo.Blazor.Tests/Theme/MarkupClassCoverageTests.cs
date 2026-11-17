@@ -135,6 +135,11 @@ public sealed class MarkupClassCoverageTests
         "tm-data-table__edit-action--cancel",
         "tm-data-table__edit-action--start",
         "tm-data-table__export",
+        // Fáze 7 (plan 98c80bc3): the load-error box is styled as a whole (.tm-data-table-load-error
+        // rule in _data-table.css); the text span and the Retry button carry classes as hooks and
+        // intentionally stay rule-free.
+        "tm-data-table-load-error__text",
+        "tm-data-table-load-error__retry",
         // ("tm-data-table__export-scope" left the inventory: the disabled-state rules
         // (.tm-data-table__export-scope[aria-disabled=…] in _data-table.css) now style it.)
         "tm-date-today-btn",

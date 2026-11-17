@@ -134,6 +134,19 @@ public class TmSectionTests : LocalizationTestBase
     }
 
     [Fact]
+    public void TmSection_Splashes_AdditionalAttributes_On_Root()
+    {
+        var cut = Render<TmSection>(p => p
+            .AddChildContent("<p>Content</p>")
+            .AddUnmatched("data-testid", "my-section")
+            .AddUnmatched("aria-label", "My section"));
+
+        var root = cut.Find(".tm-section");
+        root.GetAttribute("data-testid").Should().Be("my-section");
+        root.GetAttribute("aria-label").Should().Be("My section");
+    }
+
+    [Fact]
     public void TmSection_Collapsible_Header_Has_AriaExpanded()
     {
         var cut = Render<TmSection>(p => p

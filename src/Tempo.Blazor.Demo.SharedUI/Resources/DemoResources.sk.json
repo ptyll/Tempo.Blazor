@@ -329,6 +329,7 @@
   "TmDemo_SheetSection": "Hárok, pätička a zameranie",
   "TmDemo_OpenSheet": "Otvoriť hárok",
   "TmDemo_StackedFooter": "Vrstvená pätička",
+  "TmDemo_StackedFooterInOrder": "Vrstvená pätička (v poradí)",
   "TmDemo_InlineSheet": "Vložený hárok",
   "TmDemo_InlineSheetNoDismiss": "Vložený hárok, nedá sa odsunúť potiahnutím",
   "TmDemo_CanvasBehind": "Plátno za hárkom",

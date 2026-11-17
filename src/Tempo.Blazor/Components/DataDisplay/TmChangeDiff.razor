@@ -2,7 +2,7 @@
 @using Tempo.Blazor.Components.Icons
 @using Tempo.Blazor.Models
 
-<div class="tm-change-diff @Class">
+<div class="tm-change-diff @Class @ValueOverflowClass @(Compact ? "tm-change-diff--compact" : null)">
     @if (Changes is not null)
     {
         @foreach (var change in Changes)
@@ -37,4 +37,25 @@
 
     /// <summary>Additional CSS class(es).</summary>
     [Parameter] public string? Class { get; set; }
+
+    /// <summary>
+    /// Overflow behavior of the old/new values (Fáze 7). Default
+    /// <see cref="TmChangeDiffOverflow.Ellipsis"/> keeps the historical single-line truncation;
+    /// <see cref="TmChangeDiffOverflow.Wrap"/> wraps long values onto multiple lines and
+    /// <see cref="TmChangeDiffOverflow.Full"/> renders them in full.
+    /// </summary>
+    [Parameter] public TmChangeDiffOverflow ValueOverflow { get; set; }
+
+    /// <summary>
+    /// Opt-in compact density (Fáze 7): tighter row padding and the smaller font size. Default false
+    /// keeps the comfortable rows.
+    /// </summary>
+    [Parameter] public bool Compact { get; set; }
+
+    private string ValueOverflowClass => ValueOverflow switch
+    {
+        TmChangeDiffOverflow.Wrap => "tm-change-diff--overflow-wrap",
+        TmChangeDiffOverflow.Full => "tm-change-diff--overflow-full",
+        _ => string.Empty,
+    };
 }

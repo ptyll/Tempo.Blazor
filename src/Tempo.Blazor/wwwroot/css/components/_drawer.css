@@ -13,6 +13,8 @@
 
 /* ── Drawer container (positioning) ────────────────────── */
 .tm-drawer {
+  /* Component-local host knob (Fáze 7): the drawer body padding. Overridable on the root. */
+  --tm-drawer-body-padding: var(--tm-space-5);
     position: fixed;
     top: 0;
     bottom: 0;
@@ -228,7 +230,7 @@
     overflow-y: auto;
     flex: 1 1 auto;
     min-block-size: 0;
-    padding: 1.25rem;
+    padding: var(--tm-drawer-body-padding);
 }
 
 /* ── Footer ────────────────────────────────────────────── */

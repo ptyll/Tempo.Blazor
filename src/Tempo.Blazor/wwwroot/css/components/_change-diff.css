@@ -57,3 +57,29 @@
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+
+/* Fáze 7: opt-in overflow behavior — Wrap wraps instead of truncating, Full renders the value
+   in full with no truncation constraint at all. */
+.tm-change-diff--overflow-wrap .tm-change-diff-old,
+.tm-change-diff--overflow-wrap .tm-change-diff-new {
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.tm-change-diff--overflow-full .tm-change-diff-old,
+.tm-change-diff--overflow-full .tm-change-diff-new {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+}
+
+/* Fáze 7: opt-in compact density. */
+.tm-change-diff--compact {
+    gap: var(--tm-space-1);
+}
+
+.tm-change-diff--compact .tm-change-diff-row {
+    padding: var(--tm-space-1) var(--tm-space-2);
+    font-size: var(--tm-font-size-xs);
+}

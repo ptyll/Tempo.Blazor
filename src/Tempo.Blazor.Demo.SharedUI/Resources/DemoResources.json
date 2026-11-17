@@ -329,6 +329,7 @@
   "TmDemo_SheetSection": "Sheet, footer and focus",
   "TmDemo_OpenSheet": "Open sheet",
   "TmDemo_StackedFooter": "Stacked footer",
+  "TmDemo_StackedFooterInOrder": "Stacked footer in order",
   "TmDemo_InlineSheet": "Inline sheet",
   "TmDemo_InlineSheetNoDismiss": "Inline sheet, no swipe-off",
   "TmDemo_CanvasBehind": "Canvas behind the sheet",

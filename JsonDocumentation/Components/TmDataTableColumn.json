@@ -46,6 +46,20 @@
       "description": "Whether this column can be sorted by clicking its header."
     },
     {
+      "name": "FirstSortDirection",
+      "type": "DataTableSortDirection?",
+      "isRequired": false,
+      "default": "null",
+      "description": "Opt-in (2.12.0): the direction the FIRST click on this column applies. Null inherits the table's FirstSortDirection; a value wins over it. Default null keeps the historical table-wide cycle."
+    },
+    {
+      "name": "HeaderWrap",
+      "type": "bool?",
+      "isRequired": false,
+      "default": "null",
+      "description": "Opt-in per column (2.12.0): the header cell may wrap onto multiple lines instead of the historical nowrap. Null inherits the table-wide WrapHeaders switch; true wraps this column even on a nowrap table; false keeps it nowrap on a wrap table."
+    },
+    {
       "name": "Filterable",
       "type": "bool",
       "isRequired": false,

@@ -160,6 +160,8 @@
 .tm-btn.tm-btn-primary.tm-btn--pressed:focus-visible,
 .tm-btn.tm-btn-soft.tm-btn--pressed:focus-visible,
 .tm-btn.tm-btn--pressed:not(.tm-btn-primary):not(.tm-btn-soft):focus-visible {
+  /* The transparent outline is the forced-colors fallback: box-shadow is forced to none there. */
+  outline: 2px solid transparent;
   box-shadow: var(--tm-focus-ring);
 }
 

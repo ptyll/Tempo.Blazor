@@ -329,6 +329,7 @@
   "TmDemo_SheetSection": "Panel, zápatí a fokus",
   "TmDemo_OpenSheet": "Otevřít panel",
   "TmDemo_StackedFooter": "Skládané zápatí",
+  "TmDemo_StackedFooterInOrder": "Skládané zápatí (v pořadí)",
   "TmDemo_InlineSheet": "Vložený panel",
   "TmDemo_InlineSheetNoDismiss": "Vložený panel bez odsunutí",
   "TmDemo_CanvasBehind": "Plátno za panelem",

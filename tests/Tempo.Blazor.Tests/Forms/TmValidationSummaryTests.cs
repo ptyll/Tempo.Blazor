@@ -343,6 +343,141 @@ public class TmValidationSummaryTests : LocalizationTestBase
         cut.Find(".tm-validation-summary").Should().NotBeNull();
     }
 
+    // ── Fáze 7: GroupBy, OnMessageClick, ItemTemplate ──
+
+    [Fact]
+    public void ValidationSummary_GroupBy_RendersGroupTitles()
+    {
+        var model = new TestModel();
+        var cut = RenderInEditForm(model, p =>
+        {
+            p["GroupBy"] = (Func<string, string>)(message =>
+                message.Contains("Name") ? "Identity" : "Contact");
+        });
+
+        var editForm = cut.FindComponent<EditForm>();
+        var editContext = editForm.Instance.EditContext!;
+        var messageStore = new ValidationMessageStore(editContext);
+        messageStore.Add(editContext.Field(nameof(TestModel.Name)), "Name is required.");
+        messageStore.Add(editContext.Field(nameof(TestModel.Email)), "Email is invalid.");
+        editContext.NotifyValidationStateChanged();
+
+        var groups = cut.FindAll(".tm-validation-summary-group");
+        groups.Count.Should().Be(2);
+        groups[0].QuerySelector(".tm-validation-summary-group-title")!.TextContent.Should().Be("Identity");
+        groups[0].QuerySelectorAll("li").Should().ContainSingle(li => li.TextContent.Contains("Name is required."));
+        groups[1].QuerySelector(".tm-validation-summary-group-title")!.TextContent.Should().Be("Contact");
+    }
+
+    /// <summary>
+    /// WCAG 1.3.1: each group is exposed as a named region — the group element carries
+    /// role="group" with aria-labelledby pointing at the title element's id, so a screen reader
+    /// announces the group title with its list instead of reading the title as loose text.
+    /// </summary>
+    [Fact]
+    public void ValidationSummary_GroupBy_GroupHasRoleAndLabelledbyPointingAtTheTitleId()
+    {
+        var model = new TestModel();
+        var cut = RenderInEditForm(model, p =>
+        {
+            p["GroupBy"] = (Func<string, string>)(message =>
+                message.Contains("Name") ? "Identity" : "Contact");
+        });
+
+        var editForm = cut.FindComponent<EditForm>();
+        var editContext = editForm.Instance.EditContext!;
+        var messageStore = new ValidationMessageStore(editContext);
+        messageStore.Add(editContext.Field(nameof(TestModel.Name)), "Name is required.");
+        messageStore.Add(editContext.Field(nameof(TestModel.Email)), "Email is invalid.");
+        editContext.NotifyValidationStateChanged();
+
+        foreach (var group in cut.FindAll(".tm-validation-summary-group"))
+        {
+            group.GetAttribute("role").Should().Be("group");
+            var labelledBy = group.GetAttribute("aria-labelledby");
+            labelledBy.Should().NotBeNullOrWhiteSpace();
+            var title = group.QuerySelector(".tm-validation-summary-group-title")!;
+            title.Id.Should().Be(labelledBy, "aria-labelledby must point at the group title's id");
+        }
+    }
+
+    [Fact]
+    public void ValidationSummary_WithoutGroupBy_RendersFlatList()
+    {
+        var model = new TestModel();
+        var cut = RenderInEditForm(model);
+
+        var editForm = cut.FindComponent<EditForm>();
+        var editContext = editForm.Instance.EditContext!;
+        var messageStore = new ValidationMessageStore(editContext);
+        messageStore.Add(editContext.Field(nameof(TestModel.Name)), "Name is required.");
+        editContext.NotifyValidationStateChanged();
+
+        cut.FindAll(".tm-validation-summary-group").Should().BeEmpty();
+        cut.FindAll(".tm-validation-summary-list li").Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void ValidationSummary_OnMessageClick_RendersButtons_AndRaisesMessage()
+    {
+        string? clicked = null;
+        var model = new TestModel();
+        var cut = RenderInEditForm(model, p =>
+        {
+            p["OnMessageClick"] = EventCallback.Factory.Create<string>(this, m => clicked = m);
+        });
+
+        var editForm = cut.FindComponent<EditForm>();
+        var editContext = editForm.Instance.EditContext!;
+        var messageStore = new ValidationMessageStore(editContext);
+        messageStore.Add(editContext.Field(nameof(TestModel.Name)), "Name is required.");
+        editContext.NotifyValidationStateChanged();
+
+        var button = cut.Find(".tm-validation-summary-item");
+        button.Should().NotBeNull("a clickable message is a real button — one native activation path");
+        button.Click();
+        clicked.Should().Be("Name is required.");
+    }
+
+    [Fact]
+    public void ValidationSummary_WithoutOnMessageClick_RendersPlainListItems()
+    {
+        var model = new TestModel();
+        var cut = RenderInEditForm(model);
+
+        var editForm = cut.FindComponent<EditForm>();
+        var editContext = editForm.Instance.EditContext!;
+        var messageStore = new ValidationMessageStore(editContext);
+        messageStore.Add(editContext.Field(nameof(TestModel.Name)), "Name is required.");
+        editContext.NotifyValidationStateChanged();
+
+        cut.FindAll(".tm-validation-summary-item").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ValidationSummary_ItemTemplate_ReplacesTheMessageText()
+    {
+        var model = new TestModel();
+        var cut = RenderInEditForm(model, p =>
+        {
+            p["ItemTemplate"] = (RenderFragment<string>)(message => builder =>
+            {
+                builder.OpenElement(0, "span");
+                builder.AddAttribute(1, "class", "my-message-item");
+                builder.AddContent(2, $"[{message}]");
+                builder.CloseElement();
+            });
+        });
+
+        var editForm = cut.FindComponent<EditForm>();
+        var editContext = editForm.Instance.EditContext!;
+        var messageStore = new ValidationMessageStore(editContext);
+        messageStore.Add(editContext.Field(nameof(TestModel.Name)), "Name is required.");
+        editContext.NotifyValidationStateChanged();
+
+        cut.Find(".my-message-item").TextContent.Should().Contain("[Name is required.]");
+    }
+
     private class TestModel
     {
         public string Name { get; set; } = string.Empty;

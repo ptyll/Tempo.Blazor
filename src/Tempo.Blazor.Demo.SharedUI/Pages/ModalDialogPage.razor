@@ -118,6 +118,7 @@
     <div class="flex flex-wrap gap-3">
         <TmButton OnClick="() => _showSheet = true" data-testid="open-sheet">@Loc["TmDemo_OpenSheet"]</TmButton>
         <TmButton OnClick="() => _showStacked = true" Variant="ButtonVariant.Secondary" data-testid="open-stacked">@Loc["TmDemo_StackedFooter"]</TmButton>
+        <TmButton OnClick="() => _showStackedInOrder = true" Variant="ButtonVariant.Secondary" data-testid="open-stacked-in-order">@Loc["TmDemo_StackedFooterInOrder"]</TmButton>
         <TmButton OnClick="() => { _inlineDrawerSwipe = true; _showInlineDrawer = true; }" Variant="ButtonVariant.Ghost" data-testid="open-inline-drawer">@Loc["TmDemo_InlineSheet"]</TmButton>
         <TmButton OnClick="OpenLockedInlineDrawer" Variant="ButtonVariant.Ghost" data-testid="open-inline-drawer-locked">@Loc["TmDemo_InlineSheetNoDismiss"]</TmButton>
         <TmButton OnClick="() => _showLongDialog = true" Variant="ButtonVariant.Secondary" data-testid="open-long-dialog">@Loc["TmDemo_OpenLongDialog"]</TmButton>
@@ -188,6 +189,22 @@
     </ChildContent>
 </TmModal>
 <TmModal Show="_showStacked" OnClose="() => _showStacked = false" Title="Stacked footer" FooterLayout="FooterLayout.Stacked" ShowDefaultFooterButtons="true" />
+<!-- 2.12: StackedInOrder paints the footer children in DOM order (Cancel first, OK last), the
+     stacked footer scrolls under --tm-modal-footer-max-height when the actions outgrow it, and
+     the button labels wrap instead of truncating. A footer with many declared actions
+     demonstrates the scroll cap. -->
+<TmModal Show="_showStackedInOrder" OnClose="() => _showStackedInOrder = false" Title="Stacked footer in order" FooterLayout="FooterLayout.StackedInOrder">
+    <ChildContent>
+        <p>This modal stacks its footer actions in DOM order: Cancel above, OK below.</p>
+    </ChildContent>
+    <Footer>
+        <TmButton OnClick="() => _showStackedInOrder = false" Variant="ButtonVariant.Ghost">Option A — Draft</TmButton>
+        <TmButton OnClick="() => _showStackedInOrder = false" Variant="ButtonVariant.Ghost">Option B — Review</TmButton>
+        <TmButton OnClick="() => _showStackedInOrder = false" Variant="ButtonVariant.Ghost">Option C — Archive this item and every attached draft, revision and comment history with it (a long action label wraps onto its own row instead of truncating)</TmButton>
+        <TmButton OnClick="() => _showStackedInOrder = false" Variant="ButtonVariant.Secondary">Cancel</TmButton>
+        <TmButton OnClick="() => _showStackedInOrder = false" Variant="ButtonVariant.Primary">OK</TmButton>
+    </Footer>
+</TmModal>
 
 <!-- Basic Modal -->
 <TmModal Show="_showBasicModal"
@@ -378,6 +395,7 @@
     private bool _showCustomModal;
     private bool _showSheet;
     private bool _showStacked;
+    private bool _showStackedInOrder;
     private bool _showInlineDrawer;
     // Focus-restore modal
     private bool _showRestoreModal;

@@ -56,11 +56,15 @@
   inline-size: 100%;
 }
 .tm-data-table-wrapper {
+  /* The one bleed variable the scroll box shares with the wrapper padding: under the mobile
+     breakpoint both shrink together, so the negative margin can never stick out of the wrapper
+     again (Fáze 7 bug). */
+  --tm-data-table-bleed: var(--tm-space-4);
   --tm-data-table-mobile-checkbox-width: var(--tm-touch-target);
   display: flex;
   flex-direction: column;
   gap: var(--tm-space-4);
-  padding: var(--tm-space-4);
+  padding: var(--tm-data-table-bleed);
   background: var(--tm-bg-surface);
   border: 1px solid var(--tm-border-color);
   border-radius: var(--tm-radius-lg);
@@ -138,12 +142,30 @@
 /* ═══════════════════════════════════════════════════════════════
    Table Container
    ═══════════════════════════════════════════════════════════════ */
+/* The bleed variable is declared on the wrapper (.tm-data-table) — the fallback keeps a
+   standalone .tm-data-table-scroll (used outside the wrapper) aligned with the wrapper default. */
 .tm-data-table-scroll {
   overflow-x: auto;
   border: 1px solid var(--tm-border-color);
   border-radius: var(--tm-radius-md);
-  margin: 0 calc(-1 * var(--tm-space-4));
-  width: calc(100% + 2 * var(--tm-space-4));
+  margin: 0 calc(-1 * var(--tm-data-table-bleed, var(--tm-space-4)));
+  width: calc(100% + 2 * var(--tm-data-table-bleed, var(--tm-space-4)));
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Load error box (opt-in, Fáze 7)
+   ═══════════════════════════════════════════════════════════════ */
+.tm-data-table-load-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--tm-space-3);
+  padding: var(--tm-space-2) var(--tm-space-3);
+  border: 1px solid var(--tm-color-danger);
+  border-radius: var(--tm-radius-md);
+  background: var(--tm-color-danger-subtle);
+  color: var(--tm-color-danger-text);
+  font-size: var(--tm-font-size-sm);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -170,6 +192,15 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--tm-text-secondary);
+  white-space: nowrap;
+}
+/* WrapHeaders (table-wide) / HeaderWrap (per column, Fáze 7): opt-in header wrapping over the
+   historical nowrap default; an explicit HeaderWrap=false column stays nowrap on a wrap table. */
+.tm-data-table--wrap-headers th,
+.tm-data-table th.tm-col-header--wrap {
+  white-space: normal;
+}
+.tm-data-table--wrap-headers th.tm-col-header--nowrap {
   white-space: nowrap;
 }
 .tm-data-table tbody tr:last-child td { border-bottom: none; }
@@ -1132,7 +1163,8 @@
    ═══════════════════════════════════════════════════════════════ */
 @media (width < 768px) {
   .tm-data-table-wrapper {
-    padding: var(--tm-space-2);
+    --tm-data-table-bleed: var(--tm-space-2);
+    padding: var(--tm-data-table-bleed);
     gap: var(--tm-space-3);
   }
 

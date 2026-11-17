@@ -9727,6 +9727,31 @@
           ]
         },
         {
+          "itemName": "TmChangeDiffOverflow",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.DataDisplay",
+          "description": "How the old/new values of a TmChangeDiff row behave when they do not fit the available width. Default Ellipsis keeps the historical single-line truncation; the other values are opt-in (2.12.0, Fáze 7).",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/ChangeDiffEnums.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Ellipsis",
+              "description": "Single line, truncated with an ellipsis (the historical behavior, default). Each value keeps its semantic text colour and the strikethrough on the old value."
+            },
+            {
+              "name": "Wrap",
+              "description": "The value wraps onto multiple lines instead of truncating — long sentences (a renamed title, a long file name) stay readable. Overflow wraps anywhere, so a run with no spaces still breaks."
+            },
+            {
+              "name": "Full",
+              "description": "The value renders in full: no truncation and no wrapping constraint — the row grows with the content. Use for values that must be copied or compared verbatim."
+            }
+          ],
+          "usageExample": "<TmChangeDiff Changes=\"@changes\" ValueOverflow=\"TmChangeDiffOverflow.Wrap\" Compact=\"true\" />"
+        },
+        {
           "itemName": "TmChunkedUploader",
           "kind": "Class",
           "category": "Components",
@@ -11523,10 +11548,27 @@
               "type": "string?",
               "isRequired": false,
               "description": "Additional CSS class(es)."
+            },
+            {
+              "name": "Compact",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Opt-in compact density (2.12.0): tighter row padding and the smaller font size. Default false keeps the comfortable rows.",
+              "default": "false"
+            },
+            {
+              "name": "ValueOverflow",
+              "type": "TmChangeDiffOverflow",
+              "isRequired": true,
+              "description": "Overflow behavior of the old/new values (2.12.0). Default Ellipsis keeps the historical single-line truncation; Wrap wraps long values onto multiple lines and Full renders them in full.",
+              "default": "Ellipsis"
             }
           ],
           "cssClasses": [
             "tm-change-diff",
+            "tm-change-diff--overflow-wrap (ValueOverflow=Wrap)",
+            "tm-change-diff--overflow-full (ValueOverflow=Full)",
+            "tm-change-diff--compact (Compact)",
             "tm-change-diff-row",
             "tm-change-diff-property",
             "tm-change-diff-values",
@@ -13855,11 +13897,32 @@
               "description": "Heading shown in the empty state when no items are available."
             },
             {
+              "name": "ErrorTemplate",
+              "type": "RenderFragment<Exception>?",
+              "isRequired": false,
+              "description": "Body of the inline load-error box (2.12.0). Overrides the localized default message; the template wins over ErrorText and receives the caught exception.",
+              "default": "null"
+            },
+            {
+              "name": "ErrorText",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Text of the inline load-error box (2.12.0); the localized default (TmDataTable_LoadError) is used when empty.",
+              "default": "null"
+            },
+            {
               "name": "ExternalFilterDefinitions",
               "type": "List<FilterDefinition>",
               "isRequired": false,
               "default": "[]",
               "description": "Filter definitions for the inline external filter builder (shown above the table when ViewProvider is set). When the page owns filtering, leave this empty and set ShowExternalFilterBuilder to false or use ToolbarMode = ContentOnly."
+            },
+            {
+              "name": "FirstSortDirection",
+              "type": "DataTableSortDirection",
+              "isRequired": false,
+              "default": "DataTableSortDirection.Ascending",
+              "description": "Direction the FIRST click on a sortable column applies (2.12.0). Default Ascending keeps the historical ascending → descending → cleared cycle; Descending restores the legacy grids that start at descending. A column's own FirstSortDirection (when set) wins over this table-wide default."
             },
             {
               "name": "GroupHeaderTemplate",
@@ -13929,6 +13992,12 @@
               "type": "Func<TItem, Task>?",
               "isRequired": false,
               "description": "Invoked once, the first time a row is expanded, so the host can lazily load detail data before DetailTemplate renders it."
+            },
+            {
+              "name": "OnLoadError",
+              "type": "EventCallback<Exception>",
+              "isRequired": false,
+              "description": "Opt-in provider-error contract (2.12.0, decision EMUSCZ-2.12-BREAKING-POINTS (b)): when registered — or when ErrorTemplate/ErrorText is supplied — a provider exception during a load is caught; the previously rendered rows and total count stay untouched, an inline error box (role=alert) with a Retry action is rendered and the exception is reported here. OperationCanceledException is never caught; a superseded response is dropped. Without any opt-in the exception propagates as before."
             },
             {
               "name": "OnRowClick",
@@ -14211,6 +14280,13 @@
               "type": "string?",
               "isRequired": false,
               "description": "Fixed height for the virtualized scroll container (e.g. \"600px\", \"80vh\")."
+            },
+            {
+              "name": "WrapHeaders",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Opt-in (2.12.0): table headers wrap onto multiple lines instead of the historical nowrap (tm-data-table--wrap-headers). A column can opt back out with HeaderWrap=\"false\", or opt in individually with HeaderWrap=\"true\" on a nowrap table.",
+              "default": "false"
             }
           ],
           "compositionGuidance": "Either the page filters the data, or the table filters the data. When the page owns the filters, use ToolbarMode=ContentOnly and do not set ViewProvider/ExternalFilterDefinitions. When the table owns the filters, use the default Full toolbar mode and optionally a ViewProvider.",
@@ -14404,6 +14480,13 @@
               "description": "Type of filter control to render (Text, Number, Date, Boolean, Select)."
             },
             {
+              "name": "FirstSortDirection",
+              "type": "DataTableSortDirection?",
+              "isRequired": false,
+              "description": "Opt-in (2.12.0): the direction the FIRST click on this column applies. Null inherits the table's FirstSortDirection; a value wins over it. Default null keeps the historical table-wide cycle.",
+              "default": "null"
+            },
+            {
               "name": "Groupable",
               "type": "bool",
               "isRequired": false,
@@ -14426,6 +14509,13 @@
               "type": "RenderFragment?",
               "isRequired": false,
               "description": "Custom header render fragment (replaces plain Title text when set)."
+            },
+            {
+              "name": "HeaderWrap",
+              "type": "bool?",
+              "isRequired": false,
+              "description": "Opt-in per column (2.12.0): the header cell may wrap onto multiple lines instead of the historical nowrap. Null inherits the table-wide WrapHeaders switch; true wraps this column even on a nowrap table; false keeps it nowrap on a wrap table.",
+              "default": "null"
             },
             {
               "name": "HiddenByDefault",
@@ -18833,10 +18923,30 @@
               "description": "Additional CSS class(es) for the root element."
             },
             {
+              "name": "GroupBy",
+              "type": "Func<string, string>?",
+              "isRequired": false,
+              "description": "Opt-in (2.12.0): groups the messages under a shared title (tm-validation-summary-group / -group-title). The function maps a message to its group title; null keeps the historical flat list. Order follows the first occurrence.",
+              "default": "null"
+            },
+            {
+              "name": "ItemTemplate",
+              "type": "RenderFragment<string>?",
+              "isRequired": false,
+              "description": "Opt-in (2.12.0): replaces the plain text of each message; the template receives the message. Applies to the flat and the grouped list alike.",
+              "default": "null"
+            },
+            {
               "name": "ManualMode",
               "type": "bool",
               "isRequired": false,
               "description": "When true, visibility is controlled by the Show parameter instead of automatic error detection."
+            },
+            {
+              "name": "OnMessageClick",
+              "type": "EventCallback<string>",
+              "isRequired": false,
+              "description": "Opt-in (2.12.0): when registered, every message renders as a real button (tm-validation-summary-item) and raises the message text on activation — a host typically focuses the offending field. Without the callback the messages stay plain list items."
             },
             {
               "name": "Show",
@@ -18864,7 +18974,10 @@
             "tm-validation-summary-icon",
             "tm-validation-summary-title",
             "tm-validation-summary-body",
-            "tm-validation-summary-list"
+            "tm-validation-summary-list",
+            "tm-validation-summary-group (GroupBy)",
+            "tm-validation-summary-group-title (GroupBy)",
+            "tm-validation-summary-item (OnMessageClick)"
           ],
           "examples": [
             {
@@ -37013,12 +37126,12 @@
         }
       ],
       "summary": {
-        "itemCount": 464,
-        "manualItemCount": 464,
-        "generatedItemCount": 456,
+        "itemCount": 465,
+        "manualItemCount": 465,
+        "generatedItemCount": 457,
         "generatedOnlyItemCount": 0,
         "componentCount": 238,
-        "publicApiTypeCount": 218
+        "publicApiTypeCount": 219
       }
     },
     {
@@ -147906,10 +148019,10 @@
   ],
   "summary": {
     "packageCount": 29,
-    "itemCount": 3749,
-    "manualItemCount": 3749,
+    "itemCount": 3750,
+    "manualItemCount": 3750,
     "generatedOnlyItemCount": 0,
     "componentCount": 566,
-    "publicApiTypeCount": 3131
+    "publicApiTypeCount": 3132
   }
 }

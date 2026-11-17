@@ -1,7 +1,7 @@
 @namespace Tempo.Blazor.Components.Layout
 @using Tempo.Blazor.Components.Icons
 
-<div class="tm-section @(Collapsible ? "tm-section--collapsible" : "") @(Collapsed ? "tm-section--collapsed" : "") @Class">
+<div class="tm-section @(Collapsible ? "tm-section--collapsible" : "") @(Collapsed ? "tm-section--collapsed" : "") @Class" @attributes="AdditionalAttributes">
     @if (!string.IsNullOrEmpty(Title))
     {
         <div class="tm-section-header"

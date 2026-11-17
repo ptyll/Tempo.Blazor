@@ -1010,6 +1010,8 @@
   "TmDataTable_Cancel": "Cancel",
   "TmDataTable_CancelEdit": "Cancel",
   "TmDataTable_CancelInline": "Cancel edit",
+  "TmDataTable_LoadError": "Loading the data failed.",
+  "TmDataTable_Retry": "Retry",
   "TmDataTable_ClearAll": "Clear all",
   "TmDataTable_ClearFilters": "Clear filters",
   "TmDataTable_ActiveFilters": "Filters: {0}",

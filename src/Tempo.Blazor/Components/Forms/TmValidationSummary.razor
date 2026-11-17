@@ -15,12 +15,33 @@
         @if (ShowErrorsList && Errors.Any())
         {
             <div class="tm-validation-summary-body">
-                <ul class="tm-validation-summary-list">
-                    @foreach (var error in Errors)
+                @if (GroupBy is not null)
+                {
+                    @* Fáze 7: grouped presentation — messages under their group title (order of the
+                       first occurrence is preserved, exactly like the flat list). *@
+                    @foreach (var group in Errors.GroupBy(GroupBy).Select((g, index) => (g, index)))
                     {
-                        <li>@error</li>
+                        var groupId = $"{_idPrefix}-g{group.index}";
+                        <div class="tm-validation-summary-group" role="group" aria-labelledby="@groupId">
+                            <div id="@groupId" class="tm-validation-summary-group-title">@group.g.Key</div>
+                            <ul class="tm-validation-summary-list">
+                                @foreach (var error in group.g)
+                                {
+                                    <li>@RenderMessage(error)</li>
+                                }
+                            </ul>
+                        </div>
                     }
-                </ul>
+                }
+                else
+                {
+                    <ul class="tm-validation-summary-list">
+                        @foreach (var error in Errors)
+                        {
+                            <li>@RenderMessage(error)</li>
+                        }
+                    </ul>
+                }
             </div>
         }
     </div>
@@ -44,6 +65,51 @@
 
     /// <summary>Controls visibility when ManualMode is true. Ignored in automatic mode.</summary>
     [Parameter] public bool Show { get; set; }
+
+    /// <summary>
+    /// Opt-in (Fáze 7): groups the messages under a shared title. The function maps a message to its
+    /// group title; null (the default) keeps the historical flat list. The order of the groups and of
+    /// the messages follows the first occurrence.
+    /// </summary>
+    [Parameter] public Func<string, string>? GroupBy { get; set; }
+
+    /// <summary>
+    /// Opt-in (Fáze 7): when registered, every message renders as a real button and raises the
+    /// message text on activation (a host typically focuses the offending field). Without the
+    /// callback the messages stay plain list items.
+    /// </summary>
+    [Parameter] public EventCallback<string> OnMessageClick { get; set; }
+
+    /// <summary>
+    /// Opt-in (Fáze 7): replaces the plain text of each message; the template receives the message.
+    /// Applies to the flat and the grouped list alike.
+    /// </summary>
+    [Parameter] public RenderFragment<string>? ItemTemplate { get; set; }
+
+    private bool MessageIsClickable => OnMessageClick.HasDelegate;
+
+    // Stable per-instance prefix so each group title/list pair can be wired with aria-labelledby.
+    private readonly string _idPrefix = Guid.NewGuid().ToString("N");
+
+    private RenderFragment MessageContent(string message)
+        => ItemTemplate?.Invoke(message) ?? (b => b.AddContent(0, message));
+
+    private RenderFragment RenderMessage(string message) => builder =>
+    {
+        if (MessageIsClickable)
+        {
+            builder.OpenElement(0, "button");
+            builder.AddAttribute(1, "type", "button");
+            builder.AddAttribute(2, "class", "tm-validation-summary-item");
+            builder.AddAttribute(3, "onclick", EventCallback.Factory.Create(this, () => OnMessageClick.InvokeAsync(message)));
+            builder.AddContent(4, MessageContent(message));
+            builder.CloseElement();
+        }
+        else
+        {
+            builder.AddContent(0, MessageContent(message));
+        }
+    };
 
     private string DisplayTitle => !string.IsNullOrEmpty(Title)
         ? Title

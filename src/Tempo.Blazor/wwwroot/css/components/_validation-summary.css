@@ -63,6 +63,42 @@
     border-radius: 50%;
 }
 
+/* Fáze 7: grouped presentation. */
+.tm-validation-summary-group {
+    margin-top: var(--tm-space-2);
+}
+
+.tm-validation-summary-group-title {
+    font-weight: var(--tm-font-weight-semibold);
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-color-danger-text);
+    margin: var(--tm-space-1) 0;
+}
+
+/* Fáze 7: a clickable message is a real button styled back into the list item look. */
+.tm-validation-summary-item {
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.tm-validation-summary-item:hover {
+    text-decoration: none;
+}
+
+/* The global :focus-visible reset is not enough for a borderless button — give the
+   keyboard focus the shared ring the other controls use. */
+.tm-validation-summary-item:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+    border-radius: var(--tm-radius-sm);
+}
+
 /* Dark mode */
 [data-theme="dark"] .tm-validation-summary,
 .dark .tm-validation-summary,

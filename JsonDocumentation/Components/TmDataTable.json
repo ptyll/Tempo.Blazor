@@ -210,6 +210,40 @@
       "description": "When true and a ViewProvider is set, renders the TmViewManager. Default: true."
     },
     {
+      "name": "WrapHeaders",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Opt-in (2.12.0): table headers wrap onto multiple lines instead of the historical nowrap (tm-data-table--wrap-headers). A column can opt back out with HeaderWrap=\"false\", or opt in individually with HeaderWrap=\"true\" on a nowrap table."
+    },
+    {
+      "name": "FirstSortDirection",
+      "type": "DataTableSortDirection",
+      "isRequired": false,
+      "default": "Ascending",
+      "description": "Direction the FIRST click on a sortable column applies (2.12.0). Default Ascending keeps the historical ascending → descending → cleared cycle; Descending restores the legacy grids that start at descending. A column's own FirstSortDirection (when set) wins over this table-wide default."
+    },
+    {
+      "name": "OnLoadError",
+      "type": "EventCallback<Exception>",
+      "isRequired": false,
+      "description": "Opt-in provider-error contract (2.12.0, decision EMUSCZ-2.12-BREAKING-POINTS (b)): when registered — or when ErrorTemplate/ErrorText is supplied — a provider exception during a load is caught; the previously rendered rows and total count stay untouched, an inline error box (role=alert) with a Retry action is rendered and the exception is reported here. OperationCanceledException is never caught; a superseded response is dropped. Without any opt-in the exception propagates as before."
+    },
+    {
+      "name": "ErrorTemplate",
+      "type": "RenderFragment<Exception>?",
+      "isRequired": false,
+      "default": "null",
+      "description": "Body of the inline load-error box (2.12.0). Overrides the localized default message; the template wins over ErrorText and receives the caught exception."
+    },
+    {
+      "name": "ErrorText",
+      "type": "string?",
+      "isRequired": false,
+      "default": "null",
+      "description": "Text of the inline load-error box (2.12.0); the localized default (TmDataTable_LoadError) is used when empty."
+    },
+    {
       "name": "DefaultPageSize",
       "type": "int",
       "isRequired": false,

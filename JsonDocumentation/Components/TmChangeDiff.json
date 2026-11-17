@@ -18,10 +18,27 @@
       "type": "string?",
       "isRequired": false,
       "description": "Additional CSS class(es)."
+    },
+    {
+      "name": "ValueOverflow",
+      "type": "TmChangeDiffOverflow",
+      "isRequired": false,
+      "default": "Ellipsis",
+      "description": "Overflow behavior of the old/new values (2.12.0). Default Ellipsis keeps the historical single-line truncation; Wrap wraps long values onto multiple lines and Full renders them in full."
+    },
+    {
+      "name": "Compact",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Opt-in compact density (2.12.0): tighter row padding and the smaller font size. Default false keeps the comfortable rows."
     }
   ],
   "cssClasses": [
     "tm-change-diff",
+    "tm-change-diff--overflow-wrap (ValueOverflow=Wrap)",
+    "tm-change-diff--overflow-full (ValueOverflow=Full)",
+    "tm-change-diff--compact (Compact)",
     "tm-change-diff-row",
     "tm-change-diff-property",
     "tm-change-diff-values",

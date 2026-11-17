@@ -30,6 +30,19 @@
     /// <summary>Whether this column can be sorted by clicking its header.</summary>
     [Parameter] public bool Sortable { get; set; }
 
+    /// <summary>
+    /// Opt-in: the direction the FIRST click on this column applies. Null (the default) inherits
+    /// the table's <see cref="TmDataTable{TItem}.FirstSortDirection"/>; a value wins over it.
+    /// </summary>
+    [Parameter] public DataTableSortDirection? FirstSortDirection { get; set; }
+
+    /// <summary>
+    /// Opt-in per column: the header cell may wrap onto multiple lines instead of the historical
+    /// <c>nowrap</c>. Null inherits the table-wide <c>WrapHeaders</c> switch; true wraps this
+    /// column even on a nowrap table.
+    /// </summary>
+    [Parameter] public bool? HeaderWrap { get; set; }
+
     /// <summary>Whether this column shows an inline filter input.</summary>
     [Parameter] public bool Filterable { get; set; }
 

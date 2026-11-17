@@ -101,6 +101,46 @@ public class TmChangeDiffTests : LocalizationTestBase
         cut.Find(".tm-change-diff").ClassList.Should().Contain("my-diff");
     }
 
+    // ── Fáze 7: ValueOverflow + Compact ──
+
+    [Fact]
+    public void TmChangeDiff_ValueOverflow_Default_RendersNoModifierClass()
+    {
+        var cut = Render<TmChangeDiff>(p => p.Add(c => c.Changes, TestChanges()));
+
+        cut.Find(".tm-change-diff").ClassList.Should().NotContain(m => m.StartsWith("tm-change-diff--overflow"));
+    }
+
+    [Fact]
+    public void TmChangeDiff_ValueOverflow_Wrap_RendersWrapClass()
+    {
+        var cut = Render<TmChangeDiff>(p => p
+            .Add(c => c.Changes, TestChanges())
+            .Add(c => c.ValueOverflow, TmChangeDiffOverflow.Wrap));
+
+        cut.Find(".tm-change-diff").ClassList.Should().Contain("tm-change-diff--overflow-wrap");
+    }
+
+    [Fact]
+    public void TmChangeDiff_ValueOverflow_Full_RendersFullClass()
+    {
+        var cut = Render<TmChangeDiff>(p => p
+            .Add(c => c.Changes, TestChanges())
+            .Add(c => c.ValueOverflow, TmChangeDiffOverflow.Full));
+
+        cut.Find(".tm-change-diff").ClassList.Should().Contain("tm-change-diff--overflow-full");
+    }
+
+    [Fact]
+    public void TmChangeDiff_Compact_RendersCompactClass()
+    {
+        var cut = Render<TmChangeDiff>(p => p
+            .Add(c => c.Changes, TestChanges())
+            .Add(c => c.Compact, true));
+
+        cut.Find(".tm-change-diff").ClassList.Should().Contain("tm-change-diff--compact");
+    }
+
     // ── KG-008 (plan 92e96b25, phase 11): screen-reader text alternative ──
 
     [Fact]

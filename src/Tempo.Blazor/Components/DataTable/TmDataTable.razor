@@ -315,8 +315,26 @@
     }
 
     @* ── Table ────────────────────────────────────────────────── *@
+    @if (_loadError is not null)
+    {
+        @* Opt-in load-error box (Fáze 7): the previous rows stay rendered below; the Retry action
+           is a plain fresh provider load. *@
+        <div class="tm-data-table-load-error" role="alert">
+            @if (ErrorTemplate is not null)
+            {
+                @ErrorTemplate(_loadError)
+            }
+            else
+            {
+                <span class="tm-data-table-load-error__text">@(string.IsNullOrEmpty(ErrorText) ? Loc["TmDataTable_LoadError"] : ErrorText)</span>
+            }
+            <button type="button" class="tm-btn tm-btn-outline tm-data-table-load-error__retry" @onclick="RetryLoadAsync" disabled="@_isLoading">
+                @Loc["TmDataTable_Retry"]
+            </button>
+        </div>
+    }
     <div class="@GetScrollContainerClass()" style="@GetScrollContainerStyle()">
-        <table class="tm-data-table" role="grid" aria-rowcount="@(IsGrid ? GridAriaRowCount : null)" aria-colcount="@(IsGrid ? GridColumnCount : null)" @ref="_tableRef">
+        <table class="tm-data-table @(WrapHeaders ? "tm-data-table--wrap-headers" : null)" role="grid" aria-rowcount="@(IsGrid ? GridAriaRowCount : null)" aria-colcount="@(IsGrid ? GridColumnCount : null)" @ref="_tableRef">
             @if (_visibleColumns.Count > 0 || Selectable)
             {
                 <thead>
