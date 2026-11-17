@@ -317,8 +317,9 @@ public sealed class FocusTrapActivationE2ETests : WasmTestBase
     {
         var page = await OpenAsync("/modal-dialog");
         await page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Show Confirm" }).ClickAsync();
-        // TmDialog has no close button; its first focusable is the footer Cancel button.
-        await AssertFocusLandsInsideAsync(page, ".tm-dialog", "button.tm-btn.tm-btn-ghost.tm-btn-md.tm-dialog-btn-cancel", "TmDialog");
+        // TmDialog has no close button; its first focusable is the footer Cancel button. The demo
+        // confirm dialog names CancelButtonVariant=OutlineSecondary, so the variant classes ride along.
+        await AssertFocusLandsInsideAsync(page, ".tm-dialog", "button.tm-btn.tm-btn-outline-secondary.tm-btn-md.tm-dialog-btn-cancel", "TmDialog");
     }
 
     [TestMethod]

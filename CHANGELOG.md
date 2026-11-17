@@ -253,6 +253,34 @@ All items are additive; every default keeps the pre-2.12 behaviour.
      emits it as the textarea's initial content — the DOM defaultValue). Pinned by
      `TmTextArea_PrerenderedMarkupCarriesTheBoundValue` (`HtmlRenderer`).
 
+### Changed — modal footer (`Tempo.Blazor`, EmusCz 2.12 Fáze 6)
+
+All items are additive or visual; there is no Breaking / Migration entry for this surface.
+
+- **`FooterLayout.StackedInOrder`** (new enum value on `TmModal` and `TmDialog`, default
+  unchanged at `Inline`). The legacy `Stacked` paints the footer children in REVERSE DOM order
+  (column-reverse): the first declared action lands at the bottom, the last one at the visual
+  top — which is why its old documentation claimed "the confirm action at the bottom" and the
+  CSS disagreed. `StackedInOrder` paints a plain column in DOM order: declare the actions in
+  reading order and the first one paints at the top. It renders the same full-width stacked
+  chrome, carried by both classes `tm-modal-footer--stacked tm-modal-footer--stacked-in-order`
+  (`TmModalPresentationTests.FooterLayout_IsAClass_SoTheStylesheetCanKeepButtonsSideBySide`,
+  `TmDialogPresentationTests.FooterLayout_StackedInOrder_KeepsTheStackedWidthRules_AndNamesTheOrder`).
+  The `Stacked` XML summary now describes the reverse-order reality.
+- **A stacked footer scrolls under a max-height cap.** A `Stacked` or `StackedInOrder` footer
+  taller than `var(--tm-modal-footer-max-height, 40dvh)` scrolls (`overflow-y: auto` +
+  `overscroll-behavior: contain`) instead of pushing the dialog taller — the fix host
+  applications used to patch in their own scoped CSS (the EmusCz `DraftResumeDialog` footer
+  rules). The knob is a component-local CSS custom property: set it on the modal root to
+  raise or lower the cap. Inline footers are unchanged.
+- **Stacked button labels wrap instead of truncating.** In a stacked footer the buttons and
+  their labels switch to `white-space: normal; overflow-wrap: anywhere`, so a long action label
+  wraps onto its own row rather than being cut off — the actions are declared in reading order
+  and cutting one hides the words that order carries.
+- Demo `/modal-dialog` gained a "Stacked footer in order" example (`open-stacked-in-order`)
+  with a five-action footer demonstrating the DOM-order column, the scroll cap and the label
+  wrap (`TmDemo_StackedFooterInOrder` in en/cs/sk/fr).
+
 ## 2.11.1 - 2026-11-15
 
 > Patch release over 2.11.0: two defects found by a host application while moving to 2.11.0.

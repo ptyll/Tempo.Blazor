@@ -161,7 +161,12 @@
     /// </summary>
     [Parameter] public MobilePresentation MobilePresentation { get; set; } = MobilePresentation.Auto;
 
-    /// <summary>How the footer buttons are arranged. Inline keeps them side by side at every width.</summary>
+    /// <summary>
+    /// How the footer buttons are arranged. <see cref="FooterLayout.Inline"/> keeps them side by
+    /// side at every width; <see cref="FooterLayout.Stacked"/> stacks them full width painted in
+    /// reverse DOM order (column-reverse); <see cref="FooterLayout.StackedInOrder"/> stacks them
+    /// full width painted in DOM order.
+    /// </summary>
     [Parameter] public FooterLayout FooterLayout { get; set; } = FooterLayout.Inline;
 
     /// <summary>
@@ -346,9 +351,13 @@
 
     private string ScopeClass => $"tm-modal {GetModalClasses()}{(IsSheet ? " tm-sheet__panel" : "")}";
 
-    private string FooterClass => FooterLayout == FooterLayout.Stacked
-        ? "tm-modal-footer--stacked"
-        : "tm-modal-footer--inline";
+    private string FooterClass => FooterLayout switch
+    {
+        FooterLayout.Stacked => "tm-modal-footer--stacked",
+        // Both classes: the stacked chrome (full width, scroll cap) plus the DOM-order direction.
+        FooterLayout.StackedInOrder => "tm-modal-footer--stacked tm-modal-footer--stacked-in-order",
+        _ => "tm-modal-footer--inline",
+    };
 
     protected override async Task OnParametersSetAsync()
     {

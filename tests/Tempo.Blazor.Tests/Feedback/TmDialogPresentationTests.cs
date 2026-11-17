@@ -196,6 +196,20 @@ public class TmDialogPresentationTests : LocalizationTestBase
     }
 
     [Fact]
+    public void FooterLayout_StackedInOrder_KeepsTheStackedWidthRules_AndNamesTheOrder()
+    {
+        // Plan 98c80bc3 (Fáze 6): StackedInOrder on TmDialog — the same full-width stacked chrome,
+        // painted in DOM order, so the stylesheet can flip the flex direction on its own class.
+        var cut = Render<TmDialog>(p => p
+            .Add(d => d.Show, true)
+            .Add(d => d.Title, "Saved")
+            .Add(d => d.FooterLayout, FooterLayout.StackedInOrder));
+
+        cut.Find(".tm-dialog-footer").ClassList.Should().Contain("tm-modal-footer--stacked");
+        cut.Find(".tm-dialog-footer").ClassList.Should().Contain("tm-modal-footer--stacked-in-order");
+    }
+
+    [Fact]
     public void ResolvedLayoutChanged_FiresOnlyOnATransition()
     {
         var seen = new List<TmLayoutMode>();

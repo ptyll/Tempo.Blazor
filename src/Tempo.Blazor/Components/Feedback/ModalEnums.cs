@@ -82,8 +82,20 @@ public enum FooterLayout
     /// <summary>Buttons sit side by side, at every width. The default.</summary>
     Inline,
 
-    /// <summary>Buttons stack vertically, full width, with the confirm action at the bottom.</summary>
-    Stacked
+    /// <summary>
+    /// Buttons stack vertically, full width, painted in REVERSE DOM order (column-reverse): the
+    /// first footer child paints at the bottom, the last one at the top — so the confirm action,
+    /// placed last, sits at the visual top.
+    /// </summary>
+    Stacked,
+
+    /// <summary>
+    /// Buttons stack vertically, full width, painted in DOM order (a plain column): the first
+    /// footer child paints at the top. The opt-in 2.12 addition for hosts that declare their
+    /// actions in reading order; the stacking, full-width and scroll-cap chrome is shared with
+    /// <see cref="Stacked"/>.
+    /// </summary>
+    StackedInOrder
 }
 
 /// <summary>Where a dialog places its icon relative to its content.</summary>

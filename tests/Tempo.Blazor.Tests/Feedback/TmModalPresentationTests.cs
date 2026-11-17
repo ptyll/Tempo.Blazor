@@ -191,6 +191,32 @@ public class TmModalPresentationTests : LocalizationTestBase
     }
 
     [Fact]
+    public void StackedInOrderFooter_PinTheOrderTheScrollCapAndTheLabelWrap()
+    {
+        // Plan 98c80bc3 (Fáze 6): FooterLayout.StackedInOrder paints the footer children in DOM
+        // order (the legacy Stacked is column-reverse) and a stacked footer with more actions
+        // than fit scrolls under a max-height cap instead of pushing the dialog taller, with
+        // button labels that wrap instead of truncating.
+        var css = File.ReadAllText(Path.Combine(FindRoot(), "src", "Tempo.Blazor", "wwwroot", "css", "components", "_modal.css"));
+
+        var order = RuleFor(css, ".tm-modal-footer--stacked-in-order,");
+        order.Should().Contain("flex-direction: column",
+            "StackedInOrder is the DOM-order column; Stacked stays column-reverse");
+
+        var stacked = RuleFor(css, ".tm-modal-footer--stacked,");
+        stacked.Should().Contain("max-height: var(--tm-modal-footer-max-height",
+            "a stacked footer taller than the cap scrolls instead of growing the dialog");
+        stacked.Should().Contain("overflow-y: auto");
+        stacked.Should().Contain("flex-shrink: 0",
+            "a scroller loses its content-sized minimum in the flex column — without it the footer compresses instead of scrolling");
+
+        var stackedBtn = RuleFor(css, ".tm-modal-footer--stacked .tm-btn");
+        stackedBtn.Should().Contain("white-space: normal").And.Contain("overflow-wrap: anywhere")
+            .And.Contain("height: auto").And.Contain("min-height: var(--tm-input-height-md)",
+                "a long button label wraps onto its own row instead of truncating — and the fixed .tm-btn height must not clip the second line");
+    }
+
+    [Fact]
     public void StackedFooter_IsNotInsideAMediaQuery()
     {
         var css = File.ReadAllText(Path.Combine(FindRoot(), "src", "Tempo.Blazor", "wwwroot", "css", "components", "_modal.css"));
@@ -213,6 +239,7 @@ public class TmModalPresentationTests : LocalizationTestBase
     [Theory]
     [InlineData(FooterLayout.Inline, "tm-modal-footer--inline")]
     [InlineData(FooterLayout.Stacked, "tm-modal-footer--stacked")]
+    [InlineData(FooterLayout.StackedInOrder, "tm-modal-footer--stacked-in-order")]
     public void FooterLayout_IsAClass_SoTheStylesheetCanKeepButtonsSideBySide(FooterLayout layout, string expectedClass)
     {
         var cut = Render<TmModal>(p => p

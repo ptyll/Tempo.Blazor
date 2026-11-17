@@ -469,16 +469,57 @@
 }
 
 /* Stacking is the host's choice, at every width. A media query used to stack every footer below
-   640px, which pushed the confirm action below the fold. */
+   640px, which pushed the confirm action below the fold. A footer taller than the cap scrolls
+   instead of pushing the dialog taller (the EmusCz DraftResumeDialog used to patch this in host
+   CSS); the cap is a component-local knob. */
 .tm-modal-footer--stacked,
 .tm-dialog-footer.tm-modal-footer--stacked {
   flex-direction: column-reverse;
+  /* The panel is a flex column, and a scroller loses its content-sized minimum (min-height:auto
+     collapses to 0 once overflow leaves visible) — without flex-shrink: 0 the footer would be
+     COMPRESSED below its own cap instead of scrolling under it. The body keeps flex: 1, so the
+     panel still fits and the footer scrolls inside its cap. */
+  flex-shrink: 0;
+  /* The base footer wraps — sensible for an inline row, but a WRAPPING COLUMN breaks Chromium's
+     intrinsic sizing: the footer reported a one-button content height, so the cap never engaged
+     and the overflowing actions vanished under the panel's overflow clip. A stacked footer is
+     one action per line by definition. */
+  flex-wrap: nowrap;
+  /* The base footer justifies to flex-end. In a COLUMN that paints the overflow ABOVE the scroll
+     origin, which Chromium treats as unreachable: scrollHeight stays at the viewport height and
+     nothing can scroll to the first actions. `safe` falls back to start exactly when the content
+     overflows, and keeps today's bottom-packed look when it fits. */
+  justify-content: safe flex-end;
+  max-height: var(--tm-modal-footer-max-height, 40dvh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* StackedInOrder paints the children in DOM order (a plain column) — the legacy Stacked is
+   column-reverse. Same compound shape as the stacked rules, and declared AFTER them, so the
+   equal-specificity cascade flips the direction without touching the shared chrome. */
+.tm-modal-footer--stacked-in-order,
+.tm-dialog-footer.tm-modal-footer--stacked-in-order {
+  flex-direction: column;
 }
 
 .tm-modal-footer--stacked .tm-btn,
 .tm-dialog-footer.tm-modal-footer--stacked .tm-btn {
   width: 100%;
   min-width: auto;
+}
+
+/* A stacked footer's button labels wrap instead of truncating — the actions declare themselves
+   in reading order, so cutting a label off would hide the words that order carries. height: auto
+   with the medium height as the MINIMUM is what actually lets the second line box paint: the
+   .tm-btn base clamps the box with a fixed height and the wrapped text would be invisible.
+   Declared AFTER the width rule, which it extends. */
+.tm-modal-footer--stacked .tm-btn,
+.tm-dialog-footer.tm-modal-footer--stacked .tm-btn {
+  white-space: normal;
+  height: auto;
+  min-height: var(--tm-input-height-md);
+  overflow-wrap: anywhere;
 }
 
 .tm-modal-overlay.tm-modal--sheet .tm-modal-footer--inline > .tm-btn,
