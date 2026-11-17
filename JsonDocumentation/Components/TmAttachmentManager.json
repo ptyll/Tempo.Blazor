@@ -41,7 +41,14 @@
       "name": "Disabled",
       "type": "bool",
       "isRequired": false,
-      "description": "When true, upload and delete controls are disabled."
+      "description": "Disables the upload drop zone only; use ReadOnly to hide delete."
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false,
+      "default": "False",
+      "description": "Read-only presentation: the delete buttons and the upload drop zone are not rendered and the root carries the tm-attachment-manager--readonly class. Existing attachments (and their download action) stay visible. Use it when the viewer may see the files but not change them."
     },
     {
       "name": "MaxUploadSize",
@@ -77,6 +84,7 @@
   ],
   "cssClasses": [
     "tm-attachment-manager",
+    "tm-attachment-manager--readonly",
     "tm-attachment-list",
     "tm-attachment-item",
     "tm-attachment-icon",
@@ -112,7 +120,7 @@
     },
     {
       "title": "Read-only attachment list",
-      "code": "<TmAttachmentManager AttachmentProvider=\"@attachmentProvider\"\n                     FileProvider=\"@fileProvider\"\n                     EntityId=\"@recordId\"\n                     Disabled=\"true\" />"
+      "code": "<TmAttachmentManager AttachmentProvider=\"@attachmentProvider\"\n                     FileProvider=\"@fileProvider\"\n                     EntityId=\"@recordId\"\n                     ReadOnly=\"true\" />"
     }
   ]
 }

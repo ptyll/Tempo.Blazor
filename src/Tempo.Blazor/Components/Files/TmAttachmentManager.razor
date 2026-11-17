@@ -4,7 +4,7 @@
 @using Tempo.Blazor.Abstractions.Interfaces
 @using Microsoft.AspNetCore.Components.Forms
 
-<div class="tm-attachment-manager @Class" @attributes="AdditionalAttributes">
+<div class="@ContainerClass @Class" @attributes="AdditionalAttributes">
     @if (AttachmentProvider is not null && _attachments.Count > 0)
     {
         <div class="tm-attachment-list">
@@ -45,7 +45,7 @@
                                 ↓
                             </button>
                         }
-                        @if (att.CanDelete)
+                        @if (att.CanDelete && !ReadOnly)
                         {
                             <button type="button"
                                     class="tm-attachment-delete"
@@ -59,10 +59,17 @@
             }
         </div>
     }
+    else if (ReadOnly && AttachmentProvider is not null)
+    {
+        <p class="tm-attachment-manager__empty">@Loc["TmAttachmentManager_NoAttachments"]</p>
+    }
 
-    <TmFileDropZone Multiple="true"
-                    Disabled="@Disabled"
-                    OnFilesSelected="HandleFilesSelectedAsync" />
+    @if (!ReadOnly)
+    {
+        <TmFileDropZone Multiple="true"
+                        Disabled="@Disabled"
+                        OnFilesSelected="HandleFilesSelectedAsync" />
+    }
 
     <TmFileUploadProgress Uploads="_uploads"
                           OnCancel="CancelUploadAsync"
@@ -86,8 +93,22 @@
     /// <summary>Entity type used with <see cref="EntityId"/>. Defaults to <c>attachment-manager-entity</c>.</summary>
     [Parameter] public string EntityType { get; set; } = "attachment-manager-entity";
 
-    /// <summary>When true, upload and delete controls are disabled.</summary>
+    /// <summary>
+    /// Disables the upload drop zone only; use <see cref="ReadOnly"/> to hide delete.
+    /// </summary>
     [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>
+    /// Read-only presentation: the delete buttons and the upload drop zone are not rendered and
+    /// the root carries the <c>tm-attachment-manager--readonly</c> class. Existing attachments
+    /// (and their download action) stay visible; with no attachments a localized empty state is
+    /// rendered instead of nothing. Use it when the viewer may see the files but not change
+    /// them — <see cref="Disabled"/> only disables the upload drop zone while the delete
+    /// buttons keep rendering. An upload that was already running when <c>ReadOnly</c> turned
+    /// true keeps its progress row (with cancel/resume) so an in-flight transfer stays
+    /// controllable.
+    /// </summary>
+    [Parameter] public bool ReadOnly { get; set; }
 
     /// <summary>Maximum size of a single upload in bytes. Default 100 MB. Also caps the browser read stream.</summary>
     [Parameter] public long MaxUploadSize { get; set; } = 100L * 1024 * 1024;
@@ -106,6 +127,9 @@
 
     /// <summary>Fires when an attachment is deleted.</summary>
     [Parameter] public EventCallback<TmAttachment> OnDeleted { get; set; }
+
+    private string ContainerClass =>
+        ReadOnly ? "tm-attachment-manager tm-attachment-manager--readonly" : "tm-attachment-manager";
 
     private List<TmAttachment> _attachments = [];
     private readonly List<TmUploadItem> _uploads = [];
@@ -167,7 +191,6 @@
         var file = item.Source;
         item.State = TmUploadState.Uploading;
         item.Message = null;
-        item.Cts?.Dispose();
         item.Cts = new CancellationTokenSource();
         var token = item.Cts.Token;
         StateHasChanged();
@@ -283,26 +306,15 @@
         }
     }
 
-    private async Task CancelUploadAsync(TmUploadItem item)
-    {
-        if (item.Cts is not null)
-        {
-            await item.Cts.CancelAsync();
-        }
-        item.State = TmUploadState.Cancelled;
-    }
+    private Task CancelUploadAsync(TmUploadItem item) => item.CancelAsync();
 
-    private async Task ResumeUploadAsync(TmUploadItem item)
-    {
-        if (item.ResumeAction is not null)
-        {
-            await item.ResumeAction(item);
-        }
-    }
+    private Task ResumeUploadAsync(TmUploadItem item) => item.ResumeAsync();
 
     private void DismissUpload(TmUploadItem item)
     {
-        item.Cts?.Dispose();
+        // The setter disposes the old CTS and clears the reference, so the public
+        // CancellationToken getter keeps returning CancellationToken.None afterwards.
+        item.Cts = null;
         _uploads.Remove(item);
     }
 

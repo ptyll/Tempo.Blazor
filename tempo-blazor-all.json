@@ -17142,7 +17142,7 @@
               "name": "Disabled",
               "type": "bool",
               "isRequired": false,
-              "description": "When true, upload and delete controls are disabled."
+              "description": "Disables the upload drop zone only; use ReadOnly to hide delete."
             },
             {
               "name": "EntityId",
@@ -17189,6 +17189,13 @@
               "description": "Fires for each chunk progress update during a chunked upload."
             },
             {
+              "name": "ReadOnly",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Read-only presentation: the delete buttons and the upload drop zone are not rendered and the root carries the tm-attachment-manager--readonly class. Existing attachments (and their download action) stay visible. Use it when the viewer may see the files but not change them.",
+              "default": "False"
+            },
+            {
               "name": "ScanHook",
               "type": "IFileScanHook?",
               "isRequired": false,
@@ -17197,6 +17204,7 @@
           ],
           "cssClasses": [
             "tm-attachment-manager",
+            "tm-attachment-manager--readonly",
             "tm-attachment-list",
             "tm-attachment-item",
             "tm-attachment-icon",
@@ -17232,7 +17240,7 @@
             },
             {
               "title": "Read-only attachment list",
-              "code": "<TmAttachmentManager AttachmentProvider=\"@attachmentProvider\"\n                     FileProvider=\"@fileProvider\"\n                     EntityId=\"@recordId\"\n                     Disabled=\"true\" />"
+              "code": "<TmAttachmentManager AttachmentProvider=\"@attachmentProvider\"\n                     FileProvider=\"@fileProvider\"\n                     EntityId=\"@recordId\"\n                     ReadOnly=\"true\" />"
             }
           ]
         },
@@ -17713,6 +17721,12 @@
               "type": "bool",
               "isRequired": false,
               "description": "Allow selecting multiple files at once."
+            },
+            {
+              "name": "OnFileRemoved",
+              "type": "EventCallback<IBrowserFile>",
+              "isRequired": false,
+              "description": "Fires when one file leaves the zone's selection (the built-in list's remove button or the public RemoveAsync). A host that renders the picked files itself binds it to drop the file from that list, so both views of the selection stay in sync."
             },
             {
               "name": "OnFilesSelected",

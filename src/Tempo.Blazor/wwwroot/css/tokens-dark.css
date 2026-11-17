@@ -382,6 +382,7 @@
   --tm-color-primary-active:       var(--tm-color-primary-800);
   --tm-color-primary-bg:           var(--tm-color-primary);
   --tm-color-primary-bg-subtle:    var(--tm-color-primary-subtle);
+  /* DEPRECATED since 2.12.0 — use --tm-color-primary-subtle (see tokens.css). */
   --tm-color-primary-light:        var(--tm-color-primary-300);
   --tm-color-primary-lighter:      var(--tm-color-primary-100);
   --tm-color-primary-soft:         var(--tm-color-primary-subtle);
@@ -642,6 +643,7 @@
   --tm-color-primary-active:        var(--tm-color-primary-800);
   --tm-color-primary-bg:            var(--tm-color-primary);
   --tm-color-primary-bg-subtle:     var(--tm-color-primary-subtle);
+  /* DEPRECATED since 2.12.0 — use --tm-color-primary-subtle (see tokens.css). */
   --tm-color-primary-light:         var(--tm-color-primary-300);
   --tm-color-primary-lighter:       var(--tm-color-primary-100);
   --tm-color-primary-soft:          var(--tm-color-primary-subtle);

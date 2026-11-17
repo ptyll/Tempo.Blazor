@@ -46,7 +46,7 @@ internal static class DataTableE2EKit
         var page = await context.NewPageAsync();
         await page.GotoAsync(baseUrl.TrimEnd('/') + route, new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 90_000 });
         await page.WaitForFunctionAsync("() => document.body !== null && document.body.hasAttribute('data-blazor-ready')", null,
-            new PageWaitForFunctionOptions { Timeout = 90_000 });
+            new PageWaitForFunctionOptions { Timeout = ReadinessTimeouts.FromEnvironment().ReadyMs });
         if (options.Theme == "dark")
         {
             await page.Locator("[data-testid='theme-toggle']:visible").First.ClickAsync();

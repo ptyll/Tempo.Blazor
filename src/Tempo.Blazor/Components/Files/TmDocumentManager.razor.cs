@@ -829,7 +829,6 @@ public partial class TmDocumentManager<TMetadata> where TMetadata : class
 
         item.State = TmUploadState.Uploading;
         item.Message = null;
-        item.Cts?.Dispose();
         item.Cts = new CancellationTokenSource();
         var token = item.Cts.Token;
         StateHasChanged();
@@ -922,26 +921,15 @@ public partial class TmDocumentManager<TMetadata> where TMetadata : class
         _scanVerdicts["name:" + fileName] = value;
     }
 
-    private async Task CancelUploadAsync(TmUploadItem item)
-    {
-        if (item.Cts is not null)
-        {
-            await item.Cts.CancelAsync();
-        }
-        item.State = TmUploadState.Cancelled;
-    }
+    private Task CancelUploadAsync(TmUploadItem item) => item.CancelAsync();
 
-    private async Task ResumeUploadAsync(TmUploadItem item)
-    {
-        if (item.ResumeAction is not null)
-        {
-            await item.ResumeAction(item);
-        }
-    }
+    private Task ResumeUploadAsync(TmUploadItem item) => item.ResumeAsync();
 
     private void DismissUpload(TmUploadItem item)
     {
-        item.Cts?.Dispose();
+        // The setter disposes the old CTS and clears the reference, so the public
+        // CancellationToken getter keeps returning CancellationToken.None afterwards.
+        item.Cts = null;
         _uploads.Remove(item);
     }
 

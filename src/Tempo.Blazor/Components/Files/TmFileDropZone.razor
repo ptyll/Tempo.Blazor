@@ -65,6 +65,14 @@
     /// <summary>Fires when files are selected via click or drag-and-drop.</summary>
     [Parameter] public EventCallback<InputFileChangeEventArgs> OnFilesSelected { get; set; }
 
+    /// <summary>
+    /// Fires when the host (or the built-in list) removes one file from the zone's selection.
+    /// A host that keeps its own selected-file list (it renders the picked files itself with
+    /// <c>ShowFileList="false"</c>) binds this to drop the file from that list, so both views
+    /// of the selection stay in sync without a tracker dictionary of their own.
+    /// </summary>
+    [Parameter] public EventCallback<IBrowserFile> OnFileRemoved { get; set; }
+
     /// <summary>Allow selecting multiple files at once.</summary>
     [Parameter] public bool Multiple { get; set; }
 
@@ -160,9 +168,19 @@
         await OnFilesSelected.InvokeAsync(e);
     }
 
-    private void RemoveFile(IBrowserFile file)
+    private async Task RemoveFile(IBrowserFile file) => await RemoveAsync(file);
+
+    /// <summary>
+    /// Removes one file from the zone's selection and raises <see cref="OnFileRemoved"/>.
+    /// The host-controlled removal path for hosts that present the picked files themselves.
+    /// A no-op for a file that is not in the selection (the callback is not raised). Safe to
+    /// call from outside an event handler — the built-in list re-renders after the removal.
+    /// </summary>
+    public async Task RemoveAsync(IBrowserFile file)
     {
-        _selectedFiles.Remove(file);
+        if (!_selectedFiles.Remove(file)) return;
+        await OnFileRemoved.InvokeAsync(file);
+        await InvokeAsync(StateHasChanged);
     }
 
     /// <summary>Clears all selected files.</summary>

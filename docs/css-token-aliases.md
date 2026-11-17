@@ -101,6 +101,15 @@ Write a translucent fill as `color-mix(in srgb, var(--tm-color-primary) 15%, tra
 `rgba(var(--tm-color-primary-500-rgb), 0.15)`. The channel tokens exist for the cases a
 `color-mix()` cannot express.
 
+## Deprecated aliases
+
+- `--tm-color-primary-light` — **deprecated since 2.12.0**, use `--tm-color-primary-subtle`
+  (with `--tm-color-primary-subtle-hover` for the hover step). The deprecated alias resolves to
+  `--tm-color-primary-300`, which as a tint behind text reaches only ~2.87:1 — a contrast trap,
+  not a subtle background. The token itself stays declared (public since 2.11.0, both in
+  `tokens.css` and `tokens-dark.css`) so existing consumers keep rendering; new code must not
+  reach for it.
+
 ## What the strict audit enforces
 
 `scripts/audit-css-strict.mjs` reports four kinds, and a component dark block is an error, not a

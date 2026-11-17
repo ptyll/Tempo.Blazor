@@ -3289,6 +3289,7 @@ to{opacity:1;transform:scale(1);}
 [data-theme="dark"] .tm-file-drop-zone__area--drag-over,.tm-dark .tm-file-drop-zone__area--drag-over{border-color:var(--tm-color-primary-500,#3b82f6);background-color:rgba(59,130,246,0.12);}
 [data-theme="dark"] .tm-file-drop-zone__file-remove:hover,.tm-dark .tm-file-drop-zone__file-remove:hover{background-color:rgba(220,38,38,0.15);}
 .tm-attachment-manager{display:flex;flex-direction:column;gap:var(--tm-space-3);}
+.tm-attachment-manager__empty{margin:0;color:var(--tm-text-muted);font-size:var(--tm-font-size-sm);}
 .tm-attachment-list{display:flex;flex-direction:column;gap:var(--tm-space-2);}
 .tm-attachment-item{display:flex;align-items:center;gap:var(--tm-space-3);padding:var(--tm-space-2) var(--tm-space-3);background:var(--tm-bg-muted);border-radius:var(--tm-radius-md);}
 .tm-attachment-icon{font-size:var(--tm-font-size-xl);flex-shrink:0;}

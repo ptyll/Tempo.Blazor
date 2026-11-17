@@ -14,6 +14,12 @@
       "description": "Fires when files are selected via click or drag-and-drop."
     },
     {
+      "name": "OnFileRemoved",
+      "type": "EventCallback<IBrowserFile>",
+      "isRequired": false,
+      "description": "Fires when one file leaves the zone's selection (the built-in list's remove button or the public RemoveAsync). A host that renders the picked files itself binds it to drop the file from that list, so both views of the selection stay in sync."
+    },
+    {
       "name": "Multiple",
       "type": "bool",
       "isRequired": false,

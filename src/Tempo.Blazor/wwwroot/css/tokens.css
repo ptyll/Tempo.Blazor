@@ -463,6 +463,10 @@
   /* Older name for --tm-color-on-primary. It aliases the other one instead of repeating its value:
      two independent definitions of "ink on primary" is how one of them kept the light-only white. */
   --tm-color-primary-contrast: var(--tm-color-on-primary);
+  /* DEPRECATED since 2.12.0 — use --tm-color-primary-subtle instead. This alias resolves to
+     primary-300, which as a tint behind text reaches only ~2.87:1 — a contrast trap, not a
+     subtle background. The token stays (public since 2.11.0); new code must reach for
+     --tm-color-primary-subtle (primary-50, with the paired -hover). */
   --tm-color-primary-light:    var(--tm-color-primary-300);
   --tm-color-primary-lighter:  var(--tm-color-primary-100);
   --tm-color-primary-soft:     var(--tm-color-primary-subtle);

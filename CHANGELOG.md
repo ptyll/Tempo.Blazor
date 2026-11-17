@@ -50,6 +50,16 @@
 
 - **`TmDrawer` body padding is token-driven.** `.tm-drawer__body` padding now reads `var(--tm-drawer-body-padding, 1.25rem)` instead of the hardcoded literal, so a host tightens a docked/sheet drawer's padding with one custom property instead of `::deep` overrides and negative-margin workarounds.
 
+### Added — files (`Tempo.Blazor`, Fáze 8: soubory a tokeny, plan 98c80bc3)
+
+- **`TmFileDropZone.OnFileRemoved` (`EventCallback<IBrowserFile>`)** — fires when one file leaves the zone's selection (through the built-in list's remove button or the new public `RemoveAsync(IBrowserFile)`). A host that presents the picked files itself (`ShowFileList="false"`, e.g. a form step rendering its own attachment cards) binds it to drop the file from that list, so both views of the selection stay in sync without a tracker dictionary of its own.
+- **`TmAttachmentManager.ReadOnly` (`bool`, default `false`)** — read-only presentation: the delete buttons and the upload drop zone are not rendered and the root carries the `tm-attachment-manager--readonly` class; existing attachments (and their download action) stay visible. Use it when the viewer may see the files but not change them. `Disabled` keeps its meaning of "disables the upload drop zone only" (its XML doc now says exactly that).
+- **`TmUploadItem` public upload controller** — a host that tracks uploads itself cancels and resumes through the item instead of keeping a parallel `CancellationTokenSource` and tracker dictionaries: `CancellationToken` (the in-flight attempt's token), `CancelAsync()` (idempotent — cancels the token, moves the state to `Cancelled` and raises the new `OnCancel` callback exactly once), `ResumeAsync()` (runs the registered resume action and raises the new `OnResume` callback). The `TmAttachmentManager`, `TmFileManager` and `TmDocumentManager` cancel/resume paths route through the same controller.
+
+### Changed — CSS tokens (`Tempo.Blazor`, Fáze 8: soubory a tokeny)
+
+- **`--tm-color-primary-light` is deprecated** in favour of `--tm-color-primary-subtle` (with `--tm-color-primary-subtle-hover` for the hover step). The alias resolves to `--tm-color-primary-300`, which as a tint behind text reaches only ~2.87:1 — a contrast trap, not a subtle background. The token stays declared in `tokens.css` / `tokens-dark.css` (public since 2.11.0), so existing consumers keep rendering unchanged; the deprecation is documented in [docs/css-token-aliases.md](docs/css-token-aliases.md) and in a comment at the declaration site. New code must not reach for it.
+
 ### Added — pin on top (`Tempo.Blazor`)
 
 - **A public pin-on-top API for host status UI.** A host element pinned on top stays above every Tempo top-layer surface: `TmModal`, `TmDialog`, a modal `TmDrawer`, sheets, `TmOverlayPanel` popovers and the command palette. That includes surfaces opened *after* the element appeared. Before 2.12.0 only the toast containers had this guarantee, through an internal registry. A host bar such as `#blazor-error-ui`, a connection banner or a session strip sat in top-layer open order, so a modal opened later covered it. There is ONE registry with ONE ordering rule, and it has three front doors:
@@ -58,7 +68,7 @@
   - **`<TmPinnedOnTop Visible Priority Class>`** (`Tempo.Blazor.Components.Feedback`): a declarative wrapper that renders `div.tm-pin-on-top[data-tm-pin-on-top]` and pins itself after its first render.
 - **Visibility is the signal.** A host keeps hiding and showing its element the way it always did, through inline `display`, a class or `hidden`. The module promotes the element (`popover="manual"` + `showPopover`) while it is visible and hands it back as a plain element while it is hidden. The module owns the `popover` attribute. Markup that already carries `popover` is explicit and keeps its own show/hide. The MutationObserver never watches the attributes the module writes, discards its own records with `takeRecords()` and runs at most one pass per animation frame, so it cannot loop. An InteractiveAuto handoff that swaps the element pins the new one.
 - **Order between pins:** an integer priority (default `0`, the band of the toasts; `100` and up paints above toasts). Equal priorities keep registration order. A push (`raise`) lands on top of its own band but never above a higher one.
-- **Native modal `<dialog>` (`showModal`).** While one is open, no pin is promoted or re-raised. Everything outside the dialog is inert, so a pin above it would cover it while being unusable. The pins land again, in registry order, when the dialog closes (a capture-phase `close` listener, with the `open` attribute as fallback). This one rule also applies to the toast containers, see Breaking / Migration.
+- **Native modal `<dialog>` (`showModal`).** While one is open, no pin is promoted or re-raised. Everything outside the dialog is inert, so a pin above it would cover it while being unusable. The pins land again, in registry order, when the dialog closes (a capture-phase `close` listener, with the `open` attribute as fallback). This one rule also applies to the toast containers, see Changed — toasts under a native modal dialog.
 - **Inert:** a pinned element is exempt from a Tempo modal trap's inert background (`data-tm-inert-exempt`, removed again only when the module added it). Render pinned elements at layout level, outside the `@Body` wrapper ([overlays.md](docs/overlays.md), rule 8).
 - **CSS utility** `:where([data-tm-pin-on-top], .tm-pin-on-top)` (`_pin-on-top.css`): a zero-specificity reset of the UA `[popover]` defaults (inset, margin, border, padding, width/height, background, color, overflow), so a fixed bottom bar stays a bar. It sets no colour and adds no token, so dark mode is untouched.
 - **Without the Popover API** registering is a no-op. **During prerender** nothing is invoked. Every interop is guarded, and a dispose that races an in-flight pin call never throws (the 2.11.0 `TmToastContainer` lesson).
@@ -75,15 +85,16 @@
 
 - `ModelingIssueFilterPhase11E2ETests.FiveHundredIssues_FilterNarrowsWithinBudget` (a 350 ms wall-clock budget) now carries `TestCategory("Performance")`, so it runs in `run-e2e-perf.ps1` on an idle machine and no longer in the full lane. In the full lane it went red when run serially on `edb5bf3fe` and on `94f18bb18` (433–737 ms), with no product change between them. The budget itself is unchanged. This was the owner's decision on 2026-11-16 ([docs/e2e-test-lanes.md](docs/e2e-test-lanes.md)).
 - `OverlayInitialFocusE2ETests` (slow promote) stubs the boot-time `tm-pin-on-top.js` in its own browser context. That keeps the click-time request for the promote module, which the test delays, from becoming vacuous. `DashboardF6SelectorE2ETests` asserts the English labels its pinned `en-US` locale renders.
+- `DataTableE2EKit` now waits for the Blazor ready signal with `ReadinessTimeouts.FromEnvironment().ReadyMs` (120 s by default, overridable through the environment) instead of a hard-coded 90 s, matching what the other kits and `PlaywrightTestBase` already do.
 
-### Breaking / Migration
+### Changed — toasts under a native modal dialog and pin order
 
-| Surface | 2.11.x | 2.12.0 | Migration |
+| Surface | 2.11.x | 2.12.0 | Host note |
 |---|---|---|---|
 | A toast pushed while a native modal `<dialog>` (`showModal()`, e.g. the Blazor reconnect modal) is open | The toast container was re-raised ABOVE the dialog, where it was inert: cards covered the dialog and could not be dismissed. | The container stays below the dialog (if it was already up) or stays hidden (if it was not), and lands on top when the dialog closes. Its live regions announce the still-visible toasts then. A promotion of a Tempo surface during the dialog no longer re-raises toasts above the dialog either. | Nothing to change for the usual case. A host that relied on toasts painting above its own native modal dialog should show the message inside the dialog, or use a Tempo `TmModal` (whose open order the registry respects) instead of `showModal()`. |
 | Order between pinned roots | Insertion order only. | `(priority, insertion order)`. The toast containers pin at `0`, so two containers keep their 2.11 order. | None, unless you call `pinRoot` from your own JS: pass `{ priority }` to rank a root above or below the toasts. |
 
-Before (a host script, EmusCz `emus-error-ui.js`):
+Adopting the pin for a host error UI (optional) — before (a host script, EmusCz `emus-error-ui.js`):
 
 ```html
 <div id="blazor-error-ui">…</div>
