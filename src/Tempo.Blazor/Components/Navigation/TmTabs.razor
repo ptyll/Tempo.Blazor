@@ -8,18 +8,37 @@
         @ChildContent
     </CascadingValue>
 
-    @{
-        var activePanel = _panels.FirstOrDefault(p => p.Id == ActiveTabId);
-    }
-    @if (activePanel?.ChildContent is not null)
+    @if (KeepInactivePanels)
     {
-        <div class="tm-tabs__panel"
-             role="tabpanel"
-             id="@($"tabpanel-{activePanel.Id}")"
-             aria-labelledby="@($"tab-{activePanel.Id}")"
-             tabindex="0">
-            @activePanel.ChildContent
-        </div>
+        @foreach (var panel in _panels)
+        {
+            if (panel.ChildContent is not null)
+            {
+                var isPanelActive = panel.Id == ActiveTabId;
+                <div class="tm-tabs__panel"
+                     role="tabpanel"
+                     id="@PanelDomId(panel.Id)"
+                     aria-labelledby="@TabDomId(panel.Id)"
+                     tabindex="@(isPanelActive ? "0" : null)"
+                     hidden="@(isPanelActive ? null : "hidden")">
+                    @panel.ChildContent
+                </div>
+            }
+        }
+    }
+    else
+    {
+        var activePanel = _panels.FirstOrDefault(p => p.Id == ActiveTabId);
+        if (activePanel?.ChildContent is not null)
+        {
+            <div class="tm-tabs__panel"
+                 role="tabpanel"
+                 id="@PanelDomId(activePanel.Id)"
+                 aria-labelledby="@TabDomId(activePanel.Id)"
+                 tabindex="0">
+                @activePanel.ChildContent
+            </div>
+        }
     }
 </div>
 
@@ -65,6 +84,16 @@
 
     private bool HasHeaderSlots => HeaderLeading is not null || HeaderTrailing is not null;
 
+    /// <summary>
+    /// DOM id of the tab BUTTON for <paramref name="panelId"/>. With <see cref="IdPrefix"/>
+    /// the ids are scoped (<c>{prefix}-tab-{id}</c>), without it the pre-2.12 global
+    /// <c>tab-{id}</c> schema is kept byte-for-byte.
+    /// </summary>
+    private string TabDomId(string panelId) => IdPrefix is null ? $"tab-{panelId}" : $"{IdPrefix}-tab-{panelId}";
+
+    /// <summary>DOM id of the tab PANEL for <paramref name="panelId"/>; see <see cref="TabDomId"/>.</summary>
+    private string PanelDomId(string panelId) => IdPrefix is null ? $"tabpanel-{panelId}" : $"{IdPrefix}-tabpanel-{panelId}";
+
     // The wrapper row is emitted ONLY when a slot is in use. That conditionality is not an
     // optimisation: it is the reason this component can gain slots without touching a single
     // existing consumer, because with no slot the emitted markup stays byte-identical (the
@@ -91,15 +120,19 @@
             var tabClass = "tm-tab" +
                 (isActive ? " tm-tab--active" : "") +
                 (panel.Disabled ? " tm-tab--disabled" : "");
+            // aria-controls may only reference a panel that is actually rendered: without
+            // KeepInactivePanels that is the ACTIVE panel alone, with it every panel exists
+            // in the DOM (hidden).
+            var controlsId = (isActive || KeepInactivePanels) ? PanelDomId(panel.Id) : null;
 
             <button type="button"
                     @ref="_tabElements[panel.Id]"
                     role="tab"
-                    id="@($"tab-{panel.Id}")"
+                    id="@TabDomId(panel.Id)"
                     class="@tabClass"
                     aria-selected="@(isActive ? "true" : "false")"
                     aria-disabled="@(panel.Disabled ? "true" : null)"
-                    aria-controls="@($"tabpanel-{panel.Id}")"
+                    aria-controls="@controlsId"
                     tabindex="@(isActive ? 0 : -1)"
                     @attributes="panel.TabAttributes"
                     @onclick="@(() => SelectTab(panel))">
@@ -130,8 +163,48 @@
     /// <summary>
     /// When <c>true</c>, the tab strip wraps onto multiple rows to fit the available width instead of
     /// scrolling horizontally. Use when many tabs would otherwise overflow/truncate in a narrow container.
+    /// <para>2.12: kept for compatibility; the same layout is reachable through
+    /// <see cref="Overflow"/> = <see cref="TabsOverflow.Wrap"/>. The effective layout wraps when
+    /// EITHER the flag is set OR <see cref="Overflow"/> is <see cref="TabsOverflow.Wrap"/>.
+    /// Prefer <see cref="Overflow"/>; when both are set, Wrap wins.</para>
     /// </summary>
     [Parameter] public bool Wrap { get; set; }
+
+    /// <summary>
+    /// 2.12: How the strip behaves when the tabs do not fit the available width —
+    /// <see cref="TabsOverflow.Scroll"/> (default; the historical one-row horizontal scroll, now
+    /// with edge shadows over the clipped tabs) or <see cref="TabsOverflow.Wrap"/> (multiple rows;
+    /// the layout of the legacy <see cref="Wrap"/> boolean). The root gets <c>tm-tabs--wrap</c>
+    /// in Wrap mode; Scroll mode adds no class (it is styled through
+    /// <c>.tm-tabs:not(.tm-tabs--wrap)</c>).
+    /// </summary>
+    [Parameter] public TabsOverflow Overflow { get; set; } = TabsOverflow.Scroll;
+
+    /// <summary>
+    /// 2.12: When <c>true</c>, the tab strip sticks to the top of its nearest scrolling ancestor
+    /// while the page content scrolls under it. The offset is the <c>--tm-tabs-sticky-top</c>
+    /// token (default <c>0</c>, e.g. <c>56px</c> to clear a fixed app bar). With header slots in
+    /// use the ROW (<c>.tm-tabs__header-row</c>) is what sticks, matching the sticky-consumer
+    /// contract of <see cref="HeaderLeading"/>.
+    /// </summary>
+    [Parameter] public bool StickyHeader { get; set; }
+
+    /// <summary>
+    /// 2.12: Opt-in id prefix that scopes the generated DOM ids (<c>{prefix}-tab-{id}</c> /
+    /// <c>{prefix}-tabpanel-{id}</c>) so two <see cref="TmTabs"/> instances can carry the same
+    /// panel ids without colliding. Null (default) keeps the global <c>tab-{id}</c> /
+    /// <c>tabpanel-{id}</c> schema.
+    /// </summary>
+    [Parameter] public string? IdPrefix { get; set; }
+
+    /// <summary>
+    /// 2.12: When <c>true</c>, EVERY tab panel is rendered and the inactive ones carry the
+    /// <c>hidden</c> attribute, so hosts can keep state (input drafts, scroll positions, canvas
+    /// measurements) alive across tab switches. Default <c>false</c> keeps the historical
+    /// lazy rendering: only the active panel exists, and <c>aria-controls</c> then points at the
+    /// active panel only (a tab must never reference a panel that is not in the DOM).
+    /// </summary>
+    [Parameter] public bool KeepInactivePanels { get; set; }
 
     /// <summary>
     /// Optional content rendered immediately BEFORE the tab strip, as a SIBLING of the
@@ -196,7 +269,9 @@
                 _ => "tm-tabs--line"
             };
 
-            return Wrap ? $"{variant} tm-tabs--wrap" : variant;
+            var wrap = Wrap || Overflow == TabsOverflow.Wrap;
+            var stickyClass = StickyHeader ? " tm-tabs--sticky" : "";
+            return wrap ? $"{variant} tm-tabs--wrap{stickyClass}" : $"{variant}{stickyClass}";
         }
     }
 

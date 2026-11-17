@@ -408,6 +408,11 @@
   /* Column pin toggle: its square size and its inset from the header's inline-end edge. The RTL pinned header reserves both. */
   --tm-data-table-pin-glyph: 1.1rem;
   --tm-data-table-pin-inset: var(--tm-space-1-5);
+
+  /* TmTabs sticky offset (2.12 StickyHeader). Declared on :root — NOT on .tm-tabs--sticky —
+     so a host override on :root or any wrapper ancestor reaches the sticky strip; a
+     declaration on the component's own class would beat every inherited value. */
+  --tm-tabs-sticky-top: 0;
   --tm-color-surface:          var(--tm-bg-surface);
   --tm-color-surface-secondary: var(--tm-bg-surface-secondary);
   --tm-color-surface-elevated: var(--tm-color-white);

@@ -37,7 +37,32 @@
       "name": "Wrap",
       "type": "bool",
       "isRequired": false,
-      "description": "When true, the tab strip wraps onto multiple rows to fit the available width instead of scrolling horizontally. Use when many tabs would otherwise overflow/truncate in a narrow container."
+      "description": "When true, the tab strip wraps onto multiple rows to fit the available width instead of scrolling horizontally. Kept for compatibility: the same layout is reachable through Overflow = TabsOverflow.Wrap. The effective layout wraps when EITHER the flag is set OR Overflow is Wrap. Prefer Overflow; when both are set, Wrap wins."
+    },
+    {
+      "name": "Overflow",
+      "type": "TabsOverflow",
+      "isRequired": false,
+      "default": "Scroll",
+      "description": "How the strip behaves when the tabs do not fit the available width — Scroll (default; the historical one-row horizontal scroll, now with token-coloured edge shadows over the clipped tabs) or Wrap (multiple rows; the layout of the legacy Wrap boolean). The root gets tm-tabs--wrap in Wrap mode; Scroll mode adds no class (it is styled through .tm-tabs:not(.tm-tabs--wrap))."
+    },
+    {
+      "name": "StickyHeader",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true, the tab strip sticks to the top of its nearest scrolling ancestor while the content scrolls under it. The offset is the --tm-tabs-sticky-top token (default 0, e.g. 56px to clear a fixed app bar). With header slots in use the ROW (.tm-tabs__header-row) is what sticks, matching the sticky-consumer contract of HeaderLeading. Renders the tm-tabs--sticky class."
+    },
+    {
+      "name": "IdPrefix",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Opt-in id prefix that scopes the generated DOM ids ({prefix}-tab-{id} / {prefix}-tabpanel-{id}) so two TmTabs instances can carry the same panel ids without colliding. Null (default) keeps the global tab-{id} / tabpanel-{id} schema."
+    },
+    {
+      "name": "KeepInactivePanels",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true, EVERY tab panel is rendered and the inactive ones carry the hidden attribute, so hosts keep state (input drafts, scroll positions, canvas measurements) alive across tab switches. Default false keeps the historical lazy rendering: only the active panel exists, and aria-controls then points at the active panel only — a tab must never reference a panel that is not in the DOM."
     },
     {
       "name": "HeaderLeading",
@@ -69,7 +94,10 @@
     "tm-tabs--line",
     "tm-tabs--pill",
     "tm-tabs--enclosed",
+    "tm-tabs--wrap",
+    "tm-tabs--sticky",
     "tm-tabs__header",
+    "tm-tabs__header-row",
     "tm-tabs__panel",
     "tm-tab",
     "tm-tab--active",
@@ -77,6 +105,20 @@
     "tm-tab__icon",
     "tm-tab__label",
     "tm-tab__badge"
+  ],
+  "cssVariables": [
+    {
+      "name": "--tm-tabs-sticky-top",
+      "description": "Offset from the top of the scrolling ancestor for StickyHeader (default 0, e.g. 56px to clear a fixed app bar). Declared on :root, so a host override on :root or any wrapper ancestor wins."
+    },
+    {
+      "name": "--tm-tabs-scroll-cover",
+      "description": "Colour the scroll-mode edge-shadow covers (and the sticky strip background) paint. Defaults to --tm-bg-surface; Pill re-declares it to --tm-bg-muted. A host whose strip sits on another background re-declares the token to that background."
+    },
+    {
+      "name": "--tm-tabs-edge-shadow-size",
+      "description": "Width of each scroll-mode edge-shadow band (gradient fade and background-size). Defaults to var(--tm-space-4) = 16px."
+    }
   ],
   "examples": [
     {

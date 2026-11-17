@@ -46,6 +46,17 @@
     --tm-tab-row-height: calc(
         (2 * var(--tm-tab-padding-y)) + var(--tm-tab-line-box) + var(--tm-tab-row-chrome)
     );
+
+    /* ── 2.12 scroll edge shadows ────────────────────────────────────────────────────────
+       The colour the `local` cover layers paint. Defaults to the page surface; Pill
+       re-declares it to its muted tray (below), and a host whose strip sits on a different
+       background (a card, a panel, `--tm-bg-muted`) re-declares it to that background so the
+       covers never show as lighter boxes at the strip's edges. */
+    --tm-tabs-scroll-cover: var(--tm-bg-surface);
+
+    /* Width of each edge-shadow band (the gradient fade and the background-size share it).
+       --tm-space-4 is 16px at the default root size. */
+    --tm-tabs-edge-shadow-size: var(--tm-space-4);
 }
 
 /* ── Tab header strip ──────────────────────────────────── */
@@ -100,6 +111,55 @@
     flex-wrap: wrap;
     overflow-x: visible;
     row-gap: 0.125rem;
+}
+
+/* ── Scroll mode: edge shadows over the clipped tabs (2.12, Overflow=Scroll) ─────
+   The default overflow. The shadows must appear only on the side that actually has
+   clipped tabs, so they ride the classic `background-attachment: local` trick on the
+   SCROLLPORT itself: the `local` layers (the white covers) scroll away with the content
+   and expose the `scroll` layers (the tinted shadows) exactly where content hides under
+   the edge — no JS scroll listener, no shadow where there is nothing to see.
+   `.tm-tabs:not(.tm-tabs--wrap)` is the selector, NOT a `tm-tabs--scroll` class on the
+   root: the scroll layout is the DEFAULT, and stamping a new class onto every existing
+   strip would churn the frozen default markup for nothing. Wrap mode is excluded because
+   its header never scrolls.
+   The cover gradient is painted in `--tm-tabs-scroll-cover` (declared on `.tm-tabs`, default
+   `--tm-bg-surface`; Pill re-declares it to its muted tray) so the cover matches the
+   background the strip actually sits on — a host whose strip lives on another background
+   re-declares the token to that background. Colors come from tokens only. */
+.tm-tabs:not(.tm-tabs--wrap) .tm-tabs__header {
+    background-image:
+        linear-gradient(to right, var(--tm-tabs-scroll-cover), transparent var(--tm-tabs-edge-shadow-size)),
+        linear-gradient(to left, var(--tm-tabs-scroll-cover), transparent var(--tm-tabs-edge-shadow-size)),
+        linear-gradient(to right, var(--tm-border-color), transparent),
+        linear-gradient(to left, var(--tm-border-color), transparent);
+    background-position: left center, right center, left center, right center;
+    background-size:
+        var(--tm-tabs-edge-shadow-size) 100%, var(--tm-tabs-edge-shadow-size) 100%,
+        var(--tm-tabs-edge-shadow-size) 100%, var(--tm-tabs-edge-shadow-size) 100%;
+    background-repeat: no-repeat;
+    background-attachment: local, local, scroll, scroll;
+}
+
+/* ── Sticky header (2.12, StickyHeader) ──────────────────────────────────
+   Sticks the strip — or the ROW when slots are in use, matching the sticky-consumer
+   contract documented on HeaderLeading — to the top of the nearest scrolling ancestor.
+   The offset is the --tm-tabs-sticky-top token, declared on :root in tokens.css with the
+   default 0 so a HOST override on an ancestor (`:root { --tm-tabs-sticky-top: 56px }`, or
+   any wrapper element) actually wins: a declaration on .tm-tabs--sticky itself would beat
+   every inherited value. The background uses background-COLOR (never the shorthand, which
+   would reset the edge-shadow background-image/attachment of the scroll strip above) in
+   --tm-tabs-scroll-cover, the same token the covers paint — so Pill's tray colour comes
+   free from its token override and no per-variant rule is needed. With slots the strip
+   sits INSIDE the row, so only the row sticks and carries the background (a sticky
+   declaration on the inner strip would be a no-op whose containing block is the row).
+   z-index stays modest so overlays (dialogs, toasts, dropdowns) still win. */
+.tm-tabs--sticky > .tm-tabs__header,
+.tm-tabs--sticky .tm-tabs__header-row {
+    position: sticky;
+    top: var(--tm-tabs-sticky-top, 0);
+    z-index: 5;
+    background-color: var(--tm-tabs-scroll-cover);
 }
 
 /* Line variant: give every row its own baseline so wrapped rows keep the
@@ -268,6 +328,10 @@
     --tm-tab-padding-x: 0.875rem;
     --tm-tab-tray-padding: 0.25rem;
     --tm-tab-row-chrome: calc(2 * var(--tm-tab-tray-padding));
+    /* The tray colour is what the scroll covers paint and what a sticky strip sits on:
+       both consume the one token declared on .tm-tabs, so this single re-declaration
+       covers the edge shadows and the sticky background together. */
+    --tm-tabs-scroll-cover: var(--tm-bg-muted);
 }
 
 .tm-tabs--pill .tm-tabs__header {

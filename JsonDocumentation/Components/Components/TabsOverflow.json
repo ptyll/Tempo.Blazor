@@ -1,0 +1,17 @@
+{
+  "itemName": "TabsOverflow",
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Navigation",
+  "description": "How a TmTabs strip behaves when the tabs do not fit the available width.",
+  "values": [
+    {
+      "name": "Scroll",
+      "description": "The default: the strip stays on one row and scrolls horizontally (the historical behavior), with token-coloured edge shadows over the clipped tabs."
+    },
+    {
+      "name": "Wrap",
+      "description": "The strip wraps onto multiple rows to fit the available width — the layout the legacy Wrap boolean opted into, now a first-class value."
+    }
+  ]
+}

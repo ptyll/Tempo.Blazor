@@ -2565,6 +2565,8 @@ Záložky s obsahem.
 | `tm-tabs--line` | Varianta s čárou |
 | `tm-tabs--pill` | Pill varianta |
 | `tm-tabs--enclosed` | Enclosed varianta |
+| `tm-tabs--wrap` | Wrap overflow (více řádků) |
+| `tm-tabs--sticky` | Sticky hlavička (`--tm-tabs-sticky-top`, výchozí `0`) |
 | `tm-tabs__header` | Hlavička se záložkami |
 | `tm-tab` | Jednotlivá záložka |
 | `tm-tab--active` | Aktivní záložka |
@@ -2574,6 +2576,14 @@ Záložky s obsahem.
 | `tm-tab__badge` | Badge v záložce |
 | `tm-tabs__panel` | Panel s obsahem záložky |
 
+#### CSS tokeny TmTabs
+
+| Token | Výchozí | Popis |
+|-------|---------|-------|
+| `--tm-tabs-sticky-top` | `0` | Offset sticky hlavičky (`StickyHeader`), např. `56px` pro podjetí fixní app baru; deklarován na `:root`, takže host přebije override na `:root` nebo na wrapperu |
+| `--tm-tabs-scroll-cover` | `var(--tm-bg-surface)` | Barva krycích přechodů okrajových stínů scrollovacího režimu (a pozadí sticky pruhu); Pill ji přepisuje na `var(--tm-bg-muted)`, host s pruhem na jiném pozadí ji přepíše na to pozadí |
+| `--tm-tabs-edge-shadow-size` | `var(--tm-space-4)` | Šířka pásu okrajové stíny (gradient i `background-size`) |
+
 #### Parametry TmTabs
 
 | Parametr | Typ | Výchozí | Popis |
@@ -2581,6 +2591,13 @@ Záložky s obsahem.
 | `ActiveTabId` | `string` | **povinný** | ID aktivní záložky |
 | `ActiveTabIdChanged` | `EventCallback<string>` | — | Událost změny |
 | `Variant` | `TabVariant` | `Line` | Styl: `Line`, `Pill`, `Enclosed` |
+| `Wrap` | `bool` | `false` | Zalamování na více řádků (kompatibilita; totéž co `Overflow="TabsOverflow.Wrap"`) |
+| `Overflow` | `TabsOverflow` | `Scroll` | Chování při přetečení: `Scroll` (horizontální scroll s okrajovými stíny) nebo `Wrap` |
+| `StickyHeader` | `bool` | `false` | Přilepení hlavičky na horní okraj scroll kontejneru (offset tokenem `--tm-tabs-sticky-top`) |
+| `IdPrefix` | `string?` | `null` | Prefix generovaných DOM id (`{prefix}-tab-{id}` / `{prefix}-tabpanel-{id}`); bez něj globální schéma |
+| `KeepInactivePanels` | `bool` | `false` | Vykreslit všechny panely, neaktivní s `hidden` (zůstane stav); jinak jen aktivní panel |
+| `AriaLabel` | `string?` | `null` | Přístupové jméno tablistu |
+| `HeaderLeading` / `HeaderTrailing` | `RenderFragment?` | `null` | Sloty vedle pruhu záložek |
 | `ChildContent` | `RenderFragment?` | `null` | TmTabPanel děti |
 | `Class` | `string?` | `null` | Další CSS třídy |
 | `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |

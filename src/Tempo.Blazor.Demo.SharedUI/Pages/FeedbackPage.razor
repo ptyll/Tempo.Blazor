@@ -635,6 +635,51 @@
             </TmTabs>
         </div>
     </div>
+
+    <!-- Overflow, sticky header and kept-alive panels (2.12) -->
+    <div class="showcase-card mt-4">
+        <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Sticky header + kept-alive panels</p>
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-3">
+            The strip below sticks to the top of its scroll container while the long content
+            scrolls under it (<code>StickyHeader</code>, offset via <code>--tm-tabs-sticky-top</code>).
+            With <code>KeepInactivePanels</code> every panel stays rendered (inactive ones carry
+            <code>hidden</code>), so each tab counts its own switch flips even when it is not the
+            active one &mdash; state survives tab switches. Eight tabs in a narrow card also exercise
+            the default <code>Overflow=Scroll</code> with its edge shadows.
+        </p>
+        <div data-testid="tabs-sticky-scroller" class="rounded-lg border border-slate-200 dark:border-slate-700 max-w-[420px] max-h-60 overflow-y-auto">
+            <TmTabs data-testid="tabs-sticky-overflow" ActiveTabId="@_tabStickyActive" ActiveTabIdChanged="@StickyTabActivated" StickyHeader KeepInactivePanels>
+                @for (var i = 1; i <= 8; i++)
+                {
+                    var index = i;
+                    <TmTabPanel Id="@($"sticky-{index}")" Title="@($"Section {index}")">
+                        <div class="p-4">
+                            <p class="text-sm text-slate-700 dark:text-slate-300 font-medium mb-2">Section @index content</p>
+                            <p class="text-sm text-slate-600 dark:text-slate-400">This tab has been activated @_stickyVisits[index - 1] time(s).</p>
+                            <div class="h-32"></div>
+                        </div>
+                    </TmTabPanel>
+                }
+            </TmTabs>
+        </div>
+        <!-- Pill + sticky + scroll overflow in a deliberately narrow box: the covers must ride
+             the pill tray's own --tm-tabs-scroll-cover, and the shadow gradient must survive the
+             sticky background-color (they share one background-image on the same scrollport). -->
+        <div class="mt-4 max-w-[240px]">
+            <TmTabs data-testid="tabs-sticky-pill-overflow" Variant="TabVariant.Pill" StickyHeader IdPrefix="pill" ActiveTabId="@_tabStickyActive" ActiveTabIdChanged="@StickyTabActivated" KeepInactivePanels>
+                @for (var i = 1; i <= 8; i++)
+                {
+                    var index = i;
+                    <TmTabPanel Id="@($"sticky-{index}")" Title="@($"Section {index}")">
+                        <div class="p-4">
+                            <p class="text-sm text-slate-700 dark:text-slate-300 font-medium mb-2">Section @index content</p>
+                        </div>
+                    </TmTabPanel>
+                }
+            </TmTabs>
+        </div>
+        <p class="mt-3 text-sm text-slate-600 dark:text-slate-400">Active tab: <strong>@_tabStickyActive</strong></p>
+    </div>
 </section>
 
 <!-- Timeline -->
@@ -1393,6 +1438,22 @@
     private string _tabWrapActive = WrapTabId("Inbox");
     private string _tabPillWrapActive = $"pill-{WrapTabId("Inbox")}";
     private string _tabEncWrapActive = $"enc-{WrapTabId("Inbox")}";
+
+    // 2.12 sticky/kept-alive fixture: the active tab plus how often each one was selected.
+    private string _tabStickyActive = "sticky-1";
+    private readonly int[] _stickyVisits = [1, 0, 0, 0, 0, 0, 0, 0];
+
+    private void StickyTabActivated(string id)
+    {
+        _tabStickyActive = id;
+        if (id.StartsWith("sticky-", StringComparison.Ordinal)
+            && int.TryParse(id["sticky-".Length..], out var n)
+            && n >= 1 && n <= _stickyVisits.Length)
+        {
+            _stickyVisits[n - 1]++;
+        }
+        StateHasChanged();
+    }
 
     private static string WrapTabId(string title) => $"wrap-{title.ToLowerInvariant().Replace(' ', '-')}";
 

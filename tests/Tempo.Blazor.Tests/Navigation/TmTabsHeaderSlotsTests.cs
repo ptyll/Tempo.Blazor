@@ -20,17 +20,30 @@ namespace Tempo.Blazor.Tests.Navigation;
 public class TmTabsHeaderSlotsTests : LocalizationTestBase
 {
     /// <summary>
-    /// sha256 of <see cref="RenderNoSlots"/>'s markup, measured on the pre-slot TmTabs.razor
-    /// (Tempo main @ ab4a6851, before HeaderLeading/HeaderTrailing were added). 1269 bytes.
+    /// sha256 of <see cref="RenderNoSlots"/>'s markup. 1209 bytes.
     /// <para>
-    /// DO NOT recompute this from the current implementation — that would make the test vacuous.
+    /// HISTORY: the ORIGINAL frozen baseline (sha
+    /// <c>9ed0c8d568723921558b342e9f54c02c47648ab880369de2b7e01a35b5c572cf</c>, 1269 bytes) was
+    /// measured on the pre-slot TmTabs.razor (Tempo main @ ab4a6851). Plan 98c80bc3, Fáze 5
+    /// (EmusCz 2.12 upstream) then made ONE deliberate default-markup change: <c>aria-controls</c>
+    /// is now rendered ONLY on the tab whose panel is actually in the DOM (previously every tab
+    /// button referenced <c>tabpanel-{id}</c>, including panels that are never rendered — an
+    /// invalid ARIA reference). That is the -60 bytes (two <c>aria-controls="tabpanel-tabN"</c>
+    /// attributes plus the root class' trailing space) between the old and the new hash, and
+    /// NOTHING else — the id schema (<c>tab-{id}</c>/<c>tabpanel-{id}</c>), the variant classes and
+    /// the conditional wrapper row are unchanged. The hash below is the RE-FROZEN post-Fáze-5
+    /// baseline: it continues to prove that everything AFTER this point keeps the default DOM
+    /// byte-for-byte stable.
+    /// </para>
+    /// <para>
+    /// DO NOT recompute this from a modified implementation — that would make the test vacuous.
     /// It is the reference that proves existing consumers see an unchanged DOM, and it is the
     /// reason the wrapper row must stay CONDITIONAL: emitting the row unconditionally moves the
     /// strip one level down and this hash changes.
     /// </para>
     /// </summary>
     private const string PreSlotMarkupSha256 =
-        "9ed0c8d568723921558b342e9f54c02c47648ab880369de2b7e01a35b5c572cf";
+        "bdfe08e0e36adc35c3aa5a0dd95fd8c03f2b6cc619b9ee00eb852f520b3fbebf";
 
     /// <summary>
     /// The ONE thing normalised away before hashing: the element-reference capture marker the
@@ -75,8 +88,8 @@ public class TmTabsHeaderSlotsTests : LocalizationTestBase
 
         sha.Should().Be(
             PreSlotMarkupSha256,
-            "TmTabs without HeaderLeading/HeaderTrailing must render the pre-slot markup byte for byte "
-            + "(measured {0} bytes, expected 1269); rendered markup was:\n{1}",
+            "TmTabs without HeaderLeading/HeaderTrailing must render the re-frozen post-Fáze-5 markup "
+            + "byte for byte (measured {0} bytes, expected 1209); rendered markup was:\n{1}",
             bytes.Length,
             markup);
     }
