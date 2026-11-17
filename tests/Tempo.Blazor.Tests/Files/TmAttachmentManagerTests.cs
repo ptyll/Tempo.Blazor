@@ -66,6 +66,82 @@ public class TmAttachmentManagerTests : LocalizationTestBase
         cut.FindAll(".tm-file-drop-zone").Should().NotBeEmpty();
     }
 
+    [Fact]
+    public async Task AttachmentManager_ReadOnly_HidesDelete_DropZone_AndMarksRoot()
+    {
+        var provider = new FakeAttachmentProvider(new[]
+        {
+            Attachment("1", "report.pdf"),
+        });
+        var cut = Render<TmAttachmentManager>(p => p
+            .Add(c => c.AttachmentProvider, provider)
+            .Add(c => c.FileProvider, provider)
+            .Add(c => c.EntityId, "entity-123")
+            .Add(c => c.ReadOnly, true));
+        await cut.InvokeAsync(() => { });
+
+        cut.FindAll(".tm-attachment-delete").Should().BeEmpty("ReadOnly hides the delete action");
+        cut.FindAll(".tm-file-drop-zone").Should().BeEmpty("ReadOnly hides the upload drop zone");
+        cut.Find(".tm-attachment-manager").ClassList
+            .Should().Contain("tm-attachment-manager--readonly");
+        cut.Markup.Should().NotContain("aria-readonly",
+            "the manager is a plain div — the state is carried by the class, not an ARIA attribute");
+    }
+
+    [Fact]
+    public async Task AttachmentManager_ReadOnly_KeepsListAndDownload()
+    {
+        var provider = new FakeAttachmentProvider(new[]
+        {
+            Attachment("1", "report.pdf"),
+        });
+        var cut = Render<TmAttachmentManager>(p => p
+            .Add(c => c.AttachmentProvider, provider)
+            .Add(c => c.FileProvider, provider)
+            .Add(c => c.EntityId, "entity-123")
+            .Add(c => c.ReadOnly, true));
+        await cut.InvokeAsync(() => { });
+
+        cut.FindAll(".tm-attachment-item").Should().HaveCount(1);
+        cut.FindAll(".tm-attachment-download").Should().HaveCount(1, "ReadOnly hides delete/upload only");
+    }
+
+    [Fact]
+    public async Task AttachmentManager_NotReadOnly_KeepsDeleteAndDropZone()
+    {
+        var provider = new FakeAttachmentProvider(new[]
+        {
+            Attachment("1", "report.pdf"),
+        });
+        var cut = Render<TmAttachmentManager>(p => p
+            .Add(c => c.AttachmentProvider, provider)
+            .Add(c => c.FileProvider, provider)
+            .Add(c => c.EntityId, "entity-123"));
+        await cut.InvokeAsync(() => { });
+
+        cut.FindAll(".tm-attachment-delete").Should().NotBeEmpty();
+        cut.FindAll(".tm-file-drop-zone").Should().NotBeEmpty();
+        cut.Find(".tm-attachment-manager").ClassList
+            .Should().NotContain("tm-attachment-manager--readonly");
+    }
+
+    [Fact]
+    public async Task AttachmentManager_ReadOnly_Empty_ShowsEmptyState()
+    {
+        var provider = new FakeAttachmentProvider([]);
+        var cut = Render<TmAttachmentManager>(p => p
+            .Add(c => c.AttachmentProvider, provider)
+            .Add(c => c.FileProvider, provider)
+            .Add(c => c.EntityId, "entity-123")
+            .Add(c => c.ReadOnly, true));
+        await cut.InvokeAsync(() => { });
+
+        cut.Find(".tm-attachment-manager__empty").TextContent.Should().NotBeEmpty(
+            "a read-only manager with no attachments renders a visible empty state instead of nothing");
+        cut.FindAll(".tm-file-drop-zone").Should().BeEmpty();
+        cut.FindAll(".tm-attachment-delete").Should().BeEmpty();
+    }
+
     private static TmAttachment Attachment(
         string id,
         string fileName,

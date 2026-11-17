@@ -106,4 +106,84 @@ public class TmFileDropZoneTests : LocalizationTestBase
 
         cut.FindAll(".tm-file-drop-zone__file-item").Count.Should().Be(0);
     }
+
+    [Fact]
+    public void TmFileDropZone_RemoveFile_Raises_OnFileRemoved()
+    {
+        IBrowserFile? removed = null;
+        var cut = Render<TmFileDropZone>(p => p
+            .Add(c => c.OnFileRemoved, EventCallback.Factory.Create<IBrowserFile>(this, f => removed = f)));
+
+        cut.FindComponent<InputFile>().UploadFiles(InputFileContent.CreateFromText("x", "a.txt"));
+        cut.FindAll(".tm-file-drop-zone__file-item").Should().HaveCount(1);
+
+        cut.Find(".tm-file-drop-zone__file-remove").Click();
+
+        removed.Should().NotBeNull();
+        removed!.Name.Should().Be("a.txt");
+        cut.Instance.SelectedFiles.Should().BeEmpty();
+        cut.FindAll(".tm-file-drop-zone__file-item").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void TmFileDropZone_RemoveFile_CallsBackOncePerFile()
+    {
+        var removedNames = new List<string>();
+        var cut = Render<TmFileDropZone>(p => p
+            .Add(c => c.Multiple, true)
+            .Add(c => c.OnFileRemoved, EventCallback.Factory.Create<IBrowserFile>(this, f => removedNames.Add(f.Name))));
+
+        cut.FindComponent<InputFile>().UploadFiles(
+            InputFileContent.CreateFromText("x", "a.txt"),
+            InputFileContent.CreateFromText("y", "b.txt"));
+
+        cut.FindAll(".tm-file-drop-zone__file-remove")[1].Click();
+
+        removedNames.Should().ContainSingle().Which.Should().Be("b.txt");
+        cut.Instance.SelectedFiles.Select(f => f.Name).Should().BeEquivalentTo("a.txt");
+    }
+
+    [Fact]
+    public async Task TmFileDropZone_RemoveAsync_FromOutside_Rerenders()
+    {
+        var removedNames = new List<string>();
+        var cut = Render<TmFileDropZone>(p => p
+            .Add(c => c.OnFileRemoved, EventCallback.Factory.Create<IBrowserFile>(this, f => removedNames.Add(f.Name))));
+
+        cut.FindComponent<InputFile>().UploadFiles(InputFileContent.CreateFromText("x", "a.txt"));
+        cut.FindAll(".tm-file-drop-zone__file-item").Should().HaveCount(1);
+
+        // Host-controlled removal from OUTSIDE an event handler of the zone: the built-in
+        // list must re-render so the removed file does not linger on screen.
+        await cut.InvokeAsync(() => cut.Instance.RemoveAsync(cut.Instance.SelectedFiles[0]));
+
+        cut.Instance.SelectedFiles.Should().BeEmpty();
+        cut.FindAll(".tm-file-drop-zone__file-item").Should().BeEmpty();
+        removedNames.Should().ContainSingle().Which.Should().Be("a.txt");
+    }
+
+    [Fact]
+    public async Task TmFileDropZone_RemoveAsync_UnknownFile_DoesNotRaise_OnFileRemoved()
+    {
+        var removedNames = new List<string>();
+        var cut = Render<TmFileDropZone>(p => p
+            .Add(c => c.OnFileRemoved, EventCallback.Factory.Create<IBrowserFile>(this, f => removedNames.Add(f.Name))));
+
+        cut.FindComponent<InputFile>().UploadFiles(InputFileContent.CreateFromText("x", "a.txt"));
+
+        await cut.InvokeAsync(() => cut.Instance.RemoveAsync(new UnknownBrowserFile("never-selected.txt")));
+
+        removedNames.Should().BeEmpty("OnFileRemoved is not raised for a file that was never in the selection");
+        cut.Instance.SelectedFiles.Should().ContainSingle();
+    }
+
+    private sealed class UnknownBrowserFile(string name) : IBrowserFile
+    {
+        public string Name => name;
+        public DateTimeOffset LastModified => DateTimeOffset.Now;
+        public long Size => 1;
+        public string ContentType => "text/plain";
+        public Stream OpenReadStream(long maxAllowedSize = 512000, CancellationToken cancellationToken = default)
+            => new MemoryStream([]);
+    }
 }

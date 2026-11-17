@@ -212,6 +212,13 @@ public class UnconstrainedClassOwnershipTests
         // .tm-modal-footer .tm-btn floor, so the manifest order decides nothing new.
         ".tm-btn Tempo.Blazor/_dashboard.css|Tempo.Blazor/_modal.css",
 
+        // Fáze 6 (modal stacked footer, 2.12): the stacked footer re-declares the shared .tm-btn
+        // (height, white-space) so its two stacked actions align and wrap — an intentional
+        // Override of _button.css inside the strictly-narrower .tm-modal-footer--stacked context
+        // (the manifest already loads _modal.css after _button.css). The modifier-vs-base tie this
+        // produces for the size variants is recorded next to RecordedModifierPairs below.
+        ".tm-btn Tempo.Blazor/_button.css|Tempo.Blazor/_modal.css",
+
         // Dashboard widget charts: SVG text painted at 11/12px inside a widget slot renders ≈6px
         // and illegible, so _dashboard.css re-declares font-size on the chart text classes through
         // the strictly narrower .tm-widget .tm-chart chain (specificity (0,3,0)) — an intentional,
@@ -740,14 +747,34 @@ public class UnconstrainedClassOwnershipTests
         ("tm-scroll-spy-nav__link", "tm-scroll-spy-nav__link--active"),
     ];
 
+    /// <summary>
+    /// Recorded modifier-vs-base contests an intentionally scoped override DELIBERATELY wins.
+    /// Fáze 6 (2.12) stacked footer: <c>.tm-modal-footer--stacked .tm-btn</c> sets
+    /// <c>height: auto</c> + the min-height floor so the two stacked actions align and wrapped
+    /// labels stay visible — the size variants (<c>tm-btn-md</c>/<c>tm-btn-sm</c>) are meant to
+    /// lose their height there (the manifest loads _modal.css after _button.css, which carries the
+    /// decision; the (0,3,0) <c>.tm-dialog-footer</c> chain is strictly narrower still). The sweep
+    /// cannot tell an intentional scoped override from an accident, so these are named here;
+    /// anything NOT in this list is still a hard failure.
+    /// </summary>
+    private static readonly string[] RecordedModifierOverrideViolations =
+    [
+        "tm-btn|tm-btn-md [height]: .tm-btn.tm-btn-md (0,2,0) v Tempo.Blazor/_button.css × .tm-modal-footer--stacked .tm-btn (0,2,0) v Tempo.Blazor/_modal.css",
+        "tm-btn|tm-btn-md [height]: .tm-btn.tm-btn-md (0,2,0) v Tempo.Blazor/_button.css × .tm-dialog-footer.tm-modal-footer--stacked .tm-btn (0,3,0) v Tempo.Blazor/_modal.css",
+        "tm-btn|tm-btn-sm [height]: .tm-btn.tm-btn-sm (0,2,0) v Tempo.Blazor/_button.css × .tm-modal-footer--stacked .tm-btn (0,2,0) v Tempo.Blazor/_modal.css",
+        "tm-btn|tm-btn-sm [height]: .tm-btn.tm-btn-sm (0,2,0) v Tempo.Blazor/_button.css × .tm-dialog-footer.tm-modal-footer--stacked .tm-btn (0,3,0) v Tempo.Blazor/_modal.css",
+    ];
+
     [Fact]
     public void EveryRecordedModifier_OutranksItsBaseOnEverySharedProperty()
     {
         var violations = ModifierViolations(ModifierClaims(), RecordedModifierPairs);
 
-        violations.Should().BeEmpty(
+        violations.Except(RecordedModifierOverrideViolations, StringComparer.Ordinal).Should().BeEmpty(
             "modifikátor musí nad základem vítězit SELEKTOREM — při shodné specificitě rozhoduje "
             + "pořadí importů v manifestu, a to je přesně remíza, kterou aplikace naměřila. "
+            + "Záměrné scoped override z Fáze 6 (stacked footer) jsou zapsané v "
+            + "RecordedModifierOverrideViolations; cokoliv navíc je tvrdá chyba. "
             + "Nalezeno:\n{0}", string.Join("\n", violations));
     }
 

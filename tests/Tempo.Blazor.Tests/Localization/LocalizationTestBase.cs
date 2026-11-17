@@ -1128,6 +1128,7 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmFileDropZone_Remove"]        = "Remove file",
         ["TmFileDropZone_MaxSize"]       = "Maximum file size: {0}",
         ["TmFileDropZone_AcceptedTypes"] = "Accepted types: {0}",
+        ["TmAttachmentManager_NoAttachments"] = "No attachments.",
         ["TmFileScan_Blocked"]           = "Blocked",
         ["TmFileScan_Pending"]           = "Scanning…",
         ["TmFileVersion_Title"]          = "Version history",
@@ -7521,6 +7522,7 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmFileDropZone_Remove"]        = "Odebrat soubor",
         ["TmFileDropZone_MaxSize"]       = "Maximální velikost: {0}",
         ["TmFileDropZone_AcceptedTypes"] = "Povolené typy: {0}",
+        ["TmAttachmentManager_NoAttachments"] = "Žádné přílohy.",
 
         // TmTimeline
         ["TmTimeline_NoEntries"]  = "Žádná aktivita",
