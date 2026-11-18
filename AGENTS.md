@@ -110,7 +110,8 @@ npm run test:core-modules      # core: tm-animated-number.js (easing/frame math,
 npm run test:signing-runner    # Signing: signing-runner.js + signing-editor.js + pdf-template-designer-pointer.js + coarse-pointer probe
 npm run test:diagram-editor    # DiagramEditor: diagram-editor-touch.js + engine tests
 npm run test:email-templates   # EmailTemplates: tm-email-save-shortcut.js (Ctrl/⌘+S guard)
-npm run test:pdf-viewer        # PdfViewer: pdf-viewer-size.mjs + pdf-viewer-render.mjs (RenderTask bookkeeping)
+npm run test:pdf-viewer        # PdfViewer: pdf-viewer-size/render/continuous/fit/download (RenderTask bookkeeping, continuous math incl. pageScrollTop)
+npm run test:notion-db-resize  # NotionEditor: wwwroot/js node tests (db resize/timeline + notion-editor-caret-reserve.test.mjs: caretReserveDelta/caretReserve)
 npm run test:wireframe         # Wireframe: wireframe-designer.js pointer/export tests + wireframe-gestures.mjs
 npm run test:spreadsheet       # Spreadsheet: canvas palette (tokens), SP1 density and header-highlight helpers in a vm sandbox
 npm run test:ai                # Tempo.Blazor.AI: ai-conversation.js (own-scroll suppression, gesture/scrollend release, detach cleanup) + ai-composer.js (Enter/IME guard, combobox suppression, autosize clamp, caret placement, speech wrapper, keyboard-inset tracker) + tm-autonomy-dial.js (arrow/Home/End preventDefault, idempotent attach/detach) + tm-scheduled-runs.js (Alt+arrow move chord: run-id resolution, modifier/key filtering, the shared attachKeyboardMove wrapper)
@@ -497,9 +498,9 @@ notes — lives in [docs/pdf-viewer.md](docs/pdf-viewer.md); the demo pages are 
 | `HeaderStart` / `HeaderActions` | `RenderFragment?` | `null` | Header slots (used only with `ShowHeader`) |
 | `SelectionCtaContent` | `RenderFragment?` | `null` | Content of the sticky in-flow selection CTA row (outside the scroll area) |
 
-Public methods: `GoToPageAsync(int)`, `SetScaleAsync(double)`, `RotateAsync()`,
-`RotateCounterClockwiseAsync()`, `NextMatchAsync()` / `PreviousMatchAsync()`,
-`OpenThumbnailsSheetAsync()`, `OpenSearchAsync()`.
+Public methods: `GoToPageAsync(int)`, `SetScaleAsync(double)`, `SetZoomModeAsync(PdfZoomMode)`,
+`RotateAsync()`, `RotateCounterClockwiseAsync()`, `NextMatchAsync()` / `PreviousMatchAsync()`,
+`OpenThumbnailsSheetAsync()`, `OpenSearchAsync()`, `ScrollToAnchorAsync(int, double)`.
 
 ### Toolbar, layout and zoom
 

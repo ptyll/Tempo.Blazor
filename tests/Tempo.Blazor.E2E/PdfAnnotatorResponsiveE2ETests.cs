@@ -698,30 +698,10 @@ el => {
             return !!pageWrap?.querySelector('canvas[data-rendered]');
         }}", null, new PageWaitForFunctionOptions { Timeout = 60000 });
 
-        // Park the wrap a quarter-viewport below the top edge. scrollToPage's
-        // scrollIntoView aligns the page top with the VIEWPORT top — under the demo's
-        // sticky header (~72px) — and a click point under a sticky bar can never pass
-        // Playwright's hit-target check (its own auto-scroll cannot fix it either).
-        // The window move does not disturb the wrap's internal scroll, so the tracker
-        // keeps reporting the target page. The move is instant, but Blazor relayouts and
-        // the sticky header can still shift the wrap for a frame or two — wait for the
-        // wrap's top to hold the same value across TWO rAFs instead of sleeping.
-        await section.EvaluateAsync(@"section => new Promise(resolve => {
-            const wrap = section.querySelector('.tm-pdf-viewer__continuous-wrap');
-            if (!wrap) { resolve(false); return; }
-            const delta = wrap.getBoundingClientRect().top - Math.round(window.innerHeight * 0.25);
-            if (delta) window.scrollBy({ top: delta, behavior: 'instant' });
-            const deadline = performance.now() + 2000;
-            let last = null;
-            const tick = () => requestAnimationFrame(() => {
-                const top = wrap.getBoundingClientRect().top;
-                if (last !== null && Math.abs(top - last) < 0.5) { resolve(true); return; }
-                last = top;
-                if (performance.now() > deadline) { resolve(false); return; }
-                tick();
-            });
-            tick();
-        })");
+        // CF2 (plan 98c80bc3): scrollToPage moves ONLY the wrap's own scrollTop — the
+        // host page (window.scrollY) stays put, so no window re-park is needed here
+        // anymore (the old scrollIntoView walked every ancestor up to the window and
+        // pushed the page top under the sticky header, which this workaround undid).
         return slot;
     }
 

@@ -164,7 +164,8 @@ bar in both presentations.
 
 A fit scale MAY fall outside the 50–200 % presets (the exact container ratio wins) and is
 clamped to the absolute 0.1–5 bounds. Every zoom button, preset and pinch **demotes the mode to
-`Custom`** — user intent beats the fit contract. `SetScaleAsync(double)` is the programmatic path.
+`Custom`** — user intent beats the fit contract. `SetScaleAsync(double)` and
+`SetZoomModeAsync(PdfZoomMode)` are the programmatic paths.
 
 ### View modes and annotations (continuous annotations — decision `PDF-VIEWER-CONTINUOUS-ANNOTATIONS`)
 
@@ -179,6 +180,54 @@ clamped to the absolute 0.1–5 bounds. Every zoom button, preset and pinch **de
   and the scroll position preserved across zoom (in-place placeholder resize), rotation and
   view-mode switches. Each page wrap is a labelled `role="group"` with `aria-current="page"`
   tracking the visible page; unpainted pages show a reduced-motion-aware shimmer.
+- **`Page` reacts only to VALUE CHANGES (CF1)**: the viewer keeps the last processed `Page`
+  parameter plus a FIFO of the page values it ITSELF raised through `PageChanged` (the scroll
+  tracker and its own navigations), each stamped with the parameter-delivery generation it was
+  raised at. A re-delivered `Page` matching a raised value is the two-way binding's echo and is
+  consumed exactly once — it never scrolls; a stale unchanged re-delivery (a parent re-render
+  with changed sibling parameters, or on an unbound host) never snaps the wrap back either. A
+  delivery the viewer did NOT raise is a genuine host navigation and drives
+  `scrollToPage`/`renderPage` as before — thread anchors and undo/redo navigate reliably even
+  when the target equals a previously tracked page. Repeating the SAME value without a binding
+  does nothing: hosts call `GoToPageAsync(page)` for an explicit repeated jump (parameter-set
+  alone won't re-trigger it). Raised entries expire once more than TWO parameter deliveries
+  pass without their echo, and the echo memory resets with the document (a `Url` change) and on
+  a view-mode switch.
+- **`ViewMode` / `Scale` / `ZoomMode` react only to VALUE CHANGES too (CF1-family)**: the same
+  `parameter vs. state` class as the `Page` fix. `OnParametersSet` compares each against the last
+  PROCESSED parameter value (`_lastViewModeParam` / `_lastScaleParam` / `_lastZoomModeParam`,
+  seeded with the fresh document), never against the live internal state — a parent re-render
+  re-delivers its parameter unchanged, and the old state comparisons undid the user's choice:
+  the toolbar toggle's Continuous flipped back to SinglePage on an unbound host (the demo
+  "All Features Combined" viewer), a zoom snapped back to the stale `Scale`, and a zoom button
+  that demoted an active fit mode to `Custom` had the abandoned fit re-applied. A delivery that
+  REALLY changed still switches the presentation / applies the scale / applies the zoom mode, and
+  a two-way host's echo of a value the viewer itself raised is a no-op (the state already holds
+  it) — so `@bind-` keeps working in both directions. The `Scale` tracker advances on EVERY
+  changed delivery: an out-of-range value is ignored (it cannot be applied) but still moves the
+  last-seen parameter, so a later correction back to a previously seen value applies. Repeating
+  the same value without a binding
+  does nothing — bind `@bind-ViewMode` / `@bind-Scale` / `@bind-ZoomMode`, or call
+  `SetScaleAsync` / `SetZoomModeAsync`. `ThumbnailsCollapsed` followed this
+  last-seen-parameter pattern since the tablet-thumbnails fix; `TmPdfAnnotator` shadows every
+  two-way parameter (`Mode`, `ViewMode`, `ZoomMode`, `ThumbnailsCollapsed`,
+  `ShowPanel`, `AnnotationColor`) with the last-seen-parameter pattern; it forwards
+  `ViewMode`/`ZoomMode`/`ThumbnailsCollapsed`/`Page` to the viewer.
+- **Notification-only hosts (CF1 limitation)**: the echo matching relies on the host feeding
+  the raised value back through `@bind-Page`. A host that only listens (`PageChanged` handled,
+  `Page` never updated) delivers no echoes, so its tracked pages expire from the FIFO after two
+  parameter deliveries. Consequences: a host navigation to a page the tracker reported RECENTLY
+  (within the last two deliveries) can be swallowed as a false echo and not scroll — bind `Page`
+  two-way (the demo pages do), or navigate through `GoToPageAsync(page)`, which bypasses the
+  parameter echo matching entirely. Without any binding the unchanged
+  re-deliveries themselves stay harmless no-ops either way.
+- **In-viewer scrolling is container-only (CF2)**: `scrollToPage` computes the page-top target
+  from the page metas (`pageScrollTop(pages, page, topInset)` — `topInset` is the floating search
+  card's reserved band, so the page top lands below the card where the tracker reads its edge)
+  and writes the wrap's own `scrollTop`; the search-active highlight scroll computes its
+  'nearest' delta against the scroller (`scrollTop` and `scrollLeft`) and uses `scrollBy`. The
+  host page/window never moves — a `scrollIntoView` walks every scrollable ancestor and displaced
+  the surrounding content around embedded viewers.
 - **Annotations in Continuous (FZE-13)**: the scroll wrap hosts a second, Blazor-owned
   `.tm-pdf-viewer__continuous-overlays` container next to the JS-owned pages DOM. `pdf-viewer.js`
   reports the page boxes of the pages inside the mount band (the same ±50 % band the paint/release

@@ -910,10 +910,11 @@ window.tmPdfViewer = (function () {
         return root?.querySelector?.('.tm-pdf-viewer__search-card')?.getBoundingClientRect?.() ?? null;
     }
 
-    // How far below the container's top edge the card's bottom (+gap) sits — the inset the
-    // wraps' scroll-padding reserves. 0 without a card. The visible-page tracker reads the
-    // same effective top, so scrollIntoView(block:'start') + scroll-padding and the page
-    // indicator always agree on which page the user is actually looking at.
+    // How far below the container's top edge the card's bottom (+gap) sits — the topInset
+    // the pageScrollTop navigation subtracts (the page top lands below the card). 0 without
+    // a card. The visible-page tracker reads the same effective top, so
+    // pageScrollTop(pages, page, topInset) and the page indicator always agree on which
+    // page the user is actually looking at.
     function _effectiveTopInset(containerEl) {
         if (typeof document === 'undefined') return 0;
         const root = containerEl?.closest?.('.tm-pdf-viewer');
@@ -933,26 +934,38 @@ window.tmPdfViewer = (function () {
     // an already-visible highlight scrolls nothing at all. When the floating
     // search card is open, its bottom edge (+gap) counts as the scroller's top:
     // a highlight hidden behind the card counts as NOT visible and is pushed
-    // below it with an explicit scrollBy (scrollIntoView cannot see the card —
-    // the card is not the scroller and not in the scroll path).
+    // below it with an explicit scrollBy (the card is not the scroller and not
+    // in the scroll path).
+    // CF2/M4 (plan 98c80bc3): the 'nearest' deltas are computed against the SCROLLER
+    // (scrollTop AND scrollLeft) and written through scroller.scrollBy — the old
+    // scrollIntoView walked every scrollable ancestor up to the window and displaced
+    // the host page around the viewer.
     function _scrollToActive(searchLayerEl) {
         if (!searchLayerEl) return;
         const active = searchLayerEl.querySelector('[data-active="1"]');
-        if (!active || typeof active.scrollIntoView !== 'function') return;
+        if (!active) return;
         const scroller = _closestScrollContainer(active);
+        if (!scroller) return; // container-only — never walk the ancestor chain to the window
+        const activeRect = active.getBoundingClientRect();
+        const scrollerRect = scroller.getBoundingClientRect();
         const cardRect = _searchCardRect(searchLayerEl);
-        if (scroller) {
-            const activeRect = active.getBoundingClientRect();
-            const scrollerRect = scroller.getBoundingClientRect();
-            const topLimit = cardRect
-                ? Math.max(scrollerRect.top, cardRect.bottom + SEARCH_CARD_GAP)
-                : scrollerRect.top;
-            if (activeRect.top >= topLimit && activeRect.bottom <= scrollerRect.bottom) {
-                return; // already visible (and clear of the card) — keep scroll stable
-            }
+        const topLimit = cardRect
+            ? Math.max(scrollerRect.top, cardRect.bottom + SEARCH_CARD_GAP)
+            : scrollerRect.top;
+        if (activeRect.top >= topLimit && activeRect.bottom <= scrollerRect.bottom
+            && activeRect.left >= scrollerRect.left && activeRect.right <= scrollerRect.right) {
+            return; // already visible (and clear of the card) — keep scroll stable
         }
-        active.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-        if (cardRect && scroller && typeof scroller.scrollBy === 'function') {
+        const deltaTop = activeRect.top < topLimit
+            ? activeRect.top - topLimit
+            : Math.max(0, activeRect.bottom - scrollerRect.bottom);
+        const deltaLeft = activeRect.left < scrollerRect.left
+            ? activeRect.left - scrollerRect.left
+            : Math.max(0, activeRect.right - scrollerRect.right);
+        if ((deltaTop || deltaLeft) && typeof scroller.scrollBy === 'function') {
+            scroller.scrollBy({ top: deltaTop, left: deltaLeft });
+        }
+        if (cardRect && typeof scroller.scrollBy === 'function') {
             const nowRect = active.getBoundingClientRect();
             const hiddenByCard = nowRect.top < cardRect.bottom + SEARCH_CARD_GAP
                 && nowRect.bottom > cardRect.top;
@@ -1276,8 +1289,9 @@ window.tmPdfViewer = (function () {
     // Visible-page report with an inline fallback (mirrors computeVisiblePage: the
     // page containing the viewport's top edge) for a failed module import. The top
     // edge sits below the floating search card when it is open (the same effective
-    // top the scroll-padding and _scrollToActive use), so page navigation that
-    // aligns with the scroll padding does not report the page one above.
+    // top the scroll-padding, _scrollToActive and pageScrollTop navigation use), so
+    // page navigation that aligns with the effective top edge keeps the tracker and
+    // the page indicator on exactly the navigated page.
     function _reportVisiblePage(state, containerEl) {
         const topInset = _effectiveTopInset(containerEl);
         let visible;
@@ -1701,19 +1715,37 @@ window.tmPdfViewer = (function () {
         if (!rootEl) return;
         const pageNum = parseInt(page, 10);
         if (!Number.isFinite(pageNum) || pageNum < 1) return;
+        const state = _docs.get(rootEl);
+        const containerEl = state?._continuousEl;
+        // CF2 (plan 98c80bc3): the target top comes from the page metas (the same
+        // math scrollToAnchor uses) and ONLY the wrap's own scrollTop moves — a
+        // scrollIntoView on the page wrap walked every scrollable ancestor up to the
+        // window, so navigating one viewer displaced the host page around it.
+        // M3: the effective top inset (the floating search card) is part of the target —
+        // the page top lands below the card, exactly where the tracker's top edge reads.
+        const topInset = _effectiveTopInset(containerEl);
+        if (containerEl?.isConnected && _continuousModule) {
+            const top = _continuousModule.pageScrollTop(_collectPageMetas(containerEl), pageNum, topInset);
+            if (top !== null) {
+                containerEl.scrollTop = top;
+                // Optimistic current-page update: the scroll tracker confirms (or refines)
+                // it on the next scroll event, and the fit math reads a fresh page meanwhile.
+                state.currentPage = pageNum;
+                return;
+            }
+        }
+        // Fallback (continuous module unavailable): same container-only alignment from
+        // the wrap's own boxes, same inset convention, never a window scroll.
         // The wrap is inside the renderer-owned pages container; the thumbnails
         // sidebar carries data-page too and must not win the lookup, and the
         // Blazor overlay slots carry data-page as well — hence the class qualifier.
         const wrap = rootEl.querySelector(`:scope .tm-pdf-viewer__continuous-wrap .tm-pdf-viewer__page[data-page="${pageNum}"]`)
             ?? rootEl.querySelector(`:scope .tm-pdf-viewer__continuous-wrap [data-page="${pageNum}"]`);
-        if (wrap && typeof wrap.scrollIntoView === 'function') {
-            wrap.scrollIntoView({ block: 'start', behavior: 'auto' });
-            // Optimistic current-page update: the scroll tracker confirms (or refines)
-            // it on the next scroll event, and the fit math reads a fresh page meanwhile.
-            const state = _docs.get(rootEl);
-            if (state?._continuousEl?.isConnected) {
-                state.currentPage = pageNum;
-            }
+        if (wrap && containerEl?.isConnected) {
+            const containerTop = containerEl.getBoundingClientRect().top;
+            const wrapTop = wrap.getBoundingClientRect().top;
+            containerEl.scrollTop = Math.max(0, containerEl.scrollTop + (wrapTop - containerTop) - topInset);
+            state.currentPage = pageNum;
         }
     }
 

@@ -347,6 +347,46 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     private int _currentPage = 1;
     private int _totalPages;
     /// <summary>
+    /// CF1 (plan 98c80bc3): the last <see cref="Page"/> parameter value this viewer PROCESSED
+    /// (seeded with the fresh document and updated on every delivery). A parent re-render
+    /// re-delivers its <see cref="Page"/> UNCHANGED — comparing that echo against the live
+    /// page (<c>_currentPage</c>, already moved by the scroll tracker) read every echo as a
+    /// host-driven navigation and scrolled the continuous wrap BACK to the stale page
+    /// (snap-back: the just-interacted slot unmounted mid-gesture). Host-driven navigation
+    /// therefore fires only when the parameter REALLY changed against this value.
+    /// </summary>
+    private int _lastPageParam = 1;
+    /// <summary>
+    /// CF1/B1 (plan 98c80bc3): FIFO of the page values this viewer ITSELF raised through
+    /// <see cref="PageChanged"/> — the scroll tracker (<see cref="OnVisiblePageChanged"/>) and
+    /// every <see cref="SetPageAsync"/> navigation — while the host binds <see cref="Page"/>
+    /// two-way. Each entry is stamped with the parameter-delivery generation it was raised at
+    /// (<see cref="_paramDeliveries"/>). A later <see cref="Page"/> delivery of one of these
+    /// values is the binding's echo of the viewer's own report and is consumed exactly once
+    /// (values ahead of it are stale echoes of older reports, adjacent duplicates of one
+    /// report go with it); it never scrolls. Any OTHER changed delivery is a genuine host
+    /// navigation (a thread anchor, undo/redo, the host's own pager) and invalidates the
+    /// pending echoes — the queue is cleared, the host parameter is the newer truth. Entries
+    /// expire once more than TWO deliveries pass without their echo, so a notification-only
+    /// host (which binds <see cref="PageChanged"/> but never feeds <see cref="Page"/> back)
+    /// cannot leave a stale entry that swallows a later navigation to a tracked page. Never
+    /// pre-filled: the seeded single-value memory of the first fix swallowed host navigations
+    /// back to the initial page. Cleared with the document (Url change) and on a view-mode
+    /// switch; capacity 8.
+    /// </summary>
+    private readonly Queue<(int Page, int Gen)> _raisedPages = new();
+    /// <summary>
+    /// CF1/B1-2 (plan 98c80bc3): the number of <see cref="OnParametersSet"/> deliveries since
+    /// the fresh document (incremented on every delivery OUTSIDE the Url-change branch — a
+    /// fresh document resets the echo tracking instead). Each raised page is stamped with the
+    /// generation it was raised at; an entry older than two deliveries can no longer be a
+    /// legitimate binding echo and is dropped when it reaches the queue head.
+    /// </summary>
+    private int _paramDeliveries;
+    /// <summary>Capacity of <see cref="_raisedPages"/> (a burst of tracker reports between
+    /// two host renders never grows it past this).</summary>
+    private const int RaisedPagesCapacity = 8;
+    /// <summary>
     /// The byte length reported by JavaScript once the document has loaded
     /// (<see cref="OnDocumentLengthKnown"/>). Null when the length is unknown —
     /// a failed or missing <c>getDownloadInfo</c> reports nothing and the header
@@ -373,6 +413,33 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
 
     /// <summary>The <see cref="ThumbnailsCollapsed"/> parameter value of the previous parameter pass (see OnParametersSet).</summary>
     private bool _lastThumbnailsCollapsedParam;
+    /// <summary>
+    /// CF1-family (plan 98c80bc3): the last <see cref="ViewMode"/> parameter value this viewer
+    /// PROCESSED. A user switch (the toolbar toggle's <c>SetViewModeAsync</c>) updates
+    /// <c>_viewMode</c> without any host binding, and every parent re-render re-delivers
+    /// the unchanged <see cref="ViewMode"/> — the old <c>ViewMode != _viewMode</c> comparison read
+    /// that delivery as a host-driven switch and snapped the presentation back (the "All Features
+    /// Combined" viewer lost its Continuous toggle on the next parent render). A delivery that
+    /// really changed still switches, and a two-way host's echo of the raised value is a no-op.
+    /// </summary>
+    private PdfViewMode _lastViewModeParam = PdfViewMode.SinglePage;
+    /// <summary>
+    /// CF1-family: the last <see cref="Scale"/> parameter value this viewer PROCESSED. A user zoom
+    /// (the ± buttons, <see cref="SetScaleAsync"/>, a pinch) updates <c>_scale</c> and raises
+    /// <see cref="ScaleChanged"/>; the next parent re-render re-delivers the unchanged
+    /// <see cref="Scale"/> and the old <c>Scale != _scale</c> comparison zoomed BACK to the stale
+    /// parameter. A delivery that really changed still applies.
+    /// </summary>
+    private double _lastScaleParam = 1.0;
+    /// <summary>
+    /// CF1-family: the last <see cref="ZoomMode"/> parameter value this viewer PROCESSED. A zoom
+    /// button / preset / pinch demotes an active fit mode to <see cref="PdfZoomMode.Custom"/> and
+    /// raises <see cref="ZoomModeChanged"/>; the next parent re-render re-delivers the unchanged
+    /// <see cref="ZoomMode"/> (the host's fit mode) and the old <c>ZoomMode != _zoomMode</c>
+    /// comparison re-applied the fit the user had just abandoned. A delivery that really changed
+    /// still applies.
+    /// </summary>
+    private PdfZoomMode _lastZoomModeParam = PdfZoomMode.Auto;
     /// <summary>
     /// Incremented on every <see cref="Url"/> change. The OnAfterRenderAsync pass that starts
     /// <c>tmPdfViewer.init</c> captures the current generation and only ends the loading state
@@ -519,10 +586,19 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
             _pdfInitialized = false;
             _currentPage = Math.Max(1, Page);
             _pageInput = _currentPage.ToString(CultureInfo.InvariantCulture);
+            // CF1: a fresh document re-seeds the parameter tracking too — and the raised-pages
+            // FIFO starts EMPTY (nothing has been raised yet; a pre-filled queue would swallow
+            // a host navigation back to the seeded page).
+            _lastPageParam = _currentPage;
+            _raisedPages.Clear();
             _scale = Scale is > 0 and <= 5 ? Scale : 1.0;
             Rotation = 0;
             _viewMode = ViewMode;
             _zoomMode = ZoomMode;
+            // CF1-family: a fresh document re-seeds every shadow-parameter tracker too.
+            _lastScaleParam = Scale;
+            _lastZoomModeParam = ZoomMode;
+            _lastViewModeParam = ViewMode;
             _panelsTouched = false;
             // The panel defaults follow the layout (FZE-7): the docked thumbnails start
             // collapsed on a tablet layout, the comments panel opens only on desktop.
@@ -564,43 +640,110 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
         }
         else
         {
-            if (Page != _currentPage && Page >= 1)
+            // CF1/B1-2: every parameter delivery (outside the fresh-Url branch) advances the
+            // generation and expires raised-page entries that can no longer be a legitimate
+            // binding echo — a notification-only host never echoes anything, so its tracked
+            // pages must not sit in the queue forever and swallow a later navigation.
+            _paramDeliveries++;
+            while (_raisedPages.Count > 0 && _paramDeliveries - _raisedPages.Peek().Gen > 2)
             {
-                _currentPage = Page;
-                _pageInput = _currentPage.ToString(CultureInfo.InvariantCulture);
-                if (_pdfInitialized && !_useFallback)
-                {
-                    // In continuous mode a host-driven Page change scrolls the wrap —
-                    // the lazy renderer paints it when it becomes visible.
-                    _ = _viewMode == PdfViewMode.Continuous
-                        ? ScrollToPageInContinuousAsync(Page)
-                        : RenderCurrentPageAsync();
-                }
+                _raisedPages.Dequeue();
             }
-            if (Math.Abs(Scale - _scale) > 0.001 && Scale is > 0 and <= 5)
+            // CF1 (plan 98c80bc3): compare with the LAST PROCESSED PARAMETER, never with the
+            // live page. A parent re-render re-delivers its Page unchanged, and the scroll
+            // tracker may already have moved the viewer past it — the old `_currentPage`
+            // comparison scrolled the wrap back to that stale value (snap-back).
+            if (Page >= 1 && Page != _lastPageParam)
             {
-                _scale = Scale;
-                if (_pdfInitialized && !_useFallback)
+                if (_raisedPages.Any(raised => raised.Page == Page))
                 {
-                    _ = ApplyZoomAsync();
-                }
-            }
-            if (ZoomMode != _zoomMode)
-            {
-                _zoomMode = ZoomMode;
-                if (_pdfInitialized && !_useFallback)
-                {
-                    if (_zoomMode is PdfZoomMode.Custom)
+                    // The binding's echo of a page this viewer itself raised: drop the raised
+                    // values up to and including the first match (the older entries are stale
+                    // echoes of even earlier reports) plus adjacent duplicates of the same
+                    // report (a coalesced delivery covers them all), and never scroll — B1.
+                    while (_raisedPages.TryDequeue(out var raised) && raised.Page != Page) { }
+                    while (_raisedPages.Count > 0 && _raisedPages.Peek().Page == Page)
                     {
-                        // A host-driven switch to Custom must detach the JS fit observer
-                        // too — exactly like the user-driven SwitchToCustomZoomAsync.
-                        _ = ClearFitAsync();
-                    }
-                    else if (_totalPages > 0)
-                    {
-                        _ = ApplyZoomModeAsync();
+                        _raisedPages.Dequeue();
                     }
                 }
+                else
+                {
+                    // A value the viewer never raised is a genuine host navigation. The
+                    // pending echoes are meaningless now (the host parameter is the newer
+                    // truth) — the queue is drained so a later navigation cannot be
+                    // mistaken for one of them.
+                    _raisedPages.Clear();
+                    if (Page != _currentPage)
+                    {
+                        _currentPage = Page;
+                        _pageInput = _currentPage.ToString(CultureInfo.InvariantCulture);
+                        if (_pdfInitialized && !_useFallback)
+                        {
+                            // In continuous mode a host-driven Page change scrolls the wrap —
+                            // the lazy renderer paints it when it becomes visible.
+                            _ = _viewMode == PdfViewMode.Continuous
+                                ? ScrollToPageInContinuousAsync(Page)
+                                : RenderCurrentPageAsync();
+                        }
+                    }
+                }
+                _lastPageParam = Page;
+            }
+            // CF1-family (plan 98c80bc3): compared with the LAST PROCESSED PARAMETER, never with
+            // the live scale — a parent re-render re-delivers its Scale unchanged while a user
+            // zoom (the ± buttons, SetScaleAsync, a pinch) has already moved _scale, and the old
+            // `Scale != _scale` comparison zoomed back to the stale value. A two-way host's echo
+            // of the raised value re-delivers Scale == _scale (a no-op side-effect-wise), and a
+            // host-driven change differs from both. The tracker advances on EVERY CHANGED
+            // delivery — even an out-of-range one (which cannot be applied) — otherwise the
+            // stale seed would swallow the host's later correction back to a previously seen
+            // value (N1: 1.0 → user 1.5 → host 6 → host 1.0 must apply 1.0). The comparison is
+            // NaN-safe: `Math.Abs(NaN − x)` is NaN and every relational comparison with NaN
+            // reads false, so a NaN delivery used to fall through the guard entirely and the
+            // tracker stayed behind (a later correction to a previously seen value was then
+            // swallowed). `double.Equals` treats equal NaNs as equal, so repeated NaN
+            // deliveries stay no-ops.
+            if (!Scale.Equals(_lastScaleParam) && (double.IsNaN(Scale) || double.IsNaN(_lastScaleParam) || Math.Abs(Scale - _lastScaleParam) > 0.001))
+            {
+                if (Scale is > 0 and <= 5 && Math.Abs(Scale - _scale) > 0.001)
+                {
+                    _scale = Scale;
+                    if (_pdfInitialized && !_useFallback)
+                    {
+                        _ = ApplyZoomAsync();
+                    }
+                }
+                _lastScaleParam = Scale;
+            }
+            if (ZoomMode != _lastZoomModeParam)
+            {
+                // CF1-family: compared with the LAST PROCESSED PARAMETER (see the Scale block) —
+                // a zoom button/preset/pinch demotes an active fit mode to Custom and the next
+                // parent re-render re-delivers the unchanged ZoomMode; the old `ZoomMode !=
+                // _zoomMode` comparison re-applied the fit the user had just abandoned.
+                if (ZoomMode != _zoomMode)
+                {
+                    _zoomMode = ZoomMode;
+                    if (_pdfInitialized && !_useFallback)
+                    {
+                        if (EffectiveZoomMode is PdfZoomMode.Custom)
+                        {
+                            // A host-driven switch whose EFFECTIVE mode is Custom must detach
+                            // the JS fit observer too — on a desktop/tablet layout Auto already
+                            // behaves like Custom, so the raw `_zoomMode is Custom` branch of
+                            // the first fix kept the fit observer running on Auto. Exactly
+                            // like the user-driven SwitchToCustomZoomAsync and
+                            // SetZoomModeCoreAsync.
+                            _ = ClearFitAsync();
+                        }
+                        else if (_totalPages > 0)
+                        {
+                            _ = ApplyZoomModeAsync();
+                        }
+                    }
+                }
+                _lastZoomModeParam = ZoomMode;
             }
             // Compared with the LAST SEEN PARAMETER, never with the state: the state also carries the layout's own default (a tablet
             // starts collapsed) and the user's toggles, and any parent re-render re-delivers the unchanged parameter - comparing
@@ -616,13 +759,24 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
                     _lastThumbnailUrl = null;
                 }
             }
-            if (ViewMode != _viewMode)
+            if (ViewMode != _lastViewModeParam)
             {
-                _viewMode = ViewMode;
-                if (_pdfInitialized && !_useFallback)
+                // CF1-family: compared with the LAST PROCESSED PARAMETER (see the Scale block) —
+                // the toolbar toggle switches _viewMode on an unbound host and every parent
+                // re-render re-delivers the unchanged ViewMode; the old `ViewMode != _viewMode`
+                // comparison snapped the presentation back to the stale parameter.
+                if (ViewMode != _viewMode)
                 {
-                    _ = SwitchViewModeAsync();
+                    _viewMode = ViewMode;
+                    // CF1/B1: the wrap rebuilds on a view-mode switch — the pages raised for the
+                    // old presentation cannot echo into the new one.
+                    _raisedPages.Clear();
+                    if (_pdfInitialized && !_useFallback)
+                    {
+                        _ = SwitchViewModeAsync();
+                    }
                 }
+                _lastViewModeParam = ViewMode;
             }
         }
 
@@ -944,7 +1098,9 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
         => !ShowSearch || _searchVisible || _useFallback ? Task.CompletedTask : ToggleSearchAsync();
 
     /// <summary>Sets the zoom scale directly. Switches an active fit mode back to
-    /// <see cref="PdfZoomMode.Custom"/> — an explicit scale is a user decision.</summary>
+    /// <see cref="PdfZoomMode.Custom"/> — an explicit scale is a user decision. The call
+    /// refreshes the render tree itself, so the toolbar zoom trigger (the percentage the
+    /// chrome renders from <c>_scale</c>) is current without a host re-render.</summary>
     public async Task SetScaleAsync(double scale)
     {
         if (scale is <= 0 or > 5) return;
@@ -952,6 +1108,26 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
         _scale = scale;
         await ScaleChanged.InvokeAsync(_scale);
         await ApplyZoomAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// Applies a zoom mode programmatically — the host-side path of the toolbar's zoom
+    /// dropdown. <see cref="PdfZoomMode.FitWidth"/> / <see cref="PdfZoomMode.FitPage"/> ask
+    /// JavaScript to compute the scale from the container (and keep recomputing it on
+    /// resize); <see cref="PdfZoomMode.Custom"/> keeps the current scale and detaches an
+    /// active fit observer; <see cref="PdfZoomMode.Auto"/> follows the responsive contract
+    /// (fit-width on a mobile layout, the bound scale elsewhere). Repeating the value
+    /// already in effect is a no-op. The call refreshes the render tree itself — the
+    /// toolbar zoom trigger (the fit label / percentage) renders from the shadow state
+    /// this call just moved and must be current without a host re-render. Hosts that
+    /// present their own zoom controls bind <c>@bind-ZoomMode</c> or call this instead of
+    /// re-rendering with a new parameter.
+    /// </summary>
+    public async Task SetZoomModeAsync(PdfZoomMode mode)
+    {
+        await SetZoomModeCoreAsync(mode);
+        await InvokeAsync(StateHasChanged);
     }
 
     // ── Dispose ───────────────────────────────────────────────────────────────

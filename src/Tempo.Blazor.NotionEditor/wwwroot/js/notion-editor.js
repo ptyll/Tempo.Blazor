@@ -515,7 +515,105 @@ window.tmNotionEditor = (function () {
         const p = _pendingSplit;
         if (p && element && element.isContentEditable && element !== p.source) {
             const bid = element.closest('[data-block-id]')?.getAttribute('data-block-id');
-            if (bid !== p.blockId) _replayPendingSplit(p, element);
+            if (bid !== p.blockId) {
+                _replayPendingSplit(p, element);
+                // CF3 (plan 98c80bc3): the fresh block can sit flush with the viewport's
+                // bottom edge (Enter on the last line of a long page). A '/' anchor right
+                // after that reads as "fully out of the viewport" for overlay.js, which
+                // then PARKS the slash menu invisibly. Keep a reserve band under the caret
+                // block — a minimal downward shift of the nearest scroller, never a
+                // centering scrollIntoView (B2/M1).
+                _scrollEditableIntoViewWithReserve(element);
+            }
+        }
+    }
+
+    // ── CF3 (plan 98c80bc3) — the caret block's viewport reserve ─────────────
+    //
+    // Enter on the last line lands the fresh caret block flush with the fold, and a '/'
+    // anchor right after reads as out of view for overlay.js, which then PARKS the slash
+    // panel invisibly. The fix lives ONLY here (B2/M1 — overlay.js is untouched): the
+    // landed block keeps a reserve band of clear viewport beneath it, achieved with a
+    // MINIMAL downward shift of the nearest scroller. No centering and no
+    // scrollIntoView — the old attempt walked every scrollable ancestor and displaced
+    // the host page around the editor.
+
+    // Pure (node-tested): how far the block hangs past the reserve band — the px the
+    // scroller must move DOWN so `rect` keeps `reserve` of clear viewport above
+    // `viewBottom`. 0 when the block already clears the band (mid-viewport, top edge).
+    // `bandTop` (B1) bounds the band from ABOVE: the scroller can only scroll content
+    // inside its own strip, so the shift never rolls the block's top edge past the
+    // band top — a taller-than-band block ends aligned with the band top (fully visible
+    // as far as the band allows) instead of scrolled out of the strip's upper edge.
+    // Default -Infinity keeps the unbounded behavior for callers without a band.
+    function caretReserveDelta(rect, viewBottom, reserve, bandTop = Number.NEGATIVE_INFINITY) {
+        if (!rect || !Number.isFinite(viewBottom)) return 0;
+        const raw = Math.max(0, (rect.bottom || 0) - (viewBottom - (reserve || 0)));
+        const maxShift = Math.max(0, (rect.top || 0) - bandTop);
+        return Math.min(raw, maxShift);
+    }
+
+    // Pure (node-tested): the clear viewport kept beneath the caret block — a quarter of
+    // the visible height capped at 200px. Comfortably above the slash menu's own height
+    // band; a small (keyboard-shrunk) viewport reserves less instead of scrolling half
+    // the content away.
+    function caretReserve(visibleHeight) {
+        return Math.min(200, 0.25 * (Number.isFinite(visibleHeight) ? visibleHeight : 0));
+    }
+
+    // Nearest ancestor that actually scrolls vertically: a scrollable overflow-y with a
+    // live scrollbar (content taller than the box, +1 tolerance) — a scroll-styled but
+    // non-scrolling wrapper must not win, otherwise the band below keeps walking toward
+    // the real scrolling ancestor (the editor's own scroller when the demo hosts one,
+    // else null → the document/window scrolls). Mirrors the walk the pdf-viewer uses;
+    // degrades to null without getComputedStyle (node tests).
+    function _nearestScroller(element) {
+        if (typeof window === 'undefined' || typeof window.getComputedStyle !== 'function') return null;
+        let node = element?.parentElement;
+        while (node && node !== document.body) {
+            const style = window.getComputedStyle(node);
+            if (style && /(auto|scroll)/.test(style.overflowY || '') && node.clientHeight > 0
+                && node.scrollHeight > node.clientHeight + 1) return node;
+            node = node.parentElement;
+        }
+        return null;
+    }
+
+    function _scrollEditableIntoViewWithReserve(element) {
+        if (!element || typeof element.getBoundingClientRect !== 'function') return;
+        const rect = element.getBoundingClientRect();
+        if (!rect || (rect.top === 0 && rect.bottom === 0)) return; // not laid out
+        const scroller = _nearestScroller(element);
+        const vv = window.visualViewport;
+        // The band bottom is the NEARER of the scroller's own edge and the visible
+        // viewport's bottom edge — `visualViewport.offsetTop + visualViewport.height`
+        // (a keyboard shifts the visual viewport UP via offsetTop and shrinks it via
+        // height; without a visualViewport the layout viewport edge applies).
+        const viewportBottom = (Number.isFinite(vv?.offsetTop) && Number.isFinite(vv?.height))
+            ? vv.offsetTop + vv.height
+            : (Number.isFinite(window.innerHeight) && window.innerHeight > 0
+                ? window.innerHeight
+                : Number.POSITIVE_INFINITY);
+        const scrollerRect = scroller?.getBoundingClientRect?.();
+        const bottomLimit = Math.min(
+            Number.isFinite(scrollerRect?.bottom) ? scrollerRect.bottom : Number.POSITIVE_INFINITY,
+            viewportBottom);
+        // B1: the band is bounded by the SCROLLER's strip, not the whole viewport — its
+        // top edge (and the visual viewport's offsetTop) bound the band from above too.
+        // The reserve is a fraction of the band that is ACTUALLY visible, and the shift
+        // is clamped so the block never rolls above the band's own top edge (a small
+        // scroller used to scroll the freshly landed block out of its visible strip).
+        const bandTop = Math.max(scrollerRect?.top ?? Number.NEGATIVE_INFINITY, vv?.offsetTop ?? 0);
+        const visibleHeight = Math.max(0, bottomLimit - bandTop);
+        const delta = caretReserveDelta(rect, bottomLimit, caretReserve(visibleHeight), bandTop);
+        if (delta > 0) {
+            // Minimal shift only — the block's bottom lands exactly on the band edge.
+            // 'instant' keeps the caret adjustment out of the smooth-scroll animations.
+            if (scroller && typeof scroller.scrollBy === 'function') {
+                scroller.scrollBy({ top: delta, behavior: 'instant' });
+            } else if (typeof window.scrollBy === 'function') {
+                window.scrollBy({ top: delta, behavior: 'instant' });
+            }
         }
     }
 
@@ -3506,7 +3604,10 @@ window.tmNotionEditor = (function () {
         downloadFileStream, copyToClipboard, getPageUrl,
         // 26.11
         initMentionClickHandler, destroyMentionClickHandler,
-        getMentionDropdownPosition, clampFixedElementToViewport
+        getMentionDropdownPosition, clampFixedElementToViewport,
+        // CF3 (plan 98c80bc3): pure caret-reserve math, node-tested via
+        // `npm run test:notion-db-resize` (notion-editor-caret-reserve.test.mjs).
+        caretReserveDelta, caretReserve
     };
 })();
 

@@ -95,6 +95,225 @@ public class PdfViewerContinuousE2ETests : WasmTestBase
 
     [TestMethod]
     [TestCategory("WASM")]
+    public async Task PdfViewer_Continuous_PageNavigation_KeepsWindowScroll()
+    {
+        // CF2 (plan 98c80bc3): navigating inside the wrap moves ONLY the wrap's own
+        // scrollTop — the old scrollIntoView walked every scrollable ancestor up to the
+        // window, so one viewer's page jump displaced the whole host page around it.
+        var page = await OpenContinuousAsync();
+
+        // m2: the baseline is read AFTER the input fill, immediately before the Enter that
+        // triggers the navigation — the fill itself may settle the page, and a baseline read
+        // earlier would blame the test setup for a window move the navigation never made.
+        var input = page.Locator(SectionSelector).Locator(".tm-pdf-viewer__page-input").First;
+        await input.FillAsync("30");
+        var windowBefore = await page.EvaluateAsync<int>("() => Math.round(window.scrollY)");
+        Assert.IsTrue(windowBefore > 0, "precondition: the section is scrolled into view, the window is panned");
+        var wrapBefore = await page.EvaluateAsync<int>(
+            "() => Math.round(document.querySelector('.tm-pdf-viewer__continuous-wrap')?.scrollTop ?? -1)");
+
+        // Host-driven navigation through the toolbar page input (the goToPage path).
+        await input.PressAsync("Enter");
+
+        // The wrap really scrolled to page 30 and its canvas gets painted.
+        await page.WaitForFunctionAsync($@"() => ({JsInputValueExpr}) === '30'",
+            null, new PageWaitForFunctionOptions { Timeout = 30000 });
+        await page.WaitForFunctionAsync(@"
+() => {
+    const wrap = document.querySelector("".tm-pdf-viewer__continuous-wrap"");
+    return !!wrap?.querySelector('.tm-pdf-viewer__page[data-page=""30""] canvas[data-rendered]');
+}", null, new PageWaitForFunctionOptions { Timeout = 30000 });
+
+        var windowAfter = await page.EvaluateAsync<int>("() => Math.round(window.scrollY)");
+        var wrapAfter = await page.EvaluateAsync<int>(
+            "() => Math.round(document.querySelector('.tm-pdf-viewer__continuous-wrap')?.scrollTop ?? -1)");
+        Assert.AreEqual(windowBefore, windowAfter,
+            "window.scrollY must not change during in-viewer navigation (CF2 invariant)");
+        Assert.IsTrue(wrapAfter > wrapBefore,
+            $"the wrap's own scrollTop must move (was {wrapBefore}, now {wrapAfter})");
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task PdfViewer_Continuous_UserScrollThenParentRerender_NoSnapBack()
+    {
+        // CF1 (plan 98c80bc3, M2): the Continuous Scroll section's viewer BINDS
+        // SearchPresentation — the demo search-presentation switch therefore DELIVERS
+        // parameters to it: the genuinely changed SearchPresentation travels together with
+        // the STALE unchanged Page=1 (the wheel scroll already moved the viewer to page 3,
+        // and a host that does not bind Page re-delivers its default). A delivery like this
+        // must not read the stale Page as a host navigation and wheel the wrap back to
+        // page 1 (the old `Page != _currentPage` comparison did exactly that, unmounting
+        // the pages the user was interacting with).
+        var page = await OpenContinuousAsync();
+
+        // User scroll: real wheel events over the wrap until the tracker reports page 3.
+        var wrapBox = await page.Locator(SectionSelector).Locator(".tm-pdf-viewer__continuous-wrap").First.BoundingBoxAsync()
+            ?? throw new InvalidOperationException("The continuous wrap has no bounding box.");
+        await page.Mouse.MoveAsync((float)(wrapBox.X + wrapBox.Width / 2), (float)(wrapBox.Y + wrapBox.Height / 2));
+        for (var wheel = 0; wheel < 40; wheel++)
+        {
+            var current = await page.EvaluateAsync<int>($"() => parseInt({JsInputValueExpr}, 10) || 1");
+            if (current >= 3) break;
+            var scrollTopBefore = await page.EvaluateAsync<int>(
+                "() => Math.round(document.querySelector('.tm-pdf-viewer__continuous-wrap')?.scrollTop ?? -1)");
+            await page.Mouse.WheelAsync(0, 400);
+            // Every tick must produce progress — wait for the wrap to move or the tracker
+            // to advance instead of a fixed sleep (a slow WASM pass makes the sleep both
+            // flaky and slow; a tick without movement simply repeats).
+            await WaitForWheelProgressAsync(page, scrollTopBefore, current);
+        }
+        await page.WaitForFunctionAsync(
+            $"() => ({JsInputValueExpr}) === '3'",
+            null, new PageWaitForFunctionOptions { Timeout = 30000 });
+        var scrollTopOnPage3 = await page.EvaluateAsync<int>(
+            "() => Math.round(document.querySelector('.tm-pdf-viewer__continuous-wrap')?.scrollTop ?? -1)");
+
+        // Force a PARENT re-render THAT DELIVERS PARAMETERS: the demo search-presentation
+        // switch mutates the demo page's own state, so the whole page (this section
+        // included) re-renders and the viewer receives the changed SearchPresentation —
+        // next to its stale Page=1.
+        await page.Locator("#pdf-demo-search-presentation")
+            .SelectOptionAsync(new SelectOptionValue { Value = "Inline" });
+
+        // The settle is DETERMINISTIC: the select really shows Inline, an open floating
+        // search card is gone (the Inline presentation replaces it), and two rAF flushed
+        // Blazor's WASM render queue for the delivered pass.
+        await page.WaitForFunctionAsync($@"
+() => new Promise(resolve => {{
+    const select = document.getElementById('pdf-demo-search-presentation');
+    if (!select || select.value !== 'Inline') {{ resolve(false); return; }}
+    const viewer = document.querySelector('.tm-pdf-viewer__continuous-wrap')?.closest('.tm-pdf-viewer');
+    if (viewer?.querySelector('.tm-pdf-viewer__search-card')) {{ resolve(false); return; }}
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve(true)));
+}})", null, new PageWaitForFunctionOptions { Timeout = 30000 });
+
+        // First read after the delivered pass.
+        var pageAfterRender1 = await page.EvaluateAsync<int>($"() => parseInt({JsInputValueExpr}, 10) || 0");
+        var scrollTopAfter1 = await page.EvaluateAsync<int>(
+            "() => Math.round(document.querySelector('.tm-pdf-viewer__continuous-wrap')?.scrollTop ?? -1)");
+
+        // Second read after another two-rAF gap: a snap-back that lands a frame or two
+        // after the first read still fails the test.
+        await page.WaitForFunctionAsync(
+            "() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve(true))))",
+            null, new PageWaitForFunctionOptions { Timeout = 30000 });
+        var pageAfterRender2 = await page.EvaluateAsync<int>($"() => parseInt({JsInputValueExpr}, 10) || 0");
+        var scrollTopAfter2 = await page.EvaluateAsync<int>(
+            "() => Math.round(document.querySelector('.tm-pdf-viewer__continuous-wrap')?.scrollTop ?? -1)");
+
+        Assert.AreEqual(3, pageAfterRender1, "the tracker-reported page survives the parent re-render (first read)");
+        Assert.AreEqual(3, pageAfterRender2, "the tracker-reported page survives the parent re-render (second read)");
+        Assert.IsTrue(Math.Abs(scrollTopAfter1 - scrollTopOnPage3) < 5 && Math.Abs(scrollTopAfter2 - scrollTopOnPage3) < 5,
+            $"the wrap must not snap back after a parent re-render (scrollTop {scrollTopOnPage3} → {scrollTopAfter1} → {scrollTopAfter2})");
+    }
+
+    /// <summary>
+    /// Bounded wait for a wheel tick to actually move the wrap or advance the tracker —
+    /// the deterministic replacement for the fixed sleep in the wheel loop (a tick that
+    /// produced no movement, e.g. the wrap already resting at a page boundary, is not a
+    /// failure; the loop simply wheels again).
+    /// </summary>
+    private static async Task WaitForWheelProgressAsync(IPage page, int scrollTopBefore, int pageBefore)
+    {
+        try
+        {
+            await page.WaitForFunctionAsync($@"
+() => new Promise(resolve => {{
+    const check = () => Math.round(document.querySelector('.tm-pdf-viewer__continuous-wrap')?.scrollTop ?? -1) !== {scrollTopBefore}
+        || parseInt({JsInputValueExpr}, 10) !== {pageBefore};
+    if (check()) {{ resolve(true); return; }}
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve(check())));
+}})", null, new PageWaitForFunctionOptions { Timeout = 5000 });
+        }
+        catch (TimeoutException)
+        {
+            // No progress on this tick — the loop wheels again.
+        }
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task PdfViewer_AllFeatures_ToggleContinuous_ParentRerender_StaysContinuous()
+    {
+        // CF1-family (plan 98c80bc3): the "All Features Combined" viewer binds NO ViewMode —
+        // the user's Continuous toggle lives in the viewer's own state. A parent re-render
+        // (the demo's search-presentation switch re-renders the WHOLE page) re-delivers the
+        // unchanged ViewMode=SinglePage parameter to it; the old `ViewMode != _viewMode`
+        // comparison snapped the viewer back to SinglePage on every such render.
+        var page = await OpenContinuousAsync();
+        var section = page.Locator(AllFeaturesSelector);
+        var viewer = section.Locator(".tm-pdf-viewer").First;
+        await viewer.ScrollIntoViewIfNeededAsync();
+
+        // Load the "All Features Combined" viewer (annotations + view-mode toggle).
+        await section.Locator(".tm-pdf-viewer__page-input").First
+            .WaitForAsync(new LocatorWaitForOptions { Timeout = 60000 });
+
+        // The user switches to Continuous through the toolbar segment.
+        await section.Locator(".tm-pdf-viewer__view-mode .tm-radio-segment").Last.ClickAsync();
+        await page.WaitForFunctionAsync(
+            $@"() => {{ const v = {JsAllFeaturesRootExpr}; return !!v?.querySelector('.tm-pdf-viewer__continuous-wrap .tm-pdf-viewer__page'); }}",
+            null, new PageWaitForFunctionOptions { Timeout = 30000 });
+
+        // Force a PARENT re-render THAT DELIVERS PARAMETERS (twice, in both directions, so the
+        // delivered passes are provably behind the interaction): the demo search-presentation
+        // switch mutates the demo page's own state, so every section re-renders and this
+        // viewer receives all of its parameters unchanged (ViewMode is not bound here).
+        await page.Locator("#pdf-demo-search-presentation")
+            .SelectOptionAsync(new SelectOptionValue { Value = "Inline" });
+        await page.Locator("#pdf-demo-search-presentation")
+            .SelectOptionAsync(new SelectOptionValue { Value = "Floating" });
+        // N8 (review): the settle is DETERMINISTIC — wait until the select really shows
+        // Floating again AND two requestAnimationFrame ticks have passed (the WASM render
+        // queue of both delivered passes flushes within those frames), then verify the mode
+        // TWICE with another two-rAF gap between the reads, so a late snap-back cannot hide.
+        await page.WaitForFunctionAsync(@"
+() => new Promise(resolve => {
+    const select = document.getElementById('pdf-demo-search-presentation');
+    if (!select || select.value !== 'Floating') { resolve(false); return; }
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve(true)));
+})", null, new PageWaitForFunctionOptions { Timeout = 30000 });
+
+        // The mode must STILL be Continuous after the delivered passes — first read.
+        var stillContinuous = await page.EvaluateAsync<bool>($@"
+() => {{
+    const v = {JsAllFeaturesRootExpr};
+    return !v?.querySelector('.tm-pdf-viewer__canvas-wrap')
+        && !!v?.querySelector('.tm-pdf-viewer__continuous-wrap .tm-pdf-viewer__page')
+        && !!v?.querySelector('.tm-pdf-viewer__view-mode input[type=""radio""]:checked')?.closest('.tm-radio-segment')
+            ?.textContent?.includes('Continuous');
+}}");
+        var diagnosis = await page.EvaluateAsync<string>($@"
+() => {{
+    const v = {JsAllFeaturesRootExpr};
+    return JSON.stringify({{
+        rootFound: !!v,
+        hasCanvasWrap: !!v?.querySelector('.tm-pdf-viewer__canvas-wrap'),
+        hasContinuousPages: !!v?.querySelector('.tm-pdf-viewer__continuous-wrap .tm-pdf-viewer__page'),
+        checkedSegment: v?.querySelector('.tm-pdf-viewer__view-mode input[type=""radio""]:checked')?.closest('.tm-radio-segment')?.textContent ?? null,
+    }});
+}}");
+
+        // Second read after another two-rAF gap: a snap-back that lands a frame or two
+        // after the first read still fails the test.
+        await page.WaitForFunctionAsync(
+            "() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve(true))))",
+            null, new PageWaitForFunctionOptions { Timeout = 30000 });
+        var stillContinuousAgain = await page.EvaluateAsync<bool>($@"
+() => {{
+    const v = {JsAllFeaturesRootExpr};
+    return !v?.querySelector('.tm-pdf-viewer__canvas-wrap')
+        && !!v?.querySelector('.tm-pdf-viewer__continuous-wrap .tm-pdf-viewer__page')
+        && !!v?.querySelector('.tm-pdf-viewer__view-mode input[type=""radio""]:checked')?.closest('.tm-radio-segment')
+            ?.textContent?.includes('Continuous');
+}}");
+        Assert.IsTrue(stillContinuous && stillContinuousAgain,
+            $"a parent re-render with unchanged parameters must not switch the view mode back to SinglePage (state: {diagnosis})");
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
     public async Task PdfViewer_Continuous_SearchScrollsToMatch()
     {
         var page = await OpenContinuousAsync();
@@ -103,6 +322,9 @@ public class PdfViewerContinuousE2ETests : WasmTestBase
         // FZE-11: the card starts closed — open it through the toolbar toggle.
         var input = await page.OpenSearchCardAsync(section);
         await input.FillAsync("needle-in-the-middle");
+        // M4: the search-driven scroll moves ONLY the wrap — the baseline is captured
+        // after the fill, immediately before the Enter that triggers the match scroll.
+        var windowBefore = await page.EvaluateAsync<int>("() => Math.round(window.scrollY)");
         await input.PressAsync("Enter");
 
         // The counter appears once the search ran; the match lives on a deep page.
@@ -126,6 +348,12 @@ public class PdfViewerContinuousE2ETests : WasmTestBase
 }",
             null, new PageWaitForFunctionOptions { Timeout = 30000 });
 
+        // M4: _scrollToActive computes its 'nearest' delta against the WRAP (scrollBy) —
+        // the host page must not have moved while the viewer scrolled to the match.
+        var windowAfterMatch = await page.EvaluateAsync<int>("() => Math.round(window.scrollY)");
+        Assert.AreEqual(windowBefore, windowAfterMatch,
+            "searching must not move window.scrollY — the highlight scroll stays inside the wrap");
+
         // A multi-match query starts on its first page and stepping forward scrolls
         // the wrap match by match ("highlights" occurs once per page of the fixture).
         await input.FillAsync("highlights");
@@ -137,12 +365,16 @@ public class PdfViewerContinuousE2ETests : WasmTestBase
         await page.WaitForFunctionAsync(
             $"() => ({JsInputValueExpr}) === '2'",
             null, new PageWaitForFunctionOptions { Timeout = 30000 });
+        var windowAfterSteps = await page.EvaluateAsync<int>("() => Math.round(window.scrollY)");
+        Assert.AreEqual(windowBefore, windowAfterSteps,
+            "stepping through matches must not move window.scrollY either");
     }
 
     [TestMethod]
     [TestCategory("WASM")]
     public async Task PdfViewer_Continuous_LargeDocument_StaysResponsive()
-    {        var page = await OpenContinuousAsync();
+    {
+        var page = await OpenContinuousAsync();
 
         // Jump through the document in a few steps; the main thread must stay free —
         // a rAF lands quickly between the jumps and the painted set stays bounded.

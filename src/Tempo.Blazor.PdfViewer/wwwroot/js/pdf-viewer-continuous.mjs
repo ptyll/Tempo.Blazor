@@ -71,10 +71,9 @@ export function pageIntersectsViewport(meta, scrollTop, viewportHeight) {
 
 /**
  * Picks the page the user is currently viewing: the page containing the
- * viewport's top edge — the same rule `scrollIntoView({ block: 'start' })`
- * navigation agrees with, so an explicit jump to page N is never re-reported
- * as a different page. When the scroll is past the end of the document, the
- * last page is reported.
+ * viewport's top edge — the same rule pageScrollTop navigation uses, so an
+ * explicit jump to page N is never re-reported as a different page. When the
+ * scroll is past the end of the document, the last page is reported.
  * @param {{page: number, top: number, height: number}[]|undefined} pages Page metas in document order.
  * @param {number} scrollTop Content offset of the viewport top edge.
  * @param {number} viewportHeight Viewport height (unused by the top-edge rule; kept for
@@ -361,4 +360,27 @@ export function anchorScrollTop(pages, page, anchorRatio, viewportHeight) {
     // tracker would report that page and the anchor scroll would be fought away
     // (the F13/F14 continuous bug).
     return Math.max(0, meta.top, anchorY - (viewportHeight || 0) / 2);
+}
+
+/**
+ * CF2/M3 (plan 98c80bc3): the scroll offset that aligns a page's TOP edge with the wrap
+ * viewport's EFFECTIVE top edge — the same target `scrollIntoView({block:'start'})`
+ * produced for the scroll CONTAINER under its `scroll-padding-top`, computed from the
+ * page metas so the caller can write `containerEl.scrollTop` directly. `topInset` is the
+ * band the floating search card reserves (`_effectiveTopInset`): the page top lands
+ * BELOW the card instead of hidden behind it, and subtracting it keeps the agreement
+ * with the tracker exact — the tracker reads `scrollTop + topInset` (`_reportVisiblePage`),
+ * which lands on this page's own top edge. The host page/window never moves (a
+ * `scrollIntoView` walks EVERY scrollable ancestor, so the old implementation
+ * scrolled the whole host document and displaced the surrounding content).
+ * @param {{page: number, top: number, height: number}[]|undefined} pages Page metas in document order.
+ * @param {number} page One-based target page.
+ * @param {number} [topInset=0] Reserved band at the viewport's top edge (the open search card).
+ * @returns {number|null} The target scrollTop, or null when the page is unknown.
+ */
+export function pageScrollTop(pages, page, topInset = 0) {
+    if (!Array.isArray(pages) || pages.length === 0) return null;
+    const meta = pages.find(candidate => candidate.page === page);
+    if (!meta) return null;
+    return Math.max(0, meta.top - (Number.isFinite(topInset) && topInset > 0 ? topInset : 0));
 }

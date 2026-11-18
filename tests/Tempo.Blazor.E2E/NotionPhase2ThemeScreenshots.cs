@@ -37,6 +37,12 @@ public sealed class NotionPhase2ThemeScreenshots : NotionE2ETestBase
         return dir ?? throw new DirectoryNotFoundException("TempoBlazor.slnx");
     }
 
+    /// <summary>
+    /// m1: the shared deterministic parker (see <see cref="NotionEditorTestHelper"/>).
+    /// </summary>
+    private static Task<int> ParkLastParagraphAtTheFoldAsync(IPage page)
+        => NotionEditorTestHelper.ParkLastParagraphAtTheFoldAsync(page);
+
     private static async Task SetThemeAsync(IPage page, string theme, bool indigo)
     {
         await page.EvaluateAsync(
@@ -247,14 +253,38 @@ public sealed class NotionPhase2ThemeScreenshots : NotionE2ETestBase
         var para = page.Locator(".tm-notion-paragraph[contenteditable='true']").Last;
         await para.ClickAsync();
         await page.Keyboard.PressAsync("Control+End");
+        // m1 (CF3, plan 98c80bc3): park the last paragraph deterministically flush with the
+        // fold, wait for the split-landed block deterministically and assert the editor's
+        // reserve band — no test-driven centering, no sleeps.
+        var innerHeight = await ParkLastParagraphAtTheFoldAsync(page);
+        var beforeBlockId = await page.EvaluateAsync<string>(
+            "() => document.activeElement?.closest('[data-block-id]')?.getAttribute('data-block-id') ?? ''");
         await page.Keyboard.PressAsync("Enter");
-        // Enter puts the caret block flush with the editor viewport's bottom edge. The slash
-        // menu anchors to the caret; an anchor that sits even a few pixels below the fold is
-        // "fully out of the viewport" for overlay.js, which then PARKS the panel
-        // (visibility:hidden) until something scrolls — nothing does, so the menu never shows.
-        Assert.IsTrue(await NotionEditorHelper.CenterFocusedParagraphAsync(page),
-            "after Enter the caret must sit in a notion paragraph block (the slash menu anchors to it)");
-        await page.WaitForTimeoutAsync(300);
+        await page.WaitForFunctionAsync(
+            @"
+before => {
+    const active = document.activeElement;
+    return !!active?.classList?.contains('tm-notion-paragraph')
+        && active.isContentEditable === true
+        && (active.closest('[data-block-id]')?.getAttribute('data-block-id') ?? '') !== before;
+}",
+            beforeBlockId, new PageWaitForFunctionOptions { Timeout = 10000 });
+        var reserve = Math.Min(200, 0.25 * innerHeight);
+        await page.WaitForFunctionAsync(
+            @"
+() => {
+    const active = document.activeElement;
+    if (!active?.classList?.contains('tm-notion-paragraph')) return false;
+    const reserve = Math.min(200, 0.25 * (window.visualViewport?.height ?? window.innerHeight));
+    return active.getBoundingClientRect().bottom <= window.innerHeight - reserve + 0.5;
+}",
+            null, new PageWaitForFunctionOptions { Timeout = 10000 });
+        // The landed bottom must ACTUALLY clear the reserve band (the wait alone could time
+        // out silently in a future regression — re-read it as a fact).
+        var landedBottom = await page.EvaluateAsync<double>(
+            "() => document.activeElement?.getBoundingClientRect().bottom ?? -1");
+        Assert.IsTrue(landedBottom <= innerHeight - reserve + 0.5,
+            $"the landed caret block keeps the viewport reserve (bottom {landedBottom} <= {innerHeight - reserve})");
         await page.Keyboard.TypeAsync("/code");
         await page.Locator(".tm-notion-slash").First.WaitForAsync(new LocatorWaitForOptions { Timeout = 8000 });
         await page.Locator(".tm-notion-slash__item").First.ClickAsync();

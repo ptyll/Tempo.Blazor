@@ -393,6 +393,35 @@ public partial class TmPdfAnnotatorTests : LocalizationTestBase
     }
 
     [Fact]
+    public void SelectThreadOnPage1FromPage3_SinglePage_RendersPage1()
+    {
+        // CF1/B1 (plan 98c80bc3): in SinglePage the annotator hands thread navigation to the
+        // embedded viewer through its Page parameter. Picking the page-3 thread first leaves
+        // the viewer on page 3; picking the page-1 thread then re-delivers Page=1 — a value
+        // the VIEWER never raised. The first fix's seeded "last tracker page" (=1) read that
+        // delivery as a suppressed binding echo, so the viewer stayed on page 3 and never
+        // rendered page 1. Only values the viewer itself raised may count as echoes.
+        var cut = Render(Seeded(Highlight("h1", page: 1), Highlight("h3", page: 3)));
+        var viewer = cut.FindComponent<TmPdfViewer>().Instance;
+        cut.InvokeAsync(() => viewer.OnPdfLoaded(10));
+
+        cut.WaitForElement("[data-testid='pdf-annotator-thread'][data-thread-id='h3']").Click();
+        cut.WaitForAssertion(() =>
+            cut.FindAll(".tm-pdf-annotator-layer [data-thread-id='h3']").Should().NotBeEmpty());
+
+        cut.WaitForElement("[data-testid='pdf-annotator-thread'][data-thread-id='h1']").Click();
+
+        cut.WaitForAssertion(() =>
+            cut.FindAll(".tm-pdf-annotator-layer [data-thread-id='h1']")
+                .Should().NotBeEmpty("selecting the page-1 thread must navigate the annotator back to page 1"));
+        var renderPage = JSInterop.Invocations
+            .Where(i => i.Identifier == "tmPdfViewer.renderPage").ToList();
+        renderPage.Should().NotBeEmpty("the viewer must really render the thread's page");
+        renderPage.Last().Arguments[1].Should().Be(1,
+            "the Page=1 delivery after the page-3 visit is a host navigation — page 1 must render, never be swallowed as an echo");
+    }
+
+    [Fact]
     public void ColorIndicator_HasAccessibleLabel()
     {
         var cut = Render();
@@ -713,6 +742,30 @@ public partial class TmPdfAnnotatorTests : LocalizationTestBase
         unbound.Find(".tm-pdf-viewer__toolbar button[aria-label='Zoom in']").Click();
         unbound.Render();
         unbound.FindComponent<TmPdfViewer>().Instance.ZoomMode.Should().Be(PdfZoomMode.Custom);
+    }
+
+    [Fact]
+    public async Task ZoomIn_ThenAnnotatorRerender_KeepsScale()
+    {
+        // CF1-family (N5): TmPdfAnnotator never forwards Scale — the embedded viewer's Scale
+        // parameter stays at its default 1.0 while a user zoom (SetScaleAsync here; the ±
+        // buttons, a preset or a pinch in real use) has already moved the viewer's own
+        // _scale. The annotator's own re-render (a mode switch, a panel toggle, a thread
+        // change) re-renders the viewer with the UNCHANGED Scale=1.0 — the pre-CF1
+        // `Scale != _scale` comparison read that delivery as a host-driven zoom and snapped
+        // the user back to 100 % on every annotator re-render. The re-delivery is a no-op.
+        var cut = Render();
+        var viewer = cut.FindComponent<TmPdfViewer>().Instance;
+        cut.InvokeAsync(() => viewer.OnPdfLoaded(4));
+
+        await cut.InvokeAsync(() => viewer.SetScaleAsync(1.5));
+        JSInterop.VerifyInvoke("tmPdfViewer.setScale", 1).Single().Arguments[1].Should().Be(1.5);
+
+        // The annotator re-renders with its parameters unchanged.
+        cut.Render();
+
+        JSInterop.VerifyInvoke("tmPdfViewer.setScale", 1).Single().Arguments[1].Should().Be(1.5,
+            "the annotator's own re-render must not snap the user zoom back to 100 %");
     }
 
     [Fact]

@@ -27,7 +27,28 @@ public partial class TmPdfViewer
     {
         _currentPage = page;
         _pageInput = page.ToString(CultureInfo.InvariantCulture);
+        // CF1/B1 (plan 98c80bc3): a navigation this viewer initiated is recorded as a raised
+        // page, so the host's echo of the value never re-enters as a host navigation.
+        if (PageChanged.HasDelegate)
+        {
+            TrackRaisedPage(page);
+        }
         await PageChanged.InvokeAsync(_currentPage);
+    }
+
+    /// <summary>
+    /// CF1/B1: records a page this viewer raised through <see cref="PageChanged"/> in the
+    /// FIFO the <see cref="Page"/> deliveries are matched against (see <see cref="_raisedPages"/>),
+    /// stamped with the current parameter-delivery generation (<see cref="_paramDeliveries"/>)
+    /// so stale entries expire (CF1/B1-2) even when the host never echoes the value back.
+    /// </summary>
+    private void TrackRaisedPage(int page)
+    {
+        _raisedPages.Enqueue((page, _paramDeliveries));
+        while (_raisedPages.Count > RaisedPagesCapacity)
+        {
+            _raisedPages.Dequeue();
+        }
     }
 
     /// <summary>
@@ -191,10 +212,10 @@ public partial class TmPdfViewer
         switch (value)
         {
             case "fit-width":
-                await SetZoomModeAsync(PdfZoomMode.FitWidth);
+                await SetZoomModeCoreAsync(PdfZoomMode.FitWidth);
                 break;
             case "fit-page":
-                await SetZoomModeAsync(PdfZoomMode.FitPage);
+                await SetZoomModeCoreAsync(PdfZoomMode.FitPage);
                 break;
             default:
                 if (double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var scale)
@@ -232,14 +253,32 @@ public partial class TmPdfViewer
     /// <summary>Number of annotation threads that still need attention (shown on the toolbar toggle).</summary>
     private int OpenThreadCount => _threads.Count(thread => thread.Status == DocumentCommentThreadStatus.Open);
 
-    private async Task SetZoomModeAsync(PdfZoomMode mode)
+    /// <summary>The shared mutation point for the zoom mode — the toolbar's zoom dropdown
+    /// and the public <see cref="TmPdfViewer.SetZoomModeAsync"/> both land here. Sets the
+    /// shadow state, raises <see cref="TmPdfViewer.ZoomModeChanged"/> (a bound host's echo
+    /// of the raised value then re-seeds <c>_lastZoomModeParam</c> through the parameter
+    /// pass) and drives JavaScript: a fit mode computes its scale, an effective Custom
+    /// detaches the fit observer — exactly like the user-driven
+    /// <see cref="SwitchToCustomZoomAsync"/> and the host-driven ZoomMode parameter path.
+    /// The EFFECTIVE mode decides, never the raw <c>mode</c>: on a desktop layout
+    /// <see cref="PdfZoomMode.Auto"/> already behaves like Custom, so arriving here from a
+    /// fit mode means the observer must detach (the raw-mode branch left the fit
+    /// ResizeObserver running on Auto at every non-mobile width).</summary>
+    private async Task SetZoomModeCoreAsync(PdfZoomMode mode)
     {
         if (_zoomMode == mode) return;
         _zoomMode = mode;
         await ZoomModeChanged.InvokeAsync(_zoomMode);
-        if (_pdfInitialized && !_useFallback && _totalPages > 0)
+        if (_pdfInitialized && !_useFallback)
         {
-            await ApplyZoomModeAsync();
+            if (EffectiveZoomMode is PdfZoomMode.Custom)
+            {
+                await ClearFitAsync();
+            }
+            else if (_totalPages > 0)
+            {
+                await ApplyZoomModeAsync();
+            }
         }
     }
 
@@ -368,6 +407,9 @@ public partial class TmPdfViewer
     private async Task SetViewModeAsync(PdfViewMode mode)
     {
         _viewMode = mode;
+        // CF1/B1: the wrap rebuilds on a view-mode switch — the pages raised for the old
+        // presentation cannot echo into the new one.
+        _raisedPages.Clear();
         await ViewModeChanged.InvokeAsync(mode);
         await SwitchViewModeAsync();
     }

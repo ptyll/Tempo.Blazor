@@ -451,10 +451,11 @@
     padding: var(--tm-space-4);
 }
 
-/* FZE-11: the floating search card overlays the body's top strip. While it is open, the
-   wraps keep natively aligned content (block:'start' page navigation) clear of the card
-   (card top offset + its touch-tallest height + one gap). The search path itself uses the
-   measured card rect — see _scrollToActive in pdf-viewer.js. */
+/* FZE-11: the floating search card overlays the body's top strip. The scroll-padding-top
+   below serves only the NATIVE scroll paths left in the viewer — the browser's focus
+   scroll and anchor navigation. Page navigation and the search-active scroll measure the
+   card band themselves (pageScrollTop(…, topInset) / _scrollToActive in pdf-viewer.js)
+   and never rely on this padding. */
 .tm-pdf-viewer__body:has(> .tm-pdf-viewer__search-card) > .tm-pdf-viewer__canvas-wrap,
 .tm-pdf-viewer__body:has(> .tm-pdf-viewer__search-card) > .tm-pdf-viewer__continuous-wrap {
     scroll-padding-top: calc(var(--tm-space-3) + var(--tm-touch-target) + var(--tm-space-4));

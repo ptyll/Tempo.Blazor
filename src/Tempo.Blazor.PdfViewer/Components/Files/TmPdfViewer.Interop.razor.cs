@@ -201,9 +201,15 @@ public partial class TmPdfViewer
 
         _currentPage = pageNumber;
         _pageInput = pageNumber.ToString(CultureInfo.InvariantCulture);
+        // CF1/B1 (plan 98c80bc3): remember the page this viewer raised so the two-way
+        // binding's echo of this exact value is consumed in OnParametersSet (never scrolling).
         if (PageChanged.HasDelegate)
         {
-            _ = InvokeAsync(() => PageChanged.InvokeAsync(_currentPage));
+            TrackRaisedPage(pageNumber);
+            // N10 (review): raise the REPORTED page number, not the field — `_currentPage` can
+            // already have moved on if another report lands while this raise is still queued,
+            // and the raised value must be exactly the one the binding echoes back.
+            _ = InvokeAsync(() => PageChanged.InvokeAsync(pageNumber));
         }
 
         InvokeAsync(StateHasChanged);

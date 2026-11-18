@@ -19,6 +19,7 @@ import {
     orderPagesForRender,
     overlayMountedPages,
     pageIntersectsViewport,
+    pageScrollTop,
     placeholderSize,
     resolveSelectionPage,
     selectCanvasesToRelease,
@@ -345,4 +346,53 @@ test('anchorScrollTop_NeverAboveThePageTop', () => {
     // Page 1 keeps the document-top clamp (its meta.top is 0 anyway).
     assert.equal(anchorScrollTop(pages, 1, 0, 800), 0);
     assert.equal(anchorScrollTop(pages, 1, 0.1, 800), 0);
+});
+
+// ── CF2 (plan 98c80bc3): scrollToPage aligns the page top through the WRAP's own
+// scrollTop — never through a window-level scrollIntoView. ──────────────────
+
+test('pageScrollTop aligns the page top with the wrap top (the scrollIntoView block:start rule)', () => {
+    const pages = stackedPages(10, 800);
+    // The wrap's top edge moves to the page's content offset — page 5 starts at 3200.
+    assert.equal(pageScrollTop(pages, 5), 3200);
+    assert.equal(pageScrollTop(pages, 1), 0, 'page 1 keeps the document-top clamp');
+    assert.equal(pageScrollTop(pages, 10), 7200, 'the last page still scrolls to its own top (the browser clamps the end)');
+});
+
+test('pageScrollTop never produces a negative or unknown target', () => {
+    const pages = [{ page: 1, top: -300, height: 800 }];
+    assert.equal(pageScrollTop(pages, 1), 0,
+        'a page box above the content start clamps at zero — no upward overscroll');
+    assert.equal(pageScrollTop(stackedPages(3, 800), 9), null, 'unknown page → no scroll');
+    assert.equal(pageScrollTop([], 1), null);
+    assert.equal(pageScrollTop(undefined, 1), null);
+});
+
+test('pageScrollTop agrees with computeVisiblePage for the same scroll target', () => {
+    // Jumping to page N must land the tracker on exactly N (the top-edge rule), so an
+    // explicit navigation is never re-reported as a different page.
+    const pages = stackedPages(6, 800);
+    for (let page = 1; page <= 6; page++) {
+        const top = pageScrollTop(pages, page);
+        assert.equal(computeVisiblePage(pages, top, 600), page,
+            `navigating to page ${page} must be tracker-confirmed as page ${page}`);
+    }
+});
+
+test('pageScrollTop agrees with computeVisiblePage with a top inset (the open search card, M3)', () => {
+    // With the floating search card open the tracker reads the effective top edge
+    // (scrollTop + inset), so navigation must align the page top with THAT edge —
+    // the page starts just below the card, never hidden behind it. Subtracting the
+    // inset from the target keeps the agreement exact for every page.
+    const pages = stackedPages(6, 800);
+    const inset = 96;
+    for (let page = 1; page <= 6; page++) {
+        const top = pageScrollTop(pages, page, inset);
+        assert.equal(top, Math.max(0, (page - 1) * 800 - inset),
+            `the target for page ${page} is the page top minus the inset, clamped at 0`);
+        assert.equal(computeVisiblePage(pages, top + inset, 600), page,
+            `navigating to page ${page} with an inset must be tracker-confirmed as page ${page} (the tracker reads scrollTop + inset)`);
+    }
+    // The clamp survives a deep inset: page 1's box would start above the content.
+    assert.equal(pageScrollTop([{ page: 1, top: 40, height: 800 }], 1, 96), 0);
 });

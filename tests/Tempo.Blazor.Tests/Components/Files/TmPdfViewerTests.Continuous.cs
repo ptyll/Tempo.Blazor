@@ -216,6 +216,256 @@ public partial class TmPdfViewerTests
             .Arguments[1].Should().Be(7, "the active thumbnail must follow the visible page");
     }
 
+    // ── CF1 (plan 98c80bc3): a host re-render with a STALE Page must not snap back ──
+
+    [Fact]
+    public void Continuous_TwoRapidTrackerReports_HostRepliesStalePage_NoSnapBackScroll()
+    {
+        int capturedPage = 1;
+        var cut = Render<TmPdfViewer>(p => ContinuousDefaults(p).Add(
+            p => p.PageChanged, EventCallback.Factory.Create<int>(this, page => capturedPage = page)));
+
+        cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(10));
+        cut.Render();
+
+        // Two rapid tracker reports (user scroll + a trailing jump). The host's bound
+        // field has not caught up yet, so its next render re-delivers the ORIGINAL
+        // Page parameter (1).
+        cut.InvokeAsync(() => cut.Instance.OnVisiblePageChanged(5));
+        cut.InvokeAsync(() => cut.Instance.OnVisiblePageChanged(7));
+        cut.Render();
+
+        InvocationsOf(this, "tmPdfViewer.scrollToPage").Should().BeEmpty(
+            "an unchanged, re-delivered Page parameter is the two-way binding's echo — " +
+            "it must never drive a snap-back scrollToPage");
+        cut.Find(".tm-pdf-viewer__page-input").GetAttribute("value").Should().Be("7",
+            "the tracker-reported page stays the viewer's state; the stale parameter never overwrites it");
+
+        // A parameter that REALLY changed still navigates (the host-driven path is intact).
+        cut.Render(parameters => parameters.Add(p => p.Page, 9));
+        var scroll = JSInterop.VerifyInvoke("tmPdfViewer.scrollToPage", 1).Single();
+        scroll.Arguments[1].Should().Be(9, "a genuine host-driven page change still scrolls the wrap");
+    }
+
+    // ── CF1: the tracker's own report echoed back late must not undo a navigation ──
+
+    [Fact]
+    public async Task Continuous_TrackerReportEchoedAfterGoToPage_DoesNotUndoTheNavigation()
+    {
+        int capturedPage = 1;
+        var cut = Render<TmPdfViewer>(p => ContinuousDefaults(p).Add(
+            p => p.PageChanged, EventCallback.Factory.Create<int>(this, page => capturedPage = page)));
+
+        cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(10));
+        cut.Render();
+
+        // User scroll reports page 5, then a deliberate goToPage moves to 6. The host
+        // echoes the SCROLL value (5) afterwards — that echo must not scroll back.
+        cut.InvokeAsync(() => cut.Instance.OnVisiblePageChanged(5));
+        await cut.InvokeAsync(() => cut.Instance.OnThumbnailClicked(6));
+        cut.Render(parameters => parameters.Add(p => p.Page, 5));
+
+        InvocationsOf(this, "tmPdfViewer.scrollToPage").Should().ContainSingle(
+            "only the deliberate goToPage scroll happened — the echoed tracker report must not scroll back");
+        InvocationsOf(this, "tmPdfViewer.scrollToPage").Single().Arguments[1].Should().Be(6);
+        cut.Find(".tm-pdf-viewer__page-input").GetAttribute("value").Should().Be("6",
+            "the deliberate navigation stays; the echoed scroll report never overwrites it");
+    }
+
+    // ── CF1/B1 (plan 98c80bc3): the FIFO of the pages the viewer itself raised ──
+    //
+    // The first fix remembered ONE tracker value; it swallowed genuine host navigations
+    // (back to the tracked page, back to the initial page) and forgot out-of-order echoes.
+    // The contract now: a Page delivery matching a page the viewer ITSELF raised (the
+    // scroll tracker or one of its own navigations) is the two-way binding's echo and is
+    // consumed exactly once; every other changed delivery is a host navigation.
+
+    [Fact]
+    public void SinglePage_TwoWayNextNext_HostNavigatesBackToPage1_RendersPage1()
+    {
+        // The host binds Page two-way: Next raises 2 and 3 (each echoed back by the host),
+        // and the host's own navigation back to page 1 re-delivers a value the viewer
+        // never raised. The seeded "last tracker page" (= the initial 1) of the first fix
+        // swallowed that delivery — page 1 never rendered.
+        int capturedPage = 1;
+        var cut = Render<TmPdfViewer>(p => p.Add(x => x.Url, "https://example.com/test.pdf")
+                     .Add(x => x.ShowToolbar, true)
+                     .Add(x => x.PageChanged, EventCallback.Factory.Create<int>(this, page => capturedPage = page)));
+
+        cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(10));
+        cut.Render();
+
+        var nextBtn = () => cut.FindAll(".tm-pdf-viewer__btn")
+            .First(b => b.GetAttribute("aria-label")?.Contains("Next") == true);
+
+        nextBtn().Click();
+        capturedPage.Should().Be(2);
+        cut.Render(parameters => parameters.Add(p => p.Page, 2)); // the binding's echo
+        InvocationsOf(this, "tmPdfViewer.renderPage").Last().Arguments[1].Should().Be(2);
+
+        nextBtn().Click();
+        capturedPage.Should().Be(3);
+        cut.Render(parameters => parameters.Add(p => p.Page, 3)); // the binding's echo
+        InvocationsOf(this, "tmPdfViewer.renderPage").Last().Arguments[1].Should().Be(3);
+
+        // The host REALLY navigates back to page 1 (a thread anchor, undo, …).
+        cut.Render(parameters => parameters.Add(p => p.Page, 1));
+        InvocationsOf(this, "tmPdfViewer.renderPage").Last().Arguments[1].Should().Be(1,
+            "a Page delivery the viewer never raised is a host navigation — page 1 must render");
+        cut.Find(".tm-pdf-viewer__page-input").GetAttribute("value").Should().Be("1",
+            "the host navigation overwrites the viewer's page state");
+    }
+
+    [Fact]
+    public async Task Continuous_EchoesConsumedOnce_HostNavigationToTrackedPageStillScrolls()
+    {
+        // Tracker reports 5 and a thumbnail click moves to 8 — each echoed back by the
+        // binding and consumed from the FIFO. A LATER host navigation to the tracked page 5
+        // must still scroll: the old `_lastTrackerPage` memory kept 5 "raised" forever and
+        // swallowed exactly this navigation.
+        int capturedPage = 1;
+        var cut = Render<TmPdfViewer>(p => ContinuousDefaults(p).Add(p => p.ShowThumbnails, true).Add(
+            p => p.PageChanged, EventCallback.Factory.Create<int>(this, page => capturedPage = page)));
+
+        cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(10));
+        cut.Render();
+
+        cut.InvokeAsync(() => cut.Instance.OnVisiblePageChanged(5));
+        capturedPage.Should().Be(5);
+        cut.Render(parameters => parameters.Add(p => p.Page, 5)); // the echo of the tracker report
+        InvocationsOf(this, "tmPdfViewer.scrollToPage").Should().BeEmpty(
+            "the echo of the viewer's own scroll report must not scroll");
+
+        await cut.InvokeAsync(() => cut.Instance.OnThumbnailClicked(8));
+        capturedPage.Should().Be(8);
+        InvocationsOf(this, "tmPdfViewer.scrollToPage").Should().ContainSingle()
+            .Which.Arguments[1].Should().Be(8);
+        cut.Render(parameters => parameters.Add(p => p.Page, 8)); // the echo of the thumbnail navigation
+        InvocationsOf(this, "tmPdfViewer.scrollToPage").Should().ContainSingle(
+            "the echo of the viewer's own navigation must not scroll again");
+
+        cut.Render(parameters => parameters.Add(p => p.Page, 5));
+        InvocationsOf(this, "tmPdfViewer.scrollToPage").Should().HaveCount(2);
+        InvocationsOf(this, "tmPdfViewer.scrollToPage").Last().Arguments[1].Should().Be(5,
+            "a host navigation to a previously tracked page must scroll — its echo was already consumed");
+    }
+
+    [Fact]
+    public void Continuous_OutOfOrderEchoOfEarlierReport_DoesNotScroll()
+    {
+        // Two rapid tracker reports (5 then 6) reach the host out of order: it re-renders
+        // with the STALE 5 after the viewer already reported 6. The FIFO still holds both
+        // raised values, so the late echo of 5 is recognized — the single-value memory of
+        // the first fix only remembered 6 and scrolled the wrap back to page 5.
+        int capturedPage = 1;
+        var cut = Render<TmPdfViewer>(p => ContinuousDefaults(p).Add(
+            p => p.PageChanged, EventCallback.Factory.Create<int>(this, page => capturedPage = page)));
+
+        cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(10));
+        cut.Render();
+
+        cut.InvokeAsync(() => cut.Instance.OnVisiblePageChanged(5));
+        cut.InvokeAsync(() => cut.Instance.OnVisiblePageChanged(6));
+        cut.Render(parameters => parameters.Add(p => p.Page, 5)); // the late, out-of-order echo
+
+        InvocationsOf(this, "tmPdfViewer.scrollToPage").Should().BeEmpty(
+            "a late echo of an earlier tracker report must not scroll the wrap");
+        cut.Find(".tm-pdf-viewer__page-input").GetAttribute("value").Should().Be("6",
+            "the viewer stays on the newest reported page");
+
+        // The host catches up with 6 — that echo is consumed the same way, still no scroll.
+        cut.Render(parameters => parameters.Add(p => p.Page, 6));
+        InvocationsOf(this, "tmPdfViewer.scrollToPage").Should().BeEmpty(
+            "the trailing echo of the newest report must not scroll either");
+    }
+
+    // ── CF1/B1-2 (plan 98c80bc3): the raised-page FIFO expires per parameter delivery ──
+    //
+    // A host that only LISTENS (binds PageChanged but never writes the raised value back
+    // into Page) never echoes anything: its pending entries would sit in the queue forever
+    // and swallow a later genuine host navigation to a tracked page as a false "echo".
+    // Every entry therefore carries the parameter-delivery generation it was raised at and
+    // expires once more than two deliveries have passed without its echo.
+
+    [Fact]
+    public void Continuous_NotificationOnlyHost_HostNavigationToTrackedPage_Scrolls()
+    {
+        // The notification-only host: PageChanged is bound, but the Page parameter NEVER
+        // moves (stays 1) — three unchanged deliveries pass between the tracker reports.
+        // The host then REALLY navigates to the tracked page 5 (a thread anchor): with the
+        // ageless FIFO that delivery matched the stale raised 5 and was swallowed — no
+        // scroll. The generation expiry drops the stale entries, so the navigation scrolls.
+        int capturedPage = 1;
+        var cut = Render<TmPdfViewer>(p => ContinuousDefaults(p).Add(
+            p => p.PageChanged, EventCallback.Factory.Create<int>(this, page => capturedPage = page)));
+
+        cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(10));
+        cut.Render();
+
+        cut.InvokeAsync(() => cut.Instance.OnVisiblePageChanged(5));
+        cut.Render(); // unchanged Page=1 delivery #1
+        cut.InvokeAsync(() => cut.Instance.OnVisiblePageChanged(6));
+        cut.Render(); // unchanged Page=1 delivery #2
+        cut.InvokeAsync(() => cut.Instance.OnVisiblePageChanged(7));
+        cut.Render(); // unchanged Page=1 delivery #3
+
+        InvocationsOf(this, "tmPdfViewer.scrollToPage").Should().BeEmpty(
+            "the unchanged Page=1 deliveries are not navigations");
+        cut.Find(".tm-pdf-viewer__page-input").GetAttribute("value").Should().Be("7",
+            "the viewer's own state follows the tracker; the host's Page parameter (still 1) never overwrites it");
+        capturedPage.Should().Be(7, "the host still RECEIVES every tracker report");
+
+        // The host's own navigation to the tracked page 5 must scroll — the raised 5, 6, 7
+        // can no longer be legitimate echoes three deliveries later.
+        cut.Render(parameters => parameters.Add(p => p.Page, 5));
+
+        var scroll = JSInterop.VerifyInvoke("tmPdfViewer.scrollToPage", 1).Single();
+        scroll.Arguments[1].Should().Be(5,
+            "a host navigation to a recently tracked page must scroll once the pending echoes expired");
+        cut.Find(".tm-pdf-viewer__page-input").GetAttribute("value").Should().Be("5",
+            "the host navigation overwrites the viewer's page state");
+    }
+
+    [Fact]
+    public void Continuous_CoalescedEcho_DoesNotLeaveStaleEntries()
+    {
+        // The host coalesces three rapid tracker reports (5, 6, 5) into ONE delivery of the
+        // newest value: the echoes of the intermediate raises never arrive, and the leftover
+        // entries would sit stale in the FIFO. A genuine host navigation to page 6 after a
+        // few deliveries must scroll — with the ageless FIFO it matched the stale entries
+        // and was swallowed as a false echo.
+        int capturedPage = 1;
+        var cut = Render<TmPdfViewer>(p => ContinuousDefaults(p).Add(
+            p => p.PageChanged, EventCallback.Factory.Create<int>(this, page => capturedPage = page)));
+
+        cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(10));
+        cut.Render();
+
+        cut.InvokeAsync(() => cut.Instance.OnVisiblePageChanged(5));
+        cut.InvokeAsync(() => cut.Instance.OnVisiblePageChanged(6));
+        cut.InvokeAsync(() => cut.Instance.OnVisiblePageChanged(5));
+        cut.Render(parameters => parameters.Add(p => p.Page, 5)); // the ONE coalesced echo
+
+        InvocationsOf(this, "tmPdfViewer.scrollToPage").Should().BeEmpty(
+            "the coalesced echo of the viewer's own reports must not scroll");
+        cut.Find(".tm-pdf-viewer__page-input").GetAttribute("value").Should().Be("5");
+
+        // A few deliveries pass without the leftover echoes ever arriving.
+        cut.Render();
+        cut.Render();
+        cut.Render();
+        InvocationsOf(this, "tmPdfViewer.scrollToPage").Should().BeEmpty(
+            "the unchanged deliveries do nothing on their own");
+
+        // The host REALLY navigates to page 6 — the stale leftovers must not swallow it.
+        cut.Render(parameters => parameters.Add(p => p.Page, 6));
+
+        var scroll = JSInterop.VerifyInvoke("tmPdfViewer.scrollToPage", 1).Single();
+        scroll.Arguments[1].Should().Be(6,
+            "a host navigation after the coalesced echo must scroll — no stale entry may swallow it");
+        cut.Find(".tm-pdf-viewer__page-input").GetAttribute("value").Should().Be("6");
+    }
+
     // ── A search match activates on its own page (scrolled there by JS) ─────
 
     [Fact]

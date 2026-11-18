@@ -38912,6 +38912,58 @@
               "isRequired": false,
               "description": "Callback when the zoom mode changes (since 2.9.1)."
             }
+          ],
+          "methods": [
+            {
+              "name": "GoToPageAsync",
+              "signature": "Task GoToPageAsync(int page)",
+              "description": "Navigates to a specific page. In continuous mode the page wrap is scrolled into view instead of re-rendering a single canvas; a fit mode recomputes for the new page size. Hosts also use it for an explicit repeated jump to a page the scroll tracker already reports — a re-delivered Page parameter is consumed as a binding echo and would not re-trigger."
+            },
+            {
+              "name": "SetScaleAsync",
+              "signature": "Task SetScaleAsync(double scale)",
+              "description": "Sets the zoom scale directly. Switches an active fit mode back to Custom — an explicit scale is a user decision. Values outside 0–5 are ignored."
+            },
+            {
+              "name": "SetZoomModeAsync",
+              "signature": "Task SetZoomModeAsync(PdfZoomMode mode)",
+              "description": "Applies a zoom mode programmatically — the host-side path of the toolbar's zoom dropdown. FitWidth and FitPage ask JavaScript to compute the scale from the container (and keep recomputing it on resize); Custom keeps the current scale and detaches an active fit observer; Auto follows the responsive contract (fit-width on a mobile layout, the bound scale elsewhere). Repeating the value already in effect is a no-op."
+            },
+            {
+              "name": "RotateAsync",
+              "signature": "Task RotateAsync()",
+              "description": "Rotates the document 90 degrees clockwise; the current page (or the continuous column) re-renders at the new rotation."
+            },
+            {
+              "name": "RotateCounterClockwiseAsync",
+              "signature": "Task RotateCounterClockwiseAsync()",
+              "description": "Rotates the document 90 degrees counter-clockwise (0 → 270 → 180 → 90 → 0) — the inverse of RotateAsync. The continuous column rebuilds its placeholders and preserves the scroll position."
+            },
+            {
+              "name": "NextMatchAsync",
+              "signature": "Task NextMatchAsync()",
+              "description": "Moves the search selection to the next match and scrolls it into view."
+            },
+            {
+              "name": "PreviousMatchAsync",
+              "signature": "Task PreviousMatchAsync()",
+              "description": "Moves the search selection to the previous match and scrolls it into view."
+            },
+            {
+              "name": "OpenThumbnailsSheetAsync",
+              "signature": "Task OpenThumbnailsSheetAsync()",
+              "description": "Opens the mobile thumbnails sheet. For hosts that fold the viewer's Pages entry into their own mobile action bar (ShowMobileActionBar false); a no-op on desktop/tablet layouts and without ShowThumbnails."
+            },
+            {
+              "name": "OpenSearchAsync",
+              "signature": "Task OpenSearchAsync()",
+              "description": "Opens the search input. For hosts that fold the viewer's Search entry into their own mobile action bar (ShowMobileActionBar false); a no-op when the search is not offered (ShowSearch false) or already open."
+            },
+            {
+              "name": "ScrollToAnchorAsync",
+              "signature": "Task ScrollToAnchorAsync(int page, double y)",
+              "description": "Scrolls to a thread anchor: in Continuous the page scrolls into view and the anchor's normalized y lands on the viewport's middle line — the exact path the viewer's own thread selection uses; in SinglePage the page is navigated to. The annotator's panel selects threads through the same path. A no-op for a page outside the loaded document."
+            }
           ]
         },
         {
@@ -81673,6 +81725,10 @@
         },
         {
           "path": "src/Tempo.Blazor.NotionEditor/wwwroot/js/__tests__/notion-db-timeline.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor.NotionEditor/wwwroot/js/__tests__/notion-editor-caret-reserve.test.mjs",
           "kind": "JavaScript"
         }
       ],

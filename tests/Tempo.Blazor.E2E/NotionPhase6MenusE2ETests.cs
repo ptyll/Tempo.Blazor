@@ -59,6 +59,62 @@ public sealed class NotionPhase6MenusE2ETests : WasmTestBase
     }
 
     [TestMethod]
+    [Description("CF3 (plan 98c80bc3): Enter on the last row leaves the caret block flush with the editor's fold; '/' must still show the menu — with NO test-driven centering (the editor keeps the reserve band, overlay.js is untouched).")]
+    public async Task SlashMenu_AfterEnterOnLastRow_ShowsWithoutCentering()
+    {
+        var page = await OpenAsync(1440, 900, touch: false);
+        var para = page.Locator(".tm-notion-paragraph[contenteditable='true']").Last;
+        await para.ClickAsync();
+        await page.Keyboard.PressAsync("Control+End");
+        // m1: park the last paragraph deterministically flush with the fold — the exact
+        // pre-Enter state that used to park the slash panel invisibly.
+        var innerHeight = await ParkLastParagraphAtTheFoldAsync(page);
+
+        var beforeBlockId = await page.EvaluateAsync<string>(
+            "() => document.activeElement?.closest('[data-block-id]')?.getAttribute('data-block-id') ?? ''");
+        await page.Keyboard.PressAsync("Enter");
+        // The split landing focuses the freshly created block (a DIFFERENT data-block-id) —
+        // waited for deterministically, no sleeps.
+        await page.WaitForFunctionAsync(
+            @"
+before => {
+    const active = document.activeElement;
+    return !!active?.classList?.contains('tm-notion-paragraph')
+        && active.isContentEditable === true
+        && (active.closest('[data-block-id]')?.getAttribute('data-block-id') ?? '') !== before;
+}",
+            beforeBlockId, new PageWaitForFunctionOptions { Timeout = 10000 });
+
+        // m1: the editor keeps a reserve band under the landed block (min(200, 25% of the
+        // visible height)) — assert the landed bottom actually cleared the band.
+        var reserve = Math.Min(200, 0.25 * innerHeight);
+        await page.WaitForFunctionAsync(
+            @"
+() => {
+    const active = document.activeElement;
+    if (!active?.classList?.contains('tm-notion-paragraph')) return false;
+    const reserve = Math.min(200, 0.25 * (window.visualViewport?.height ?? window.innerHeight));
+    return active.getBoundingClientRect().bottom <= window.innerHeight - reserve + 0.5;
+}",
+            null, new PageWaitForFunctionOptions { Timeout = 10000 });
+        var landedBottom = await page.EvaluateAsync<double>(
+            "() => document.activeElement?.getBoundingClientRect().bottom ?? -1");
+        Assert.IsTrue(landedBottom <= innerHeight - reserve + 0.5,
+            $"the landed caret block keeps the viewport reserve (bottom {landedBottom} <= {innerHeight - reserve})");
+
+        await page.Keyboard.TypeAsync("/");
+
+        var menu = page.Locator(".tm-notion-slash").First;
+        await menu.WaitForAsync(new LocatorWaitForOptions { Timeout = 10000, State = WaitForSelectorState.Visible });
+        Assert.IsTrue(await menu.IsVisibleAsync(),
+            "the slash menu must be visible right after Enter on the last row (no parking, no centering workaround)");
+        var box = await menu.BoundingBoxAsync();
+        Assert.IsNotNull(box, "the visible menu must have a bounding box");
+        Assert.IsTrue(box.Y + box.Height > 0 && box.Y < 900 && box.X < 1440,
+            $"the menu renders inside the viewport (box {box.X},{box.Y} {box.Width}x{box.Height})");
+    }
+
+    [TestMethod]
     [Description("Phase 6: the page icon opens the one emoji picker; mobile sheets it")]
     public async Task EmojiPicker_OpensFromThePageIcon_AndSheetsOnMobile()
     {
@@ -487,13 +543,22 @@ public sealed class NotionPhase6MenusE2ETests : WasmTestBase
         await para.WaitForAsync(new LocatorWaitForOptions { Timeout = 10000 });
         await para.ClickAsync();
         await page.Keyboard.PressAsync("End");
+        // CF3 (m1): ONE Enter splits the paragraph; the caret lands in the freshly created
+        // block (a different data-block-id) — waited for deterministically, no sleeps. The
+        // editor keeps its viewport reserve under the landed block, so a following '/'
+        // shows the menu.
+        var beforeBlockId = await page.EvaluateAsync<string>(
+            "() => document.activeElement?.closest('[data-block-id]')?.getAttribute('data-block-id') ?? ''");
         await page.Keyboard.PressAsync("Enter");
-        // Enter can leave the caret block flush with an editor viewport edge; a slash anchor
-        // fully out of the viewport makes overlay.js PARK the panel invisible (nothing scrolls
-        // it back). Center the focused block — scrollIntoView fixes EVERY scrollable ancestor.
-        Assert.IsTrue(await NotionEditorHelper.CenterFocusedParagraphAsync(page),
-            "after Enter the caret must sit in a notion paragraph block (the slash menu anchors to it)");
-        await page.WaitForTimeoutAsync(1000);
+        await page.WaitForFunctionAsync(
+            @"
+before => {
+    const active = document.activeElement;
+    return !!active?.classList?.contains('tm-notion-paragraph')
+        && active.isContentEditable === true
+        && (active.closest('[data-block-id]')?.getAttribute('data-block-id') ?? '') !== before;
+}",
+            beforeBlockId, new PageWaitForFunctionOptions { Timeout = 10000 });
         await page.Keyboard.TypeAsync("/");
         await page.WaitForSelectorAsync(".tm-notion-slash", new PageWaitForSelectorOptions
         {
@@ -501,6 +566,12 @@ public sealed class NotionPhase6MenusE2ETests : WasmTestBase
             Timeout = 15000,
         });
     }
+
+    /// <summary>
+    /// m1: the shared deterministic parker (see <see cref="NotionEditorTestHelper"/>).
+    /// </summary>
+    private static Task<int> ParkLastParagraphAtTheFoldAsync(IPage page)
+        => NotionEditorTestHelper.ParkLastParagraphAtTheFoldAsync(page);
 
     private static async Task SetThemeAsync(IPage page, string theme)
     {
