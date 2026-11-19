@@ -459,7 +459,13 @@
       "name": "RowAttributes",
       "type": "Func<TItem, IReadOnlyDictionary<string, object>?>?",
       "isRequired": false,
-      "description": "Optional row-level HTML attributes applied to every data row, including non-virtualized, virtualized, and grouped leaf rows."
+      "description": "Optional row-level HTML attributes applied to every data row, including non-virtualized, virtualized, and grouped leaf rows. The names class, onclick, onkeydown and tabindex are reserved and dropped — use RowClass to style a row."
+    },
+    {
+      "name": "RowClass",
+      "type": "Func<TItem, string?>?",
+      "isRequired": false,
+      "description": "CSS class(es) added to the data row of an item - the way to style a current, highlighted or status row (class is a reserved RowAttributes name, so it is dropped there). The result is merged into the classes the row already carries (tm-row-selected, the edit-state classes) and never replaces them; several classes are space-separated, null or blank adds nothing. Applies to plain, virtualized, grouped leaf rows and the row being edited, and is read again on every render. A class is only visual - pair a current row with aria-current through RowAttributes. Default null - the row markup is unchanged."
     },
     {
       "name": "SelectionActions",
@@ -594,6 +600,10 @@
     {
       "title": "Row-level attributes for test ids and data hooks",
       "code": "<TmDataTable TItem=\"OrderDto\"\n             Items=\"@orders\"\n             ViewContext=\"orders\"\n             RowAttributes=\"@(row => new Dictionary<string, object>\n             {\n                 [\"data-testid\"] = $\"order-{row.Id}\",\n                 [\"data-status\"] = row.Status\n             })\">\n    <TmDataTableColumn Title=\"Order #\" Field=\"o => o.OrderNumber\" />\n    <TmDataTableColumn Title=\"Status\" Field=\"o => o.Status\" />\n</TmDataTable>"
+    },
+    {
+      "title": "RowClass: style the current row",
+      "code": "<TmDataTable TItem=\"Order\"\n             Items=\"@_orders\"\n             ViewContext=\"orders\"\n             RowClass=\"@(o => o.Id == _currentId ? \"order-row--current\" : null)\"\n             RowAttributes=\"@(o => o.Id == _currentId ? _currentRowAttributes : null)\"\n             OnRowClick=\"@(o => _currentId = o.Id)\">\n    <TmDataTableColumn Title=\"Order #\" Field=\"o => o.Number\" />\n</TmDataTable>\n\n@* RowClass adds the host's class next to the table's own (tm-row-selected, ...). class in RowAttributes is reserved and dropped; a class is only visual, so aria-current marks the current row for assistive technology (_currentRowAttributes = new Dictionary<string, object> { [\"aria-current\"] = \"true\" }). *@\n<style>\n    .order-row--current { background: var(--tm-color-primary-subtle); }\n</style>"
     },
     {
       "title": "Page-owned filters + content-only table",

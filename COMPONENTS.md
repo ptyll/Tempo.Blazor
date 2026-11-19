@@ -3761,6 +3761,7 @@ Kompletní datová tabulka s řazením, filtrováním, stránkováním, grouping
 | `tm-col-filter-select` | Select filtru |
 | `tm-col-filter-clear` | Vymazání filtru |
 | `tm-row-selected` | Vybraný řádek |
+| `tm-data-table-mobile-only` | Ovládací prvek jen pro úzký kontejner (< 640px) — mobilní „Řazení“ a „Filtry“ u `MobileLayout=Cards`; v širokém kontejneru skrytý |
 | `tm-pagination-container` | Kontejner stránkování |
 
 > **TmDataTableColumn** je bezhlavový deskriptorový komponent — nerendruje žádné vlastní HTML/CSS.
@@ -3793,7 +3794,7 @@ Kompletní datová tabulka s řazením, filtrováním, stránkováním, grouping
 | `OnSelectionChanged` | `EventCallback<IReadOnlyList<TItem>>` | — | Změna výběru |
 | `ViewContext` | `string` | **povinný** | Unikátní ID pro ukládání view |
 | `Appearance` | `DataTableAppearance` | `Plain` | `Plain` = dnešní plocha, `Card` přidá `tm-data-table-wrapper--card-surface`. Brána povrchu — ostatní volby ji nepřepínají |
-| `MobileLayout` | `DataTableMobileLayout` | `None` | `Scroll` (vodorovný posuv, `MobilePinned`) nebo `Cards` (řádky jako karty, `CardRole`) |
+| `MobileLayout` | `DataTableMobileLayout` | `None` | `Scroll` (vodorovný posuv, `MobilePinned`) nebo `Cards` (řádky jako karty, `CardRole`). Pod 640px kontejneru karta uvolní inline šířku sloupce (`Width`/`MinWidth`) a seznam karet nemá vnější rámeček; mobilní „Řazení“/„Filtry“ se v širokém kontejneru nezobrazují |
 | `KeyboardNavigation` | `DataTableKeyboardNavigation` | `Rows` | `Grid` = jeden roving tabindex, šipky mezi buňkami |
 | `ColumnMenuMode` | `ColumnMenuMode` | `None` | `Menu` nahradí pin tlačítko kebabem v záhlaví sloupce |
 | `EditActionsMode` | `EditActionsMode` | `Icons` | `Text` nebo `Footer` pro Uložit/Zrušit; mobilní karty vždy `Text` |
@@ -3803,6 +3804,7 @@ Kompletní datová tabulka s řazením, filtrováním, stránkováním, grouping
 | `ShowActiveViewName` | `bool` | `false` | Přepínač pohledů ukáže název aktivního pohledu |
 | `AllowSetDefault` | `bool` | `false` | Akce „Nastavit jako výchozí" (vyžaduje `ViewProvider`) |
 | `GroupHeaderTemplate` | `RenderFragment<DataGroup<TItem>>?` | `null` | Nahradí vestavěné záhlaví skupiny |
+| `RowClass` | `Func<TItem, string?>?` | `null` | CSS třída(y) přidané řádku položky — cesta ke stylování aktuálního / zvýrazněného / stavového řádku (`class` je v `RowAttributes` rezervovaný a zahazuje se). Sloučí se s třídami, které řádek už nese (`tm-row-selected`, třídy editace), nikdy je nenahrazuje; více tříd se odděluje mezerou, `null`/prázdné nic nepřidá. Platí pro běžné, virtualizované, seskupené i právě editované řádky a čte se při každém renderu. Třída je jen vizuální — „aktuální“ řádek doplňte o `aria-current` přes `RowAttributes` |
 | `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 | `TestIdPrefix` | `string?` | `null` | Prefix pro `data-testid` tabulky; **propaguje se i do vestavěné `TmPagination`** |
 | `DataTestId` | `string?` | `null` | Přebije `data-testid` kořenového prvku |

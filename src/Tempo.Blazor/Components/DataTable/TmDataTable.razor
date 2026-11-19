@@ -735,7 +735,7 @@
                         @if (Editable && IsEditingRow(currentRowIndex))
                         {
                             <CascadingValue Value="_editContext" IsFixed="false">
-                                <tr class="tm-row-editing tm-data-table-row--editing @(_editHasErrors ? "tm-data-table-row--invalid" : null)" data-testid="@TestId("row-editing")" role="@(IsGrid ? "row" : null)" aria-rowindex="@(IsGrid ? currentRowIndex + GridBodyRowOffset : null)" @onkeydown="HandleEditKeyDownAsync" @onkeydown:stopPropagation="@IsGrid">
+                                <tr class="@GetEditingRowClass(rowItem)" data-testid="@TestId("row-editing")" role="@(IsGrid ? "row" : null)" aria-rowindex="@(IsGrid ? currentRowIndex + GridBodyRowOffset : null)" @onkeydown="HandleEditKeyDownAsync" @onkeydown:stopPropagation="@IsGrid">
                                     @if (HasDetail)
                                     {
                                         <td class="tm-col-expander"></td>

@@ -170,6 +170,11 @@ public class TmFilterBuilderResultPreviewTests : LocalizationTestBase
         cut.WaitForAssertion(() => calls.Should().Be(1), timeout: TimeSpan.FromSeconds(2));
 
         calls = 0;
+        // The three renders must land inside ONE debounce window no matter how loaded the machine is: with
+        // the 300 ms default, three renders under the full parallel suite can outlast the window, the
+        // debounce fires early and "nothing new has been asked yet" fails on wall-clock time alone. A wide
+        // window keeps the claim (collapse into one call) and drops the race.
+        cut.Instance.ResultCountDebounceMs = 1500;
         cut.Render(p => p.Add(c => c.ActiveFilters, new[] { NameContainsA, StatusActive }));
         cut.Render(p => p.Add(c => c.ActiveFilters, new[] { StatusActive }));
         cut.Render(p => p.Add(c => c.ActiveFilters, new[] { ScoreHigh }));
@@ -181,7 +186,7 @@ public class TmFilterBuilderResultPreviewTests : LocalizationTestBase
         {
             calls.Should().Be(1);
             last.Should().ContainSingle().Which.FieldName.Should().Be("score");
-        }, timeout: TimeSpan.FromSeconds(2));
+        }, timeout: TimeSpan.FromSeconds(6));
     }
 
     /// <summary>A count that resolves as null clears the text but leaves the live region in place.</summary>

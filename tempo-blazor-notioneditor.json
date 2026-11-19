@@ -9938,6 +9938,10 @@
     {
       "path": "src/Tempo.Blazor.NotionEditor/wwwroot/js/__tests__/notion-editor-caret-reserve.test.mjs",
       "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor.NotionEditor/wwwroot/js/__tests__/notion-editor-focus-restore.test.mjs",
+      "kind": "JavaScript"
     }
   ],
   "summary": {

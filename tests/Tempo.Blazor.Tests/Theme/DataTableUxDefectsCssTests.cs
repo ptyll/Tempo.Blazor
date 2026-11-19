@@ -191,8 +191,10 @@ public sealed class DataTableUxDefectsCssTests
     public void CardsTitle_ReservesTheCheckboxCorner()
     {
         var css = Css();
-        // The Title cell has an earlier grid-column rule; the padding reservation is the LAST one.
-        var at = css.LastIndexOf(".tm-data-table-wrapper--cards .tm-data-table tbody td[data-card-role=\"Title\"]", StringComparison.Ordinal);
+        // The Title cell has an earlier grid-column rule; the padding reservation is the LAST one. Since
+        // Fáze 10a it is scoped to a row that actually has the docked checkbox cell (DataTableCardsLayoutCssTests
+        // pins that scoping from the other side) - a row without it keeps the full card width.
+        var at = css.LastIndexOf(".tm-data-table-wrapper--cards .tm-data-table tbody tr:has(> td.tm-col-check) td[data-card-role=\"Title\"]", StringComparison.Ordinal);
         at.Should().BeGreaterThanOrEqualTo(0);
         css[css.IndexOf('{', at)..css.IndexOf('}', at)].Should().Contain("padding-inline-end");
     }

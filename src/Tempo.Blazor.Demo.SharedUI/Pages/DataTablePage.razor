@@ -130,6 +130,61 @@
     </div>
 </section>
 
+<!-- RowClass + the card layout of a table with a narrow column (Fáze 10a) -->
+<section class="demo-section demo-dt-rows" data-testid="dt-rowclass-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">@Loc["TmDataTableDemo_RowClassTitle"]</h2>
+    </div>
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmDataTableDemo_RowClassDescription"]</p>
+        <p class="text-sm text-slate-700 dark:text-slate-300 mb-4" data-testid="dt-rowclass-current" aria-live="polite">
+            @Loc["TmDataTableDemo_RowClassCurrent", _rowClassCurrent?.Name ?? "–"]
+        </p>
+
+        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">@Loc["TmDataTableDemo_RowClassWideHeading"]</h3>
+        <div data-testid="dt-rowclass-wide">
+            <TmDataTable TItem="Employee"
+                         Items="_redesignEmployees"
+                         ViewContext="rowclass-wide"
+                         MobileLayout="DataTableMobileLayout.Cards"
+                         RowClass="@(e => e.Id == _rowClassCurrentId ? "demo-dt-row--current" : null)"
+                         RowAttributes="RowClassAttributes"
+                         OnRowClick="OnRowClassRowClick"
+                         ShowPagination="false">
+                <ChildContent>
+                    <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColId"]" PropertyName="Id"
+                                       Field="e => e.Id" Sortable="true" Width="72px" CardRole="DataTableCardRole.Field" />
+                    <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColName"]" PropertyName="Name"
+                                       Field="e => e.Name" Sortable="true" CardRole="DataTableCardRole.Title" />
+                    <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColRole"]" PropertyName="Role"
+                                       Field="e => e.Role" Sortable="true" CardRole="DataTableCardRole.Field" />
+                </ChildContent>
+            </TmDataTable>
+        </div>
+
+        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300 mt-6 mb-2">@Loc["TmDataTableDemo_RowClassCardsHeading"]</h3>
+        <div class="demo-dt-rows__cards" data-testid="dt-rowclass-cards">
+            <TmDataTable TItem="Employee"
+                         Items="_redesignEmployees"
+                         ViewContext="rowclass-cards"
+                         MobileLayout="DataTableMobileLayout.Cards"
+                         RowClass="@(e => e.Id == _rowClassCurrentId ? "demo-dt-row--current" : null)"
+                         RowAttributes="RowClassAttributes"
+                         OnRowClick="OnRowClassRowClick"
+                         ShowPagination="false">
+                <ChildContent>
+                    <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColId"]" PropertyName="Id"
+                                       Field="e => e.Id" Sortable="true" Width="72px" CardRole="DataTableCardRole.Field" />
+                    <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColName"]" PropertyName="Name"
+                                       Field="e => e.Name" Sortable="true" CardRole="DataTableCardRole.Title" />
+                    <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColRole"]" PropertyName="Role"
+                                       Field="e => e.Role" Sortable="true" CardRole="DataTableCardRole.Field" />
+                </ChildContent>
+            </TmDataTable>
+        </div>
+    </div>
+</section>
+
 <section class="demo-section" data-testid="dt-views-demo" style="max-inline-size: 24rem">
     <div class="flex items-center space-x-2 mb-4">
         <h2 class="text-lg font-semibold text-slate-900 dark:text-white">@Loc["TmDataTableDemo_ViewsTitle"]</h2>
@@ -1138,6 +1193,23 @@
     {
         /// <summary>Fixed hire date so the redesign demo never renders a value relative to today.</summary>
         public DateOnly HiredOn { get; init; } = new(2024, 3, 15);
+    }
+
+    // ── RowClass playground (Fáze 10a): the current row is host state, styled through RowClass ──
+    private int _rowClassCurrentId = 2;
+    private Employee? _rowClassCurrent => _redesignEmployees.FirstOrDefault(e => e.Id == _rowClassCurrentId);
+
+    private static readonly IReadOnlyDictionary<string, object> CurrentRowAttributes =
+        new Dictionary<string, object> { ["aria-current"] = "true" };
+
+    /// <summary>A class is only visual: the current row is also exposed programmatically through <c>aria-current</c>.</summary>
+    private IReadOnlyDictionary<string, object>? RowClassAttributes(Employee employee) =>
+        employee.Id == _rowClassCurrentId ? CurrentRowAttributes : null;
+
+    private Task OnRowClassRowClick(Employee employee)
+    {
+        _rowClassCurrentId = employee.Id;
+        return Task.CompletedTask;
     }
 
     // ── Redesign (opt-in) playground ──

@@ -1,0 +1,13 @@
+/* RowClass demo (Fáze 10a): the host styles its "current" row through the class RowClass adds. The
+   selector carries the table's own descendant chain so it out-ranks the card-surface background
+   (`.tm-data-table-wrapper--cards .tm-data-table tbody tr`) and the hover tint — tokens only, so both
+   themes follow. The inset accent is a second, non-colour cue for the current row. */
+.demo-dt-rows ::deep .tm-data-table tbody tr.demo-dt-row--current {
+    background-color: var(--tm-color-primary-subtle);
+    box-shadow: inset calc(var(--tm-border-width) * 3) 0 0 var(--tm-color-primary);
+}
+
+/* The 24rem card container of the demo: a narrow container, whatever the viewport. */
+.demo-dt-rows__cards {
+    max-inline-size: 24rem;
+}

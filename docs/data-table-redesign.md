@@ -55,6 +55,28 @@ Example:
 </TmDataTable>
 ```
 
+### Card layout details (2.12)
+
+- **The mobile Sort and Filters controls follow the container.** Both carry `tm-data-table-mobile-only`: hidden in a container of 640px or more (the header already sorts and filters there), shown below it. The rule is scoped under `.tm-data-table-wrapper`, so a later-imported `display` rule of the same specificity (the dropdown wrapper, the Filters button) can no longer reveal them on a desktop.
+- **A card cell is as wide as its card.** `TmDataTableColumn.Width` / `MinWidth` still reach the cell as an inline style, because the same markup is the wide table; below 640px the card rules release them (`width: 100%`, `min-width: 0`), so a 72px `ID` column no longer squeezes the label of its card row.
+- **The card list is not framed.** In `MobileLayout=Cards` and `CardMode`, below 640px, the scroll box drops its border, radius and negative bleed — each card is already a bordered surface.
+- **The card title reserves the checkbox corner only when the row has one.** With `MobileLayout=Cards` below 640px, the `Title` cell kept a `padding-inline-end` of one touch target plus `--tm-space-1` for the docked selection checkbox even on a table without `Selectable`, which pushed the title's value away from every other row's value. The reserve now applies only to a row that renders `td.tm-col-check`.
+
+## Styling a row (`RowClass`)
+
+`class` is a reserved `RowAttributes` name (the table owns the row class and silently drops a consumer's). `RowClass` is the dedicated channel for a "current", highlighted or status row:
+
+```razor
+<TmDataTable TItem="Order" Items="_orders" ViewContext="orders"
+             RowClass="@(o => o.Id == _currentId ? "order-row--current" : null)"
+             RowAttributes="@(o => o.Id == _currentId ? _currentRowAttributes : null)"
+             OnRowClick="@(o => _currentId = o.Id)">
+    <TmDataTableColumn TItem="Order" Title="Order #" Field="o => o.Number" />
+</TmDataTable>
+```
+
+The result is merged into the classes the row already carries (`tm-row-selected`, the edit-state classes) and never replaces them; several classes are space-separated, `null` or blank adds nothing. It applies to plain, virtualized, grouped leaf rows and the row being edited, and is evaluated on every render of the table. The host's rule needs the table's descendant chain to out-rank the hover and card-surface backgrounds (`.tm-data-table tbody tr.order-row--current`). A class is only visual: pair a "current" row with `aria-current` through `RowAttributes` (`_currentRowAttributes = new Dictionary<string, object> { ["aria-current"] = "true" }`), as the `/data-table` demo does, so a screen reader announces it while arrowing through the rows. Default `null` leaves the row markup unchanged.
+
 ## Keyboard navigation
 
 `KeyboardNavigation="DataTableKeyboardNavigation.Grid"` opts into ARIA grid navigation with one roving tabindex. The current default, `Rows`, keeps one tab stop per row (Enter activates on keydown, Space on keyup). Keep `Rows` explicitly when preserving today's behavior is important; Grid is planned to become the default in the next major release.
@@ -192,7 +214,7 @@ Mobile cards always use `Text`, whatever was set.
 
 The demo pages render every opt-in behind a control that starts at the default, so the rest of the page is unchanged:
 
-- `/data-table` — Appearance, MobileLayout, KeyboardNavigation, ColumnMenuMode, EditActionsMode, AllowExportSelected, ShowFilterSummary, ShowActiveViewName, AllowSetDefault and ShowFilterResultPreview, plus a 24rem-wide container that shows `MobileLayout="Cards"` on a desktop.
+- `/data-table` — Appearance, MobileLayout, KeyboardNavigation, ColumnMenuMode, EditActionsMode, AllowExportSelected, ShowFilterSummary, ShowActiveViewName, AllowSetDefault and ShowFilterResultPreview, plus a 24rem-wide container that shows `MobileLayout="Cards"` on a desktop and a `RowClass` section (a current row that follows a click, in a wide table and in a 24rem card container with a 72px `ID` column).
 - `/multi-view-list` — ViewSwitcherLabels, AvatarFallback, TableCellLayout, CardActivation, ShowItemCount, Responsive, MaxCardColumns, ItemHref, StatusVariantField and GroupHeaderTemplate.
 
 ## Mobile sheets
@@ -229,6 +251,7 @@ Every opt-in parameter added for the redesign, with its default. A default is th
 | `GroupHeaderTemplate` | `RenderFragment<DataGroup<TItem>>?` | `null` |
 | `ToolbarMode` | `DataToolbarMode` | `Full` |
 | `CardMode` (alias of `MobileLayout=Cards`) | `bool` | `false` |
+| `RowClass` | `Func<TItem, string?>?` | `null` |
 | `TmDataTableColumn.MobilePinned` | `bool` | `false` |
 | `TmDataTableColumn.CardRole` | `DataTableCardRole` | `Field` |
 

@@ -1507,6 +1507,26 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
     /// <summary>Additional HTML attributes to apply to each data row.</summary>
     [Parameter] public Func<TItem, IReadOnlyDictionary<string, object>?>? RowAttributes { get; set; }
 
+    /// <summary>
+    /// CSS class(es) to add to the data row of an item — the way to style a "current", highlighted or
+    /// status row. <c>class</c> is a reserved <see cref="RowAttributes"/> name (the table owns the row
+    /// class and silently drops a consumer's), so this is the dedicated channel. The result is merged
+    /// into the classes the row already carries (<c>tm-row-selected</c>, the edit-state classes) and
+    /// never replaces them; several classes are space-separated, <c>null</c> or blank adds nothing. It
+    /// applies to every data row — plain, virtualized, grouped leaf rows and the row being edited — and is
+    /// read again on every render, so a host that tracks the current row only re-renders the table.
+    /// A class is only visual — pair a "current" row with <c>aria-current</c> through <see cref="RowAttributes"/>.
+    /// Default: <c>null</c> — the row markup is unchanged.
+    /// <example>
+    /// <code>
+    /// &lt;TmDataTable TItem="Order" Items="_orders" ViewContext="orders"
+    ///              RowClass="@(o => o.Id == _currentId ? "order-row--current" : null)"
+    ///              RowAttributes="@(o => o.Id == _currentId ? _currentRowAttributes : null)"&gt;
+    /// </code>
+    /// </example>
+    /// </summary>
+    [Parameter] public Func<TItem, string?>? RowClass { get; set; }
+
     // ── Parameters: slots ─────────────────────────────────────────
 
     /// <summary>Render fragment shown in the selection action bar (bulk actions).</summary>
@@ -3941,7 +3961,45 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
         return firstKey;
     }
 
-    private string GetRowClass(TItem item) => IsSelected(item) ? "tm-row-selected" : string.Empty;
+    /// <summary>
+    /// The class list of a data row: the table's own state class (<c>tm-row-selected</c>) followed by
+    /// whatever <see cref="RowClass"/> returns for the item. Empty when neither applies, so a table
+    /// without <see cref="RowClass"/> renders the same markup it always did.
+    /// </summary>
+    private string GetRowClass(TItem item)
+    {
+        var custom = RowClassOf(item);
+        if (custom.Length == 0)
+        {
+            return IsSelected(item) ? "tm-row-selected" : string.Empty;
+        }
+
+        return IsSelected(item) ? "tm-row-selected " + custom : custom;
+    }
+
+    /// <summary>The host's <see cref="RowClass"/> for one item, whitespace-normalised; empty when none.</summary>
+    private string RowClassOf(TItem item)
+    {
+        var raw = RowClass?.Invoke(item);
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return string.Empty;
+        }
+
+        return string.Join(' ', raw.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+    }
+
+    /// <summary>
+    /// The class list of the row that is being edited: the edit-state classes, the optional invalid
+    /// marker, then the host's <see cref="RowClass"/>, so "current row" styling survives the switch into
+    /// edit mode.
+    /// </summary>
+    private string GetEditingRowClass(TItem item)
+    {
+        var custom = RowClassOf(item);
+        var core = "tm-row-editing tm-data-table-row--editing" + (_editHasErrors ? " tm-data-table-row--invalid" : string.Empty);
+        return custom.Length == 0 ? core : core + " " + custom;
+    }
 
     // ── Scroll container helpers ─────────────────────────────────
 

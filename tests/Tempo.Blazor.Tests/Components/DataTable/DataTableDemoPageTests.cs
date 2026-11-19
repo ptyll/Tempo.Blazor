@@ -130,6 +130,84 @@ public class DataTableDemoPageTests : DemoPageLocalizationTestBase
                 .ClassList.Should().Contain("tm-data-table-wrapper--card-surface"));
     }
 
+    [Fact]
+    public void RowClassSection_MarksTheCurrentRow_AndFollowsAClick()
+    {
+        var cut = Render<DataTablePage>();
+        var section = cut.Find("[data-testid='dt-rowclass-section']");
+        var wide = section.QuerySelector("[data-testid='dt-rowclass-wide']")!;
+
+        // Id 2 (Grace Hopper) starts as the current row, and ONLY that row carries the host's class.
+        var current = wide.QuerySelectorAll("tbody tr.demo-dt-row--current");
+        current.Should().HaveCount(1);
+        current[0].TextContent.Should().Contain("Grace Hopper");
+        section.QuerySelector("[data-testid='dt-rowclass-current']")!.TextContent.Should().Contain("Grace Hopper");
+
+        wide.QuerySelectorAll("tbody tr").Single(r => r.TextContent.Contains("Alan Turing"))
+            .Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var marked = cut.Find("[data-testid='dt-rowclass-wide']").QuerySelectorAll("tbody tr.demo-dt-row--current");
+            marked.Should().HaveCount(1);
+            marked[0].TextContent.Should().Contain("Alan Turing");
+            cut.Find("[data-testid='dt-rowclass-current']").TextContent.Should().Contain("Alan Turing");
+        });
+
+        // The card table (24rem container) is a second view of the same state.
+        cut.Find("[data-testid='dt-rowclass-cards']").QuerySelectorAll("tbody tr.demo-dt-row--current")
+            .Should().HaveCount(1);
+    }
+
+    /// <summary>
+    /// A class is only visual: the demo pairs the "current" row with <c>aria-current</c> through
+    /// <c>RowAttributes</c>, so a screen reader announces it while arrowing through the rows.
+    /// </summary>
+    [Fact]
+    public void RowClassSection_CurrentRow_CarriesAriaCurrent_AndOtherRowsDoNot_AlsoAfterAClick()
+    {
+        var cut = Render<DataTablePage>();
+
+        void AssertOnlyTheClassedRowIsCurrent(string testId, string expectedName)
+        {
+            var table = cut.Find($"[data-testid='{testId}']");
+            var current = table.QuerySelectorAll("tbody tr.demo-dt-row--current");
+            current.Should().HaveCount(1);
+            current[0].TextContent.Should().Contain(expectedName);
+            current[0].GetAttribute("aria-current").Should().Be("true");
+
+            table.QuerySelectorAll("tbody tr:not(.demo-dt-row--current)").Should().NotBeEmpty();
+            table.QuerySelectorAll("tbody tr:not(.demo-dt-row--current)")
+                .Should().OnlyContain(r => r.GetAttribute("aria-current") == null);
+            table.QuerySelectorAll("tbody tr[aria-current]").Should().HaveCount(1);
+        }
+
+        AssertOnlyTheClassedRowIsCurrent("dt-rowclass-wide", "Grace Hopper");
+        AssertOnlyTheClassedRowIsCurrent("dt-rowclass-cards", "Grace Hopper");
+
+        cut.Find("[data-testid='dt-rowclass-wide']").QuerySelectorAll("tbody tr")
+            .Single(r => r.TextContent.Contains("Alan Turing")).Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            AssertOnlyTheClassedRowIsCurrent("dt-rowclass-wide", "Alan Turing");
+            AssertOnlyTheClassedRowIsCurrent("dt-rowclass-cards", "Alan Turing");
+        });
+    }
+
+    [Fact]
+    public void RowClassSection_CardTables_CarryTheIdColumnWidthInTheMarkup_AndTheCardsLayout()
+    {
+        var cut = Render<DataTablePage>();
+
+        foreach (var id in new[] { "dt-rowclass-wide", "dt-rowclass-cards" })
+        {
+            var table = cut.Find($"[data-testid='{id}']");
+            table.QuerySelector(".tm-data-table-wrapper--cards.tm-data-table-wrapper--container").Should().NotBeNull();
+            table.QuerySelector("tbody td[data-label='ID']")!.GetAttribute("style").Should().Contain("width:72px");
+        }
+    }
+
     private sealed class DemoApiHandler : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(

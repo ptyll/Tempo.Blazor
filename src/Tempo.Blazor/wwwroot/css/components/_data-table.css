@@ -1526,6 +1526,29 @@
     background: var(--tm-bg-surface);
   }
 
+  /* A card is stacked, so it is as wide as the card. The column's Width / MinWidth reach the cell as an
+     INLINE style (they size the column of the wide table), and an inline declaration beats every
+     selector — a 72px column kept its cell, and with it the label of its card row, at 72px (an "ID"
+     label broke letter by letter). Only `!important` can win against it, and only here: a wide
+     container keeps the table, where those widths are the column sizing. The docked checkbox cell is
+     the one cell that carries no column style and must stay shrink-to-fit (`inline-size: auto` below),
+     so it is excluded — `width !important` would out-rank that `inline-size` and stretch it. */
+  .tm-data-table-wrapper--card .tm-data-table tbody td:not(.tm-col-check),
+  .tm-data-table-wrapper--cards .tm-data-table tbody td:not(.tm-col-check) {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* The card list is not framed: each card is already a bordered surface, and the scroll box's own
+     frame (plus its negative bleed over the wrapper padding) boxed every card into one more box. */
+  .tm-data-table-wrapper--card .tm-data-table-scroll,
+  .tm-data-table-wrapper--cards .tm-data-table-scroll {
+    border: 0;
+    border-radius: 0;
+    margin: 0;
+    width: 100%;
+  }
+
   .tm-data-table-wrapper--card .tm-data-table tbody td,
   .tm-data-table-wrapper--cards .tm-data-table tbody td {
     display: flex;
@@ -1586,7 +1609,9 @@
     align-items: center;
     justify-content: center;
   }
-  .tm-data-table-wrapper--cards .tm-data-table tbody td[data-card-role="Title"] {
+  /* Only a row that HAS the docked checkbox reserves its corner: on a table without Selectable the
+     reserve only pushed the title's value column away from every other row's value. */
+  .tm-data-table-wrapper--cards .tm-data-table tbody tr:has(> td.tm-col-check) td[data-card-role="Title"] {
     padding-inline-end: calc(var(--tm-touch-target) + var(--tm-space-1));
   }
 
@@ -1649,10 +1674,16 @@
 }
 
 /* The mobile sort and filter buttons exist in the markup whenever Cards is on,
-   and only a narrow container reveals them. A wide container keeps the header. */
-.tm-data-table-mobile-only { display: none; }
+   and only a narrow container reveals them. A wide container keeps the header.
+   The wrapper in the selector is the point: the Sort control is a TmDropdown whose own root rule
+   (`.tm-dropdown-wrapper { display: inline-flex }`) and the Filters button's layout rule
+   (`.tm-data-table-cards-toolbar__filter`) are both a bare class, i.e. the SAME specificity as the bare
+   `.tm-data-table-mobile-only`, and _dropdown.css is imported after this file — so the later rule won and
+   both controls showed on a desktop, next to a header that already sorts and filters. (0,2,0) wins at
+   every import order; the narrow reveal repeats it so the hide cannot win back. */
+.tm-data-table-wrapper .tm-data-table-mobile-only { display: none; }
 @container tm-data-table (width < 640px) {
-  .tm-data-table-mobile-only { display: inline-flex; }
+  .tm-data-table-wrapper .tm-data-table-mobile-only { display: inline-flex; }
 }
 
 /* "Page X of Y" is revealed by the container, never by a parameter. Below the
@@ -1707,7 +1738,8 @@
   .tm-page-btn,
   .tm-data-table-cards-toolbar__sort,
   .tm-data-table-cards-toolbar__filter,
-  .tm-data-table-cards-toolbar__sort .tm-dropdown-trigger {
+  .tm-data-table-cards-toolbar__sort .tm-dropdown-trigger,
+  .tm-data-table-wrapper .tm-column-picker-toggle {
     min-inline-size: var(--tm-touch-target);
     min-block-size: var(--tm-touch-target);
   }
