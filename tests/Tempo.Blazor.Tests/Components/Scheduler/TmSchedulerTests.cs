@@ -23,6 +23,49 @@ public class TmSchedulerTests : LocalizationTestBase
         cut.Find(".tm-scheduler").Should().NotBeNull();
     }
 
+    /// <summary>
+    /// S1/S2: a statically rendered (prerender) tree never reaches <see cref="TmScheduler.OnAfterRenderAsync"/>,
+    /// so its <c>DisposeAsync</c> must not attempt JS interop at all — the interop runtime refuses
+    /// those calls with InvalidOperationException, and every discarded prerender circuit used to
+    /// spam the host event log with unhandled dispose exceptions. The fix is the <c>!_rendered</c>
+    /// early return; the old band-aid (swallowing InvalidOperationException in the catch) is gone.
+    /// Strict JSInterop: any invocation would fail this test loudly.
+    /// </summary>
+    [Fact]
+    public async Task DisposeAsync_WithoutOnAfterRender_PerformsNoJsInterop_AndDoesNotThrow()
+    {
+        JSInterop.Mode = JSRuntimeMode.Strict;
+
+        // An instance whose OnAfterRenderAsync never ran — exactly the prerender-tree instance the
+        // framework creates and discards. Created outside the render pipeline on purpose.
+        var prerendered = new TmScheduler();
+
+        Func<Task> dispose = () => prerendered.DisposeAsync().AsTask();
+        await dispose.Should().NotThrowAsync(
+            "a never-rendered scheduler's dispose is pure state cleanup — no JS attach ever happened, so nothing may be detached");
+
+        JSInterop.Invocations.Should().BeEmpty(
+            "DisposeAsync without OnAfterRender must not touch JS interop (the !_rendered guard)");
+    }
+
+    /// <summary>
+    /// The contrast half of the S2 contract: a RENDERED scheduler must still detach its browser
+    /// listeners on dispose — the prerender guard must only skip the never-rendered window, not
+    /// amputate the interactive path. Loose JSInterop records every call, so the detach invocations
+    /// prove the guard did not swallow a rendered component's teardown.
+    /// </summary>
+    [Fact]
+    public async Task DisposeAsync_AfterRender_StillDetachesTheBrowserListeners()
+    {
+        var cut = Render<TmScheduler>(); // OnAfterRender ran → _rendered
+
+        Func<Task> dispose = () => cut.Instance.DisposeAsync().AsTask();
+        await dispose.Should().NotThrowAsync("circuit-level JS failures stay swallowed on dispose");
+
+        JSInterop.VerifyInvoke("TempoBlazor.Scheduler.detachPrintListener", 1);
+        JSInterop.VerifyInvoke("TempoBlazor.Scheduler.releaseEscape", 1);
+    }
+
     [Fact]
     public void Renders_Toolbar()
     {

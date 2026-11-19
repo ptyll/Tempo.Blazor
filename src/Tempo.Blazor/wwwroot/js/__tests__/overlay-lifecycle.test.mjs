@@ -242,10 +242,16 @@ test('escape on a focus trap defers the anchor restore until the panel hides', a
     await new Promise(r => setTimeout(r, 0));
 });
 
-test('a vetoed trap dismissal drops the deferred anchor restore', async () => {
+test('a vetoed trap dismissal keeps the deferred anchor restore armed (a REAL veto keeps the panel open)', async () => {
+    // With NotifyDismissedAsync answering `_disposed || !IsVisible`, accepted=false means exactly
+    // one thing: the consumer really keeps the panel open (a controlled veto). The deferred
+    // restore stays armed — it can only fire on a later close, under hidePanel's focusWentNowhere
+    // guard (see the next test) — and a dismissal through a DIFFERENT reason clears it outright
+    // (see the outside-click test below).
+    const focusCalls = [];
     const insidePanel = { isConnected: true };
     installDomStubs({ activeElement: insidePanel });
-    const anchor = { ...stubAnchor(), focus() {} };
+    const anchor = { ...stubAnchor(), focus: () => focusCalls.push('anchor') };
     const entry = {
         key: 'trap-veto',
         panel: { ...stubPanel(), contains: el => el === insidePanel },
@@ -258,9 +264,66 @@ test('a vetoed trap dismissal drops the deferred anchor restore', async () => {
     assert.equal(dismiss(entry, 'escape'), true);
     assert.equal(entry.restoreAnchorOnClose, anchor, 'the restore is armed while the callback runs');
     await new Promise(r => setTimeout(r, 0));
+    assert.equal(entry.restoreAnchorOnClose, anchor,
+        'a veto keeps the deferred restore armed; only hidePanel\u2019s focusWentNowhere guard may drop it');
+    assert.equal(entry.dismissed, false, 'a veto still re-arms the entry for the next Escape');
+    assert.deepEqual(focusCalls, [], 'the veto itself restores nothing — the trap still holds the page inert');
+});
+
+test('a vetoed Escape followed by an outside dismissal restores NOTHING — the pointer path owns that dismissal', async () => {
+    // O1: a dismissal by another reason after a vetoed Escape must clear the still-armed anchor
+    // restore. The user has now aimed at a concrete target; the deferred "focus went nowhere"
+    // contract belongs to the keyboard path alone, so the outside dismissal may not pull focus
+    // back to the anchor.
+    const focusCalls = [];
+    const insidePanel = { isConnected: true };
+    installDomStubs({ activeElement: insidePanel });
+    const anchor = { ...stubAnchor(), focus: () => focusCalls.push('anchor') };
+    const entry = {
+        key: 'veto-then-outside',
+        panel: { ...stubPanel(), contains: el => el === insidePanel },
+        anchor,
+        dotNetRef: { invokeMethodAsync: async () => false },
+        options: { closeOnEscape: true, trapFocus: true },
+        dismissed: false,
+    };
+
+    assert.equal(dismiss(entry, 'escape'), true);
+    await new Promise(r => setTimeout(r, 0)); // the veto resolves; the restore stays armed
+    assert.equal(entry.dismissed, false, 'precondition: the veto re-armed the entry');
+    assert.equal(entry.restoreAnchorOnClose, anchor, 'precondition: the restore the Escape armed is still there');
+
+    dismiss(entry, 'outside'); // the user clicks somewhere concrete instead
     assert.equal(entry.restoreAnchorOnClose, null,
-        'a veto keeps the panel open, so a later close must not yank focus back');
-    assert.equal(entry.dismissed, false);
+        'the outside dismissal must drop the restore the vetoed Escape had armed');
+    assert.equal(entry.dismissed, true, 'the outside dismissal runs (the entry was re-armed)');
+    await new Promise(r => setTimeout(r, 0));
+    assert.deepEqual(focusCalls, [], 'no path may restore the anchor after the user clicked outside');
+});
+
+test('a kept restore still no-ops when the user focused a real target before the close', async () => {
+    // The guard half of the contract above: vetoed Escape keeps restoreAnchorOnClose armed, but a
+    // close that happens after the user focused something real must not yank that focus back.
+    const focusCalls = [];
+    let onKeyDown;
+    const insidePanel = { isConnected: true };
+    const realTarget = { isConnected: true };
+    installDomStubs({
+        activeElement: insidePanel,
+        captureKeydown: fn => { onKeyDown = fn; },
+    });
+    const anchor = { ...stubAnchor(), focus: () => focusCalls.push('anchor') };
+    const panel = { ...stubPanel(), contains: el => el === insidePanel };
+    open('veto-guard', panel, anchor, { invokeMethodAsync: async () => false }, { trapFocus: true });
+
+    onKeyDown({ key: 'Escape', preventDefault() {}, stopImmediatePropagation() {} });
+    await new Promise(r => setTimeout(r, 0)); // the veto resolves; the restore stays armed
+
+    globalThis.document.activeElement = realTarget; // the user engaged something else meanwhile
+    close('veto-guard');
+    assert.deepEqual(focusCalls, [],
+        'hidePanel restores only when focus went nowhere — a real target keeps it');
+    await new Promise(r => setTimeout(r, 0));
 });
 
 test('an accepted dismissal (dotNetRef resolves true) keeps entry.dismissed', async () => {

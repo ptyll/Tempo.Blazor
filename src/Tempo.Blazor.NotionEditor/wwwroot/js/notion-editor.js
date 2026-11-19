@@ -13,6 +13,24 @@
  *   26.9  Scroll / nav         — scrollToBlock / initSmoothScrollSpy / destroyScrollSpy
  *   30.1  Cover drag           — startCoverDrag
  */
+
+// Prewarm the core overlay modules this editor's floating menus rely on. Every floating menu
+// (slash, mention, block context menu, page settings …) is a TmOverlayPanel: its Escape dismissal
+// and its mobile-sheet focus trap arm from overlay.js / tm-focus-trap.js, whose FIRST import per
+// document used to ride the same interop call that opens the menu — under load that delayed the
+// armed document-level Escape listener long enough for an open menu to swallow its first Escape
+// (the panel then stayed visible forever, NotionPhase6MenusE2ETests). Importing both here — at
+// script parse time, long before any menu opens — shrinks that window to a single queued interop.
+// Fire-and-forget: a missing module must never break the editor, and under the node test runner
+// the specifier simply resolves to nothing (the rejection is handled). The specifiers resolve the
+// way data-table.js resolves its helpers: a relative './_content/…' string is resolved against the
+// IMPORTING MODULE's URL (…/_content/Tempo.Blazor.NotionEditor/js/ → a 404), so the URL is built
+// from <base href> and passed to import() as an absolute string.
+try {
+    import(new URL('_content/Tempo.Blazor/js/overlay.js', document.baseURI).href).catch(() => { });
+    import(new URL('_content/Tempo.Blazor/js/tm-focus-trap.js', document.baseURI).href).catch(() => { });
+} catch { /* a runtime without dynamic import keeps today's lazy behavior */ }
+
 window.tmNotionEditor = (function () {
     'use strict';
 
@@ -695,6 +713,80 @@ window.tmNotionEditor = (function () {
         if (first) first.focus({ preventScroll: true });
     }
 
+    // The menu search inputs (slash, mention, token) win focus through a short re-assert loop: the
+    // keystroke that opens a menu also queues a content update whose render refocuses the block's
+    // editable a frame later and would silently steal the typing target back. The loop must DIE
+    // when the menu closes — otherwise its later frames steal the close-path's block refocus
+    // (cancelMentionTrigger & friends) back onto an input that the close render is about to
+    // REMOVE, dumping keyboard focus on <body> after Escape (NotionPhase6Menus focus misses).
+    let _menuInputFocusCancel = null;
+    function cancelMenuInputFocus() {
+        if (_menuInputFocusCancel) {
+            _menuInputFocusCancel();
+            _menuInputFocusCancel = null;
+        }
+    }
+    // The root of the menu that is closing: the floating menu, mobile sheet or drawer the focus
+    // currently sits in. Captured by the closer BEFORE it touches the focus, because the restore's
+    // own focus() moves it away from the menu.
+    function _closingMenuRoot() {
+        const active = document.activeElement;
+        return active && typeof active.closest === 'function'
+            ? active.closest('.tm-notion-floating-menu, .tm-overlay-panel-sheet, .tm-drawer')
+            : null;
+    }
+    // Hands the focus back to the block a menu was opened from. On a MOBILE sheet the page behind it is
+    // still `inert` while the close handlers run (the sheet's trap releases it a render later), so a
+    // plain focus() is a silent no-op there and the removed search input drops the focus on <body>.
+    // The restore therefore re-asserts on the next frames — only while the focus is still homeless
+    // (body / detached / still inside THE menu that is closing), so a deliberate focus move by the
+    // user — onto another control or into another dialog — is never overridden. Bounded and
+    // cancelled by the next menu focus loop.
+    // `afterNode` (optional): a child of `el` the caret returns right behind (the click-to-edit status
+    // chip) instead of the end of the block.
+    function restoreBlockFocus(el, menuRoot = _closingMenuRoot(), afterNode = null) {
+        if (!el) return;
+        // A block that is itself inside the closing menu root (a block hosted in a drawer) is not "the
+        // menu": the focus on it — or on anything in it — is already home.
+        if (menuRoot && menuRoot.contains(el)) menuRoot = null;
+        // "Still needs a home": the focus is on <body>, on a detached node, or still inside the menu
+        // being closed (a focus() against an inert page is a silent no-op, so the search input keeps
+        // the focus until the sheet releases the page). Any other real element — another dialog
+        // included — already has a home and is left alone.
+        const needsHome = () => {
+            const active = document.activeElement;
+            if (!active || active === document.body || active.isConnected === false) return true;
+            if (el.contains(active)) return false;
+            return !!menuRoot && menuRoot.contains(active);
+        };
+        const _placeCaret = () => {
+            if (afterNode && afterNode.isConnected && el.contains(afterNode)) {
+                el.focus();
+                const r = document.createRange();
+                r.setStartAfter(afterNode);
+                r.collapse(true);
+                _applyRange(r);
+            } else {
+                _setCursorAtEnd(el);
+            }
+        };
+        if (!needsHome()) return;
+        _placeCaret();
+        if (!needsHome() || typeof requestAnimationFrame !== 'function') return;
+        let attempts = 0;
+        let cancelled = false;
+        const cancel = () => { cancelled = true; };
+        _menuInputFocusCancel = cancel;
+        const retry = () => {
+            if (cancelled || !el.isConnected || ++attempts > 40 || !needsHome()) {
+                if (_menuInputFocusCancel === cancel) _menuInputFocusCancel = null;
+                return;
+            }
+            _placeCaret();
+            requestAnimationFrame(retry);
+        };
+        requestAnimationFrame(retry);
+    }
     // Floating menus open while the editor is still settling the keystroke that
     // triggered them: the same input event queues a Blazor content update whose
     // render can refocus the block's editable a frame or two AFTER the menu's
@@ -704,9 +796,16 @@ window.tmNotionEditor = (function () {
     // is done the input keeps focus for good.
     function focusMenuInput(el) {
         if (!el) return;
+        cancelMenuInputFocus(); // one live loop per document
         let attempts = 0;
+        let cancelled = false;
+        const cancel = () => { cancelled = true; };
+        _menuInputFocusCancel = cancel;
         const tryFocus = () => {
-            if (!el.isConnected || ++attempts > 10) return;
+            if (cancelled || !el.isConnected || ++attempts > 10) {
+                if (_menuInputFocusCancel === cancel) _menuInputFocusCancel = null;
+                return;
+            }
             // CF18-3: a deliberate focus move (user Tabbed/clicked onto a real element —
             // not the document body and not this menu's target) must win over the
             // re-assert. The contenteditable case is different: that is the render-queued
@@ -2412,14 +2511,24 @@ window.tmNotionEditor = (function () {
 
     function insertSlashHtml(html) {
         if (!_slashElement) return;
+        const element = _slashElement;
+        // The picker that triggered the insert closes with it: capture ITS root before the focus moves,
+        // and stop its input's re-assert loop from stealing the focus back.
+        const menuRoot = _closingMenuRoot();
+        cancelMenuInputFocus();
+        let inserted = null;
         try {
-            _slashElement.focus();
+            element.focus();
             const range = _slashTriggerRange();
             if (range) {
-                _replaceRangeWithHtml(range, html);
-                _slashElement.dispatchEvent(new Event('input', { bubbles: true }));
+                inserted = _replaceRangeWithHtml(range, html);
+                element.dispatchEvent(new Event('input', { bubbles: true }));
             }
         } catch { /* ignore edge cases */ }
+        // On a mobile sheet the page is still inert, so the focus() above was a no-op and the removed
+        // picker input would leave the focus on <body>: retry like every other menu close, with the
+        // caret kept right behind the inserted node.
+        restoreBlockFocus(element, menuRoot, inserted);
         _slashElement = null;
         _slashAnchorNode = null;
         _slashAnchorOff = 0;
@@ -2474,43 +2583,75 @@ window.tmNotionEditor = (function () {
     }
 
     function replaceActiveStatusChip(html, blockId, chipIndex) {
+        // Same hand-back as every other menu close (see insertSlashHtml): capture the closing picker's
+        // root before the focus moves and stop its input's re-assert loop. This happens BEFORE the chip
+        // is looked up, so the picker closes (and the focus comes home) even when the chip is gone.
+        const menuRoot = _closingMenuRoot();
+        cancelMenuInputFocus();
+
         let chip = _statusChipBeingEdited
             || document.querySelector('.tm-notion-status[data-tm-status-editing="true"]');
-        if ((!chip || !chip.isConnected) && blockId && Number.isInteger(chipIndex) && chipIndex >= 0) {
-            const block = document.querySelector(`[data-block-id="${CSS.escape(blockId)}"] [contenteditable="true"]`);
-            chip = block?.querySelectorAll('.tm-notion-status')?.[chipIndex] || null;
+        if (chip && !chip.isConnected) chip = null;
+        const block = blockId
+            ? document.querySelector(`[data-block-id="${CSS.escape(blockId)}"] [contenteditable="true"]`)
+            : null;
+        if (!chip && block && Number.isInteger(chipIndex) && chipIndex >= 0) {
+            chip = block.querySelectorAll('.tm-notion-status')?.[chipIndex] || null;
         }
-        if (!chip) return;
-        const editor = chip.closest('[contenteditable="true"]');
-        if (!editor) return;
+        const editor = chip ? chip.closest('[contenteditable="true"]') : null;
+        if (!editor) {
+            // Nothing to replace (the chip was re-rendered away / detached while the picker was open):
+            // the picker is closing all the same — drop the edit state and hand the focus to the block
+            // the chip belonged to, when it can still be found.
+            _clearStatusEditState();
+            if (block) restoreBlockFocus(block, menuRoot);
+            return;
+        }
 
+        let inserted = null;
         try {
             const range = document.createRange();
             range.selectNode(chip);
-            const inserted = _replaceRangeWithHtml(range, html);
-            if (inserted) {
-                const caret = document.createRange();
-                caret.setStartAfter(inserted);
-                caret.collapse(true);
-                _applyRange(caret);
-            }
+            // _replaceRangeWithHtml parks the caret right behind the inserted node.
+            inserted = _replaceRangeWithHtml(range, html);
             editor.dispatchEvent(new Event('input', { bubbles: true }));
         } catch { /* ignore edge cases */ }
 
+        _clearStatusEditState();
+        restoreBlockFocus(editor, menuRoot, inserted);
+    }
+
+    function _clearStatusEditState() {
         _statusChipBeingEdited = null;
         document.querySelectorAll('.tm-notion-status[data-tm-status-editing="true"]')
             .forEach(existing => delete existing.dataset.tmStatusEditing);
     }
-
     function cancelStatusEdit() {
+        // The close hands the focus back to the block the picker was opened from: the slash
+        // element for a picker opened by "/status", the chip's own block for a click-to-edit.
+        // Without it the picker input's removal dumps the focus on <body> after Escape.
+        const editedChip = _statusChipBeingEdited;
+        const menuRoot = _closingMenuRoot();
+        cancelMenuInputFocus();
+        // A click-to-edit chip names its own block, which wins over a stale slash element.
+        const chipBlock = editedChip && editedChip.isConnected ? editedChip.closest('[contenteditable="true"]') : null;
+        const target = chipBlock || (_slashElement && _slashElement.isConnected ? _slashElement : null);
         _statusChipBeingEdited = null;
         document.querySelectorAll('.tm-notion-status[data-tm-status-editing="true"]')
             .forEach(existing => delete existing.dataset.tmStatusEditing);
+        if (target) {
+            restoreBlockFocus(target, menuRoot, chipBlock ? editedChip : null);
+        }
+        _slashElement    = null;
+        _slashAnchorNode = null;
+        _slashAnchorOff  = 0;
     }
 
     function refocusSlashElement() {
+        const menuRoot = _closingMenuRoot();
+        cancelMenuInputFocus(); // the slash search input's re-assert must not steal this back
         if (_slashElement) {
-            _setCursorAtEnd(_slashElement);
+            restoreBlockFocus(_slashElement, menuRoot);
         }
         _slashElement    = null;
         _slashAnchorNode = null;
@@ -2520,6 +2661,7 @@ window.tmNotionEditor = (function () {
     function insertMentionChip(mentionType, mentionId, displayText) {
         if (!_mentionElement) return;
         try {
+            cancelMenuInputFocus(); // the mention search input's re-assert must not steal this back
             _mentionElement.focus();
 
             const sel   = window.getSelection();
@@ -2568,9 +2710,12 @@ window.tmNotionEditor = (function () {
     }
 
     function cancelMentionTrigger() {
+        // Kill the menu input's focus re-assert FIRST: its remaining frames would steal the block
+        // refocus below back onto the (about-to-be-unmounted) search input and dump focus on <body>.
+        const menuRoot = _closingMenuRoot();
+        cancelMenuInputFocus();
         if (_mentionElement) {
-            _mentionElement.focus();
-            _setCursorAtEnd(_mentionElement);
+            restoreBlockFocus(_mentionElement, menuRoot);
         }
         _mentionElement    = null;
         _mentionAnchorNode = null;
@@ -2609,6 +2754,7 @@ window.tmNotionEditor = (function () {
     function insertNotionToken(key, displayName, colorClass) {
         if (!_tokenElement) return;
         try {
+            cancelMenuInputFocus(); // the token search input's re-assert must not steal this back
             _tokenElement.focus();
 
             const sel   = window.getSelection();
@@ -2662,9 +2808,12 @@ window.tmNotionEditor = (function () {
     }
 
     function cancelTokenTrigger() {
+        // Same ordering contract as cancelMentionTrigger: the input re-assert dies before the block
+        // refocus so the close cannot race it back onto the search input.
+        const menuRoot = _closingMenuRoot();
+        cancelMenuInputFocus();
         if (_tokenElement) {
-            _tokenElement.focus();
-            _setCursorAtEnd(_tokenElement);
+            restoreBlockFocus(_tokenElement, menuRoot);
         }
         _tokenElement    = null;
         _tokenAnchorNode = null;

@@ -1,6 +1,7 @@
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.JSInterop;
 using Tempo.Blazor.Components.Feedback;
 using Tempo.Blazor.Components.Overlay;
@@ -533,6 +534,83 @@ public class TmOverlayPanelTests : LocalizationTestBase
 
         await cut.InvokeAsync(() => cut.Instance.NotifyDismissedAsync("escape"));
         cut.FindAll(".tm-overlay-panel").Should().BeEmpty();
+    }
+
+    /// <summary>
+    /// O2: a panel whose consumer closes it by UNMOUNTING (a controlled <c>IsOpen=true</c> whose
+    /// <see cref="TmOverlayPanel.IsOpenChanged"/> handler removes it from the tree — e.g.
+    /// TmNotionBlockContextMenu) must answer the JS dismissal with ACCEPTED. Answering
+    /// <c>false</c> made overlay.js re-arm a vetoed entry that no later close() can ever release,
+    /// and the panel's Escape-restore never fired — focus stayed on <c>&lt;body&gt;</c>. The
+    /// panel instance is captured BEFORE the unmount: bUnit's wrapper refuses disposed components,
+    /// but the raw instance is exactly what the JS interop holds through its DotNetObjectReference.
+    /// </summary>
+    [Fact]
+    public async Task NotifyDismissed_AnswersAccepted_WhenTheConsumerUnmountedThePanel()
+    {
+        var host = Render<UnmountingPanelHost>();
+        var panelInstance = host.FindComponent<TmOverlayPanel>().Instance;
+
+        // The consumer's IsOpenChanged(false) removes the panel from the tree (the host re-renders
+        // without it); the renderer tears the removed subtree down in the same render pass. Both
+        // invocations run ON the dispatcher (through the still-alive host).
+        await host.InvokeAsync(async () => await panelInstance.SetOpenAsync(false));
+        host.FindComponents<TmOverlayPanel>().Should().BeEmpty("the host unmounted the panel instead of closing it");
+
+        // The JS-side dismissal landing after that unmount must read as ACCEPTED — the component
+        // is disposed even though its pinned IsOpen=true never flipped. The raw instance is what
+        // the interop holds (the bUnit wrapper refuses disposed components).
+        bool? answer = null;
+        await host.InvokeAsync(async () => answer = await panelInstance.NotifyDismissedAsync("escape"));
+        answer.Should().BeTrue(
+            "an unmounted (disposed) panel answers accepted — a false here re-arms a dead overlay.js entry");
+    }
+
+    /// <summary>
+    /// The contrast half of the O2 contract: a LIVE pinned panel (IsOpen=true, consumer ignores
+    /// the callback) still answers VETO, so overlay.js keeps re-arming it for the next Escape.
+    /// </summary>
+    [Fact]
+    public async Task NotifyDismissed_AnswersVeto_WhenALivePinnedPanelStaysOpen()
+    {
+        var cut = Render<TmOverlayPanel>(p => p
+            .Add(x => x.IsOpen, true)
+            .Add(x => x.IsOpenChanged, EventCallback.Factory.Create<bool>(this, _ => { }))
+            .AddChildContent("<p>panel</p>"));
+
+        var answer = await cut.InvokeAsync(() => cut.Instance.NotifyDismissedAsync("escape"));
+
+        answer.Should().BeFalse("a consumer that keeps the panel open vetoes the dismissal (N167)");
+    }
+}
+
+/// <summary>
+/// The O2 fixture parent: a controlled <c>IsOpen=true</c> panel whose <see cref="TmOverlayPanel.IsOpenChanged"/>
+/// handler closes by UNMOUNTING (the pinned tree is deleted) instead of flipping its own binding.
+/// </summary>
+internal sealed class UnmountingPanelHost : ComponentBase
+{
+    private bool _open = true;
+
+    protected override void BuildRenderTree(RenderTreeBuilder builder)
+    {
+        if (!_open)
+        {
+            return;
+        }
+
+        builder.OpenComponent<Tempo.Blazor.Components.Overlay.TmOverlayPanel>(0);
+        builder.AddAttribute(1, "IsOpen", true);
+        builder.AddAttribute(2, "IsOpenChanged", EventCallback.Factory.Create<bool>(this, value =>
+        {
+            if (!value)
+            {
+                _open = false;
+                StateHasChanged();
+            }
+        }));
+        builder.AddAttribute(3, "ChildContent", (RenderFragment)(b => b.AddContent(0, "panel")));
+        builder.CloseComponent();
     }
 }
 

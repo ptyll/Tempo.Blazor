@@ -464,6 +464,11 @@
     /// <summary>Triggers the one-time browser zone probe after the first interactive render.</summary>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // Guards DisposeAsync: a statically-rendered (prerender) tree never reaches this method,
+        // so its dispose must not attempt JS interop at all — the interop runtime refuses it with
+        // InvalidOperationException and every discarded prerender circuit used to spam the host
+        // event log with unhandled dispose exceptions.
+        _rendered = true;
         _printRendered?.TrySetResult();
 
         if (firstRender)
@@ -519,6 +524,14 @@
     {
         _userZoneObserver?.Dispose();
         _printRef?.Dispose();
+        if (!_rendered)
+        {
+            // A prerender-only tree attached no browser listener (OnAfterRender never ran on the
+            // static circuit), so there is nothing to detach and the interop runtime would refuse
+            // the calls anyway (statically rendered).
+            return;
+        }
+
         try
         {
             await JS.InvokeVoidAsync("TempoBlazor.Scheduler.detachPrintListener", _rootRef);
@@ -528,9 +541,13 @@
                 await JS.InvokeVoidAsync("TempoBlazor.Scheduler.detachScrollGuard", _rootRef);
             }
         }
-        catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException)
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException
+            or ObjectDisposedException)
         {
-            // The circuit is already gone, so there is no listener left to remove.
+            // The circuit is already gone, so there is no listener left to remove. The
+            // statically-rendered (prerender) tree never gets this far: thanks to the !_rendered
+            // early return above, the dispose no longer throws InvalidOperationException after a
+            // static prerender.
         }
     }
 
@@ -540,6 +557,7 @@
     private string BodyLabel => SchedulerViewLabel.Of(Loc, View);
     private ElementReference _rootRef;
     private bool _scrollGuardAttached;
+    private bool _rendered;
 
     private IReadOnlyList<TmActionItem> ActionBarItems(TmLayoutContext mode)
     {

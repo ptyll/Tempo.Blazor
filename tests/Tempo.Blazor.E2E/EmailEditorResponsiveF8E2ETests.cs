@@ -24,6 +24,18 @@ public sealed class EmailEditorResponsiveF8E2ETests : EmailTemplateE2ETestBase
 {
     private const string EditorRoute = "/email-templates/edit/11111111-1111-1111-1111-111111111111";
 
+    /// <summary>
+    /// The 44px touch-target floor is <c>--tm-touch-target: 2.75rem</c>, so a live
+    /// <c>getBoundingClientRect()</c> reports the computed layout size as float32: under Chromium
+    /// font/zoom fractioning the same 44px element can measure 43.99997. The contract being
+    /// asserted (min-block-size is applied under a coarse pointer) is unaffected, so the floor
+    /// comparisons tolerate that measurement noise instead of failing a correct layout. (The
+    /// sheet-row probe in NotionPhase6MenusE2ETests.AssertSheetAsync applies the same idea with a
+    /// coarser tolerance — it counts rows below <c>min - 0.5</c>.)
+    /// </summary>
+    private const float TouchTargetMeasureEpsilon = 0.01f;
+    private const float TouchTargetPx = 44f;
+
     /// <summary>Opens the editor on an explicit viewport (and, on a phone, a real coarse-pointer context).</summary>
     private async Task<IPage> OpenEditorAsync(int width, int height, bool touch = false)
     {
@@ -215,7 +227,8 @@ public sealed class EmailEditorResponsiveF8E2ETests : EmailTemplateE2ETestBase
         (await expand.GetAttributeAsync("aria-label")).Should().Be("Properties");
         var box = await expand.BoundingBoxAsync();
         box.Should().NotBeNull();
-        box!.Height.Should().BeGreaterThanOrEqualTo(44, "a tablet is a coarse pointer: the target is finger-sized");
+        box!.Height.Should().BeGreaterThanOrEqualTo(TouchTargetPx - TouchTargetMeasureEpsilon,
+            "a tablet is a coarse pointer: the target is finger-sized");
 
         await expand.ClickAsync();
         await page.WaitForSelectorAsync("aside.tm-editor-shell__panel--right", new() { Timeout = 8000 });
@@ -575,7 +588,7 @@ public sealed class EmailEditorResponsiveF8E2ETests : EmailTemplateE2ETestBase
         var panelBox = await panel.BoundingBoxAsync();
         rowBox.Should().NotBeNull();
         panelBox.Should().NotBeNull();
-        rowBox!.Height.Should().BeGreaterThanOrEqualTo(44, "a coarse pointer needs a 44px row");
+        rowBox!.Height.Should().BeGreaterThanOrEqualTo(TouchTargetPx - TouchTargetMeasureEpsilon, "a coarse pointer needs a 44px row");
         (panelBox!.Width - rowBox.Width).Should().BeLessThan(24,
             "the rows fill the panel instead of hugging their label");
 
@@ -598,7 +611,7 @@ public sealed class EmailEditorResponsiveF8E2ETests : EmailTemplateE2ETestBase
         // U3 (jádro): a tab is primary navigation on a phone and is finger-sized under a coarse pointer.
         var tabBox = await page.Locator(".tm-editor-shell__tabs--region .tm-editor-shell__tab").First.BoundingBoxAsync();
         tabBox.Should().NotBeNull();
-        tabBox!.Height.Should().BeGreaterThanOrEqualTo(44, "a sheet/Tabs tab is a --tm-touch-target control");
+        tabBox!.Height.Should().BeGreaterThanOrEqualTo(TouchTargetPx - TouchTargetMeasureEpsilon, "a sheet/Tabs tab is a --tm-touch-target control");
         (await InlineOverflowAsync(page, "[data-tm-email-editor]")).Should().BeLessThanOrEqualTo(0);
 
         await SaveNamedViewportScreenshotAsync(page, "f8-editor-mobile-tabs-390.png");
@@ -624,13 +637,13 @@ public sealed class EmailEditorResponsiveF8E2ETests : EmailTemplateE2ETestBase
         // U3 (jádro): every sheet tab is a finger-sized target, not a 32px word.
         var tab = await page.Locator(".tm-editor-shell__sheet .tm-editor-shell__tab").First.BoundingBoxAsync();
         tab.Should().NotBeNull();
-        tab!.Height.Should().BeGreaterThanOrEqualTo(44,
+        tab!.Height.Should().BeGreaterThanOrEqualTo(TouchTargetPx - TouchTargetMeasureEpsilon,
             "--tm-touch-target under a coarse pointer (2.10.0: .tm-editor-shell__tab min-block-size)");
 
         // Item 12: Save is finger-sized too.
         var save = await page.Locator("[data-region='header'] [data-tm-save]").First.BoundingBoxAsync();
         save.Should().NotBeNull();
-        save!.Height.Should().BeGreaterThanOrEqualTo(44);
+        save!.Height.Should().BeGreaterThanOrEqualTo(TouchTargetPx - TouchTargetMeasureEpsilon);
 
         await SettleAsync(page);
         await SaveNamedViewportScreenshotAsync(page, "f8-editor-mobile-320.png");

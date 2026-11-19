@@ -111,7 +111,7 @@ npm run test:signing-runner    # Signing: signing-runner.js + signing-editor.js 
 npm run test:diagram-editor    # DiagramEditor: diagram-editor-touch.js + engine tests
 npm run test:email-templates   # EmailTemplates: tm-email-save-shortcut.js (Ctrl/⌘+S guard)
 npm run test:pdf-viewer        # PdfViewer: pdf-viewer-size/render/continuous/fit/download (RenderTask bookkeeping, continuous math incl. pageScrollTop)
-npm run test:notion-db-resize  # NotionEditor: wwwroot/js node tests (db resize/timeline + notion-editor-caret-reserve.test.mjs: caretReserveDelta/caretReserve)
+npm run test:notion-db-resize  # NotionEditor: wwwroot/js node tests, whole directory walked recursively (db resize/timeline + notion-editor-caret-reserve.test.mjs: caretReserveDelta/caretReserve + notion-editor-focus-restore.test.mjs: restoreBlockFocus / cancelStatusEdit)
 npm run test:wireframe         # Wireframe: wireframe-designer.js pointer/export tests + wireframe-gestures.mjs
 npm run test:spreadsheet       # Spreadsheet: canvas palette (tokens), SP1 density and header-highlight helpers in a vm sandbox
 npm run test:ai                # Tempo.Blazor.AI: ai-conversation.js (own-scroll suppression, gesture/scrollend release, detach cleanup) + ai-composer.js (Enter/IME guard, combobox suppression, autosize clamp, caret placement, speech wrapper, keyboard-inset tracker) + tm-autonomy-dial.js (arrow/Home/End preventDefault, idempotent attach/detach) + tm-scheduled-runs.js (Alt+arrow move chord: run-id resolution, modifier/key filtering, the shared attachKeyboardMove wrapper)

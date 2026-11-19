@@ -114,22 +114,55 @@ public abstract class PlaywrightTestBase
                 return;
             }
 
-            _playwright ??= await Microsoft.Playwright.Playwright.CreateAsync();
-            _browser = await _playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
+            // A tracked browser existed and is now dead/gone: this launch is a RELAUNCH, so it is
+            // recorded to TestResults/browser-relaunches.jsonl (H4) — the machine-readable half,
+            // next to host-restarts.jsonl. The very first launch of the run is not a relaunch.
+            var isRelaunch = _browser is not null || _playwright is not null;
+            await LaunchBrowserCoreAsync();
+            if (isRelaunch)
             {
-                Headless = _headless,
-                SlowMo = 100, // Add small delay between actions for stability
-                // Enable precise performance.memory.usedJSHeapSize for the navigation memory-leak
-                // probe; without the flag Chromium may omit the API entirely (returns 0 → NaN ratio).
-                // --expose-gc makes window.gc() real so the probe measures retained memory after
-                // collection — otherwise transient navigation allocations count as "growth".
-                Args = BrowserArgs
-            });
+                RecordBrowserRelaunch("browser-died-mid-run", testName: null);
+            }
         }
         finally
         {
             BrowserLock.Release();
         }
+    }
+
+    /// <summary>
+    /// B1 unit-test seam: when set, <see cref="LaunchBrowserCoreAsync"/> delegates the launch to
+    /// this fake instead of Playwright, so the harness unit tests can exercise the relaunch path
+    /// (and prove it no longer deadlocks on the re-entered <see cref="BrowserLock"/>) without a
+    /// real Chromium. Null return = "launched nothing"; callers reset the statics around the test.
+    /// </summary>
+    internal static Func<Task<IBrowser?>>? BrowserLaunchOverride { get; set; }
+
+    /// <summary>
+    /// The actual launch body, WITHOUT <see cref="BrowserLock"/>. B1: both <see cref="EnsureBrowserAsync"/>
+    /// and <see cref="ForceRelaunchBrowserAsync"/> need to launch under the lock, and SemaphoreSlim is
+    /// NOT reentrant — ForceRelaunch holding the lock while calling EnsureBrowserAsync deadlocked the
+    /// shard the moment the wedged-browser recovery in <see cref="CreateContextAsync"/> first fired.
+    /// </summary>
+    private static async Task LaunchBrowserCoreAsync()
+    {
+        if (BrowserLaunchOverride is not null)
+        {
+            _browser = await BrowserLaunchOverride().WaitAsync(BrowserCallTimeout);
+            return;
+        }
+
+        _playwright ??= await Microsoft.Playwright.Playwright.CreateAsync().WaitAsync(BrowserCallTimeout);
+        _browser = await _playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
+        {
+            Headless = _headless,
+            SlowMo = 100, // Add small delay between actions for stability
+            // Enable precise performance.memory.usedJSHeapSize for the navigation memory-leak
+            // probe; without the flag Chromium may omit the API entirely (returns 0 → NaN ratio).
+            // --expose-gc makes window.gc() real so the probe measures retained memory after
+            // collection — otherwise transient navigation allocations count as "growth".
+            Args = BrowserArgs
+        }).WaitAsync(BrowserCallTimeout);
     }
 
     /// <summary>
@@ -179,7 +212,7 @@ public abstract class PlaywrightTestBase
         {
             if (_browser != null)
             {
-                await _browser.CloseAsync();
+                await _browser.CloseAsync().WaitAsync(TimeSpan.FromSeconds(30));
                 _browser = null;
             }
             _playwright?.Dispose();
@@ -201,14 +234,32 @@ public abstract class PlaywrightTestBase
     /// </param>
     protected async Task<IBrowserContext> CreateContextAsync(bool hasTouch = false)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var options = new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = 1280, Height = 720 },
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
             AcceptDownloads = true,
             HasTouch = hasTouch
-        });
+        };
+
+        // A wedged browser answers IsConnected (its process lives) while protocol calls never
+        // return — the shard-1 stall of 2026-11-18: the last test wrote its screenshot at 14:13
+        // and the next NewContextAsync never came back, so the shard sat silent ~38 minutes until
+        // it was killed externally, producing no TRX at all. Bound the call and treat a timeout as
+        // "this browser is a corpse": relaunch once and let the retry ride the fresh browser.
+        IBrowserContext context;
+        try
+        {
+            context = await Browser.NewContextAsync(options).WaitAsync(BrowserCallTimeout);
+        }
+        catch (TimeoutException)
+        {
+            Console.WriteLine($"[e2e] Browser.NewContextAsync did not return within {BrowserCallTimeout.TotalSeconds:0}s — the shared browser looks wedged; relaunching it and retrying once.");
+            await ForceRelaunchBrowserAsync(TestContext.TestName);
+            context = await Browser.NewContextAsync(options).WaitAsync(BrowserCallTimeout);
+        }
+
         if (ShouldCollectTraceOnFailure())
         {
             await context.Tracing.StartAsync(new TracingStartOptions
@@ -216,12 +267,80 @@ public abstract class PlaywrightTestBase
                 Screenshots = true,
                 Snapshots = true,
                 Sources = true
-            });
+            }).WaitAsync(BrowserCallTimeout);
             _contextsWithTrace.Add(context);
         }
 
         _contextsToDispose.Add(context);
         return context;
+    }
+
+    /// <summary>
+    /// The wall-clock ceiling for ONE Playwright lifecycle call (create/close a context, launch or
+    /// close the browser). Generous on purpose — under parallel load these legitimately take
+    /// seconds — but a call that exceeds it has never come back in practice: the transport is
+    /// wedged and only a relaunch helps (see <see cref="CreateContextAsync"/>).
+    /// </summary>
+    private static readonly TimeSpan BrowserCallTimeout = TimeSpan.FromSeconds(90);
+
+    /// <summary>
+    /// Treats the shared browser as dead even when its process still runs: abandons the corpse
+    /// (its teardown is bounded too — a wedged pipe never answers Close/Dispose) and relaunches a
+    /// fresh Playwright + Chromium, so one wedged browser costs ONE loud retry instead of a silent
+    /// multi-hour stall of the whole shard. Internal so the harness unit tests can drive it with
+    /// <see cref="BrowserLaunchOverride"/>.
+    /// </summary>
+    internal static async Task ForceRelaunchBrowserAsync(string? testName = null)
+    {
+        await BrowserLock.WaitAsync();
+        try
+        {
+            var staleBrowser = _browser;
+            var stalePlaywright = _playwright;
+            _browser = null;
+            _playwright = null;
+            if (staleBrowser is not null || stalePlaywright is not null)
+            {
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        if (staleBrowser is not null)
+                        {
+                            await staleBrowser.CloseAsync().WaitAsync(TimeSpan.FromSeconds(10));
+                        }
+
+                        stalePlaywright?.Dispose();
+                    }
+                    catch
+                    {
+                        // The corpse stays a corpse; its processes leave with the test run.
+                    }
+                });
+            }
+
+            // B1: launch through the lock-free core. Calling EnsureBrowserAsync() here — while THIS
+            // method already holds BrowserLock — deadlocked on the non-reentrant semaphore.
+            await LaunchBrowserCoreAsync();
+            RecordBrowserRelaunch("wedged-browser-force-relaunch", testName);
+        }
+        finally
+        {
+            BrowserLock.Release();
+        }
+    }
+
+    /// <summary>
+    /// H4: snapshots the shared browser statics so the harness unit tests can run the relaunch
+    /// path without a browser and leave a concurrent real Playwright class untouched.
+    /// </summary>
+    internal static (IBrowser? Browser, IPlaywright? Playwright) SnapshotBrowserForTest() => (_browser, _playwright);
+
+    /// <summary>Restores what <see cref="SnapshotBrowserForTest"/> captured.</summary>
+    internal static void RestoreBrowserForTest(IBrowser? browser, IPlaywright? playwright)
+    {
+        _browser = browser;
+        _playwright = playwright;
     }
 
     /// <summary>Tracks a context this test opened itself, so cleanup closes it.</summary>
@@ -265,10 +384,42 @@ public abstract class PlaywrightTestBase
 
                 await WaitForAppReadyAsync(page);
             },
-            () => string.Equals(page.Url, "about:blank", StringComparison.OrdinalIgnoreCase)
+            async () =>
+            {
+                // The readiness gate timed out. Besides a slow first boot, the other cause is a host
+                // that DIED while the app was booting (observed 2026-11-18: Demo WASM died mid-run and
+                // the recovery reload landed on net::ERR_CONNECTION_REFUSED). Resurrect the hosts the
+                // same way a ClassInitialize would BEFORE the reload, and once more if the reload
+                // itself still meets a refused connection (the host died between the probe and the
+                // reload). A second refusal still propagates — the recovery stays bounded.
+                await RecoverDemoHostsAsync();
+                try
+                {
+                    await ReloadOrNavigateAsync();
+                }
+                catch (PlaywrightException ex) when (IsConnectionRefused(ex))
+                {
+                    await RecoverDemoHostsAsync();
+                    await ReloadOrNavigateAsync();
+                }
+            });
+
+        return;
+
+        Task ReloadOrNavigateAsync() =>
+            string.Equals(page.Url, "about:blank", StringComparison.OrdinalIgnoreCase)
                 ? page.GotoAsync(url, new PageGotoOptions { WaitUntil = waitUntil, Timeout = timeouts.DomContentLoadedMs })
-                : page.ReloadAsync(new PageReloadOptions { WaitUntil = waitUntil, Timeout = timeouts.DomContentLoadedMs }));
+                : page.ReloadAsync(new PageReloadOptions { WaitUntil = waitUntil, Timeout = timeouts.DomContentLoadedMs });
     }
+
+    /// <summary>
+    /// Whether <paramref name="ex"/> is the browser-level "nothing is listening" error — the
+    /// signature of a self-hosted demo host that died under the in-flight test.
+    /// </summary>
+    internal static bool IsConnectionRefused(PlaywrightException ex) =>
+        ex.Message.Contains("ERR_CONNECTION_REFUSED", StringComparison.OrdinalIgnoreCase)
+        || ex.Message.Contains("ERR_CONNECTION_RESET", StringComparison.OrdinalIgnoreCase)
+        || ex.Message.Contains("ERR_EMPTY_RESPONSE", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Closes all browser contexts that were created by the test via
@@ -280,8 +431,17 @@ public abstract class PlaywrightTestBase
         foreach (var context in _contextsToDispose)
         {
             await StopTraceAsync(context);
-            try { await context.CloseAsync(); }
-            catch { /* best-effort: browser may already be gone */ }
+            try
+            {
+                // Bounded: a context whose browser died mid-test can hang the close forever, and
+                // TestCleanup runs between EVERY pair of tests — one wedged close must not stall
+                // the shard the way the unbounded lifecycle calls stalled shard 1 on 2026-11-18.
+                await context.CloseAsync().WaitAsync(TimeSpan.FromSeconds(15));
+            }
+            catch
+            {
+                /* best-effort: browser may already be gone, or the close is wedged */
+            }
         }
         _contextsToDispose.Clear();
         _contextsWithTrace.Clear();
@@ -301,7 +461,7 @@ public abstract class PlaywrightTestBase
         {
             if (TestContext.CurrentTestOutcome == UnitTestOutcome.Passed)
             {
-                await context.Tracing.StopAsync();
+                await context.Tracing.StopAsync().WaitAsync(TimeSpan.FromSeconds(30));
                 return;
             }
 
@@ -309,7 +469,7 @@ public abstract class PlaywrightTestBase
             Directory.CreateDirectory(directory);
             var name = SanitizeResultFileName(TestContext.TestName ?? "playwright-test");
             var path = Path.Combine(directory, $"{name}_{DateTime.Now:yyyyMMdd_HHmmss}_trace.zip");
-            await context.Tracing.StopAsync(new TracingStopOptions { Path = path });
+            await context.Tracing.StopAsync(new TracingStopOptions { Path = path }).WaitAsync(TimeSpan.FromSeconds(30));
             TestContext.AddResultFile(path);
         }
         catch
@@ -542,7 +702,19 @@ public abstract class PlaywrightTestBase
         return await page.EvaluateAsync<long>("() => performance.memory?.usedJSHeapSize || 0");
     }
 
-    private static async Task EnsureDemoHostsAsync(TestContext context)
+    /// <summary>
+    /// Re-probes (and, when needed, resurrects) the self-hosted demo hosts from an IN-FLIGHT
+    /// failure. ClassInitialize already resurrects a dead host at every class boundary, but a test
+    /// whose host died MID-TEST used to fail with <c>net::ERR_CONNECTION_REFUSED</c> and the
+    /// resurrection waited for the next class — the casualty was avoidable. The cold-boot recovery
+    /// in <see cref="GotoAppReadyAsync"/> calls this before its one reload, so a host that died
+    /// while the app booted comes back for the SAME test. H1: the INSTANCE <see cref="TestContext"/>
+    /// is forwarded, so the restart record names the test that triggered the recovery and its
+    /// diagnostics land in that test's log instead of nowhere.
+    /// </summary>
+    internal Task RecoverDemoHostsAsync() => EnsureDemoHostsAsync(TestContext);
+
+    private static async Task EnsureDemoHostsAsync(TestContext? context)
     {
         if (string.Equals(Environment.GetEnvironmentVariable("TM_E2E_SELF_HOST"), "false", StringComparison.OrdinalIgnoreCase))
         {
@@ -602,7 +774,7 @@ public abstract class PlaywrightTestBase
     }
 
     private static async Task EnsureHostAsync(
-        TestContext context,
+        TestContext? context,
         string name,
         string projectPath,
         string launchProfile,
@@ -625,12 +797,21 @@ public abstract class PlaywrightTestBase
                 return;
             }
 
-            // Wedged: alive past its readiness window but not serving. Replace it.
+            // Alive past its readiness window and not serving — PROBABLY wedged. H3: one failed
+            // probe is also the signature of a host that answers just after the probe timed out
+            // under full-lane load, so the kill needs THREE consecutive failed probes spread over
+            // ~6 s. Any healthy probe leaves the host in place.
+            if (!await IsHostStuckAcrossConsecutiveProbesAsync(urls))
+            {
+                return;
+            }
+
+            // Wedged: alive past its readiness window, three probes in a row saw nothing. Replace it.
             DemoHostProcesses.Remove(existing);
             var wedgedOutput = existing.RecentOutput;
             existing.Dispose();
-            RecordHostRestart(name, "unreachable-past-window", wedgedOutput);
-            context.WriteLine($"{name} was unreachable past its readiness window — restarting.");
+            RecordHostRestart(context, name, "unreachable-past-window", wedgedOutput);
+            context?.WriteLine($"{name} was unreachable past its readiness window (3 consecutive failed probes) — restarting.");
         }
         else if (existing is not null)
         {
@@ -639,22 +820,24 @@ public abstract class PlaywrightTestBase
             var sinceLastStart = DateTimeOffset.UtcNow - existing.StartedAtUtc;
             DemoHostProcesses.Remove(existing);
             var recentOutput = existing.RecentOutput;
+            // B2: the exit code is captured INSIDE Dispose() before the Process handle goes away,
+            // so reading it after Dispose is safe (the disposed Process object throws).
             existing.Dispose();
             if (sinceLastStart < TimeSpan.FromSeconds(30))
             {
                 throw new InvalidOperationException($"{name} exited before it became ready. Recent output:{Environment.NewLine}{recentOutput}");
             }
 
-            RecordHostRestart(name, "died-mid-run", recentOutput);
-            context.WriteLine($"{name} died mid-run — restarting it.");
+            RecordHostRestart(context, name, "died-mid-run", recentOutput, existing.ExitCode);
+            context?.WriteLine($"{name} died mid-run — restarting it.");
         }
         else if (_demoHostsInitialized)
         {
             // The hosts were healthy at first init but this one is unreachable now, and no tracked
             // process exists — an externally-started host died. Adopt it: self-host a replacement
             // instead of letting every remaining test fail with connection refused.
-            RecordHostRestart(name, "externally-died", "");
-            context.WriteLine($"{name} became unreachable mid-run — self-hosting a replacement.");
+            RecordHostRestart(context, name, "externally-died", "");
+            context?.WriteLine($"{name} became unreachable mid-run — self-hosting a replacement.");
         }
 
         var process = StartDemoHostProcess(name, projectPath, launchProfile);
@@ -663,7 +846,7 @@ public abstract class PlaywrightTestBase
     }
 
     private static async Task WaitForHostReadyAsync(
-        TestContext context,
+        TestContext? context,
         DemoHostProcess process,
         IReadOnlyList<string> urls,
         TimeSpan timeout)
@@ -678,7 +861,7 @@ public abstract class PlaywrightTestBase
 
             if (await AllUrlsReachableAsync(urls))
             {
-                context.WriteLine($"{process} ready at {string.Join(", ", urls)}.");
+                context?.WriteLine($"{process} ready at {string.Join(", ", urls)}.");
                 return;
             }
 
@@ -748,6 +931,33 @@ public abstract class PlaywrightTestBase
     }
 
     /// <summary>
+    /// H3: whether a host is REALLY wedged — THREE consecutive failed probes spread over ~6 s.
+    /// The old single-probe verdict killed hosts that were alive and answered a moment after the
+    /// one probe timed out (a full-lane load spikes every probe at once), discarding a process
+    /// that was a second away from serving. Any healthy probe in the window answers "not stuck".
+    /// </summary>
+    internal static async Task<bool> IsHostStuckAcrossConsecutiveProbesAsync(IReadOnlyList<string> urls)
+    {
+        const int requiredFailures = 3;
+        for (var probe = 1; probe <= requiredFailures; probe++)
+        {
+            if (await AllUrlsReachableAsync(urls))
+            {
+                return false;
+            }
+
+            if (probe < requiredFailures)
+            {
+                // Probes at ~0 s / ~3 s / ~6 s: the window rides out one slow probe round without
+                // stretching the wedged-host replacement beyond a few seconds.
+                await Task.Delay(TimeSpan.FromSeconds(3));
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
     /// One pooled probe client for the whole class (N193): the previous per-call
     /// <c>new HttpClient(handler)</c> churned a socket per 500 ms readiness poll across eight
     /// shards. The handler accepts untrusted certificates on loopback addresses only — every demo
@@ -762,7 +972,7 @@ public abstract class PlaywrightTestBase
     /// its invisibility: the release-evidence run reads <see cref="HostRestartLog.TotalHostRestarts"/>
     /// and refuses to report a run with hidden server crashes as a clean green.
     /// </summary>
-    private static void RecordHostRestart(string name, string reason, string recentOutput)
+    private static void RecordHostRestart(TestContext? context, string name, string reason, string recentOutput, int? exitCode = null)
     {
         try
         {
@@ -770,11 +980,35 @@ public abstract class PlaywrightTestBase
                 Path.Combine(FindRepositoryRoot(), "TestResults", "host-restarts.jsonl"),
                 name,
                 reason,
-                recentOutput);
+                recentOutput,
+                exitCode,
+                testName: context?.TestName);
         }
         catch
         {
             // The record is evidence, not the mechanism: a disk problem must not stop the restart.
+        }
+    }
+
+    /// <summary>
+    /// H4: records a shared-browser relaunch to <c>TestResults/browser-relaunches.jsonl</c> and
+    /// <see cref="HostRestartLog.TotalBrowserRelaunches"/> — the browser twin of
+    /// <see cref="RecordHostRestart"/>, so the lane summary can show how often the run had to
+    /// resurrect the wedge-prone shared Chromium. Evidence, not the mechanism: a failed append
+    /// never fails the relaunch.
+    /// </summary>
+    private static void RecordBrowserRelaunch(string reason, string? testName)
+    {
+        try
+        {
+            HostRestartLog.AppendBrowserRelaunchRecord(
+                Path.Combine(FindRepositoryRoot(), "TestResults", "browser-relaunches.jsonl"),
+                reason,
+                testName);
+        }
+        catch
+        {
+            // The record is evidence, not the mechanism.
         }
     }
 
@@ -821,11 +1055,21 @@ public abstract class PlaywrightTestBase
         throw new InvalidOperationException("Repository root was not found.");
     }
 
-    private sealed class DemoHostProcess : IDisposable
+    /// <summary>
+    /// The tracked demo host process. Internal (nested) so the harness unit tests can exercise the
+    /// exit-code capture (B2) without standing a demo host up.
+    /// </summary>
+    internal sealed class DemoHostProcess : IDisposable
     {
         private readonly string _name;
         private readonly Process _process;
         private readonly ConcurrentQueue<string> _output = new();
+        // B2: the exit code is captured ONCE — inside Dispose(), BEFORE _process.Dispose(). A
+        // disposed Process throws InvalidOperationException from HasExited/ExitCode, so the
+        // died-mid-run restart record that reads ExitCode after Dispose used to crash instead of
+        // recording the evidence.
+        private int? _exitCode;
+        private bool _disposed;
 
         public DemoHostProcess(string name, Process process)
         {
@@ -840,6 +1084,15 @@ public abstract class PlaywrightTestBase
         public DateTimeOffset StartedAtUtc { get; }
 
         public bool HasExited => _process.HasExited;
+
+        /// <summary>
+        /// The dead process's exit code, or null while it is alive / not yet reaped. Recorded with a
+        /// died-mid-run restart so the JSONL line can tell a crash (a Win32 fault code) from an
+        /// external hard kill (taskkill leaves exit code 1 and an empty output tail). Safe to read
+        /// after <see cref="Dispose"/>: the value rides the field captured before the handle died,
+        /// and a disposed process answers null instead of throwing.
+        /// </summary>
+        public int? ExitCode => _exitCode ?? (!_disposed && _process.HasExited ? _process.ExitCode : null);
 
         public string RecentOutput => string.Join(Environment.NewLine, _output.ToArray());
 
@@ -865,6 +1118,10 @@ public abstract class PlaywrightTestBase
                     _process.Kill(entireProcessTree: true);
                     _process.WaitForExit(5000);
                 }
+
+                // B2: capture BEFORE _process.Dispose() — after it the Process object is dead and
+                // every member read throws InvalidOperationException.
+                _exitCode ??= _process.HasExited ? _process.ExitCode : null;
             }
             catch
             {
@@ -872,6 +1129,7 @@ public abstract class PlaywrightTestBase
             }
             finally
             {
+                _disposed = true;
                 _process.Dispose();
             }
         }

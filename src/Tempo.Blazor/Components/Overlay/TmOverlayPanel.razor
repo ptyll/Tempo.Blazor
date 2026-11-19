@@ -456,8 +456,11 @@
     /// <summary>
     /// Called by overlay.js when a dismissal gesture (Escape, outside pointerdown) or a native
     /// <c>hidePopover</c> closes the panel. Returns <see langword="true"/> when the dismissal was
-    /// accepted — the panel is no longer visible — and <see langword="false"/> when the consumer
-    /// vetoed it (a controlled <see cref="IsOpenChanged"/> handler that leaves
+    /// accepted — the panel is no longer visible OR the component is already disposing: a panel
+    /// that closes by UNMOUNTING (a controlled consumer whose <see cref="IsOpenChanged"/> handler
+    /// removes it from the tree) is gone, so answering <c>false</c> would make overlay.js
+    /// re-arm a vetoed entry that no later close can ever release. <see langword="false"/>
+    /// therefore means exactly one thing: the consumer vetoed (a handler that leaves
     /// <see cref="IsOpen"/> true, e.g. a form with unsaved changes). overlay.js uses the answer
     /// to re-arm a vetoed entry so the next Escape still dismisses it (N167).
     /// </summary>
@@ -465,7 +468,7 @@
     public async Task<bool> NotifyDismissedAsync(string reason)
     {
         await ApplyOpenAsync(false, dismissed: true, reason);
-        return !IsVisible;
+        return _disposed || !IsVisible;
     }
 
     /// <summary>
@@ -502,6 +505,15 @@
 
     private async Task ApplyOpenAsync(bool open, bool dismissed, string? reason)
     {
+        if (_disposed)
+        {
+            // The panel was disposed (its consumer unmounted it) while a JS dismissal raced the
+            // teardown: no callbacks and no render — the caller computes its answer from _disposed
+            // (NotifyDismissedAsync). A render queued from here would hit a renderer that already
+            // dropped the component.
+            return;
+        }
+
         if (IsOpen.HasValue)
         {
             await IsOpenChanged.InvokeAsync(open);
@@ -734,10 +746,15 @@
         // Same lock: a render parked on the import await finishes first, and once it lets go it
         // has either completed its open() or seen _disposed — either way the module release here
         // cannot race it (N172).
+        //
+        // _disposed is set BEFORE the semaphore wait: a JS dismissal that lands while DisposeAsync
+        // is parked behind a render must already see the disposing state, or its
+        // NotifyDismissedAsync answer would be computed from a half-torn-down component (see
+        // NotifyDismissedAsync — an unmounted-but-not-yet-disposed panel must answer accepted).
+        _disposed = true;
         await _jsSync.WaitAsync();
         try
         {
-            _disposed = true;
             try
             {
                 if (_module is not null && _jsOpen)

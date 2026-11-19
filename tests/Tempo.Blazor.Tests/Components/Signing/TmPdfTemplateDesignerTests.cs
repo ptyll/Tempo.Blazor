@@ -1017,6 +1017,94 @@ public class TmPdfTemplateDesignerTests : LocalizationTestBase
             "the second row is a separate toolbar and must not repeat the first row's name");
     }
 
+    // ── Docked palette: the user's collapse is stored (CollapsedPanels bound to the Left flag) ──
+
+    private IRenderedComponent<TmPdfTemplateDesigner> RenderDesktopDesigner()
+        => Render<TmPdfTemplateDesigner>(parameters =>
+            parameters.Add(p => p.Documents, CreatePages())
+                      .Add(p => p.Fields, CreateFields())
+                      .Add(p => p.LayoutMode, TmLayoutMode.Desktop));
+
+    private static void CollapseLeftPanel(IRenderedComponent<TmPdfTemplateDesigner> cut)
+        => cut.Find("button[aria-label='Collapse left panel']").Click();
+
+    [Fact]
+    public void Palette_CollapseLeftPanel_ShowsTheRailAndTheCollapseSticks()
+    {
+        var cut = RenderDesktopDesigner();
+        cut.FindAll(".tm-pdf-template-designer__palette").Should().NotBeEmpty("the docked palette starts expanded");
+        cut.FindAll(".tm-editor-shell__rail--left").Should().BeEmpty();
+
+        CollapseLeftPanel(cut);
+
+        cut.FindAll(".tm-editor-shell__rail--left").Should().ContainSingle("the collapsed palette leaves its rail");
+        cut.FindAll("button[aria-label='Expand left panel']").Should().ContainSingle();
+        cut.FindAll(".tm-pdf-template-designer__palette").Should().BeEmpty("the user's collapse is stored, the shell parameter is echoed back");
+
+        // An unrelated re-render must not bring the palette back.
+        cut.Render();
+        cut.FindAll(".tm-editor-shell__rail--left").Should().ContainSingle();
+        cut.FindAll(".tm-pdf-template-designer__palette").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Palette_ExpandLeftPanel_RestoresThePalette()
+    {
+        var cut = RenderDesktopDesigner();
+        CollapseLeftPanel(cut);
+
+        cut.Find("button[aria-label='Expand left panel']").Click();
+
+        cut.FindAll(".tm-editor-shell__rail--left").Should().BeEmpty();
+        cut.FindAll(".tm-pdf-template-designer__palette").Should().NotBeEmpty("expanding brings the docked palette back");
+        cut.FindAll("button[aria-label='Collapse left panel']").Should().ContainSingle();
+    }
+
+    [Fact]
+    public void Palette_DesktopToTabletToDesktop_KeepsTheUsersCollapse()
+    {
+        var cut = RenderDesktopDesigner();
+        CollapseLeftPanel(cut);
+
+        cut.Render(parameters => parameters.Add(p => p.LayoutMode, TmLayoutMode.Tablet));
+        cut.Find(".tm-pdf-template-designer").GetAttribute("data-layout").Should().Be("tablet");
+        cut.Find(".tm-pdf-template-designer__palette").ClassList.Should().Contain("tm-pdf-template-designer__palette--rail",
+            "the tablet owns the palette as its canvas rail");
+
+        cut.Render(parameters => parameters.Add(p => p.LayoutMode, TmLayoutMode.Desktop));
+
+        cut.Find(".tm-pdf-template-designer").GetAttribute("data-layout").Should().Be("desktop");
+        cut.FindAll(".tm-editor-shell__rail--left").Should().ContainSingle("the collapse the user chose survives the round trip");
+        cut.FindAll(".tm-pdf-template-designer__palette").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Palette_DesktopToTabletToDesktop_WithoutCollapse_KeepsThePaletteExpanded()
+    {
+        var cut = RenderDesktopDesigner();
+
+        cut.Render(parameters => parameters.Add(p => p.LayoutMode, TmLayoutMode.Tablet));
+        cut.Render(parameters => parameters.Add(p => p.LayoutMode, TmLayoutMode.Desktop));
+
+        cut.FindAll(".tm-editor-shell__rail--left").Should().BeEmpty();
+        cut.FindAll(".tm-pdf-template-designer__palette").Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public async Task Palette_LayoutImposedClose_IsNeverStored()
+    {
+        var cut = RenderDesktopDesigner();
+        var shell = cut.FindComponent<Tempo.Blazor.Components.Layout.TmEditorShell>();
+
+        // The shell raises LeftOpenChanged(false) for the tablet overlay's one-open-panel rule and the
+        // mobile sheet's close — never a user action on the docked desktop palette.
+        await cut.InvokeAsync(() => shell.Instance.LeftOpenChanged.InvokeAsync(false));
+
+        cut.FindAll(".tm-editor-shell__rail--left").Should().BeEmpty("a forced close is not a collapse");
+        cut.FindAll(".tm-pdf-template-designer__palette").Should().NotBeEmpty("the palette stays docked and open");
+        cut.FindAll("button[aria-label='Show left panel']").Should().BeEmpty("no stored close, so no toggle button either");
+    }
+
     private static IReadOnlyList<SigningDocumentPage> CreatePages()
     {
         return

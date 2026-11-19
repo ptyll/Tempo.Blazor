@@ -51,6 +51,10 @@ function element(parent = null) {
             return null;
         },
         hasAttribute(name) { return el.attributes.has(name); },
+        // The real DOM has both; the stub records presence only (the marker assertions ask
+        // hasAttribute, the value is irrelevant).
+        setAttribute(name) { el.attributes.add(name); },
+        removeAttribute(name) { el.attributes.delete(name); },
         toggleAttribute(name, force) {
             const on = force === undefined ? !el.attributes.has(name) : force;
             if (on) el.attributes.add(name); else el.attributes.delete(name);
@@ -162,6 +166,58 @@ test('a non-modal trap leaves the background usable', () => {
     activate(drawer, 'inline', null, false, null, false);
 
     assert.equal(page.hasAttribute('inert'), false);
+});
+
+test('activation stamps data-tm-focus-trap-active; deactivation clears it', () => {
+    // The marker means "THIS TRAP IS ACTIVE" (activate() ran for this element; deactivate()
+    // clears it) — a diagnostic/testing signal for the trap LIFECYCLE, not "Escape is ready":
+    // the document-level Escape listener only exists with closeOnEscape AND an escapeHandler.
+    // Tests use it to know the lazily-imported module has activated THIS element (NotionPhase6Menus
+    // waits on the marker before pressing Escape — 2026-11-18 full run), not to assume what
+    // Escape will do.
+    const body = element();
+    const sheet = element(body);
+    installDom(body);
+
+    activate(sheet, 'marker-sheet', null, true, null, true);
+
+    assert.equal(sheet.hasAttribute('data-tm-focus-trap-active'), true,
+        'the marker lands when the trap activates');
+
+    deactivate('marker-sheet');
+
+    assert.equal(sheet.hasAttribute('data-tm-focus-trap-active'), false,
+        'deactivation clears the marker together with the trap');
+});
+
+test('an active marker without an escape handler stays lifecycle-only (no "Escape armed" meaning)', () => {
+    // The F1 contract: with closeOnEscape=false (or no escapeHandler) there is NO document-level
+    // Escape listener at all, yet the marker is present — proof the marker can never mean
+    // "Escape is ready".
+    const body = element();
+    const sheet = element(body);
+    installDom(body);
+
+    activate(sheet, 'marker-no-escape', null, false, null, true);
+
+    assert.equal(sheet.hasAttribute('data-tm-focus-trap-active'), true,
+        'the trap is active even though Escape is not wired for it');
+    deactivate('marker-no-escape');
+});
+
+test('a deactivated id loses the marker even when its element is reused by a fresh trap only after re-activation', () => {
+    const body = element();
+    const sheet = element(body);
+    installDom(body);
+
+    activate(sheet, 'marker-reuse', null, true, null, true);
+    deactivate('marker-reuse');
+    // Re-activate on the SAME element (a sheet that closes and reopens): the marker must come back.
+    activate(sheet, 'marker-reuse', null, true, null, true);
+    assert.equal(sheet.hasAttribute('data-tm-focus-trap-active'), true,
+        'a fresh activation re-stamps the marker');
+    deactivate('marker-reuse');
+    assert.equal(sheet.hasAttribute('data-tm-focus-trap-active'), false);
 });
 
 test('only the innermost trap cycles Tab and only the topmost handles Escape', () => {

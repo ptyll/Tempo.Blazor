@@ -49,8 +49,12 @@ public class PinOnTopE2ETests : WasmTestBase
         return page;
     }
 
-    /// <summary>What hit-testing returns at the banner's centre: "banner", or the topmost other surface.</summary>
-    private static Task<string> TopAtBannerAsync(IPage page) => page.EvaluateAsync<string>(
+    /// <summary>
+    /// The hit-test at the banner's centre as ONE JS function source: "banner", or the topmost other
+    /// surface. <see cref="TopAtBannerAsync"/> evaluates it once; <see cref="WaitTopAsync"/> re-runs
+    /// the very same source every frame as its predicate, so the diagnostic and the wait can never drift.
+    /// </summary>
+    private const string TopAtBannerScript =
         """
         () => {
             const banner = document.querySelector('[data-testid="pin-banner"]');
@@ -65,18 +69,27 @@ public class PinOnTopE2ETests : WasmTestBase
                  : hit.closest('.tm-toast-container') ? 'toast'
                  : 'other:' + (hit.className || hit.tagName);
         }
-        """);
+        """;
+
+    private static Task<string> TopAtBannerAsync(IPage page) => page.EvaluateAsync<string>(TopAtBannerScript);
 
     private static async Task WaitTopAsync(IPage page, string expected)
     {
-        string last = "";
-        for (var i = 0; i < 60; i++)
+        // T2: one state wait instead of a sampled 100 ms polling loop — the predicate (the same
+        // JS as TopAtBannerAsync) re-runs in the page on every frame until it returns `expected`,
+        // or the 4 s budget expires. A timeout fails with the expectation AND what the hit-test
+        // last returned, instead of a bare TimeoutException.
+        try
         {
-            last = await TopAtBannerAsync(page);
-            if (last == expected) return;
-            await page.WaitForTimeoutAsync(100);
+            await page.WaitForFunctionAsync(
+                "expected => (" + TopAtBannerScript + ")() === expected",
+                expected,
+                new PageWaitForFunctionOptions { Timeout = 4000 });
         }
-        Assert.AreEqual(expected, last, "top-layer paint order at the banner centre");
+        catch (TimeoutException)
+        {
+            Assert.Fail($"expected '{expected}', observed '{await TopAtBannerAsync(page)}'");
+        }
     }
 
     private static Task<bool> IsPopoverOpenAsync(IPage page) => page.EvaluateAsync<bool>(
@@ -154,17 +167,29 @@ public class PinOnTopE2ETests : WasmTestBase
             """);
         Assert.AreEqual("111", open, "banner, toast container and modal are all in the top layer");
         await WaitTopAsync(page, "banner");
-        // The toast stays reachable above the modal too.
-        var toastTop = await page.EvaluateAsync<bool>(
-            """
-            () => {
-                const card = document.querySelector('.tm-toast');
-                const r = card.getBoundingClientRect();
-                const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-                return !!hit && card.contains(hit);
-            }
-            """);
-        Assert.IsTrue(toastTop, "the toast pushed from inside the modal paints above the modal");
+        // The toast stays reachable above the modal too. The hit-test reads PAINT order, which
+        // settles a beat AFTER the toast element mounts (the registry promotes the new toast over
+        // the already-promoted modal on its next raise), so it is ONE state wait — the toast-centre
+        // hit-test re-evaluated in the page every frame — instead of a sampled polling loop.
+        try
+        {
+            await page.WaitForFunctionAsync(
+                """
+                () => {
+                    const card = document.querySelector('.tm-toast');
+                    if (!card) return false;
+                    const r = card.getBoundingClientRect();
+                    const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+                    return !!hit && card.contains(hit);
+                }
+                """,
+                null,
+                new PageWaitForFunctionOptions { Timeout = 4000 });
+        }
+        catch (TimeoutException)
+        {
+            Assert.Fail("the toast pushed from inside the modal paints above the modal");
+        }
         await ShotAsync(page, "banner-and-toast-over-modal-1440-light");
     }
 

@@ -147,9 +147,14 @@ before => {
     [Description("Phase 6: Ctrl/Cmd+P opens page search as a modal; mobile is fullscreen")]
     public async Task PageSearch_OpensAsAModal_AtEveryBand()
     {
+        // F3: the focus-return misses of every band are collected and asserted once, at the end.
+        var misses = new List<string>();
         foreach (var (width, height, touch, band) in Bands)
         {
             var page = await OpenAsync(width, height, touch);
+            // The user presses Ctrl/Cmd+P from the page, i.e. with a block focused; with nothing
+            // focused there is no place for the focus to come back to.
+            await page.Locator(".tm-notion-paragraph[contenteditable='true']").First.FocusAsync();
             await page.Keyboard.PressAsync("Control+p");
             var dialog = page.Locator(".tm-nps").First;
             await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
@@ -158,13 +163,69 @@ before => {
             await ShotAsync(page, "notion-search", $"search-{band}-light");
             await SetThemeAsync(page, "dark");
             await ShotAsync(page, "notion-search", $"search-{band}-dark");
-            await AssertEscapeReturnsFocusAsync(page, ".tm-nps", ".tm-notion-page");
+            var miss = await AssertEscapeReturnsFocusAsync(page, ".tm-nps", ".tm-notion-page");
+            if (miss is not null)
+                misses.Add($"[{band}] {miss}");
             await page.Context.CloseAsync();
         }
+
+        Assert.AreEqual(0, misses.Count,
+            "page search must return focus to the page on Escape at every band; missed bands: " + string.Join("; ", misses));
     }
 
     // One test per surface: a timeout on one menu must not drop the shots of the others, and a
     // 1024-touch user opens the slash-gated menus as a sheet (no focused search box to type into).
+    [TestMethod]
+    [Description("B3: notion-editor.js prewarms the shared overlay modules at parse time — the overlay.js resource entry exists BEFORE any menu opens and loaded 200 (the literal relative './_content/…' specifier resolved against the NotionEditor's own static-asset base and 404'd)")]
+    public async Task NotionEditor_PrewarmsOverlayModule_BeforeTheFirstMenuOpens()
+    {
+        // The resource-timing buffer holds 250 entries by default and a WASM boot fetches more than
+        // that, so the overlay.js entry would be evicted before the probe reads it — raise the
+        // ceiling before ANY page script runs.
+        var page = await OpenAsync(1440, 900, touch: false, configureContext: context =>
+            context.AddInitScriptAsync("performance.setResourceTimingBufferSize(10000);")); // NO menu is opened here
+
+        var expectedUrl = await page.EvaluateAsync<string>(
+            "() => new URL('_content/Tempo.Blazor/js/overlay.js', document.baseURI).href");
+
+        // The prewarm fires at script parse time — long before this wait starts — so the entry is
+        // already in the resource timeline; the bounded wait only absorbs load hiccups.
+        try
+        {
+            await page.WaitForFunctionAsync(
+                "url => performance.getEntriesByType('resource').some(entry => entry.name === url)",
+                expectedUrl, new PageWaitForFunctionOptions { Timeout = 15000 });
+        }
+        catch (TimeoutException)
+        {
+            var seen = await page.EvaluateAsync<string[]>(
+                "() => performance.getEntriesByType('resource').map(entry => entry.name).filter(name => name.includes('overlay'))");
+            Assert.Fail(
+                $"no performance resource entry for {expectedUrl} before any menu opened — the prewarm import regressed "
+                + $"to a relative specifier (its 404 would live under the NotionEditor's own asset base). overlay-named entries: "
+                + (seen.Length == 0 ? "none" : string.Join(", ", seen)));
+        }
+
+        // responseStatus is Chromium 109+; when the entry cannot tell (0/undefined), the HEAD
+        // verdict decides: the entry must exist and must NOT be the relative-URL 404.
+        var status = await page.EvaluateAsync<long>(
+            "url => (performance.getEntriesByType('resource').find(entry => entry.name === url) || {}).responseStatus ?? 0",
+            expectedUrl);
+        if (status == 0)
+        {
+            var headStatus = await page.EvaluateAsync<long>(
+                "async url => (await fetch(url, { method: 'HEAD' })).status", expectedUrl);
+            Assert.IsFalse(headStatus == 404,
+                $"overlay.js resolved to a 404 (HEAD status {headStatus}) — the prewarm import is not using the absolute document.baseURI URL");
+            Assert.AreEqual(200, headStatus, "overlay.js must be served for the prewarm to actually warm the module");
+        }
+        else
+        {
+            Assert.AreEqual(200, status,
+                $"overlay.js prewarmed with the wrong URL or failed to load (responseStatus {status})");
+        }
+    }
+
     [TestMethod]
     [Description("Phase 6: the mention menu at every band, opened the way that band's user opens it")]
     public Task Phase6Menus_Mention_AtEveryBand() => CaptureSurfaceAsync(CaptureMentionAsync);
@@ -176,6 +237,81 @@ before => {
     [TestMethod]
     [Description("Phase 6: the status picker at every band, picked from the slash sheet on touch")]
     public Task Phase6Menus_Status_AtEveryBand() => CaptureSurfaceAsync(CaptureStatusAsync);
+
+    [TestMethod]
+    [Description("Mobile status picker (390 px, coarse): inserting / replacing a status with Enter hands the focus to the block, not <body> — the sheet keeps the page inert while the picker closes (restoreBlockFocus on insertSlashHtml and replaceActiveStatusChip)")]
+    public async Task Phase6Menus_Status_EnterInsertOnMobileSheet_ReturnsFocusToTheBlock()
+    {
+        var page = await OpenAsync(390, 844, true);
+        try
+        {
+            // Insert path: /status → label → Enter (insertSlashHtml).
+            await TypeTriggerAsync(page, "/");
+            var slash = page.Locator(".tm-notion-slash").First;
+            await slash.WaitForAsync(Visible());
+            var item = slash.Locator(".tm-notion-slash__item", new LocatorLocatorOptions { HasTextString = "Status" }).First;
+            await item.EvaluateAsync("el => el.scrollIntoView({ block: 'center' })");
+            await item.EvaluateAsync("el => el.click()");
+            var picker = page.Locator(".tm-notion-status-picker").First;
+            await picker.WaitForAsync(Visible());
+            await AssertSheetHostsAsync(page, ".tm-notion-status-picker");
+
+            await picker.Locator(".tm-notion-status-picker__input").First.FillAsync("DONE");
+            await picker.Locator(".tm-notion-status-picker__input").First.PressAsync("Enter");
+            await picker.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Hidden, Timeout = 8000 });
+            await page.Locator(".tm-notion-status[data-status-label='DONE']").First.WaitForAsync(Visible());
+            Assert.AreEqual("ok", await WaitForBlockFocusAsync(page), "Enter-insert (insertSlashHtml) must leave the focus on the block");
+            Assert.IsTrue(await CaretStandsRightAfterChipAsync(page, "DONE"), "Enter-insert: the collapsed caret must stand right behind the inserted DONE chip");
+
+            // Replace path: tap the chip → label → Enter (replaceActiveStatusChip).
+            await page.Locator(".tm-notion-status[data-status-label='DONE']").First.TapAsync();
+            await picker.WaitForAsync(Visible());
+            await picker.Locator(".tm-notion-status-picker__input").First.FillAsync("DOING");
+            await picker.Locator(".tm-notion-status-picker__input").First.PressAsync("Enter");
+            await picker.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Hidden, Timeout = 8000 });
+            await page.Locator(".tm-notion-status[data-status-label='DOING']").First.WaitForAsync(Visible());
+            Assert.AreEqual("ok", await WaitForBlockFocusAsync(page), "Enter-replace (replaceActiveStatusChip) must leave the focus on the block");
+            Assert.IsTrue(await CaretStandsRightAfterChipAsync(page, "DOING"), "Enter-replace: the collapsed caret must stand right behind the replacing DOING chip");
+        }
+        finally
+        {
+            await page.Context.CloseAsync();
+        }
+    }
+
+    private static async Task AssertSheetHostsAsync(IPage page, string surface)
+    {
+        var inSheet = await page.EvaluateAsync<bool>(
+            "sel => !!document.querySelector(sel)?.closest('.tm-overlay-panel-sheet')", surface);
+        Assert.IsTrue(inSheet, $"{surface} is presented on the mobile sheet");
+    }
+
+    /// <summary>
+    /// True when the selection is collapsed and stands right behind the status chip with the given label
+    /// (the chip is the node immediately before the caret in the chip's parent).
+    /// </summary>
+    private static Task<bool> CaretStandsRightAfterChipAsync(IPage page, string label) => page.EvaluateAsync<bool>(
+        "label => { const sel = getSelection(); if (!sel || sel.rangeCount === 0) return false; const r = sel.getRangeAt(0); const chip = document.querySelector('.tm-notion-status[data-status-label=\"' + label + '\"]'); return !!chip && r.collapsed && r.startContainer === chip.parentNode && r.startContainer.childNodes[r.startOffset - 1] === chip; }",
+        label);
+    /// <summary>
+    /// Waits (bounded) for <c>document.activeElement</c> to be an editable block and returns "ok", or a
+    /// "miss:&lt;what owns the focus&gt;" description — a stuck <c>&lt;body&gt;</c> is the symptom.
+    /// </summary>
+    private static async Task<string> WaitForBlockFocusAsync(IPage page)
+    {
+        const string probe = "() => { const a = document.activeElement; return !!a && a !== document.body && a.classList.contains('tm-notion-paragraph') && a.isContentEditable; }";
+        try
+        {
+            await page.WaitForFunctionAsync(probe, null, new PageWaitForFunctionOptions { Timeout = 4000 });
+            return "ok";
+        }
+        catch (TimeoutException)
+        {
+            var on = await page.EvaluateAsync<string>(
+                "() => { const a = document.activeElement; return a ? (a.tagName + '.' + (a.className || '')) : 'none'; }");
+            return "miss:" + on;
+        }
+    }
 
     [TestMethod]
     [Description("Phase 6: the block menu at every band")]
@@ -205,8 +341,12 @@ before => {
     [Description("Phase 6: page settings at every band, including the 1024 sheet after the paint fix")]
     public Task Phase6Menus_PageSettings_AtEveryBand() => CaptureSurfaceAsync(CapturePageSettingsAsync);
 
-    private async Task CaptureSurfaceAsync(Func<IPage, string, string, bool, int, Task> capture)
+    private async Task CaptureSurfaceAsync(Func<IPage, string, string, bool, int, Task<string?>> capture)
     {
+        // F3: a missing focus return is COLLECTED, never silently ignored and never thrown from
+        // the middle of the loop — every band/theme still gets its screenshots, and the test
+        // fails ONCE, with every miss named.
+        var misses = new List<string>();
         foreach (var (width, height, touch, band) in Bands)
         {
             foreach (var theme in new[] { "light", "dark" })
@@ -215,26 +355,31 @@ before => {
                 if (theme == "dark")
                     await SetThemeAsync(page, "dark");
 
-                await capture(page, band, theme, touch, width);
+                var miss = await capture(page, band, theme, touch, width);
+                if (miss is not null)
+                    misses.Add($"[{band}/{theme}] {miss}");
                 await page.Context.CloseAsync();
             }
         }
+
+        Assert.AreEqual(0, misses.Count,
+            "every surface must return focus to its trigger on Escape; missed surfaces: " + string.Join("; ", misses));
     }
 
-    private static async Task CaptureMentionAsync(IPage page, string band, string theme, bool touch, int width)
+    private static async Task<string?> CaptureMentionAsync(IPage page, string band, string theme, bool touch, int width)
     {
         _ = (touch, width);
         await TypeTriggerAsync(page, "@");
         var menu = page.Locator(".tm-nmm").First;
         await menu.WaitForAsync(Visible());
         await ShotAsync(page, "notion-menus", $"mention-{band}-{theme}", menu);
-        await AssertEscapeReturnsFocusAsync(page, ".tm-nmm", ".tm-notion-paragraph");
+        return await AssertEscapeReturnsFocusAsync(page, ".tm-nmm", ".tm-notion-paragraph");
     }
 
-    private static Task CaptureTokenAsync(IPage page, string band, string theme, bool touch, int width)
+    private static Task<string?> CaptureTokenAsync(IPage page, string band, string theme, bool touch, int width)
         => CaptureTokenAsync(page, band, theme);
 
-    private static async Task CaptureTokenAsync(IPage page, string band, string theme)
+    private static async Task<string?> CaptureTokenAsync(IPage page, string band, string theme)
     {
         await TypeTriggerAsync(page, "{{");
         var menu = page.Locator(".tm-notion-token-dropdown").First;
@@ -242,10 +387,10 @@ before => {
         Assert.AreEqual(1, await page.Locator(".tm-notion-token-dropdown__create-btn").CountAsync(),
             "the token menu has exactly one Create, in the floating-menu footer");
         await ShotAsync(page, "notion-menus", $"token-{band}-{theme}", menu);
-        await AssertEscapeReturnsFocusAsync(page, ".tm-notion-token-dropdown", ".tm-notion-paragraph");
+        return await AssertEscapeReturnsFocusAsync(page, ".tm-notion-token-dropdown", ".tm-notion-paragraph");
     }
 
-    private static async Task CaptureStatusAsync(IPage page, string band, string theme, bool touch, int width)
+    private static async Task<string?> CaptureStatusAsync(IPage page, string band, string theme, bool touch, int width)
     {
         await TypeTriggerAsync(page, "/");
         var slash = page.Locator(".tm-notion-slash").First;
@@ -275,13 +420,13 @@ before => {
         var picker = page.Locator(".tm-notion-status-picker").First;
         await picker.WaitForAsync(Visible());
         await ShotAsync(page, "notion-pickers", $"status-{band}-{theme}", picker);
-        await AssertEscapeReturnsFocusAsync(page, ".tm-notion-status-picker", ".tm-notion-paragraph");
+        return await AssertEscapeReturnsFocusAsync(page, ".tm-notion-status-picker", ".tm-notion-paragraph");
     }
 
-    private static Task CaptureBlockMenuAsync(IPage page, string band, string theme)
+    private static Task<string?> CaptureBlockMenuAsync(IPage page, string band, string theme)
         => CaptureBlockMenuAsync(page, band, theme, false, 1440);
 
-    private static async Task CaptureBlockMenuAsync(IPage page, string band, string theme, bool touch, int width)
+    private static async Task<string?> CaptureBlockMenuAsync(IPage page, string band, string theme, bool touch, int width)
     {
         var block = page.Locator("[data-notion-block]").First;
         await block.HoverAsync();
@@ -291,11 +436,26 @@ before => {
         await menu.WaitForAsync(Visible());
         if (touch && width < 1024)
             await AssertSheetAsync(page, "Block options", slash: false);
+        await WaitUntilEscapeArmedAsync(page);
         await ShotAsync(page, "notion-menus", $"block-menu-{band}-{theme}", menu);
-        await AssertEscapeReturnsFocusAsync(page, ".tm-notion-ctx-panel", ".tm-notion-handle__btn");
+        return await AssertEscapeReturnsFocusAsync(page, ".tm-notion-ctx-panel", ".tm-notion-handle__menu-anchor > .tm-notion-handle__btn");
     }
 
-    private static async Task CaptureAiAsync(IPage page, string band, string theme, bool touch, int width)
+    /// <summary>
+    /// Waits until the open block menu has an ACTIVE focus trap. The panel is "visible" the moment
+    /// Blazor rendered it, but the trap's activation rides a LATER JS-interop call (the lazy
+    /// tm-focus-trap import) — under parallel load that gap stretched long enough for the Escape
+    /// below to land in it and leave the panel visibly open forever. F1/F2: the wait is scoped to
+    /// THE MENU via <c>data-tm-focus-trap-active</c>, and the marker means "THIS trap is ACTIVE"
+    /// (a diagnostic lifecycle marker, see docs/overlays.md) — NOT "Escape is armed/will close",
+    /// so this wait is the precondition for a stable Escape press, nothing more.
+    /// </summary>
+    private static async Task WaitUntilEscapeArmedAsync(IPage page)
+        => await page.WaitForFunctionAsync(
+            "() => !!document.querySelector('.tm-notion-ctx-panel[data-tm-focus-trap-active], [data-tm-focus-trap-active] .tm-notion-ctx-panel')",
+            null, new PageWaitForFunctionOptions { Timeout = 15000 });
+
+    private static async Task<string?> CaptureAiAsync(IPage page, string band, string theme, bool touch, int width)
     {
         await TypeTriggerAsync(page, "/");
         var slash = page.Locator(".tm-notion-slash").First;
@@ -315,13 +475,13 @@ before => {
         var menu = page.Locator("[data-testid='notion-ai-menu']").First;
         await menu.WaitForAsync(Visible());
         await ShotAsync(page, "notion-menus", $"ai-{band}-{theme}", menu);
-        await AssertEscapeReturnsFocusAsync(page, "[data-testid='notion-ai-menu']", ".tm-notion-paragraph");
+        return await AssertEscapeReturnsFocusAsync(page, "[data-testid='notion-ai-menu']", ".tm-notion-paragraph");
     }
 
-    private static Task CaptureTypeSwitcherAsync(IPage page, string band, string theme, bool touch, int width)
+    private static Task<string?> CaptureTypeSwitcherAsync(IPage page, string band, string theme, bool touch, int width)
         => CaptureTypeSwitcherAsync(page, band, theme);
 
-    private static async Task CaptureTypeSwitcherAsync(IPage page, string band, string theme)
+    private static async Task<string?> CaptureTypeSwitcherAsync(IPage page, string band, string theme)
     {
         await SelectParagraphAsync(page);
         await page.Locator("button[title='Turn into']").First.ClickAsync(new LocatorClickOptions { Force = true });
@@ -329,12 +489,13 @@ before => {
         await panel.WaitForAsync(Visible());
         await ShotAsync(page, "notion-menus", $"type-switcher-{band}-{theme}", panel);
         await page.Keyboard.PressAsync("Escape");
+        return null;
     }
 
-    private static Task CaptureColourPaletteAsync(IPage page, string band, string theme, bool touch, int width)
+    private static Task<string?> CaptureColourPaletteAsync(IPage page, string band, string theme, bool touch, int width)
         => CaptureColourPaletteAsync(page, band, theme);
 
-    private static async Task CaptureColourPaletteAsync(IPage page, string band, string theme)
+    private static async Task<string?> CaptureColourPaletteAsync(IPage page, string band, string theme)
     {
         await SelectParagraphAsync(page);
         await page.Locator("[data-testid='notion-inline-color']").First.ClickAsync(new LocatorClickOptions { Force = true });
@@ -342,12 +503,13 @@ before => {
         await panel.WaitForAsync(Visible());
         await ShotAsync(page, "notion-menus", $"colour-palette-{band}-{theme}", panel);
         await page.Keyboard.PressAsync("Escape");
+        return null;
     }
 
-    private static Task CaptureTemplatesAsync(IPage page, string band, string theme, bool touch, int width)
+    private static Task<string?> CaptureTemplatesAsync(IPage page, string band, string theme, bool touch, int width)
         => CaptureTemplatesAsync(page, band, theme, width);
 
-    private static async Task CaptureTemplatesAsync(IPage page, string band, string theme, int width)
+    private static async Task<string?> CaptureTemplatesAsync(IPage page, string band, string theme, int width)
     {
         var bandName = width >= 1200 ? "desktop" : width >= 768 ? "tablet" : "mobile";
         await page.Locator($".tm-notion-editor[data-editor-layout='{bandName}']").First.WaitForAsync(Visible());
@@ -369,12 +531,13 @@ before => {
         // shows the sheet surface alone; a region capture used to include the page below it.
         await ShotAsync(page, "notion-templates", $"templates-{band}-{theme}", width < 640 ? null : gallery);
         await page.Keyboard.PressAsync("Escape");
+        return null;
     }
 
-    private static Task CaptureShortcutsAsync(IPage page, string band, string theme, bool touch, int width)
+    private static Task<string?> CaptureShortcutsAsync(IPage page, string band, string theme, bool touch, int width)
         => CaptureShortcutsAsync(page, band, theme, width);
 
-    private static async Task CaptureShortcutsAsync(IPage page, string band, string theme, int width)
+    private static async Task<string?> CaptureShortcutsAsync(IPage page, string band, string theme, int width)
     {
         
         // Desktop and tablet keep the trigger on the bar. The mobile band has no bar copy — the
@@ -410,24 +573,27 @@ before => {
         await ShotAsync(page, "notion-menus", $"shortcuts-{band}-{theme}", width < 640 ? null : panel);
         await page.Keyboard.PressAsync("Escape");
         _ = width;
+        return null;
     }
 
-    private static Task CapturePageSettingsAsync(IPage page, string band, string theme)
+    private static Task<string?> CapturePageSettingsAsync(IPage page, string band, string theme)
         => CapturePageSettingsAsync(page, band, theme, false, 1440);
 
-    private static async Task CapturePageSettingsAsync(IPage page, string band, string theme, bool touch, int width)
+    private static async Task<string?> CapturePageSettingsAsync(IPage page, string band, string theme, bool touch, int width)
     {
-        
         await page.Keyboard.PressAsync("Escape");
         await page.WaitForTimeoutAsync(300);
         var trigger = page.Locator(".tm-npsm-trigger").First;
+        // Keyboard activation: the trigger owns the focus when the menu opens (a bare el.click()
+        // leaves it on whatever had it, and Escape then correctly returns it THERE).
+        await trigger.FocusAsync();
         await trigger.EvaluateAsync("el => el.click()");
         var menu = page.Locator(".tm-npsm").First;
         await menu.WaitForAsync(Visible());
         if (touch && width < 1024)
             await AssertSheetAsync(page, "Page settings", slash: false);
         await ShotAsync(page, "notion-menus", $"page-settings-{band}-{theme}", menu);
-        await AssertEscapeReturnsFocusAsync(page, ".tm-npsm", ".tm-npsm-trigger");
+        return await AssertEscapeReturnsFocusAsync(page, ".tm-npsm", ".tm-npsm-trigger");
     }
 
     private static async Task AssertSearchGeometryAsync(IPage page, int width, string band)
@@ -466,7 +632,14 @@ before => {
         Assert.AreEqual(0, shortRow, $"every sheet row is at least {min}px");
     }
 
-    private static async Task AssertEscapeReturnsFocusAsync(IPage page, string surface, string trigger)
+    /// <summary>
+    /// Presses Escape against the open <paramref name="surface"/> and checks the focus hand-back.
+    /// F3: instead of throwing (which would abort the remaining surfaces mid-loop) or only logging
+    /// (which let the misses pass green), the helper RETURNS the miss and the caller COLLECTS the
+    /// misses of its whole run, asserting <c>Assert.AreEqual(0, misses.Count, …)</c> at the END of
+    /// the test — one failure listing every surface whose Escape left the focus behind.
+    /// </summary>
+    private static async Task<string?> AssertEscapeReturnsFocusAsync(IPage page, string surface, string trigger)
     {
         await page.Keyboard.PressAsync("Escape");
         await page.Locator(surface).First.WaitForAsync(new LocatorWaitForOptions
@@ -474,12 +647,12 @@ before => {
             State = WaitForSelectorState.Hidden,
             Timeout = 8000,
         });
-        var focused = await page.EvaluateAsync<bool>(
-            "sel => { const el = document.querySelector(sel); return !!el && (el === document.activeElement || el.contains(document.activeElement)); }",
+        var focused = await page.EvaluateAsync<string>(
+            "sel => { const active = document.activeElement; const on = active ? (active.className || active.tagName) : 'none'; return (active && active !== document.body && (active.matches(sel) || !!active.closest(sel))) ? 'ok' : 'miss:' + on; }",
             trigger);
-        // Evidence first: a focus hand-back that misses must not abort the remaining surfaces.
-        if (!focused)
-            Console.WriteLine($"[phase6] Escape closed {surface} but focus did not return to {trigger}");
+        return focused == "ok"
+            ? null
+            : $"Escape closed {surface} but focus did not return to {trigger} (active: {focused["miss:".Length..]})";
     }
 
     private static async Task TypeTriggerAsync(IPage page, string text)
@@ -496,11 +669,25 @@ before => {
         else
             await para.ClickAsync();
         await page.Keyboard.PressAsync("End");
+        var sourceBlockId = await page.EvaluateAsync<string>(
+            "() => document.activeElement?.closest('[data-block-id]')?.getAttribute('data-block-id') ?? ''");
         await page.Keyboard.PressAsync("Enter");
-        await page.WaitForTimeoutAsync(1000);
+        // State waits instead of fixed sleeps: typing before the fresh block owns the focus would
+        // land in the SOURCE block (which the Enter pipeline then rewrites), and the menu is only
+        // there to assert on once the trigger text has reached the editor's input listener.
+        await NotionE2ETestBase.WaitForBlockFocusToMoveAsync(page, sourceBlockId);
         await page.Keyboard.TypeAsync(text);
-        await page.WaitForTimeoutAsync(400);
+        await page.Locator(TriggerMenuSelector(text)).First.WaitForAsync(Visible());
     }
+
+    /// <summary>The menu a trigger text opens — the state <see cref="TypeTriggerAsync"/> waits for.</summary>
+    private static string TriggerMenuSelector(string trigger) => trigger switch
+    {
+        "@" => ".tm-nmm",
+        "{{" => ".tm-notion-token-dropdown",
+        "/" => ".tm-notion-slash",
+        _ => throw new ArgumentOutOfRangeException(nameof(trigger), trigger, "no menu is mapped to this trigger"),
+    };
 
     private static async Task SelectParagraphAsync(IPage page)
     {
@@ -513,13 +700,17 @@ before => {
     private static LocatorWaitForOptions Visible()
         => new() { State = WaitForSelectorState.Visible, Timeout = 10000 };
 
-    private async Task<IPage> OpenAsync(int width, int height, bool touch)
+    private async Task<IPage> OpenAsync(int width, int height, bool touch, Func<IBrowserContext, Task>? configureContext = null)
     {
         using var http = DemoApiTestHttp.CreateClient();
         try { await http.PostAsync("https://localhost:5100/api/notion/reset", null); }
         catch { /* The waits below report a missing API. */ }
 
         var context = await CreateContextAsync(hasTouch: touch);
+        if (configureContext is not null)
+        {
+            await configureContext(context);
+        }
         await context.AddInitScriptAsync("window.localStorage.setItem('tm-demo-culture', 'en');");
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(width, height);

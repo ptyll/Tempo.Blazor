@@ -5,6 +5,7 @@ using Microsoft.JSInterop;
 using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Abstractions.Models;
 using Tempo.Blazor.Components.Actions;
+using Tempo.Blazor.Components.Layout;
 using Tempo.Blazor.Components.Navigation;
 
 namespace Tempo.Blazor.Components.Signing;
@@ -72,7 +73,7 @@ public partial class TmPdfTemplateDesigner : IAsyncDisposable
                 ["onpointermove"] = EventCallback.Factory.Create<PointerEventArgs>(this, HandlePointerMoveAsync),
                 ["onpointerup"] = EventCallback.Factory.Create<PointerEventArgs>(this, HandlePointerUpAsync),
             };
-    private bool _paletteOpen = true;
+    private bool _paletteCollapsed;
     private bool _inspectorDismissed;
     private TmLayoutMode _resolvedLayout = TmLayoutMode.Desktop;
     private TmContextMenu? _contextMenuRef;
@@ -365,11 +366,37 @@ public partial class TmPdfTemplateDesigner : IAsyncDisposable
         return InvokeAsync(StateHasChanged);
     }
 
-    private bool PaletteOpen => ShowDockedPalette && _paletteOpen;
+    /// <summary>
+    /// The shell's collapse set: the docked palette's rail while the USER has collapsed it. Only the
+    /// <see cref="EditorShellPanel.Left"/> flag is ever set — the inspector is not collapsible here.
+    /// </summary>
+    private EditorShellPanel PaletteCollapsedPanels =>
+        ShowDockedPalette && _paletteCollapsed ? EditorShellPanel.Left : EditorShellPanel.None;
+
+    private Task OnCollapsedPanelsChanged(EditorShellPanel panels)
+    {
+        // The Left flag is the user's choice made with the shell's "Collapse / Expand left panel"
+        // buttons, which exist on the desktop docked palette only. The tablet overlay and the mobile
+        // sheet render no such buttons and raise no collapse set, so nothing a layout imposes lands
+        // here. Without a docked palette there is nothing to (un)collapse: the flag is left alone.
+        if (ShowDockedPalette)
+        {
+            _paletteCollapsed = panels.HasFlag(EditorShellPanel.Left);
+        }
+
+        return InvokeAsync(StateHasChanged);
+    }
 
     private Task OnPaletteOpenChanged(bool open)
     {
-        _paletteOpen = open;
+        // The docked palette is open whenever it exists (ShowDockedPalette), so there is no open state
+        // to store. The user's way to put it away is the collapse button, stored through
+        // CollapsedPanels (OnCollapsedPanelsChanged → _paletteCollapsed). A close (false) that reaches
+        // this handler is imposed by the layout, never chosen by the user: the tablet overlay's
+        // one-open-panel rule running against stale desktop-era parameters during a layout flip, or
+        // the mobile sheet closing both panels. Storing one would make the palette come back closed
+        // behind a "Show left panel" toggle after narrow → desktop. The re-render hands the shell its
+        // LeftOpen parameter back.
         return InvokeAsync(StateHasChanged);
     }
 

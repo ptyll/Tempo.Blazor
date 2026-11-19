@@ -193,7 +193,17 @@ public class NotionCodeBlockMarkdownPreviewE2ETests : NotionE2ETestBase
         // End moves the caret to the end of the current line, so a paragraph that already holds
         // text inserts the slash into that text. Control+End lands at the end of the block.
         await page.Keyboard.PressAsync("Control+End");
+        // The Enter split is ASYNC (keydown preventDefault → JSInvokable → CreateBlockAsync →
+        // StateHasChanged → the fresh block takes focus). Re-querying ".Last" before that render
+        // lands still resolves the PRE-split last paragraph — under parallel load that was the
+        // seeded "The block below shows the Spreadsheet editor…" paragraph and the emptiness
+        // assertion below fired on it. Identify the source block first and wait until the caret
+        // owns a DIFFERENT block (the shared state-based gate, NotionE2ETestBase), then ".Last"
+        // is deterministically the freshly created empty paragraph.
+        var beforeBlockId = await page.EvaluateAsync<string>(
+            "() => document.activeElement?.closest('[data-block-id]')?.getAttribute('data-block-id') ?? ''");
         await page.Keyboard.PressAsync("Enter");
+        await WaitForBlockFocusToMoveAsync(page, beforeBlockId);
         var created = page.Locator(".tm-notion-paragraph[contenteditable='true']").Last;
         await created.WaitForAsync(new LocatorWaitForOptions { Timeout = 5000 });
         var beforeSlash = await created.EvaluateAsync<string>("el => el.innerText");

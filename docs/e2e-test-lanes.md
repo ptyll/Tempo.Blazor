@@ -40,8 +40,10 @@ nightly — today no scheduled workflow exists, so it runs manually via
   | `-Shards <n>` (default 8) | number of class shards, balanced by test count (LPT split, deterministic - the same sources give the same shards) |
   | `-OnlyShard 3,5` | run only these shards (repeat a red one without paying for the rest) |
   | `-Filter "<vstest>"` | extra filter ANDed with the shard's class selection (`TestCategory=WASM`, ...) |
-  | `-RerunFailed` | re-run every failed test once, serially in a fresh process, by its EXACT name (`FullyQualifiedName=<class>.<method>`, resolved from the TRX `UnitTest`/`TestMethod`), and classify it: `contention-flake` only if the rerun ran >= 1 test and none failed; `deterministic (red serially)` otherwise; `unclassified (rerun matched 0 tests)` when nothing ran |
+  | `-RerunFailed` | re-run every failed test once, serially in a fresh process, by its EXACT name (`FullyQualifiedName=<class>.<method>`, resolved from the TRX `UnitTest`/`TestMethod`), and classify it: `contention-flake` only if the rerun ran >= 1 test and none failed; `deterministic (red serially)` otherwise; `deterministic (killed by watchdog)` when the rerun was killed by the script's own watchdog; `unclassified (rerun matched 0 tests)` when nothing ran |
   | `-IncludePerformance` | also run the `Performance` category (normally `run-e2e-perf.ps1` only) |
+  | `-ShardTimeoutMinutes <n>` (default 240) | outer wall-clock budget per shard; on expiry the script captures the testhost's managed stacks, kills the shard tree and marks the shard `KilledBy: budget` |
+  | `-InactivityTimeoutMinutes <n>` (default 30) | no-progress watchdog: the normal-verbosity console log appends a line per finished test, so this much total silence means no test completed - the script captures the stacks, kills the tree and marks the shard `KilledBy: inactivity` |
   | `-NoBuild` / `-ReportDir` | skip the up-front build / choose the report folder |
 
   **Shards and host reaping.** The demo hosts bind fixed ports (API 5100, WASM 7106 + 5010, Server 7107,
@@ -53,7 +55,9 @@ nightly — today no scheduled workflow exists, so it runs manually via
   under `TM_E2E_SELF_HOST=false` (then the operator owns the hosts).
 
   **Report** (`TestResults/e2e-full-<timestamp>/`): `shard-<n>.trx` per shard, `summary.json` (totals, per-shard
-  results, every failure with its message and serial-rerun verdict, `hostRestarts`) and `summary.md`. The exit
+  results with `KilledBy` (`inactivity`/`budget`/'' - why a shard went down without results), every failure with its
+  message and serial-rerun verdict, `hostRestarts`, `browserRelaunches`) and `summary.md` (the same as a table, with
+  an **Aborted** and a **Killed by** column). The exit
   code is non-zero for any failure that is not proven a contention flake, and for a shard that produced no results at
   all, and for an **aborted shard**. `hostRestarts` must be 0 for evidence runs (see *Host resurrections* below).
 
@@ -415,7 +419,10 @@ configurable:
   usage bounded.
 - **Host resurrections are evidence, not noise (N209):** `PlaywrightTestBase`
   appends every demo-host resurrection to `TestResults/host-restarts.jsonl`
-  (repo root) and counts them in `HostRestartLog.TotalHostRestarts`. When
+  (repo root) and counts them in `HostRestartLog.TotalHostRestarts`. Each
+  record carries `test` — the name of the test whose run tripped the restart —
+  so the JSONL answers "which test was in flight" without cross-referencing the
+  TRX. When
   recording a release-evidence run, copy the JSONL into the run's artifacts
   dir and report the count in `eng/release-evidence/e2e-full-run.json` under
   `hostRestarts` — `eng/verify-release-evidence.sh` refuses any nonzero count
@@ -423,6 +430,15 @@ configurable:
   which is why release-run artifacts ship in the committed
   `eng/release-evidence/<run>/` tree rather than the gitignored `TestResults/`
   dir a fresh CI checkout cannot see.
+- **Browser relaunches are evidence too (H4):** every resurrection of the shared
+  Chromium — a dead browser relaunched by `EnsureBrowserAsync`, or the wedged-browser
+  force relaunch — appends one line to `TestResults/browser-relaunches.jsonl`
+  (with the reason and, when known, the in-flight test) and increments
+  `HostRestartLog.TotalBrowserRelaunches`. `run-e2e-full.ps1` reports the run's
+  delta in `summary.json`/`summary.md` as `BrowserRelaunches`, right next to
+  `HostRestarts`: a run that had to resurrect the wedge-prone shared browser is
+  visible without grepping the shard logs. A nonzero count is a lane-health
+  signal (the relaunch itself is a deliberate recovery), not an automatic gate.
 - **The evidence `total` (and `passed`/`failed`/`skipped`) counts distinct
   test names in the TRX** — data-row instances that share a test name count
   once — not the number of `testId` elements the file happens to carry

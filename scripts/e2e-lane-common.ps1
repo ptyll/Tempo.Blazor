@@ -213,3 +213,16 @@ function Get-E2EHostRestartCount {
     if (-not (Test-Path $log)) { return 0 }
     return @(Get-Content $log | Where-Object { $_.Trim() }).Count
 }
+
+function Get-E2EBrowserRelaunchCount {
+    <#
+      H4: the number of shared-browser relaunches recorded so far (one JSONL line per resurrection
+      of the wedge-prone Chromium in TestResults/browser-relaunches.jsonl). The full lane reports the
+      DELTA over the run in summary.json/summary.md (Totals.BrowserRelaunches), the same way it does
+      for demo-host restarts.
+    #>
+    param([string]$RepoRoot)
+    $log = Join-Path $RepoRoot 'TestResults/browser-relaunches.jsonl'
+    if (-not (Test-Path $log)) { return 0 }
+    return @(Get-Content $log | Where-Object { $_.Trim() }).Count
+}

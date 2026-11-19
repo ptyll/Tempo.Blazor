@@ -144,6 +144,18 @@ without one. Escape stays with `overlay.js`, which restores focus to the anchor.
 activates only after the popover has been shown, so the initial-focus move can never land on
 `<body>`. Popups that must stay light (menus, suggestion lists) leave it off.
 
+**`data-tm-focus-trap-active` is a diagnostic lifecycle marker.** `tm-focus-trap.js`
+stamps it on the trap root when `activate()` ran for that element and removes it on
+`deactivate()`. It means **"this trap is active"** — nothing more. It does NOT mean
+"Escape is armed" or "Escape will close this surface": the document-level Escape
+listener exists only when the trap was created with `closeOnEscape` AND an escape
+handler, and whether a particular Escape is consumed further depends on modal
+ownership and focus ownership at the moment the key lands. E2E specs may wait on the
+marker to know the lazily-imported module has activated a specific element (scope it
+to the surface under test, e.g.
+`.tm-notion-ctx-panel[data-tm-focus-trap-active], [data-tm-focus-trap-active] .tm-notion-ctx-panel`),
+but a test must not read the marker as a promise about what a subsequent Escape does.
+
 **Cost, stated plainly:** `TrapFocus` marks the rest of the page `inert` and locks document
 scroll while the popup is open — on desktop too. The picker therefore loses the
 "outside-click-into-a-field-keeps-typing" convenience: a pointerdown outside the popup closes

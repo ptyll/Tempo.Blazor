@@ -349,6 +349,13 @@ export function activate(element, id, escapeHandler, closeOnEscape, restoreTarge
     }
 
     traps.set(id, { element, tabHandler, focusInHandler, lastFocused: null, escHandler, returnTarget, restoreTarget, modal });
+    // Marker: "THIS TRAP IS ACTIVE" — activate() ran for `element` (and deactivate() clears it).
+    // It is a DIAGNOSTIC/testing signal for trap lifecycle, NOT "Escape is ready": the
+    // document-level Escape listener exists only when closeOnEscape AND an escapeHandler were
+    // supplied (escHandler above may be null), and whether a given Escape is consumed further
+    // depends on modal ownership / focus ownership at key time. Tests use it to know the
+    // lazily-imported module has activated THIS element — not to assume what Escape will do.
+    if (element) element.setAttribute('data-tm-focus-trap-active', 'true');
 
     // A modal trap makes the rest of the page unreachable, not only invisible. `inert` is a DOM
     // attribute Blazor cannot keep in sync with the page around the overlay, so the module owns it.
@@ -581,6 +588,7 @@ export function deactivate(id) {
     const trap = traps.get(id);
     if (!trap) return;
     traps.delete(id);
+    if (trap.element) trap.element.removeAttribute('data-tm-focus-trap-active');
 
     if (trap.element && trap.tabHandler) {
         trap.element.removeEventListener('keydown', trap.tabHandler);

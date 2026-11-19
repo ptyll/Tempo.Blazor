@@ -494,6 +494,13 @@ export function dismiss(entry, reason) {
         return false;
     }
     entry.dismissed = true;
+    // Only an Escape arms the deferred anchor restore, so only an Escape may keep one: a dismissal
+    // by another reason (outside pointerdown, the anchor scrolling away) after a VETOED Escape
+    // must drop the still-armed restore — the user has now aimed at a concrete target, and the
+    // "restore when focus goes nowhere" contract belongs to the keyboard path alone.
+    if (reason !== 'escape') {
+        entry.restoreAnchorOnClose = null;
+    }
     if (reason === 'escape') {
         // Keyboard dismissal returns focus to the trigger ONLY when focus actually needs a
         // home — the same focusWentNowhere condition the outside-pointerdown restore uses.
@@ -524,8 +531,14 @@ export function dismiss(entry, reason) {
         .then(accepted => {
             if (!accepted) {
                 entry.dismissed = false;
-                // The panel stays open, so the deferred restore must not fire on a later close.
-                entry.restoreAnchorOnClose = null;
+                // accepted=false now means ONE thing: the consumer really keeps the panel open (a
+                // controlled veto). Since NotifyDismissedAsync answers `_disposed || !IsVisible`,
+                // a panel closing by UNMOUNTING (a pinned IsOpen=true panel whose tree is deleted,
+                // e.g. TmNotionBlockContextMenu) answers TRUE, so it is no longer classified as a
+                // veto and its armed Escape-restore survives to hidePanel()/release(). For a REAL
+                // veto the restore stays armed too, but it can only ever fire on a later close,
+                // under the focusWentNowhere guard — and a dismissal through a different reason
+                // clears it outright (see the non-escape branch above).
             }
         })
         .catch(() => {

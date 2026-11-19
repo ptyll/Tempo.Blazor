@@ -104,6 +104,35 @@ public class HostRestartRecordingTests
     }
 
     /// <summary>
+    /// The 2026-11-18 "Demo WASM died-mid-run" record shipped NO exit evidence, so the release
+    /// evidence could not tell an app crash from an external hard kill (taskkill leaves exit code 1
+    /// and an empty output tail; a Win32 fault rides a negative code). The dead process's exit code
+    /// now rides the record: present as a NUMBER when known, absent when the process was reaped
+    /// without one.
+    /// </summary>
+    [TestMethod]
+    public void BuildRestartLine_CarriesTheExitCode_WhenTheDeadProcessReportedOne()
+    {
+        string withCode = HostRestartLog.BuildRestartLine(
+            "Demo WASM", "died-mid-run", new DateTimeOffset(2026, 11, 18, 16, 16, 6, TimeSpan.Zero),
+            "Now listening on: https://localhost:7106", exitCode: 1);
+        using (JsonDocument document = JsonDocument.Parse(withCode))
+        {
+            Assert.AreEqual(1, document.RootElement.GetProperty("exitCode").GetInt32(),
+                "a known exit code is recorded as a JSON number so it survives grep/jq triage");
+        }
+
+        string withoutCode = HostRestartLog.BuildRestartLine(
+            "Demo Server", "unreachable-past-window", new DateTimeOffset(2026, 11, 17, 4, 26, 25, TimeSpan.Zero),
+            "Sestavování...");
+        using (JsonDocument document = JsonDocument.Parse(withoutCode))
+        {
+            Assert.IsFalse(document.RootElement.TryGetProperty("exitCode", out _),
+                "no exit code means no exitCode property — an absent field is easier to query than a null");
+        }
+    }
+
+    /// <summary>
     /// The readiness verdict arms — including the contrast that is the whole point of N193: under
     /// the old <c>status != ServiceUnavailable</c> predicate a crashed app answering 500 read as
     /// reachable; under this one it does not.

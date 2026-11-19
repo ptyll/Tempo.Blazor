@@ -19,6 +19,8 @@ public class PdfTemplateDesignerServerE2ETests : ServerTestBase
         await page.SetViewportSizeAsync(1440, 900);
         await page.GotoAsync($"{BaseUrl}/signing-components");
         await WaitForAppReadyAsync(page);
+        // The demo sidebar keeps a 1440 viewport's designer under the desktop breakpoint; this
+        // style pins the designer to the viewport so the desktop layout is its own.
         await page.AddStyleTagAsync(new PageAddStyleTagOptions { Content = SigningRedesignPhase8Specs.WideLayoutStyle });
         await page.EvaluateAsync("() => window.dispatchEvent(new Event('resize'))");
 
@@ -37,6 +39,38 @@ public class PdfTemplateDesignerServerE2ETests : ServerTestBase
         await text.ClickAsync();
         await Assertions.Expect(status).ToContainTextAsync("3 designer fields");
         await Assertions.Expect(designer.Locator(".tm-signing-field")).ToHaveCountAsync(3);
+    }
+
+    [TestMethod]
+    [Description("T3 regression: the designer boots in the demo's narrow card (tablet, shell panels in the Overlay presentation), then goes desktop — the docked palette must be VISIBLE, not collapsed. The shell's layout-imposed one-open-panel close used to stick as a user close, so the palette came back collapsed forever")]
+    public async Task PdfTemplateDesigner_NarrowBootThenDesktop_KeepsThePaletteVisible()
+    {
+        var context = await CreateContextAsync();
+        var page = await context.NewPageAsync();
+        // Boot NARROW (tablet layout: the rail owns the palette, the docked one is hidden).
+        await page.SetViewportSizeAsync(800, 900);
+        await page.GotoAsync($"{BaseUrl}/signing-components");
+        await WaitForAppReadyAsync(page);
+
+        var designer = page.Locator("[data-testid='pdf-template-designer']").First;
+        await designer.ScrollIntoViewIfNeededAsync();
+        await Assertions.Expect(designer).Not.ToHaveAttributeAsync("data-layout", "desktop", new() { Timeout = 15000 });
+
+        // Now go desktop: resize to 1440 and pin the designer to the viewport.
+        await page.SetViewportSizeAsync(1440, 900);
+        await page.AddStyleTagAsync(new PageAddStyleTagOptions { Content = SigningRedesignPhase8Specs.WideLayoutStyle });
+        await page.EvaluateAsync("() => window.dispatchEvent(new Event('resize'))");
+        await Assertions.Expect(designer).ToHaveAttributeAsync("data-layout", "desktop", new() { Timeout = 15000 });
+        // The docked palette — with a real palette item, VISIBLE: the pre-fix behavior rendered
+        // the collapsed toggle instead and the item never appeared.
+        var paletteItem = designer.Locator("[data-field-type='Text']").First;
+        await Assertions.Expect(paletteItem).ToBeVisibleAsync(new() { Timeout = 15000 });
+
+        // The palette actually works after the flip: the click arms draw mode without adding.
+        await paletteItem.ClickAsync();
+        var status = page.Locator("[data-testid='pdf-template-designer-status']");
+        await Assertions.Expect(status).ToContainTextAsync("2 designer fields");
+        await Assertions.Expect(designer).ToHaveClassAsync(new System.Text.RegularExpressions.Regex("tm-pdf-template-designer--drawing"));
     }
 }
 
