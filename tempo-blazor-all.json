@@ -4324,7 +4324,7 @@
           "kind": "Component",
           "category": "Charts",
           "namespace": "Tempo.Blazor.Components.Charts",
-          "description": "Pure SVG chart component supporting Bar, Line, Area, Pie, Donut, and HorizontalBar chart types with optional legend, grid, value labels, animation, gradient area fills, a proportional DateTime X axis for time series, combo charts (per-dataset ChartDataset.RenderAs = ChartDatasetRenderAs.Line renders that dataset as a line overlay over the bars of a Bar chart on a shared Y scale — bars for periodic flows, lines for cumulative values), dense-axis label thinning on Bar charts (over 24 categories only every n-th label renders), negative values on Bar/Line charts (signed domain with an emphasized zero axis; bars grow down from the zero baseline), point-marker thinning on dense line series (markers closer than ~9 units thin to ~24-unit spacing while the polyline stays complete), and click events on segments. Chart types additionally include Funnel (conversion trapezoids with per-stage conversion percentages; opt-in FunnelLabelPlacement moves every stage label into a gutter beside the shape, a stage whose value is 0 or NaN keeps a visible FunnelMinSegmentWidth-wide band, the label ink follows the --tm-chart-funnel-label-* and paired --tm-chart-series-n-ink tokens — no inline hex — and a visually hidden stage table gives screen readers the stages and their conversions), Heatmap (dataset-rows × label-columns intensity matrix with a global scale), Treemap (squarified shares, flat or hierarchical via ChartTreeNode), and Waterfall (the first value starts at zero and subsequent values are cumulative deltas, with optional connectors and calculated total). Stacked variants (StackedBar vertical, StackedHorizontalBar, StackedArea) accumulate each category's datasets on a shared baseline scaled to the largest stack total; non-positive values contribute nothing to a stack, datasets toggle off through the series legend, and bar value labels are omitted when a segment is too small to keep the text readable. The built-in series palette is token-driven (TG-002): a chart that sets no per-series colours resolves the --tm-chart-series-1..8 design tokens — series 1 follows the theme primary, the other seven are hue-fixed accents, dark mode lifts them to 400-tones that hold contrast on the dark surface, and each series pairs with a --tm-chart-series-n-ink token for labels drawn on the fill — so the rendered SVG carries var(--tm-…) references, never library hexes (only caller-passed colours render as literals). A serialized chart SVG carries those var(--tm-chart-*) references, resolved only under the Tempo stylesheet: before serializing, copy getComputedStyle(el).fill/.stroke onto each node as attributes (like _bakePaints in wireframe-designer.js), or override the tokens on the exported root.",
+          "description": "Pure SVG chart component supporting Bar, Line, Area, Pie, Donut, and HorizontalBar chart types with optional legend, grid, value labels, animation, gradient area fills, a proportional DateTime X axis for time series, combo charts (per-dataset ChartDataset.RenderAs = ChartDatasetRenderAs.Line renders that dataset as a line overlay over the bars of a Bar chart on a shared Y scale — bars for periodic flows, lines for cumulative values), a nice value axis (grid ticks step by 1, 2 or 5 x 10^n and both ends of the axis sit on a tick, so a 6.42..16.14 series reads 0, 5, 10, 15, 20; the left gutter widens for long tick labels), culture-aware numbers and dates in axis labels, value labels and tooltips (a decimal comma under cs-CZ; ValueFormat and Culture are opt-in knobs; data-* attributes and SVG coordinates stay invariant), an opt-in Responsive viewBox that follows the measured plot width, dense-axis label thinning on every category axis (only every n-th label renders once the labels would touch: the step is derived from the width a category owns and the width of the widest label, not from a fixed count), negative values on Bar/Line charts (signed domain with an emphasized zero axis; bars grow down from the zero baseline), point-marker thinning on dense line series (markers closer than ~9 units thin to ~24-unit spacing while the polyline stays complete), and click events on segments. Chart types additionally include Funnel (conversion trapezoids with per-stage conversion percentages; opt-in FunnelLabelPlacement moves every stage label into a gutter beside the shape, a stage whose value is 0 or NaN keeps a visible FunnelMinSegmentWidth-wide band, the label ink follows the --tm-chart-funnel-label-* and paired --tm-chart-series-n-ink tokens — no inline hex — and a visually hidden stage table gives screen readers the stages and their conversions), Heatmap (dataset-rows × label-columns intensity matrix with a global scale), Treemap (squarified shares, flat or hierarchical via ChartTreeNode), and Waterfall (the first value starts at zero and subsequent values are cumulative deltas, with optional connectors and calculated total). Stacked variants (StackedBar vertical, StackedHorizontalBar, StackedArea) accumulate each category's datasets on a shared baseline scaled to the largest stack total; non-positive values contribute nothing to a stack, datasets toggle off through the series legend, and bar value labels are omitted when a segment is too small to keep the text readable. The built-in series palette is token-driven (TG-002): a chart that sets no per-series colours resolves the --tm-chart-series-1..8 design tokens — series 1 follows the theme primary, the other seven are hue-fixed accents, dark mode lifts them to 400-tones that hold contrast on the dark surface, and each series pairs with a --tm-chart-series-n-ink token for labels drawn on the fill — so the rendered SVG carries var(--tm-…) references, never library hexes (only caller-passed colours render as literals). A serialized chart SVG carries those var(--tm-chart-*) references, resolved only under the Tempo stylesheet: before serializing, copy getComputedStyle(el).fill/.stroke onto each node as attributes (like _bakePaints in wireframe-designer.js), or override the tokens on the exported root.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Charts/TmChart.razor",
           "documentationStatus": "merged",
@@ -4360,6 +4360,12 @@
               "name": "Class",
               "type": "string?",
               "isRequired": false
+            },
+            {
+              "name": "Culture",
+              "type": "CultureInfo?",
+              "isRequired": false,
+              "description": "The culture that formats every number and date the chart prints. Null (default) follows CultureInfo.CurrentCulture, so a cs-CZ page reads 16,1 instead of 16.1; pass one to pin a language regardless of the thread (an export that must stay English)."
             },
             {
               "name": "Data",
@@ -4403,6 +4409,12 @@
               "type": "EventCallback<ChartSeriesToggle>",
               "isRequired": false,
               "description": "Raised whenever a legend series/value is toggled."
+            },
+            {
+              "name": "Responsive",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Opt-in. The SVG viewBox follows the MEASURED plot box (one user unit = one CSS pixel) instead of the fixed 600 x 400 that the SVG meets into, so a wide card is filled edge to edge, the axis type keeps its real size and the category labels are thinned from the width that is actually there. Until the first measurement (prerender, the first frame) the chart draws in the default viewBox; Funnel ignores it (its label scale is calibrated on 600 x 400). If the JS runtime is unavailable or the module fails to load, the chart keeps the default 600 x 400 viewBox for the lifetime of the instance. Default false keeps the pre-2.12.0 fixed viewBox and never loads the measuring module."
             },
             {
               "name": "ShowGrid",
@@ -4478,6 +4490,12 @@
               "editorRequired": true
             },
             {
+              "name": "ValueFormat",
+              "type": "string?",
+              "isRequired": false,
+              "description": "A .NET numeric format string for every value the chart PRINTS - axis ticks, value labels, tooltips and the live announcement (for example \"0.0 °C\", \"N1\" or \"P0\"). Null (default) keeps at most two decimals (0.##). Rendered with Culture; data-* attributes and SVG coordinates always stay invariant. An invalid format falls back to the default."
+            },
+            {
               "name": "WaterfallShowConnectors",
               "type": "bool",
               "isRequired": false,
@@ -4531,6 +4549,10 @@
             "tm-chart__funnel-label--outside"
           ],
           "examples": [
+            {
+              "title": "Responsive width, formatted values (opt-in)",
+              "code": "<TmChart Type=\"ChartType.Line\"\n         Data=\"@hourlyTemperatures\"\n         Responsive=\"true\"\n         ValueFormat=\"0.0 °C\"\n         Height=\"320px\" />"
+            },
             {
               "title": "Basic bar chart",
               "code": "<TmChart Type=\"ChartType.Bar\"\n         Data=\"@(new ChartData { Labels = new[] { \"Jan\", \"Feb\", \"Mar\" }, Datasets = new[] { new ChartDataset { Label = \"Sales\", Values = new[] { 100.0, 200.0, 150.0 }, Color = \"#3b82f6\" } } })\"\n         Height=\"300px\"\n         ShowLegend=\"true\"\n         ShowGrid=\"true\" />"

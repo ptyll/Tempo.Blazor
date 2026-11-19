@@ -221,7 +221,7 @@ JS engine unit tests run separately and are cheap enough for every commit:
 - `npm run test:email-templates` — `tm-email-save-shortcut.js` (Ctrl/⌘+S guard).
 - `npm run test:pdf-viewer` — `pdf-viewer-size.mjs` and `pdf-viewer-render.mjs` (RenderTask bookkeeping).
 
-- `npm run test:core-modules` — tm-animated-number.js + TmSegmentedControl.razor.js (explicit file list; the animated-number file also runs in `test:overlay`).
+- `npm run test:core-modules` — tm-animated-number.js + TmSegmentedControl.razor.js + TmChart.razor.js (explicit file list; the animated-number file also runs in `test:overlay`).
 
 CI: `.github/workflows/js-node-tests.yml` runs every lane (plus the document-editor bundle freshness check) on every push and pull request.
 

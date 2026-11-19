@@ -215,22 +215,18 @@ public partial class TmChart
             var rows = string.Join(
                 Loc["TmChart_IndexSeparator"],
                 context.Series.Select(series => string.Format(
-                    CultureInfo.CurrentCulture,
+                    EffectiveCulture,
                     Loc["TmChart_IndexSeries"],
                     series.Label,
-                    CultureValue(series.Value))));
+                    V(series.Value))));
 
             return string.Format(
-                CultureInfo.CurrentCulture,
+                EffectiveCulture,
                 Loc["TmChart_IndexAnnouncement"],
                 context.Label,
                 rows);
         }
     }
-
-    /// <summary>Culture formatting for tooltip text (SVG coordinates stay invariant).</summary>
-    private static string CultureValue(double value) =>
-        value.ToString("0.##", CultureInfo.CurrentCulture);
 
     // ── Interaction ──
 
@@ -519,7 +515,7 @@ public partial class TmChart
 
                 builder.OpenElement(23, "span");
                 builder.AddAttribute(24, "class", "tm-chart__tooltip-series-value");
-                builder.AddContent(25, CultureValue(series.Value));
+                builder.AddContent(25, V(series.Value));
                 builder.CloseElement();
 
                 builder.CloseElement();

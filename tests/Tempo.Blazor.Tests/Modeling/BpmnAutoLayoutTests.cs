@@ -2,6 +2,7 @@ using System.Text.Json;
 using FluentAssertions;
 using Tempo.Blazor.Modeling;
 using Tempo.Blazor.Modeling.BpmnXml;
+using Xunit;
 
 namespace Tempo.Blazor.Tests.Modeling;
 
@@ -10,6 +11,12 @@ namespace Tempo.Blazor.Tests.Modeling;
 /// layered left-to-right flow, pools as stacked bands with lanes stacked inside, container sizes
 /// fitted to their content, byte-level determinism and overlap freedom.
 /// </summary>
+/// <remarks>
+/// The suite contains one WALL-CLOCK budget fact (a 100 000-node chain under 5 s), so it belongs to the exclusive
+/// <see cref="WallClockBudgets"/> collection: under the parallel suite that stopwatch measured the queue, not the
+/// layout (5.2 s in a loaded run, well under a second alone). The budget keeps its product value.
+/// </remarks>
+[Collection(WallClockBudgets.Name)]
 public sealed class BpmnAutoLayoutTests
 {
     private static ModelingElementDto Node(string id, string semanticType, string parentId = "") =>

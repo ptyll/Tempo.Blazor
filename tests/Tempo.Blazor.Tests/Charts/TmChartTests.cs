@@ -212,10 +212,11 @@ public class TmChartTests : LocalizationTestBase
         (AttributeAsDouble(bars[1], "y") + AttributeAsDouble(bars[1], "height"))
             .Should().BeApproximately(AttributeAsDouble(bars[0], "y"), 0.02);
 
-        // The maximum stack is Q3 = 30 + 15, not the maximum individual value (30).
+        // The maximum stack is Q3 = 30 + 15 = 45, not the maximum individual value (30): the nice axis tops out
+        // on the next 1/2/5 tick above it (50), and 45 is never printed.
         cut.FindAll("text.tm-chart__axis-label")
             .Select(x => x.TextContent)
-            .Should().Contain("45");
+            .Should().Contain("50").And.NotContain("45");
 
         cut.FindAll("text.tm-chart__value")
             .Select(x => x.TextContent)
@@ -240,9 +241,9 @@ public class TmChartTests : LocalizationTestBase
         (AttributeAsDouble(bars[0], "x") + AttributeAsDouble(bars[0], "width"))
             .Should().BeApproximately(AttributeAsDouble(bars[1], "x"), 0.02);
 
-        // Q3 is the maximum stack (45), so its two segments span the full 530px plot width.
+        // Q3 is the maximum stack (45) on a nice 0..50 axis, so its two segments span 45/50 of the 530px plot width.
         (AttributeAsDouble(bars[4], "width") + AttributeAsDouble(bars[5], "width"))
-            .Should().BeApproximately(530, 0.02);
+            .Should().BeApproximately(530 * 45 / 50.0, 0.02);
     }
 
     [Fact]

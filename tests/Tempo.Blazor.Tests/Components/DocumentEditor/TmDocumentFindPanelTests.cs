@@ -247,11 +247,13 @@ public sealed class TmDocumentFindPanelTests : LocalizationTestBase
             .Add(x => x.Document, doc));
 
         cut.Find("[data-testid='document-find-input']").Input("cat");
+        // The search is debounced (200 ms): clicking "next" before it ran would step through zero results, which is
+        // exactly what a loaded machine did. Wait for the result count, then step.
+        cut.WaitForAssertion(() => cut.Find("[data-testid='document-find-count']").TextContent.Should().Contain("1 of 2"));
         cut.Find("[data-testid='document-find-next']").Click();
 
         // After clicking next once with 2 results, active index should be 1 → "2 of 2"
-        var count = cut.Find("[data-testid='document-find-count']");
-        count.TextContent.Should().Contain("2 of 2");
+        cut.WaitForAssertion(() => cut.Find("[data-testid='document-find-count']").TextContent.Should().Contain("2 of 2"));
     }
 
     [Fact]

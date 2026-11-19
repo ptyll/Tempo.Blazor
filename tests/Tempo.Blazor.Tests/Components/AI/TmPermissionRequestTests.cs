@@ -709,8 +709,11 @@ public class TmPermissionRequestTests : LocalizationTestBase
     [Fact]
     public async Task WhileTheDecisionIsBeingSaved_BothActionsAreDisabled()
     {
+        // The decision stays in flight until the test releases it: a fixed Task.Delay raced the assertions and
+        // lost them whenever the machine was busy (the busy state had already ended by the time it was read).
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var cut = RenderRequest(parameters => parameters
-            .Add(request => request.OnDecision, async _ => await Task.Delay(500)));
+            .Add(request => request.OnDecision, async _ => await release.Task));
 
         var click = cut.Find("[data-testid='ai-permission-allow']").ClickAsync(new MouseEventArgs());
 
@@ -719,6 +722,7 @@ public class TmPermissionRequestTests : LocalizationTestBase
         cut.Find("[data-testid='ai-permission-allow']").HasAttribute("disabled").Should().BeTrue();
         cut.Find("[data-testid='ai-permission-deny']").HasAttribute("disabled").Should().BeTrue();
 
+        release.SetResult();
         await click;
 
         cut.Find(".tm-ai-permission").GetAttribute("data-state").Should().Be("granted");

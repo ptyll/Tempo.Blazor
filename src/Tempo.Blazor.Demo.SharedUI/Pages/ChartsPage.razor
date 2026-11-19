@@ -285,6 +285,25 @@
     </div>
 </section>
 
+<!-- Responsive width, nice value axis and culture-aware numbers (plan 98c80bc3, phase 10b) -->
+<section class="demo-section mb-8" data-testid="charts-demo-responsive">
+    <h2 class="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-2">@Loc["TmChartDemo_ResponsiveTitle"]</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmChartDemo_ResponsiveDescription"]</p>
+    <div class="grid grid-cols-1 gap-6">
+        <div class="showcase-card" data-testid="charts-demo-responsive-off">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">@Loc["TmChartDemo_ResponsiveDefault"]</h3>
+            <TmChart Type="ChartType.Line" Data="_hourlyTemperatureData" Height="320px"
+                     AriaLabel="@Loc["TmChartDemo_ResponsiveAria"]" />
+        </div>
+        <div class="showcase-card" data-testid="charts-demo-responsive-on">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">@Loc["TmChartDemo_ResponsiveOn"]</h3>
+            <TmChart Type="ChartType.Line" Data="_hourlyTemperatureData" Height="320px" Responsive="true"
+                     ValueFormat="0.0"
+                     AriaLabel="@Loc["TmChartDemo_ResponsiveAria"]" />
+        </div>
+    </div>
+</section>
+
 <!-- Pie Chart -->
 <section class="demo-section mb-8">
     <h2 class="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-4">Pie Chart</h2>
@@ -684,9 +703,34 @@
         ]
     };
 
+    /// <summary>
+    /// 24 hourly temperatures for the responsive / nice-axis / culture section (plan 98c80bc3, phase 10b). A field,
+    /// not a per-access property, for the same reason as <see cref="IndexTooltipData"/>.
+    /// </summary>
+    private ChartData _hourlyTemperatureData = default!;
+
+    private ChartData CreateHourlyTemperatureData() => new()
+    {
+        Labels = [.. Enumerable.Range(0, 24).Select(h => $"{h:00}:00")],
+        Datasets =
+        [
+            new ChartDataset
+            {
+                Label = Loc["TmChartDemo_ResponsiveSeries"],
+                Color = "#2563eb",
+                Values =
+                [
+                    6.4, 6.1, 5.8, 5.6, 5.9, 6.8, 8.3, 10.2, 12.4, 14.1, 15.3, 16.1,
+                    16.1, 15.7, 14.8, 13.6, 12.2, 10.9, 9.7, 8.9, 8.2, 7.6, 7.1, 6.7,
+                ],
+            },
+        ],
+    };
+
     protected override void OnInitialized()
     {
         _indexTooltipData = CreateIndexTooltipData();
+        _hourlyTemperatureData = CreateHourlyTemperatureData();
         _indexTooltipManyData = CreateManySeriesIndexData();
         _sankeyCashFlowData = CreateSankeyData(useCustomColors: false);
         _sankeyCustomColorsData = CreateSankeyData(useCustomColors: true);

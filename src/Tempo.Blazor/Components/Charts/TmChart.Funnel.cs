@@ -285,7 +285,8 @@ public partial class TmChart
     /// </summary>
     private static (string Text, bool Truncated) FunnelTextFit(string text, double x, double fontUnits)
     {
-        var room = SvgW - x - TextEdgeSafety;
+        // The funnel never measures itself (see IsResponsive), so its viewBox is always the default one.
+        var room = DefaultSvgW - x - TextEdgeSafety;
         var perCharacter = fontUnits * TextCharWidthEm;
         if (room <= 0)
         {
@@ -427,7 +428,7 @@ public partial class TmChart
             var value = FunnelValue(ds, i);
             var pct = first > 0 ? value / first * 100 : 0;
             var conversion = string.Format(
-                CultureInfo.CurrentCulture,
+                EffectiveCulture,
                 Loc["TmChart_FunnelConversionValue"],
                 FunnelNumber(value), FunnelNumber(first), FunnelNumber(pct));
             rows.Add((i < Data.Labels.Length ? Data.Labels[i] : "", FunnelNumber(value), conversion));
@@ -441,11 +442,11 @@ public partial class TmChart
     /// conversion reads <c>49,19 %</c> under <c>cs-CZ</c> and <c>49.19 %</c> under <c>en-US</c>, and an
     /// exact half stays <c>12,5 %</c> rather than <c>12,50 %</c>.
     /// </summary>
-    private static string FunnelNumber(double value) =>
-        value.ToString("#,0.##", CultureInfo.CurrentCulture);
+    private string FunnelNumber(double value) =>
+        value.ToString("#,0.##", EffectiveCulture);
 
     /// <summary>The value line of one stage: the value and its conversion from the first stage.</summary>
-    private static string FunnelValueLine(double value, double pct) =>
+    private string FunnelValueLine(double value, double pct) =>
         $"{FunnelNumber(value)} ({FunnelNumber(pct)}\u00A0%)";
 
     /// <summary>

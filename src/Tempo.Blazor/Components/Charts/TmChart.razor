@@ -17,7 +17,7 @@
         @* The plot box is the funnel's SIZE container: its width and height are the box the SVG meets
            into, which is the scale the label type has to compensate (_chart.css). Every other chart type
            gets the same box without the containment. *@
-        <div class="tm-chart__plot">
+        <div class="tm-chart__plot" @ref="_plot" data-responsive="@(IsResponsive ? "true" : null)">
             <svg viewBox="0 0 @SvgW @SvgH"
                  preserveAspectRatio="xMidYMid meet"
                  aria-label="@ChartAriaLabel"
@@ -120,16 +120,11 @@
 </div>
 
 @code {
-    private const int SvgW = 600;
-    private const int SvgH = 400;
-    private const int PL = 50;  // pad-left
-    private const int PR = 20;  // pad-right
+    private const int PR = 20;  // pad-right (pad-left is the value-axis gutter, see TmChart.Axis.cs)
     private const int PT = 20;  // pad-top
     private const int PB = 40;  // pad-bottom
     private const int MinStackedValueLabelHeight = 16;
     private const int MinStackedValueLabelWidth = 24;
-    private int CW => SvgW - PL - PR;  // chart width
-    private int CH => SvgH - PT - PB;  // chart height
 
     [Parameter, EditorRequired] public ChartType Type { get; set; }
     [Parameter, EditorRequired] public ChartData Data { get; set; } = default!;
@@ -220,7 +215,7 @@
     // output is byte-identical to the pre-2.9.1 hardcoded string. A host-supplied AriaLabel wins, and a
     // blank one is treated as absent: `aria-label=""` would erase the accessible name altogether.
     private string ChartAriaLabel => string.IsNullOrWhiteSpace(AriaLabel)
-        ? string.Format(CultureInfo.CurrentCulture, Loc["TmChart_AriaLabel"], Type)
+        ? string.Format(EffectiveCulture, Loc["TmChart_AriaLabel"], Type)
         : AriaLabel;
 
     private record LegendItem(string Label, string Color);
@@ -238,6 +233,7 @@
 
     protected override void OnParametersSet()
     {
+        ForgetMeasurementUnlessResponsive();
         if (!ReferenceEquals(_lastData, Data))
         {
             _hidden.Clear();
@@ -300,7 +296,7 @@
         {
             var tp = Data.TimePoints;
             var subDay = tp.Length > 1 && (tp.Max() - tp.Min()).TotalDays <= 2;
-            return tp[valueIndex].ToString(subDay ? "g" : "d", CultureInfo.CurrentCulture);
+            return tp[valueIndex].ToString(subDay ? "g" : "d", EffectiveCulture);
         }
 
         return valueIndex < Data.Labels.Length ? Data.Labels[valueIndex] : "";
@@ -402,6 +398,8 @@
 
     private RenderFragment ChartContent => builder =>
     {
+        // The value-axis gutter follows the widest tick label of THIS render (a legend toggle changes the domain).
+        _gutter = ComputeGutter();
         switch (Type)
         {
             case ChartType.Bar:
@@ -459,7 +457,7 @@
     // 0-based when every visible value is non-negative (existing behavior); extends below
     // zero when any value is negative (e.g. cashflow), with an emphasized zero axis.
 
-    private (double Min, double Max) BarValueDomain()
+    private ChartAxisScale BarValueDomain()
     {
         double min = 0, max = 0;
         if (PerValue)
@@ -486,8 +484,8 @@
             }
         }
 
-        if (max == min) max = min + 1; // flat/empty — avoid a zero-height domain
-        return (min, max);
+        // A flat/empty series is widened inside Nice(); both ends land on a 1/2/5 tick (TmChart.Axis.cs).
+        return ChartAxisScale.Nice(min, max);
     }
 
     private double BarDomainY(double value, double min, double max)
@@ -496,13 +494,13 @@
     private void BuildGrid(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder b)
     {
         if (!ShowGrid) return;
-        var (min, max) = BarValueDomain();
-        for (int i = 0; i <= 5; i++)
+        var scale = BarValueDomain();
+        var (min, max) = scale;
+        foreach (var value in scale.Ticks())
         {
-            var value = min + (max - min) * i / 5.0;
             var y = BarDomainY(value, min, max);
             SvgLine(b, "tm-chart__grid-line", PL, y, PL + CW, y);
-            SvgText(b, "tm-chart__axis-label", PL - 8, y + 4, F(value), "end");
+            SvgText(b, "tm-chart__axis-label", PL - 8, y + 4, V(value), "end");
         }
 
         // Emphasized zero axis when the domain crosses zero (parity with Area charts).
@@ -573,14 +571,14 @@
                     var fill = ResolveFillColor(ds, i, ds.BackgroundColor ?? ds.Color);
                     SvgRect(b, x, y, bw, bh, fill, ds.Color, di, i, x + bw / 2, y);
                     if (ShowValues)
-                        SvgText(b, "tm-chart__value", x + bw / 2, val < 0 ? y + bh + 12 : y - 4, F(val), "middle");
+                        SvgText(b, "tm-chart__value", x + bw / 2, val < 0 ? y + bh + 12 : y - 4, V(val), "middle");
                 }
             }
         }
 
-        // Dense categorical axes thin their labels (every n-th) so they never overlap;
-        // charts with up to 24 categories keep every label (existing behavior).
-        var labelStep = lc > 24 ? (int)Math.Ceiling(lc / 12.0) : 1;
+        // Dense categorical axes thin their labels (every n-th) so they never overlap: the step comes from
+        // the width a category owns and the width of the widest label, not from a fixed category count.
+        var labelStep = CategoryLabelStep(Data.Labels, lc, gw);
         for (int i = 0; i < lc; i += labelStep)
         {
             var cx = PL + i * gw + gw / 2.0;
@@ -656,7 +654,7 @@
                 b.CloseElement();
 
                 if (ShowValues)
-                    SvgText(b, "tm-chart__value", x, y - 10, F(ds.Values[i]), "middle");
+                    SvgText(b, "tm-chart__value", x, y - 10, V(ds.Values[i]), "middle");
             }
         }
     }
@@ -682,10 +680,11 @@
                 var fill = ResolveFillColor(ds, i, ds.BackgroundColor ?? ds.Color);
                 SvgRect(b, PL, y, bw, bh, fill, ds.Color, di, i, PL + bw + 6, y + bh / 2);
                 if (ShowValues)
-                    SvgText(b, "tm-chart__value", PL + bw + 6, y + bh / 2 + 4, F(val), "start");
+                    SvgText(b, "tm-chart__value", PL + bw + 6, y + bh / 2 + 4, V(val), "start");
             }
         }
-        for (int i = 0; i < lc; i++)
+        var rowStep = ChartAxisScale.RowStep(lc, gh);
+        for (int i = 0; i < lc; i += rowStep)
         {
             var cy = PT + i * gh + gh / 2.0;
             SvgText(b, "tm-chart__label", PL - 8, cy + 4, Data.Labels[i], "end");
@@ -751,7 +750,7 @@
                 b.CloseElement();
 
                 if (ShowValues)
-                    SvgText(b, "tm-chart__value", x, y - 10, F(ds.Values[i]), "middle");
+                    SvgText(b, "tm-chart__value", x, y - 10, V(ds.Values[i]), "middle");
             }
         }
 
@@ -826,7 +825,8 @@
 
         var lc = Data.Labels.Length;
         var sx = CW / (double)Math.Max(lc - 1, 1);
-        for (int i = 0; i < lc; i++)
+        var labelStep = CategoryLabelStep(Data.Labels, lc, sx);
+        for (int i = 0; i < lc; i += labelStep)
         {
             SvgText(b, "tm-chart__label", PL + i * sx, PT + CH + 24, Data.Labels[i], "middle");
         }
@@ -872,14 +872,16 @@
             for (; t <= max; t = t.AddYears(1)) ticks.Add(t);
         }
 
-        // Thin the ticks so at most 8 labels render — labels must never overlap.
-        const int maxLabels = 8;
-        var step = Math.Max(1, (int)Math.Ceiling(ticks.Count / (double)maxLabels));
-        var culture = CultureInfo.CurrentCulture;
+        // Thin the ticks so labels never overlap: the budget is the number of labels of the widest text that
+        // fit the plot (it grows with a responsive chart), not a fixed 8.
+        var culture = EffectiveCulture;
+        var texts = ticks.Select(t => t.ToString(format, culture)).ToArray();
+        var budget = ChartAxisScale.LabelBudget(CW, LongestLabel(texts));
+        var step = Math.Max(1, (int)Math.Ceiling(ticks.Count / (double)budget));
         for (int k = 0; k < ticks.Count; k += step)
         {
             var x = TimeX(ticks[k], min, max);
-            SvgText(b, "tm-chart__label", x, PT + CH + 24, ticks[k].ToString(format, culture), "middle");
+            SvgText(b, "tm-chart__label", x, PT + CH + 24, texts[k], "middle");
         }
     }
 
@@ -889,7 +891,7 @@
 
     private readonly string _areaGradientUid = Guid.NewGuid().ToString("N");
 
-    private (double Min, double Max) AreaDomain()
+    private ChartAxisScale AreaDomain()
     {
         double min = 0, max = 0;
         for (int di = 0; di < Data.Datasets.Length; di++)
@@ -902,8 +904,7 @@
                 if (v > max) max = v;
             }
         }
-        if (max == min) max = min + 1; // flat/empty series — avoid a zero-height domain
-        return (min, max);
+        return ChartAxisScale.Nice(min, max);
     }
 
     private double AreaY(double value, double min, double max)
@@ -912,13 +913,13 @@
     private void BuildAreaGrid(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder b)
     {
         if (!ShowGrid) return;
-        var (min, max) = AreaDomain();
-        for (int i = 0; i <= 5; i++)
+        var scale = AreaDomain();
+        var (min, max) = scale;
+        foreach (var value in scale.Ticks())
         {
-            var value = min + (max - min) * i / 5.0;
             var y = AreaY(value, min, max);
             SvgLine(b, "tm-chart__grid-line", PL, y, PL + CW, y);
-            SvgText(b, "tm-chart__axis-label", PL - 8, y + 4, F(value), "end");
+            SvgText(b, "tm-chart__axis-label", PL - 8, y + 4, V(value), "end");
         }
 
         // Emphasized zero axis when the domain crosses zero.
@@ -1081,7 +1082,7 @@
                     b.CloseElement();
 
                     if (ShowValues)
-                        SvgText(b, "tm-chart__value", x, y - 10, F(ds.Values[i]), "middle");
+                        SvgText(b, "tm-chart__value", x, y - 10, V(ds.Values[i]), "middle");
                 }
             }
         }
@@ -1203,7 +1204,7 @@
             builder.AddAttribute(18, "class", "tm-chart__tooltip-dot");
             builder.AddAttribute(19, "style", $"background-color:{_tip.Color};");
             builder.CloseElement();
-            var text = Data is { Datasets.Length: > 1 } ? $"{_tip.DatasetLabel}: {F(_tip.Value)}" : F(_tip.Value);
+            var text = Data is { Datasets.Length: > 1 } ? $"{_tip.DatasetLabel}: {V(_tip.Value)}" : V(_tip.Value);
             builder.AddContent(20, text);
             builder.CloseElement();
         }
@@ -1253,7 +1254,7 @@
         return bars;
     }
 
-    private (double Min, double Max) WaterfallDomain(IReadOnlyList<WaterfallBar> bars)
+    private ChartAxisScale WaterfallDomain(IReadOnlyList<WaterfallBar> bars)
     {
         double min = 0, max = 0;
         foreach (var bar in bars)
@@ -1262,21 +1263,20 @@
             max = Math.Max(max, Math.Max(bar.Start, bar.End));
         }
 
-        if (min == max) max = min + 1;
-        return (min, max);
+        return ChartAxisScale.Nice(min, max);
     }
 
     private void BuildWaterfallGrid(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder b)
     {
         if (!ShowGrid) return;
         var bars = WaterfallBars();
-        var (min, max) = WaterfallDomain(bars);
-        for (int i = 0; i <= 5; i++)
+        var scale = WaterfallDomain(bars);
+        var (min, max) = scale;
+        foreach (var value in scale.Ticks())
         {
-            var value = min + (max - min) * i / 5.0;
             var y = BarDomainY(value, min, max);
             SvgLine(b, "tm-chart__grid-line", PL, y, PL + CW, y);
-            SvgText(b, "tm-chart__axis-label", PL - 8, y + 4, F(value), "end");
+            SvgText(b, "tm-chart__axis-label", PL - 8, y + 4, V(value), "end");
         }
 
         if (min < 0)
@@ -1301,6 +1301,7 @@
         var gw = CW / (double)bars.Count;
         var gp = gw * 0.15;
         var bw = gw * 0.7;
+        var labelStep = CategoryLabelStep(bars.Select(bar => bar.Label), bars.Count, gw);
 
         if (WaterfallShowConnectors)
         {
@@ -1335,14 +1336,15 @@
                 if (ShowValues)
                 {
                     var text = bar.IsTotal || bar.Index == 0
-                        ? F(bar.End)
-                        : bar.Delta > 0 ? $"+{F(bar.Delta)}" : F(bar.Delta);
+                        ? V(bar.End)
+                        : bar.Delta > 0 ? $"+{V(bar.Delta)}" : V(bar.Delta);
                     var valueY = bar.End < bar.Start ? y + height + 12 : y - 4;
                     SvgText(b, "tm-chart__value", x + bw / 2, valueY, text, "middle");
                 }
             }
 
-            SvgText(b, "tm-chart__label", x + bw / 2, PT + CH + 24, bar.Label, "middle");
+            if (i % labelStep == 0)
+                SvgText(b, "tm-chart__label", x + bw / 2, PT + CH + 24, bar.Label, "middle");
         }
     }
 
@@ -1492,7 +1494,7 @@
     // values contribute nothing to a stack. A whole dataset can be toggled off via the
     // interactive series legend (IsSegmentHidden(di, -1)).
 
-    private (double Min, double Max) StackedDomain()
+    private ChartAxisScale StackedDomain()
     {
         var lc = Data.Labels.Length;
         double max = 0;
@@ -1507,19 +1509,19 @@
             }
             if (sum > max) max = sum;
         }
-        return (0, max <= 0 ? 1 : max);
+        return ChartAxisScale.Nice(0, max <= 0 ? 1 : max);
     }
 
     private void BuildStackedGrid(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder b)
     {
         if (!ShowGrid) return;
-        var (min, max) = StackedDomain();
-        for (int i = 0; i <= 5; i++)
+        var scale = StackedDomain();
+        var (min, max) = scale;
+        foreach (var value in scale.Ticks())
         {
-            var value = min + (max - min) * i / 5.0;
             var y = PT + CH - ((value - min) / (max - min)) * CH;
             SvgLine(b, "tm-chart__grid-line", PL, y, PL + CW, y);
-            SvgText(b, "tm-chart__axis-label", PL - 8, y + 4, F(value), "end");
+            SvgText(b, "tm-chart__axis-label", PL - 8, y + 4, V(value), "end");
         }
     }
 
@@ -1548,12 +1550,12 @@
                 var fill = ResolveFillColor(ds, i, ds.BackgroundColor ?? ds.Color);
                 SvgRect(b, x, yTop, bw, segH, fill, ds.Color, di, i, x + bw / 2, yTop);
                 if (ShowValues && segH >= MinStackedValueLabelHeight)
-                    SvgText(b, "tm-chart__value", x + bw / 2, yTop + segH / 2 + 4, F(val), "middle");
+                    SvgText(b, "tm-chart__value", x + bw / 2, yTop + segH / 2 + 4, V(val), "middle");
                 cum += val;
             }
         }
 
-        var labelStep = lc > 24 ? (int)Math.Ceiling(lc / 12.0) : 1;
+        var labelStep = CategoryLabelStep(Data.Labels, lc, gw);
         for (int i = 0; i < lc; i += labelStep)
         {
             var cx = PL + i * gw + gw / 2.0;
@@ -1586,12 +1588,13 @@
                 var fill = ResolveFillColor(ds, i, ds.BackgroundColor ?? ds.Color);
                 SvgRect(b, x, y, segW, bh, fill, ds.Color, di, i, x + segW / 2, y + bh / 2);
                 if (ShowValues && segW >= MinStackedValueLabelWidth)
-                    SvgText(b, "tm-chart__value", x + segW / 2, y + bh / 2 + 4, F(val), "middle");
+                    SvgText(b, "tm-chart__value", x + segW / 2, y + bh / 2 + 4, V(val), "middle");
                 cum += val;
             }
         }
 
-        for (int i = 0; i < lc; i++)
+        var rowStep = ChartAxisScale.RowStep(lc, gh);
+        for (int i = 0; i < lc; i += rowStep)
         {
             var cy = PT + i * gh + gh / 2.0;
             SvgText(b, "tm-chart__label", PL - 8, cy + 4, Data.Labels[i], "end");
@@ -1642,7 +1645,8 @@
             b.CloseElement();
         }
 
-        for (int i = 0; i < lc; i++)
+        var labelStep = CategoryLabelStep(Data.Labels, lc, sx);
+        for (int i = 0; i < lc; i += labelStep)
         {
             var cx = PL + i * sx;
             SvgText(b, "tm-chart__label", cx, PT + CH + 24, Data.Labels[i], "middle");
@@ -1721,13 +1725,14 @@
                     // hover; the ink is picked from the FILL (see HeatmapValueInk), never from the
                     // theme alone — --tm-text-inverse is dark in dark mode, which would read
                     // dark-on-dark on a caller colour like #1d4ed8.
-                    SvgTextColored(b, "tm-chart__heatmap-value", x + cw2 / 2, y + ch2 / 2 + 4, F(val),
+                    SvgTextColored(b, "tm-chart__heatmap-value", x + cw2 / 2, y + ch2 / 2 + 4, V(val),
                         "middle", HeatmapValueInk(fill, norm), 11);
                 }
             }
         }
 
-        for (int c = 0; c < cols; c++)
+        var columnStep = CategoryLabelStep(Data.Labels, cols, cw2);
+        for (int c = 0; c < cols; c += columnStep)
         {
             SvgText(b, "tm-chart__axis-label", PL + c * cw2 + cw2 / 2, PT + CH + 16, Data.Labels[c], "middle");
         }
@@ -1886,7 +1891,7 @@
             if (ShowValues && rect.H > 36)
             {
                 SvgTextColored(b, "tm-chart__treemap-value", rect.X + rect.W / 2, rect.Y + rect.H / 2 + 18,
-                    F(value), "middle", ink, 9);
+                    V(value), "middle", ink, 9);
             }
         }
     }

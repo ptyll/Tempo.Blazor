@@ -161,7 +161,8 @@ public class TmChartComboTests : LocalizationTestBase
             .Add(x => x.Type, ChartType.Bar)
             .Add(x => x.Data, data));
 
-        cut.FindAll("text.tm-chart__label").Count.Should().BeLessThanOrEqualTo(13);
+        // The step is derived from the width a category owns (3-character labels in 11-unit slots -> every 3rd).
+        cut.FindAll("text.tm-chart__label").Count.Should().BeInRange(12, 16);
     }
 
     [Fact]
