@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<title>Tempo viewport probe</title>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; font: 13px/1.35 system-ui, sans-serif; }
+  body { padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+  #grid { position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background-image: linear-gradient(to right, rgba(128,128,128,.35) 1px, transparent 1px),
+                      linear-gradient(to bottom, rgba(128,128,128,.35) 1px, transparent 1px);
+    background-size: 20px 20px; }
+  .tick { position: fixed; font-size: 9px; opacity: .8; z-index: 1; pointer-events: none; }
+  #corner { position: fixed; left: 0; bottom: 0; width: 100px; height: 100px; z-index: 1; pointer-events: none;
+    border-top: 2px dashed #e11d48; border-right: 2px dashed #e11d48; }
+  main { position: relative; z-index: 2; padding: 6px; }
+  pre { margin: 0; white-space: pre-wrap; font: 12px/1.3 ui-monospace, monospace;
+    background: color-mix(in srgb, Canvas 88%, transparent); padding: 4px; border-radius: 4px; }
+  input { font-size: 16px; width: 100%; margin-top: 6px; padding: 6px; }
+  button { font-size: 14px; margin-top: 6px; padding: 8px 10px; min-height: 44px; }
+  #safe { position: fixed; z-index: 1; pointer-events: none;
+    top: env(safe-area-inset-top); right: env(safe-area-inset-right);
+    bottom: env(safe-area-inset-bottom); left: env(safe-area-inset-left);
+    outline: 2px solid #16a34a; outline-offset: -2px; }
+</style>
+</head>
+<body>
+<div id="grid"></div>
+<div id="safe"></div>
+<div id="corner"></div>
+<main>
+  <pre id="out">…</pre>
+  <input id="kb" inputmode="numeric" placeholder="Klepni sem: otevře klávesnici">
+  <button id="copy" type="button">Kopírovat výsledky</button>
+</main>
+<script>
+(() => {
+  const out = document.getElementById('out');
+  const probe = document.createElement('div');
+  probe.style.cssText = 'position:fixed;visibility:hidden;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)';
+  document.body.appendChild(probe);
+  let minVvHeight = Infinity, maxVvHeight = 0;
+  const mq = q => matchMedia(q).matches;
+  function ticks() {
+    document.querySelectorAll('.tick').forEach(t => t.remove());
+    for (let x = 0; x <= innerWidth; x += 50) add(x + '', `left:${x + 1}px;top:0`);
+    for (let y = 50; y <= innerHeight; y += 50) add(y + '', `left:1px;top:${y + 1}px`);
+    function add(t, s) { const e = document.createElement('div'); e.className = 'tick'; e.textContent = t; e.style.cssText = s; document.body.appendChild(e); }
+  }
+  function render() {
+    const vv = window.visualViewport;
+    const cs = getComputedStyle(probe);
+    if (vv) { minVvHeight = Math.min(minVvHeight, vv.height); maxVvHeight = Math.max(maxVvHeight, vv.height); }
+    const r = {
+      ua: navigator.userAgent,
+      innerWidth, innerHeight,
+      outerWidth, outerHeight,
+      clientWidth: document.documentElement.clientWidth,
+      clientHeight: document.documentElement.clientHeight,
+      screen: `${screen.width}x${screen.height} avail ${screen.availWidth}x${screen.availHeight}`,
+      orientation: screen.orientation ? screen.orientation.type : '?',
+      devicePixelRatio,
+      visualViewport: vv ? `${vv.width.toFixed(1)}x${vv.height.toFixed(1)} offsetTop ${vv.offsetTop.toFixed(1)} scale ${vv.scale}` : 'n/a',
+      vvHeightMinMax: vv ? `${minVvHeight.toFixed(1)} / ${maxVvHeight.toFixed(1)}` : 'n/a',
+      safeArea: `T ${cs.paddingTop} R ${cs.paddingRight} B ${cs.paddingBottom} L ${cs.paddingLeft}`,
+      pointerCoarse: mq('(pointer: coarse)'), hover: mq('(hover: hover)'),
+      reducedMotion: mq('(prefers-reduced-motion: reduce)'), dark: mq('(prefers-color-scheme: dark)'),
+      forcedColors: mq('(forced-colors: active)'),
+      dvh100px: (() => { const d = document.createElement('div'); d.style.height = '100dvh'; document.body.appendChild(d); const h = d.getBoundingClientRect().height; d.remove(); return h; })(),
+      svh100px: (() => { const d = document.createElement('div'); d.style.height = '100svh'; document.body.appendChild(d); const h = d.getBoundingClientRect().height; d.remove(); return h; })(),
+      rootFontPx: getComputedStyle(document.documentElement).fontSize,
+      keyboard: navigator.virtualKeyboard ? 'VirtualKeyboard API available' : 'no VirtualKeyboard API'
+    };
+    out.textContent = Object.entries(r).map(([k, v]) => `${k}: ${v}`).join('\n');
+    ticks();
+  }
+  ['resize', 'orientationchange'].forEach(e => addEventListener(e, render));
+  if (visualViewport) { visualViewport.addEventListener('resize', render); visualViewport.addEventListener('scroll', render); }
+  document.getElementById('kb').addEventListener('focus', () => setTimeout(render, 600));
+  document.getElementById('kb').addEventListener('blur', () => setTimeout(render, 600));
+  document.getElementById('copy').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(out.textContent); document.getElementById('copy').textContent = 'Zkopírováno'; }
+    catch { document.getElementById('copy').textContent = 'Kopírování nejde — pošli screenshot'; }
+  });
+  render();
+})();
+</script>
+</body>
+</html>
