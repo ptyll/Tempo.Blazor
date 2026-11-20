@@ -384,7 +384,7 @@ configurable:
   (`FilterableDropdown`, `NotionOverlayInModal`, `OverlayPanel`, `TmDataTableSortButton`, `TmDataTableSortButtonVisual`)
   and the `ReportingF*` specs that start their own `dotnet` host.
 - **Ratchet.** `ReadinessInfrastructureTests.NoSpecOpensItsOwnContextOrBootsPastTheCentralRecovery_RatchetedByKnownOffenders`
-  scans every `*.cs` of the E2E project (comments stripped; `PlaywrightTestBase.cs` and the guard itself excluded) for
+  scans every `*.cs` of the E2E project (comments stripped; the `PlaywrightTestBase.cs` / `PlaywrightTestBase.<Part>.cs` partials and the guard itself excluded) for
   `.NewContextAsync(`, `.GotoAsync(...); await WaitForAppReadyAsync(` (and the `ReloadAsync` twin),
   `WaitForFunctionAsync("...data-blazor-ready` and `RegisterContext(`. The hits of today are frozen in
   `KnownOffenders` (file -> count + reason). The test fails for a NEW file, for a count that GROWS and for a count that

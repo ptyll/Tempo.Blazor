@@ -1,4 +1,4 @@
-﻿using System.Text.RegularExpressions;
+using System.Text.RegularExpressions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Tempo.Blazor.E2E;
@@ -595,7 +595,10 @@ public class ReadinessInfrastructureTests
             var relative = Path.GetRelativePath(root, file).Replace(Path.DirectorySeparatorChar, '/');
             if (relative.StartsWith("bin/", StringComparison.Ordinal)
                 || relative.StartsWith("obj/", StringComparison.Ordinal)
-                || relative is "PlaywrightTestBase.cs" or "ReadinessInfrastructureTests.cs")
+                || relative is "ReadinessInfrastructureTests.cs"
+                // PlaywrightTestBase is a partial class split across PlaywrightTestBase.cs and
+                // PlaywrightTestBase.<Part>.cs (source-file ceiling); every part is the central harness.
+                || Regex.IsMatch(relative, @"^PlaywrightTestBase(\.[A-Za-z]+)?\.cs$"))
             {
                 continue;
             }

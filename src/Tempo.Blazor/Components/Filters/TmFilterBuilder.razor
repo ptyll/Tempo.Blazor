@@ -111,7 +111,9 @@
 
     /// <summary>
     /// Returns the number of records matching the given filters, or null when unknown. Called with a
-    /// 300 ms debounce while <see cref="ShowResultPreview"/> is true. A thrown exception shows nothing
+    /// 300 ms debounce while <see cref="ShowResultPreview"/> is true. The debounce runs on the injected
+    /// <see cref="TimeProvider"/> (<see cref="TimeProvider.System"/> by default), so a host that registers
+    /// its own <see cref="TimeProvider"/> controls this debounce as well. A thrown exception shows nothing
     /// and never takes the builder down. An existing <c>Func</c> variable binds directly.
     /// </summary>
     [Parameter] public Func<IReadOnlyList<ActiveFilter>, CancellationToken, Task<int?>>? ResultCountProvider { get; set; }
@@ -128,6 +130,18 @@
     /// tests set it through <c>InternalsVisibleTo</c>. Defaults to 300 ms.
     /// </summary>
     internal int ResultCountDebounceMs { get; set; } = 300;
+
+    /// <summary>
+    /// Clock behind the debounce. Resolved through <see cref="IServiceProvider"/> so a consumer that never
+    /// registers a <see cref="TimeProvider"/> still gets <see cref="TimeProvider.System"/> (a bare
+    /// <c>[Inject] TimeProvider</c> would throw for exactly those consumers). Tests register a
+    /// <c>FakeTimeProvider</c> and advance it instead of waiting on the wall clock.
+    /// </summary>
+    [Inject] private IServiceProvider Services { get; set; } = default!;
+
+    private TimeProvider Clock
+        => _clock ??= Services.GetService(typeof(TimeProvider)) as TimeProvider ?? TimeProvider.System;
+    private TimeProvider? _clock;
 
     /// <summary>Show the "Clear all" button when filters are active.</summary>
     [Parameter] public bool ShowClearAll { get; set; } = true;
@@ -360,7 +374,7 @@
     {
         try
         {
-            await Task.Delay(ResultCountDebounceMs, cts.Token);
+            await Task.Delay(TimeSpan.FromMilliseconds(ResultCountDebounceMs), Clock, cts.Token);
         }
         catch (OperationCanceledException)
         {

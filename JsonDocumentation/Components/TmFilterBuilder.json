@@ -63,7 +63,7 @@
       "name": "ResultCountProvider",
       "type": "Func<IReadOnlyList<ActiveFilter>, CancellationToken, Task<int?>>?",
       "isRequired": false,
-      "description": "Returns the number of records matching the given filters, or null when unknown. Called with a 300 ms debounce while ShowResultPreview is true. A thrown exception shows nothing and never takes the builder down. An existing Func variable binds directly."
+      "description": "Returns the number of records matching the given filters, or null when unknown. Called with a 300 ms debounce while ShowResultPreview is true. The debounce runs on the injected TimeProvider (TimeProvider.System by default), so a host that registers its own TimeProvider controls this debounce as well. A thrown exception shows nothing and never takes the builder down. An existing Func variable binds directly."
     },
     {
       "name": "ResultCountKey",

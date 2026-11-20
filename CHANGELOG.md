@@ -376,6 +376,14 @@ All items are additive or visual; there is no Breaking / Migration entry for thi
   with a five-action footer demonstrating the DOM-order column, the scroll cap and the label
   wrap (`TmDemo_StackedFooterInOrder` in en/cs/sk/fr).
 
+### Changed — `TmFilterBuilder` result-preview debounce runs on the injected `TimeProvider` (`Tempo.Blazor`)
+
+- **The 300 ms debounce of the result preview (`ShowResultPreview` + `ResultCountProvider`) is an `ITimer` on the
+  injected `TimeProvider`, defaulting to `TimeProvider.System`.** A host that registers its own `TimeProvider`
+  (a `FakeTimeProvider` in tests, a controlled clock elsewhere) now drives this debounce too, the way it already
+  drives `TmQueryInput` and `TmSearchInput`; a host that registers none keeps the wall-clock behaviour. No public
+  member changes and the window is still 300 ms.
+
 ## 2.11.1 - 2026-11-15
 
 > Patch release over 2.11.0: two defects found by a host application while moving to 2.11.0.

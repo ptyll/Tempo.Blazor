@@ -2,6 +2,7 @@ using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 using Tempo.Blazor.Components.Filters;
 using Tempo.Blazor.Interfaces;
 using Tempo.Blazor.Localization;
@@ -14,9 +15,35 @@ namespace Tempo.Blazor.Tests.Filters;
 /// Result preview of <see cref="TmFilterBuilder"/>: a debounced count from
 /// <see cref="TmFilterBuilder.ResultCountProvider"/>, rendered as a pluralized, polite live region.
 /// The preview renders only when both <c>ShowResultPreview</c> and the provider are set.
+/// The debounce runs on the injected <see cref="TimeProvider"/>: every test registers a
+/// <see cref="FakeTimeProvider"/> and advances it, so no assertion depends on how long the machine
+/// (a loaded Linux runner, another ambient culture) takes to get to the wall-clock deadline.
 /// </summary>
 public class TmFilterBuilderResultPreviewTests : LocalizationTestBase
 {
+    private readonly FakeTimeProvider _clock = new();
+
+    public TmFilterBuilderResultPreviewTests()
+    {
+        Services.AddSingleton<TimeProvider>(_clock);
+    }
+
+    /// <summary>Moves the fake clock across the default 300 ms debounce, on the renderer's dispatcher.</summary>
+    private void ElapseDebounce(IRenderedComponent<TmFilterBuilder> cut) => Advance(cut, 300);
+
+    private void Advance(IRenderedComponent<TmFilterBuilder> cut, int milliseconds)
+    {
+        cut.InvokeAsync(() =>
+        {
+            _clock.Advance(TimeSpan.FromMilliseconds(milliseconds));
+            return Task.CompletedTask;
+        }).GetAwaiter().GetResult();
+
+        // Drain the dispatcher queue: continuations the clock release posted to it must have run
+        // before the caller asserts.
+        cut.InvokeAsync(() => { }).GetAwaiter().GetResult();
+    }
+
     private static readonly ActiveFilter NameContainsA =
         new("name", "Name", FilterOperator.Contains, "A", "A");
 
@@ -74,6 +101,7 @@ public class TmFilterBuilderResultPreviewTests : LocalizationTestBase
             })
             .Add(c => c.ActiveFilters, new[] { NameContainsA }));
 
+        ElapseDebounce(cut);
         cut.WaitForAssertion(() =>
             cut.Find(".tm-filter-result-preview").TextContent.Should().Contain("3 matching records"),
             timeout: TimeSpan.FromSeconds(2));
@@ -93,6 +121,7 @@ public class TmFilterBuilderResultPreviewTests : LocalizationTestBase
             .Add(c => c.ResultCountProvider, Count(1))
             .Add(c => c.ActiveFilters, new[] { NameContainsA }));
 
+        ElapseDebounce(cut);
         cut.WaitForAssertion(() =>
             cut.Find(".tm-filter-result-preview").TextContent.Trim().Should().Be("1 matching record"),
             timeout: TimeSpan.FromSeconds(2));
@@ -112,6 +141,7 @@ public class TmFilterBuilderResultPreviewTests : LocalizationTestBase
             .Add(c => c.ResultCountProvider, Count(count))
             .Add(c => c.ActiveFilters, new[] { NameContainsA }));
 
+        ElapseDebounce(cut);
         cut.WaitForAssertion(() =>
             cut.Find(".tm-filter-result-preview").TextContent.Trim().Should().Be(expected),
             timeout: TimeSpan.FromSeconds(2));
@@ -125,6 +155,7 @@ public class TmFilterBuilderResultPreviewTests : LocalizationTestBase
             .Add(c => c.ShowResultPreview, true)
             .Add(c => c.ResultCountProvider, Count(null)));
 
+        ElapseDebounce(cut);
         cut.WaitForAssertion(() =>
         {
             var region = cut.Find(".tm-filter-result-preview");
@@ -143,6 +174,7 @@ public class TmFilterBuilderResultPreviewTests : LocalizationTestBase
             .Add(c => c.ResultCountProvider, (IReadOnlyList<ActiveFilter> _, CancellationToken _) =>
                 throw new InvalidOperationException("count failed")));
 
+        ElapseDebounce(cut);
         cut.WaitForAssertion(() =>
             cut.Find(".tm-filter-result-preview").TextContent.Trim().Should().BeEmpty(),
             timeout: TimeSpan.FromSeconds(2));
@@ -167,26 +199,28 @@ public class TmFilterBuilderResultPreviewTests : LocalizationTestBase
             })
             .Add(c => c.ActiveFilters, new[] { NameContainsA }));
 
+        ElapseDebounce(cut);
         cut.WaitForAssertion(() => calls.Should().Be(1), timeout: TimeSpan.FromSeconds(2));
 
         calls = 0;
-        // The three renders must land inside ONE debounce window no matter how loaded the machine is: with
-        // the 300 ms default, three renders under the full parallel suite can outlast the window, the
-        // debounce fires early and "nothing new has been asked yet" fails on wall-clock time alone. A wide
-        // window keeps the claim (collapse into one call) and drops the race.
-        cut.Instance.ResultCountDebounceMs = 1500;
+        // Three changes, each arriving before the previous one's 300 ms window ran out, on the fake clock:
+        // the wait restarts on every change, so no amount of real elapsed time can split the burst.
         cut.Render(p => p.Add(c => c.ActiveFilters, new[] { NameContainsA, StatusActive }));
+        Advance(cut, 299);
         cut.Render(p => p.Add(c => c.ActiveFilters, new[] { StatusActive }));
+        Advance(cut, 299);
         cut.Render(p => p.Add(c => c.ActiveFilters, new[] { ScoreHigh }));
+        Advance(cut, 299);
 
-        // Still inside the debounce window: nothing new has been asked yet.
+        // 897 ms have passed in total, but never 300 ms since the last change: nothing has been asked yet.
         calls.Should().Be(0);
 
+        Advance(cut, 1);
         cut.WaitForAssertion(() =>
         {
             calls.Should().Be(1);
             last.Should().ContainSingle().Which.FieldName.Should().Be("score");
-        }, timeout: TimeSpan.FromSeconds(6));
+        }, timeout: TimeSpan.FromSeconds(2));
     }
 
     /// <summary>A count that resolves as null clears the text but leaves the live region in place.</summary>
@@ -200,6 +234,7 @@ public class TmFilterBuilderResultPreviewTests : LocalizationTestBase
                 Task.FromResult<int?>(next))
             .Add(c => c.ActiveFilters, new[] { NameContainsA }));
 
+        ElapseDebounce(cut);
         cut.WaitForAssertion(() =>
             cut.Find(".tm-filter-result-preview").TextContent.Should().Contain("4"),
             timeout: TimeSpan.FromSeconds(2));
@@ -208,6 +243,7 @@ public class TmFilterBuilderResultPreviewTests : LocalizationTestBase
         cut.Render(p => p
             .Add(c => c.ResultCountProvider, Count(null))
             .Add(c => c.ActiveFilters, new[] { StatusActive }));
+        ElapseDebounce(cut);
 
         cut.WaitForAssertion(() =>
         {
@@ -234,6 +270,7 @@ public class TmFilterBuilderResultPreviewTests : LocalizationTestBase
             region.QuerySelector(".tm-spinner").Should().NotBeNull();
         }, timeout: TimeSpan.FromSeconds(2));
 
+        ElapseDebounce(cut);
         gate.SetResult(2);
         cut.WaitForAssertion(() =>
             cut.Find(".tm-filter-result-preview").TextContent.Should().Contain("2 matching records"),
@@ -255,11 +292,13 @@ public class TmFilterBuilderResultPreviewTests : LocalizationTestBase
             })
             .Add(c => c.ActiveFilters, new[] { StatusActive }));
 
+        ElapseDebounce(cut);
         cut.WaitForAssertion(() => last.Should().ContainSingle(), timeout: TimeSpan.FromSeconds(2));
 
         cut.Find(".tm-filter-builder-add").Click();
         cut.Find(".tm-filter-field-option").Click();
         cut.Find(".tm-filter-value-input").Change("Ann");
+        ElapseDebounce(cut);
 
         cut.WaitForAssertion(() =>
         {
@@ -290,6 +329,7 @@ public class TmFilterBuilderResultPreviewTests : LocalizationTestBase
             .Add(c => c.ResultCountProvider, Count(2000000))
             .Add(c => c.ActiveFilters, new[] { NameContainsA }));
 
+        ElapseDebounce(cut);
         cut.WaitForAssertion(() =>
         {
             var text = cut.Find(".tm-filter-result-preview").TextContent;
@@ -315,6 +355,7 @@ public class TmFilterBuilderResultPreviewTests : LocalizationTestBase
             .Add(c => c.ResultCountProvider, provider)
             .Add(c => c.ActiveFilters, filters));
 
+        ElapseDebounce(cut);
         cut.WaitForAssertion(() =>
         {
             calls.Should().Be(1);
@@ -326,6 +367,8 @@ public class TmFilterBuilderResultPreviewTests : LocalizationTestBase
             .Add(c => c.ResultCountProvider, provider)
             .Add(c => c.ActiveFilters, filters));
 
+        // Even once the debounce would have elapsed again, an unchanged input schedules nothing.
+        ElapseDebounce(cut);
         calls.Should().Be(1);
         var region = cut.Find(".tm-filter-result-preview");
         region.TextContent.Should().Contain("3 matching records");
@@ -347,11 +390,13 @@ public class TmFilterBuilderResultPreviewTests : LocalizationTestBase
             })
             .Add(c => c.ActiveFilters, new[] { NameContainsA }));
 
+        ElapseDebounce(cut);
         cut.WaitForAssertion(() =>
             cut.Find(".tm-filter-result-preview").TextContent.Should().Contain("4 matching records"),
             timeout: TimeSpan.FromSeconds(2));
 
         cut.Render(p => p.Add(c => c.ActiveFilters, new[] { StatusActive }));
+        ElapseDebounce(cut);
 
         cut.WaitForAssertion(() =>
         {
