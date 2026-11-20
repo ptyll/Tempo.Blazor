@@ -20,13 +20,12 @@ public class ChatAutoAttachServerE2ETests : ServerTestBase
 
     private async Task<IPage> OpenAsync()
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = 1440, Height = 1100 },
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
         page.PageError += (_, e) => { lock (_clientErrors) _clientErrors.Add("PAGEERROR: " + e); };
         page.Console += (_, m) =>
@@ -34,8 +33,7 @@ public class ChatAutoAttachServerE2ETests : ServerTestBase
             if (m.Type == "error" && m.Text.Contains("Unhandled exception"))
                 lock (_clientErrors) _clientErrors.Add("CONSOLE: " + m.Text);
         };
-        await page.GotoAsync($"{BaseUrl}/chat", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/chat");
 
         var section = page.Locator(AutoAttachSection);
         await section.ScrollIntoViewIfNeededAsync();

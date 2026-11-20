@@ -21,8 +21,7 @@ public sealed class TmChartTimeAxisE2ETests : WasmTestBase
         await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1000);
-        await page.GotoAsync($"{BaseUrl}/charts", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/charts");
         await page.WaitForSelectorAsync("[data-testid='charts-time-axis-section']", new PageWaitForSelectorOptions { Timeout = 30000 });
         return page;
     }

@@ -45,8 +45,7 @@ public sealed class ContrastAuditE2ETests : WasmTestBase
         await context.AddInitScriptAsync($"localStorage.setItem('tm-demo-culture', '{culture}');");
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(width, height);
-        await page.GotoAsync($"{BaseUrl}{route}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{route}");
         return page;
     }
 
@@ -333,16 +332,14 @@ public sealed class ContrastAuditE2ETests : WasmTestBase
     {
         var page = await OpenAsync("/forms");
         await page.EmulateMediaAsync(new PageEmulateMediaOptions { Contrast = Contrast.More });
-        await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.Load });
-        await WaitForAppReadyAsync(page);
+        await ReloadAppReadyAsync(page);
 
         await RatioAsync(page.Locator("[data-testid='multiselect-disabled-single'] .tm-multiselect__chip").First,
             "disabled chip (prefers-contrast: more)");
         await RatioAsync(page.Locator("[data-testid='multiselect-disabled-empty'] .tm-multiselect__placeholder"),
             "disabled placeholder (prefers-contrast: more)");
 
-        await page.GotoAsync($"{BaseUrl}/data-display", new PageGotoOptions { WaitUntil = WaitUntilState.Load });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/data-display");
         await RatioAsync(page.Locator(".tm-change-diff-new").First,
             "change-diff new value (prefers-contrast: more)");
 

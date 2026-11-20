@@ -36,7 +36,7 @@ public class ChatLayoutMobileE2ETests : WasmTestBase
 
     private async Task<IPage> OpenAsync(int width, int height, bool mobileEmulation = false)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             Locale = "en-US",
@@ -44,7 +44,6 @@ public class ChatLayoutMobileE2ETests : WasmTestBase
             IsMobile = mobileEmulation,
             HasTouch = mobileEmulation,
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
         page.PageError += (_, e) => { lock (_clientErrors) _clientErrors.Add("PAGEERROR: " + e); };
         page.Console += (_, m) =>
@@ -52,8 +51,7 @@ public class ChatLayoutMobileE2ETests : WasmTestBase
             if (m.Type == "error" && m.Text.Contains("Unhandled exception"))
                 lock (_clientErrors) _clientErrors.Add("CONSOLE: " + m.Text);
         };
-        await page.GotoAsync($"{BaseUrl}{ChatPage}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{ChatPage}");
 
         var section = page.Locator(Section);
         await section.ScrollIntoViewIfNeededAsync();
@@ -333,7 +331,7 @@ public class ChatLayoutMobileE2ETests : WasmTestBase
     [TestCategory("WASM")]
     public async Task VirtualKeyboard_LiftsTheStickyComposerAboveTheVisualViewport()
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = 375, Height = 812 },
             Locale = "en-US",
@@ -341,7 +339,6 @@ public class ChatLayoutMobileE2ETests : WasmTestBase
             IsMobile = true,
             HasTouch = true,
         });
-        RegisterContext(context);
         await context.AddInitScriptAsync(FakeVisualViewportScript);
         var page = await context.NewPageAsync();
         page.PageError += (_, e) => { lock (_clientErrors) _clientErrors.Add("PAGEERROR: " + e); };
@@ -350,8 +347,7 @@ public class ChatLayoutMobileE2ETests : WasmTestBase
             if (m.Type == "error" && m.Text.Contains("Unhandled exception"))
                 lock (_clientErrors) _clientErrors.Add("CONSOLE: " + m.Text);
         };
-        await page.GotoAsync($"{BaseUrl}{ChatPage}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{ChatPage}");
 
         var phone = page.Locator(Phone);
         await phone.ScrollIntoViewIfNeededAsync();

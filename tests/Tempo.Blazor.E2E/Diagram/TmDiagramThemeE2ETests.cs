@@ -41,18 +41,16 @@ public sealed class TmDiagramThemeE2ETests : WasmTestBase
 
     private async Task<IPage> OpenAsync(int width = 1440, int height = 1000, bool reducedMotion = false)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
             ReducedMotion = reducedMotion ? ReducedMotion.Reduce : ReducedMotion.NoPreference,
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
         await page.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
-        await page.GotoAsync($"{BaseUrl}{Route}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{Route}");
         await page.Locator($"{Canvas} {PageRect}").First.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
         await page.Locator($"{Canvas} g.tm-diagram-node").First.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
         await page.WaitForTimeoutAsync(500);

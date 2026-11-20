@@ -12,7 +12,7 @@ public sealed class SheetReviewE2ETests : WasmTestBase
 {
     private async Task<IPage> OpenAsync(string route, int width, int height, bool touch)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             // Pin the locale: the demo follows the browser language, and a context without one inherits the host machine's (cs-CZ on the dev box) while the specs read English labels.
             Locale = "en-US",
@@ -20,10 +20,8 @@ public sealed class SheetReviewE2ETests : WasmTestBase
             ViewportSize = new ViewportSize { Width = width, Height = height },
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}{route}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{route}");
         return page;
     }
 

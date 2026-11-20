@@ -20,7 +20,7 @@ public sealed class OverlayRound5E2ETests : WasmTestBase
 
     private async Task<IPage> OpenAsync(int width, int height = 1000)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             // Pin the locale: the demo follows the browser language, and a context without one inherits the host machine's (cs-CZ on the dev box) while the specs read English labels.
             Locale = "en-US",
@@ -28,15 +28,13 @@ public sealed class OverlayRound5E2ETests : WasmTestBase
             ViewportSize = new ViewportSize { Width = width, Height = height },
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
         return page;
     }
 
     private async Task GotoAsync(IPage page, string path)
     {
-        await page.GotoAsync($"{BaseUrl}{path}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 90000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{path}");
     }
 
     private static async Task<string> ShootAsync(IPage page, string name)

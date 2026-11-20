@@ -71,8 +71,7 @@ public sealed class ModalFocusRestoreWasmE2ETests : WasmTestBase
         await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1000);
-        await page.GotoAsync($"{BaseUrl}{Route}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{Route}");
 
         await page.GetByTestId("focus-restore-section").ScrollIntoViewIfNeededAsync();
         return page;
@@ -279,8 +278,7 @@ public sealed class ModalFocusRestoreWasmE2ETests : WasmTestBase
             if (request.Url.Contains("tm-focus-trap", StringComparison.Ordinal)) Interlocked.Increment(ref seen);
         };
         await page.SetViewportSizeAsync(1440, 1000);
-        await page.GotoAsync($"{BaseUrl}{Route}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{Route}");
         await page.GetByTestId("focus-restore-section").ScrollIntoViewIfNeededAsync();
 
         await page.GetByTestId("open-restore-modal").ClickAsync();
@@ -514,8 +512,7 @@ public sealed class ModalFocusRestoreServerE2ETests : ServerTestBase
         await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1000);
-        await page.GotoAsync($"{BaseUrl}{Route}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{Route}");
 
         await page.GetByTestId("focus-restore-section").ScrollIntoViewIfNeededAsync();
         return page;

@@ -18,20 +18,14 @@ public sealed class ModalStackedInOrderE2ETests : WasmTestBase
 
     private async Task<IPage> OpenAsync(int width, int height, bool dark)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             IgnoreHTTPSErrors = true,
             Locale = "en-US",
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/modal-dialog", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.Load,
-            Timeout = 90000,
-        });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/modal-dialog");
 
         if (dark)
         {

@@ -90,12 +90,7 @@ public sealed class TmChartColorsE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1366, 900);
-        await page.GotoAsync($"{BaseUrl}/charts", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60000
-        });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/charts", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync("[data-testid='chart-donut-custom'] .tm-chart svg", new PageWaitForSelectorOptions
         {
             State = WaitForSelectorState.Visible,

@@ -19,7 +19,7 @@ public sealed class BottomSheetE2ETests : WasmTestBase
 
     private async Task<IPage> OpenTouchAsync(int width, int height)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             // Pin the locale: the demo follows the browser language, and a context without one inherits the host machine's (cs-CZ on the dev box) while the specs read English labels.
             Locale = "en-US",
@@ -27,10 +27,8 @@ public sealed class BottomSheetE2ETests : WasmTestBase
             ViewportSize = new ViewportSize { Width = width, Height = height },
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}{Route}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{Route}");
         return page;
     }
 

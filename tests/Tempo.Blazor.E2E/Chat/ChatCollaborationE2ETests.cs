@@ -27,8 +27,7 @@ public class ChatCollaborationE2ETests : WasmTestBase
                 lock (_clientErrors) _clientErrors.Add("CONSOLE: " + m.Text);
         };
         await page.SetViewportSizeAsync(1440, 1100);
-        await page.GotoAsync($"{BaseUrl}{ChatPage}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{ChatPage}");
 
         var section = page.Locator("[data-testid='chat-collab-section']");
         await section.ScrollIntoViewIfNeededAsync();

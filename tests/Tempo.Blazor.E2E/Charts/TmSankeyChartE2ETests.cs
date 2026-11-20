@@ -31,10 +31,7 @@ public sealed class TmSankeyChartE2ETests : WasmTestBase
             }
         };
 
-        await page.GotoAsync(
-            $"{BaseUrl}/charts",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 90_000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/charts");
 
         var section = page.Locator(SankeySection);
         await section.WaitForAsync(

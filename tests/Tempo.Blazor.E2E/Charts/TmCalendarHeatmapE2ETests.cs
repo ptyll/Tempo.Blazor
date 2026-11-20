@@ -21,9 +21,7 @@ public sealed class TmCalendarHeatmapE2ETests : WasmTestBase
 
         var errors = new List<string>();
         page.PageError += (_, message) => errors.Add(message);
-        await page.GotoAsync($"{BaseUrl}/charts",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 90_000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/charts");
 
         var section = page.Locator("[data-testid='calendar-heatmap']");
         await section.WaitForAsync(

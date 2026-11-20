@@ -15,8 +15,7 @@ public class TmMultiViewListStretchedLinkE2ETests : WasmTestBase
     {
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/data-display");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/data-display");
 
         var section = page.GetByTestId("mvl-stretched-link");
         var button = section.Locator("button.tm-stretched-link").First;

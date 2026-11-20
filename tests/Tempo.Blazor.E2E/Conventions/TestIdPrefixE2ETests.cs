@@ -29,8 +29,7 @@ public sealed class TestIdPrefixE2ETests : WasmTestBase
                 lock (_clientErrors) _clientErrors.Add("CONSOLE: " + m.Text);
         };
         await page.SetViewportSizeAsync(1440, 1000);
-        await page.GotoAsync($"{BaseUrl}{Route}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{Route}");
 
         var section = page.Locator("[data-testid='k9-testid-prefix-section']");
         await section.ScrollIntoViewIfNeededAsync();

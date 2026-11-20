@@ -18,9 +18,7 @@ public class FileManagerK4E2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1100);
-        await page.GotoAsync($"{BaseUrl}{FileManagerPage}",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{FileManagerPage}");
 
         await page.GetByRole(AriaRole.Tab, new() { Name = "Chunked Upload", Exact = false }).ClickAsync();
         await page.Locator("[data-testid='dms-chunked']").WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });

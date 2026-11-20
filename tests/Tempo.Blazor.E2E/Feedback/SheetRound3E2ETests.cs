@@ -13,7 +13,7 @@ public sealed class SheetRound3E2ETests : WasmTestBase
 {
     private async Task<IPage> OpenAsync(int width)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             // Pin the locale: the demo follows the browser language, and a context without one inherits the host machine's (cs-CZ on the dev box) while the specs read English labels.
             Locale = "en-US",
@@ -21,10 +21,8 @@ public sealed class SheetRound3E2ETests : WasmTestBase
             ViewportSize = new ViewportSize { Width = width, Height = 844 },
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/feedback", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/feedback");
         return page;
     }
 
@@ -263,8 +261,7 @@ public sealed class SheetRound3E2ETests : WasmTestBase
     public async Task LongDialog_KeepsTitleAndReachesTheLastWord(int width)
     {
         var page = await OpenAsync(width);
-        await page.GotoAsync($"{BaseUrl}/modal-dialog", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/modal-dialog");
         if (width >= 1024)
         {
             await page.GetByTestId("toggle-sheet-presentation").CheckAsync();
@@ -302,8 +299,7 @@ public sealed class SheetRound3E2ETests : WasmTestBase
     public async Task StandaloneScope_Escape_RestoresTheTrigger()
     {
         var page = await OpenAsync(390);
-        await page.GotoAsync($"{BaseUrl}/modal-dialog", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/modal-dialog");
         var trigger = page.GetByTestId("scope-trigger");
         await trigger.ScrollIntoViewIfNeededAsync();
         await trigger.ClickAsync();
@@ -322,8 +318,7 @@ public sealed class SheetRound3E2ETests : WasmTestBase
     public async Task ViewManager_ThirdInstance_EscapeRestoresItsOwnToggle()
     {
         var page = await OpenAsync(1440);
-        await page.GotoAsync($"{BaseUrl}/data-table", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/data-table");
 
         var toggles = page.Locator(".tm-view-manager-toggle");
         Assert.IsTrue(await toggles.CountAsync() >= 3, "the data-table page renders three view managers");

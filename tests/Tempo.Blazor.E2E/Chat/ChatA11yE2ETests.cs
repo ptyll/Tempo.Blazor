@@ -31,8 +31,7 @@ public class ChatA11yE2ETests : WasmTestBase
                 lock (_clientErrors) _clientErrors.Add("CONSOLE: " + m.Text);
         };
         await page.SetViewportSizeAsync(1440, 1100);
-        await page.GotoAsync($"{BaseUrl}{ChatPage}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{ChatPage}");
 
         var section = page.Locator(Section);
         await section.ScrollIntoViewIfNeededAsync();
@@ -121,8 +120,7 @@ public class ChatA11yE2ETests : WasmTestBase
         var page = await context.NewPageAsync();
         page.PageError += (_, e) => { lock (_clientErrors) _clientErrors.Add("PAGEERROR: " + e); };
         await page.SetViewportSizeAsync(1440, 1100);
-        await page.GotoAsync($"{BaseUrl}{ChatPage}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{ChatPage}");
         const string pane = "[data-testid='chat-pane-alice']";
         await page.Locator(pane).ScrollIntoViewIfNeededAsync();
         await page.WaitForFunctionAsync(

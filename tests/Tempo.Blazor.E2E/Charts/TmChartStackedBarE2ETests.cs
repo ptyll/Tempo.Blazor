@@ -32,9 +32,7 @@ public sealed class TmChartStackedBarE2ETests : WasmTestBase
             }
         };
 
-        await page.GotoAsync($"{BaseUrl}/charts",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 90_000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/charts");
         await page.Locator($"{StackedSection} rect.tm-chart__bar").First
             .WaitForAsync(new LocatorWaitForOptions { Timeout = 90_000 });
         await page.Locator(StackedSection).ScrollIntoViewIfNeededAsync();

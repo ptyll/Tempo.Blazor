@@ -26,7 +26,7 @@ public class ChatCustomTemplatesE2ETests : WasmTestBase
 
     private async Task<IPage> OpenAsync(int width = 1440, int height = 1100, bool mobileEmulation = false)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             Locale = "en-US",
@@ -34,7 +34,6 @@ public class ChatCustomTemplatesE2ETests : WasmTestBase
             IsMobile = mobileEmulation,
             HasTouch = mobileEmulation,
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
         page.PageError += (_, e) => { lock (_clientErrors) _clientErrors.Add("PAGEERROR: " + e); };
         page.Console += (_, m) =>
@@ -42,8 +41,7 @@ public class ChatCustomTemplatesE2ETests : WasmTestBase
             if (m.Type == "error" && m.Text.Contains("Unhandled exception"))
                 lock (_clientErrors) _clientErrors.Add("CONSOLE: " + m.Text);
         };
-        await page.GotoAsync($"{BaseUrl}{ChatPage}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{ChatPage}");
 
         var section = page.Locator(Section);
         await section.ScrollIntoViewIfNeededAsync();
@@ -620,13 +618,12 @@ public class ChatCustomTemplatesE2ETests : WasmTestBase
     /// </summary>
     private async Task<IPage> OpenAutoAttachAsync(int width = 1440, int height = 1100)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
         page.PageError += (_, e) => { lock (_clientErrors) _clientErrors.Add("PAGEERROR: " + e); };
         page.Console += (_, m) =>
@@ -634,8 +631,7 @@ public class ChatCustomTemplatesE2ETests : WasmTestBase
             if (m.Type == "error" && m.Text.Contains("Unhandled exception"))
                 lock (_clientErrors) _clientErrors.Add("CONSOLE: " + m.Text);
         };
-        await page.GotoAsync($"{BaseUrl}{ChatPage}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{ChatPage}");
 
         var section = page.Locator(AutoAttachSection);
         await section.ScrollIntoViewIfNeededAsync();

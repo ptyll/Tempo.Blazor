@@ -25,8 +25,7 @@ public sealed class TmChartResponsiveE2ETests : WasmTestBase
         await context.AddInitScriptAsync($"localStorage.setItem('tm-demo-culture', '{culture}');");
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(width, height);
-        await page.GotoAsync($"{BaseUrl}/charts", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/charts");
         await page.WaitForSelectorAsync(Section, new PageWaitForSelectorOptions { Timeout = 30000 });
         await page.Locator(Section).ScrollIntoViewIfNeededAsync();
         // The measuring module reports the plot box a frame after the first render.

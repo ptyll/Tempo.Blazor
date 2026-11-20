@@ -55,17 +55,15 @@ public sealed class TmChartThemeE2ETests : WasmTestBase
 
     private async Task<IPage> OpenAsync(int width = 1440, int height = 1100)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
         await page.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
-        await page.GotoAsync($"{BaseUrl}{Route}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{Route}");
         await page.Locator($"{Donut} svg").First.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
         await page.WaitForTimeoutAsync(400);
         return page;
