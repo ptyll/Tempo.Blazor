@@ -5,18 +5,18 @@ namespace Tempo.Blazor.E2E;
 public class DataTableGridKeyboardE2ETests : WasmTestBase
 {
     [TestMethod, TestCategory("WASM")]
-    public Task GridKeyboard_TabArrowsEnterSpaceHomeFilterAndGroup() => DataTableSpecs.GridKeyboardAsync(Browser, BaseUrl, RegisterContext);
+    public Task GridKeyboard_TabArrowsEnterSpaceHomeFilterAndGroup() => DataTableSpecs.GridKeyboardAsync(this);
 
     [TestMethod, TestCategory("WASM")]
-    public Task GridEdit_F2FocusesEditor_EscapeCancels_EnterSaves() => DataTableSpecs.GridEditAsync(Browser, BaseUrl, RegisterContext);
+    public Task GridEdit_F2FocusesEditor_EscapeCancels_EnterSaves() => DataTableSpecs.GridEditAsync(this);
 }
 
 [TestClass]
 public class DataTableGridKeyboardServerE2ETests : ServerTestBase
 {
     [TestMethod, TestCategory("Server")]
-    public Task GridKeyboard_TabArrowsEnterSpaceHomeFilterAndGroup() => DataTableSpecs.GridKeyboardAsync(Browser, BaseUrl, RegisterContext);
+    public Task GridKeyboard_TabArrowsEnterSpaceHomeFilterAndGroup() => DataTableSpecs.GridKeyboardAsync(this);
 
     [TestMethod, TestCategory("Server")]
-    public Task GridEdit_F2FocusesEditor_EscapeCancels_EnterSaves() => DataTableSpecs.GridEditAsync(Browser, BaseUrl, RegisterContext);
+    public Task GridEdit_F2FocusesEditor_EscapeCancels_EnterSaves() => DataTableSpecs.GridEditAsync(this);
 }

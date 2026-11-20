@@ -16,7 +16,7 @@ public sealed class DataTablePhase4ScreenshotTests : WasmTestBase
     [TestCategory("WASM")]
     public async Task Phase4_GroupedRowsExportMenuAndTabletLayout_AreInTheExpectedState()
     {
-        var page = await OpenAsync(Browser, BaseUrl, "/data-table", new Options(1440, 900), RegisterContext);
+        var page = await OpenAsync(this, "/data-table", new Options(1440, 900));
 
         var grouped = page.Locator("[data-testid='datatable-rowattrs-grouped']");
         await grouped.ScrollIntoViewIfNeededAsync();

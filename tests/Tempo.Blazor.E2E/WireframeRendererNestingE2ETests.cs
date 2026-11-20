@@ -30,10 +30,7 @@ public sealed class WireframeRendererNestingE2ETests : WasmTestBase
 {
     [TestMethod]
     public async Task RepeatBasedStencils_NestGroups_InElementSvg_AndToolboxPreview()
-        => await WireframeRendererNestingGuard.RunAsync(
-            BaseUrl,
-            () => CreateContextAsync(),
-            (page, url) => GotoAppReadyAsync(page, url));
+        => await WireframeRendererNestingGuard.RunAsync(this);
 }
 
 /// <summary>The same DOM guard on the Blazor Server demo (:7107).</summary>
@@ -44,10 +41,7 @@ public sealed class WireframeRendererNestingServerE2ETests : ServerTestBase
 {
     [TestMethod]
     public async Task RepeatBasedStencils_NestGroups_On_The_Server_Host()
-        => await WireframeRendererNestingGuard.RunAsync(
-            BaseUrl,
-            () => CreateContextAsync(),
-            (page, url) => GotoAppReadyAsync(page, url));
+        => await WireframeRendererNestingGuard.RunAsync(this);
 }
 
 /// <summary>The same DOM guard on the InteractiveAuto demo (:7108).</summary>
@@ -58,10 +52,7 @@ public sealed class WireframeRendererNestingInteractiveAutoE2ETests : Interactiv
 {
     [TestMethod]
     public async Task RepeatBasedStencils_NestGroups_On_The_InteractiveAuto_Host()
-        => await WireframeRendererNestingGuard.RunAsync(
-            BaseUrl,
-            () => CreateContextAsync(),
-            (page, url) => GotoAppReadyAsync(page, url));
+        => await WireframeRendererNestingGuard.RunAsync(this);
 }
 
 /// <summary>Host-independent guard logic all three lanes run.</summary>
@@ -84,26 +75,22 @@ internal static class WireframeRendererNestingGuard
         ("TmRichEditorFull", "Rich Text"),
     ];
 
-    public static async Task RunAsync(
-        string baseUrl,
-        Func<Task<IBrowserContext>> createContext,
-        Func<IPage, string, Task> gotoAppReady)
+    public static async Task RunAsync(PlaywrightTestBase test)
     {
-        await using var context = await createContext();
+        var context = await test.CreateContextAsync(new BrowserNewContextOptions());
         var page = await context.NewPageAsync();
 
         // Same boot sequence as the wireframe gallery specs: hide the sidebar so the first editor
         // resolves its DESKTOP layout (a tablet/mobile layout docks the palette differently and
         // renders no .tm-wd-toolbox__search-input), then pin the en culture the palette search
-        // terms are written in.
+        // terms are written in (both in ONE init script, so the first document already boots in en).
         await page.AddInitScriptAsync(
+            "localStorage.setItem('tm-demo-culture', 'en'); " +
             "document.addEventListener('DOMContentLoaded', () => { const s = document.createElement('style'); " +
             "s.textContent = 'aside.fixed.inset-y-0.left-0.z-30 { display: none !important; } " +
             "main { margin-left: 0 !important; width: 100vw !important; max-width: 100vw !important; }'; " +
             "document.head.appendChild(s); });");
-        await gotoAppReady(page, $"{baseUrl}{WireframeEditorUrl}");
-        await page.EvaluateAsync("() => localStorage.setItem('tm-demo-culture', 'en')");
-        await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
+        await test.GotoAppReadyAsync(page, $"{test.AppBaseUrl}{WireframeEditorUrl}");
         await WireframeStencilHarness.PrepareAsync(page);
 
         foreach (var (type, searchTerm) in Stencils)

@@ -5,21 +5,21 @@ namespace Tempo.Blazor.E2E;
 public class MultiViewListRedesignE2ETests : WasmTestBase
 {
     [TestMethod, TestCategory("WASM")]
-    public Task Radiogroup_Cards_Initials_ItemCount_ColumnCap() => MultiViewListSpecs.RadiogroupAndCardsAsync(Browser, BaseUrl, RegisterContext);
+    public Task Radiogroup_Cards_Initials_ItemCount_ColumnCap() => MultiViewListSpecs.RadiogroupAndCardsAsync(this);
 
     [TestMethod, TestCategory("WASM")]
-    public Task StretchedLink_OneTabStop_ClickAnywhere_EnterOnce() => MultiViewListSpecs.StretchedLinkAsync(Browser, BaseUrl, RegisterContext);
+    public Task StretchedLink_OneTabStop_ClickAnywhere_EnterOnce() => MultiViewListSpecs.StretchedLinkAsync(this);
 
     [TestMethod, TestCategory("WASM")]
-    public Task Edge_EmptyAndVeryLongTitles() => MultiViewListSpecs.EdgeAsync(Browser, BaseUrl, RegisterContext);
+    public Task Edge_EmptyAndVeryLongTitles() => MultiViewListSpecs.EdgeAsync(this);
 
     [TestMethod, TestCategory("WASM")]
-    public Task GroupedCardHeader_DiffersFromBody_LightAndDark() => MultiViewListSpecs.GroupedCardHeaderDiffersFromBodyAsync(Browser, BaseUrl, RegisterContext);
+    public Task GroupedCardHeader_DiffersFromBody_LightAndDark() => MultiViewListSpecs.GroupedCardHeaderDiffersFromBodyAsync(this);
 }
 
 [TestClass]
 public class MultiViewListRedesignServerE2ETests : ServerTestBase
 {
     [TestMethod, TestCategory("Server")]
-    public Task Radiogroup_Cards_Initials_ItemCount_ColumnCap() => MultiViewListSpecs.RadiogroupAndCardsAsync(Browser, BaseUrl, RegisterContext);
+    public Task Radiogroup_Cards_Initials_ItemCount_ColumnCap() => MultiViewListSpecs.RadiogroupAndCardsAsync(this);
 }

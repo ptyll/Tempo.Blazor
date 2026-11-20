@@ -52,31 +52,23 @@ internal static class SigningRedesignPhase6Specs
     }
 
     public static async Task<IPage> OpenActiveStepsRunnerAsync(
-        IBrowser browser,
-        string baseUrl,
+        PlaywrightTestBase test,
         int width,
         int height,
-        bool mobile,
-        Action<IBrowserContext> registerContext,
-        Func<IPage, Task> waitForReady)
+        bool mobile)
     {
-        var context = await browser.NewContextAsync(new BrowserNewContextOptions
-        {
-            ViewportSize = new ViewportSize { Width = width, Height = height },
-            Locale = "en-US",
-            IgnoreHTTPSErrors = true,
-            HasTouch = mobile,
-            IsMobile = mobile
-        });
-        registerContext(context);
-        var page = await context.NewPageAsync();
-        await page.AddInitScriptAsync("() => localStorage.setItem('tm-demo-culture', 'en')");
-        await page.GotoAsync($"{baseUrl}{SigningComponentsUrl}", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60_000
-        });
-        await waitForReady(page);
+        var page = await test.OpenAppPageAsync(
+            $"{test.AppBaseUrl}{SigningComponentsUrl}",
+            new BrowserNewContextOptions
+            {
+                ViewportSize = new ViewportSize { Width = width, Height = height },
+                Locale = "en-US",
+                IgnoreHTTPSErrors = true,
+                HasTouch = mobile,
+                IsMobile = mobile
+            },
+            context => context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');"),
+            WaitUntilState.DOMContentLoaded);
         var runner = GetActiveRunner(page);
         await runner.ScrollIntoViewIfNeededAsync();
         await page.WaitForTimeoutAsync(200);
@@ -387,7 +379,7 @@ public class SigningRedesignPhase6E2ETests : BaselineGeneratorTestBase
 
         // ── 1440 desktop: the three flows' states, light/default. ──
         var page = await SigningRedesignPhase6Specs.OpenActiveStepsRunnerAsync(
-            Browser, BaseUrl, 1440, 900, mobile: false, RegisterContext, WaitForAppReadyAsync);
+            this, 1440, 900, mobile: false);
         var runner = SigningRedesignPhase6Specs.GetActiveRunner(page);
         var steps = SigningRedesignPhase6Specs.GetStepsRail(runner);
 
@@ -429,7 +421,7 @@ public class SigningRedesignPhase6E2ETests : BaselineGeneratorTestBase
 
         // ── The standalone LOCAL preview (real RequestImageFileAsync pipeline, no host resolver). ──
         page = await SigningRedesignPhase6Specs.OpenActiveStepsRunnerAsync(
-            Browser, BaseUrl, 1440, 900, mobile: false, RegisterContext, WaitForAppReadyAsync);
+            this, 1440, 900, mobile: false);
         await SigningRedesignPhase6Specs.CaptureLocalPreviewAsync(page, written);
         await page.Context.CloseAsync();
 
@@ -442,7 +434,7 @@ public class SigningRedesignPhase6E2ETests : BaselineGeneratorTestBase
                  })
         {
             page = await SigningRedesignPhase6Specs.OpenActiveStepsRunnerAsync(
-                Browser, BaseUrl, 1440, 900, mobile: false, RegisterContext, WaitForAppReadyAsync);
+                this, 1440, 900, mobile: false);
             await SigningRedesignPhase5Specs.ApplyThemeAsync(page, dark, indigo);
             var themedRunner = SigningRedesignPhase6Specs.GetActiveRunner(page);
 
@@ -461,7 +453,7 @@ public class SigningRedesignPhase6E2ETests : BaselineGeneratorTestBase
 
         // ── 390 touch: the three flows inside the mobile sheet. ──
         page = await SigningRedesignPhase6Specs.OpenActiveStepsRunnerAsync(
-            Browser, BaseUrl, 390, 844, mobile: true, RegisterContext, WaitForAppReadyAsync);
+            this, 390, 844, mobile: true);
         runner = SigningRedesignPhase6Specs.GetActiveRunner(page);
         steps = SigningRedesignPhase6Specs.GetStepsRail(runner);
 
@@ -515,7 +507,7 @@ public class SigningRedesignPhase6BehaviorE2ETests : WasmTestBase
     public async Task SigningActiveSteps_Desktop1440_HostContract_CompletesCeremony()
     {
         var page = await SigningRedesignPhase6Specs.OpenActiveStepsRunnerAsync(
-            Browser, BaseUrl, 1440, 900, mobile: false, RegisterContext, WaitForAppReadyAsync);
+            this, 1440, 900, mobile: false);
         var runner = SigningRedesignPhase6Specs.GetActiveRunner(page);
         var steps = SigningRedesignPhase6Specs.GetStepsRail(runner);
 
@@ -546,7 +538,7 @@ public class SigningRedesignPhase6BehaviorE2ETests : WasmTestBase
     public async Task SigningActiveSteps_Touch390_HostContract_WorksInTheSheet()
     {
         var page = await SigningRedesignPhase6Specs.OpenActiveStepsRunnerAsync(
-            Browser, BaseUrl, 390, 844, mobile: true, RegisterContext, WaitForAppReadyAsync);
+            this, 390, 844, mobile: true);
         var runner = SigningRedesignPhase6Specs.GetActiveRunner(page);
         var steps = SigningRedesignPhase6Specs.GetStepsRail(runner);
 

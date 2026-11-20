@@ -16,13 +16,13 @@ public sealed class DataTablePhase8ScreenshotTests : WasmTestBase
     [TestCategory("WASM")]
     public async Task Phase8_GroupedTableAndMultiViewCards_AreInTheExpectedState()
     {
-        var page = await OpenAsync(Browser, BaseUrl, "/data-table", new Options(1440, 900), RegisterContext);
+        var page = await OpenAsync(this, "/data-table", new Options(1440, 900));
         await Assertions.Expect(page.Locator("[data-testid='dt-ergonomics-section'] .tm-data-table-wrapper")).ToBeVisibleAsync();
         var grouped = page.Locator("[data-testid='datatable-rowattrs-grouped']");
         await grouped.ScrollIntoViewIfNeededAsync();
         await Assertions.Expect(grouped.Locator("tr.tm-data-table-group-row").First).ToBeVisibleAsync(new() { Timeout = 15_000 });
 
-        var list = await OpenAsync(Browser, BaseUrl, "/multi-view-list", new Options(1440, 900), RegisterContext);
+        var list = await OpenAsync(this, "/multi-view-list", new Options(1440, 900));
         var cards = list.Locator("[data-testid='mvl-redesign-list']");
         await cards.ScrollIntoViewIfNeededAsync();
         await Assertions.Expect(cards.Locator(".tm-mvl-card-grid")).ToHaveCountAsync(0, new() { Timeout = 15_000 });

@@ -50,7 +50,7 @@ public class DiagramBaselineScreenshots : BaselineGeneratorTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
 
-        await page.AddInitScriptAsync("() => localStorage.setItem('tm-demo-culture', 'en')");
+        await page.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
         await page.GotoAsync($"{BaseUrl}{DiagramEditorUrl}", new PageGotoOptions
         {
             WaitUntil = WaitUntilState.DOMContentLoaded,

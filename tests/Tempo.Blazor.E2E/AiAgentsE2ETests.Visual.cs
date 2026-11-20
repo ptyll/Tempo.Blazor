@@ -220,15 +220,14 @@ public sealed partial class AiAgentsE2ETests
     [TestMethod]
     public async Task TheVisualizationsFanOutPresentsTheDetailInAPopover_EscapeReturnsFocus()
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
-        {
-            ViewportSize = new ViewportSize { Width = 1280, Height = 900 },
-            Locale = "en-US",
-            IgnoreHTTPSErrors = true,
-        });
-        RegisterContext(context);
-        var page = await context.NewPageAsync();
-        await GotoAppReadyAsync(page, $"{BaseUrl}/ai-agent-visualizations");
+        var page = await OpenAppPageAsync(
+            $"{BaseUrl}/ai-agent-visualizations",
+            new BrowserNewContextOptions
+            {
+                ViewportSize = new ViewportSize { Width = 1280, Height = 900 },
+                Locale = "en-US",
+                IgnoreHTTPSErrors = true,
+            });
         await page.WaitForSelectorAsync("[data-testid='ai-viz-fan-out'] [data-testid='fan-out-tile']",
             new PageWaitForSelectorOptions { Timeout = 30000 });
 

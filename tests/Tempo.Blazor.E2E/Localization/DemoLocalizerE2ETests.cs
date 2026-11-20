@@ -17,12 +17,14 @@ internal static class DemoLocalizerSmoke
     internal const string ModalDialogPage = "/modal-dialog";
 
     /// <summary>Asserts the moved-key strings render localized (never as raw keys) on an open page.</summary>
-    internal static async Task AssertModalDialogRendersMovedDemoStringsAsync(IPage page, string baseUrl, Action<IPage> readyWait)
+    internal static async Task AssertModalDialogRendersMovedDemoStringsAsync(PlaywrightTestBase test)
     {
-        await page.SetViewportSizeAsync(1440, 900);
-        await page.GotoAsync($"{baseUrl}{ModalDialogPage}",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        readyWait(page);
+        var context = await test.CreateContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = 1440, Height = 900 }
+        });
+        var page = await context.NewPageAsync();
+        await test.GotoAppReadyAsync(page, $"{test.AppBaseUrl}{ModalDialogPage}");
 
         var openSheet = page.Locator("[data-testid='open-sheet']");
         await openSheet.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
@@ -47,9 +49,7 @@ public class DemoLocalizerWasmE2ETests : WasmTestBase
     [Description("WASM: /modal-dialog renders the moved demo keys localized (DemoTmLocalizer serves them)")]
     public async Task ModalDialog_RendersMovedDemoKeys()
     {
-        var context = await CreateContextAsync();
-        var page = await context.NewPageAsync();
-        await DemoLocalizerSmoke.AssertModalDialogRendersMovedDemoStringsAsync(page, BaseUrl, p => WaitForAppReadyAsync(p));
+        await DemoLocalizerSmoke.AssertModalDialogRendersMovedDemoStringsAsync(this);
     }
 }
 
@@ -62,9 +62,7 @@ public class DemoLocalizerServerE2ETests : ServerTestBase
     [Description("Server: /modal-dialog renders the moved demo keys localized (DemoTmLocalizer serves them)")]
     public async Task ModalDialog_RendersMovedDemoKeys()
     {
-        var context = await CreateContextAsync();
-        var page = await context.NewPageAsync();
-        await DemoLocalizerSmoke.AssertModalDialogRendersMovedDemoStringsAsync(page, BaseUrl, p => WaitForAppReadyAsync(p));
+        await DemoLocalizerSmoke.AssertModalDialogRendersMovedDemoStringsAsync(this);
     }
 }
 
@@ -77,8 +75,6 @@ public class DemoLocalizerInteractiveAutoE2ETests : InteractiveAutoTestBase
     [Description("InteractiveAuto: /modal-dialog renders the moved demo keys localized on the auto render mode")]
     public async Task ModalDialog_RendersMovedDemoKeys()
     {
-        var context = await CreateContextAsync();
-        var page = await context.NewPageAsync();
-        await DemoLocalizerSmoke.AssertModalDialogRendersMovedDemoStringsAsync(page, BaseUrl, p => WaitForAppReadyAsync(p));
+        await DemoLocalizerSmoke.AssertModalDialogRendersMovedDemoStringsAsync(this);
     }
 }

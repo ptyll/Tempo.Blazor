@@ -33,20 +33,17 @@ public sealed class OverlayInitialFocusE2ETests : WasmTestBase
     // control row opens the dialog the mobile chrome DOES have - the filter dialog (a TmModal like the import one).
     private const string GanttControlMobile = "gantt-control,/gantt,button[data-testid='gantt-filter-btn'],.tm-modal-overlay:has(.tm-gantt__filter-panel-inner--dialog),.tm-modal-close";
 
-    private async Task<IBrowserContext> NewContextAsync(int width, int height, bool touch)
+    private static BrowserNewContextOptions ContextOptions(int width, int height, bool touch) => new()
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
-        {
-            HasTouch = touch,
-            IsMobile = touch,
-            ViewportSize = new ViewportSize { Width = width, Height = height },
-            IgnoreHTTPSErrors = true,
-            Locale = "en-US",
-        });
-        await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
-        RegisterContext(context);
-        return context;
-    }
+        HasTouch = touch,
+        IsMobile = touch,
+        ViewportSize = new ViewportSize { Width = width, Height = height },
+        IgnoreHTTPSErrors = true,
+        Locale = "en-US",
+    };
+
+    private static Task PinCultureAsync(IBrowserContext context)
+        => context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
 
     private static string[] Spec(string row)
     {
@@ -77,9 +74,7 @@ public sealed class OverlayInitialFocusE2ETests : WasmTestBase
     {
         var parts = Spec(spec);
         var name = parts[0];
-        var page = await (await NewContextAsync(width, height, touch)).NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}{parts[1]}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 90000 });
-        await WaitForAppReadyAsync(page);
+        var page = await OpenAppPageAsync($"{BaseUrl}{parts[1]}", ContextOptions(width, height, touch), PinCultureAsync);
 
         // Focus-lost counter: a focusout with no relatedTarget whose NEXT microtask still finds
         // document.activeElement on <body>. Installed once per page. It observes what the old
@@ -145,7 +140,6 @@ public sealed class OverlayInitialFocusE2ETests : WasmTestBase
         var parts = Spec(spec);
         // A fresh context per run: the promote module has not been imported yet, so its only
         // request is the click-time one the route below can catch and delay.
-        var context = await NewContextAsync(1440, 900, touch: false);
         // Hold the promote module at the network layer so the promotion lands ~800 ms after the
         // root rendered. MUST carry wildcards: Blazor serves it as tm-top-layer.<fingerprint>.js,
         // so a literal path silently matches nothing. Only requests after the flag below are
@@ -160,27 +154,27 @@ public sealed class OverlayInitialFocusE2ETests : WasmTestBase
         // That is a test-setup change, not a product one: this scenario needs no pinned error
         // bar, so the boot-time pin module is replaced with an empty one, and the promote module
         // is again first requested by the click.
-        await context.RouteAsync("**/tm-pin-on-top*.js*", r => r.FulfillAsync(new RouteFulfillOptions
+        var page = await OpenAppPageAsync($"{BaseUrl}{parts[1]}", ContextOptions(1440, 900, touch: false), async context =>
         {
-            Status = 200,
-            ContentType = "text/javascript",
-            Body = "// stubbed by OverlayInitialFocusE2ETests: no boot-time import of tm-top-layer.js",
-        }));
-        await context.RouteAsync("**/tm-top-layer*.js*", async r =>
-        {
-            if (!openerClicked)
+            await PinCultureAsync(context);
+            await context.RouteAsync("**/tm-pin-on-top*.js*", r => r.FulfillAsync(new RouteFulfillOptions
             {
+                Status = 200,
+                ContentType = "text/javascript",
+                Body = "// stubbed by OverlayInitialFocusE2ETests: no boot-time import of tm-top-layer.js",
+            }));
+            await context.RouteAsync("**/tm-top-layer*.js*", async r =>
+            {
+                if (!openerClicked)
+                {
+                    await r.FallbackAsync();
+                    return;
+                }
+                Interlocked.Increment(ref delayedHits);
+                await Task.Delay(800);
                 await r.FallbackAsync();
-                return;
-            }
-            Interlocked.Increment(ref delayedHits);
-            await Task.Delay(800);
-            await r.FallbackAsync();
+            });
         });
-        var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}{parts[1]}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 90000 });
-        await WaitForAppReadyAsync(page);
-
         // Strip the author display every root relies on today: an unpromoted popover root is then
         // display:none, so an early trap activation would drop its initial-focus move entirely.
         await page.AddStyleTagAsync(new PageAddStyleTagOptions

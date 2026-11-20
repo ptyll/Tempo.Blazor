@@ -68,31 +68,23 @@ internal static class SigningRedesignPhase7Specs
     }
 
     public static async Task<IPage> OpenSigningComponentsAsync(
-        IBrowser browser,
-        string baseUrl,
+        PlaywrightTestBase test,
         int width,
         int height,
-        bool touch,
-        Action<IBrowserContext> registerContext,
-        Func<IPage, Task> waitForReady)
+        bool touch)
     {
-        var context = await browser.NewContextAsync(new BrowserNewContextOptions
-        {
-            ViewportSize = new ViewportSize { Width = width, Height = height },
-            Locale = "en-US",
-            IgnoreHTTPSErrors = true,
-            HasTouch = touch,
-            IsMobile = touch && width < 400
-        });
-        registerContext(context);
-        var page = await context.NewPageAsync();
-        await page.AddInitScriptAsync("() => localStorage.setItem('tm-demo-culture', 'en')");
-        await page.GotoAsync($"{baseUrl}{SigningComponentsUrl}", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60_000
-        });
-        await waitForReady(page);
+        var page = await test.OpenAppPageAsync(
+            $"{test.AppBaseUrl}{SigningComponentsUrl}",
+            new BrowserNewContextOptions
+            {
+                ViewportSize = new ViewportSize { Width = width, Height = height },
+                Locale = "en-US",
+                IgnoreHTTPSErrors = true,
+                HasTouch = touch,
+                IsMobile = touch && width < 400
+            },
+            context => context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');"),
+            WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync("[data-testid='recipient-role-editor-template']",
             new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 20_000 });
         return page;
@@ -183,7 +175,7 @@ public class SigningRedesignPhase7E2ETests : BaselineGeneratorTestBase
                  })
         {
             var page = await SigningRedesignPhase7Specs.OpenSigningComponentsAsync(
-                Browser, BaseUrl, 1440, 900, touch: false, RegisterContext, WaitForAppReadyAsync);
+                this, 1440, 900, touch: false);
             await SigningRedesignPhase5Specs.ApplyThemeAsync(page, dark, indigo);
             await SigningRedesignPhase7Specs.CaptureAllAsync(page, 1440, theme, brand, written);
             await page.Context.CloseAsync();
@@ -192,7 +184,7 @@ public class SigningRedesignPhase7E2ETests : BaselineGeneratorTestBase
         // 1024 touch: the tablet band with the demo sidebar dropped, so the components see wide
         // containers (the same trick the phase-3 captures use).
         var tablet = await SigningRedesignPhase7Specs.OpenSigningComponentsAsync(
-            Browser, BaseUrl, 1024, 768, touch: true, RegisterContext, WaitForAppReadyAsync);
+            this, 1024, 768, touch: true);
         await tablet.AddStyleTagAsync(new PageAddStyleTagOptions { Content = SigningRedesignPhase7Specs.WideLayoutStyle });
         await SigningRedesignPhase7Specs.CaptureAllAsync(tablet, 1024, "light", "default", written);
         await tablet.Context.CloseAsync();
@@ -200,7 +192,7 @@ public class SigningRedesignPhase7E2ETests : BaselineGeneratorTestBase
         foreach (var (width, height) in new[] { (390, 844), (320, 700) })
         {
             var page = await SigningRedesignPhase7Specs.OpenSigningComponentsAsync(
-                Browser, BaseUrl, width, height, touch: false, RegisterContext, WaitForAppReadyAsync);
+                this, width, height, touch: false);
             await SigningRedesignPhase7Specs.CaptureAllAsync(page, width, "light", "default", written);
             await page.Context.CloseAsync();
         }
@@ -233,7 +225,7 @@ public class SigningRedesignPhase7BehaviorE2ETests : WasmTestBase
     public async Task RoleEditor_DragAndDrop_1440_ReordersRoles()
     {
         var page = await SigningRedesignPhase7Specs.OpenSigningComponentsAsync(
-            Browser, BaseUrl, 1440, 900, touch: false, RegisterContext, WaitForAppReadyAsync);
+            this, 1440, 900, touch: false);
 
         var editor = SigningRedesignPhase7Specs.GetByTestId(page, "recipient-role-editor-template");
         var cards = editor.Locator("[data-role-uuid]");
@@ -283,7 +275,7 @@ public class SigningRedesignPhase7BehaviorE2ETests : WasmTestBase
     public async Task RoleEditor_Arrows_390_ReorderRoles()
     {
         var page = await SigningRedesignPhase7Specs.OpenSigningComponentsAsync(
-            Browser, BaseUrl, 390, 844, touch: true, RegisterContext, WaitForAppReadyAsync);
+            this, 390, 844, touch: true);
 
         var editor = SigningRedesignPhase7Specs.GetByTestId(page, "recipient-role-editor-template");
         var secondUuid = await editor.Locator("[data-role-uuid]").Nth(1).GetAttributeAsync("data-role-uuid");
@@ -311,7 +303,7 @@ public class SigningRedesignPhase7BehaviorE2ETests : WasmTestBase
     public async Task RoleEditor_RemoveMiddle_1440_FocusesNextCardsToggle()
     {
         var page = await SigningRedesignPhase7Specs.OpenSigningComponentsAsync(
-            Browser, BaseUrl, 1440, 900, touch: false, RegisterContext, WaitForAppReadyAsync);
+            this, 1440, 900, touch: false);
 
         var editor = SigningRedesignPhase7Specs.GetByTestId(page, "recipient-role-editor-template");
         var secondUuid = await editor.Locator("[data-role-uuid]").Nth(1).GetAttributeAsync("data-role-uuid");
@@ -341,7 +333,7 @@ public class SigningRedesignPhase7BehaviorE2ETests : WasmTestBase
     public async Task RoleEditor_MoveUpTwiceViaEnter_1440_FocusStaysInsideMovedCard()
     {
         var page = await SigningRedesignPhase7Specs.OpenSigningComponentsAsync(
-            Browser, BaseUrl, 1440, 900, touch: false, RegisterContext, WaitForAppReadyAsync);
+            this, 1440, 900, touch: false);
 
         var editor = SigningRedesignPhase7Specs.GetByTestId(page, "recipient-role-editor-template");
         var movedCard = editor.Locator("[data-role-uuid]").Nth(1);
@@ -378,7 +370,7 @@ public class SigningRedesignPhase7BehaviorE2ETests : WasmTestBase
     public async Task ConditionBuilder_RemoveRow_1440_FocusesNextRowsRemove()
     {
         var page = await SigningRedesignPhase7Specs.OpenSigningComponentsAsync(
-            Browser, BaseUrl, 1440, 900, touch: false, RegisterContext, WaitForAppReadyAsync);
+            this, 1440, 900, touch: false);
 
         var builder = SigningRedesignPhase7Specs.GetByTestId(page, "condition-builder");
         await builder.ScrollIntoViewIfNeededAsync();
@@ -404,7 +396,7 @@ public class SigningRedesignPhase7BehaviorE2ETests : WasmTestBase
     public async Task AuditTrailViewer_390_TablesFitWithoutHorizontalOverflow()
     {
         var page = await SigningRedesignPhase7Specs.OpenSigningComponentsAsync(
-            Browser, BaseUrl, 390, 844, touch: false, RegisterContext, WaitForAppReadyAsync);
+            this, 390, 844, touch: false);
 
         var viewer = SigningRedesignPhase7Specs.GetByTestId(page, "audit-trail-viewer");
         await viewer.ScrollIntoViewIfNeededAsync();
@@ -427,7 +419,7 @@ public class SigningRedesignPhase7BehaviorE2ETests : WasmTestBase
     public async Task PanelContracts_RenderOnTheDemo()
     {
         var page = await SigningRedesignPhase7Specs.OpenSigningComponentsAsync(
-            Browser, BaseUrl, 1440, 900, touch: false, RegisterContext, WaitForAppReadyAsync);
+            this, 1440, 900, touch: false);
 
         // Verification: the status banner is a live region with the status modifier.
         var verification = SigningRedesignPhase7Specs.GetByTestId(page, "pdf-signature-verification");

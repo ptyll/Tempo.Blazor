@@ -23,6 +23,12 @@ public abstract partial class PlaywrightTestBase
     protected abstract string BaseUrl { get; }
 
     /// <summary>
+    /// <see cref="BaseUrl"/> for the static per-feature kits (<c>DataTableE2EKit</c>, the Signing specs ...) that receive the test instance
+    /// instead of a browser + base URL, so they open pages through the central helpers.
+    /// </summary>
+    internal string AppBaseUrl => BaseUrl;
+
+    /// <summary>
     /// Gets or sets the test context from MSTest.
     /// </summary>
     public TestContext TestContext { get; set; } = default!;

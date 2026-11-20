@@ -59,35 +59,27 @@ internal static class SigningRedesignPhase8Specs
     }
 
     public static async Task<IPage> OpenDesignerAsync(
-        IBrowser browser,
-        string baseUrl,
+        PlaywrightTestBase test,
         int width,
         int height,
-        bool touch,
-        Action<IBrowserContext> registerContext,
-        Func<IPage, Task> waitForReady)
+        bool touch)
     {
-        var context = await browser.NewContextAsync(new BrowserNewContextOptions
-        {
-            ViewportSize = new ViewportSize { Width = width, Height = height },
-            Locale = "en-US",
-            IgnoreHTTPSErrors = true,
-            HasTouch = touch,
-            IsMobile = touch && width < 400
-        });
-        registerContext(context);
-        var page = await context.NewPageAsync();
-        await page.AddInitScriptAsync(
-            "() => { localStorage.setItem('tm-demo-culture', 'en'); " +
-            "const style = document.createElement('style'); style.textContent = " +
-            System.Text.Json.JsonSerializer.Serialize(width <= 1024 ? WideLayoutStyle : string.Empty) +
-            "; document.documentElement.appendChild(style); }");
-        await page.GotoAsync($"{baseUrl}{SigningComponentsUrl}", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60_000
-        });
-        await waitForReady(page);
+        var page = await test.OpenAppPageAsync(
+            $"{test.AppBaseUrl}{SigningComponentsUrl}",
+            new BrowserNewContextOptions
+            {
+                ViewportSize = new ViewportSize { Width = width, Height = height },
+                Locale = "en-US",
+                IgnoreHTTPSErrors = true,
+                HasTouch = touch,
+                IsMobile = touch && width < 400
+            },
+            context => context.AddInitScriptAsync(
+                "localStorage.setItem('tm-demo-culture', 'en'); " +
+                "const style = document.createElement('style'); style.textContent = " +
+                System.Text.Json.JsonSerializer.Serialize(width <= 1024 ? WideLayoutStyle : string.Empty) +
+                "; document.documentElement.appendChild(style);"),
+            WaitUntilState.DOMContentLoaded);
         var designer = Designer(page);
         await designer.ScrollIntoViewIfNeededAsync();
         await designer.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 20_000 });
@@ -335,7 +327,7 @@ public class SigningRedesignPhase8E2ETests : BaselineGeneratorTestBase
                  })
         {
             var page = await SigningRedesignPhase8Specs.OpenDesignerAsync(
-                Browser, BaseUrl, 1440, 900, touch: false, RegisterContext, WaitForAppReadyAsync);
+                this, 1440, 900, touch: false);
             await SigningRedesignPhase5Specs.ApplyThemeAsync(page, dark, indigo);
             await SigningRedesignPhase8Specs.CaptureAsync(page, $"designer--1440--{theme}--{brand}.png", written);
 
@@ -353,7 +345,7 @@ public class SigningRedesignPhase8E2ETests : BaselineGeneratorTestBase
         }
 
         var tablet = await SigningRedesignPhase8Specs.OpenDesignerAsync(
-            Browser, BaseUrl, 1024, 768, touch: true, RegisterContext, WaitForAppReadyAsync);
+            this, 1024, 768, touch: true);
         await tablet.AddStyleTagAsync(new PageAddStyleTagOptions { Content = SigningRedesignPhase8Specs.WideLayoutStyle });
         await SigningRedesignPhase8Specs.CaptureAsync(tablet, "designer--1024--light--default.png", written);
         await Assertions.Expect(tablet.Locator(".tm-editor-shell__overlay--left")).ToHaveCountAsync(0);
@@ -634,7 +626,7 @@ public class SigningRedesignPhase8E2ETests : BaselineGeneratorTestBase
 
     private Task<IPage> OpenDesignerAsync(int width, int height, bool touch) =>
         SigningRedesignPhase8Specs.OpenDesignerAsync(
-            Browser, BaseUrl, width, height, touch, RegisterContext, WaitForAppReadyAsync);
+            this, width, height, touch);
 }
 
 /// <summary>
@@ -843,5 +835,5 @@ public class SigningRedesignPhase8BehaviorE2ETests : WasmTestBase
 
     private async Task<IPage> OpenAsync(int width, int height, bool touch) =>
         await SigningRedesignPhase8Specs.OpenDesignerAsync(
-            Browser, BaseUrl, width, height, touch, RegisterContext, WaitForAppReadyAsync);
+            this, width, height, touch);
 }

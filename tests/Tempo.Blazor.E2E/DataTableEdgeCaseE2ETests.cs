@@ -5,8 +5,8 @@ namespace Tempo.Blazor.E2E;
 public class DataTableEdgeCaseE2ETests : WasmTestBase
 {
     [TestMethod, TestCategory("WASM")]
-    public Task EmptyNoResultsLoadingLongTextAndFifteenColumns() => DataTableSpecs.EdgeStatesAsync(Browser, BaseUrl, RegisterContext);
+    public Task EmptyNoResultsLoadingLongTextAndFifteenColumns() => DataTableSpecs.EdgeStatesAsync(this);
 
     [TestMethod, TestCategory("WASM")]
-    public Task Zoom200_Rtl_AndCoarsePointerTargets() => DataTableSpecs.ZoomRtlAndTouchAsync(Browser, BaseUrl, RegisterContext);
+    public Task Zoom200_Rtl_AndCoarsePointerTargets() => DataTableSpecs.ZoomRtlAndTouchAsync(this);
 }

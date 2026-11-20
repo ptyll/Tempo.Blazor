@@ -149,8 +149,7 @@ public sealed class DensityTG007E2ETests : WasmTestBase
     {
         var page = await CreatePageAsync();
         await page.SetViewportSizeAsync(390, 844);
-        await page.GotoAsync(BaseUrl.TrimEnd('/') + "/density");
-        await WaitBlazorReadyAsync(page);
+        await GotoAppReadyAsync(page, BaseUrl.TrimEnd('/') + "/density");
         await SwitchToAsync(page, "Compact");
 
         var metrics = await ReadMetricsAsync(page);
@@ -176,8 +175,7 @@ public sealed class DensityTG007E2ETests : WasmTestBase
         // coarse-pointer floor — the compact 6 px block padding alone would give a ~30 px row.
         var page = await CreatePageAsync(hasTouch: true);
         await page.SetViewportSizeAsync(390, 844);
-        await page.GotoAsync(BaseUrl.TrimEnd('/') + "/density");
-        await WaitBlazorReadyAsync(page);
+        await GotoAppReadyAsync(page, BaseUrl.TrimEnd('/') + "/density");
 
         Assert.IsTrue(
             await page.EvaluateAsync<bool>("() => matchMedia('(pointer: coarse)').matches"),
@@ -259,18 +257,10 @@ public sealed class DensityTG007E2ETests : WasmTestBase
         }
 
         await page.SetViewportSizeAsync(1440, 900);
-        await page.GotoAsync(BaseUrl.TrimEnd('/') + route);
-        await WaitBlazorReadyAsync(page);
+        await GotoAppReadyAsync(page, BaseUrl.TrimEnd('/') + route);
         await page.Locator("[data-testid='density-scope']").WaitForAsync(
             new LocatorWaitForOptions { Timeout = 30000 });
         return page;
-    }
-
-    private static async Task WaitBlazorReadyAsync(IPage page)
-    {
-        await page.WaitForFunctionAsync(
-            "() => document.body !== null && document.body.hasAttribute('data-blazor-ready')",
-            null, new PageWaitForFunctionOptions { Timeout = 30000 });
     }
 
     private static async Task AssertNoBlazorErrorAsync(IPage page)

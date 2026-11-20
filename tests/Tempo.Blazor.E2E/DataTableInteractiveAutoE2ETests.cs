@@ -5,11 +5,11 @@ namespace Tempo.Blazor.E2E;
 public class DataTableInteractiveAutoE2ETests : InteractiveAutoTestBase
 {
     [TestMethod, TestCategory("InteractiveAuto")]
-    public Task ResultPreview_MatchesRowsAfterApplying() => DataTableSpecs.ResultPreviewAsync(Browser, BaseUrl, RegisterContext);
+    public Task ResultPreview_MatchesRowsAfterApplying() => DataTableSpecs.ResultPreviewAsync(this);
 
     [TestMethod, TestCategory("InteractiveAuto")]
-    public Task ColumnMenu_SortHideGroup_AndKeyboard() => DataTableSpecs.ColumnMenuAsync(Browser, BaseUrl, RegisterContext);
+    public Task ColumnMenu_SortHideGroup_AndKeyboard() => DataTableSpecs.ColumnMenuAsync(this);
 
     [TestMethod, TestCategory("InteractiveAuto")]
-    public Task GridEdit_F2FocusesEditor_EscapeCancels_EnterSaves() => DataTableSpecs.GridEditAsync(Browser, BaseUrl, RegisterContext);
+    public Task GridEdit_F2FocusesEditor_EscapeCancels_EnterSaves() => DataTableSpecs.GridEditAsync(this);
 }

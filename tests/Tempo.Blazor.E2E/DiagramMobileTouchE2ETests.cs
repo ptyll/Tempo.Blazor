@@ -374,7 +374,7 @@ public sealed class DiagramMobileTouchE2ETests : WasmTestBase
         });
         RegisterContext(context);
         var page = await context.NewPageAsync();
-        await page.AddInitScriptAsync("() => localStorage.setItem('tm-demo-culture', 'en')");
+        await page.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
         await page.GotoAsync($"{BaseUrl}{ModelingEditorUrl}", new PageGotoOptions
         {
             WaitUntil = WaitUntilState.Load,
@@ -514,7 +514,7 @@ public sealed class DiagramMobileTouchE2ETests : WasmTestBase
         }
 
         var page = await context.NewPageAsync();
-        await page.AddInitScriptAsync("() => localStorage.setItem('tm-demo-culture', 'en')");
+        await page.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
         await page.GotoAsync($"{BaseUrl}{DiagramEditorUrl}", new PageGotoOptions
         {
             WaitUntil = WaitUntilState.Load,

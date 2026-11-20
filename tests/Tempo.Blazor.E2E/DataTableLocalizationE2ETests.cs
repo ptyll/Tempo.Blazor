@@ -5,5 +5,5 @@ namespace Tempo.Blazor.E2E;
 public class DataTableLocalizationE2ETests : WasmTestBase
 {
     [TestMethod, TestCategory("WASM")]
-    public Task Czech_ToolbarGroupingFilterAndPlurals() => DataTableSpecs.CzechAsync(Browser, BaseUrl, RegisterContext);
+    public Task Czech_ToolbarGroupingFilterAndPlurals() => DataTableSpecs.CzechAsync(this);
 }

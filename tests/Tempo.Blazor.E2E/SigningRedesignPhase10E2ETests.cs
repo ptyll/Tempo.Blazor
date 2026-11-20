@@ -27,35 +27,27 @@ internal static class SigningRedesignPhase10Specs
     }
 
     public static async Task<IPage> OpenBridgeAsync(
-        IBrowser browser,
-        string baseUrl,
+        PlaywrightTestBase test,
         int width,
         int height,
-        bool touch,
-        Action<IBrowserContext> registerContext,
-        Func<IPage, Task> waitForReady)
+        bool touch)
     {
-        var context = await browser.NewContextAsync(new BrowserNewContextOptions
-        {
-            ViewportSize = new ViewportSize { Width = width, Height = height },
-            Locale = "en-US",
-            IgnoreHTTPSErrors = true,
-            HasTouch = touch,
-            IsMobile = touch && width < 640
-        });
-        registerContext(context);
-        var page = await context.NewPageAsync();
-        await page.AddInitScriptAsync(
-            "() => { localStorage.setItem('tm-demo-culture', 'en'); " +
-            "const style = document.createElement('style'); style.textContent = " +
-            System.Text.Json.JsonSerializer.Serialize(width <= 1024 ? SigningRedesignPhase9Specs.WideLayoutStyle : string.Empty) +
-            "; document.documentElement.appendChild(style); }");
-        await page.GotoAsync($"{baseUrl}{BridgeUrl}", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60_000
-        });
-        await waitForReady(page);
+        var page = await test.OpenAppPageAsync(
+            $"{test.AppBaseUrl}{BridgeUrl}",
+            new BrowserNewContextOptions
+            {
+                ViewportSize = new ViewportSize { Width = width, Height = height },
+                Locale = "en-US",
+                IgnoreHTTPSErrors = true,
+                HasTouch = touch,
+                IsMobile = touch && width < 640
+            },
+            context => context.AddInitScriptAsync(
+                "localStorage.setItem('tm-demo-culture', 'en'); " +
+                "const style = document.createElement('style'); style.textContent = " +
+                System.Text.Json.JsonSerializer.Serialize(width <= 1024 ? SigningRedesignPhase9Specs.WideLayoutStyle : string.Empty) +
+                "; document.documentElement.appendChild(style);"),
+            WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync("[data-testid='signing-from-editor-tabs']", new PageWaitForSelectorOptions
         {
             Timeout = 60_000
@@ -134,8 +126,7 @@ public class SigningRedesignPhase10E2ETests : BaselineGeneratorTestBase
             foreach (var (dark, indigo, theme, brand) in themes)
             {
                 var page = await SigningRedesignPhase10Specs.OpenBridgeAsync(
-                    Browser, BaseUrl, width, width == 390 ? 844 : 900, touch: width < 1200,
-                    RegisterContext, WaitForAppReadyAsync);
+                    this, width, width == 390 ? 844 : 900, touch: width < 1200);
                 await SigningRedesignPhase5Specs.ApplyThemeAsync(page, dark, indigo);
                 await SigningRedesignPhase10Specs.CaptureAsync(
                     page, $"bridge-edit--{width}--{theme}--{brand}.png", written);
@@ -186,7 +177,7 @@ public class SigningRedesignPhase10BehaviorE2ETests : WasmTestBase
     public async Task SigningBridge_IsOneWorkspace_LaterTabsDisabledUntilExport()
     {
         var page = await SigningRedesignPhase10Specs.OpenBridgeAsync(
-            Browser, BaseUrl, 1440, 900, touch: false, RegisterContext, WaitForAppReadyAsync);
+            this, 1440, 900, touch: false);
 
         var tabs = page.Locator("[data-testid='signing-from-editor-tabs']");
         await Assertions.Expect(tabs).ToBeVisibleAsync();
@@ -214,7 +205,7 @@ public class SigningRedesignPhase10BehaviorE2ETests : WasmTestBase
     public async Task SigningBridge_RoundTrip_KeepsDesignerFieldsAndInsertedBodyField()
     {
         var page = await SigningRedesignPhase10Specs.OpenBridgeAsync(
-            Browser, BaseUrl, 1440, 900, touch: false, RegisterContext, WaitForAppReadyAsync);
+            this, 1440, 900, touch: false);
 
         await page.Locator("[data-testid='signing-from-editor-document'] [data-testid='document-canvas-page']").First
             .ClickAsync();
@@ -248,7 +239,7 @@ public class SigningRedesignPhase10BehaviorE2ETests : WasmTestBase
     public async Task SigningComponents_ShowsNewParameters_ThroughTmSelect()
     {
         var page = await SigningRedesignPhase9Specs.OpenAsync(
-            Browser, BaseUrl, 1440, 900, touch: false, RegisterContext, WaitForAppReadyAsync);
+            this, 1440, 900, touch: false);
 
         var layout = page.Locator("[data-testid='document-comments-layout'] select");
         await Assertions.Expect(layout).ToBeVisibleAsync();
@@ -287,17 +278,10 @@ public class SigningRedesignPhase10RecheckE2ETests : BaselineGeneratorTestBase
         var dir = Path.Combine(root!.FullName, "tests", "Tempo.Blazor.E2E", "__screenshots__", "signing-redesign", "phase-10-recheck");
         Directory.CreateDirectory(dir);
 
-        IPage page;
-        try
-        {
-            page = await SigningRedesignPhase9Specs.OpenAsync(
-                Browser, BaseUrl, 320, 844, touch: true, RegisterContext, WaitForAppReadyAsync);
-        }
-        catch (TimeoutException)
-        {
-            page = await SigningRedesignPhase9Specs.OpenAsync(
-                Browser, BaseUrl, 320, 844, touch: true, RegisterContext, WaitForAppReadyAsync);
-        }
+        // OpenAsync boots through GotoAppReadyAsync, which owns the ONE controlled cold-boot reload (the former local
+        // open-twice retry of this spec is that recovery, centralized).
+        var page = await SigningRedesignPhase9Specs.OpenAsync(
+            this, 320, 844, touch: true);
         var runner = SigningRedesignPhase9Specs.Runner(page);
         await runner.ScrollIntoViewIfNeededAsync();
         var expand = runner.Locator(".tm-signing-form-runner__mobile-expand").First;
@@ -320,7 +304,7 @@ public class SigningRedesignPhase10RecheckE2ETests : BaselineGeneratorTestBase
         await page.Context.CloseAsync();
 
         var commentsPage = await SigningRedesignPhase9Specs.OpenAsync(
-            Browser, BaseUrl, 390, 844, touch: true, RegisterContext, WaitForAppReadyAsync);
+            this, 390, 844, touch: true);
         var comments = SigningRedesignPhase9Specs.Comments(commentsPage);
         var sheet = comments.Locator(".tm-document-page-viewer__comments-sheet").First;
         await comments.ScrollIntoViewIfNeededAsync();

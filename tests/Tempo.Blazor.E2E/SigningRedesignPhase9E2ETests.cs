@@ -39,39 +39,31 @@ internal static class SigningRedesignPhase9Specs
     }
 
     public static async Task<IPage> OpenAsync(
-        IBrowser browser,
-        string baseUrl,
+        PlaywrightTestBase test,
         int width,
         int height,
         bool touch,
-        Action<IBrowserContext> registerContext,
-        Func<IPage, Task> waitForReady,
         string? query = null)
     {
-        var context = await browser.NewContextAsync(new BrowserNewContextOptions
-        {
-            ViewportSize = new ViewportSize { Width = width, Height = height },
-            Locale = "en-US",
-            IgnoreHTTPSErrors = true,
-            HasTouch = touch,
-            IsMobile = touch && width < 640
-        });
-        registerContext(context);
-        var page = await context.NewPageAsync();
-        await page.AddInitScriptAsync(
-            "() => { localStorage.setItem('tm-demo-culture', 'en'); " +
-            "const style = document.createElement('style'); style.textContent = " +
-            System.Text.Json.JsonSerializer.Serialize(width <= 1024 ? WideLayoutStyle : string.Empty) +
-            "; document.documentElement.appendChild(style); }");
         var url = string.IsNullOrEmpty(query)
-            ? $"{baseUrl}{SigningComponentsUrl}"
-            : $"{baseUrl}{SigningComponentsUrl}?{query}";
-        await page.GotoAsync(url, new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60_000
-        });
-        await waitForReady(page);
+            ? $"{test.AppBaseUrl}{SigningComponentsUrl}"
+            : $"{test.AppBaseUrl}{SigningComponentsUrl}?{query}";
+        var page = await test.OpenAppPageAsync(
+            url,
+            new BrowserNewContextOptions
+            {
+                ViewportSize = new ViewportSize { Width = width, Height = height },
+                Locale = "en-US",
+                IgnoreHTTPSErrors = true,
+                HasTouch = touch,
+                IsMobile = touch && width < 640
+            },
+            context => context.AddInitScriptAsync(
+                "localStorage.setItem('tm-demo-culture', 'en'); " +
+                "const style = document.createElement('style'); style.textContent = " +
+                System.Text.Json.JsonSerializer.Serialize(width <= 1024 ? WideLayoutStyle : string.Empty) +
+                "; document.documentElement.appendChild(style);"),
+            WaitUntilState.DOMContentLoaded);
         return page;
     }
 
@@ -221,7 +213,7 @@ public class SigningRedesignPhase9E2ETests : BaselineGeneratorTestBase
             foreach (var (dark, indigo, theme, brand) in themes)
             {
                 var page = await SigningRedesignPhase9Specs.OpenAsync(
-                    Browser, BaseUrl, width, 844, touch: true, RegisterContext, WaitForAppReadyAsync);
+                    this, width, 844, touch: true);
                 await SigningRedesignPhase5Specs.ApplyThemeAsync(page, dark, indigo);
 
                 var designer = SigningRedesignPhase9Specs.Designer(page);
@@ -296,7 +288,7 @@ public class SigningRedesignPhase9E2ETests : BaselineGeneratorTestBase
         }
 
         var tablet = await SigningRedesignPhase9Specs.OpenAsync(
-            Browser, BaseUrl, 1024, 768, touch: true, RegisterContext, WaitForAppReadyAsync);
+            this, 1024, 768, touch: true);
         await tablet.AddStyleTagAsync(new PageAddStyleTagOptions { Content = SigningRedesignPhase9Specs.WideLayoutStyle });
         await SigningRedesignPhase9Specs.CaptureAsync(
             tablet, SigningRedesignPhase9Specs.Designer(tablet), "designer--1024-touch--light--default.png", written);
@@ -307,7 +299,7 @@ public class SigningRedesignPhase9E2ETests : BaselineGeneratorTestBase
         await tablet.Context.CloseAsync();
 
         var desktop = await SigningRedesignPhase9Specs.OpenAsync(
-            Browser, BaseUrl, 1366, 768, touch: false, RegisterContext, WaitForAppReadyAsync);
+            this, 1366, 768, touch: false);
         await SigningRedesignPhase9Specs.CaptureAsync(
             desktop, SigningRedesignPhase9Specs.Viewer(desktop), "viewer--1366--light--default.png", written);
         await SigningRedesignPhase9Specs.CaptureAsync(
@@ -315,7 +307,7 @@ public class SigningRedesignPhase9E2ETests : BaselineGeneratorTestBase
         await desktop.Context.CloseAsync();
 
         var runnerTablet = await SigningRedesignPhase9Specs.OpenAsync(
-            Browser, BaseUrl, 768, 1024, touch: true, RegisterContext, WaitForAppReadyAsync);
+            this, 768, 1024, touch: true);
         await SigningRedesignPhase9Specs.CaptureAsync(
             runnerTablet, SigningRedesignPhase9Specs.Runner(runnerTablet), "runner--768--light--default.png", written);
         await runnerTablet.Context.CloseAsync();
@@ -336,7 +328,7 @@ public class SigningRedesignPhase9BehaviorE2ETests : WasmTestBase
     public async Task SigningRunner_Mobile_OneDrawer_HandleIsOnlyAriaExpandedToggle()
     {
         var page = await SigningRedesignPhase9Specs.OpenAsync(
-            Browser, BaseUrl, 390, 844, touch: true, RegisterContext, WaitForAppReadyAsync);
+            this, 390, 844, touch: true);
         var runner = SigningRedesignPhase9Specs.Runner(page);
         await runner.ScrollIntoViewIfNeededAsync();
 
@@ -361,7 +353,7 @@ public class SigningRedesignPhase9BehaviorE2ETests : WasmTestBase
     public async Task Designer_TabletTouch_IsNotTheMobileSheet()
     {
         var page = await SigningRedesignPhase9Specs.OpenAsync(
-            Browser, BaseUrl, 1024, 768, touch: true, RegisterContext, WaitForAppReadyAsync);
+            this, 1024, 768, touch: true);
         await page.AddStyleTagAsync(new PageAddStyleTagOptions { Content = SigningRedesignPhase9Specs.WideLayoutStyle });
         var designer = SigningRedesignPhase9Specs.Designer(page);
         await designer.ScrollIntoViewIfNeededAsync();
@@ -386,7 +378,7 @@ public class SigningRedesignPhase9BehaviorE2ETests : WasmTestBase
     public async Task SigningRunner_Mobile_PeekStaysInViewportWhenScrolledToTop()
     {
         var page = await SigningRedesignPhase9Specs.OpenAsync(
-            Browser, BaseUrl, 390, 844, touch: true, RegisterContext, WaitForAppReadyAsync);
+            this, 390, 844, touch: true);
         var runner = SigningRedesignPhase9Specs.Runner(page);
         await runner.ScrollIntoViewIfNeededAsync();
         var handle = runner.Locator(".tm-signing-form-runner__sheet-handle");
@@ -407,7 +399,7 @@ public class SigningRedesignPhase9BehaviorE2ETests : WasmTestBase
     public async Task Designer_MobileTouch_SelectsDeletesDetects_WithoutMoveHandles()
     {
         var page = await SigningRedesignPhase9Specs.OpenAsync(
-            Browser, BaseUrl, 390, 844, touch: true, RegisterContext, WaitForAppReadyAsync);
+            this, 390, 844, touch: true);
         var designer = SigningRedesignPhase9Specs.Designer(page);
         await designer.ScrollIntoViewIfNeededAsync();
 
@@ -431,7 +423,7 @@ public class SigningRedesignPhase9BehaviorE2ETests : WasmTestBase
     public async Task SigningRunner_Mobile_TwoPages_SnapDoesNotCollapsePages()
     {
         var page = await SigningRedesignPhase9Specs.OpenAsync(
-            Browser, BaseUrl, 390, 844, touch: true, RegisterContext, WaitForAppReadyAsync,
+            this, 390, 844, touch: true,
             query: "runnerPages=2");
         var runner = SigningRedesignPhase9Specs.Runner(page);
         await runner.ScrollIntoViewIfNeededAsync();
@@ -481,7 +473,7 @@ public class SigningRedesignPhase9BehaviorE2ETests : WasmTestBase
     public async Task CommentsSheet_At320_DoesNotOverflow()
     {
         var page = await SigningRedesignPhase9Specs.OpenAsync(
-            Browser, BaseUrl, 320, 844, touch: true, RegisterContext, WaitForAppReadyAsync);
+            this, 320, 844, touch: true);
         var comments = SigningRedesignPhase9Specs.Comments(page);
         await comments.ScrollIntoViewIfNeededAsync();
         var handle = comments.Locator(".tm-document-page-viewer__comments-sheet .tm-sheet__handle").First;

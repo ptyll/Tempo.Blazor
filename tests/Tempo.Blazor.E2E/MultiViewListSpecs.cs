@@ -8,9 +8,9 @@ internal static class MultiViewListSpecs
 {
     private static ILocator List(IPage page) => page.Locator("[data-testid='mvl-redesign-list']");
 
-    internal static async Task RadiogroupAndCardsAsync(IBrowser browser, string baseUrl, Action<IBrowserContext> register)
+    internal static async Task RadiogroupAndCardsAsync(PlaywrightTestBase test)
     {
-        var page = await OpenAsync(browser, baseUrl, "/multi-view-list", new Options(), register);
+        var page = await OpenAsync(test, "/multi-view-list", new Options());
         var list = List(page);
         await list.ScrollIntoViewIfNeededAsync();
 
@@ -63,9 +63,9 @@ internal static class MultiViewListSpecs
             null, new PageWaitForFunctionOptions { Timeout = 10_000 });
     }
 
-    internal static async Task StretchedLinkAsync(IBrowser browser, string baseUrl, Action<IBrowserContext> register)
+    internal static async Task StretchedLinkAsync(PlaywrightTestBase test)
     {
-        var page = await OpenAsync(browser, baseUrl, "/data-display", new Options(), register);
+        var page = await OpenAsync(test, "/data-display", new Options());
         var section = page.GetByTestId("mvl-stretched-link");
         await section.ScrollIntoViewIfNeededAsync();
         var card = section.Locator(".tm-mvl-card--stretched").First;
@@ -86,9 +86,9 @@ internal static class MultiViewListSpecs
         await Assertions.Expect(clicks).ToHaveTextAsync((before + 2).ToString()); // exactly once per press
     }
 
-    internal static async Task GroupPickerFocusAsync(IBrowser browser, string baseUrl, Action<IBrowserContext> register)
+    internal static async Task GroupPickerFocusAsync(PlaywrightTestBase test)
     {
-        var page = await OpenAsync(browser, baseUrl, "/multi-view-list", new Options(), register);
+        var page = await OpenAsync(test, "/multi-view-list", new Options());
         var list = List(page);
         await list.ScrollIntoViewIfNeededAsync();
         var button = list.Locator(".tm-mvl-group-btn");
@@ -109,9 +109,9 @@ internal static class MultiViewListSpecs
         Assert.IsFalse(await button.EvaluateAsync<bool>("el => el === document.activeElement"), "an outside click does not return focus to the trigger");
     }
 
-    internal static async Task GroupedCardHeaderDiffersFromBodyAsync(IBrowser browser, string baseUrl, Action<IBrowserContext> register)
+    internal static async Task GroupedCardHeaderDiffersFromBodyAsync(PlaywrightTestBase test)
     {
-        var page = await OpenAsync(browser, baseUrl, "/multi-view-list", new Options(), register);
+        var page = await OpenAsync(test, "/multi-view-list", new Options());
         var cards = page.Locator("[data-testid='mvl-redesign-cards']");
         await cards.ScrollIntoViewIfNeededAsync();
 
@@ -141,9 +141,9 @@ internal static class MultiViewListSpecs
         Assert.AreNotEqual(colors[1], colors[0], $"{theme}: the group header background differs from the body");
     }
 
-    internal static async Task EdgeAsync(IBrowser browser, string baseUrl, Action<IBrowserContext> register)
+    internal static async Task EdgeAsync(PlaywrightTestBase test)
     {
-        var page = await OpenAsync(browser, baseUrl, "/multi-view-list", new Options(), register);
+        var page = await OpenAsync(test, "/multi-view-list", new Options());
         var empty = page.Locator("[data-testid='mvl-edge-empty']");
         await empty.ScrollIntoViewIfNeededAsync();
         await Assertions.Expect(empty.Locator(".tm-empty-state")).ToContainTextAsync("Nobody here yet");

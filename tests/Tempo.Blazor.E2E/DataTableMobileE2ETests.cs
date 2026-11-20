@@ -5,21 +5,21 @@ namespace Tempo.Blazor.E2E;
 public class DataTableMobileE2ETests : WasmTestBase
 {
     [TestMethod, TestCategory("WASM")]
-    public Task Cards_HeaderGone_SortDropdown_FilterSheet() => DataTableSpecs.MobileCardsAsync(Browser, BaseUrl, RegisterContext);
+    public Task Cards_HeaderGone_SortDropdown_FilterSheet() => DataTableSpecs.MobileCardsAsync(this);
 
     [TestMethod, TestCategory("WASM")]
-    public Task ScrollPinnedColumn_Pager_TabletCellsDoNotOverlap() => DataTableSpecs.ScrollPinnedAndPagerAsync(Browser, BaseUrl, RegisterContext);
+    public Task ScrollPinnedColumn_Pager_TabletCellsDoNotOverlap() => DataTableSpecs.ScrollPinnedAndPagerAsync(this);
 
     [TestMethod, TestCategory("WASM")]
-    public Task PinnedColumns_Tablet1024_NoOverlap_StayPinnedOnScroll() => DataTableSpecs.PinnedColumns_Tablet1024Async(Browser, BaseUrl, RegisterContext);
+    public Task PinnedColumns_Tablet1024_NoOverlap_StayPinnedOnScroll() => DataTableSpecs.PinnedColumns_Tablet1024Async(this);
 
     [TestMethod, TestCategory("WASM")]
-    public Task CardsWide_ColumnMenuFilter_FocusesHeaderFilter_NoSheet() => DataTableSpecs.CardsWideColumnMenuFilterFocusesHeaderAsync(Browser, BaseUrl, RegisterContext);
+    public Task CardsWide_ColumnMenuFilter_FocusesHeaderFilter_NoSheet() => DataTableSpecs.CardsWideColumnMenuFilterFocusesHeaderAsync(this);
 }
 
 [TestClass]
 public class DataTableMobileServerE2ETests : ServerTestBase
 {
     [TestMethod, TestCategory("Server")]
-    public Task Cards_HeaderGone_SortDropdown_FilterSheet() => DataTableSpecs.MobileCardsAsync(Browser, BaseUrl, RegisterContext);
+    public Task Cards_HeaderGone_SortDropdown_FilterSheet() => DataTableSpecs.MobileCardsAsync(this);
 }

@@ -17,9 +17,9 @@ internal static class DataTableSpecs
 
     // ───────────────────────── 13.2 grid keyboard ─────────────────────────
 
-    internal static async Task GridKeyboardAsync(IBrowser browser, string baseUrl, Action<IBrowserContext> register)
+    internal static async Task GridKeyboardAsync(PlaywrightTestBase test)
     {
-        var page = await OpenAsync(browser, baseUrl, "/data-table", new Options(), register);
+        var page = await OpenAsync(test, "/data-table", new Options());
         await SelectAsync(page, "dt-redesign-keyboard", "Grid");
         var table = Redesign(page);
         await table.ScrollIntoViewIfNeededAsync();
@@ -95,9 +95,9 @@ internal static class DataTableSpecs
         await Assertions.Expect(toggle).ToHaveAttributeAsync("aria-expanded", "false");
     }
 
-    internal static async Task GridEditAsync(IBrowser browser, string baseUrl, Action<IBrowserContext> register)
+    internal static async Task GridEditAsync(PlaywrightTestBase test)
     {
-        var page = await OpenAsync(browser, baseUrl, "/data-table", new Options(), register);
+        var page = await OpenAsync(test, "/data-table", new Options());
         var section = page.Locator("[data-testid='dt-grid-edit']");
         await section.ScrollIntoViewIfNeededAsync();
         await section.Locator("td[tabindex='0']").FocusAsync();
@@ -127,9 +127,9 @@ internal static class DataTableSpecs
     /// the layout is Cards, so the column menu's "Filter…" must focus the header filter and never
     /// open a sheet anchored to the display:none toolbar trigger.
     /// </summary>
-    internal static async Task CardsWideColumnMenuFilterFocusesHeaderAsync(IBrowser browser, string baseUrl, Action<IBrowserContext> register)
+    internal static async Task CardsWideColumnMenuFilterFocusesHeaderAsync(PlaywrightTestBase test)
     {
-        var page = await OpenAsync(browser, baseUrl, "/data-table", new Options(1200, 900), register);
+        var page = await OpenAsync(test, "/data-table", new Options(1200, 900));
         await SelectAsync(page, "dt-redesign-mobile-layout", "Cards");
         await SelectAsync(page, "dt-redesign-column-menu", "Menu");
         var table = Redesign(page);
@@ -149,9 +149,9 @@ internal static class DataTableSpecs
             "the wide container never opens the cards sheet from the column menu");
     }
 
-    internal static async Task ColumnMenuAsync(IBrowser browser, string baseUrl, Action<IBrowserContext> register)
+    internal static async Task ColumnMenuAsync(PlaywrightTestBase test)
     {
-        var page = await OpenAsync(browser, baseUrl, "/data-table", new Options(), register);
+        var page = await OpenAsync(test, "/data-table", new Options());
         var section = page.Locator("[data-testid='dt-column-menu-section']");
         await section.ScrollIntoViewIfNeededAsync();
         var kebab = section.Locator(".tm-data-table-col-menu[data-column-key='Name']");
@@ -173,7 +173,7 @@ internal static class DataTableSpecs
         await Assertions.Expect(section.Locator(".tm-data-table-group-chip")).ToContainTextAsync("Name");
 
         // Keyboard: the sort button is the header's Tab stop; Alt+ArrowDown opens the menu and it STAYS open.
-        var page2 = await OpenAsync(browser, baseUrl, "/data-table", new Options(), register);
+        var page2 = await OpenAsync(test, "/data-table", new Options());
         var s2 = page2.Locator("[data-testid='dt-column-menu-section']");
         await s2.ScrollIntoViewIfNeededAsync();
         await InsertProbeAsync(page2, "[data-testid='dt-column-menu-section']");
@@ -212,9 +212,9 @@ internal static class DataTableSpecs
 
     // ───────────────────────── 13.7 result preview ─────────────────────────
 
-    internal static async Task ResultPreviewAsync(IBrowser browser, string baseUrl, Action<IBrowserContext> register)
+    internal static async Task ResultPreviewAsync(PlaywrightTestBase test)
     {
-        var page = await OpenAsync(browser, baseUrl, "/data-table", new Options(), register);
+        var page = await OpenAsync(test, "/data-table", new Options());
         await ToggleAsync(page, "dt-redesign-result-preview");
         var table = Redesign(page);
         await table.ScrollIntoViewIfNeededAsync();
@@ -232,9 +232,9 @@ internal static class DataTableSpecs
 
     // ───────────────────────── 13.4 overlays ─────────────────────────
 
-    internal static async Task ViewManagerDesktopAsync(IBrowser browser, string baseUrl, Action<IBrowserContext> register)
+    internal static async Task ViewManagerDesktopAsync(PlaywrightTestBase test)
     {
-        var page = await OpenAsync(browser, baseUrl, "/data-table", new Options(), register);
+        var page = await OpenAsync(test, "/data-table", new Options());
         var table = Redesign(page);
         await table.ScrollIntoViewIfNeededAsync();
         var trigger = table.Locator(".tm-view-manager-toggle");
@@ -258,9 +258,9 @@ internal static class DataTableSpecs
             "an outside click must not pull focus back to the trigger");
     }
 
-    internal static async Task ViewManagerMobileSheetAsync(IBrowser browser, string baseUrl, Action<IBrowserContext> register)
+    internal static async Task ViewManagerMobileSheetAsync(PlaywrightTestBase test)
     {
-        var page = await OpenAsync(browser, baseUrl, "/data-table", new Options(390, 844, Touch: true, IsMobile: true), register);
+        var page = await OpenAsync(test, "/data-table", new Options(390, 844, Touch: true, IsMobile: true));
         await SelectAsync(page, "dt-redesign-mobile-layout", "Cards");
         var table = Redesign(page);
         await table.ScrollIntoViewIfNeededAsync();
@@ -273,9 +273,9 @@ internal static class DataTableSpecs
         await Assertions.Expect(sheet).ToContainTextAsync("Engineering");
     }
 
-    internal static async Task ExportScopeAsync(IBrowser browser, string baseUrl, Action<IBrowserContext> register)
+    internal static async Task ExportScopeAsync(PlaywrightTestBase test)
     {
-        var page = await OpenAsync(browser, baseUrl, "/data-table", new Options(), register);
+        var page = await OpenAsync(test, "/data-table", new Options());
         var section = page.Locator("[data-testid='dt-export-section']");
         await section.ScrollIntoViewIfNeededAsync();
         var trigger = section.Locator(".tm-data-table__export .tm-dropdown-trigger");
@@ -300,9 +300,9 @@ internal static class DataTableSpecs
         StringAssert.Contains(lines[0], "Amount");
     }
 
-    internal static async Task FilterBuilderPresentationAsync(IBrowser browser, string baseUrl, Action<IBrowserContext> register)
+    internal static async Task FilterBuilderPresentationAsync(PlaywrightTestBase test)
     {
-        var desktop = await OpenAsync(browser, baseUrl, "/data-table", new Options(), register);
+        var desktop = await OpenAsync(test, "/data-table", new Options());
         var popover = desktop.Locator("[data-testid='dt-filter-popover']");
         await popover.ScrollIntoViewIfNeededAsync();
         var add = popover.Locator(".tm-filter-builder-add");
@@ -316,7 +316,7 @@ internal static class DataTableSpecs
         await desktop.Keyboard.PressAsync("Escape");
         await Assertions.Expect(add).ToBeFocusedAsync();
 
-        var mobile = await OpenAsync(browser, baseUrl, "/data-table", new Options(390, 844, Touch: true, IsMobile: true), register);
+        var mobile = await OpenAsync(test, "/data-table", new Options(390, 844, Touch: true, IsMobile: true));
         var auto = mobile.Locator("[data-testid='dt-filter-auto']");
         await auto.ScrollIntoViewIfNeededAsync();
         await auto.Locator(".tm-filter-builder-add").ClickAsync();
@@ -332,9 +332,9 @@ internal static class DataTableSpecs
     /// neighbours (measured by bounding boxes) and the first Scroll column must stay pinned
     /// while the table scrolls horizontally.
     /// </summary>
-    internal static async Task PinnedColumns_Tablet1024Async(IBrowser browser, string baseUrl, Action<IBrowserContext> register)
+    internal static async Task PinnedColumns_Tablet1024Async(PlaywrightTestBase test)
     {
-        var page = await OpenAsync(browser, baseUrl, "/data-table", new Options(1024, 800), register);
+        var page = await OpenAsync(test, "/data-table", new Options(1024, 800));
         var host = page.Locator("[data-testid='dt-edge-wide']");
         await host.ScrollIntoViewIfNeededAsync();
         var scroller = host.Locator(".tm-data-table-scroll").First;
@@ -370,9 +370,9 @@ internal static class DataTableSpecs
         await AssertNoOverlapAsync("back at rest");
     }
 
-    internal static async Task MobileCardsAsync(IBrowser browser, string baseUrl, Action<IBrowserContext> register)
+    internal static async Task MobileCardsAsync(PlaywrightTestBase test)
     {
-        var page = await OpenAsync(browser, baseUrl, "/data-table", new Options(390, 844, Touch: true, IsMobile: true), register);
+        var page = await OpenAsync(test, "/data-table", new Options(390, 844, Touch: true, IsMobile: true));
         await SelectAsync(page, "dt-redesign-mobile-layout", "Cards");
         await SelectAsync(page, "dt-redesign-appearance", "Card");
         var table = Redesign(page);
@@ -418,9 +418,9 @@ internal static class DataTableSpecs
         await Assertions.Expect(filters).ToContainTextAsync("Filters (1)");
     }
 
-    internal static async Task ScrollPinnedAndPagerAsync(IBrowser browser, string baseUrl, Action<IBrowserContext> register)
+    internal static async Task ScrollPinnedAndPagerAsync(PlaywrightTestBase test)
     {
-        var page = await OpenAsync(browser, baseUrl, "/data-table", new Options(1024, 900), register);
+        var page = await OpenAsync(test, "/data-table", new Options(1024, 900));
         var host = page.Locator("[data-testid='dt-export-responsive']");
         await host.ScrollIntoViewIfNeededAsync();
         await host.EvaluateAsync("el => { el.style.maxWidth = '360px'; }");
@@ -436,7 +436,7 @@ internal static class DataTableSpecs
         Assert.AreEqual(before, (await BoxAsync(pinned)).X, 1.0, "the first Scroll column keeps its left edge");
 
         // Pager: page numbers on a wide container, "Page X of Y" only on a narrow one.
-        var wideViewport = await OpenAsync(browser, baseUrl, "/data-table", new Options(1440, 900), register);
+        var wideViewport = await OpenAsync(test, "/data-table", new Options(1440, 900));
         var wide = wideViewport.Locator("[data-testid='dt-edge-pager-wide']");
         await wide.ScrollIntoViewIfNeededAsync();
         await Assertions.Expect(wide.Locator(".tm-page-btn").First).ToBeVisibleAsync();
@@ -462,9 +462,9 @@ internal static class DataTableSpecs
 
     // ───────────────────────── 13.8 localization ─────────────────────────
 
-    internal static async Task CzechAsync(IBrowser browser, string baseUrl, Action<IBrowserContext> register)
+    internal static async Task CzechAsync(PlaywrightTestBase test)
     {
-        var page = await OpenAsync(browser, baseUrl, "/data-table", new Options(Culture: "cs"), register);
+        var page = await OpenAsync(test, "/data-table", new Options(Culture: "cs"));
         await SelectAsync(page, "dt-redesign-appearance", "Card");
         await ToggleAsync(page, "dt-redesign-result-preview");
         var table = Redesign(page);
@@ -521,9 +521,9 @@ internal static class DataTableSpecs
 
     // ───────────────────────── 13.9 edge cases ─────────────────────────
 
-    internal static async Task EdgeStatesAsync(IBrowser browser, string baseUrl, Action<IBrowserContext> register)
+    internal static async Task EdgeStatesAsync(PlaywrightTestBase test)
     {
-        var page = await OpenAsync(browser, baseUrl, "/data-table", new Options(), register);
+        var page = await OpenAsync(test, "/data-table", new Options());
         var empty = page.Locator("[data-testid='dt-edge-empty']");
         await empty.ScrollIntoViewIfNeededAsync();
         await Assertions.Expect(empty.Locator(".tm-empty-state")).ToContainTextAsync("No employees yet");
@@ -572,10 +572,10 @@ internal static class DataTableSpecs
         Assert.AreEqual(x1, (await BoxAsync(pinned)).X, 1.0, "the pinned column keeps its edge while 15 columns scroll");
     }
 
-    internal static async Task ZoomRtlAndTouchAsync(IBrowser browser, string baseUrl, Action<IBrowserContext> register)
+    internal static async Task ZoomRtlAndTouchAsync(PlaywrightTestBase test)
     {
         // 200% zoom: DPR 2 at 720×450 — the toolbar still fits its card and the page does not overflow.
-        var zoom = await OpenAsync(browser, baseUrl, "/data-table", new Options(720, 450, DeviceScaleFactor: 2), register);
+        var zoom = await OpenAsync(test, "/data-table", new Options(720, 450, DeviceScaleFactor: 2));
         await SelectAsync(zoom, "dt-redesign-appearance", "Card");
         var table = Redesign(zoom);
         await table.ScrollIntoViewIfNeededAsync();
@@ -590,7 +590,7 @@ internal static class DataTableSpecs
         Assert.IsTrue(await zoom.EvaluateAsync<bool>("() => document.documentElement.scrollWidth <= window.innerWidth + 1"), "no horizontal page overflow at 200%");
 
         // RTL: a column pinned to the start edge moves to the right side.
-        var rtl = await OpenAsync(browser, baseUrl, "/data-table", new Options(), register);
+        var rtl = await OpenAsync(test, "/data-table", new Options());
         var wide = rtl.Locator("[data-testid='dt-edge-wide']");
         await wide.ScrollIntoViewIfNeededAsync();
         await rtl.EvaluateAsync("() => { document.documentElement.setAttribute('dir', 'rtl'); }");
@@ -602,7 +602,7 @@ internal static class DataTableSpecs
             $"under dir=rtl the start-pinned column sits on the right (pin centre {pin.X + pin.Width / 2}, scroller centre {scroller.X + scroller.Width / 2})");
 
         // Coarse pointer on a tablet: every control the table owns is at least 44px.
-        var touch = await OpenAsync(browser, baseUrl, "/data-table", new Options(1024, 768, Touch: true), register);
+        var touch = await OpenAsync(test, "/data-table", new Options(1024, 768, Touch: true));
         Assert.IsTrue(await touch.EvaluateAsync<bool>("() => matchMedia('(pointer: coarse)').matches"), "precondition: coarse pointer");
         await SelectAsync(touch, "dt-redesign-column-menu", "Menu");
         var t = Redesign(touch);
@@ -621,9 +621,9 @@ internal static class DataTableSpecs
     /// look — solid-primary chip, outlined Expand/Collapse buttons and single-line export
     /// items; the Card surface keeps the redesign styling.
     /// </summary>
-    internal static async Task DefaultAppearanceGroupZoneAndExportAsync(IBrowser browser, string baseUrl, Action<IBrowserContext> register)
+    internal static async Task DefaultAppearanceGroupZoneAndExportAsync(PlaywrightTestBase test)
     {
-        var page = await OpenAsync(browser, baseUrl, "/data-table", new Options(), register);
+        var page = await OpenAsync(test, "/data-table", new Options());
         var table = Redesign(page);
         await table.ScrollIntoViewIfNeededAsync();
 

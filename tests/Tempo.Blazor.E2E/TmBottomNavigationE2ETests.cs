@@ -166,7 +166,7 @@ public sealed class TmBottomNavigationServerE2ETests : ServerTestBase
 {
     [TestMethod]
     public async Task BottomNavigation_Renders_With_A_Localized_Name_On_The_Server_Host()
-        => await TmBottomNavigationSmoke.RunAsync(BaseUrl, () => CreateContextAsync(), (page, url) => GotoAppReadyAsync(page, url));
+        => await TmBottomNavigationSmoke.RunAsync(this);
 }
 
 /// <summary>The same bar on the InteractiveAuto demo (:7108).</summary>
@@ -176,7 +176,7 @@ public sealed class TmBottomNavigationInteractiveAutoE2ETests : InteractiveAutoT
 {
     [TestMethod]
     public async Task BottomNavigation_Renders_With_A_Localized_Name_On_The_InteractiveAuto_Host()
-        => await TmBottomNavigationSmoke.RunAsync(BaseUrl, () => CreateContextAsync(), (page, url) => GotoAppReadyAsync(page, url));
+        => await TmBottomNavigationSmoke.RunAsync(this);
 }
 
 /// <summary>The host-independent smoke assertions both non-WASM lanes run.</summary>
@@ -184,18 +184,17 @@ internal static class TmBottomNavigationSmoke
 {
     private const string Section = "[data-testid='bottom-navigation-section']";
 
-    public static async Task RunAsync(
-        string baseUrl,
-        Func<Task<IBrowserContext>> createContext,
-        Func<IPage, string, Task> gotoReady)
+    public static async Task RunAsync(PlaywrightTestBase test)
     {
-        var context = await createContext();
+        var context = await test.CreateContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = 1440, Height = 1000 }
+        });
         var page = await context.NewPageAsync();
-        await page.SetViewportSizeAsync(1440, 1000);
         var errors = new List<string>();
         page.PageError += (_, message) => errors.Add(message);
 
-        await gotoReady(page, $"{baseUrl}/new-components");
+        await test.GotoAppReadyAsync(page, $"{test.AppBaseUrl}/new-components");
         var nav = page.Locator($"{Section} nav.tm-bottom-nav").First;
         await nav.WaitForAsync(new LocatorWaitForOptions { Timeout = 90000 });
 

@@ -5,12 +5,12 @@ namespace Tempo.Blazor.E2E;
 public class DataTableResultPreviewE2ETests : WasmTestBase
 {
     [TestMethod, TestCategory("WASM")]
-    public Task ResultPreview_MatchesRowsAfterApplying() => DataTableSpecs.ResultPreviewAsync(Browser, BaseUrl, RegisterContext);
+    public Task ResultPreview_MatchesRowsAfterApplying() => DataTableSpecs.ResultPreviewAsync(this);
 }
 
 [TestClass]
 public class DataTableResultPreviewServerE2ETests : ServerTestBase
 {
     [TestMethod, TestCategory("Server")]
-    public Task ResultPreview_MatchesRowsAfterApplying() => DataTableSpecs.ResultPreviewAsync(Browser, BaseUrl, RegisterContext);
+    public Task ResultPreview_MatchesRowsAfterApplying() => DataTableSpecs.ResultPreviewAsync(this);
 }

@@ -113,8 +113,7 @@ public sealed class DashboardTG009ChromelessE2ETests : WasmTestBase
     {
         var page = await CreatePageAsync();
         await page.SetViewportSizeAsync(390, 844);
-        await page.GotoAsync(BaseUrl.TrimEnd('/') + "/dashboard-overview");
-        await WaitBlazorReadyAsync(page);
+        await GotoAppReadyAsync(page, BaseUrl.TrimEnd('/') + "/dashboard-overview");
         var widgets = page.Locator(".tm-dashboard .tm-widget");
         await widgets.First.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
 
@@ -164,16 +163,8 @@ public sealed class DashboardTG009ChromelessE2ETests : WasmTestBase
         }
 
         await page.SetViewportSizeAsync(1440, 900);
-        await page.GotoAsync(BaseUrl.TrimEnd('/') + route);
-        await WaitBlazorReadyAsync(page);
+        await GotoAppReadyAsync(page, BaseUrl.TrimEnd('/') + route);
         return page;
-    }
-
-    private static async Task WaitBlazorReadyAsync(IPage page)
-    {
-        await page.WaitForFunctionAsync(
-            "() => document.body !== null && document.body.hasAttribute('data-blazor-ready')",
-            null, new PageWaitForFunctionOptions { Timeout = 30000 });
     }
 
     private static async Task AssertNoBlazorErrorAsync(IPage page)

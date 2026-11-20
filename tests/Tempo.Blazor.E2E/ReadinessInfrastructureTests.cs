@@ -200,6 +200,19 @@ public class ReadinessInfrastructureTests
     ];
 
     /// <summary>
+    /// Rules whose target is 0 and that are NOT part of the ratchet (never summed into <see cref="KnownOffenders"/>).
+    /// Playwright .NET takes the init script as a SOURCE string and evaluates it: an arrow function is only an
+    /// expression statement that is never called, so the script silently does nothing (the Signing/Diagram specs
+    /// lost their culture pin this way).
+    /// </summary>
+    private static readonly (string Id, Regex Pattern, string Hint)[] ZeroRules =
+    [
+        ("R6 AddInitScriptAsync arrow function",
+            new Regex(@"AddInitScriptAsync\(\s*(?:@\$|\$@|@|\$)?""\s*(?:async\s*)?\(\s*\)\s*=>", RegexOptions.Compiled),
+            "an init script is a statement list, not a function: write \"localStorage.setItem(...);\", never \"() => ...\""),
+    ];
+
+    /// <summary>
     /// The ratchet: per file (relative to the E2E project, forward slashes) the number of rule hits tolerated today and
     /// why. Computed by running <see cref="BootRules"/> over every comment-stripped <c>*.cs</c>.
     /// </summary>
@@ -218,9 +231,6 @@ public class ReadinessInfrastructureTests
         ["AdditiveExtensionsE2ETests.cs"] = (3, Debt),
         ["AgentPlanE2ETests.cs"] = (2, Debt),
         ["AgentRunE2ETests.cs"] = (2, Debt),
-        ["AiAgentsE2EBase.cs"] = (2, Debt),
-        ["AiAgentsE2ETests.Visual.cs"] = (2, Debt),
-        ["AiAgentVisualizationsPageBase.cs"] = (2, Debt),
         ["AnalyticsKitE2ETests.cs"] = (2, Debt),
         ["AppShellE2ETests.cs"] = (3, Debt),
         ["AriaWiringE2ETests.cs"] = (2, Debt),
@@ -230,24 +240,20 @@ public class ReadinessInfrastructureTests
         ["ConditionBuilderE2ETests.cs"] = (3, Debt),
         ["ContextUsageE2ETests.cs"] = (2, Debt),
         ["Conventions/TestIdPrefixE2ETests.cs"] = (1, Debt),
-        ["DashboardF2ScreenshotTests.cs"] = (1, Debt),
-        ["DashboardF3ResponsiveE2ETests.cs"] = (4, Debt),
-        ["DashboardF4ReorderE2ETests.cs"] = (3, Debt),
-        ["DashboardF5PointerDragE2ETests.cs"] = (3, Debt),
+        ["DashboardF3ResponsiveE2ETests.cs"] = (2, Debt),
+        ["DashboardF4ReorderE2ETests.cs"] = (2, Debt),
+        ["DashboardF5PointerDragE2ETests.cs"] = (2, Debt),
         ["DashboardF6SelectorE2ETests.cs"] = (3, Debt),
-        ["DashboardF7DialogsE2ETests.cs"] = (3, Debt),
-        ["DashboardTG009ChromelessE2ETests.cs"] = (1, Debt),
+        ["DashboardF7DialogsE2ETests.cs"] = (2, Debt),
         ["DataDisplay/TmMultiViewListStretchedLinkE2ETests.cs"] = (1, Debt),
         ["DataDisplayKpiE2ETests.cs"] = (2, Debt),
         ["DataDisplayTrendBreakdownE2ETests.cs"] = (2, Debt),
         ["DataTableColumnResizeE2ETests.cs"] = (3, Debt),
-        ["DataTableE2EKit.cs"] = (2, Debt),
         ["DataTableErgonomicsE2ETests.cs"] = (1, Debt),
         ["DataTableRedesignDemoE2ETests.cs"] = (5, Debt),
         ["DebtTokenBaselineScreenshots.cs"] = (1, Debt),
         ["DecimalInputE2ETests.cs"] = (1, Debt),
         ["DemoCrossLinksPhase9E2ETests.cs"] = (5, Debt),
-        ["DensityTG007E2ETests.cs"] = (1, Debt),
         ["Diagram/TmDiagramThemeE2ETests.cs"] = (3, Debt),
         ["DiagramArchimate3Phase7E2ETests.cs"] = (1, Debt),
         ["DiagramBaselineScreenshots.cs"] = (1, Debt),
@@ -305,7 +311,6 @@ public class ReadinessInfrastructureTests
         ["Feedback/DialogF2DebtE2ETests.cs"] = (3, Debt),
         ["Feedback/ModalFocusRestoreE2ETests.cs"] = (3, Debt),
         ["Feedback/ModalStackedInOrderE2ETests.cs"] = (3, Debt),
-        ["Feedback/OverlayInitialFocusE2ETests.cs"] = (4, Debt),
         ["Feedback/OverlayRound5E2ETests.cs"] = (3, Debt),
         ["Feedback/OverlayRound6E2ETests.cs"] = (3, Debt),
         ["Feedback/SheetReviewE2ETests.cs"] = (3, Debt),
@@ -427,7 +432,6 @@ public class ReadinessInfrastructureTests
         ["NotionDbMobileSheetE2ETests.cs"] = (3, Debt),
         ["NotionDragDropE2ETests.cs"] = (1, Debt),
         ["NotionDragDropMediaE2ETests.cs"] = (1, Debt),
-        ["NotionE2ETestBase.cs"] = (2, Debt),
         ["NotionEditPersistenceE2ETests.cs"] = (3, Debt),
         ["NotionFormattingE2ETests.cs"] = (2, Debt),
         ["NotionKeyboardE2ETests.cs"] = (1, Debt),
@@ -471,7 +475,6 @@ public class ReadinessInfrastructureTests
         ["PdfAnnotatorE2ETests.cs"] = (2, Debt),
         ["PdfAnnotatorResponsiveE2ETests.cs"] = (5, Debt),
         ["PdfAnnotatorUndoE2ETests.cs"] = (1, Debt),
-        ["PdfRedesignThemeScreenshotTests.cs"] = (1, Debt),
         ["PdfTemplateDesignerE2ETests.cs"] = (4, Debt),
         ["PdfViewerAnnotationsE2ETests.cs"] = (4, Debt),
         ["PdfViewerContinuousE2ETests.cs"] = (1, Debt),
@@ -496,7 +499,7 @@ public class ReadinessInfrastructureTests
         ["ReportingF7TablixE2ETests.cs"] = (1, OwnHost),
         ["ReportingF8PdfRendererE2ETests.cs"] = (1, OwnHost),
         ["ReportingF9ReportViewerE2ETests.cs"] = (1, OwnHost),
-        ["ResponsiveConventionsE2ETests.cs"] = (3, Debt),
+        ["ResponsiveConventionsE2ETests.cs"] = (2, Debt),
         ["RteDialogsTopLayerE2ETests.cs"] = (3, Debt),
         ["SegmentedControlE2ETests.cs"] = (2, Debt),
         ["Scheduler/SchedulerNavigationE2ETests.cs"] = (1, Debt),
@@ -519,15 +522,9 @@ public class ReadinessInfrastructureTests
         ["SigningProductPanelsE2ETests.cs"] = (1, Debt),
         ["SigningQualityE2ETests.cs"] = (1, Debt),
         ["SigningRedesignBaselineE2ETests.cs"] = (7, Debt),
-        ["SigningRedesignPhase10E2ETests.cs"] = (1, Debt),
         ["SigningRedesignPhase2E2ETests.cs"] = (3, Debt),
         ["SigningRedesignPhase3E2ETests.cs"] = (6, Debt),
         ["SigningRedesignPhase4E2ETests.cs"] = (4, Debt),
-        ["SigningRedesignPhase5E2ETests.cs"] = (1, Debt),
-        ["SigningRedesignPhase6E2ETests.cs"] = (1, Debt),
-        ["SigningRedesignPhase7E2ETests.cs"] = (1, Debt),
-        ["SigningRedesignPhase8E2ETests.cs"] = (1, Debt),
-        ["SigningRedesignPhase9E2ETests.cs"] = (1, Debt),
         ["SigningStepsE2ETests.cs"] = (1, Debt),
         ["SmallGaps10cE2ETests.cs"] = (2, Debt),
         ["SmokeLaneE2ETests.cs"] = (1, Debt),
@@ -543,7 +540,6 @@ public class ReadinessInfrastructureTests
         ["SpreadsheetPhase6BaselineScreenshots.cs"] = (4, Debt),
         ["SpreadsheetPhase6E2ETests.cs"] = (5, Debt),
         ["SpreadsheetPhase6ResponsiveE2ETests.cs"] = (1, Debt),
-        ["ThemeMatrixScreenshotTests.cs"] = (4, Debt),
         ["ThemeTokenBaselineScreenshots.cs"] = (1, Debt),
         ["TmBottomNavigationE2ETests.cs"] = (3, Debt),
         ["TmButtonDataTableScopeE2ETests.cs"] = (1, Debt),
@@ -585,11 +581,12 @@ public class ReadinessInfrastructureTests
         ["WorkflowDesignerTouchE2ETests.cs"] = (3, Debt),
         };
 
-    [TestMethod]
-    public void NoSpecOpensItsOwnContextOrBootsPastTheCentralRecovery_RatchetedByKnownOffenders()
+    /// <summary>
+    /// Every scanned <c>*.cs</c> of the E2E project (relative path with forward slashes + comment-stripped text):
+    /// bin/obj, this guard and the central <c>PlaywrightTestBase</c> partials are excluded.
+    /// </summary>
+    private static IEnumerable<(string Relative, string Text)> EnumerateScannedSources(string root)
     {
-        var root = FindE2EDirectory();
-        var actual = new SortedDictionary<string, (int Count, string Detail)>(StringComparer.Ordinal);
         foreach (var file in Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories))
         {
             var relative = Path.GetRelativePath(root, file).Replace(Path.DirectorySeparatorChar, '/');
@@ -603,7 +600,39 @@ public class ReadinessInfrastructureTests
                 continue;
             }
 
-            var text = StripComments(File.ReadAllText(file));
+            yield return (relative, StripComments(File.ReadAllText(file)));
+        }
+    }
+
+    [TestMethod]
+    public void NoInitScriptIsAnArrowFunction()
+    {
+        var root = FindE2EDirectory();
+        var offenders = new List<string>();
+        foreach (var (relative, text) in EnumerateScannedSources(root))
+        {
+            foreach (var (id, pattern, _) in ZeroRules)
+            {
+                var hits = pattern.Matches(text).Count;
+                if (hits > 0)
+                {
+                    offenders.Add($"{relative}: {id} x{hits}");
+                }
+            }
+        }
+
+        Assert.AreEqual(0, offenders.Count,
+            "an init script is a SOURCE string, not a function (the arrow is never called); this rule is not ratcheted (target 0, KnownOffenders does not apply):\n  "
+            + string.Join("\n  ", offenders) + "\n  " + string.Join(" | ", ZeroRules.Select(r => $"{r.Id}: {r.Hint}")));
+    }
+
+    [TestMethod]
+    public void NoSpecOpensItsOwnContextOrBootsPastTheCentralRecovery_RatchetedByKnownOffenders()
+    {
+        var root = FindE2EDirectory();
+        var actual = new SortedDictionary<string, (int Count, string Detail)>(StringComparer.Ordinal);
+        foreach (var (relative, text) in EnumerateScannedSources(root))
+        {
             var total = 0;
             var rules = new List<string>();
             foreach (var (id, pattern, _) in BootRules)

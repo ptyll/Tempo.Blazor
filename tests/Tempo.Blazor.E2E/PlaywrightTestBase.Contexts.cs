@@ -265,6 +265,7 @@ public abstract partial class PlaywrightTestBase
     }
 
     /// <summary>Tracks a context this test opened itself, so cleanup closes it.</summary>
+    [Obsolete("A context that needs RegisterContext was not created by CreateContextAsync (no failure trace, no bounded relaunching creation): use CreateContextAsync(options) / OpenAppPageAsync. Becomes private once every spec is migrated (E2E harness phase 1a).")]
     protected void RegisterContext(IBrowserContext context) => _contextsToDispose.Add(context);
 
     /// <summary>

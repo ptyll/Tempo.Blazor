@@ -19,7 +19,7 @@ public class DiagramLayoutE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
 
-        await page.AddInitScriptAsync("() => localStorage.setItem('tm-demo-culture', 'en')");
+        await page.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
         // The cold-boot recovery (one controlled reload) lives in PlaywrightTestBase.GotoAppReadyAsync.
         await GotoAppReadyAsync(page, $"{BaseUrl}{DiagramEditorUrl}", WaitUntilState.DOMContentLoaded);
         await WaitForDiagramEditorReadyAsync(page);

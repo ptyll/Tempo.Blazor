@@ -226,11 +226,7 @@ public sealed class ResponsiveConventionsE2ETests : WasmTestBase
             page = await CreatePageAsync();
             await page.SetViewportSizeAsync(width, height);
         }
-        await page.GotoAsync(BaseUrl.TrimEnd('/') + "/responsive-conventions",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60_000 });
-        await page.WaitForFunctionAsync(
-            "() => document.body !== null && document.body.hasAttribute('data-blazor-ready')",
-            null, new PageWaitForFunctionOptions { Timeout = 30_000 });
+        await GotoAppReadyAsync(page, BaseUrl.TrimEnd('/') + "/responsive-conventions");
         await page.GetByTestId("rc-host-wide").Locator(".tm-dashboard-grid").WaitForAsync(new LocatorWaitForOptions { Timeout = 30_000 });
         await page.GetByTestId("rc-host-wide-heading").GetByText("px").WaitForAsync(new LocatorWaitForOptions { Timeout = 15_000 });
         await page.Mouse.MoveAsync(0, 0);

@@ -229,7 +229,7 @@ public sealed class TmDiagramThemeServerE2ETests : ServerTestBase
 {
     [TestMethod]
     public async Task BpmnCanvas_DarkMode_Flips_On_The_Server_Host()
-        => await TmDiagramThemeSmoke.RunAsync(BaseUrl, () => CreateContextAsync(), (page, url) => GotoAppReadyAsync(page, url));
+        => await TmDiagramThemeSmoke.RunAsync(this);
 }
 
 /// <summary>The dark-canvas contract on the InteractiveAuto demo (:7108).</summary>
@@ -239,23 +239,20 @@ public sealed class TmDiagramThemeInteractiveAutoE2ETests : InteractiveAutoTestB
 {
     [TestMethod]
     public async Task BpmnCanvas_DarkMode_Flips_On_The_InteractiveAuto_Host()
-        => await TmDiagramThemeSmoke.RunAsync(BaseUrl, () => CreateContextAsync(), (page, url) => GotoAppReadyAsync(page, url));
+        => await TmDiagramThemeSmoke.RunAsync(this);
 }
 
 /// <summary>The host-independent smoke assertions both non-WASM lanes run.</summary>
 internal static class TmDiagramThemeSmoke
 {
-    public static async Task RunAsync(
-        string baseUrl,
-        Func<Task<IBrowserContext>> createContext,
-        Func<IPage, string, Task> gotoReady)
+    public static async Task RunAsync(PlaywrightTestBase test)
     {
-        var context = await createContext();
+        var context = await test.CreateContextAsync(new BrowserNewContextOptions());
         var page = await context.NewPageAsync();
         var errors = new List<string>();
         page.PageError += (_, message) => errors.Add(message);
 
-        await gotoReady(page, $"{baseUrl}/modeling-editor?scenario=bpmn2-generated");
+        await test.GotoAppReadyAsync(page, $"{test.AppBaseUrl}/modeling-editor?scenario=bpmn2-generated");
         var pageRect = page.Locator("rect.tm-diagram-page").First;
         await pageRect.WaitForAsync(new LocatorWaitForOptions { Timeout = 90000 });
         await page.WaitForTimeoutAsync(400);

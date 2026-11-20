@@ -16,7 +16,7 @@ public abstract partial class PlaywrightTestBase
     /// ("ReadinessInfrastructureTests.NoSpecKeepsALocalColdBootRecoveryCopy" enforces it). A second timeout is a real
     /// failure and propagates. The wait budgets come from <see cref="ReadinessTimeouts"/> (<c>TM_E2E_READY_TIMEOUT_MS</c>).
     /// </summary>
-    protected async Task GotoAppReadyAsync(IPage page, string url, WaitUntilState waitUntil = WaitUntilState.Load)
+    protected internal async Task GotoAppReadyAsync(IPage page, string url, WaitUntilState waitUntil = WaitUntilState.Load)
     {
         var timeouts = ReadinessTimeouts.FromEnvironment();
         var navigated = false;
@@ -32,7 +32,7 @@ public abstract partial class PlaywrightTestBase
                     await page.GotoAsync(url, new PageGotoOptions { WaitUntil = waitUntil, Timeout = timeouts.DomContentLoadedMs });
                 }
 
-                await WaitForAppReadyAsync(page);
+                await WaitForBootGateAsync(page);
             },
             () => RecoverBootAsync(ReloadOrNavigateAsync));
 
@@ -47,10 +47,11 @@ public abstract partial class PlaywrightTestBase
     /// <summary>
     /// Reloads the CURRENT page and waits for the app to be ready, with the same ONE controlled recovery as
     /// <see cref="GotoAppReadyAsync"/>. Specs that reload a page (to prove state survives a reload, to re-run a boot
-    /// path) call this instead of <c>page.ReloadAsync()</c> + <c>WaitForAppReadyAsync</c>: a reload boots the WASM
+    /// path) call this instead of <c>page.ReloadAsync()</c> + <c>WaitForAppReadyAsync</c> (<c>waitUntil</c> keeps the spec's own
+    /// reload wait condition): a reload boots the WASM
     /// runtime again, and a boot whose one framework fetch dies stalls for good without the recovery.
     /// </summary>
-    protected async Task ReloadAppReadyAsync(IPage page)
+    protected internal async Task ReloadAppReadyAsync(IPage page, WaitUntilState waitUntil = WaitUntilState.Load)
     {
         var timeouts = ReadinessTimeouts.FromEnvironment();
         var reloaded = false;
@@ -60,12 +61,116 @@ public abstract partial class PlaywrightTestBase
                 if (!reloaded)
                 {
                     reloaded = true;
-                    await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.Load, Timeout = timeouts.DomContentLoadedMs });
+                    await page.ReloadAsync(new PageReloadOptions { WaitUntil = waitUntil, Timeout = timeouts.DomContentLoadedMs });
                 }
 
-                await WaitForAppReadyAsync(page);
+                await WaitForBootGateAsync(page);
             },
+            () => RecoverBootAsync(() => page.ReloadAsync(new PageReloadOptions { WaitUntil = waitUntil, Timeout = timeouts.DomContentLoadedMs })));
+    }
+
+    /// <summary>
+    /// Runs <paramref name="trigger"/> (a click, a language switch, a form submit ...) that makes the page load a NEW
+    /// document, waits for the app of that document to be ready and recovers a stalled boot with the same ONE
+    /// controlled reload as <see cref="GotoAppReadyAsync"/>. It replaces the hand-rolled
+    /// <c>trigger + WaitForLoadState + WaitForAppReadyAsync</c> sequence, which could pass on the OLD document
+    /// (its <c>data-blazor-ready</c> is still set while the navigation is in flight).
+    /// </summary>
+    /// <remarks>
+    /// The old document is ALWAYS marked before the trigger and the gate waits until the mark is gone, so it can never
+    /// pass on the old page. A trigger that does not replace the document (client-side routing, a click that does
+    /// nothing) is therefore a failure by design: use <see cref="GotoAppReadyAsync"/> / <see cref="ReloadAppReadyAsync"/>
+    /// or a plain locator wait for navigation inside the running app.
+    /// </remarks>
+    /// <param name="page">The page whose document is replaced by the trigger.</param>
+    /// <param name="trigger">The action that starts the full document load (never awaited for the load itself).</param>
+    protected internal async Task NavigateAppReadyAsync(IPage page, Func<Task> trigger)
+    {
+        ArgumentNullException.ThrowIfNull(page);
+        ArgumentNullException.ThrowIfNull(trigger);
+
+        var timeouts = ReadinessTimeouts.FromEnvironment();
+        await page.EvaluateAsync("() => { window.__tmE2EOldDocument = true; }");
+
+        await trigger();
+
+        try
+        {
+            // WaitForFunction survives the navigation (it re-runs in the new document, where the mark is absent).
+            await page.WaitForFunctionAsync("() => window.__tmE2EOldDocument !== true", null,
+                new PageWaitForFunctionOptions { Timeout = timeouts.DomContentLoadedMs });
+        }
+        catch (Exception ex) when (ColdBootRecovery.IsTimeout(ex))
+        {
+            throw new InvalidOperationException(
+                "NavigateAppReadyAsync: the trigger did not load a new document (the old page is still there). "
+                + "It is for a trigger that replaces the document (forceLoad link, culture switch, form submit); "
+                + "for client-side routing wait on the destination instead.", ex);
+        }
+
+        await ColdBootRecovery.RunAsync(
+            () => WaitForBootGateAsync(page),
             () => RecoverBootAsync(() => page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.Load, Timeout = timeouts.DomContentLoadedMs })));
+    }
+
+    /// <summary>
+    /// Creates a context (through <see cref="CreateContextAsync(BrowserNewContextOptions, bool)"/>: suite defaults, failure
+    /// trace, bounded relaunching creation, cleanup registration), lets the spec prepare it
+    /// (<paramref name="beforeNavigate"/>: init scripts, routes, cookies, permissions ...), opens one page and boots it on
+    /// <paramref name="url"/> with <see cref="GotoAppReadyAsync"/> (the ONE controlled cold-boot reload). The context is
+    /// <c>page.Context</c>.
+    /// </summary>
+    /// <param name="url">Absolute URL to open.</param>
+    /// <param name="options">Context options (viewport, locale, touch, color scheme ...); <c>null</c> = suite defaults.</param>
+    /// <param name="beforeNavigate">Runs after the context exists and before the first navigation.</param>
+    /// <param name="waitUntil">The navigation's wait condition (kept per spec; the readiness gate follows regardless).</param>
+    /// <param name="trace">Collect a failure trace; <c>false</c> for boot/perf specs whose timing the tracing would skew.</param>
+    protected internal async Task<IPage> OpenAppPageAsync(
+        string url,
+        BrowserNewContextOptions? options = null,
+        Func<IBrowserContext, Task>? beforeNavigate = null,
+        WaitUntilState waitUntil = WaitUntilState.Load,
+        bool trace = true)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(url);
+
+        var context = await CreateContextAsync(options ?? new BrowserNewContextOptions(), trace);
+        if (beforeNavigate is not null)
+        {
+            await beforeNavigate(context);
+        }
+
+        var page = await context.NewPageAsync();
+        await GotoAppReadyAsync(page, url, waitUntil);
+        return page;
+    }
+
+    /// <summary>
+    /// Navigates WITHOUT the readiness gate and WITHOUT the cold-boot reload. Only for specs whose subject is the boot
+    /// itself (a boot-time measurement, a stalled/blocked boot on purpose, a page that never becomes ready); every other
+    /// spec must use <see cref="GotoAppReadyAsync"/>. Such a spec creates its context with
+    /// <c>CreateContextAsync(options, trace: false)</c>; never <see cref="OpenAppPageAsync"/>, which always recovers.
+    /// </summary>
+    /// <param name="page">The page to navigate.</param>
+    /// <param name="url">Absolute URL.</param>
+    /// <param name="reason">Why this navigation must not be recovered (required, written to the test output).</param>
+    /// <param name="waitUntil">The navigation's wait condition.</param>
+    protected internal async Task<IResponse?> GotoWithoutBootRecoveryAsync(
+        IPage page,
+        string url,
+        string reason,
+        WaitUntilState waitUntil = WaitUntilState.Load)
+    {
+        ArgumentNullException.ThrowIfNull(page);
+        ArgumentException.ThrowIfNullOrWhiteSpace(url);
+        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+
+        TestContext.WriteLine($"[e2e] navigating without boot recovery: {reason}");
+        return await page.GotoAsync(url, new PageGotoOptions
+        {
+            WaitUntil = waitUntil,
+            Timeout = ReadinessTimeouts.FromEnvironment().DomContentLoadedMs
+        });
     }
 
     /// <summary>
@@ -89,6 +194,7 @@ public abstract partial class PlaywrightTestBase
             await reload();
         }
     }
+
     /// <summary>
     /// Whether <paramref name="ex"/> is the browser-level "nothing is listening" error — the
     /// signature of a self-hosted demo host that died under the in-flight test.
@@ -99,9 +205,15 @@ public abstract partial class PlaywrightTestBase
         || ex.Message.Contains("ERR_EMPTY_RESPONSE", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
-    /// Waits for the Blazor application to be ready.
+    /// Waits for the Blazor application to be ready. NO recovery: a cold boot that stalls fails the spec.
     /// </summary>
-    protected async Task WaitForAppReadyAsync(IPage page)
+    [Obsolete("A bare readiness wait has no cold-boot recovery: use GotoAppReadyAsync / ReloadAppReadyAsync / NavigateAppReadyAsync (or OpenAppPageAsync). Becomes private once every spec is migrated (E2E harness phase 1a).")]
+    protected Task WaitForAppReadyAsync(IPage page) => WaitForBootGateAsync(page);
+
+    /// <summary>
+    /// The readiness gate itself (one deadline per attempt); every central helper ends in it.
+    /// </summary>
+    private async Task WaitForBootGateAsync(IPage page)
     {
         // Every budget derives from TM_E2E_READY_TIMEOUT_MS (default 120 s; the former hard-coded 60 s / 15 s / 45 s
         // windows were too tight for a cold WASM boot under full-lane CPU load). All waits are on a STATE, so a
@@ -162,6 +274,7 @@ public abstract partial class PlaywrightTestBase
             TestContext.WriteLine($"[e2e] slow boot: data-blazor-ready after {bootWatch.Elapsed.TotalSeconds:F1}s (timeout {timeouts.ReadyMs}ms)");
         }
     }
+
     /// <summary>
     /// Waits until fonts are loaded, no CSS transition runs, no smooth scroll is in flight and the boxes of
     /// <paramref name="selector"/> are identical across 3 consecutive frames (15 s budget).

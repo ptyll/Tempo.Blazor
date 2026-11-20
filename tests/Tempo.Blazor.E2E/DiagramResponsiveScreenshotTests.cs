@@ -507,7 +507,7 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
 
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(width, height);
-        await page.AddInitScriptAsync("() => localStorage.setItem('tm-demo-culture', 'en')");
+        await page.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
         await page.GotoAsync($"{BaseUrl}{DiagramEditorUrl}", new PageGotoOptions
         {
             WaitUntil = WaitUntilState.Load,

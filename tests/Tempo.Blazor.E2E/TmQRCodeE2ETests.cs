@@ -171,7 +171,7 @@ public sealed class TmQRCodeServerE2ETests : ServerTestBase
 {
     [TestMethod]
     public async Task QrCode_Renders_On_The_Server_Host()
-        => await TmQRCodeSmoke.RunAsync(BaseUrl, () => CreateContextAsync(), (page, url) => GotoAppReadyAsync(page, url));
+        => await TmQRCodeSmoke.RunAsync(this);
 }
 
 /// <summary>The same QR cards on the InteractiveAuto demo (:7108).</summary>
@@ -181,7 +181,7 @@ public sealed class TmQRCodeInteractiveAutoE2ETests : InteractiveAutoTestBase
 {
     [TestMethod]
     public async Task QrCode_Renders_On_The_InteractiveAuto_Host()
-        => await TmQRCodeSmoke.RunAsync(BaseUrl, () => CreateContextAsync(), (page, url) => GotoAppReadyAsync(page, url));
+        => await TmQRCodeSmoke.RunAsync(this);
 }
 
 /// <summary>The host-independent smoke assertions both non-WASM lanes run.</summary>
@@ -189,18 +189,17 @@ internal static class TmQRCodeSmoke
 {
     private const string Section = "[data-testid='qr-code-section']";
 
-    public static async Task RunAsync(
-        string baseUrl,
-        Func<Task<IBrowserContext>> createContext,
-        Func<IPage, string, Task> gotoReady)
+    public static async Task RunAsync(PlaywrightTestBase test)
     {
-        var context = await createContext();
+        var context = await test.CreateContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = 1440, Height = 1000 }
+        });
         var page = await context.NewPageAsync();
-        await page.SetViewportSizeAsync(1440, 1000);
         var errors = new List<string>();
         page.PageError += (_, message) => errors.Add(message);
 
-        await gotoReady(page, $"{baseUrl}/new-components");
+        await test.GotoAppReadyAsync(page, $"{test.AppBaseUrl}/new-components");
         var section = page.Locator(Section);
         await section.WaitForAsync(new LocatorWaitForOptions { Timeout = 90000 });
         await section.ScrollIntoViewIfNeededAsync();

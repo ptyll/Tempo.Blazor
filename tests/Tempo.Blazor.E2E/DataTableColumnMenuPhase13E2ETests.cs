@@ -5,12 +5,12 @@ namespace Tempo.Blazor.E2E;
 public class DataTableColumnMenuPhase13E2ETests : WasmTestBase
 {
     [TestMethod, TestCategory("WASM")]
-    public Task ColumnMenu_SortHideGroup_AndKeyboard() => DataTableSpecs.ColumnMenuAsync(Browser, BaseUrl, RegisterContext);
+    public Task ColumnMenu_SortHideGroup_AndKeyboard() => DataTableSpecs.ColumnMenuAsync(this);
 }
 
 [TestClass]
 public class DataTableColumnMenuPhase13ServerE2ETests : ServerTestBase
 {
     [TestMethod, TestCategory("Server")]
-    public Task ColumnMenu_SortHideGroup_AndKeyboard() => DataTableSpecs.ColumnMenuAsync(Browser, BaseUrl, RegisterContext);
+    public Task ColumnMenu_SortHideGroup_AndKeyboard() => DataTableSpecs.ColumnMenuAsync(this);
 }

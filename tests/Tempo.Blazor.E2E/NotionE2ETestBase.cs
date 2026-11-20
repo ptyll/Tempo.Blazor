@@ -37,18 +37,15 @@ public abstract class NotionE2ETestBase : WasmTestBase
     {
         await ResetNotionDemoDataAsync();
 
-        var context = await CreateContextAsync();
-        await context.AddInitScriptAsync("window.localStorage.setItem('tm-demo-culture', 'en');");
+        _page = await OpenAppPageAsync(
+            $"{BaseUrl}/notion-editor{query}",
+            new BrowserNewContextOptions
+            {
+                ViewportSize = new ViewportSize { Width = _viewportWidth, Height = _viewportHeight },
+            },
+            context => context.AddInitScriptAsync("window.localStorage.setItem('tm-demo-culture', 'en');"),
+            WaitUntilState.DOMContentLoaded);
 
-        _page = await context.NewPageAsync();
-        await _page.SetViewportSizeAsync(_viewportWidth, _viewportHeight);
-        await _page.GotoAsync($"{BaseUrl}/notion-editor{query}", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60000
-        });
-
-        await WaitForAppReadyAsync(_page);
         await _page.WaitForSelectorAsync(".tm-notion-editor", new PageWaitForSelectorOptions
         {
             State = WaitForSelectorState.Visible,
@@ -850,12 +847,7 @@ public abstract class NotionE2ETestBase : WasmTestBase
         using var response = await http.PostAsync($"/api/notion/e2e/seed/{Uri.EscapeDataString(scenario)}", null);
         response.EnsureSuccessStatusCode();
 
-        await Page.ReloadAsync(new PageReloadOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60000
-        });
-        await WaitForAppReadyAsync(Page);
+        await ReloadAppReadyAsync(Page, WaitUntilState.DOMContentLoaded);
         await Page.WaitForSelectorAsync(".tm-notion-page", new PageWaitForSelectorOptions
         {
             State = WaitForSelectorState.Visible,

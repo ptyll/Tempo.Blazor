@@ -17,7 +17,7 @@ public sealed class DataTableCardsRowClassE2ETests : WasmTestBase
 
     private async Task<IPage> OpenSectionAsync(int width, int height, string theme = "light")
     {
-        var page = await OpenAsync(Browser, BaseUrl, "/data-table", new Options(width, height, Theme: theme), RegisterContext);
+        var page = await OpenAsync(this, "/data-table", new Options(width, height, Theme: theme));
         await PrepareForCaptureAsync(page);
         var section = page.Locator("[data-testid='dt-rowclass-section']");
         await section.ScrollIntoViewIfNeededAsync();
@@ -182,8 +182,8 @@ public sealed class DataTableCardsRowClassE2ETests : WasmTestBase
     [DataRow("dark")]
     public async Task Phone390_CardsToolbarShowsAndTheCardsAreUnframed(string theme)
     {
-        var page = await OpenAsync(Browser, BaseUrl, "/data-table",
-            new Options(390, 844, Touch: true, IsMobile: true, Theme: theme), RegisterContext);
+        var page = await OpenAsync(this, "/data-table",
+            new Options(390, 844, Touch: true, IsMobile: true, Theme: theme));
         await PrepareForCaptureAsync(page);
         var cards = page.Locator(Cards);
         await cards.ScrollIntoViewIfNeededAsync();

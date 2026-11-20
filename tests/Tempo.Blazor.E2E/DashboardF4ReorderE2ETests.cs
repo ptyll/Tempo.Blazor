@@ -359,11 +359,7 @@ public sealed class DashboardF4ReorderE2ETests : ServerTestBase
             await page.AddInitScriptAsync($"window.localStorage.setItem('tm-demo-culture','{culture}');");
         }
 
-        await page.GotoAsync(BaseUrl.TrimEnd('/') + "/dashboard",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60_000 });
-        await page.WaitForFunctionAsync(
-            "() => document.body !== null && document.body.hasAttribute('data-blazor-ready')",
-            null, new PageWaitForFunctionOptions { Timeout = 30_000 });
+        await GotoAppReadyAsync(page, BaseUrl.TrimEnd('/') + "/dashboard");
         await page.Locator(".tm-dashboard .tm-widget").First.WaitForAsync(
             new LocatorWaitForOptions { Timeout = 30_000 });
         await page.WaitForTimeoutAsync(400);

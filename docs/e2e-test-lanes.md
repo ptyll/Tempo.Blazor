@@ -383,10 +383,35 @@ configurable:
   **Exceptions** (permanent, with a reason in the guard): the Firefox legs that launch their own Playwright + Firefox
   (`FilterableDropdown`, `NotionOverlayInModal`, `OverlayPanel`, `TmDataTableSortButton`, `TmDataTableSortButtonVisual`)
   and the `ReportingF*` specs that start their own `dotnet` host.
+- **Central helpers (phase 1a).** Besides `GotoAppReadyAsync` / `ReloadAppReadyAsync(page, waitUntil = Load)`:
+  - `NavigateAppReadyAsync(page, trigger)` runs a trigger that loads a NEW document (a culture switch, a `forceLoad`
+    link) and gates on the NEW document (the old one is ALWAYS marked first, so the gate can never pass on it) with the
+    same one controlled reload. A trigger that does not replace the document fails loudly ("did not load a new document");
+    client-side routing is not its job. `SwitchLanguageAsync` uses it.
+  - `OpenAppPageAsync(url, options?, beforeNavigate?, waitUntil = Load, trace = true)` = `CreateContextAsync(options)` +
+    `beforeNavigate(context)` (init scripts, routes, cookies, permissions) + one page + `GotoAppReadyAsync`; `page.Context`
+    is the context. Every per-spec option (viewport, locale, touch/isMobile, color scheme, reduced motion, forced colors,
+    device scale factor, accept downloads, permissions, timezone) is passed through unchanged.
+  - `GotoWithoutBootRecoveryAsync(page, url, reason)` is for the specs whose SUBJECT is the boot (a boot measurement, a boot
+    stalled on purpose): no gate, no reload, the reason is written to the test output. Such a spec creates its context with
+    `CreateContextAsync(options, trace: false)` so the tracing overhead does not skew the timing.
+  - **Kits are handed the test, not a browser.** A static per-feature kit (`DataTableE2EKit`, `DataTableSpecs`,
+    `MultiViewListSpecs`, the `SigningRedesignPhaseNSpecs`, the `*Smoke` classes) receives the `PlaywrightTestBase` and calls
+    `test.OpenAppPageAsync(...)` / `test.CreateContextAsync(...)` / `test.GotoAppReadyAsync(...)` (the base URL is
+    `test.AppBaseUrl`); it never takes an `IBrowser` + `baseUrl` + `registerContext` + a readiness delegate, and never keeps
+    its own `data-blazor-ready` gate (rule R3).
+  - `WaitForAppReadyAsync` and `RegisterContext` are `[Obsolete]` (warning CS0618, which the E2E project keeps visible
+    although `Directory.Build.props` silences it repo-wide): they are the migration worklist and become private in the final
+    step of the phase. Measured after steps 1-2 (`dotnet build tests/Tempo.Blazor.E2E --no-incremental`, distinct warnings):
+    831 × CS0618 (607 × `WaitForAppReadyAsync`, 224 × `RegisterContext`), other warnings 0. This is the ceiling for step 3: the
+    count only falls and is 0 in step 4. (The kit conversions of steps 1-2 already removed ~150 call sites of the two members; the
+    attribute was introduced together with them, so 831 is the first measured value.)
 - **Ratchet.** `ReadinessInfrastructureTests.NoSpecOpensItsOwnContextOrBootsPastTheCentralRecovery_RatchetedByKnownOffenders`
   scans every `*.cs` of the E2E project (comments stripped; the `PlaywrightTestBase.cs` / `PlaywrightTestBase.<Part>.cs` partials and the guard itself excluded) for
   `.NewContextAsync(`, `.GotoAsync(...); await WaitForAppReadyAsync(` (and the `ReloadAsync` twin),
-  `WaitForFunctionAsync("...data-blazor-ready` and `RegisterContext(`. The hits of today are frozen in
+  `WaitForFunctionAsync("...data-blazor-ready` and `RegisterContext(`. A sixth rule, R6, is NOT ratcheted: `AddInitScriptAsync("() => ...` (an
+  arrow-function init script) must have zero hits - Playwright .NET evaluates the string as a script, so an arrow function is
+  only an uncalled expression and the script silently does nothing. The hits of today are frozen in
   `KnownOffenders` (file -> count + reason). The test fails for a NEW file, for a count that GROWS and for a count that
   DROPS without the entry being lowered (delete the entry at zero), so converted code cannot regress and the list only
   shrinks. Converting a file means: `CreateContextAsync(...)` + `GotoAppReadyAsync(page, url)`, then lower its entry.

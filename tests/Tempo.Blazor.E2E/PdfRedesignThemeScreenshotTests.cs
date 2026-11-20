@@ -185,20 +185,16 @@ public sealed class PdfRedesignThemeScreenshotTests : WasmTestBase
     {
         var page = await CreatePageAsync();
         await page.SetViewportSizeAsync(DesktopWidth, 1000);
-        await page.GotoAsync(BaseUrl.TrimEnd('/') + path,
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
+        await GotoAppReadyAsync(page, BaseUrl.TrimEnd('/') + path);
 
         if (indigo)
         {
             // The demo's boot script (index.html) applies data-tm-theme from localStorage, so the
             // flag must be written on the APP origin and the page reloaded to pick it up.
             await page.EvaluateAsync("() => localStorage.setItem('tm-demo-color-theme','indigo')");
-            await page.ReloadAsync(new PageReloadOptions { Timeout = 30000 });
+            await ReloadAppReadyAsync(page);
         }
 
-        await page.WaitForFunctionAsync(
-            "() => document.body !== null && document.body.hasAttribute('data-blazor-ready')",
-            null, new PageWaitForFunctionOptions { Timeout = 30000 });
         if (indigo)
         {
             await page.WaitForFunctionAsync(

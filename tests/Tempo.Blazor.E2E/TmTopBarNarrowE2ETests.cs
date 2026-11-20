@@ -298,7 +298,7 @@ public sealed class TmTopBarNarrowServerE2ETests : ServerTestBase
 {
     [TestMethod]
     public async Task TopBar_Narrow_Width_Behaves_On_The_Server_Host()
-        => await TmTopBarNarrowSmoke.RunAsync(BaseUrl, () => CreateContextAsync(), (page, url) => GotoAppReadyAsync(page, url));
+        => await TmTopBarNarrowSmoke.RunAsync(this);
 }
 
 /// <summary>The narrow-bar contract on the InteractiveAuto demo (:7108).</summary>
@@ -308,7 +308,7 @@ public sealed class TmTopBarNarrowInteractiveAutoE2ETests : InteractiveAutoTestB
 {
     [TestMethod]
     public async Task TopBar_Narrow_Width_Behaves_On_The_InteractiveAuto_Host()
-        => await TmTopBarNarrowSmoke.RunAsync(BaseUrl, () => CreateContextAsync(), (page, url) => GotoAppReadyAsync(page, url));
+        => await TmTopBarNarrowSmoke.RunAsync(this);
 }
 
 /// <summary>The host-independent smoke assertions both non-WASM lanes run.</summary>
@@ -316,18 +316,17 @@ internal static class TmTopBarNarrowSmoke
 {
     private const string Demo = "[data-testid='topbar-demo']";
 
-    public static async Task RunAsync(
-        string baseUrl,
-        Func<Task<IBrowserContext>> createContext,
-        Func<IPage, string, Task> gotoReady)
+    public static async Task RunAsync(PlaywrightTestBase test)
     {
-        var context = await createContext();
+        var context = await test.CreateContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = 390, Height = 844 }
+        });
         var page = await context.NewPageAsync();
-        await page.SetViewportSizeAsync(390, 844);
         var errors = new List<string>();
         page.PageError += (_, message) => errors.Add(message);
 
-        await gotoReady(page, $"{baseUrl}/layout");
+        await test.GotoAppReadyAsync(page, $"{test.AppBaseUrl}/layout");
         // The state attribute lives on the component root (.tm-topbar) — 'topbar-demo' is the demo
         // page's wrapper div around it.
         var bar = page.Locator("[data-testid='topbar-demo'] .tm-topbar").First;

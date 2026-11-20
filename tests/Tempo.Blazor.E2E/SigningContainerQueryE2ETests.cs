@@ -172,7 +172,7 @@ public class SigningContainerQueryE2ETests : WasmTestBase
             var context = await CreateContextAsync();
             var page = await context.NewPageAsync();
             await page.SetViewportSizeAsync(1440, 900);
-            await page.AddInitScriptAsync("() => localStorage.setItem('tm-demo-culture', 'en')");
+            await page.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
             await page.GotoAsync($"{BaseUrl}{url}", new PageGotoOptions
             {
                 WaitUntil = WaitUntilState.DOMContentLoaded,
@@ -252,7 +252,7 @@ public class SigningContainerQueryE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 900);
-        await page.AddInitScriptAsync("() => localStorage.setItem('tm-demo-culture', 'en')");
+        await page.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
         await page.GotoAsync($"{BaseUrl}/signing-components", new PageGotoOptions
         {
             WaitUntil = WaitUntilState.DOMContentLoaded,
@@ -269,7 +269,7 @@ public class SigningContainerQueryE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 900);
-        await page.AddInitScriptAsync("() => localStorage.setItem('tm-demo-culture', 'en')");
+        await page.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
         await page.GotoAsync($"{BaseUrl}/signing-components", new PageGotoOptions
         {
             WaitUntil = WaitUntilState.DOMContentLoaded,

@@ -27,31 +27,23 @@ internal static class SigningRedesignPhase5Specs
     }
 
     public static async Task<IPage> OpenRunnerAsync(
-        IBrowser browser,
-        string baseUrl,
+        PlaywrightTestBase test,
         int width,
         int height,
-        bool mobile,
-        Action<IBrowserContext> registerContext,
-        Func<IPage, Task> waitForReady)
+        bool mobile)
     {
-        var context = await browser.NewContextAsync(new BrowserNewContextOptions
-        {
-            ViewportSize = new ViewportSize { Width = width, Height = height },
-            Locale = "en-US",
-            IgnoreHTTPSErrors = true,
-            HasTouch = mobile,
-            IsMobile = mobile
-        });
-        registerContext(context);
-        var page = await context.NewPageAsync();
-        await page.AddInitScriptAsync("() => localStorage.setItem('tm-demo-culture', 'en')");
-        await page.GotoAsync($"{baseUrl}{SigningComponentsUrl}", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60_000
-        });
-        await waitForReady(page);
+        var page = await test.OpenAppPageAsync(
+            $"{test.AppBaseUrl}{SigningComponentsUrl}",
+            new BrowserNewContextOptions
+            {
+                ViewportSize = new ViewportSize { Width = width, Height = height },
+                Locale = "en-US",
+                IgnoreHTTPSErrors = true,
+                HasTouch = mobile,
+                IsMobile = mobile
+            },
+            context => context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');"),
+            WaitUntilState.DOMContentLoaded);
         var runner = GetRunner(page);
         await runner.ScrollIntoViewIfNeededAsync();
         await page.WaitForTimeoutAsync(200);
@@ -374,7 +366,7 @@ public class SigningRedesignPhase5E2ETests : BaselineGeneratorTestBase
         var written = new List<string>();
 
         // ── 390 touch pass: peek → full → choice cards → signature draw → More menu. ──
-        var page = await SigningRedesignPhase5Specs.OpenRunnerAsync(Browser, BaseUrl, 390, 844, mobile: true, RegisterContext, WaitForAppReadyAsync);
+        var page = await SigningRedesignPhase5Specs.OpenRunnerAsync(this, 390, 844, mobile: true);
         var runner = SigningRedesignPhase5Specs.GetRunner(page);
         var steps = SigningRedesignPhase5Specs.GetStepsRail(runner);
 
@@ -415,7 +407,7 @@ public class SigningRedesignPhase5E2ETests : BaselineGeneratorTestBase
                      (false, true, "light", "indigo")
                  })
         {
-            page = await SigningRedesignPhase5Specs.OpenRunnerAsync(Browser, BaseUrl, 390, 844, mobile: true, RegisterContext, WaitForAppReadyAsync);
+            page = await SigningRedesignPhase5Specs.OpenRunnerAsync(this, 390, 844, mobile: true);
             await SigningRedesignPhase5Specs.ApplyThemeAsync(page, dark, indigo);
             await page.WaitForTimeoutAsync(150);
             await SigningRedesignPhase5Specs.CollapseSheetAsync(SigningRedesignPhase5Specs.GetStepsRail(SigningRedesignPhase5Specs.GetRunner(page)), touch: true);
@@ -424,7 +416,7 @@ public class SigningRedesignPhase5E2ETests : BaselineGeneratorTestBase
         }
 
         // ── 320: the narrowest supported width — peek, full and the choice cards. ──
-        page = await SigningRedesignPhase5Specs.OpenRunnerAsync(Browser, BaseUrl, 320, 640, mobile: true, RegisterContext, WaitForAppReadyAsync);
+        page = await SigningRedesignPhase5Specs.OpenRunnerAsync(this, 320, 640, mobile: true);
         runner = SigningRedesignPhase5Specs.GetRunner(page);
         steps = SigningRedesignPhase5Specs.GetStepsRail(runner);
         await SigningRedesignPhase5Specs.CollapseSheetAsync(steps, touch: true);
@@ -442,14 +434,14 @@ public class SigningRedesignPhase5E2ETests : BaselineGeneratorTestBase
         await page.Context.CloseAsync();
 
         // ── 768×1024 (tablet portrait): the docked two-column panel (≥ 640 keeps docked). ──
-        page = await SigningRedesignPhase5Specs.OpenRunnerAsync(Browser, BaseUrl, 768, 1024, mobile: true, RegisterContext, WaitForAppReadyAsync);
+        page = await SigningRedesignPhase5Specs.OpenRunnerAsync(this, 768, 1024, mobile: true);
         await SigningRedesignPhase5Specs.CaptureRunnerAsync(page, "signing-runner-tablet--768--light--default.png", written);
         await page.Context.CloseAsync();
 
         // ── 1280×800: the DOCKED capture at the demo host's real content width (review: the old
         //    1024 capture pinned the runner to ~1000px, and the demo column cut the right rail
         //    off — no pin here, the runner classifies docked on its own container). ──
-        page = await SigningRedesignPhase5Specs.OpenRunnerAsync(Browser, BaseUrl, 1280, 800, mobile: false, RegisterContext, WaitForAppReadyAsync);
+        page = await SigningRedesignPhase5Specs.OpenRunnerAsync(this, 1280, 800, mobile: false);
         var dockedWidth = await page.EvaluateAsync<double>(
             "() => document.querySelector(\"[data-testid='signing-runner-demo']\").getBoundingClientRect().width");
         Assert.IsTrue(dockedWidth >= 640, $"the desktop runner must classify docked (width={dockedWidth})");
@@ -465,7 +457,7 @@ public class SigningRedesignPhase5E2ETests : BaselineGeneratorTestBase
                      (true, true, "dark", "indigo")
                  })
         {
-            page = await SigningRedesignPhase5Specs.OpenRunnerAsync(Browser, BaseUrl, 1440, 900, mobile: false, RegisterContext, WaitForAppReadyAsync);
+            page = await SigningRedesignPhase5Specs.OpenRunnerAsync(this, 1440, 900, mobile: false);
             await SigningRedesignPhase5Specs.ApplyThemeAsync(page, dark, indigo);
             await page.WaitForTimeoutAsync(150);
             await SigningRedesignPhase5Specs.CaptureRunnerAsync(page, $"signing-runner-docked--1440--{theme}--{brand}.png", written);
@@ -499,7 +491,7 @@ public class SigningRedesignPhase5BehaviorE2ETests : WasmTestBase
     [Description("Completes the runner by touch at 390: radio cards, Draw default, field above the sheet, CTA visible")]
     public async Task SigningRunner_TouchWalkthrough_RadioCards_DrawDefault_FieldAboveSheet()
     {
-        var page = await SigningRedesignPhase5Specs.OpenRunnerAsync(Browser, BaseUrl, 390, 844, mobile: true, RegisterContext, WaitForAppReadyAsync);
+        var page = await SigningRedesignPhase5Specs.OpenRunnerAsync(this, 390, 844, mobile: true);
         var runner = SigningRedesignPhase5Specs.GetRunner(page);
         var steps = SigningRedesignPhase5Specs.GetStepsRail(runner);
 
@@ -580,7 +572,7 @@ public class SigningRedesignPhase5BehaviorE2ETests : WasmTestBase
     [Description("At 320 no horizontal scroll, and after Next the step input is visible inside the sheet")]
     public async Task SigningRunner_At320_NoHorizontalScroll_AndStepInputVisibleAfterNext()
     {
-        var page = await SigningRedesignPhase5Specs.OpenRunnerAsync(Browser, BaseUrl, 320, 640, mobile: true, RegisterContext, WaitForAppReadyAsync);
+        var page = await SigningRedesignPhase5Specs.OpenRunnerAsync(this, 320, 640, mobile: true);
         var runner = SigningRedesignPhase5Specs.GetRunner(page);
         var steps = SigningRedesignPhase5Specs.GetStepsRail(runner);
         await SigningRedesignPhase5Specs.ExpandSheetAsync(steps, touch: true);
@@ -635,7 +627,7 @@ public class SigningRedesignPhase5BehaviorE2ETests : WasmTestBase
     [Description("Previous with the sheet expanded lands the returned field above the sheet top")]
     public async Task SigningRunner_Previous_WithSheetExpanded_ActiveFieldAboveSheet()
     {
-        var page = await SigningRedesignPhase5Specs.OpenRunnerAsync(Browser, BaseUrl, 390, 844, mobile: true, RegisterContext, WaitForAppReadyAsync);
+        var page = await SigningRedesignPhase5Specs.OpenRunnerAsync(this, 390, 844, mobile: true);
         var runner = SigningRedesignPhase5Specs.GetRunner(page);
         var steps = SigningRedesignPhase5Specs.GetStepsRail(runner);
 
@@ -681,7 +673,7 @@ public class SigningRedesignPhase5BehaviorE2ETests : WasmTestBase
     [Description("Overlay tap in peek opens the full sheet with the tapped field above the sheet top")]
     public async Task SigningRunner_OverlayTap_InPeek_LandsFull_AboveSheet()
     {
-        var page = await SigningRedesignPhase5Specs.OpenRunnerAsync(Browser, BaseUrl, 390, 844, mobile: true, RegisterContext, WaitForAppReadyAsync);
+        var page = await SigningRedesignPhase5Specs.OpenRunnerAsync(this, 390, 844, mobile: true);
         var runner = SigningRedesignPhase5Specs.GetRunner(page);
         var steps = SigningRedesignPhase5Specs.GetStepsRail(runner);
 
@@ -731,7 +723,7 @@ public class SigningRedesignPhase5BehaviorE2ETests : WasmTestBase
     [Description("Shrinking the viewport onto a focused input keeps the Next CTA visible")]
     public async Task SigningRunner_KeyboardSimulation_CtaStaysVisible()
     {
-        var page = await SigningRedesignPhase5Specs.OpenRunnerAsync(Browser, BaseUrl, 390, 844, mobile: true, RegisterContext, WaitForAppReadyAsync);
+        var page = await SigningRedesignPhase5Specs.OpenRunnerAsync(this, 390, 844, mobile: true);
         var runner = SigningRedesignPhase5Specs.GetRunner(page);
         var steps = SigningRedesignPhase5Specs.GetStepsRail(runner);
 
@@ -775,7 +767,7 @@ public class SigningRedesignPhase5BehaviorE2ETests : WasmTestBase
     [Description("At 320 the Next action is wider than Previous and no label overflows")]
     public async Task SigningRunner_ActionBar320_NextWidest_NoLabelOverflow()
     {
-        var page = await SigningRedesignPhase5Specs.OpenRunnerAsync(Browser, BaseUrl, 320, 640, mobile: true, RegisterContext, WaitForAppReadyAsync);
+        var page = await SigningRedesignPhase5Specs.OpenRunnerAsync(this, 320, 640, mobile: true);
         var runner = SigningRedesignPhase5Specs.GetRunner(page);
         var steps = SigningRedesignPhase5Specs.GetStepsRail(runner);
 
@@ -814,7 +806,7 @@ public class SigningRedesignPhase5BehaviorE2ETests : WasmTestBase
     [Description("At 1440 the runner keeps the docked panel (no sheet, select stays)")]
     public async Task SigningRunner_Desktop1440_KeepsDockedPanel()
     {
-        var page = await SigningRedesignPhase5Specs.OpenRunnerAsync(Browser, BaseUrl, 1440, 900, mobile: false, RegisterContext, WaitForAppReadyAsync);
+        var page = await SigningRedesignPhase5Specs.OpenRunnerAsync(this, 1440, 900, mobile: false);
         var runner = SigningRedesignPhase5Specs.GetRunner(page);
         var steps = SigningRedesignPhase5Specs.GetStepsRail(runner);
 
@@ -842,7 +834,7 @@ public class SigningRedesignPhase5BehaviorE2ETests : WasmTestBase
     [Description("At 1440 after Next the active field centre sits within 25% of the viewport centre")]
     public async Task SigningRunner_Desktop1440_AfterNext_FieldCentredInViewport()
     {
-        var page = await SigningRedesignPhase5Specs.OpenRunnerAsync(Browser, BaseUrl, 1440, 900, mobile: false, RegisterContext, WaitForAppReadyAsync);
+        var page = await SigningRedesignPhase5Specs.OpenRunnerAsync(this, 1440, 900, mobile: false);
         var runner = SigningRedesignPhase5Specs.GetRunner(page);
         var steps = SigningRedesignPhase5Specs.GetStepsRail(runner);
 

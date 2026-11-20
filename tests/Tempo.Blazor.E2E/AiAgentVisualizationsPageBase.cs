@@ -57,20 +57,18 @@ public abstract class AiAgentVisualizationsPageBase : PlaywrightTestBase
     protected async Task<IPage> OpenAsync(int width = 1440, int height = 1100, bool coarsePointer = false,
         bool reduceMotion = false)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
-        {
-            ViewportSize = new ViewportSize { Width = width, Height = height },
-            Locale = "en-US",
-            ReducedMotion = reduceMotion ? ReducedMotion.Reduce : ReducedMotion.NoPreference,
-            IgnoreHTTPSErrors = true,
-            HasTouch = coarsePointer,
-        });
-        await context.AddInitScriptAsync(
-            "localStorage.setItem('tm-demo-culture', 'en'); document.cookie = 'tm-demo-culture=en;path=/;max-age=31536000;samesite=lax';");
-        RegisterContext(context);
-
-        var page = await context.NewPageAsync();
-        await GotoAppReadyAsync(page, $"{BaseUrl}/ai-agent-visualizations");
+        var page = await OpenAppPageAsync(
+            $"{BaseUrl}/ai-agent-visualizations",
+            new BrowserNewContextOptions
+            {
+                ViewportSize = new ViewportSize { Width = width, Height = height },
+                Locale = "en-US",
+                ReducedMotion = reduceMotion ? ReducedMotion.Reduce : ReducedMotion.NoPreference,
+                IgnoreHTTPSErrors = true,
+                HasTouch = coarsePointer,
+            },
+            context => context.AddInitScriptAsync(
+                "localStorage.setItem('tm-demo-culture', 'en'); document.cookie = 'tm-demo-culture=en;path=/;max-age=31536000;samesite=lax';"));
         await page.WaitForSelectorAsync(
             $"{SimulatorSection} [data-testid='ai-viz-play']",
             new PageWaitForSelectorOptions { Timeout = 30000 });

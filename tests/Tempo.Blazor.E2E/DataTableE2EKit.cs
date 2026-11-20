@@ -19,22 +19,15 @@ internal static class DataTableE2EKit
         string Theme = "light",
         bool Indigo = false);
 
-    /// <summary>Opens a route in a fresh context with a pinned culture, reduced motion and (optionally) touch emulation.</summary>
-    internal static async Task<IPage> OpenAsync(IBrowser browser, string baseUrl, string route, Options? options = null, Action<IBrowserContext>? register = null)
+    /// <summary>
+    /// Opens a route in a fresh context with a pinned culture, reduced motion and (optionally) touch emulation. The
+    /// context and the navigation go through <paramref name="test"/> (<c>OpenAppPageAsync</c>): suite defaults, failure
+    /// trace, cleanup registration and the ONE controlled cold-boot reload - the kit keeps no boot gate of its own.
+    /// </summary>
+    internal static async Task<IPage> OpenAsync(PlaywrightTestBase test, string route, Options? options = null)
     {
+        ArgumentNullException.ThrowIfNull(test);
         options ??= new Options();
-        var context = await browser.NewContextAsync(new BrowserNewContextOptions
-        {
-            ViewportSize = new ViewportSize { Width = options.Width, Height = options.Height },
-            HasTouch = options.Touch,
-            IsMobile = options.IsMobile,
-            DeviceScaleFactor = options.DeviceScaleFactor,
-            IgnoreHTTPSErrors = true,
-            AcceptDownloads = true,
-            Locale = options.Culture + "-US",
-            ReducedMotion = ReducedMotion.Reduce,
-        });
-        register?.Invoke(context);
         var init = string.Create(CultureInfo.InvariantCulture,
             $"localStorage.setItem('tm-demo-culture','{options.Culture}'); document.cookie='tm-demo-culture={options.Culture};path=/;max-age=31536000;samesite=lax';");
         if (options.Indigo)
@@ -42,11 +35,20 @@ internal static class DataTableE2EKit
             init += "localStorage.setItem('tm-demo-color-theme','indigo');";
         }
 
-        await context.AddInitScriptAsync(init);
-        var page = await context.NewPageAsync();
-        await page.GotoAsync(baseUrl.TrimEnd('/') + route, new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 90_000 });
-        await page.WaitForFunctionAsync("() => document.body !== null && document.body.hasAttribute('data-blazor-ready')", null,
-            new PageWaitForFunctionOptions { Timeout = ReadinessTimeouts.FromEnvironment().ReadyMs });
+        var page = await test.OpenAppPageAsync(
+            test.AppBaseUrl.TrimEnd('/') + route,
+            new BrowserNewContextOptions
+            {
+                ViewportSize = new ViewportSize { Width = options.Width, Height = options.Height },
+                HasTouch = options.Touch,
+                IsMobile = options.IsMobile,
+                DeviceScaleFactor = options.DeviceScaleFactor,
+                IgnoreHTTPSErrors = true,
+                AcceptDownloads = true,
+                Locale = options.Culture + "-US",
+                ReducedMotion = ReducedMotion.Reduce,
+            },
+            context => context.AddInitScriptAsync(init));
         if (options.Theme == "dark")
         {
             await page.Locator("[data-testid='theme-toggle']:visible").First.ClickAsync();

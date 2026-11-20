@@ -19,7 +19,7 @@ public sealed class FilesF8E2ETests : WasmTestBase
 
     private async Task<IPage> OpenPickersAsync(int width = 1440, int height = 900)
     {
-        var page = await OpenAsync(Browser, BaseUrl, "/pickers", new Options(width, height), RegisterContext);
+        var page = await OpenAsync(this, "/pickers", new Options(width, height));
         await page.Locator(".tm-attachment-manager").First.WaitForAsync(
             new LocatorWaitForOptions { Timeout = 30_000 });
         // The attachment manager section sits far down the page — bring it to the top of the

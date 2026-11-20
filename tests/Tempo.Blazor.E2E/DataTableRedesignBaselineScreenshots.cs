@@ -27,7 +27,7 @@ public class DataTableRedesignBaselineScreenshots : BaselineGeneratorTestBase
 
     private async Task<IPage> OpenThemedAsync(string theme, string route, int width, int height, bool touch = false, float dpr = 1)
     {
-        var page = await OpenAsync(Browser, BaseUrl, route, ThemeOptions(theme, width, height, touch, dpr), RegisterContext);
+        var page = await OpenAsync(this, route, ThemeOptions(theme, width, height, touch, dpr));
         await PrepareForCaptureAsync(page);
         return page;
     }

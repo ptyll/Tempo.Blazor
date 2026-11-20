@@ -112,7 +112,7 @@ public class SigningRedesignBaselineE2ETests : BaselineGeneratorTestBase
             RegisterContext(context);
             var page = await context.NewPageAsync();
 
-            await page.AddInitScriptAsync("() => localStorage.setItem('tm-demo-culture', 'en')");
+            await page.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
             await page.GotoAsync($"{BaseUrl}{SigningComponentsUrl}", new PageGotoOptions
             {
                 WaitUntil = WaitUntilState.DOMContentLoaded,
@@ -195,7 +195,7 @@ public class SigningRedesignBaselineE2ETests : BaselineGeneratorTestBase
         RegisterContext(context);
         var page = await context.NewPageAsync();
 
-        await page.AddInitScriptAsync("() => localStorage.setItem('tm-demo-culture', 'en')");
+        await page.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
         await page.GotoAsync($"{BaseUrl}{SigningComponentsUrl}", new PageGotoOptions
         {
             WaitUntil = WaitUntilState.DOMContentLoaded,

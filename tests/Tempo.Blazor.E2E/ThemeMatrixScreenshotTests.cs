@@ -30,26 +30,14 @@ public sealed class ThemeMatrixScreenshotTests : WasmTestBase
         {
             foreach (var indigo in new[] { false, true })
             {
-                var page = await CreatePageAsync();
                 // Desktop width, so the sidebar (and its theme toggle) is shown rather than the
-                // mobile header, whose copy of the toggle is hidden and not clickable.
-                await page.SetViewportSizeAsync(1440, 900);
-                await page.GotoAsync(BaseUrl);
-                await page.WaitForFunctionAsync(
-                    "() => document.body !== null && document.body.hasAttribute('data-blazor-ready')",
-                    null, new PageWaitForFunctionOptions { Timeout = 30000 });
-
-                if (indigo)
-                {
-                    await ApplyIndigoAsync(page);
-                }
+                // mobile header, whose copy of the toggle is hidden and not clickable. The indigo init
+                // script re-applies the theme on every navigation of the page below.
+                var page = await OpenThemedPageAsync(BaseUrl, indigo, 1440, 900);
 
                 foreach (var (route, name, ready) in Pages)
                 {
-                    await page.GotoAsync(BaseUrl.TrimEnd('/') + route);
-                    await page.WaitForFunctionAsync(
-                        "() => document.body !== null && document.body.hasAttribute('data-blazor-ready')",
-                        null, new PageWaitForFunctionOptions { Timeout = 30000 });
+                    await GotoAppReadyAsync(page, BaseUrl.TrimEnd('/') + route);
                     await page.Locator(ready).First.WaitForAsync(
                         new LocatorWaitForOptions { Timeout = 30000 });
 
@@ -136,14 +124,7 @@ public sealed class ThemeMatrixScreenshotTests : WasmTestBase
         var page = await OpenAsync("/modal-dialog", "[data-testid='open-basic-modal']", dark: false, indigo: false, 1440, 900);
         // The switcher persists the culture and force-reloads; the host reapplies it before the
         // renderer captures its context, which is what makes the dialog's buttons come back translated.
-        await Task.WhenAll(
-            page.WaitForRequestAsync(
-                request => request.IsNavigationRequest,
-                new PageWaitForRequestOptions { Timeout = 30000 }),
-            page.Locator("[data-testid='language-switcher-cs']").ClickAsync());
-        await page.WaitForFunctionAsync(
-            "() => document.body !== null && document.body.hasAttribute('data-blazor-ready')",
-            null, new PageWaitForFunctionOptions { Timeout = 30000 });
+        await NavigateAppReadyAsync(page, () => page.Locator("[data-testid='language-switcher-cs']").ClickAsync());
         await page.GetByRole(AriaRole.Button, new() { Name = "Show Confirm" }).ClickAsync();
         await page.Locator(".tm-dialog").First.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
         var dialog = await page.Locator(".tm-dialog").First.InnerTextAsync();
@@ -166,18 +147,7 @@ public sealed class ThemeMatrixScreenshotTests : WasmTestBase
 
     private async Task<IPage> OpenAsync(string route, string ready, bool dark, bool indigo, int width, int height)
     {
-        var page = await CreatePageAsync();
-        await page.SetViewportSizeAsync(width, height);
-        if (indigo)
-        {
-            await page.AddInitScriptAsync(
-                "() => { localStorage.setItem('tm-demo-color-theme','indigo'); document.documentElement.setAttribute('data-tm-theme','indigo'); }");
-        }
-
-        await page.GotoAsync(BaseUrl.TrimEnd('/') + route);
-        await page.WaitForFunctionAsync(
-            "() => document.body !== null && document.body.hasAttribute('data-blazor-ready')",
-            null, new PageWaitForFunctionOptions { Timeout = 30000 });
+        var page = await OpenThemedPageAsync(BaseUrl.TrimEnd('/') + route, indigo, width, height);
         await page.Locator(ready).First.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
         if (dark)
         {
@@ -247,12 +217,18 @@ public sealed class ThemeMatrixScreenshotTests : WasmTestBase
             expectedPainted, new PageWaitForFunctionOptions { Timeout = 5000 });
     }
 
-    private static async Task ApplyIndigoAsync(IPage page)
-    {
-        // The switch restores this from localStorage on every load, so one write covers the run.
-        await page.EvaluateAsync(
-            "() => { localStorage.setItem('tm-demo-color-theme','indigo'); document.documentElement.setAttribute('data-tm-theme','indigo'); }");
-    }
+    /// <summary>
+    /// Opens <paramref name="url"/> in a fresh context of the given viewport. The indigo init script runs before every
+    /// document of the page, so the theme survives each navigation the specs make.
+    /// </summary>
+    private Task<IPage> OpenThemedPageAsync(string url, bool indigo, int width, int height) =>
+        OpenAppPageAsync(
+            url,
+            new BrowserNewContextOptions { ViewportSize = new ViewportSize { Width = width, Height = height } },
+            indigo
+                ? context => context.AddInitScriptAsync(
+                    "localStorage.setItem('tm-demo-color-theme','indigo'); document.documentElement.setAttribute('data-tm-theme','indigo');")
+                : null);
 
     private async Task SaveAsync(IPage page, string name, bool fullPage = true)
     {

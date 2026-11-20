@@ -336,8 +336,7 @@ public sealed class SchedulerTimelineDaysServerE2ETests : ServerTestBase
         await OpenBoardAsync();
     }
 
-    private async Task OpenBoardAsync() => await SchedulerTimelineDaysSmoke.RunAsync(
-        BaseUrl, () => CreateContextAsync(), (page, url) => GotoAppReadyAsync(page, url));
+    private async Task OpenBoardAsync() => await SchedulerTimelineDaysSmoke.RunAsync(this);
 }
 
 /// <summary>The same board on the InteractiveAuto demo (:7108, WASM after the first render).</summary>
@@ -351,8 +350,7 @@ public sealed class SchedulerTimelineDaysInteractiveAutoE2ETests : InteractiveAu
         await OpenBoardAsync();
     }
 
-    private async Task OpenBoardAsync() => await SchedulerTimelineDaysSmoke.RunAsync(
-        BaseUrl, () => CreateContextAsync(), (page, url) => GotoAppReadyAsync(page, url));
+    private async Task OpenBoardAsync() => await SchedulerTimelineDaysSmoke.RunAsync(this);
 }
 
 /// <summary>The host-independent smoke assertions both non-WASM lanes run.</summary>
@@ -361,18 +359,17 @@ internal static class SchedulerTimelineDaysSmoke
     private const string BoardSection = "[data-testid='scheduler-timeline-days-section']";
     private const string Board = BoardSection + " [data-tm-scroll='timeline-days']";
 
-    public static async Task RunAsync(
-        string baseUrl,
-        Func<Task<IBrowserContext>> createContext,
-        Func<IPage, string, Task> gotoReady)
+    public static async Task RunAsync(PlaywrightTestBase test)
     {
-        var context = await createContext();
+        var context = await test.CreateContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = 1440, Height = 1100 }
+        });
         var page = await context.NewPageAsync();
-        await page.SetViewportSizeAsync(1440, 1100);
         var errors = new List<string>();
         page.PageError += (_, message) => errors.Add(message);
 
-        await gotoReady(page, $"{baseUrl}/scheduler");
+        await test.GotoAppReadyAsync(page, $"{test.AppBaseUrl}/scheduler");
         var board = page.Locator(Board);
         await board.WaitForAsync(new LocatorWaitForOptions { Timeout = 90000 });
         await board.ScrollIntoViewIfNeededAsync();

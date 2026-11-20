@@ -80,12 +80,10 @@ public abstract partial class PlaywrightTestBase
     protected async Task SwitchLanguageAsync(IPage page, string culture)
     {
         var button = page.Locator($"[data-testid='language-switcher-{culture}']").First;
-        await button.ClickAsync();
 
-        // SetCultureAsync force-loads the page — wait for the reload to finish and the app to
-        // be interactive again rather than racing the first paint.
-        await page.WaitForLoadStateAsync(LoadState.DOMContentLoaded);
-        await WaitForAppReadyAsync(page);
+        // SetCultureAsync force-loads the page — wait for the NEW document and the app to
+        // be interactive again (with the controlled cold-boot reload) rather than racing the first paint.
+        await NavigateAppReadyAsync(page, () => button.ClickAsync());
     }
 
     /// <summary>
