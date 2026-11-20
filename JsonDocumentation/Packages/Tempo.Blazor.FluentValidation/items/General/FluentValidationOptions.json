@@ -3,8 +3,52 @@
   "kind": "Class",
   "category": "General",
   "namespace": "Tempo.Blazor.FluentValidation",
-  "description": "Programmatic options for the FluentValidation integration: controls field-changed validation behaviour, async validation, and severity mapping without attribute markup.",
+  "description": "Programmatic options: model provider, rule sets, validation-context preparation, failure-to-field mapping, message formatting, field-changed behaviour and opt-in clearing of external failures on edit.",
   "packageId": "Tempo.Blazor.FluentValidation",
   "sourcePath": "src/Tempo.Blazor.FluentValidation/FluentValidationOptions.cs",
-  "documentationStatus": "generated"
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "ModelProvider",
+      "kind": "Property",
+      "type": "Func<object?>?",
+      "description": "Supplies the model to validate. Defaults to the EditContext's own model. Returning null skips the run (local messages are cleared) - useful while a page's data has not loaded yet."
+    },
+    {
+      "name": "RuleSets",
+      "kind": "Property",
+      "type": "Func<IReadOnlyCollection<string>?>?",
+      "description": "The rule sets included in a full-model run (composed with the member filter on a member-scoped run). Evaluated per run, so the selection may depend on mutable page state. Null/empty = default rules."
+    },
+    {
+      "name": "PrepareContext",
+      "kind": "Property",
+      "type": "Action<IValidationContext>?",
+      "description": "Called with the FluentValidation context before each run - the hook for IValidationContext.RootContextData (e.g. a workflow/validation context object)."
+    },
+    {
+      "name": "FieldMapper",
+      "kind": "Property",
+      "type": "Func<ValidationFailure, FieldIdentifier?>?",
+      "description": "Maps a failure to the FieldIdentifier whose message store entry it becomes. Defaults to editContext.Field(failure.PropertyName); returning null falls back to that default. Use to strip collection paths (Items[3].Name -> Name) or otherwise re-key failures."
+    },
+    {
+      "name": "MessageFormatter",
+      "kind": "Property",
+      "type": "Func<ValidationFailure, string>?",
+      "description": "Renders the message text stored (and displayed) for a failure. Defaults to ValidationFailure.ErrorMessage. Use to resolve resource keys to localized text."
+    },
+    {
+      "name": "OnFieldChanged",
+      "kind": "Property",
+      "type": "FieldChangedValidation",
+      "description": "Field-changed behaviour; FieldChangedValidation.Member by default."
+    },
+    {
+      "name": "ClearExternalFailureOnFieldChange",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Opt-in (default false). When true, editing a field drops the external failures injected via FluentValidationSubscription.SetExternalFailures (e.g. a server 422) that landed on that field, compared on the mapped FieldIdentifier rather than the bare property name; failures on other fields are kept. The clear runs before the local re-validation, and a later SetExternalFailures brings the failure back."
+    }
+  ]
 }

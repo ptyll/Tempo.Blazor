@@ -8219,6 +8219,36 @@ editContext.AddFluentValidation(serviceProvider);
 // Nyní validace reaguje na OnFieldChanged a OnValidationRequested automaticky
 ```
 
+#### Chyby ze serveru (externí vrstva) a `ClearExternalFailureOnFieldChange`
+
+`FluentValidationSubscription.SetExternalFailures(...)` vloží do stejného message store i chyby, které nevznikly lokální validací (typicky odpověď serveru 422). Přežívají každé lokální přepočtení, dokud je nenahradíte dalším `SetExternalFailures` nebo `Clear()`.
+
+Volitelné `FluentValidationOptions.ClearExternalFailureOnFieldChange` (opt-in, výchozí `false`) odstraní externí chybu pole ve chvíli, kdy uživatel pole upraví, takže pod novou hodnotou nezůstane zastaralá serverová zpráva:
+
+```csharp
+// Model s kolekcí: Items[i].Email – několik položek sdílí stejný název pole "Email"
+var editContext = new EditContext(model);
+var subscription = editContext.AddFluentValidation(serviceProvider, new FluentValidationOptions
+{
+    ClearExternalFailureOnFieldChange = true,
+    // "Items[3].Email" → pole Email konkrétní položky (objekt + název pole)
+    FieldMapper = failure => ParseItemIndex(failure.PropertyName) is { } i
+        ? new FieldIdentifier(model.Items[i], "Email")
+        : null,   // null = výchozí mapování (editContext.Field(PropertyName))
+});
+
+subscription.SetExternalFailures(serverFailures);   // 422 → chyby pod Items[3].Email a Items[5].Email
+// uživatel upraví Items[3].Email → zmizí jen externí chyba této položky,
+// stejné pole jiné položky (Items[5].Email) si zprávu drží
+```
+
+- Porovnává se **namapovaný** `FieldIdentifier` (po `FieldMapper`), ne holý název vlastnosti — cesta `Items[3].Email` namapovaná na `new FieldIdentifier(model.Items[3], "Email")` se smaže úpravou `Items[3].Email`, zatímco stejné pole jiné položky zůstane.
+- Výchozí mapování klíčuje na `EditContext.Model`, takže vnořené vlastnosti a `ModelProvider` s jiným modelem než `EditContext.Model` potřebují `FieldMapper`, který vrací identifikátor vnořeného objektu (jinak se `FieldIdentifier` chyby nikdy neshoduje s upraveným polem a chyba se nesmaže).
+- Mazání proběhne před lokální (member / full-model) validací a platí i při `OnFieldChanged = FieldChangedValidation.None`.
+- Další `SetExternalFailures` vrstvu nahradí, takže chyba upraveného pole se vrátí, pokud ji server znovu vrátí.
+- Serverová odpověď, která dorazí **po** editaci, chybu vrátí (nahrazuje vrstvu, neví, že pole už uživatel změnil); rozpracované odpovědi, které se už nehodí, si host zahazuje sám (např. zrušením požadavku nebo ignorováním zastaralé odpovědi).
+- Výchozí `false` zachovává dosavadní chování (externí chyby žijí do výměny nebo `Clear()`).
+
 ---
 
 ## Přehled enumů

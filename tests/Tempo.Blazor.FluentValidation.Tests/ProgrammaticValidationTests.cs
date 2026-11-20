@@ -16,6 +16,18 @@ public class SegmentedModel
     public int Age { get; set; }
 }
 
+/// <summary>A collection item of <see cref="ItemsModel"/> (several items share the field name <c>Email</c>).</summary>
+public class ItemModel
+{
+    public string Email { get; set; } = string.Empty;
+}
+
+/// <summary>A model holding a collection, for tests that need the same field name on several objects.</summary>
+public class ItemsModel
+{
+    public List<ItemModel> Items { get; set; } = [];
+}
+
 /// <summary>A validator with a default rule, a named rule set and a RootContextData-driven rule.</summary>
 public class SegmentedPersonValidator : AbstractValidator<SegmentedModel>
 {
@@ -283,6 +295,150 @@ public class ProgrammaticValidationTests
 
         editContext.GetValidationMessages(editContext.Field("SERVER_ONLY")).Should().BeEmpty();
         editContext.GetValidationMessages(editContext.Field(nameof(SegmentedModel.FirstName))).Should().NotBeEmpty();
+    }
+
+    // ── ClearExternalFailureOnFieldChange (opt-in) ───────────────────────────────────────────
+
+    private static (EditContext Context, FluentValidationSubscription Subscription) ExternalOnTwoFields(
+        bool clearOnFieldChange,
+        Func<ValidationFailure, FieldIdentifier?>? fieldMapper = null,
+        FieldChangedValidation onFieldChanged = FieldChangedValidation.Member)
+    {
+        var editContext = new EditContext(new object());
+        var model = new SegmentedModel { FirstName = "John", Email = "john@example.com", Age = 30 };
+        var subscription = editContext.AddFluentValidation(WithSegmentedValidator(), new FluentValidationOptions
+        {
+            ModelProvider = () => model,
+            ClearExternalFailureOnFieldChange = clearOnFieldChange,
+            FieldMapper = fieldMapper,
+            OnFieldChanged = onFieldChanged,
+        });
+        subscription.SetExternalFailures(
+        [
+            new ValidationFailure(nameof(SegmentedModel.FirstName), "server-first-name"),
+            new ValidationFailure(nameof(SegmentedModel.Email), "server-email"),
+        ]);
+        return (editContext, subscription);
+    }
+
+    [Fact]
+    public void ClearExternalFailureOnFieldChange_ClearsOnlyTheEditedField()
+    {
+        var (editContext, _) = ExternalOnTwoFields(clearOnFieldChange: true);
+
+        editContext.NotifyFieldChanged(editContext.Field(nameof(SegmentedModel.Email)));
+
+        editContext.GetValidationMessages(editContext.Field(nameof(SegmentedModel.Email))).Should().BeEmpty();
+        editContext.GetValidationMessages(editContext.Field(nameof(SegmentedModel.FirstName)))
+            .Should().ContainSingle().Which.Should().Be("server-first-name");
+        editContext.GetValidationMessages().Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void ClearExternalFailureOnFieldChange_DefaultOff_KeepsBothFailures()
+    {
+        var (editContext, _) = ExternalOnTwoFields(clearOnFieldChange: false);
+
+        editContext.NotifyFieldChanged(editContext.Field(nameof(SegmentedModel.Email)));
+
+        editContext.GetValidationMessages(editContext.Field(nameof(SegmentedModel.Email))).Should().Contain("server-email");
+        editContext.GetValidationMessages(editContext.Field(nameof(SegmentedModel.FirstName))).Should().Contain("server-first-name");
+        editContext.GetValidationMessages().Should().HaveCount(2);
+    }
+
+    [Fact]
+    public void ClearExternalFailureOnFieldChange_FalseIsTheOptionsDefault()
+        => new FluentValidationOptions().ClearExternalFailureOnFieldChange.Should().BeFalse();
+
+    [Fact]
+    public void ClearExternalFailureOnFieldChange_LaterSetExternalFailures_BringsTheFailureBack()
+    {
+        var (editContext, subscription) = ExternalOnTwoFields(clearOnFieldChange: true);
+        editContext.NotifyFieldChanged(editContext.Field(nameof(SegmentedModel.Email)));
+        editContext.GetValidationMessages(editContext.Field(nameof(SegmentedModel.Email))).Should().BeEmpty();
+
+        // A fresh server response (the edited field fails again) is NOT swallowed by the earlier clear.
+        subscription.SetExternalFailures(
+        [
+            new ValidationFailure(nameof(SegmentedModel.FirstName), "server-first-name"),
+            new ValidationFailure(nameof(SegmentedModel.Email), "server-email-again"),
+        ]);
+
+        editContext.GetValidationMessages(editContext.Field(nameof(SegmentedModel.Email))).Should().Contain("server-email-again");
+        editContext.GetValidationMessages().Should().HaveCount(2);
+    }
+
+    [Fact]
+    public void ClearExternalFailureOnFieldChange_ComparesTheMappedField_NotTheBareName()
+    {
+        // The server path "Items[3].Email" is mapped onto the Email field; editing Email must clear it,
+        // although the failure's raw PropertyName differs from the edited field name.
+        var editContext = new EditContext(new object());
+        var model = new SegmentedModel { FirstName = "John", Email = "john@example.com", Age = 30 };
+        var subscription = editContext.AddFluentValidation(WithSegmentedValidator(), new FluentValidationOptions
+        {
+            ModelProvider = () => model,
+            ClearExternalFailureOnFieldChange = true,
+            FieldMapper = failure => failure.PropertyName.StartsWith("Items[", StringComparison.Ordinal)
+                ? editContext.Field(nameof(SegmentedModel.Email))
+                : null,
+        });
+        subscription.SetExternalFailures(
+        [
+            new ValidationFailure("Items[3].Email", "server-item-email"),
+            new ValidationFailure(nameof(SegmentedModel.FirstName), "server-first-name"),
+        ]);
+        editContext.GetValidationMessages(editContext.Field(nameof(SegmentedModel.Email))).Should().Contain("server-item-email");
+
+        editContext.NotifyFieldChanged(editContext.Field(nameof(SegmentedModel.Email)));
+
+        editContext.GetValidationMessages(editContext.Field(nameof(SegmentedModel.Email))).Should().BeEmpty();
+        editContext.GetValidationMessages().Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void ClearExternalFailureOnFieldChange_SameFieldNameOnAnotherItem_IsKept()
+    {
+        // Two collection items share the field NAME "Email"; only the mapped FieldIdentifier (model object +
+        // field name) tells them apart. Editing item 1's Email must not drop the failure on item 0's Email.
+        var item0 = new ItemModel { Email = "a@example.com" };
+        var item1 = new ItemModel { Email = "b@example.com" };
+        var model = new ItemsModel { Items = [item0, item1] };
+        var editContext = new EditContext(model);
+        var subscription = editContext.AddFluentValidation(BuildServiceProvider(), new FluentValidationOptions
+        {
+            ClearExternalFailureOnFieldChange = true,
+            FieldMapper = failure => new FieldIdentifier(model.Items[ItemIndex(failure.PropertyName)], nameof(ItemModel.Email)),
+        });
+        subscription.SetExternalFailures(
+        [
+            new ValidationFailure("Items[0].Email", "server-item0-email"),
+            new ValidationFailure("Items[1].Email", "server-item1-email"),
+        ]);
+        var field0 = new FieldIdentifier(item0, nameof(ItemModel.Email));
+        var field1 = new FieldIdentifier(item1, nameof(ItemModel.Email));
+        editContext.GetValidationMessages(field0).Should().ContainSingle().Which.Should().Be("server-item0-email");
+        editContext.GetValidationMessages(field1).Should().ContainSingle().Which.Should().Be("server-item1-email");
+
+        editContext.NotifyFieldChanged(field1);
+
+        editContext.GetValidationMessages(field1).Should().BeEmpty();
+        editContext.GetValidationMessages(field0).Should().ContainSingle().Which.Should().Be("server-item0-email");
+        editContext.GetValidationMessages().Should().HaveCount(1);
+    }
+
+    private static int ItemIndex(string propertyName)
+        => int.Parse(propertyName[(propertyName.IndexOf('[') + 1)..propertyName.IndexOf(']')], System.Globalization.CultureInfo.InvariantCulture);
+
+    [Fact]
+    public void ClearExternalFailureOnFieldChange_AlsoAppliesWhenFieldChangedValidationIsNone()
+    {
+        var (editContext, _) = ExternalOnTwoFields(clearOnFieldChange: true, onFieldChanged: FieldChangedValidation.None);
+
+        editContext.NotifyFieldChanged(editContext.Field(nameof(SegmentedModel.Email)));
+
+        editContext.GetValidationMessages(editContext.Field(nameof(SegmentedModel.Email))).Should().BeEmpty();
+        editContext.GetValidationMessages().Should().HaveCount(1);
     }
 
     // ── Field-changed behaviour ──────────────────────────────────────────────────────────────

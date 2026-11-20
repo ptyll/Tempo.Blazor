@@ -12,7 +12,8 @@ namespace Tempo.Blazor.FluentValidation;
 /// <list type="bullet">
 /// <item><description><b>local</b> — failures produced by running the validator here (recomputed on every run), and</description></item>
 /// <item><description><b>external</b> — failures injected via <see cref="SetExternalFailures"/> (e.g. a server 422
-/// response), which persist across local runs until replaced.</description></item>
+/// response), which persist across local runs until replaced or cleared, or — with
+/// <see cref="FluentValidationOptions.ClearExternalFailureOnFieldChange"/> — until their field is edited.</description></item>
 /// </list>
 /// Both layers render through the same field mapping and message formatting, and an external failure identical
 /// to a local one (same mapped field, same rendered text) is shown once.
@@ -67,7 +68,9 @@ public sealed class FluentValidationSubscription : IDisposable
 
     /// <summary>
     /// Replaces the external failure layer (server-side / out-of-band failures) and re-renders the store.
-    /// Null or empty clears the layer. Local messages are untouched.
+    /// Null or empty clears the layer. Local messages are untouched. The failures persist until replaced or
+    /// cleared, or — with <see cref="FluentValidationOptions.ClearExternalFailureOnFieldChange"/> — until their
+    /// field is edited.
     /// </summary>
     public void SetExternalFailures(IEnumerable<ValidationFailure>? failures)
     {
@@ -110,6 +113,22 @@ public sealed class FluentValidationSubscription : IDisposable
 
     private async void OnFieldChanged(object? sender, FieldChangedEventArgs e)
     {
+        // Opt-in: an edit drops the server-side failure of THIS field (compared on the mapped FieldIdentifier,
+        // not the bare property name) before the local re-validation re-renders the store.
+        if (_options.ClearExternalFailureOnFieldChange)
+        {
+            var before = _external.Count;
+            _external = [.. _external.Where(x => !x.Field.Equals(e.FieldIdentifier))];
+            if (_external.Count != before)
+            {
+                // RefreshStore calls NotifyValidationStateChanged, and the local re-validation below calls it
+                // again when it finishes — so a consumer can see two notifications for one edit. That is
+                // intentional: this first one removes the stale server message immediately, even when the
+                // local run is async, skipped (OnFieldChanged = None) or has no validator to run.
+                RefreshStore();
+            }
+        }
+
         switch (_options.OnFieldChanged)
         {
             case FieldChangedValidation.FullModel:

@@ -64,4 +64,16 @@ public sealed class FluentValidationOptions
 
     /// <summary>Field-changed behaviour; <see cref="FieldChangedValidation.Member"/> by default.</summary>
     public FieldChangedValidation OnFieldChanged { get; set; } = FieldChangedValidation.Member;
+
+    /// <summary>
+    /// Opt-in; <see langword="false"/> by default. When <see langword="true"/>, editing a field drops the
+    /// failures injected through <see cref="FluentValidationSubscription.SetExternalFailures"/> (for example a
+    /// server 422 response) that landed on that field, so a stale server message does not stay under a value
+    /// the user has already changed. The comparison uses the mapped <see cref="FieldIdentifier"/> (after
+    /// <see cref="FieldMapper"/>), not the bare property name; failures on other fields are kept, and the
+    /// clear happens before the local re-validation (whatever <see cref="OnFieldChanged"/> is set to). A
+    /// later <see cref="FluentValidationSubscription.SetExternalFailures"/> call replaces the layer and brings
+    /// the field's failure back. Default <see langword="false"/> keeps external failures until replaced or cleared.
+    /// </summary>
+    public bool ClearExternalFailureOnFieldChange { get; set; }
 }
