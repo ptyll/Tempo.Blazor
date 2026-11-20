@@ -85,6 +85,37 @@
       "description": "Width of the docked panel and of the side sheet. Ignored by the bottom sheet, which sizes from its snap point."
     },
     {
+      "name": "SheetHeight",
+      "type": "SidePanelSheetHeight",
+      "isRequired": false,
+      "default": "Snap",
+      "description": "How tall the BOTTOM sheet is on a phone layout: Snap rests on SheetSnapPoints (half height out of the box); Content makes the sheet as tall as its content under SheetMaxHeight - a short form is shown whole without dragging, a longer body scrolls and the FooterContent stays pinned to the bottom. The docked panel and the side sheet ignore it."
+    },
+    {
+      "name": "SheetSnapPoints",
+      "type": "IReadOnlyList<double>?",
+      "isRequired": false,
+      "description": "Fractions of the viewport height the bottom sheet snaps to, ascending, each between 0 and 1 (for example [0.7, 1.0] opens a form at 70 %). Null keeps the drawer default, half height and the cap. A value above SheetMaxHeight is clamped to it. Ignored with SheetHeight = Content, by the docked panel and by the side sheet."
+    },
+    {
+      "name": "SheetSnapIndex",
+      "type": "int",
+      "isRequired": false,
+      "default": "0",
+      "description": "The snap (an index into SheetSnapPoints) the bottom sheet renders. Two-way with SheetSnapIndexChanged: the sheet adopts a changed value and reports the snap a drag or the handle's keyboard settled on."
+    },
+    {
+      "name": "SheetSnapIndexChanged",
+      "type": "EventCallback<int>",
+      "isRequired": false,
+      "description": "Raised when the bottom sheet settles on another snap (a drag, the handle's arrow keys, Home / End)."
+    },
+    {
+      "name": "SheetMaxHeight",
+      "type": "double?",
+      "isRequired": false,
+      "description": "The tallest fraction of the viewport the bottom sheet may cover, between 0 and 1: the cap of the snaps and of the content height. Null keeps the drawer default of 0.85, which leaves a sliver of the page behind the sheet visible."
+    },    {
       "name": "LayoutMode",
       "type": "TmLayoutMode",
       "isRequired": false,
@@ -124,6 +155,13 @@
   ],
   "examples": [
     {
+      "title": "Phone sheet that fits its form (edit interval)",
+      "code": "<TmSidePanel Presentation=\"SidePanelPresentation.Sheet\" @bind-Open=\"editing\" Title=\"Edit interval\"\n             SheetHeight=\"SidePanelSheetHeight.Content\">\n    <ChildContent>…four fields…</ChildContent>\n    <FooterContent>\n        <TmButton OnClick=\"Cancel\">Cancel</TmButton>\n        <TmButton OnClick=\"Save\">Save</TmButton>\n    </FooterContent>\n</TmSidePanel>"
+    },
+    {
+      "title": "Phone sheet that opens at 70 % and can be raised",
+      "code": "<TmSidePanel @bind-Open=\"open\" Title=\"Filters\"\n             SheetSnapPoints=\"@(new[] { 0.7, 1.0 })\" SheetMaxHeight=\"0.95\" />"
+    },    {
       "title": "Responsive event detail inspector",
       "code": "<TmSidePanel @bind-Open=\"detailOpen\" Title=\"Event detail\">\n    <HeaderActions>\n        <TmButton OnClick=\"Delete\">Delete</TmButton>\n    </HeaderActions>\n    <p>Detail body…</p>\n</TmSidePanel>"
     }

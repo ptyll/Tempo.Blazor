@@ -298,6 +298,12 @@ named by its title (a localized default when there is none), and `HeaderActions`
 the title. Pass `RestoreFocusTargetId` (the opener's id) so the sheet returns focus to the opener on
 every close path.
 
+On a phone the bottom sheet is half height by default. `SheetHeight="SidePanelSheetHeight.Content"` sizes it to
+its content under the cap (a short form shows whole, a longer body scrolls above the pinned footer);
+`SheetSnapPoints`, `SheetSnapIndex` and `SheetMaxHeight` hand the drawer's own snap list, snap and cap through
+to it — see [bottom-sheet.md](bottom-sheet.md#tmsidepanel-on-a-phone-snaps-or-content-height). The side sheet
+and the docked panel ignore these.
+
 Unlike the shell's mobile sheet, a side-panel sheet **is** modal and promoted: it is a transient
 detail that should not compete with the content behind it. Scheduler (`SidePanel`,
 `EventDetailTemplate`) and Gantt (task panel) are the intended first consumers.

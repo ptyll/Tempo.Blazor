@@ -2229,6 +2229,8 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("presentation", "Presentation", PropType.Enum,  "auto",  cat: "Appearance",
                     opts: ["auto", "docked", "sheet"]),
                 P("width",        "Width",       PropType.Int,    360,     cat: "Appearance"),
+                P("sheetHeight",  "Sheet height", PropType.Enum,  "snap",  cat: "Appearance",
+                    opts: ["snap", "content"]),
             ]
         };
 

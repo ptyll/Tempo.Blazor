@@ -41,6 +41,38 @@ on the shared `pointer-drag.js` helper: a second finger cannot take over an acti
 during a drag cancels the drag first — the inline height is rolled back, the snap C# owns stays, the
 Escape is consumed and does not reach the dialog — so it takes a second Escape to close the sheet.
 
+### `TmSidePanel` on a phone: snaps or content height
+
+`TmSidePanel` composes this drawer as a bottom sheet on a phone viewport and, until 2.12, always used the
+drawer defaults — a half-height sheet (`[0.5, 1.0]`, the top snap clamped to the 0.85 cap), so a form of four
+fields opened with its last field and its buttons below the fold and the reader had to drag the handle first.
+The panel now hands the sheet height to the host, in two ways; both apply to the BOTTOM sheet only (the side
+sheet and the docked panel have no height of their own and ignore them), and every default is the pre-2.12
+behaviour.
+
+| Parameter | Default | Meaning |
+|---|---|---|
+| `SheetHeight` | `Snap` | `Snap` rests on snap points. `Content` sizes the sheet to its content under the cap. |
+| `SheetSnapPoints` | `null` | The drawer's `SnapPoints` (`[0.7, 1.0]` opens a form at 70 %). `null` keeps `[0.5, 1.0]`. |
+| `SheetSnapIndex` / `SheetSnapIndexChanged` | `0` | The snap the sheet renders, two-way like the drawer's `SnapIndex`. |
+| `SheetMaxHeight` | `null` | The drawer's `MaxHeight`, the cap of the snaps and of the content height; `null` keeps 0.85. |
+
+`SheetHeight="SidePanelSheetHeight.Content"` is the same mode `TmModal` uses on a phone (`tm-sheet--content`):
+the panel is as tall as its header, body and footer, **a short form shows whole without dragging**, and the cap
+still applies. A longer body scrolls inside the sheet while the `FooterContent` (`tm-drawer__footer--sticky`)
+stays pinned to the bottom. There are no snaps, so `SheetSnapPoints` / `SheetSnapIndex` are ignored, the grabber
+is a decorative swipe target (a downward swipe still dismisses) and the handle is not a slider.
+
+Choose by the content: a short form, a confirmation or an editor of a few fields wants `Content`; a tall,
+open-ended surface (a long list, a filter panel the reader wants to expand) wants snaps — usually with
+`SheetSnapPoints` raised above the half default so it opens usefully tall, and `SheetMaxHeight` when 0.85 leaves
+too much (or too little) of the page behind it.
+
+The cap of a content-height MODAL sheet is `--tm-sheet-max` of the visible viewport. The drawer's own
+`max-block-size: 100dvh` used to out-specify the shared `.tm-sheet__panel` cap (they are the same property), so a
+content sheet with a long body filled the whole screen; `_drawer.css` now restates the cap at a higher
+specificity, which also makes every other content-height bottom drawer honour `MaxHeight`.
+
 ## Modal and inline
 
 A modal sheet anchors to the viewport and lifts above the on-screen keyboard. `TmModal` and `TmDialog`

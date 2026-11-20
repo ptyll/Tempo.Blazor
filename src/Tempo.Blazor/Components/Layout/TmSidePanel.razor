@@ -44,6 +44,10 @@ else if (Open)
               CloseOnOverlayClick="true"
               CloseOnEscape="true"
               ShowCloseButton="@ShowHeader"
+              SnapPoints="@EffectiveSnapPoints"
+              SnapIndex="@SheetSnapIndex"
+              SnapIndexChanged="OnSheetSnapIndexChanged"
+              MaxHeight="@(SheetMaxHeight ?? TmDrawer.DefaultMaxHeight)"
               RestoreFocusTargetId="@RestoreFocusTargetId"
               FooterContent="FooterContent"
               AdditionalAttributes="SheetAttributes">
@@ -140,6 +144,42 @@ else if (Open)
     /// would pin that mode.
     /// </summary>
     [Parameter] public EventCallback<TmLayoutMode> ResolvedLayoutChanged { get; set; }
+
+    /// <summary>
+    /// How tall the BOTTOM sheet is on a phone layout: <see cref="SidePanelSheetHeight.Snap"/>
+    /// (default — rests on <see cref="SheetSnapPoints"/>, half height out of the box) or
+    /// <see cref="SidePanelSheetHeight.Content"/> (as tall as the content, under
+    /// <see cref="SheetMaxHeight"/>; the body scrolls when it is longer and the
+    /// <see cref="FooterContent"/> stays pinned to the bottom). The docked panel and the side sheet
+    /// ignore it.
+    /// </summary>
+    [Parameter] public SidePanelSheetHeight SheetHeight { get; set; } = SidePanelSheetHeight.Snap;
+
+    /// <summary>
+    /// Fractions of the viewport height the bottom sheet snaps to, ascending, each between 0 and 1
+    /// (for example <c>[0.7, 1.0]</c> opens a form at 70 %). Null (default) keeps the drawer
+    /// default, half height and the cap. A value above <see cref="SheetMaxHeight"/> is clamped to it.
+    /// Ignored with <see cref="SheetHeight"/> = <see cref="SidePanelSheetHeight.Content"/>, by the
+    /// docked panel and by the side sheet.
+    /// </summary>
+    [Parameter] public IReadOnlyList<double>? SheetSnapPoints { get; set; }
+
+    /// <summary>
+    /// The snap (an index into <see cref="SheetSnapPoints"/>) the bottom sheet renders. Two-way with
+    /// <see cref="SheetSnapIndexChanged"/>: the sheet adopts a changed value and reports the snap a
+    /// drag or the handle's keyboard settled on. Default 0, the lowest snap.
+    /// </summary>
+    [Parameter] public int SheetSnapIndex { get; set; }
+
+    /// <summary>Raised when the bottom sheet settles on another snap (a drag, the handle's arrow keys, Home / End).</summary>
+    [Parameter] public EventCallback<int> SheetSnapIndexChanged { get; set; }
+
+    /// <summary>
+    /// The tallest fraction of the viewport the bottom sheet may cover, between 0 and 1: the cap of
+    /// the snaps and of the content height. Null (default) keeps the drawer default of 0.85, which
+    /// leaves a sliver of the page behind the sheet visible.
+    /// </summary>
+    [Parameter] public double? SheetMaxHeight { get; set; }
 
     /// <summary>Extra CSS classes for the docked root (the sheet root carries them through <see cref="TmDrawer.Class"/>).</summary>
     [Parameter] public string? Class { get; set; }
@@ -276,4 +316,13 @@ else if (Open)
     private async Task CloseAsync() => await OpenChanged.InvokeAsync(false);
 
     private async Task OnOpenChanged(bool open) => await OpenChanged.InvokeAsync(open);
+
+    /// <summary>The snaps the drawer gets: none for a content-height sheet (the drawer then sizes to
+    /// its content), the host's list when given, else the drawer default.</summary>
+    private IReadOnlyList<double> EffectiveSnapPoints =>
+        SheetPosition != DrawerPosition.Bottom ? TmDrawer.DefaultSnapPoints // a side sheet has no height of its own: its markup stays exactly as before
+        : SheetHeight == SidePanelSheetHeight.Content ? Array.Empty<double>()
+        : SheetSnapPoints ?? TmDrawer.DefaultSnapPoints;
+
+    private Task OnSheetSnapIndexChanged(int index) => SheetSnapIndexChanged.InvokeAsync(index);
 }

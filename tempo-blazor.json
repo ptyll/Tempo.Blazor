@@ -9235,6 +9235,27 @@
       "usageExample": "<TmSidePanel Presentation=\"SidePanelPresentation.Auto\" @bind-Open=\"open\" Title=\"Event detail\">…</TmSidePanel>"
     },
     {
+      "itemName": "SidePanelSheetHeight",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Layout",
+      "description": "How tall the BOTTOM sheet of a TmSidePanel is (the phone presentation). The side sheet and the docked panel have no height of their own, so the choice does not apply to them.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Layout/SidePanelSheetHeight.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Snap",
+          "description": "The sheet rests on a snap point: SheetSnapPoints (default half height and the cap) at SheetSnapIndex, with a draggable, keyboard-operable handle between the snaps. The default and the pre-2.12 behaviour."
+        },
+        {
+          "name": "Content",
+          "description": "The sheet is as tall as its content, under the cap SheetMaxHeight (default 0.85 of the viewport): a short form shows whole without dragging, a longer body scrolls while the footer stays pinned to the bottom. No snaps, so SheetSnapPoints and SheetSnapIndex are ignored and the grabber is a decorative swipe target."
+        }
+      ],
+      "usageExample": "<TmSidePanel Presentation=\"SidePanelPresentation.Sheet\" SheetHeight=\"SidePanelSheetHeight.Content\" @bind-Open=\"open\" Title=\"Edit interval\">…</TmSidePanel>"
+    },
+    {
       "itemName": "SidePanelSide",
       "kind": "Enum",
       "category": "Components",
@@ -25300,7 +25321,7 @@
           "name": "MaxHeight",
           "type": "double",
           "isRequired": false,
-          "default": "0.85",
+          "default": "DefaultMaxHeight",
           "description": "The sheet cap as a fraction of the visible viewport, between 0 and 1."
         },
         {
@@ -26277,6 +26298,38 @@
           "description": "Id of the host element (typically the opener button) focus returns to when the SHEET presentation closes — via Escape, the header close, the backdrop, a swipe or the host setting Open to false. Null keeps the focus scope default."
         },
         {
+          "name": "SheetHeight",
+          "type": "SidePanelSheetHeight",
+          "isRequired": false,
+          "default": "SidePanelSheetHeight.Snap",
+          "description": "How tall the BOTTOM sheet is on a phone layout: Snap rests on SheetSnapPoints (half height out of the box); Content makes the sheet as tall as its content under SheetMaxHeight - a short form is shown whole without dragging, a longer body scrolls and the FooterContent stays pinned to the bottom. The docked panel and the side sheet ignore it."
+        },
+        {
+          "name": "SheetMaxHeight",
+          "type": "double?",
+          "isRequired": false,
+          "description": "The tallest fraction of the viewport the bottom sheet may cover, between 0 and 1: the cap of the snaps and of the content height. Null keeps the drawer default of 0.85, which leaves a sliver of the page behind the sheet visible."
+        },
+        {
+          "name": "SheetSnapIndex",
+          "type": "int",
+          "isRequired": false,
+          "description": "The snap (an index into SheetSnapPoints) the bottom sheet renders. Two-way with SheetSnapIndexChanged: the sheet adopts a changed value and reports the snap a drag or the handle's keyboard settled on.",
+          "default": "0"
+        },
+        {
+          "name": "SheetSnapIndexChanged",
+          "type": "EventCallback<int>",
+          "isRequired": false,
+          "description": "Raised when the bottom sheet settles on another snap (a drag, the handle's arrow keys, Home / End)."
+        },
+        {
+          "name": "SheetSnapPoints",
+          "type": "IReadOnlyList<double>?",
+          "isRequired": false,
+          "description": "Fractions of the viewport height the bottom sheet snaps to, ascending, each between 0 and 1 (for example [0.7, 1.0] opens a form at 70 %). Null keeps the drawer default, half height and the cap. A value above SheetMaxHeight is clamped to it. Ignored with SheetHeight = Content, by the docked panel and by the side sheet."
+        },
+        {
           "name": "ShowHeader",
           "type": "bool",
           "isRequired": false,
@@ -26316,6 +26369,14 @@
         "tm-side-panel-sheet"
       ],
       "examples": [
+        {
+          "title": "Phone sheet that fits its form (edit interval)",
+          "code": "<TmSidePanel Presentation=\"SidePanelPresentation.Sheet\" @bind-Open=\"editing\" Title=\"Edit interval\"\n             SheetHeight=\"SidePanelSheetHeight.Content\">\n    <ChildContent>…four fields…</ChildContent>\n    <FooterContent>\n        <TmButton OnClick=\"Cancel\">Cancel</TmButton>\n        <TmButton OnClick=\"Save\">Save</TmButton>\n    </FooterContent>\n</TmSidePanel>"
+        },
+        {
+          "title": "Phone sheet that opens at 70 % and can be raised",
+          "code": "<TmSidePanel @bind-Open=\"open\" Title=\"Filters\"\n             SheetSnapPoints=\"@(new[] { 0.7, 1.0 })\" SheetMaxHeight=\"0.95\" />"
+        },
         {
           "title": "Responsive event detail inspector",
           "code": "<TmSidePanel @bind-Open=\"detailOpen\" Title=\"Event detail\">\n    <HeaderActions>\n        <TmButton OnClick=\"Delete\">Delete</TmButton>\n    </HeaderActions>\n    <p>Detail body…</p>\n</TmSidePanel>"
@@ -37228,11 +37289,11 @@
     }
   ],
   "summary": {
-    "itemCount": 466,
-    "manualItemCount": 466,
-    "generatedItemCount": 458,
+    "itemCount": 467,
+    "manualItemCount": 467,
+    "generatedItemCount": 459,
     "generatedOnlyItemCount": 0,
     "componentCount": 238,
-    "publicApiTypeCount": 220
+    "publicApiTypeCount": 221
   }
 }

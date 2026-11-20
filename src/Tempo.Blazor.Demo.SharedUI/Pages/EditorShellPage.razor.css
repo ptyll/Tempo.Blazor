@@ -253,3 +253,32 @@
     color: var(--tm-color-text-muted);
     font-size: var(--tm-text-sm, 0.875rem);
 }
+
+/* Fáze 10d: the "edit interval" sheet demo. The form lives inside the TmSidePanel bottom sheet (rendered
+   through TmDrawer outside this page's scope), so its layout is scoped to the markup this page owns. */
+.es-interval-section h2 {
+    margin: 0 0 var(--tm-space-1);
+}
+
+.es-interval-section > p {
+    margin: 0 0 var(--tm-space-3);
+    color: var(--tm-color-text-muted);
+}
+
+.es-interval-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--tm-space-3);
+}
+
+.es-interval-section > .es-interval-hint {
+    margin: var(--tm-space-2) 0 0;
+    font-size: var(--tm-text-sm, 0.875rem);
+}
+
+.es-interval-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+}

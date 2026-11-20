@@ -118,6 +118,16 @@
     pointer-events: auto;
 }
 
+/* The cap of a MODAL bottom sheet. `max-block-size` (above) and the shared `.tm-sheet__panel { max-height }`
+   are the same property in a horizontal writing mode, and the 100dvh ceiling out-specifies the shared cap — so a
+   content-height sheet (no snap points) with a long body filled the whole viewport and `--tm-sheet-max` never
+   applied. Restated here at a higher specificity: the sheet may cover `--tm-sheet-max` of the visible viewport,
+   the body scrolls beyond it and the sticky footer stays put. A snapped sheet is already clamped to the same cap
+   by TmDrawer, so its height is unchanged. The inline sheet below comes later at the same specificity. */
+.tm-drawer--bottom.tm-sheet .tm-drawer__panel.tm-sheet__panel {
+    max-height: calc(var(--tm-sheet-max, 0.85) * var(--tm-sheet-viewport, 100dvh));
+}
+
 /* An inline sheet sits in its container. The root must not eat clicks meant for the canvas behind
    it, and it does not lift for a keyboard: it is not positioned against the viewport. */
 .tm-drawer--inline.tm-drawer--bottom {
@@ -130,7 +140,9 @@
 .tm-drawer--inline.tm-drawer--bottom .tm-drawer__panel.tm-sheet__panel {
     /* The shared sheet rule sizes .tm-sheet__panel from the viewport at the same specificity, so a
        bare panel selector loses to it. The compound wins, and an inline sheet is a fraction of its
-       host instead of the viewport. */
+       host instead of the viewport. The 4-class compound has the same specificity as the modal cap rule above
+       (`.tm-drawer--bottom.tm-sheet .tm-drawer__panel.tm-sheet__panel`) and follows it in source order, so it
+       wins over that cap. */
     height: calc(var(--tm-sheet-height, 0.5) * 100%);
     max-height: calc(var(--tm-sheet-max, 0.85) * 100%);
 }

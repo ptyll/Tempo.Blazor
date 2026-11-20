@@ -1,0 +1,21 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Layout",
+  "description": "How tall the BOTTOM sheet of a TmSidePanel is (the phone presentation). The side sheet and the docked panel have no height of their own, so the choice does not apply to them.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/Layout/SidePanelSheetHeight.cs",
+  "documentationStatus": "documented",
+  "itemName": "SidePanelSheetHeight",
+  "members": [
+    {
+      "name": "Snap",
+      "description": "The sheet rests on a snap point: SheetSnapPoints (default half height and the cap) at SheetSnapIndex, with a draggable, keyboard-operable handle between the snaps. The default and the pre-2.12 behaviour."
+    },
+    {
+      "name": "Content",
+      "description": "The sheet is as tall as its content, under the cap SheetMaxHeight (default 0.85 of the viewport): a short form shows whole without dragging, a longer body scrolls while the footer stays pinned to the bottom. No snaps, so SheetSnapPoints and SheetSnapIndex are ignored and the grabber is a decorative swipe target."
+    }
+  ],
+  "usageExample": "<TmSidePanel Presentation=\"SidePanelPresentation.Sheet\" SheetHeight=\"SidePanelSheetHeight.Content\" @bind-Open=\"open\" Title=\"Edit interval\">…</TmSidePanel>"
+}

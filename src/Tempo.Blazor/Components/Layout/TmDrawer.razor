@@ -96,6 +96,12 @@
 @code {
     private static readonly double[] DefaultSnaps = [0.5, 1.0];
 
+    /// <summary>The snap points a bottom sheet uses when the host passes none (half and full).</summary>
+    internal static IReadOnlyList<double> DefaultSnapPoints => DefaultSnaps;
+
+    /// <summary>The cap on a sheet's height, as a fraction of the viewport, when the host passes none.</summary>
+    internal const double DefaultMaxHeight = 0.85;
+
     /// <summary>Whether the drawer is open.</summary>
     [Parameter] public bool IsOpen { get; set; }
 
@@ -212,7 +218,7 @@
     /// The tallest fraction of the viewport a sheet may cover. Between 0 and 1; the default leaves a
     /// sliver of the content behind the sheet visible.
     /// </summary>
-    [Parameter] public double MaxHeight { get; set; } = 0.85;
+    [Parameter] public double MaxHeight { get; set; } = DefaultMaxHeight;
 
     /// <summary>The viewport's layout. A modal sheet is positioned against the viewport, not its container.</summary>
     [CascadingParameter(Name = TmLayoutScopes.Viewport)] public TmLayoutContext? Viewport { get; set; }

@@ -140,6 +140,55 @@
             </div>
         </div>
     </section>
+    <section class="es-interval-section" data-testid="interval-section">
+        <h2>@Loc["TmSidePanelDemo_IntervalTitle"]</h2>
+        <p>@Loc["TmSidePanelDemo_IntervalIntro"]</p>
+        <div class="es-interval-controls">
+            <TmSegmentedControl TValue="IntervalSheetMode"
+                                Label="@Loc["TmSidePanelDemo_SheetHeightLabel"]"
+                                Options="_intervalModes"
+                                Value="_intervalMode"
+                                ValueChanged="OnIntervalModeChanged"
+                                Disabled="@(!PhoneViewport)"
+                                DataTestId="interval-sheet-mode" />
+            <TmButton OnClick="OpenInterval" id="interval-open" aria-expanded="@(_intervalOpen ? "true" : "false")" data-testid="interval-open">@Loc["TmSidePanelDemo_IntervalOpen"]</TmButton>
+        </div>
+        @if (!PhoneViewport)
+        {
+            <p class="es-interval-hint" data-testid="interval-phone-only">@Loc["TmSidePanelDemo_SheetHeightPhoneOnly"]</p>
+        }
+        <p class="es-last-action" data-testid="interval-saved">@Loc["TmSidePanelDemo_IntervalSaved"]: @_intervalSaved</p>
+        <TmSidePanel Presentation="SidePanelPresentation.Sheet"
+                     Open="_intervalOpen"
+                     OpenChanged="OnIntervalOpenChanged"
+                     Title="@Loc["TmSidePanelDemo_IntervalTitle"]"
+                     SheetHeight="@(_intervalMode == IntervalSheetMode.Content ? SidePanelSheetHeight.Content : SidePanelSheetHeight.Snap)"
+                     SheetSnapPoints="@(_intervalMode == IntervalSheetMode.Snaps ? IntervalSnaps : null)"
+                     SheetMaxHeight="@(_intervalMode == IntervalSheetMode.Snaps ? 0.95 : null)"
+                     RestoreFocusTargetId="interval-open"
+                     data-testid="interval-panel">
+            <ChildContent>
+                <div class="es-interval-form">
+                    <TmFormField Label="@Loc["TmSidePanelDemo_FieldDay"]">
+                        <TmSelect TValue="string" Value="@_intervalDay" ValueChanged="@(v => _intervalDay = v ?? "workdays")" Options="@_dayOptions" data-testid="interval-day" />
+                    </TmFormField>
+                    <TmFormField Label="@Loc["TmSidePanelDemo_FieldStart"]">
+                        <TmTimePicker Value="@_intervalStart" ValueChanged="@(v => _intervalStart = v)" HideClear="true" data-testid="interval-start" />
+                    </TmFormField>
+                    <TmFormField Label="@Loc["TmSidePanelDemo_FieldEnd"]">
+                        <TmTimePicker Value="@_intervalEnd" ValueChanged="@(v => _intervalEnd = v)" HideClear="true" data-testid="interval-end" />
+                    </TmFormField>
+                    <TmFormField Label="@Loc["TmSidePanelDemo_FieldTemperature"]">
+                        <TmNumberInput Value="@_intervalTemperature" ValueChanged="@(v => _intervalTemperature = v)" Min="5" Max="30" data-testid="interval-temperature" />
+                    </TmFormField>
+                </div>
+            </ChildContent>
+            <FooterContent>
+                <TmButton Variant="ButtonVariant.Secondary" OnClick="CloseInterval" data-testid="interval-cancel">@Loc["TmSidePanelDemo_ActionCancel"]</TmButton>
+                <TmButton OnClick="SaveInterval" data-testid="interval-save">@Loc["TmSidePanelDemo_ActionApply"]</TmButton>
+            </FooterContent>
+        </TmSidePanel>
+    </section>
 </div>
 
 @code {
@@ -169,6 +218,23 @@
     private int _snap;
     private bool _customSnaps;
     private static readonly IReadOnlyList<double> CustomSnaps = [0.4, 0.75, 1.0];
+
+    // ── Fáze 10d: the bottom-sheet HEIGHT of TmSidePanel (an "edit interval" form on a phone) ──
+    private enum IntervalSheetMode { Content, Snaps, Default }
+
+    private static readonly IReadOnlyList<double> IntervalSnaps = [0.7, 1.0];
+    private IReadOnlyList<SegmentedOption<IntervalSheetMode>> _intervalModes = [];
+    private IReadOnlyList<SelectOption<string>> _dayOptions = [];
+    private IntervalSheetMode _intervalMode = IntervalSheetMode.Content;
+    private bool _intervalOpen;
+    private string _intervalDay = "workdays";
+    private TimeOnly? _intervalStart = new(6, 0);
+    private TimeOnly? _intervalEnd = new(8, 30);
+    private int? _intervalTemperature = 21;
+    private string _intervalSaved = "—";
+
+    private bool PhoneViewport => Viewport is { IsMobile: true };
+
     private bool _inspectorOpen;
     private bool _inspectorTouched;
     private SidePanelSide _inspectorSide = SidePanelSide.Right;
@@ -248,6 +314,18 @@
         // desktop it would be a modal sheet that covers the demo, so it starts closed there.
         if (!_inspectorTouched) _inspectorOpen = Viewport is { IsDesktop: true };
 
+        _intervalModes =
+        [
+            new SegmentedOption<IntervalSheetMode> { Value = IntervalSheetMode.Content, Label = Loc["TmSidePanelDemo_SheetHeightContent"] },
+            new SegmentedOption<IntervalSheetMode> { Value = IntervalSheetMode.Snaps, Label = Loc["TmSidePanelDemo_SheetHeightSnaps"] },
+            new SegmentedOption<IntervalSheetMode> { Value = IntervalSheetMode.Default, Label = Loc["TmSidePanelDemo_SheetHeightDefault"] },
+        ];
+        _dayOptions =
+        [
+            new SelectOption<string>("workdays", Loc["TmSidePanelDemo_DayWorkdays"]),
+            new SelectOption<string>("weekend", Loc["TmSidePanelDemo_DayWeekend"]),
+            new SelectOption<string>("everyday", Loc["TmSidePanelDemo_DayEveryday"]),
+        ];
         _alignOptions =
         [
             new SelectOption<string>("left", Loc["TmEditorShellDemo_AlignLeft"]),
@@ -391,6 +469,20 @@
     {
         CloseInspector();
         return Record("TmSidePanelDemo_ActionApply");
+    }
+
+    private void OpenInterval() => _intervalOpen = true;
+
+    private void CloseInterval() => _intervalOpen = false;
+
+    private void OnIntervalOpenChanged(bool open) => _intervalOpen = open;
+
+    private void OnIntervalModeChanged(IntervalSheetMode mode) => _intervalMode = mode;
+
+    private void SaveInterval()
+    {
+        _intervalSaved = string.Format(Loc["TmSidePanelDemo_IntervalSummary"], _intervalStart?.ToString("HH:mm"), _intervalEnd?.ToString("HH:mm"), _intervalTemperature);
+        _intervalOpen = false;
     }
 
     private void OnInspectorOpenChanged(bool open)
