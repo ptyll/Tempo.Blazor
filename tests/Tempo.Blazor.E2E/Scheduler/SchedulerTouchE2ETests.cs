@@ -309,18 +309,11 @@ public class SchedulerTouchE2ETests : WasmTestBase
 
     private async Task<IPage> OpenAsync(int width, int height, bool touch)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
-        {
-            // Pin the locale: the demo follows the browser language, and a context without one inherits the host machine's (cs-CZ on the dev box) while the specs read English labels.
-            Locale = "en-US",
-            ViewportSize = new ViewportSize { Width = width, Height = height },
-            HasTouch = touch,
-            IgnoreHTTPSErrors = true,
-        });
-        RegisterContext(context);
+        // CreateContextAsync pins the locale (the demo follows the browser language), keeps the failure trace and relaunches a wedged browser;
+        // GotoAppReadyAsync gates on data-blazor-ready and recovers a stalled WASM boot with ONE reload.
+        var context = await CreateContextAsync(width, height, hasTouch: touch);
         var page = await context.NewPageAsync();
-        await page.GotoAsync(SchedulerDemoUrl.For(BaseUrl), new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, SchedulerDemoUrl.For(BaseUrl));
         await page.Locator("[data-testid='scheduler-interactive']").ScrollIntoViewIfNeededAsync();
         return page;
     }

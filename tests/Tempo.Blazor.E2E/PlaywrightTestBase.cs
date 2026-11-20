@@ -142,7 +142,7 @@ public abstract class PlaywrightTestBase
     /// The actual launch body, WITHOUT <see cref="BrowserLock"/>. B1: both <see cref="EnsureBrowserAsync"/>
     /// and <see cref="ForceRelaunchBrowserAsync"/> need to launch under the lock, and SemaphoreSlim is
     /// NOT reentrant — ForceRelaunch holding the lock while calling EnsureBrowserAsync deadlocked the
-    /// shard the moment the wedged-browser recovery in <see cref="CreateContextAsync"/> first fired.
+    /// shard the moment the wedged-browser recovery in <see cref="CreateContextAsync(BrowserNewContextOptions, bool)"/> first fired.
     /// </summary>
     private static async Task LaunchBrowserCoreAsync()
     {
@@ -232,17 +232,50 @@ public abstract class PlaywrightTestBase
     /// Emulates a coarse pointer (<c>(any-pointer: coarse)</c>). The responsive-chrome specs need it: the
     /// 44px touch targets are a coarse-pointer rule, and a desktop-pointer context can never see them.
     /// </param>
-    protected async Task<IBrowserContext> CreateContextAsync(bool hasTouch = false)
-    {
-        var options = new BrowserNewContextOptions
-        {
-            ViewportSize = new ViewportSize { Width = 1280, Height = 720 },
-            Locale = "en-US",
-            IgnoreHTTPSErrors = true,
-            AcceptDownloads = true,
-            HasTouch = hasTouch
-        };
+    protected Task<IBrowserContext> CreateContextAsync(bool hasTouch = false)
+        => CreateContextAsync(1280, 720, hasTouch);
 
+    /// <summary>
+    /// <see cref="CreateContextAsync(bool)"/> with an explicit viewport (and, optionally, a phone-like
+    /// <c>isMobile</c> context). Specs that need a viewport or <c>isMobile</c> used to call
+    /// <c>Browser.NewContextAsync</c> directly and so lost the failure trace and the bounded, relaunching context
+    /// creation of this helper - use this overload instead.
+    /// </summary>
+    /// <param name="width">Viewport width in CSS pixels.</param>
+    /// <param name="height">Viewport height in CSS pixels.</param>
+    /// <param name="hasTouch">Emulates a coarse pointer; see <see cref="CreateContextAsync(bool)"/>.</param>
+    /// <param name="isMobile">Emulates a mobile browser (meta viewport, overlay scrollbars).</param>
+    protected Task<IBrowserContext> CreateContextAsync(int width, int height, bool hasTouch = false, bool isMobile = false)
+        => CreateContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = width, Height = height },
+            HasTouch = hasTouch,
+            IsMobile = isMobile
+        });
+
+    /// <summary>
+    /// The general context factory every other <c>CreateContextAsync</c> overload wraps: specs that need options the
+    /// convenience overloads do not carry (color scheme, geolocation, permissions, storage state, a user agent ...)
+    /// pass them here instead of calling <c>Browser.NewContextAsync</c>, so they keep the failure trace, the
+    /// bounded, relaunching context creation and the registration for cleanup.
+    /// </summary>
+    /// <param name="options">
+    /// The caller's options (required, never mutated: a clone is used). Unset <c>Locale</c> (en-US),
+    /// <c>IgnoreHTTPSErrors</c> (true), <c>AcceptDownloads</c> (true) and <c>ViewportSize</c> (1280x720) get the suite defaults.
+    /// </param>
+    /// <param name="trace">Collect a failure trace (see <c>TM_E2E_TRACE_ON_FAILURE</c>); pass <c>false</c> to opt out.</param>
+    protected internal async Task<IBrowserContext> CreateContextAsync(BrowserNewContextOptions options, bool trace = true)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        options = new BrowserNewContextOptions(options);
+        options.Locale ??= "en-US";
+        options.IgnoreHTTPSErrors ??= true;
+        options.AcceptDownloads ??= true;
+        if (options.ViewportSize is null)
+        {
+            options.ViewportSize = new ViewportSize { Width = 1280, Height = 720 };
+        }
         // A wedged browser answers IsConnected (its process lives) while protocol calls never
         // return — the shard-1 stall of 2026-11-18: the last test wrote its screenshot at 14:13
         // and the next NewContextAsync never came back, so the shard sat silent ~38 minutes until
@@ -260,7 +293,7 @@ public abstract class PlaywrightTestBase
             context = await Browser.NewContextAsync(options).WaitAsync(BrowserCallTimeout);
         }
 
-        if (ShouldCollectTraceOnFailure())
+        if (trace && ShouldCollectTraceOnFailure())
         {
             await context.Tracing.StartAsync(new TracingStartOptions
             {
@@ -279,7 +312,7 @@ public abstract class PlaywrightTestBase
     /// The wall-clock ceiling for ONE Playwright lifecycle call (create/close a context, launch or
     /// close the browser). Generous on purpose — under parallel load these legitimately take
     /// seconds — but a call that exceeds it has never come back in practice: the transport is
-    /// wedged and only a relaunch helps (see <see cref="CreateContextAsync"/>).
+    /// wedged and only a relaunch helps (see <see cref="CreateContextAsync(BrowserNewContextOptions, bool)"/>).
     /// </summary>
     private static readonly TimeSpan BrowserCallTimeout = TimeSpan.FromSeconds(90);
 
@@ -349,7 +382,7 @@ public abstract class PlaywrightTestBase
     /// <summary>
     /// Creates a new page and navigates to the base URL.
     /// </summary>
-    /// <param name="hasTouch">Emulates a coarse pointer; see <see cref="CreateContextAsync"/>.</param>
+    /// <param name="hasTouch">Emulates a coarse pointer; see <see cref="CreateContextAsync(bool)"/>.</param>
     protected async Task<IPage> CreatePageAsync(bool hasTouch = false)
     {
         var context = await CreateContextAsync(hasTouch);
@@ -384,25 +417,7 @@ public abstract class PlaywrightTestBase
 
                 await WaitForAppReadyAsync(page);
             },
-            async () =>
-            {
-                // The readiness gate timed out. Besides a slow first boot, the other cause is a host
-                // that DIED while the app was booting (observed 2026-11-18: Demo WASM died mid-run and
-                // the recovery reload landed on net::ERR_CONNECTION_REFUSED). Resurrect the hosts the
-                // same way a ClassInitialize would BEFORE the reload, and once more if the reload
-                // itself still meets a refused connection (the host died between the probe and the
-                // reload). A second refusal still propagates — the recovery stays bounded.
-                await RecoverDemoHostsAsync();
-                try
-                {
-                    await ReloadOrNavigateAsync();
-                }
-                catch (PlaywrightException ex) when (IsConnectionRefused(ex))
-                {
-                    await RecoverDemoHostsAsync();
-                    await ReloadOrNavigateAsync();
-                }
-            });
+            () => RecoverBootAsync(ReloadOrNavigateAsync));
 
         return;
 
@@ -412,6 +427,51 @@ public abstract class PlaywrightTestBase
                 : page.ReloadAsync(new PageReloadOptions { WaitUntil = waitUntil, Timeout = timeouts.DomContentLoadedMs });
     }
 
+    /// <summary>
+    /// Reloads the CURRENT page and waits for the app to be ready, with the same ONE controlled recovery as
+    /// <see cref="GotoAppReadyAsync"/>. Specs that reload a page (to prove state survives a reload, to re-run a boot
+    /// path) call this instead of <c>page.ReloadAsync()</c> + <c>WaitForAppReadyAsync</c>: a reload boots the WASM
+    /// runtime again, and a boot whose one framework fetch dies stalls for good without the recovery.
+    /// </summary>
+    protected async Task ReloadAppReadyAsync(IPage page)
+    {
+        var timeouts = ReadinessTimeouts.FromEnvironment();
+        var reloaded = false;
+        await ColdBootRecovery.RunAsync(
+            async () =>
+            {
+                if (!reloaded)
+                {
+                    reloaded = true;
+                    await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.Load, Timeout = timeouts.DomContentLoadedMs });
+                }
+
+                await WaitForAppReadyAsync(page);
+            },
+            () => RecoverBootAsync(() => page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.Load, Timeout = timeouts.DomContentLoadedMs })));
+    }
+
+    /// <summary>
+    /// The recovery step shared by <see cref="GotoAppReadyAsync"/> and <see cref="ReloadAppReadyAsync"/>. The readiness
+    /// gate timed out. Besides a slow first boot, the other cause is a host that DIED while the app was booting
+    /// (observed 2026-11-18: Demo WASM died mid-run and the recovery reload landed on net::ERR_CONNECTION_REFUSED).
+    /// Resurrect the hosts the same way a ClassInitialize would BEFORE the reload, and once more if the reload itself
+    /// still meets a refused connection (the host died between the probe and the reload). A second refusal still
+    /// propagates - the recovery stays bounded.
+    /// </summary>
+    private async Task RecoverBootAsync(Func<Task> reload)
+    {
+        await RecoverDemoHostsAsync();
+        try
+        {
+            await reload();
+        }
+        catch (PlaywrightException ex) when (IsConnectionRefused(ex))
+        {
+            await RecoverDemoHostsAsync();
+            await reload();
+        }
+    }
     /// <summary>
     /// Whether <paramref name="ex"/> is the browser-level "nothing is listening" error — the
     /// signature of a self-hosted demo host that died under the in-flight test.
@@ -423,7 +483,7 @@ public abstract class PlaywrightTestBase
 
     /// <summary>
     /// Closes all browser contexts that were created by the test via
-    /// <see cref="CreatePageAsync"/> or <see cref="CreateContextAsync"/>.
+    /// <see cref="CreatePageAsync"/> or <see cref="CreateContextAsync(BrowserNewContextOptions, bool)"/>.
     /// </summary>
     [TestCleanup]
     public async Task BaseTestCleanup()
@@ -607,6 +667,57 @@ public abstract class PlaywrightTestBase
             $"the layout never settled within 15s (fonts loading, a CSS transition running, the '{selector}' boxes/scroll still moving, or the selector matched no element) — geometry read now would be mid-reflow");
     }
 
+    /// <summary>
+    /// Waits until every FINITE animation inside <paramref name="scopeSelector"/> (the element and its subtree) has
+    /// finished, and asserts it did (10 s budget). Infinite animations (spinners, pulses) are ignored.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="WaitForLayoutToSettleAsync"/> watches CSS TRANSITIONS only, and an entrance animation that holds its
+    /// start state through a delay (<c>animation-delay</c>) looks perfectly stable until it plays. A spec that hovers
+    /// or clicks a moving target then fights Playwright's actionability retries. This helper reads
+    /// <c>getAnimations({ subtree: true })</c> (<c>running</c> and <c>pending</c> play states), loops until a pass
+    /// finds no finite animation still running (an animation that starts while waiting is caught by the next pass)
+    /// and races the whole loop against a 10 s timeout so a never-ending finite animation fails loudly instead of
+    /// hanging.
+    /// </remarks>
+    /// <returns><c>true</c> when the scope was animation-quiet within the budget (the call has already asserted it).</returns>
+    protected static async Task<bool> WaitForAnimationsToFinishAsync(IPage page, string scopeSelector)
+    {
+        var finished = await page.EvaluateAsync<bool>(
+            """
+            async (scopeSelector) => {
+                const scope = document.querySelector(scopeSelector);
+                if (!scope) {
+                    return false;
+                }
+
+                const isFiniteRunning = animation =>
+                    (animation.playState === 'running' || animation.playState === 'pending')
+                    && animation.effect
+                    && Number.isFinite(animation.effect.getComputedTiming().endTime);
+                let cancelled = false;
+                const drain = async () => {
+                    while (!cancelled) {
+                        const running = scope.getAnimations({ subtree: true }).filter(isFiniteRunning);
+                        if (running.length === 0) {
+                            return true;
+                        }
+
+                        await Promise.all(running.map(animation => animation.finished.catch(() => { })));
+                    }
+
+                    return false;
+                };
+                const timeout = new Promise(resolve => setTimeout(() => resolve(false), 10000));
+                const result = await Promise.race([drain(), timeout]);
+                cancelled = true;
+                return result;
+            }
+            """, scopeSelector);
+        Assert.IsTrue(finished,
+            $"the finite animations inside '{scopeSelector}' did not finish within 10s (or the scope matched no element) - a hover/click now would hit a moving target");
+        return finished;
+    }
     /// <summary>
     /// Takes a screenshot and attaches it to the test result.
     /// </summary>

@@ -372,7 +372,31 @@ configurable:
 - **One deadline per attempt.** `WaitForAppReadyAsync` measures one `ReadyMs` deadline per attempt; each sub-wait
   (DOMContentLoaded, shell selector, text fallback, `data-blazor-ready`) gets only the time that is left (at least 1 ms),
   so the pre-gates can never add up to more than `TM_E2E_READY_TIMEOUT_MS`.
-
+- **Rule: contexts and navigations go through the base.** A spec creates its browser context ONLY with
+  `PlaywrightTestBase.CreateContextAsync` (`(bool hasTouch)`, `(width, height, hasTouch, isMobile)` or the general
+  `(BrowserNewContextOptions options, bool trace = true)`; the options are cloned and get the suite defaults
+  `en-US`, `IgnoreHTTPSErrors`, `AcceptDownloads` and a 1280x720 viewport) and navigates ONLY with `GotoAppReadyAsync`
+  (a page) or `ReloadAppReadyAsync` (a reload of the current page). Both give the failure trace, the bounded,
+  relaunching context creation, the cleanup registration and the one controlled cold-boot reload; a hand-written
+  `Browser.NewContextAsync` + `GotoAsync` + `WaitForAppReadyAsync` has none of them (the 2026-11-20
+  `Scheduler_Touch_SwipeFromEventCentre_Scrolls_AndDoesNotResize (768)` run lost 120 s to exactly that).
+  **Exceptions** (permanent, with a reason in the guard): the Firefox legs that launch their own Playwright + Firefox
+  (`FilterableDropdown`, `NotionOverlayInModal`, `OverlayPanel`, `TmDataTableSortButton`, `TmDataTableSortButtonVisual`)
+  and the `ReportingF*` specs that start their own `dotnet` host.
+- **Ratchet.** `ReadinessInfrastructureTests.NoSpecOpensItsOwnContextOrBootsPastTheCentralRecovery_RatchetedByKnownOffenders`
+  scans every `*.cs` of the E2E project (comments stripped; `PlaywrightTestBase.cs` and the guard itself excluded) for
+  `.NewContextAsync(`, `.GotoAsync(...); await WaitForAppReadyAsync(` (and the `ReloadAsync` twin),
+  `WaitForFunctionAsync("...data-blazor-ready` and `RegisterContext(`. The hits of today are frozen in
+  `KnownOffenders` (file -> count + reason). The test fails for a NEW file, for a count that GROWS and for a count that
+  DROPS without the entry being lowered (delete the entry at zero), so converted code cannot regress and the list only
+  shrinks. Converting a file means: `CreateContextAsync(...)` + `GotoAppReadyAsync(page, url)`, then lower its entry.
+- **Cold-boot recovery proof.** `BootRecoveryE2ETests` cuts EVERY `_framework/*.wasm` request while the first document
+  is active (the runtime's `enableDownloadRetry` absorbs a single abort, so one cut proves nothing) and asserts that
+  `GotoAppReadyAsync` recovers with exactly one reload (two main-frame navigations). It fails when the recovery in
+  `GotoAppReadyAsync` is removed.
+- **Delayed entrance animations.** `WaitForLayoutToSettleAsync` only sees CSS transitions; a spec that must hover or
+  click an element that plays a delayed animation (chart points) calls `WaitForAnimationsToFinishAsync(page, scopeSelector)`
+  first (finite running/pending animations of the scope's subtree, 10 s budget, asserted).
 ## Practical notes for running locally
 
 - All four hosts are auto-started by `PlaywrightTestBase.EnsureDemoHostsAsync`

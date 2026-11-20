@@ -42,19 +42,13 @@ public class PointerDragE2ETests : WasmTestBase
 
     private async Task<IPage> OpenSchedulerDayAsync(bool touch, int width, int height)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
-        {
-            // Pin the locale: the demo follows the browser language, and a context without one inherits the host machine's (cs-CZ on the dev box) while the specs read English labels.
-            Locale = "en-US",
-            ViewportSize = new ViewportSize { Width = width, Height = height },
-            HasTouch = touch,
-            IsMobile = touch && width < 640,
-            IgnoreHTTPSErrors = true,
-        });
-        RegisterContext(context);
+        // CreateContextAsync pins the locale (the demo follows the browser language, and a context without one inherits
+        // the host machine's - cs-CZ on the dev box - while the specs read English labels), keeps the failure trace and
+        // relaunches a wedged browser. GotoAppReadyAsync navigates, gates on data-blazor-ready and recovers a boot that
+        // stalled (a WASM boot whose one framework fetch dies stays on "Loading components..." for good) with ONE reload.
+        var context = await CreateContextAsync(width, height, hasTouch: touch, isMobile: touch && width < 640);
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/scheduler", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/scheduler");
 
         var host = page.Locator("[data-testid='scheduler-interactive']");
         await host.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
@@ -349,17 +343,9 @@ public class PointerDragE2ETests : WasmTestBase
     [TestCategory("WASM")]
     public async Task EditorShell_Resizer_MouseDrag_Works_OnTheSharedHelper_EscapeRollsBack_AndOnlyThatShellMoves()
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
-        {
-            // Pin the locale: the demo follows the browser language, and a context without one inherits the host machine's (cs-CZ on the dev box) while the specs read English labels.
-            Locale = "en-US",
-            ViewportSize = new ViewportSize { Width = 1440, Height = 900 },
-            IgnoreHTTPSErrors = true,
-        });
-        RegisterContext(context);
+        var context = await CreateContextAsync(1440, 900);
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/editor-shell", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/editor-shell");
 
         var shell = "[data-testid='editor-shell']";
         var separator = page.Locator($"{shell} [role='separator'][data-side='left']");

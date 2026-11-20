@@ -94,7 +94,19 @@ public sealed class TmChartTimeAxisE2ETests : WasmTestBase
         var section = page.Locator("[data-testid='charts-time-axis-section']");
         var areaChart = section.Locator(".tm-chart").First;
         await section.ScrollIntoViewIfNeededAsync();
-        await page.WaitForTimeoutAsync(300);
+
+        // Hover only a SETTLED point. The chart plays an entrance animation (`tm-chart-point-pop`: r 0 -> 4, delayed
+        // 0.6 s, so ~1 s after the render) and the demo sets `html { scroll-behavior: smooth }`. A hover that lands
+        // inside that window meets a moving point: Playwright logs "element is not stable" and RETRIES the hover with
+        // a forced scroll-into-view, which the smooth scrolling turns into an animation of hundreds of pixels. The
+        // pointer then slides off the circle, `mouseout` hides the tooltip and the assertion times out (the same
+        // failure is in the 2026-09-24 full-run evidence, long before the 10b chart change, and it reproduced 4/4
+        // under CPU load). A fixed 300 ms sleep is no guarantee, so wait for the real signals instead: every finite
+        // animation of the section finished (WaitForAnimationsToFinishAsync; WaitForLayoutToSettleAsync only watches CSS
+        // transitions, and a delayed animation holds r=0 and looks stable), then fonts loaded and the point boxes + scroll position identical across
+        // 3 consecutive frames.
+        await WaitForAnimationsToFinishAsync(page, "[data-testid='charts-time-axis-section']");
+        await WaitForLayoutToSettleAsync(page, "[data-testid='charts-time-axis-section'] circle.tm-chart__point");
 
         await areaChart.Locator("circle.tm-chart__point").First.HoverAsync();
         var tooltip = areaChart.Locator("[data-testid='chart-tooltip']");
