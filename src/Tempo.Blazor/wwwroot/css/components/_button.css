@@ -229,6 +229,26 @@
   background-color: var(--tm-color-warning-subtle);
 }
 
+/* Outline danger (2.12.0): the quiet destructive action — a row-level "Delete" that must not
+   shout like the filled .tm-btn-danger. Every colour is a token the dark theme already
+   re-declares (--tm-color-danger-text #991b1b → #fca5a5, --tm-color-danger-soft-border,
+   --tm-color-danger-subtle → a translucent danger tint), so no dark block is needed. The ink
+   holds ≥ 4.5:1 on the surface and on the hover wash in both themes (TokenContrastTests
+   .OutlineDangerButton). The border is the soft tone by design: the ink and the label carry the
+   meaning, the border only frames the target. Focus keeps the danger ring like .tm-btn-danger. */
+.tm-btn.tm-btn-outline-danger {
+  background-color: transparent;
+  border-color: var(--tm-color-danger-soft-border);
+  color: var(--tm-color-danger-text);
+}
+.tm-btn.tm-btn-outline-danger:hover:not(:disabled) {
+  background-color: var(--tm-color-danger-subtle);
+}
+.tm-btn.tm-btn-outline-danger:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring-danger);
+}
+
 .tm-btn.tm-btn-link {
   background-color: transparent;
   border-color: transparent;

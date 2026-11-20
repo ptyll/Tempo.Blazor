@@ -2,7 +2,7 @@
   "itemName": "TmButton",
   "kind": "Component",
   "category": "Buttons",
-  "description": "General-purpose button component with multiple visual variants (Primary, Secondary, Ghost, Danger, Outline, OutlineSecondary, Warning, OutlineWarning, Link, Default), sizes (Xs, Sm, Md, Lg), optional icon, loading state with spinner, and full-width block mode. The base .tm-btn rule carries the medium height and padding (2.8.26), so a missing size class still yields a 38 px button. Since 2.9.0 the Default variant draws its border from --tm-border-color-control (was --tm-border-color), keeping the control boundary above the 3:1 WCAG 1.4.11 minimum against --tm-bg-surface in both themes. Since TG-007 (2.11.0) the button follows the interface density contract: inside a data-tm-density=\"compact\" ancestor the Md box height reads the compact --tm-input-height-md (32 px instead of 38 px); comfortable (no attribute) is unchanged.",
+  "description": "General-purpose button component with multiple visual variants (Primary, Secondary, Ghost, Danger, OutlineDanger, Outline, OutlineSecondary, Warning, OutlineWarning, Soft, Link, Default), sizes (Xs, Sm, Md, Lg), optional icon, loading state with spinner, and full-width block mode. The base .tm-btn rule carries the medium height and padding (2.8.26), so a missing size class still yields a 38 px button. Since 2.9.0 the Default variant draws its border from --tm-border-color-control (was --tm-border-color), keeping the control boundary above the 3:1 WCAG 1.4.11 minimum against --tm-bg-surface in both themes. Since TG-007 (2.11.0) the button follows the interface density contract: inside a data-tm-density=\"compact\" ancestor the Md box height reads the compact --tm-input-height-md (32 px instead of 38 px); comfortable (no attribute) is unchanged. Since 2.12.0 ButtonVariant.OutlineDanger is the quiet destructive outline for row-level actions such as Delete: transparent fill, --tm-color-danger-text ink, --tm-color-danger-soft-border border and a --tm-color-danger-subtle hover wash, readable in both themes through tokens that flip with the theme.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Buttons"
   ],
@@ -108,6 +108,7 @@
     "tm-btn-secondary",
     "tm-btn-ghost",
     "tm-btn-danger",
+    "tm-btn-outline-danger",
     "tm-btn-outline",
     "tm-btn-outline-secondary",
     "tm-btn-warning",
@@ -146,6 +147,10 @@
     {
       "title": "Neutral outline button",
       "code": "<TmButton Variant=\"ButtonVariant.OutlineSecondary\">Back</TmButton>"
+    },
+    {
+      "title": "Quiet destructive row action (2.12.0)",
+      "code": "<TmButton Variant=\"ButtonVariant.OutlineDanger\" Size=\"ButtonSize.Sm\" Icon=\"trash\" OnClick=\"() => Remove(row)\">Delete</TmButton>"
     },
     {
       "title": "Full-width submit button",

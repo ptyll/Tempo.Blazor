@@ -97,7 +97,11 @@ with the `Highlight`/`HighlightText` pair, because a background painted from tok
 - `Size` — `Sm` (32 px), `Md` (38 px, the default) and `Lg` (44 px); `Sm`/`Md` line the tray up with the
   input heights beside it. On `(pointer: coarse)` every size grows to the 44 px `--tm-touch-target`.
 - `FullWidth` — the tray fills its container and shares the width equally between the segments. Without it
-  the tray hugs its content and scrolls when it runs out of room.
+  the tray hugs its content and scrolls when it runs out of room. Since 2.12.0 a `FullWidth` segment pads
+  with `var(--tm-segmented-full-width-padding-inline)` (declared on `:root`, default `var(--tm-space-1)`) for every size instead of the
+  size's own padding, so seven short labels (Mo–Su) fit a 360–390 px column instead of clipping to "M…";
+  set the token to `0` on the tray for the narrowest sets. A label that is genuinely too long still
+  ellipsises. The demo card "Weekdays, full width" on `/data-display` shows it.
 - `SegmentedOption.Count` and `SegmentedOption.Badge` — plain TEXT inside the segment, so they are part of
   its accessible name ("Inbox 12"); the count uses tabular figures and the badge is a small pill. They are
   never the only carrier of information and never a colour-only cue.

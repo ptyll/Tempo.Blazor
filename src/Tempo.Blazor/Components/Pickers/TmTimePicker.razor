@@ -28,7 +28,7 @@
                      MaxTime="@MaxTime"
                      Invalid="@IsOutOfRange" />
 
-        @if (Value.HasValue && !Disabled)
+        @if (Value.HasValue && !Disabled && !HideClear)
         {
             <button type="button"
                     class="tm-picker-clear"
@@ -56,6 +56,14 @@
     [Parameter] public string?    Placeholder  { get; set; }
     [Parameter] public bool       Disabled     { get; set; }
     [Parameter] public bool       Required     { get; set; }
+    /// <summary>
+    /// Hides the "✕" clear button that is otherwise rendered while a <see cref="Value"/> is set and the picker is
+    /// not <see cref="Disabled"/>. Parity with <c>TmDateTimePicker.HideClear</c>. The value stays editable segment by
+    /// segment; only the one-click clear is removed. Defaults to <c>false</c>. <see cref="Required"/> does not hide
+    /// the button implicitly (same as <c>TmDatePicker</c> / <c>TmDateTimePicker</c>) — a host with a mandatory field
+    /// passes <c>HideClear="true"</c> explicitly.
+    /// </summary>
+    [Parameter] public bool       HideClear    { get; set; }
     [Parameter] public string?    Label        { get; set; }
     [Parameter] public string?    Class        { get; set; }
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }

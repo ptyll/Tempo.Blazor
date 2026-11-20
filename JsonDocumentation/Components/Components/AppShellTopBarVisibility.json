@@ -1,0 +1,21 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Layout",
+  "description": "On which layouts an TmAppShell renders its top bar region (2.12.0). The rule governs the whole bar — the built-in TmTopBar and a host TopBar slot alike — and the bar is left out of the DOM, not hidden by CSS, so no empty banner landmark remains.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/Layout/AppShellTopBarVisibility.cs",
+  "documentationStatus": "documented",
+  "itemName": "AppShellTopBarVisibility",
+  "members": [
+    {
+      "name": "Always",
+      "description": "The bar renders on every layout whenever there is bar content (the behaviour before 2.12.0, and the default)."
+    },
+    {
+      "name": "CompactOnly",
+      "description": "The bar renders only on a compact layout — a tablet or a phone container — and is left out on a desktop one. A desktop whose brand and account already live in the docked sidebar header and footer needs no second bar, so the host no longer hides the frame header with its own CSS. The phone hamburger is unaffected: a phone is compact, so its bar (and the opener inside it) keeps rendering."
+    }
+  ],
+  "usageExample": "<TmAppShell Title=\"Acme\" TopBarVisibility=\"AppShellTopBarVisibility.CompactOnly\" NavItems=\"@items\">…</TmAppShell>"
+}

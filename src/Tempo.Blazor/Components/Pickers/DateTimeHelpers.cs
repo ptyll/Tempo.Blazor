@@ -63,7 +63,7 @@ internal static class DateTimeHelpers
     }
 
     /// <summary>
-    /// Full weekday names in the same order as <see cref="GetDayHeaders"/>. Header cells are
+    /// Full weekday names in the same order as <see cref="GetDayHeaders(CultureInfo, DayOfWeek)"/>. Header cells are
     /// generic, so the abbreviated text stays visible and the full name is the accessible name
     /// (an <c>abbr</c> title, or a screen-reader-only span).
     /// </summary>

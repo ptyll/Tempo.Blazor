@@ -3749,7 +3749,7 @@
       "kind": "Component",
       "category": "Buttons",
       "namespace": "Tempo.Blazor.Components.Buttons",
-      "description": "General-purpose button component with multiple visual variants (Primary, Secondary, Ghost, Danger, Outline, OutlineSecondary, Warning, OutlineWarning, Link, Default), sizes (Xs, Sm, Md, Lg), optional icon, loading state with spinner, and full-width block mode. The base .tm-btn rule carries the medium height and padding (2.8.26), so a missing size class still yields a 38 px button. Since 2.9.0 the Default variant draws its border from --tm-border-color-control (was --tm-border-color), keeping the control boundary above the 3:1 WCAG 1.4.11 minimum against --tm-bg-surface in both themes. Since TG-007 (2.11.0) the button follows the interface density contract: inside a data-tm-density=\"compact\" ancestor the Md box height reads the compact --tm-input-height-md (32 px instead of 38 px); comfortable (no attribute) is unchanged.",
+      "description": "General-purpose button component with multiple visual variants (Primary, Secondary, Ghost, Danger, OutlineDanger, Outline, OutlineSecondary, Warning, OutlineWarning, Soft, Link, Default), sizes (Xs, Sm, Md, Lg), optional icon, loading state with spinner, and full-width block mode. The base .tm-btn rule carries the medium height and padding (2.8.26), so a missing size class still yields a 38 px button. Since 2.9.0 the Default variant draws its border from --tm-border-color-control (was --tm-border-color), keeping the control boundary above the 3:1 WCAG 1.4.11 minimum against --tm-bg-surface in both themes. Since TG-007 (2.11.0) the button follows the interface density contract: inside a data-tm-density=\"compact\" ancestor the Md box height reads the compact --tm-input-height-md (32 px instead of 38 px); comfortable (no attribute) is unchanged. Since 2.12.0 ButtonVariant.OutlineDanger is the quiet destructive outline for row-level actions such as Delete: transparent fill, --tm-color-danger-text ink, --tm-color-danger-soft-border border and a --tm-color-danger-subtle hover wash, readable in both themes through tokens that flip with the theme.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Buttons/TmButton.razor",
       "documentationStatus": "merged",
@@ -3858,6 +3858,7 @@
         "tm-btn-secondary",
         "tm-btn-ghost",
         "tm-btn-danger",
+        "tm-btn-outline-danger",
         "tm-btn-outline",
         "tm-btn-outline-secondary",
         "tm-btn-warning",
@@ -3896,6 +3897,10 @@
         {
           "title": "Neutral outline button",
           "code": "<TmButton Variant=\"ButtonVariant.OutlineSecondary\">Back</TmButton>"
+        },
+        {
+          "title": "Quiet destructive row action (2.12.0)",
+          "code": "<TmButton Variant=\"ButtonVariant.OutlineDanger\" Size=\"ButtonSize.Sm\" Icon=\"trash\" OnClick=\"() => Remove(row)\">Delete</TmButton>"
         },
         {
           "title": "Full-width submit button",
@@ -6055,6 +6060,27 @@
         }
       ],
       "usageExample": "<TmAppShell MobileNav=\"AppShellMobileNav.BottomNavigation\" NavItems=\"@items\">…</TmAppShell>"
+    },
+    {
+      "itemName": "AppShellTopBarVisibility",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Layout",
+      "description": "On which layouts an TmAppShell renders its top bar region (2.12.0). The rule governs the whole bar — the built-in TmTopBar and a host TopBar slot alike — and the bar is left out of the DOM, not hidden by CSS, so no empty banner landmark remains.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Layout/AppShellTopBarVisibility.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Always",
+          "description": "The bar renders on every layout whenever there is bar content (the behaviour before 2.12.0, and the default)."
+        },
+        {
+          "name": "CompactOnly",
+          "description": "The bar renders only on a compact layout — a tablet or a phone container — and is left out on a desktop one. A desktop whose brand and account already live in the docked sidebar header and footer needs no second bar, so the host no longer hides the frame header with its own CSS. The phone hamburger is unaffected: a phone is compact, so its bar (and the opener inside it) keeps rendering."
+        }
+      ],
+      "usageExample": "<TmAppShell Title=\"Acme\" TopBarVisibility=\"AppShellTopBarVisibility.CompactOnly\" NavItems=\"@items\">…</TmAppShell>"
     },
     {
       "itemName": "AppShellVariant",
@@ -22948,7 +22974,7 @@
           "name": "FullWidth",
           "type": "bool",
           "isRequired": false,
-          "description": "Stretches the tray to the full width of its container and shares that width equally between the segments. Default false — the tray hugs its content and scrolls when it runs out of room.",
+          "description": "Stretches the tray to the full width of its container and shares that width equally between the segments. Default false — the tray hugs its content and scrolls when it runs out of room. Since 2.12.0 a FullWidth segment drops its inline padding to a thin gutter (--tm-segmented-full-width-padding-inline, declared on :root with the default var(--tm-space-1); a host sets it to 0 on :root or an ancestor for the narrowest sets) for every size, so seven short labels (Mo–Su) fit a 360–390 px column instead of clipping to \"M…\"; a label that is genuinely too long still ellipsises.",
           "default": "false"
         },
         {
@@ -23020,6 +23046,10 @@
         {
           "title": "Period switcher bound to a value",
           "code": "@code {\n    private string? period = \"month\";\n\n    private readonly IReadOnlyList<SegmentedOption<string>> periods =\n    [\n        new() { Label = \"Month\", Value = \"month\" },\n        new() { Label = \"Week\", Value = \"week\" },\n        new() { Label = \"Day\", Value = \"day\" }\n    ];\n}\n\n<TmSegmentedControl TValue=\"string\" Label=\"Period\"\n                    Options=\"periods\" @bind-Value=\"period\" />"
+        },
+        {
+          "title": "Seven weekdays across a phone-width column (2.12.0)",
+          "code": "<TmSegmentedControl TValue=\"string\" FullWidth=\"true\" Label=\"Day\"\n                    Options=\"weekdays\" @bind-Value=\"day\" />"
         },
         {
           "title": "View switcher with counts and a disabled segment",
@@ -24436,6 +24466,12 @@
           "description": "Entries of the phone bottom bar, used when MobileNav is BottomNavigation. Null (the default) derives one entry per top-level item of the navigation model (NavItems, or every section's items in order, ignoring sub-entries) — pass this when the bar needs its own labels, icons or a subset of the destinations (a bottom bar is comfortable up to about five)."
         },
         {
+          "name": "BrandContent",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Custom brand content (a logo) of the built-in top bar, passed to the TmTopBar BrandContent slot so a logo needs no custom TopBar (2.12.0, additive). When set it replaces the plain Title text in the bar brand area (give the logo its own accessible name) and counts as bar content on its own. Ignored while a host TopBar slot replaces the built-in bar."
+        },
+        {
           "name": "Breakpoints",
           "type": "TmLayoutBreakpoints?",
           "isRequired": false,
@@ -24579,6 +24615,13 @@
           "description": "Actions of the built-in top bar, right-aligned (a theme switch, a command-palette trigger)."
         },
         {
+          "name": "TopBarVisibility",
+          "type": "AppShellTopBarVisibility",
+          "isRequired": false,
+          "default": "AppShellTopBarVisibility.Always",
+          "description": "On which layouts the top bar region renders (2.12.0, additive). Always (default) renders it on every layout whenever there is bar content, as before. CompactOnly leaves it out of the DOM on a desktop layout and keeps it on a tablet and a phone, so a desktop with the brand in the sidebar header needs no host CSS that hides the frame header and no empty banner landmark remains. Applies to the built-in bar and to a host TopBar slot alike; the phone hamburger lives in the phone bar and is never lost."
+        },
+        {
           "name": "User",
           "type": "IUserInfo?",
           "isRequired": false,
@@ -24707,6 +24750,10 @@
           "code": "<TmAppShell Title=\"Acme\"\n            MobileNav=\"AppShellMobileNav.BottomNavigation\"\n            NavItems=\"@topLevelItems\"\n            BottomNavItemClicked=\"@OnDestinationTapped\">\n    <ChildContent>@Body</ChildContent>\n</TmAppShell>"
         },
         {
+          "title": "Logo in the built-in bar, and no bar on a desktop that carries the brand in the sidebar (2.12.0)",
+          "code": "<TmAppShell Title=\"Acme\"\n            TopBarVisibility=\"AppShellTopBarVisibility.CompactOnly\"\n            NavSections=\"@navSections\">\n    <BrandContent><img src=\"/logo.svg\" alt=\"Acme\" /></BrandContent>\n    <SidebarHeader><img src=\"/logo.svg\" alt=\"Acme\" /></SidebarHeader>\n    <ChildContent>@Body</ChildContent>\n</TmAppShell>"
+        },
+        {
           "title": "A custom bar with its own opener drives the phone drawer",
           "code": "<TmAppShell @ref=\"shell\" TopBar=\"@customBar\" ShowTopBarMenuButton=\"false\">\n    <ChildContent>@Body</ChildContent>\n</TmAppShell>\n\n<button type=\"button\" @onclick=\"() => shell.OpenNavigationAsync()\">Menu</button>"
         }
@@ -24741,6 +24788,11 @@
           "name": "AppShellMobileNav",
           "description": "How a phone layout presents the navigation",
           "parameter": "MobileNav"
+        },
+        {
+          "name": "AppShellTopBarVisibility",
+          "description": "On which layouts the top bar region renders",
+          "parameter": "TopBarVisibility"
         },
         {
           "name": "BottomNavItem",
@@ -28928,6 +28980,12 @@
           "name": "Disabled",
           "type": "bool",
           "isRequired": false
+        },
+        {
+          "name": "HideClear",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Hides the \"✕\" clear button that is otherwise rendered while a Value is set and the picker is not Disabled. Parity with TmDateTimePicker.HideClear. The value stays editable segment by segment; only the one-click clear is removed. Defaults to false. Required does not hide the button implicitly (same as TmDatePicker / TmDateTimePicker) — a host with a mandatory field passes HideClear=\"true\" explicitly."
         },
         {
           "name": "Label",
@@ -37170,11 +37228,11 @@
     }
   ],
   "summary": {
-    "itemCount": 465,
-    "manualItemCount": 465,
-    "generatedItemCount": 457,
+    "itemCount": 466,
+    "manualItemCount": 466,
+    "generatedItemCount": 458,
     "generatedOnlyItemCount": 0,
     "componentCount": 238,
-    "publicApiTypeCount": 219
+    "publicApiTypeCount": 220
   }
 }

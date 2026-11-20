@@ -181,8 +181,20 @@ public partial class TmAppShell
     private IReadOnlyList<ISidebarNavItem> EffectiveNavItems
         => NavSections is { Count: > 0 } ? Array.Empty<ISidebarNavItem>() : NavItems ?? Array.Empty<ISidebarNavItem>();
 
-    private bool HasTopBar => TopBar is not null
+    /// <summary>
+    /// Whether the top bar region renders: there is bar content AND <see cref="TmAppShell.TopBarVisibility"/>
+    /// admits the resolved layout. The visibility rule is a markup decision (the region is not in the DOM),
+    /// so a desktop <see cref="AppShellTopBarVisibility.CompactOnly"/> shell carries no empty banner.
+    /// </summary>
+    private bool HasTopBar => TopBarVisibleOnThisLayout && HasTopBarContent;
+
+    /// <summary>A desktop layout drops the bar under <see cref="AppShellTopBarVisibility.CompactOnly"/>; a tablet and a phone keep it.</summary>
+    private bool TopBarVisibleOnThisLayout
+        => TopBarVisibility != AppShellTopBarVisibility.CompactOnly || Resolved != TmLayoutMode.Desktop;
+
+    private bool HasTopBarContent => TopBar is not null
         || !string.IsNullOrWhiteSpace(Title)
+        || BrandContent is not null
         || TopBarActions is not null
         || User is not null
         // A phone frame with navigation but no bar content still needs a bar: that is where the

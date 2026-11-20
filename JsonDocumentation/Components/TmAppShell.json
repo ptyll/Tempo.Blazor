@@ -123,6 +123,19 @@
       "description": "Custom top bar content, replacing the built-in bar. Rendered inside the shell's own header element, so the content must not render a second header landmark (a composed TmTopBar passes IsLandmark=\"false\"). On a phone in Drawer mode the frame renders its own hamburger in front of the slot (opt out with ShowTopBarMenuButton=\"false\")."
     },
     {
+      "name": "TopBarVisibility",
+      "type": "AppShellTopBarVisibility",
+      "isRequired": false,
+      "default": "Always",
+      "description": "On which layouts the top bar region renders (2.12.0, additive). Always (default) renders it on every layout whenever there is bar content, as before. CompactOnly leaves it out of the DOM on a desktop layout and keeps it on a tablet and a phone, so a desktop with the brand in the sidebar header needs no host CSS that hides the frame header and no empty banner landmark remains. Applies to the built-in bar and to a host TopBar slot alike; the phone hamburger lives in the phone bar and is never lost."
+    },
+    {
+      "name": "BrandContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Custom brand content (a logo) of the built-in top bar, passed to the TmTopBar BrandContent slot so a logo needs no custom TopBar (2.12.0, additive). When set it replaces the plain Title text in the bar brand area (give the logo its own accessible name) and counts as bar content on its own. Ignored while a host TopBar slot replaces the built-in bar."
+    },
+    {
       "name": "Title",
       "type": "string?",
       "isRequired": false,
@@ -293,6 +306,10 @@
       "code": "<TmAppShell Title=\"Acme\"\n            MobileNav=\"AppShellMobileNav.BottomNavigation\"\n            NavItems=\"@topLevelItems\"\n            BottomNavItemClicked=\"@OnDestinationTapped\">\n    <ChildContent>@Body</ChildContent>\n</TmAppShell>"
     },
     {
+      "title": "Logo in the built-in bar, and no bar on a desktop that carries the brand in the sidebar (2.12.0)",
+      "code": "<TmAppShell Title=\"Acme\"\n            TopBarVisibility=\"AppShellTopBarVisibility.CompactOnly\"\n            NavSections=\"@navSections\">\n    <BrandContent><img src=\"/logo.svg\" alt=\"Acme\" /></BrandContent>\n    <SidebarHeader><img src=\"/logo.svg\" alt=\"Acme\" /></SidebarHeader>\n    <ChildContent>@Body</ChildContent>\n</TmAppShell>"
+    },
+    {
       "title": "A custom bar with its own opener drives the phone drawer",
       "code": "<TmAppShell @ref=\"shell\" TopBar=\"@customBar\" ShowTopBarMenuButton=\"false\">\n    <ChildContent>@Body</ChildContent>\n</TmAppShell>\n\n<button type=\"button\" @onclick=\"() => shell.OpenNavigationAsync()\">Menu</button>"
     }
@@ -327,6 +344,11 @@
       "name": "AppShellMobileNav",
       "description": "How a phone layout presents the navigation",
       "parameter": "MobileNav"
+    },
+    {
+      "name": "AppShellTopBarVisibility",
+      "description": "On which layouts the top bar region renders",
+      "parameter": "TopBarVisibility"
     },
     {
       "name": "BottomNavItem",

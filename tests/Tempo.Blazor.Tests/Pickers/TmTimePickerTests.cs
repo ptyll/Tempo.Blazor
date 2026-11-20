@@ -126,6 +126,57 @@ public class TmTimePickerTests : LocalizationTestBase
     }
 
     [Fact]
+    public void TimePicker_HideClear_DefaultsToFalse_AndKeepsClearButton()
+    {
+        new TmTimePicker().HideClear.Should().BeFalse();
+
+        var cut = Render<TmTimePicker>(p => p.Add(c => c.Value, new TimeOnly(10, 0)));
+
+        cut.FindAll(".tm-picker-clear").Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void TimePicker_HideClear_True_RemovesClearButton_ButKeepsValueEditable()
+    {
+        TimeOnly? captured = null;
+        var cut = Render<TmTimePicker>(p => p
+            .Add(c => c.Value,        new TimeOnly(10, 0))
+            .Add(c => c.HideClear,    true)
+            .Add(c => c.ValueChanged, (TimeOnly? v) => captured = v));
+
+        cut.FindAll(".tm-picker-clear").Should().BeEmpty();
+        cut.Find(".tm-time-seg--hours").GetAttribute("value").Should().Be("10");
+
+        cut.Find(".tm-time-seg--hours").Change("11");
+
+        captured.Should().Be(new TimeOnly(11, 0));
+    }
+
+    [Fact]
+    public void TimePicker_HideClear_False_DoesNotRenderClearWithoutValueOrWhenDisabled()
+    {
+        Render<TmTimePicker>().FindAll(".tm-picker-clear").Should().BeEmpty();
+
+        Render<TmTimePicker>(p => p
+            .Add(c => c.Value,    new TimeOnly(10, 0))
+            .Add(c => c.Disabled, true))
+            .FindAll(".tm-picker-clear").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void TimePicker_Required_DoesNotHideClearImplicitly()
+    {
+        // Parity with TmDatePicker / TmDateTimePicker: Required only marks the label. Hiding the
+        // clear button is the explicit HideClear opt-in, so a required field can still be emptied
+        // (and then reports its own validation error) unless the host asks otherwise.
+        var cut = Render<TmTimePicker>(p => p
+            .Add(c => c.Value,    new TimeOnly(10, 0))
+            .Add(c => c.Required, true));
+
+        cut.FindAll(".tm-picker-clear").Should().HaveCount(1);
+    }
+
+    [Fact]
     public void TimePicker_Disabled_RendersDisabled()
     {
         var cut = Render<TmTimePicker>(p => p.Add(c => c.Disabled, true));

@@ -418,6 +418,14 @@
      so a host override on :root or any wrapper ancestor reaches the sticky strip; a
      declaration on the component's own class would beat every inherited value. */
   --tm-tabs-sticky-top: 0;
+
+  /* TmSegmentedControl FullWidth inline padding (2.12.0). A FullWidth segment shares the row equally,
+     so short labels (Mo–Su in a 360–390 px column) need a thin gutter instead of the size padding.
+     Declared on :root — NOT on .tm-segmented--full-width — so a host sets it to 0 on :root or on any
+     wrapper ancestor for the narrowest sets; a declaration on the component's own class would beat
+     every inherited value. */
+  --tm-segmented-full-width-padding-inline: var(--tm-space-1);
+
   --tm-color-surface:          var(--tm-bg-surface);
   --tm-color-surface-secondary: var(--tm-bg-surface-secondary);
   --tm-color-surface-elevated: var(--tm-color-white);

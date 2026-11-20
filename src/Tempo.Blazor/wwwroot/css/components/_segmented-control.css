@@ -202,6 +202,21 @@
   font-size: var(--tm-font-size-md);
 }
 
+/* FullWidth with many short segments (seven weekdays Mo–Su in a 360–390 px column, 2.12.0). The
+   segments share the row equally (flex: 1 1 0) and centre their content, so the inline padding is what
+   decides how much of an equal share is left for the label: with the Md padding (--tm-space-3 twice) a
+   ~36px share kept ~12px for "Mo" and the label was clipped to "M…". The padding therefore drops to a
+   thin gutter here, for EVERY size — it costs nothing when the shares are wide (the content is centred
+   in the segment either way) and is the whole difference when they are not. The knob
+   --tm-segmented-full-width-padding-inline (declared on :root in tokens.css, default
+   var(--tm-space-1)) lets a host go to 0 for the narrowest sets. The selector has
+   three classes on purpose: the size rules above (`.tm-segmented--lg .tm-segmented__option`, two classes)
+   come EARLIER and would otherwise tie or win on order. The label's own ellipsis stays as the safety net
+   for a label that is genuinely too long. */
+.tm-segmented.tm-segmented--full-width .tm-segmented__option {
+  padding-inline: var(--tm-segmented-full-width-padding-inline);
+}
+
 .tm-segmented--disabled {
   opacity: 0.75;
 }

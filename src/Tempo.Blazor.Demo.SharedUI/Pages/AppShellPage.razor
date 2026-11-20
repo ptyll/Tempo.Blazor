@@ -89,6 +89,25 @@
                 }
             </div>
 
+            <div class="app-shell-page__control" role="group" aria-label="@Loc["TmAppShellDemo_TopBarGroup"]">
+                <span class="app-shell-page__control-label">@Loc["TmAppShellDemo_TopBarLabel"]</span>
+                <button type="button"
+                        class="tm-btn tm-btn-secondary tm-btn-sm"
+                        data-testid="app-shell-topbar-always"
+                        aria-pressed="@BoolText(_topBarVisibility == AppShellTopBarVisibility.Always)"
+                        @onclick="() => _topBarVisibility = AppShellTopBarVisibility.Always">@Loc["TmAppShellDemo_TopBarAlways"]</button>
+                <button type="button"
+                        class="tm-btn tm-btn-secondary tm-btn-sm"
+                        data-testid="app-shell-topbar-compact"
+                        aria-pressed="@BoolText(_topBarVisibility == AppShellTopBarVisibility.CompactOnly)"
+                        @onclick="() => _topBarVisibility = AppShellTopBarVisibility.CompactOnly">@Loc["TmAppShellDemo_TopBarCompactOnly"]</button>
+                <button type="button"
+                        class="tm-btn tm-btn-secondary tm-btn-sm"
+                        data-testid="app-shell-brand-logo-toggle"
+                        aria-pressed="@BoolText(_brandLogo)"
+                        @onclick="() => _brandLogo = !_brandLogo">@Loc["TmAppShellDemo_BrandLogo"]</button>
+            </div>
+
             <div class="app-shell-page__control">
                 <button type="button"
                         class="tm-btn tm-btn-secondary tm-btn-sm"
@@ -116,6 +135,8 @@
                 <TmAppShell TestIdPrefix="shell"
                             Variant="_variant"
                             Title="@Loc["TmAppShellDemo_Brand"]"
+                            TopBarVisibility="_topBarVisibility"
+                            BrandContent="@(_brandLogo ? BrandLogoContent : null)"
                             NavSections="_navSections"
                             SidebarNavLabel="@Loc["TmAppShellDemo_NavLabel"]"
                             WorkAreaLabel="@Loc["TmAppShellDemo_SourcesTitle"]"
@@ -327,6 +348,8 @@
     ];
 
     private AppShellVariant _variant = AppShellVariant.Inset;
+    private AppShellTopBarVisibility _topBarVisibility = AppShellTopBarVisibility.Always;
+    private bool _brandLogo;
     private string _widthPreset = "fit";
     private bool _workAreaOpen;
     private int _workAreaWidth = 420;
@@ -356,6 +379,12 @@
     };
 
     private static string BoolText(bool value) => value ? "true" : "false";
+
+    /// <summary>The logo the built-in top bar shows instead of the plain title (an icon plus the brand name, so the accessible name is the text).</summary>
+    private RenderFragment BrandLogoContent => @<span class="app-shell-page__brand" data-testid="app-shell-brand-logo">
+        <TmIcon Name="@IconNames.Layout" Size="IconSize.Sm" />
+        <span>@Loc["TmAppShellDemo_Brand"]</span>
+    </span>;
 
     private static string CssMode(TmLayoutMode mode) => mode switch
     {

@@ -587,6 +587,17 @@
                                     Options="_segmentedLong" @bind-Value="_segmentedLongValue" />
             </div>
         </div>
+        <div class="showcase-card flex flex-col gap-3 lg:col-span-2" data-testid="segmented-weekdays-card">
+            @* FullWidth + seven short segments in a phone-width column (2.12.0): the labels must stay whole
+               ("Mo", not "M…"). The abbreviations come from the current culture, so no weekday text is hardcoded. *@
+            <div class="w-[22.5rem] max-w-full" data-testid="segmented-weekdays-narrow">
+                <TmSegmentedControl TValue="string" FullWidth="true"
+                                    Label="@Loc["TmDataDisplayDemo_SegmentedWeekdays"]"
+                                    Options="_segmentedWeekdays"
+                                    @bind-Value="_segmentedWeekday"
+                                    DataTestId="segmented-weekdays" />
+            </div>
+        </div>
     </div>
     <DemoCrossLinks LabelKey="TmDemo_FullScenario"
                     Links="DemoCrossLinkSets.AnalyticsKitScenario"
@@ -620,6 +631,21 @@
         new() { Label = "Revenue", Value = "revenue" }
     ];
 
+    // Seven weekdays, Monday first, with the current culture's short names (FullWidth demo, 2.12.0).
+    private IReadOnlyList<SegmentedOption<string>>? _segmentedWeekdaysCache;
+    private IReadOnlyList<SegmentedOption<string>> _segmentedWeekdays => _segmentedWeekdaysCache ??= Enumerable.Range(0, 7)
+        .Select(offset =>
+        {
+            var day = (DayOfWeek)(((int)DayOfWeek.Monday + offset) % 7);
+            return new SegmentedOption<string>
+            {
+                Label = System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetShortestDayName(day),
+                Value = day.ToString().ToLowerInvariant()
+            };
+        })
+        .ToList();
+
+    private string? _segmentedWeekday = "monday";
     private string? _segmentedPeriod = "week";
     private string? _segmentedSmall = "day";
     private string? _segmentedMedium = "week";

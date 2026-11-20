@@ -277,6 +277,11 @@ public abstract class AppShellE2EBase : PlaywrightTestBase
         var workArea = page.GetByTestId("shell-app-shell-work-area");
         var before = (await workArea.BoundingBoxAsync())!.Width;
 
+        // The raw mouse works in VIEWPORT coordinates and (unlike a locator click) never scrolls: bring
+        // the separator's midpoint into view first, or a control row above the stage that wraps onto one
+        // more line pushes the separator under the fold and the drag lands on nothing.
+        await separator.EvaluateAsync("el => el.scrollIntoView({ block: 'center', behavior: 'instant' })");
+        await page.WaitForTimeoutAsync(150);
         var box = (await separator.BoundingBoxAsync())!;
         var y = box.Y + box.Height / 2;
         await page.Mouse.MoveAsync(box.X + box.Width / 2, y);

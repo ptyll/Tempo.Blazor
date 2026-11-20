@@ -148,6 +148,24 @@ public partial class TmAppShell
     /// </summary>
     [Parameter] public RenderFragment? TopBar { get; set; }
 
+    /// <summary>
+    /// On which layouts the top bar region renders. <see cref="AppShellTopBarVisibility.Always"/>
+    /// (default) renders it on every layout whenever there is bar content, as before 2.12.0.
+    /// <see cref="AppShellTopBarVisibility.CompactOnly"/> leaves it out of the DOM on a desktop layout
+    /// and keeps it on a tablet and a phone, so a desktop with the brand in the sidebar header needs no
+    /// host CSS that hides the frame's header. Applies to the built-in bar and to a host
+    /// <see cref="TopBar"/> slot alike; the phone hamburger lives in the phone's bar and is never lost.
+    /// </summary>
+    [Parameter] public AppShellTopBarVisibility TopBarVisibility { get; set; } = AppShellTopBarVisibility.Always;
+
+    /// <summary>
+    /// Custom brand content (a logo) of the built-in top bar, passed to its <c>BrandContent</c> slot so a
+    /// logo needs no custom <see cref="TopBar"/>. When set it replaces the plain <see cref="Title"/> text
+    /// in the bar's brand area (give the logo its own accessible name), and it counts as bar content on its
+    /// own. Ignored while a host <see cref="TopBar"/> slot replaces the built-in bar.
+    /// </summary>
+    [Parameter] public RenderFragment? BrandContent { get; set; }
+
     /// <summary>Brand title of the built-in top bar (usually the application name). Without it, and without any other bar content, the shell renders no header at all.</summary>
     [Parameter] public string? Title { get; set; }
 

@@ -38,7 +38,7 @@
       "type": "bool",
       "isRequired": false,
       "default": "false",
-      "description": "Stretches the tray to the full width of its container and shares that width equally between the segments. Default false — the tray hugs its content and scrolls when it runs out of room."
+      "description": "Stretches the tray to the full width of its container and shares that width equally between the segments. Default false — the tray hugs its content and scrolls when it runs out of room. Since 2.12.0 a FullWidth segment drops its inline padding to a thin gutter (--tm-segmented-full-width-padding-inline, declared on :root with the default var(--tm-space-1); a host sets it to 0 on :root or an ancestor for the narrowest sets) for every size, so seven short labels (Mo–Su) fit a 360–390 px column instead of clipping to \"M…\"; a label that is genuinely too long still ellipsises."
     },
     {
       "name": "Role",
@@ -108,6 +108,10 @@
     {
       "title": "Period switcher bound to a value",
       "code": "@code {\n    private string? period = \"month\";\n\n    private readonly IReadOnlyList<SegmentedOption<string>> periods =\n    [\n        new() { Label = \"Month\", Value = \"month\" },\n        new() { Label = \"Week\", Value = \"week\" },\n        new() { Label = \"Day\", Value = \"day\" }\n    ];\n}\n\n<TmSegmentedControl TValue=\"string\" Label=\"Period\"\n                    Options=\"periods\" @bind-Value=\"period\" />"
+    },
+    {
+      "title": "Seven weekdays across a phone-width column (2.12.0)",
+      "code": "<TmSegmentedControl TValue=\"string\" FullWidth=\"true\" Label=\"Day\"\n                    Options=\"weekdays\" @bind-Value=\"day\" />"
     },
     {
       "title": "View switcher with counts and a disabled segment",

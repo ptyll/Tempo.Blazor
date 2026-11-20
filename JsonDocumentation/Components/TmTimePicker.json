@@ -48,6 +48,11 @@
       "isRequired": false
     },
     {
+      "name": "HideClear",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
       "name": "Label",
       "type": "string?",
       "isRequired": false

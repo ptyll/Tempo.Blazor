@@ -72,6 +72,7 @@ public class TmButtonTests : LocalizationTestBase
     [InlineData(ButtonVariant.OutlineSecondary, "tm-btn-outline-secondary")]
     [InlineData(ButtonVariant.Warning, "tm-btn-warning")]
     [InlineData(ButtonVariant.OutlineWarning, "tm-btn-outline-warning")]
+    [InlineData(ButtonVariant.OutlineDanger, "tm-btn-outline-danger")]
     public void TmButton_Applies_Variant_CssClass(ButtonVariant variant, string expectedClass)
     {
         var cut = Render<TmButton>(p => p
@@ -551,6 +552,36 @@ public class TmButtonTests : LocalizationTestBase
             .AddChildContent("Click"));
 
         cut.Find("button").ClassList.Should().Contain("tm-btn-soft");
+    }
+
+    // ─── OutlineDanger variant (Fáze 10c) ────────────────────────────────────
+
+    [Fact]
+    public void TmButton_OutlineDanger_CarriesBaseVariantAndSizeOnTheSameElement()
+    {
+        var cut = Render<TmButton>(p => p
+            .Add(c => c.Variant, ButtonVariant.OutlineDanger)
+            .Add(c => c.Size, ButtonSize.Sm)
+            .AddChildContent("Delete"));
+
+        cut.Find("button").ClassList.Should()
+            .Contain("tm-btn")
+            .And.Contain("tm-btn-outline-danger")
+            .And.Contain("tm-btn-sm")
+            .And.NotContain("tm-btn-danger", "the quiet variant must not pick up the filled danger rules");
+    }
+
+    [Fact]
+    public void TmButton_OutlineDanger_PressedStillRendersAriaPressed()
+    {
+        var cut = Render<TmButton>(p => p
+            .Add(c => c.Variant, ButtonVariant.OutlineDanger)
+            .Add(c => c.Pressed, true)
+            .AddChildContent("Delete"));
+
+        var button = cut.Find("button");
+        button.GetAttribute("aria-pressed").Should().Be("true");
+        button.ClassList.Should().Contain("tm-btn--pressed");
     }
 
     // ─── Pressed (toggle buttons, Fáze 4) ────────────────────────────────────

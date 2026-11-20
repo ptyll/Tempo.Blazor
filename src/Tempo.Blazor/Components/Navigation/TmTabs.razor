@@ -308,7 +308,7 @@
     private bool _headerResyncRendered;
 
     private (string? Title, string? Icon, string? Badge, bool Disabled)[] CaptureHeaderInputs()
-        => _panels.Select(panel => (panel.Title, panel.Icon, panel.Badge, panel.Disabled)).ToArray();
+        => _panels.Select(panel => ((string?)panel.Title, (string?)panel.Icon, (string?)panel.Badge, panel.Disabled)).ToArray();
 
     internal void UnregisterPanel(TmTabPanel panel)
     {
