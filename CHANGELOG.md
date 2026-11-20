@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.12.0 (unreleased)
+## 2.12.0 - 2026-11-20
 
 > Plan "Tempo: public pin-on-top API for host status UI" (4ce1b994; decision `TOP-LAYER-PIN`,
 > [ADR-0006](docs/adr/0006-top-layer-pin.md), contract [docs/top-layer-pin.md](docs/top-layer-pin.md)).
