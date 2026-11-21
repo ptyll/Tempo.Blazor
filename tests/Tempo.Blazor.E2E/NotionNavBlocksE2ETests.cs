@@ -29,8 +29,7 @@ public class NotionNavBlocksE2ETests : WasmTestBase
         // default leaves ~918px (tablet) where the page tree is a closed drawer and the sidebar
         // search button is not rendered. 1600 keeps the editor on the desktop band.
         await page.SetViewportSizeAsync(1600, 900);
-        await page.GotoAsync($"{BaseUrl}/notion-editor");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/notion-editor");
         await page.WaitForSelectorAsync(".tm-notion-editor", new PageWaitForSelectorOptions { Timeout = 30000 });
         await page.WaitForTimeoutAsync(2000);
         return page;

@@ -42,8 +42,7 @@ public class NotionMyTasksE2ETests : NotionE2ETestBase
             Timeout = 10000
         });
 
-        await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await ReloadAppReadyAsync(page, WaitUntilState.DOMContentLoaded);
         var overdueBlock = Block(page, OverdueTaskId);
         await overdueBlock.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 60000 });
         await ExpectClassContainsAsync(overdueBlock.Locator(".tm-notion-todo").First, "tm-notion-todo--checked");

@@ -23,8 +23,7 @@ public class NotionPageSettingsE2ETests : WasmTestBase
 
         var context = await CreateContextAsync();
         var page    = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/notion-editor");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/notion-editor");
         await page.WaitForSelectorAsync(".tm-notion-editor", new PageWaitForSelectorOptions { Timeout = 30000 });
         await page.WaitForTimeoutAsync(2000);
         return page;
@@ -39,7 +38,7 @@ public class NotionPageSettingsE2ETests : WasmTestBase
         try { await http.PostAsync("https://localhost:5100/api/notion/reset", null); }
         catch { }
 
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize      = new ViewportSize { Width = 1280, Height = 720 },
             Locale            = "en-US",
@@ -47,8 +46,7 @@ public class NotionPageSettingsE2ETests : WasmTestBase
             AcceptDownloads   = true
         });
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/notion-editor");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/notion-editor");
         await page.WaitForSelectorAsync(".tm-notion-editor", new PageWaitForSelectorOptions { Timeout = 30000 });
         await page.WaitForTimeoutAsync(2000);
         return page;

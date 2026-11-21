@@ -25,7 +25,7 @@ public sealed class NotionCommentDialogsE2ETests : NotionE2ETestBase
             seeded.EnsureSuccessStatusCode();
         }
 
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = true,
@@ -34,14 +34,8 @@ public sealed class NotionCommentDialogsE2ETests : NotionE2ETestBase
             IgnoreHTTPSErrors = true,
         });
         await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
-        RegisterContext(context);
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/notion-editor{query}", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60000,
-        });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/notion-editor{query}", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync(".tm-notion-editor", new PageWaitForSelectorOptions
         {
             State = WaitForSelectorState.Visible,

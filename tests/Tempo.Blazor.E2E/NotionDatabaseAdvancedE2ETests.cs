@@ -20,8 +20,7 @@ public class NotionDatabaseAdvancedE2ETests : WasmTestBase
 
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/notion-editor");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/notion-editor");
         await page.WaitForSelectorAsync(".tm-notion-editor", new PageWaitForSelectorOptions { Timeout = 30000 });
         await page.WaitForTimeoutAsync(2000);
         return page;

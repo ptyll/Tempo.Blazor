@@ -26,8 +26,7 @@ public class NotionTokenDropdownE2ETests : WasmTestBase
 
         var context = await CreateContextAsync();
         var page    = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/notion-editor");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/notion-editor");
         await page.WaitForSelectorAsync(".tm-notion-editor", new PageWaitForSelectorOptions { Timeout = 30000 });
         await page.WaitForTimeoutAsync(2000);
         return page;
@@ -435,12 +434,7 @@ public class NotionTokenDropdownE2ETests : WasmTestBase
         using var response = await http.PostAsync("/api/notion/e2e/seed/seedMentionTokenPage", null);
         response.EnsureSuccessStatusCode();
 
-        await page.ReloadAsync(new PageReloadOptions
-        {
-            WaitUntil = WaitUntilState.Load,
-            Timeout = 60000
-        });
-        await WaitForAppReadyAsync(page);
+        await ReloadAppReadyAsync(page);
         await page.WaitForSelectorAsync("[data-block-id='eb500000-0000-0000-0000-000000000003'] .tm-notion-token[data-key='unknown.invoice_deadline']", new PageWaitForSelectorOptions
         {
             State = WaitForSelectorState.Visible,

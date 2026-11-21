@@ -138,8 +138,7 @@ public sealed class NotionDatabasePhase8E2ETests : WasmTestBase
         await context.GrantPermissionsAsync(["clipboard-read", "clipboard-write"]);
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(width, height);
-        await page.GotoAsync($"{BaseUrl}/notion-editor");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/notion-editor");
         await page.WaitForSelectorAsync(".tm-notion-editor", new PageWaitForSelectorOptions { Timeout = 30000 });
         return page;
     }

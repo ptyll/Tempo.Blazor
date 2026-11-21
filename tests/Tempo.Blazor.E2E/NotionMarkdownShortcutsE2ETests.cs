@@ -181,8 +181,7 @@ public class NotionMarkdownShortcutsE2ETests : NotionE2ETestBase
         await page.WaitForTimeoutAsync(900);
         await CaptureBaselineAsync("markdown-shortcuts", "inline-colour", Block(page, blockId));
 
-        await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await ReloadAppReadyAsync(page, WaitUntilState.DOMContentLoaded);
         await page.Locator(".tm-notion-page").First.WaitForAsync(Visible());
 
         var reloaded = Block(page, blockId);
@@ -213,8 +212,7 @@ public class NotionMarkdownShortcutsE2ETests : NotionE2ETestBase
 
         await page.EvaluateAsync("() => document.activeElement?.blur()");
         await page.WaitForTimeoutAsync(900);
-        await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await ReloadAppReadyAsync(page, WaitUntilState.DOMContentLoaded);
         await page.Locator(".tm-notion-page").First.WaitForAsync(Visible());
 
         var reloaded = await Block(page, blockId).Locator("[style*='color']").First.GetAttributeAsync("style");

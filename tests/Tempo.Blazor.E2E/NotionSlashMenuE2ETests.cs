@@ -23,8 +23,7 @@ public class NotionSlashMenuE2ETests : WasmTestBase
 
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/notion-editor");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/notion-editor");
         await page.WaitForSelectorAsync(".tm-notion-editor", new PageWaitForSelectorOptions { Timeout = 30000 });
         await page.WaitForTimeoutAsync(2000);
         return page;
@@ -539,12 +538,7 @@ public class NotionSlashMenuE2ETests : WasmTestBase
 
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1280, 720);
-        await page.GotoAsync($"{BaseUrl}/notion-editor", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60000
-        });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/notion-editor", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync(".tm-notion-editor", new PageWaitForSelectorOptions { State = WaitForSelectorState.Visible, Timeout = 60000 });
         await page.WaitForSelectorAsync(".tm-notion-page", new PageWaitForSelectorOptions { State = WaitForSelectorState.Visible, Timeout = 60000 });
         await SeedEmptyPageAsync(page);

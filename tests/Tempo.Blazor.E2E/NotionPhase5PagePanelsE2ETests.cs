@@ -29,12 +29,7 @@ public sealed class NotionPhase5PagePanelsE2ETests : WasmTestBase
         await context.AddInitScriptAsync("window.localStorage.setItem('tm-demo-culture', 'en');");
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(width, height);
-        await page.GotoAsync($"{BaseUrl}/notion-editor{query}", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60000,
-        });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/notion-editor{query}", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync(".tm-notion-page", new PageWaitForSelectorOptions
         {
             State = WaitForSelectorState.Visible,
@@ -95,8 +90,7 @@ public sealed class NotionPhase5PagePanelsE2ETests : WasmTestBase
         using var client = DemoApiTestHttp.CreateClient();
         using var response = await client.PostAsync($"/api/notion/e2e/seed/{methodName}", content: null);
         response.EnsureSuccessStatusCode();
-        await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await ReloadAppReadyAsync(page, WaitUntilState.DOMContentLoaded);
         await page.Locator(".tm-notion-page").First.WaitForAsync(new LocatorWaitForOptions
         {
             State = WaitForSelectorState.Visible,

@@ -20,8 +20,7 @@ public sealed class NotionAnalyticsE2ETests : NotionE2ETestBase
         await Assertions.Expect(panel.Locator(".tm-notion-analytics__chart .tm-chart")).ToBeVisibleAsync();
 
         var firstViews = await ReadViewsAsync(page);
-        await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await ReloadAppReadyAsync(page, WaitUntilState.DOMContentLoaded);
         await page.Locator(".tm-notion-page").First.WaitForAsync(new LocatorWaitForOptions
         {
             State = WaitForSelectorState.Visible,

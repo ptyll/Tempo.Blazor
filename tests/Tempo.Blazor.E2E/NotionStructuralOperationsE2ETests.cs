@@ -196,8 +196,7 @@ public class NotionStructuralOperationsE2ETests : NotionE2ETestBase
 
     private async Task ReloadAsync(IPage page)
     {
-        await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await ReloadAppReadyAsync(page, WaitUntilState.DOMContentLoaded);
         await page.Locator(".tm-notion-page").First.WaitForAsync(Visible());
         await page.WaitForTimeoutAsync(600);
     }

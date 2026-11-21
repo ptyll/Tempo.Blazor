@@ -51,8 +51,7 @@ public class NotionActionItemsE2ETests : NotionE2ETestBase
         await ExpectClassContainsAsync(completed.Locator(".tm-notion-todo").First, "tm-notion-todo--checked");
         await CaptureTodoBaselineAsync(page, "cf3-todo-checked-seeded-with-metadata", completed);
 
-        await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await ReloadAppReadyAsync(page, WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync($"[data-block-id='{UnassignedTaskId}'] .tm-notion-todo__assignee-name", new PageWaitForSelectorOptions
         {
             State = WaitForSelectorState.Visible,

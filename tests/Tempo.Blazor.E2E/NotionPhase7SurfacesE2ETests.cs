@@ -279,12 +279,7 @@ public sealed class NotionPhase7SurfacesE2ETests : WasmTestBase
         await context.AddInitScriptAsync("window.localStorage.setItem('tm-demo-culture', 'en');");
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(width, height);
-        await page.GotoAsync($"{BaseUrl}/notion-editor", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60000,
-        });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/notion-editor", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync(".tm-notion-page", new PageWaitForSelectorOptions
         {
             State = WaitForSelectorState.Visible,

@@ -28,12 +28,7 @@ public sealed class NotionPublicShareE2ETests : NotionE2ETestBase
         var publicContext = await CreateContextAsync();
         await publicContext.AddInitScriptAsync("window.localStorage.setItem('tm-demo-culture', 'en');");
         var publicPage = await publicContext.NewPageAsync();
-        await publicPage.GotoAsync(publicUrl, new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60000
-        });
-        await WaitForAppReadyAsync(publicPage);
+        await GotoAppReadyAsync(publicPage, publicUrl, WaitUntilState.DOMContentLoaded);
         await publicPage.GetByTestId("notion-public-page").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 60000 });
         await publicPage.WaitForSelectorAsync(".tm-notion-editor.tm-notion-editor--locked", new PageWaitForSelectorOptions { State = WaitForSelectorState.Visible, Timeout = 60000 });
         Assert.AreEqual(0, await publicPage.Locator(".tm-notion-sidebar").CountAsync(), "Public route must not expose the private workspace sidebar.");
@@ -52,8 +47,7 @@ public sealed class NotionPublicShareE2ETests : NotionE2ETestBase
         var revokedCapture = await CaptureBaselineAsync("share", "cf33-revoked-share-dialog", page.Locator(".tm-npsd").First);
         TestContext.WriteLine($"UX CF33 revoked dialog baseline captured: {revokedCapture.FullPagePath} / {revokedCapture.RegionPath}");
 
-        await publicPage.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 60000 });
-        await WaitForAppReadyAsync(publicPage);
+        await ReloadAppReadyAsync(publicPage, WaitUntilState.DOMContentLoaded);
         await Assertions.Expect(publicPage.GetByTestId("notion-public-not-found")).ToBeVisibleAsync();
 
         TestContext.WriteLine("UX CF33 review: the dialog keeps link state, revoke, copy, comments, and expiry in one compact decision surface; the public page opens as a calm read-only document with the private sidebar removed.");
@@ -79,12 +73,7 @@ public sealed class NotionPublicShareE2ETests : NotionE2ETestBase
         var publicContext = await CreateContextAsync();
         await publicContext.AddInitScriptAsync("window.localStorage.setItem('tm-demo-culture', 'en');");
         var publicPage = await publicContext.NewPageAsync();
-        await publicPage.GotoAsync($"{BaseUrl}/p/cf33-expired", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60000
-        });
-        await WaitForAppReadyAsync(publicPage);
+        await GotoAppReadyAsync(publicPage, $"{BaseUrl}/p/cf33-expired", WaitUntilState.DOMContentLoaded);
         await Assertions.Expect(publicPage.GetByTestId("notion-public-not-found")).ToBeVisibleAsync();
         var expiredCapture = await CaptureExternalPageBaselineAsync(publicPage, "share", "cf33-expired-public-link", publicPage.GetByTestId("notion-public-not-found"));
         TestContext.WriteLine($"UX CF33 expired public link baseline captured: {expiredCapture.FullPagePath} / {expiredCapture.RegionPath}");

@@ -25,8 +25,7 @@ public class NotionTableE2ETests : WasmTestBase
 
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/notion-editor");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/notion-editor");
         await page.WaitForSelectorAsync(".tm-notion-editor", new PageWaitForSelectorOptions { Timeout = 30000 });
         await page.WaitForTimeoutAsync(2000);
         return page;
@@ -50,12 +49,7 @@ public class NotionTableE2ETests : WasmTestBase
         using var response = await http.PostAsync(TablePageSeedEndpoint, null);
         response.EnsureSuccessStatusCode();
 
-        await page.ReloadAsync(new PageReloadOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60000
-        });
-        await WaitForAppReadyAsync(page);
+        await ReloadAppReadyAsync(page, WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync("[data-block-id='eb700000-0000-0000-0000-000000000010'] .tm-notion-table", new PageWaitForSelectorOptions
         {
             State = WaitForSelectorState.Visible,

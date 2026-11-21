@@ -229,8 +229,7 @@ public sealed class NotionDatabasePhase9E2ETests : WasmTestBase
         var context = await CreateContextAsync(hasTouch: hasTouch);
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 900);
-        await page.GotoAsync($"{BaseUrl}/notion-editor");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/notion-editor");
         await page.WaitForSelectorAsync(".tm-notion-editor", new PageWaitForSelectorOptions { Timeout = 30000 });
         var db = page.Locator(".tm-db").First;
         await db.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });

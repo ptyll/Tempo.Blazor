@@ -24,12 +24,7 @@ public sealed class NotionResponsiveShellE2ETests : WasmTestBase
         await context.AddInitScriptAsync("window.localStorage.setItem('tm-demo-culture', 'en');");
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(width, height);
-        await page.GotoAsync($"{BaseUrl}/notion-editor{query}", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60000,
-        });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/notion-editor{query}", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync(".tm-notion-editor", new PageWaitForSelectorOptions
         {
             State = WaitForSelectorState.Visible,
@@ -186,9 +181,9 @@ public sealed class NotionResponsiveShellE2ETests : WasmTestBase
             "m => window.tmNotionDemo && typeof window.tmNotionDemo[m] === 'function'",
             "seedPublicSharePage",
             new PageWaitForFunctionOptions { Timeout = 60000 });
-        await page.EvaluateAsync("m => window.tmNotionDemo[m]()", "seedPublicSharePage");
-        await page.WaitForLoadStateAsync(LoadState.DOMContentLoaded);
-        await WaitForAppReadyAsync(page);
+        await NavigateAppReadyAsync(
+            page,
+            () => page.EvaluateAsync("m => window.tmNotionDemo[m]()", "seedPublicSharePage"));
         await page.WaitForSelectorAsync(".tm-notion-editor", new PageWaitForSelectorOptions
         {
             State = WaitForSelectorState.Visible,
@@ -206,12 +201,7 @@ public sealed class NotionResponsiveShellE2ETests : WasmTestBase
         await context.AddInitScriptAsync("window.localStorage.setItem('tm-demo-culture', 'en');");
         var publicPage = await context.NewPageAsync();
         await publicPage.SetViewportSizeAsync(320, 700);
-        await publicPage.GotoAsync(publicUrl, new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60000,
-        });
-        await WaitForAppReadyAsync(publicPage);
+        await GotoAppReadyAsync(publicPage, publicUrl, WaitUntilState.DOMContentLoaded);
         await publicPage.GetByTestId("notion-public-page").WaitForAsync(
             new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 60000 });
 

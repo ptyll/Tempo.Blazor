@@ -27,8 +27,7 @@ public class NotionSidebarE2ETests : WasmTestBase
         // tree is a closed overlay drawer there. 1600 keeps the editor on the desktop band so
         // the sidebar is docked and visible, as these tests assert.
         await page.SetViewportSizeAsync(1600, 900);
-        await page.GotoAsync($"{BaseUrl}/notion-editor");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/notion-editor");
         await page.WaitForSelectorAsync(".tm-notion-editor", new PageWaitForSelectorOptions { Timeout = 30000 });
         await page.WaitForTimeoutAsync(2000);
         return page;

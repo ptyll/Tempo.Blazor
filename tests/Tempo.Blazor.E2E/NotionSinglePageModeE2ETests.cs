@@ -31,8 +31,7 @@ public class NotionSinglePageModeE2ETests : WasmTestBase
     private async Task<(IPage page, ILocator singlePageEditor)> OpenSinglePageDemoAsync()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/notion-editor");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/notion-editor");
 
         var section = page.Locator("[data-testid='notion-single-page-demo']");
         await section.ScrollIntoViewIfNeededAsync();

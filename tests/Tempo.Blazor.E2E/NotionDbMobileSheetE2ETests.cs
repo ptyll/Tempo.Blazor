@@ -21,7 +21,7 @@ public sealed class NotionDbMobileSheetE2ETests : WasmTestBase
         using var databaseResponse = await http.PostAsync("/api/notion/databases/e2e/seed/default", null);
         databaseResponse.EnsureSuccessStatusCode();
 
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = true,
@@ -30,14 +30,8 @@ public sealed class NotionDbMobileSheetE2ETests : WasmTestBase
             IgnoreHTTPSErrors = true,
         });
         await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
-        RegisterContext(context);
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/notion-editor", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60000,
-        });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/notion-editor", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync(".tm-notion-editor", new PageWaitForSelectorOptions
         {
             State = WaitForSelectorState.Visible,

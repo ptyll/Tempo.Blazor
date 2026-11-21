@@ -89,12 +89,7 @@ public sealed class NotionWatchNotificationsE2ETests : NotionE2ETestBase
         await context.AddInitScriptAsync("window.localStorage.setItem('tm-demo-culture', 'en');");
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1280, 720);
-        await page.GotoAsync($"{BaseUrl}/notion-editor{query}", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60000
-        });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/notion-editor{query}", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync(".tm-notion-page", new PageWaitForSelectorOptions
         {
             State = WaitForSelectorState.Visible,

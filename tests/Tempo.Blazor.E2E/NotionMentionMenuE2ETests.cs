@@ -27,8 +27,7 @@ public class NotionMentionMenuE2ETests : WasmTestBase
 
         var context = await CreateContextAsync();
         var page    = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/notion-editor");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/notion-editor");
         await page.WaitForSelectorAsync(".tm-notion-editor", new PageWaitForSelectorOptions { Timeout = 30000 });
         await page.WaitForTimeoutAsync(2000);
         return page;
@@ -344,18 +343,14 @@ public class NotionMentionMenuE2ETests : WasmTestBase
         await CaptureBaselineAsync(page, "mention-menu", "eb5-long-page-chip", chip);
     }
 
-    private static async Task SeedMentionTokenPageAsync(IPage page)
+    private async Task SeedMentionTokenPageAsync(IPage page)
     {
         await page.WaitForFunctionAsync(
             "methodName => window.tmNotionDemo && typeof window.tmNotionDemo[methodName] === 'function'",
             "seedMentionTokenPage",
             new PageWaitForFunctionOptions { Timeout = 60000 });
         await page.EvaluateAsync("async methodName => await window.tmNotionDemo[methodName]()", "seedMentionTokenPage");
-        await page.ReloadAsync(new PageReloadOptions
-        {
-            WaitUntil = WaitUntilState.NetworkIdle,
-            Timeout = 60000
-        });
+        await ReloadAppReadyAsync(page, WaitUntilState.NetworkIdle);
         await page.WaitForSelectorAsync("[data-block-id='eb500000-0000-0000-0000-000000000003'] .tm-notion-token[data-key='unknown.invoice_deadline']", new PageWaitForSelectorOptions
         {
             State = WaitForSelectorState.Visible,

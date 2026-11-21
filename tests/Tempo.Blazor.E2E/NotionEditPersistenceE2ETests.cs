@@ -38,8 +38,7 @@ public class NotionEditPersistenceE2ETests : NotionE2ETestBase
         await page.WaitForTimeoutAsync(900);
         await CaptureBaselineAsync("edit-persistence", "inline-code-before-reload", Block(page, blockId));
 
-        await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await ReloadAppReadyAsync(page, WaitUntilState.DOMContentLoaded);
         await page.Locator(".tm-notion-page").First.WaitForAsync(Visible());
 
         var reloaded = Block(page, blockId);
@@ -136,8 +135,7 @@ public class NotionEditPersistenceE2ETests : NotionE2ETestBase
         await BlurAsync(page);
         await page.WaitForTimeoutAsync(900);
 
-        await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await ReloadAppReadyAsync(page, WaitUntilState.DOMContentLoaded);
         await page.Locator(".tm-notion-page").First.WaitForAsync(Visible());
 
         var block = Block(page, blockId);
@@ -166,8 +164,7 @@ public class NotionEditPersistenceE2ETests : NotionE2ETestBase
         await BlurAsync(page);
         await page.WaitForTimeoutAsync(900);
 
-        await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await ReloadAppReadyAsync(page, WaitUntilState.DOMContentLoaded);
         await page.Locator(".tm-notion-page").First.WaitForAsync(Visible());
 
         var chip = Block(page, blockId).Locator(".tm-notion-status");

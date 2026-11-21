@@ -28,8 +28,7 @@ public class NotionClipboardPasteE2ETests : WasmTestBase
             ? $"{BaseUrl}/notion-editor?readonly=true"
             : $"{BaseUrl}/notion-editor";
 
-        await page.GotoAsync(url);
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, url);
         await page.WaitForSelectorAsync(".tm-notion-editor", new PageWaitForSelectorOptions { Timeout = 30000 });
         await page.WaitForTimeoutAsync(2000);
         return page;
