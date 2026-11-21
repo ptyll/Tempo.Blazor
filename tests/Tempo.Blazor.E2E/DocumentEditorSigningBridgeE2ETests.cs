@@ -27,11 +27,7 @@ public sealed class DocumentEditorSigningBridgeE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1000);
-        await page.GotoAsync($"{BaseUrl}/document-editor", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60_000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor", WaitUntilState.DOMContentLoaded);
 
         await page.WaitForSelectorAsync("[data-testid='document-editor-demo']", new PageWaitForSelectorOptions
         {
@@ -69,12 +65,7 @@ public sealed class DocumentEditorSigningBridgeE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1000);
-        await page.GotoAsync($"{BaseUrl}/signing-components", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.Load,
-            Timeout = 60_000
-        });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         // S0.3 — the designer (field overlay builder over document pages) and the form runner
         // are the two existing surfaces the bridge feeds; both must be live before S1 starts.
@@ -105,12 +96,7 @@ public sealed class DocumentEditorSigningBridgeE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1000);
-        await page.GotoAsync($"{BaseUrl}/signing-from-editor", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.Load,
-            Timeout = 60_000
-        });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-from-editor");
 
         // (a) the editor renders the seed contract through the canvas engine.
         await page.WaitForSelectorAsync(
@@ -162,8 +148,7 @@ public sealed class DocumentEditorSigningBridgeE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1000);
-        await page.GotoAsync($"{BaseUrl}/signing-from-editor", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60_000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-from-editor");
 
         await page.WaitForSelectorAsync(
             "[data-testid='signing-from-editor-document'] [data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']",

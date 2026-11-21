@@ -107,11 +107,7 @@ public sealed class DocumentEditorCanvasRenderE2ETests : WasmTestBase
 
     private async Task OpenRenderDocumentAsync(IPage page)
     {
-        await page.GotoAsync($"{BaseUrl}/canvas-engine-host?documentId=phase-5-canvas-render", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.Load,
-            Timeout = 60_000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/canvas-engine-host?documentId=phase-5-canvas-render");
         await page.WaitForSelectorAsync(
             "[data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']",
             new PageWaitForSelectorOptions { Timeout = 30_000 });
@@ -157,7 +153,7 @@ public sealed class DocumentEditorCanvasRenderE2ETests : WasmTestBase
 
     private async Task<DeviceScaleProbe> RunDeviceScaleProbeAsync()
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = 1280, Height = 900 },
             DeviceScaleFactor = 2,

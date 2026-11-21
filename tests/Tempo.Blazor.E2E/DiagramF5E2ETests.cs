@@ -30,12 +30,7 @@ public class DiagramF5E2ETests : WasmTestBase
         var page = await context.NewPageAsync();
 
         await page.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
-        await page.GotoAsync($"{BaseUrl}{DiagramEditorUrl}", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60_000
-        });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{DiagramEditorUrl}", WaitUntilState.DOMContentLoaded);
 
         await page.WaitForSelectorAsync(".tm-diagram-canvas", new PageWaitForSelectorOptions
         {

@@ -33,11 +33,7 @@ public sealed class DocumentEditorHeadlessExportParityE2ETests : WasmTestBase
         var errors = new List<string>();
         page.PageError += (_, message) => errors.Add($"pageerror: {message}");
         await page.SetViewportSizeAsync(1440, 1000);
-        await page.GotoAsync($"{BaseUrl}/canvas-engine-host?documentId={DocumentId}&showToolbar=true&preferLocalDraft=false", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60_000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/canvas-engine-host?documentId={DocumentId}&showToolbar=true&preferLocalDraft=false", WaitUntilState.DOMContentLoaded);
         await WaitForEditorReadyAsync(page);
 
         // ── Browser path: the editor exports with its LIVE canvas layout snapshot. ──────────────
@@ -86,7 +82,7 @@ public sealed class DocumentEditorHeadlessExportParityE2ETests : WasmTestBase
     {
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/", new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 60_000 });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/", WaitUntilState.DOMContentLoaded);
 
         var base64 = await page.EvaluateAsync<string>(
             """
@@ -160,10 +156,8 @@ public sealed class DocumentEditorHeadlessExportParityE2ETests : WasmTestBase
     private async Task ScreenshotPdfInViewerAsync(IBrowserContext context, string pdfUrl, string screenshotPath)
     {
         var viewerPage = await context.NewPageAsync();
-        await viewerPage.GotoAsync(
-            $"{BaseUrl}/pdf-viewer?url={Uri.EscapeDataString(pdfUrl)}",
-            new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 60_000 });
-        await WaitForAppReadyAsync(viewerPage);
+        await GotoAppReadyAsync(viewerPage,
+            $"{BaseUrl}/pdf-viewer?url={Uri.EscapeDataString(pdfUrl)}", WaitUntilState.DOMContentLoaded);
         var viewerCanvas = viewerPage.Locator("[data-testid='pdf-basic-usage-card'] .tm-pdf-viewer__canvas").First;
         await Assertions.Expect(viewerCanvas).ToBeVisibleAsync(new() { Timeout = 45_000 });
         await viewerPage.WaitForFunctionAsync(

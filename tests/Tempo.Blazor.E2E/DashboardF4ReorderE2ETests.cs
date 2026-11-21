@@ -338,14 +338,13 @@ public sealed class DashboardF4ReorderE2ETests : ServerTestBase
         IPage page;
         if (touch)
         {
-            var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+            var context = await CreateContextAsync(new BrowserNewContextOptions
             {
                 HasTouch = true,
                 ViewportSize = new ViewportSize { Width = width, Height = height },
                 Locale = "en-US",
                 IgnoreHTTPSErrors = true,
             });
-            RegisterContext(context);
             page = await context.NewPageAsync();
         }
         else

@@ -192,7 +192,7 @@ public sealed class DashboardF6SelectorE2ETests : WasmTestBase
 
     private async Task<IPage> OpenDashboardAsync(int width, int height, bool touch = false)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             // Pin the locale: the demo follows the browser language, and a context without one inherits the host machine's (cs-CZ on the dev box) while the specs read English labels.
             Locale = "en-US",
@@ -200,11 +200,8 @@ public sealed class DashboardF6SelectorE2ETests : WasmTestBase
             ViewportSize = new ViewportSize { Width = width, Height = height },
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
-        await page.GotoAsync(BaseUrl.TrimEnd('/') + "/dashboard",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, BaseUrl.TrimEnd('/') + "/dashboard");
         await page.Locator(".tm-dashboard .tm-widget").First.WaitForAsync(
             new LocatorWaitForOptions { Timeout = 30000 });
         return page;

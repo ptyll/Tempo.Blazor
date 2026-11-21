@@ -30,11 +30,7 @@ public sealed class DocumentEditorPdfExportE2ETests : WasmTestBase
         var errors = new List<string>();
         page.PageError += (_, message) => errors.Add($"pageerror: {message}");
         await page.SetViewportSizeAsync(1440, 1000);
-        await page.GotoAsync($"{BaseUrl}/canvas-engine-host?documentId={DocumentId}&showToolbar=true&preferLocalDraft=false", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60_000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/canvas-engine-host?documentId={DocumentId}&showToolbar=true&preferLocalDraft=false", WaitUntilState.DOMContentLoaded);
         await WaitForEditorReadyAsync(page);
 
         // Export through the production toolbar path (References → Export PDF).
@@ -92,10 +88,8 @@ public sealed class DocumentEditorPdfExportE2ETests : WasmTestBase
 
         // Open the export in the real TmPdfViewer demo (served by the last-export API endpoint).
         var viewerPage = await context.NewPageAsync();
-        await viewerPage.GotoAsync(
-            $"{BaseUrl}/pdf-viewer?url={Uri.EscapeDataString($"https://localhost:5100/api/document-editor/{DocumentId}/export/pdf/last")}",
-            new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 60_000 });
-        await WaitForAppReadyAsync(viewerPage);
+        await GotoAppReadyAsync(viewerPage,
+            $"{BaseUrl}/pdf-viewer?url={Uri.EscapeDataString($"https://localhost:5100/api/document-editor/{DocumentId}/export/pdf/last")}", WaitUntilState.DOMContentLoaded);
         var viewerCanvas = viewerPage.Locator("[data-testid='pdf-basic-usage-card'] .tm-pdf-viewer__canvas").First;
         await Assertions.Expect(viewerCanvas).ToBeVisibleAsync(new() { Timeout = 45_000 });
         // Wait for the canvas to reach the real rendered page size (pre-render default is 300×150).
@@ -124,11 +118,7 @@ public sealed class DocumentEditorPdfExportE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1000);
-        await page.GotoAsync($"{BaseUrl}/canvas-engine-host?documentId=phase-3-canvas-empty&showToolbar=true&preferLocalDraft=false", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60_000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/canvas-engine-host?documentId=phase-3-canvas-empty&showToolbar=true&preferLocalDraft=false", WaitUntilState.DOMContentLoaded);
         await page.WaitForFunctionAsync(
             """
             () => document.querySelector('[data-testid="document-canvas-engine-host"][data-canvas-engine-ready="true"]')

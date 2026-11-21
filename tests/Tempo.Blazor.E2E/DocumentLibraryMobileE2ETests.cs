@@ -43,7 +43,7 @@ public class DocumentLibraryMobileE2ETests : WasmTestBase
 
     private async Task<IPage> OpenPageAsync(int width, int height, bool dark = false, bool touch = true, string culture = "en", string layout = "Auto")
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = touch,
@@ -51,12 +51,10 @@ public class DocumentLibraryMobileE2ETests : WasmTestBase
             Locale = culture == "en" ? "en-US" : culture,
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
 
         var page = await context.NewPageAsync();
         await page.AddInitScriptAsync($"localStorage.setItem('tm-demo-culture', '{culture}'); localStorage.removeItem('tm-demo-color-theme');");
-        await page.GotoAsync($"{BaseUrl}{DialogPage}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60_000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{DialogPage}");
         if (dark)
         {
             await page.Locator("[data-testid='theme-toggle']").First.DispatchEventAsync("click");

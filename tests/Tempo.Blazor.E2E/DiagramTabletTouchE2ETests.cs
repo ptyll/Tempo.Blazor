@@ -419,22 +419,16 @@ public sealed class DiagramTabletTouchE2ETests : WasmTestBase
     [Description("Modeling at 1024: the hosted diagram editor resolves the tablet layout and no Escape collision")]
     public async Task Modeling_1024_HostedEditorGetsTabletLayout()
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = 1024, Height = 768 },
             HasTouch = true,
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
         await page.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
-        await page.GotoAsync($"{BaseUrl}{ModelingEditorUrl}", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.Load,
-            Timeout = 60_000,
-        });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{ModelingEditorUrl}");
 
         // The modeling canvas hosts TmDiagramEditor: at a 1024 window its container lands in
         // the 768–1199 band, so the tablet presentation (railed palette, overlay minimap) must
@@ -461,14 +455,13 @@ public sealed class DiagramTabletTouchE2ETests : WasmTestBase
         IBrowserContext context;
         if (touch)
         {
-            context = await Browser.NewContextAsync(new BrowserNewContextOptions
+            context = await CreateContextAsync(new BrowserNewContextOptions
             {
                 HasTouch = true,
                 ViewportSize = new ViewportSize { Width = width, Height = height },
                 Locale = "en-US",
                 IgnoreHTTPSErrors = true,
             });
-            RegisterContext(context);
         }
         else
         {
@@ -477,12 +470,7 @@ public sealed class DiagramTabletTouchE2ETests : WasmTestBase
 
         var page = await context.NewPageAsync();
         await page.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
-        await page.GotoAsync($"{BaseUrl}{DiagramEditorUrl}", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.Load,
-            Timeout = 60_000,
-        });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{DiagramEditorUrl}");
 
         await page.WaitForSelectorAsync(".tm-diagram-canvas", new PageWaitForSelectorOptions
         {

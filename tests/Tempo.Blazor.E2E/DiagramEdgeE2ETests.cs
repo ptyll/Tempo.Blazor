@@ -1142,14 +1142,13 @@ public class DiagramEdgeE2ETests : WasmTestBase
     [Description("J6 — a press on a connection point UNDER an edge corridor starts an edge draw, not a whole-edge drag (the port/cp wins over the corridor)")]
     public async Task Desktop_ConnectionPointUnderEdgeCorridor_DrawsEdge()
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = 1440, Height = 900 },
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
             AcceptDownloads = true
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
         await OpenDiagramEditorAsync(page);
 
@@ -1212,14 +1211,13 @@ public class DiagramEdgeE2ETests : WasmTestBase
     [Description("Desktop: mouse-dragging the e resize handle of a selected node with a right-side port resizes it — no edge is created")]
     public async Task Desktop_ResizeHandleE_OnNodeWithRightPort_ResizesWithoutEdge()
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = 1440, Height = 900 },
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
             AcceptDownloads = true
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
         await OpenDiagramEditorAsync(page);
         // The docked toolbox renders only in the DESKTOP band — the demo gutters would keep a

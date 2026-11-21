@@ -42,20 +42,18 @@ public class DocumentLibraryRedesignE2ETests : WasmTestBase
 
     private async Task<IPage> OpenPageAsync(int width, int height, bool touch = false, bool dark = false, bool indigo = false)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = touch,
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
 
         var page = await context.NewPageAsync();
         await page.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');"
             + (indigo ? " localStorage.setItem('tm-demo-color-theme', 'indigo');" : " localStorage.removeItem('tm-demo-color-theme');"));
-        await page.GotoAsync($"{BaseUrl}{DialogPage}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60_000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{DialogPage}");
 
         if (indigo)
         {

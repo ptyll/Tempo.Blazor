@@ -491,14 +491,13 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
         IBrowserContext context;
         if (touch)
         {
-            context = await Browser.NewContextAsync(new BrowserNewContextOptions
+            context = await CreateContextAsync(new BrowserNewContextOptions
             {
                 HasTouch = true,
                 ViewportSize = new ViewportSize { Width = width, Height = height },
                 Locale = "en-US",
                 IgnoreHTTPSErrors = true,
             });
-            RegisterContext(context);
         }
         else
         {
@@ -508,12 +507,7 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(width, height);
         await page.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
-        await page.GotoAsync($"{BaseUrl}{DiagramEditorUrl}", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.Load,
-            Timeout = 60_000
-        });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{DiagramEditorUrl}");
 
         await page.WaitForSelectorAsync(".tm-diagram-canvas", new PageWaitForSelectorOptions
         {

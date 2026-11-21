@@ -211,18 +211,16 @@ public class DocumentLibraryNotionE2ETests : NotionE2ETestBase
     private async Task<IPage> OpenNotionTouchEditorAsync(int width, int height)
     {
         await ResetNotionDemoDataAsync();
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = true,
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         await context.AddInitScriptAsync("window.localStorage.setItem('tm-demo-culture', 'en');");
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/notion-editor", new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/notion-editor", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync(".tm-notion-page", new PageWaitForSelectorOptions { State = WaitForSelectorState.Visible, Timeout = 60000 });
         await page.WaitForFunctionAsync("() => window.tmNotionDemo && typeof window.tmNotionDemo.seedEmptyPage === 'function'", null, new PageWaitForFunctionOptions { Timeout = 60000 });
         await page.EvaluateAsync("() => window.tmNotionDemo.seedEmptyPage()");

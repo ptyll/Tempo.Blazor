@@ -21,8 +21,7 @@ public class DiagramUml25Phase5E2ETests : PlaywrightTestBase
         await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync($"{BaseUrl}{DiagramEditorUrl}");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{DiagramEditorUrl}");
 
         // The docked toolbox exists only in the DESKTOP band (the demo column is tablet at
         // every default viewport, phase 6) — pin the container like a full-bleed host.
@@ -84,8 +83,7 @@ public class DiagramUml25Phase5E2ETests : PlaywrightTestBase
         await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync($"{BaseUrl}{DiagramEditorUrl}");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{DiagramEditorUrl}");
         await DiagramEditorE2E.PinDesktopAsync(page);
 
         var reportJson = await page.EvaluateAsync<string>("""

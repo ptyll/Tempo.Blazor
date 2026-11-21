@@ -197,14 +197,13 @@ public sealed class DashboardF5PointerDragE2ETests : ServerTestBase
 
     private async Task<IPage> OpenTouchAsync(int width, int height)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             HasTouch = true,
             ViewportSize = new ViewportSize { Width = width, Height = height },
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
         await GotoAppReadyAsync(page, BaseUrl.TrimEnd('/') + "/dashboard");
         await page.Locator(".tm-dashboard .tm-widget").First.WaitForAsync(

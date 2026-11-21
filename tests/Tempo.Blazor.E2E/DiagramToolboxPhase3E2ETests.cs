@@ -22,8 +22,7 @@ public class DiagramToolboxPhase3E2ETests : PlaywrightTestBase
         await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync($"{BaseUrl}{DiagramEditorUrl}");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{DiagramEditorUrl}");
 
         // The docked toolbox exists only in the DESKTOP band: the demo column sits in the
         // tablet band at every default viewport (920px at 1280), where the palette rails

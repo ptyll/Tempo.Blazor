@@ -365,22 +365,16 @@ public sealed class DiagramMobileTouchE2ETests : WasmTestBase
     [Description("390 Modeling preview: the Viewer-preset hosted editor has no edit bar and no sheet collision with the overlay header")]
     public async Task Modeling_390_ViewerPreview_Mobile()
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = 390, Height = 844 },
             HasTouch = true,
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
         await page.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
-        await page.GotoAsync($"{BaseUrl}{ModelingEditorUrl}", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.Load,
-            Timeout = 60_000,
-        });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{ModelingEditorUrl}");
 
         var hosted = page.Locator(".tm-modeling-editor .tm-diagram-editor").First;
         if (await hosted.CountAsync() == 0)
@@ -499,14 +493,13 @@ public sealed class DiagramMobileTouchE2ETests : WasmTestBase
         IBrowserContext context;
         if (touch)
         {
-            context = await Browser.NewContextAsync(new BrowserNewContextOptions
+            context = await CreateContextAsync(new BrowserNewContextOptions
             {
                 HasTouch = true,
                 ViewportSize = new ViewportSize { Width = width, Height = height },
                 Locale = "en-US",
                 IgnoreHTTPSErrors = true,
             });
-            RegisterContext(context);
         }
         else
         {
@@ -515,12 +508,7 @@ public sealed class DiagramMobileTouchE2ETests : WasmTestBase
 
         var page = await context.NewPageAsync();
         await page.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
-        await page.GotoAsync($"{BaseUrl}{DiagramEditorUrl}", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.Load,
-            Timeout = 60_000,
-        });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{DiagramEditorUrl}");
 
         await page.WaitForSelectorAsync(".tm-diagram-canvas", new PageWaitForSelectorOptions
         {

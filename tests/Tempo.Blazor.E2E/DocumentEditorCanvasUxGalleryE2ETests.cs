@@ -95,7 +95,7 @@ public sealed class DocumentEditorCanvasUxGalleryE2ETests : WasmTestBase
         var output = CreateGalleryOutputDirectory(nameof(Phase23_UxPolish_VerifiesDprDarkMobileAndStateSurfaces));
         var artifacts = new List<object>();
 
-        await using var dpr1Context = await CreateManualContextAsync(1280, 900, 1, ColorScheme.Light);
+        var dpr1Context = await CreateManualContextAsync(1280, 900, 1, ColorScheme.Light);
         var dpr1Page = await dpr1Context.NewPageAsync();
         await OpenCanvasDocumentAsync(dpr1Page, "phase-6-canvas-text-layout");
         var dpr1Screenshot = Path.Combine(output, "dpr1-text-sharpness.png");
@@ -105,7 +105,7 @@ public sealed class DocumentEditorCanvasUxGalleryE2ETests : WasmTestBase
         artifacts.Add(new { name = "dpr1-text-sharpness", screenshotPath = dpr1Screenshot, probe = dpr1Probe });
         TestContext.AddResultFile(dpr1Screenshot);
 
-        await using var dpr2Context = await CreateManualContextAsync(1280, 900, 2, ColorScheme.Light);
+        var dpr2Context = await CreateManualContextAsync(1280, 900, 2, ColorScheme.Light);
         var dpr2Page = await dpr2Context.NewPageAsync();
         await OpenCanvasDocumentAsync(dpr2Page, "phase-6-canvas-text-layout");
         var dpr2Screenshot = Path.Combine(output, "dpr2-text-sharpness.png");
@@ -115,7 +115,7 @@ public sealed class DocumentEditorCanvasUxGalleryE2ETests : WasmTestBase
         artifacts.Add(new { name = "dpr2-text-sharpness", screenshotPath = dpr2Screenshot, probe = dpr2Probe });
         TestContext.AddResultFile(dpr2Screenshot);
 
-        await using var darkContext = await CreateManualContextAsync(1440, 1000, 1, ColorScheme.Dark);
+        var darkContext = await CreateManualContextAsync(1440, 1000, 1, ColorScheme.Dark);
         var darkPage = await darkContext.NewPageAsync();
         await OpenCanvasDocumentAsync(darkPage, "phase-17-canvas-comments-revisions");
         await ApplyDarkThemeAsync(darkPage);
@@ -127,7 +127,7 @@ public sealed class DocumentEditorCanvasUxGalleryE2ETests : WasmTestBase
         artifacts.Add(new { name = "dark-comments-revisions-colors", screenshotPath = darkScreenshot, probe = darkProbe });
         TestContext.AddResultFile(darkScreenshot);
 
-        await using var mobileContext = await CreateManualContextAsync(390, 760, 2, ColorScheme.Light);
+        var mobileContext = await CreateManualContextAsync(390, 760, 2, ColorScheme.Light);
         var mobilePage = await mobileContext.NewPageAsync();
         await OpenCanvasDocumentAsync(mobilePage, "phase-13-canvas-toolbar-spellcheck");
         var mobileScreenshot = Path.Combine(output, "mobile-toolbar-overflow.png");
@@ -139,7 +139,7 @@ public sealed class DocumentEditorCanvasUxGalleryE2ETests : WasmTestBase
         artifacts.Add(new { name = "mobile-toolbar-overflow", screenshotPath = mobileScreenshot, probe = mobileProbe });
         TestContext.AddResultFile(mobileScreenshot);
 
-        await using var statesContext = await CreateManualContextAsync(1280, 900, 1, ColorScheme.Light);
+        var statesContext = await CreateManualContextAsync(1280, 900, 1, ColorScheme.Light);
         var statesPage = await statesContext.NewPageAsync();
         await OpenCanvasDocumentAsync(statesPage, "phase-3-canvas-empty");
         var emptyScreenshot = Path.Combine(output, "empty-state.png");
@@ -169,15 +169,9 @@ public sealed class DocumentEditorCanvasUxGalleryE2ETests : WasmTestBase
         var artifacts = new List<object>();
         const string documentId = "phase-6-canvas-text-layout";
 
-        await using var loadingContext = await CreateManualContextAsync(1280, 900, 1, ColorScheme.Light);
+        var loadingContext = await CreateManualContextAsync(1280, 900, 1, ColorScheme.Light);
         var loadingPage = await loadingContext.NewPageAsync();
-        await loadingPage.GotoAsync(
-            $"{BaseUrl}/canvas-engine-host?documentId={Uri.EscapeDataString(documentId)}&showToolbar=true&disableCollaboration=true&loadDelayMs=3500",
-            new PageGotoOptions
-            {
-                WaitUntil = WaitUntilState.DOMContentLoaded,
-                Timeout = 60_000
-            });
+        await GotoAppReadyAsync(loadingPage, $"{BaseUrl}/canvas-engine-host?documentId={Uri.EscapeDataString(documentId)}&showToolbar=true&disableCollaboration=true&loadDelayMs=3500", WaitUntilState.DOMContentLoaded);
         await Assertions.Expect(loadingPage.GetByTestId("document-editor-loading")).ToBeVisibleAsync(new() { Timeout = 20_000 });
 
         var loadingScreenshot = Path.Combine(output, "loading-state.png");
@@ -196,15 +190,9 @@ public sealed class DocumentEditorCanvasUxGalleryE2ETests : WasmTestBase
         artifacts.Add(new { name = "loading-state", screenshotPath = loadingScreenshot, probe = loadingProbe });
         await WaitForCanvasDocumentReadyAsync(loadingPage, documentId);
 
-        await using var errorContext = await CreateManualContextAsync(1280, 900, 1, ColorScheme.Light);
+        var errorContext = await CreateManualContextAsync(1280, 900, 1, ColorScheme.Light);
         var errorPage = await errorContext.NewPageAsync();
-        await errorPage.GotoAsync(
-            $"{BaseUrl}/canvas-engine-host?documentId={Uri.EscapeDataString(documentId)}&showToolbar=true&disableCollaboration=true&failLoads=true",
-            new PageGotoOptions
-            {
-                WaitUntil = WaitUntilState.DOMContentLoaded,
-                Timeout = 60_000
-            });
+        await GotoAppReadyAsync(errorPage, $"{BaseUrl}/canvas-engine-host?documentId={Uri.EscapeDataString(documentId)}&showToolbar=true&disableCollaboration=true&failLoads=true", WaitUntilState.DOMContentLoaded);
         await Assertions.Expect(errorPage.GetByTestId("document-editor-load-error")).ToBeVisibleAsync(new() { Timeout = 20_000 });
 
         var errorScreenshot = Path.Combine(output, "load-error-state.png");
@@ -235,8 +223,8 @@ public sealed class DocumentEditorCanvasUxGalleryE2ETests : WasmTestBase
         TestContext.AddResultFile(manifestPath);
     }
 
-    private static async Task<IBrowserContext> CreateManualContextAsync(int width, int height, float dpr, ColorScheme colorScheme)
-        => await Browser.NewContextAsync(new BrowserNewContextOptions
+    private async Task<IBrowserContext> CreateManualContextAsync(int width, int height, float dpr, ColorScheme colorScheme)
+        => await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             DeviceScaleFactor = dpr,
@@ -248,11 +236,7 @@ public sealed class DocumentEditorCanvasUxGalleryE2ETests : WasmTestBase
 
     private async Task OpenCanvasDocumentAsync(IPage page, string documentId, string extraQuery = "")
     {
-        await page.GotoAsync($"{BaseUrl}/canvas-engine-host?documentId={Uri.EscapeDataString(documentId)}&showToolbar=true{extraQuery}", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60_000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/canvas-engine-host?documentId={Uri.EscapeDataString(documentId)}&showToolbar=true{extraQuery}", WaitUntilState.DOMContentLoaded);
         await WaitForCanvasDocumentReadyAsync(page, documentId);
     }
 

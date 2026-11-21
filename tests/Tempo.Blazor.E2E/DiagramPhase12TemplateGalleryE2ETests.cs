@@ -73,8 +73,7 @@ public sealed class DiagramPhase12TemplateGalleryE2ETests : PlaywrightTestBase
         await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1600, 900);
-        await page.GotoAsync($"{BaseUrl}{DiagramEditorUrl}");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{DiagramEditorUrl}");
         await WaitForDiagramReadyAsync(page);
         return page;
     }

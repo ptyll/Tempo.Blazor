@@ -15,7 +15,7 @@ public sealed class DocumentEditorCanvasAccessibilityE2ETests : WasmTestBase
     [TestMethod]
     public async Task Phase21_CanvasAccessibilityMirrorKeyboardLiveRegionAndForcedColors_AreProductionReady()
     {
-        await using var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = 1440, Height = 1000 },
             Locale = "en-US",
@@ -66,7 +66,7 @@ public sealed class DocumentEditorCanvasAccessibilityE2ETests : WasmTestBase
         Assert.IsTrue(reviewProbe.CommentCount >= 1, reviewProbe.Debug);
         Assert.IsTrue(reviewProbe.RevisionCount >= 1, reviewProbe.Debug);
 
-        await using var forcedContext = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var forcedContext = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = 1280, Height = 900 },
             Locale = "en-US",
@@ -123,7 +123,7 @@ public sealed class DocumentEditorCanvasAccessibilityE2ETests : WasmTestBase
     [TestMethod]
     public async Task Phase21_CanvasFocusManagementAndDialogTrap_AreKeyboardReady()
     {
-        await using var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = 1440, Height = 1000 },
             Locale = "en-US",
@@ -210,11 +210,7 @@ public sealed class DocumentEditorCanvasAccessibilityE2ETests : WasmTestBase
 
     private async Task OpenCanvasDocumentAsync(IPage page, string documentId)
     {
-        await page.GotoAsync($"{BaseUrl}/canvas-engine-host?documentId={documentId}&showToolbar=true", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60_000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/canvas-engine-host?documentId={documentId}&showToolbar=true", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync(
             "[data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']",
             new PageWaitForSelectorOptions { Timeout = 30_000 });

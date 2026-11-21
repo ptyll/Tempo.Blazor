@@ -198,7 +198,7 @@ public sealed class DashboardF7DialogsE2ETests : WasmTestBase
         IPage page;
         if (touch)
         {
-            var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+            var context = await CreateContextAsync(new BrowserNewContextOptions
             {
                 HasTouch = true,
                 IsMobile = true,
@@ -206,7 +206,6 @@ public sealed class DashboardF7DialogsE2ETests : WasmTestBase
                 Locale = "en-US",
                 IgnoreHTTPSErrors = true,
             });
-            RegisterContext(context);
             page = await context.NewPageAsync();
         }
         else

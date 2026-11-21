@@ -43,7 +43,7 @@ public class DocumentLibraryScopeE2ETests : WasmTestBase
 
     private async Task<IPage> OpenPageAsync(int width, int height, bool touch = false, string culture = "en", bool showRecent = false)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = touch,
@@ -51,12 +51,10 @@ public class DocumentLibraryScopeE2ETests : WasmTestBase
             Locale = culture == "en" ? "en-US" : culture,
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
 
         var page = await context.NewPageAsync();
         await page.AddInitScriptAsync($"localStorage.setItem('tm-demo-culture', '{culture}'); localStorage.removeItem('tm-demo-color-theme');");
-        await page.GotoAsync($"{BaseUrl}{DialogPage}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60_000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{DialogPage}");
         if (showRecent)
         {
             await page.CheckAsync("[data-testid=show-recent]");

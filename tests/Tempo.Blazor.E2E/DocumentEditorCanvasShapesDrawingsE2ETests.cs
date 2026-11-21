@@ -158,7 +158,7 @@ public sealed class DocumentEditorCanvasShapesDrawingsE2ETests : WasmTestBase
     [TestMethod]
     public async Task PhaseE7_CanvasDrawingLayerUsesHighDpiBackingStoreForSharpShapesAndHandles()
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = 1440, Height = 1000 },
             DeviceScaleFactor = 2,
@@ -1170,11 +1170,7 @@ public sealed class DocumentEditorCanvasShapesDrawingsE2ETests : WasmTestBase
 
     private async Task OpenPhaseE7DocumentAsync(IPage page)
     {
-        await page.GotoAsync($"{BaseUrl}/canvas-engine-host?documentId={PhaseE7DocumentId}&showToolbar=true&disableCollaboration=true", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.Load,
-            Timeout = 60_000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/canvas-engine-host?documentId={PhaseE7DocumentId}&showToolbar=true&disableCollaboration=true");
         await WaitForPhaseE7ReadyAsync(page);
         await WaitForPhaseE7SettledAsync(page);
     }
