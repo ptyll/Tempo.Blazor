@@ -90,8 +90,7 @@ public sealed class ModelingLocalizationM15E2ETests : WasmTestBase
         var page = await context.NewPageAsync();
         // MO3: the "Pohled" toolbar text lives on the labeled viewpoint select, which renders
         // once a notation is selected — open the page with the BPMN notation.
-        await page.GotoAsync($"{BaseUrl}{ModelingEditorUrl}?notation=bpmn", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{ModelingEditorUrl}?notation=bpmn");
         await page.Locator("[data-testid='modeling-editor'][data-state='loaded']")
             .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
         return page;

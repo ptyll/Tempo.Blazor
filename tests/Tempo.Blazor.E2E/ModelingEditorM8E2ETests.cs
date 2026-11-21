@@ -68,8 +68,7 @@ public sealed class ModelingEditorM8E2ETests : WasmTestBase
         var page = await OpenModelingPageAsync();
 
         await page.SetViewportSizeAsync(900, 720);
-        await page.ReloadAsync();
-        await WaitForAppReadyAsync(page);
+        await ReloadAppReadyAsync(page);
         await WaitForLoadedEditorAsync(page);
 
         Assert.IsTrue(await HasNoHorizontalOverflowAsync(page), "Modeling editor should not create horizontal overflow at 900px.");
@@ -116,8 +115,9 @@ public sealed class ModelingEditorM8E2ETests : WasmTestBase
 
     private async Task<IPage> OpenModelingPageAsync(string query = "")
     {
-        var page = await OpenPageWithoutInitialReadyWaitAsync($"{ModelingEditorUrl}{query}");
-        await WaitForAppReadyAsync(page);
+        var page = await OpenAppPageAsync(
+            $"{BaseUrl}{ModelingEditorUrl}{query}",
+            beforeNavigate: context => context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');"));
         await ExpectVisibleAsync(page, "[data-testid='modeling-editor']");
         return page;
     }
@@ -127,7 +127,10 @@ public sealed class ModelingEditorM8E2ETests : WasmTestBase
         var context = await CreateContextAsync();
         await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}{pathAndQuery}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
+        await GotoWithoutBootRecoveryAsync(
+            page,
+            $"{BaseUrl}{pathAndQuery}",
+            "the spec observes the transient loading state of the first load (?delay=6000); a readiness gate and a recovery reload would hide it");
         return page;
     }
 

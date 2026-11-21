@@ -165,8 +165,7 @@ public sealed class ModelingBpmnXmlConverterE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}{ModelingEditorUrl}{query}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{ModelingEditorUrl}{query}");
         await page.Locator("[data-testid='modeling-editor'][data-state='loaded']")
             .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
         return page;

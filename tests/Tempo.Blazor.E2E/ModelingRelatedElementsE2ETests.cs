@@ -161,7 +161,7 @@ public sealed class ModelingRelatedElementsE2ETests : WasmTestBase
 
     private async Task<IPage> OpenLoadedModelingPageAsync(int width, int height, bool touch)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = touch,
@@ -169,7 +169,6 @@ public sealed class ModelingRelatedElementsE2ETests : WasmTestBase
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en'); localStorage.removeItem('tm-demo-theme');");
 
         var page = await context.NewPageAsync();

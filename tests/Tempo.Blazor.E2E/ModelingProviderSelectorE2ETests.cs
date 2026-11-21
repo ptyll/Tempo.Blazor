@@ -80,8 +80,7 @@ public sealed class ModelingProviderSelectorE2ETests : WasmTestBase
         var page = await context.NewPageAsync();
         try
         {
-            await page.GotoAsync($"{BaseUrl}{ModelingEditorUrl}?provider=unknown-provider", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-            await WaitForAppReadyAsync(page);
+            await GotoAppReadyAsync(page, $"{BaseUrl}{ModelingEditorUrl}?provider=unknown-provider");
 
             await ExpectVisibleAsync(page, "[data-testid='modeling-editor'][data-state='empty']");
             await ExpectVisibleAsync(page, "[data-testid='modeling-editor-empty']");
@@ -97,8 +96,7 @@ public sealed class ModelingProviderSelectorE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}{ModelingEditorUrl}{query}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{ModelingEditorUrl}{query}");
         await page.Locator("[data-testid='modeling-editor'][data-state='loaded']")
             .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
         return page;

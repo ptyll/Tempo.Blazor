@@ -109,8 +109,7 @@ public sealed class ModelingAuthoringPhase3E2ETests : WasmTestBase
             await ExpectAttributeAsync(page, "[data-testid='modeling-editor']", "data-relationship-count", "1");
 
             // A pair the rules know NOTHING valid for is refused with the rules' own explanation.
-            await page.GotoAsync($"{BaseUrl}{ModelingEditorUrl}?editing=1&scenario=bpmn2-ai-task&notation=bpmn2",
-                new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
+            await GotoAppReadyAsync(page, $"{BaseUrl}{ModelingEditorUrl}?editing=1&scenario=bpmn2-ai-task&notation=bpmn2");
             await WaitForLoadedAsync(page);
 
             await SelectTreeRowAsync(page, "AI classify order");
@@ -309,22 +308,19 @@ public sealed class ModelingAuthoringPhase3E2ETests : WasmTestBase
 
     private async Task<IPage> OpenAuthoringPageAsync(string query, int width = 1440, int height = 900, bool touch = false)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = touch,
             Locale = "en-US",
             IgnoreHTTPSErrors = true
         });
-        RegisterContext(context);
         await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
         var page = await context.NewPageAsync();
         page.Console += (_, message) => _console.Add($"[{message.Type}] {message.Text}");
         page.PageError += (_, error) => _console.Add($"[pageerror] {error}");
         await page.SetViewportSizeAsync(width, height);
-        await page.GotoAsync($"{BaseUrl}{ModelingEditorUrl}{query}",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{ModelingEditorUrl}{query}");
         await WaitForLoadedAsync(page);
         return page;
     }

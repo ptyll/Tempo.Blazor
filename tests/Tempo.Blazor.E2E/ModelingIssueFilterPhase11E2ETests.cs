@@ -268,7 +268,8 @@ public sealed class ModelingIssueFilterPhase11E2ETests : WasmTestBase
     [Description("500-issue scenario: a text filter narrows the list within the 150ms debounce + 200ms processing budget and the chips report counts")]
     public async Task FiveHundredIssues_FilterNarrowsWithinBudget()
     {
-        var page = await OpenModelingPageAsync("?scenario=issues-500", 1440, 900, touch: false);
+        // trace: false - tracing would skew the filter latency this spec budgets.
+        var page = await OpenModelingPageAsync("?scenario=issues-500", 1440, 900, touch: false, trace: false);
 
         await page.WaitForFunctionAsync(
             "() => Number(document.querySelector(\"[data-testid='modeling-issue-panel']\")?.getAttribute('data-total-issue-count') ?? '0') >= 500",
@@ -367,17 +368,16 @@ public sealed class ModelingIssueFilterPhase11E2ETests : WasmTestBase
 
     // ── Local helpers ────────────────────────────────────────────────────────
 
-    private async Task<IPage> OpenModelingPageAsync(string query, int width, int height, bool touch)
+    private async Task<IPage> OpenModelingPageAsync(string query, int width, int height, bool touch, bool trace = true)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = touch,
             IsMobile = false,
             Locale = "en-US",
             IgnoreHTTPSErrors = true
-        });
-        RegisterContext(context);
+        }, trace);
         await context.AddInitScriptAsync(
             """
             localStorage.setItem('tm-demo-culture', 'en');
@@ -386,12 +386,7 @@ public sealed class ModelingIssueFilterPhase11E2ETests : WasmTestBase
                 );
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(width, height);
-        await page.GotoAsync($"{BaseUrl}{ModelingEditorUrl}{query}", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.Load,
-            Timeout = 60_000
-        });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{ModelingEditorUrl}{query}");
         await page.Locator("[data-testid='modeling-editor'][data-state='loaded']")
             .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 20_000 });
         // The generation render must land BEFORE any tab/sheet interaction: the post-generate

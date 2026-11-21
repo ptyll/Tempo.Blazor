@@ -127,7 +127,7 @@ public sealed class ModelingViewerPhase6Screenshots : BaselineGeneratorTestBase
     private async Task<IPage> OpenViewerAsync(string query, int width, int height, bool touch)
     {
         var context = touch
-            ? await Browser.NewContextAsync(new BrowserNewContextOptions
+            ? await CreateContextAsync(new BrowserNewContextOptions
             {
                 ViewportSize = new ViewportSize { Width = width, Height = height },
                 HasTouch = true,
@@ -136,7 +136,6 @@ public sealed class ModelingViewerPhase6Screenshots : BaselineGeneratorTestBase
                 IgnoreHTTPSErrors = true,
             })
             : await CreateContextAsync();
-        RegisterContext(context);
         await context.AddInitScriptAsync(
             """
             localStorage.setItem('tm-demo-culture', 'en');
@@ -145,12 +144,7 @@ public sealed class ModelingViewerPhase6Screenshots : BaselineGeneratorTestBase
 
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(width, height);
-        await page.GotoAsync($"{BaseUrl}{ViewerUrl}{query}", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.Load,
-            Timeout = 90000,
-        });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{ViewerUrl}{query}");
         await page.Locator(ViewerSelector)
             .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 30000 });
         await page.WaitForFunctionAsync(

@@ -221,7 +221,7 @@ public sealed class ModelingPropertySchemaPhase5E2ETests : WasmTestBase
 
     private async Task<IPage> OpenEditorAsync(string query, int width, int height, bool touch = false)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = touch,
@@ -229,16 +229,10 @@ public sealed class ModelingPropertySchemaPhase5E2ETests : WasmTestBase
             Locale = "en-US",
             IgnoreHTTPSErrors = true
         });
-        RegisterContext(context);
         await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
 
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}{ModelingEditorUrl}{query}", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.Load,
-            Timeout = 60000
-        });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{ModelingEditorUrl}{query}");
         await WaitForLoadedAsync(page);
         return page;
     }

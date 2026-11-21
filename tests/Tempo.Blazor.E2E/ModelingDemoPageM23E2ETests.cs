@@ -18,12 +18,10 @@ public sealed class ModelingDemoPageM23E2ETests : WasmTestBase
         var context = await CreateEnglishContextAsync();
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync($"{BaseUrl}{ModelingEditorUrl}?notation=bpmn&viewpoint=overview", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{ModelingEditorUrl}?notation=bpmn&viewpoint=overview");
         await WaitForLoadedEditorAsync(page);
 
-        await page.GotoAsync(BaseUrl, new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, BaseUrl);
 
         var stopwatch = Stopwatch.StartNew();
         await page.EvaluateAsync("path => Blazor.navigateTo(path)", $"{ModelingEditorUrl}?notation=bpmn&viewpoint=overview");
@@ -121,8 +119,7 @@ public sealed class ModelingDemoPageM23E2ETests : WasmTestBase
     {
         var page = await OpenLoadedModelingPageAsync();
 
-        await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await ReloadAppReadyAsync(page);
         await WaitForLoadedEditorAsync(page);
 
         Assert.IsTrue(await ReadNumericAttributeAsync(page, "[data-testid='modeling-model-tree']", "data-visible-count") > 0, "Tree should remain populated after refresh.");
@@ -134,8 +131,7 @@ public sealed class ModelingDemoPageM23E2ETests : WasmTestBase
         var context = await CreateEnglishContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(width, height);
-        await page.GotoAsync($"{BaseUrl}{ModelingEditorUrl}?notation=bpmn&viewpoint=overview", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{ModelingEditorUrl}?notation=bpmn&viewpoint=overview");
         await WaitForLoadedEditorAsync(page);
         return page;
     }
@@ -144,14 +140,13 @@ public sealed class ModelingDemoPageM23E2ETests : WasmTestBase
     /// real touch targets, Fáze 7).</summary>
     private async Task<IPage> OpenLoadedTouchModelingPageAsync(int width, int height)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = true,
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         await context.AddInitScriptAsync(
             """
             localStorage.setItem('tm-demo-culture', 'en');
@@ -159,8 +154,7 @@ public sealed class ModelingDemoPageM23E2ETests : WasmTestBase
             """);
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(width, height);
-        await page.GotoAsync($"{BaseUrl}{ModelingEditorUrl}?notation=bpmn&viewpoint=overview", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{ModelingEditorUrl}?notation=bpmn&viewpoint=overview");
         await WaitForLoadedEditorAsync(page);
         return page;
     }

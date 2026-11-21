@@ -360,7 +360,7 @@ public sealed class ModelingTabletTouchE2ETests : WasmTestBase
 
     private async Task<IPage> OpenLoadedTabletPageAsync(int width, int height, string? scenario = null, string querySuffix = "")
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = true,
@@ -368,7 +368,6 @@ public sealed class ModelingTabletTouchE2ETests : WasmTestBase
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en'); localStorage.removeItem('tm-demo-theme');");
 
         var page = await context.NewPageAsync();

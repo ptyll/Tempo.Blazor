@@ -596,7 +596,7 @@ public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestB
 
     private async Task<IPage> OpenThemedModelingPageAsync(string query, string theme, int width, int height)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = false,
@@ -604,7 +604,6 @@ public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestB
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         var init = "localStorage.setItem('tm-demo-culture', 'en');";
         if (theme.Contains("indigo", StringComparison.Ordinal))
         {
@@ -662,7 +661,7 @@ public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestB
     /// optional <paramref name="culture"/> swaps the demo culture (the cs baseline).</summary>
     private async Task<IPage> OpenThemedTouchModelingPageAsync(string query, string theme, int width, int height, string culture = "en")
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = true,
@@ -670,7 +669,6 @@ public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestB
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         var init = $"localStorage.setItem('tm-demo-culture', '{culture}');";
         if (theme.Contains("indigo", StringComparison.Ordinal))
         {
@@ -1046,7 +1044,7 @@ public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestB
 
     private async Task<IPage> OpenModelingPageAsync(string query, int width, int height, bool touch)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = touch,
@@ -1054,7 +1052,6 @@ public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestB
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
 
         var page = await context.NewPageAsync();

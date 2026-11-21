@@ -483,14 +483,13 @@ public sealed class ModelingMobilePhase7E2ETests : WasmTestBase
     private async Task<IPage> OpenTouchAsync(int width, int height, string query = "?notation=bpmn&viewpoint=overview",
         string? expectedState = "loaded")
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = true,
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         await context.AddInitScriptAsync(
             """
             localStorage.setItem('tm-demo-culture', 'en');
@@ -498,12 +497,7 @@ public sealed class ModelingMobilePhase7E2ETests : WasmTestBase
             """);
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(width, height);
-        await page.GotoAsync($"{BaseUrl}{ModelingEditorUrl}{query}", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.Load,
-            Timeout = 60_000,
-        });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{ModelingEditorUrl}{query}");
         if (expectedState is not null)
         {
             await page.Locator($"[data-testid='modeling-editor'][data-state='{expectedState}']")

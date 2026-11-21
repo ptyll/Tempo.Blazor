@@ -88,7 +88,7 @@ public sealed class ModelingPhase15BaselineScreenshots : BaselineGeneratorTestBa
 
     private async Task<IPage> OpenModelingPageAsync(string query, int width, int height, bool touch)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = touch,
@@ -96,7 +96,6 @@ public sealed class ModelingPhase15BaselineScreenshots : BaselineGeneratorTestBa
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
 
         var page = await context.NewPageAsync();

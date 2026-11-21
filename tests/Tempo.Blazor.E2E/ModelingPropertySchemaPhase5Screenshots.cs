@@ -120,7 +120,7 @@ public sealed class ModelingPropertySchemaPhase5Screenshots : BaselineGeneratorT
         Shot shot,
         string culture = "en")
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = touch,
@@ -128,7 +128,6 @@ public sealed class ModelingPropertySchemaPhase5Screenshots : BaselineGeneratorT
             Locale = culture == "cs" ? "cs-CZ" : "en-US",
             IgnoreHTTPSErrors = true
         });
-        RegisterContext(context);
         await context.AddInitScriptAsync($"localStorage.setItem('tm-demo-culture', '{culture}');");
 
         var page = await context.NewPageAsync();

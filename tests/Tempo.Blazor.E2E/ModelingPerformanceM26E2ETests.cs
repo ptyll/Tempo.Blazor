@@ -24,7 +24,8 @@ public sealed class ModelingPerformanceM26E2ETests : WasmTestBase
     [Description("The modeling editor route reports a browser LCP under the M26 budget")]
     public async Task ModelingEditor_LcpStaysUnderBudget()
     {
-        var context = await CreateContextAsync();
+        // trace: false - tracing would skew the LCP this spec measures.
+        var context = await CreateContextAsync(new BrowserNewContextOptions(), trace: false);
         await context.AddInitScriptAsync(
             """
             (() => {
@@ -45,13 +46,13 @@ public sealed class ModelingPerformanceM26E2ETests : WasmTestBase
             """);
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync($"{BaseUrl}{ModelingEditorUrl}{PerformanceQuery}", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.Load,
-            Timeout = 60000
-        });
+        await GotoWithoutBootRecoveryAsync(
+            page,
+            $"{BaseUrl}{ModelingEditorUrl}{PerformanceQuery}",
+            "the spec measures the browser LCP/FCP of the load itself; a readiness gate and a recovery reload would change what is measured");
         await WaitForLoadedPerformanceModelAsync(page);
         var firstLoadFcp = await page.EvaluateAsync<double>("() => performance.getEntriesByName('first-contentful-paint')[0]?.startTime ?? -1");
+        // The reload is part of the measurement (the second load reports the LCP): a plain reload, no recovery.
         await page.ReloadAsync(new PageReloadOptions
         {
             WaitUntil = WaitUntilState.Load,
@@ -158,15 +159,11 @@ public sealed class ModelingPerformanceM26E2ETests : WasmTestBase
         // The Fáze 12 hierarchy budget, calibrated on the same desktop pair as the flat filter
         // above: the ?scenario=hierarchy-large model is 200 elements in 6-level ParentId chains,
         // so the filter has to walk ancestors AND annotate levels on every keystroke.
-        var context = await CreateContextAsync();
+        var context = await CreateContextAsync(new BrowserNewContextOptions(), trace: false); // tracing would skew the budget this spec measures
         await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 900);
-        await page.GotoAsync($"{BaseUrl}{ModelingEditorUrl}?scenario=hierarchy-large&notation=bpmn", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.Load,
-            Timeout = 60000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}{ModelingEditorUrl}?scenario=hierarchy-large&notation=bpmn");
         await page.Locator("[data-testid='modeling-editor'][data-state='loaded']")
             .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 30000 });
 
@@ -295,16 +292,11 @@ public sealed class ModelingPerformanceM26E2ETests : WasmTestBase
     /// stress model) and waits for the loaded editor plus the populated dock.</summary>
     private async Task<IPage> OpenIssues500ModelAsync(int width, int height)
     {
-        var context = await CreateContextAsync();
+        var context = await CreateContextAsync(new BrowserNewContextOptions(), trace: false); // tracing would skew the budget this spec measures
         await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(width, height);
-        await page.GotoAsync($"{BaseUrl}{ModelingEditorUrl}?scenario=issues-500", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.Load,
-            Timeout = 60000
-        });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{ModelingEditorUrl}?scenario=issues-500");
         await page.Locator("[data-testid='modeling-editor'][data-state='loaded']")
             .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 20000 });
         await page.WaitForFunctionAsync(
@@ -315,15 +307,11 @@ public sealed class ModelingPerformanceM26E2ETests : WasmTestBase
 
     private async Task<IPage> OpenPerformanceModelAsync(int width = 1280, int height = 720)
     {
-        var context = await CreateContextAsync();
+        var context = await CreateContextAsync(new BrowserNewContextOptions(), trace: false); // tracing would skew the budget this spec measures
         await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(width, height);
-        await page.GotoAsync($"{BaseUrl}{ModelingEditorUrl}{PerformanceQuery}", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.Load,
-            Timeout = 60000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}{ModelingEditorUrl}{PerformanceQuery}");
         await WaitForLoadedPerformanceModelAsync(page);
         return page;
     }

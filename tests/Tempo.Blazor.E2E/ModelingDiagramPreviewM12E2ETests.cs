@@ -165,22 +165,16 @@ public sealed class ModelingDiagramPreviewM12E2ETests : WasmTestBase
     [Description("At 1024x768 the preview header actions wrap instead of clipping outside the preview panel")]
     public async Task DiagramPreview_ActionsStayInsidePreviewAt1024()
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = 1024, Height = 768 },
             HasTouch = true,
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
         await page.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
-        await page.GotoAsync($"{BaseUrl}{ModelingEditorUrl}", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.Load,
-            Timeout = 60_000,
-        });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{ModelingEditorUrl}");
         await page.Locator("[data-testid='modeling-editor'][data-state='loaded']")
             .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
         await WaitForPreviewNodeCountAtLeastAsync(page, 1);
@@ -405,8 +399,7 @@ public sealed class ModelingDiagramPreviewM12E2ETests : WasmTestBase
         var context = await CreateContextAsync();
         await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}{ModelingEditorUrl}{query}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{ModelingEditorUrl}{query}");
         await page.Locator("[data-testid='modeling-editor'][data-state='loaded']")
             .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
         return page;

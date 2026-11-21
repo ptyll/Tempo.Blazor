@@ -276,7 +276,7 @@ public sealed class ModelingAccessibilityM25E2ETests : WasmTestBase
         IBrowserContext? context = null;
         try
         {
-            context = await Browser.NewContextAsync(new BrowserNewContextOptions
+            context = await CreateContextAsync(new BrowserNewContextOptions
             {
                 ViewportSize = new ViewportSize { Width = 1280, Height = 720 },
                 Locale = "en-US",
@@ -285,8 +285,7 @@ public sealed class ModelingAccessibilityM25E2ETests : WasmTestBase
             });
             await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
             var page = await context.NewPageAsync();
-            await page.GotoAsync($"{BaseUrl}{ModelingEditorUrl}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-            await WaitForAppReadyAsync(page);
+            await GotoAppReadyAsync(page, $"{BaseUrl}{ModelingEditorUrl}");
             await page.Locator("[data-testid='modeling-editor'][data-state='loaded']")
                 .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
 
@@ -348,8 +347,7 @@ public sealed class ModelingAccessibilityM25E2ETests : WasmTestBase
         await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1280, 720);
-        await page.GotoAsync($"{BaseUrl}{ModelingEditorUrl}{query}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{ModelingEditorUrl}{query}");
         await page.Locator("[data-testid='modeling-editor'][data-state='loaded']")
             .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
         await page.Locator("[data-testid='modeling-diagram-preview']")

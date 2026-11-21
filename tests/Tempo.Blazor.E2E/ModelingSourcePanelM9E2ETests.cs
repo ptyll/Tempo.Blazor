@@ -103,8 +103,9 @@ public sealed class ModelingSourcePanelM9E2ETests : WasmTestBase
 
     private async Task<IPage> OpenLoadedModelingPageAsync(string query = "")
     {
-        var page = await OpenPageWithoutInitialReadyWaitAsync(query);
-        await WaitForAppReadyAsync(page);
+        var page = await OpenAppPageAsync(
+            $"{BaseUrl}{ModelingEditorUrl}{query}",
+            beforeNavigate: context => context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');"));
         await WaitForLoadedEditorAsync(page);
         return page;
     }
@@ -114,7 +115,10 @@ public sealed class ModelingSourcePanelM9E2ETests : WasmTestBase
         var context = await CreateContextAsync();
         await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}{ModelingEditorUrl}{query}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
+        await GotoWithoutBootRecoveryAsync(
+            page,
+            $"{BaseUrl}{ModelingEditorUrl}{query}",
+            "the spec observes the transient loading state of the first load (?delay=6000); a readiness gate and a recovery reload would hide it");
         return page;
     }
 

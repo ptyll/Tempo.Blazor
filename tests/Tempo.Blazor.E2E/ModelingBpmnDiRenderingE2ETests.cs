@@ -49,7 +49,7 @@ public sealed class ModelingBpmnDiRenderingE2ETests : WasmTestBase
         {
             foreach (var dark in new[] { false, true })
             {
-                var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+                var context = await CreateContextAsync(new BrowserNewContextOptions
                 {
                     ViewportSize = new ViewportSize { Width = width, Height = height },
                     HasTouch = touch,
@@ -57,13 +57,10 @@ public sealed class ModelingBpmnDiRenderingE2ETests : WasmTestBase
                     Locale = "en-US",
                     IgnoreHTTPSErrors = true,
                 });
-                RegisterContext(context);
                 await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
 
                 var page = await context.NewPageAsync();
-                await page.GotoAsync($"{BaseUrl}{ModelingEditorUrl}?bpmn={fixture}",
-                    new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-                await WaitForAppReadyAsync(page);
+                await GotoAppReadyAsync(page, $"{BaseUrl}{ModelingEditorUrl}?bpmn={fixture}");
 
                 if (dark)
                 {

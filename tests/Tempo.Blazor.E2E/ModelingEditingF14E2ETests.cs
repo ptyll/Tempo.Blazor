@@ -301,7 +301,7 @@ public sealed class ModelingEditingF14E2ETests : WasmTestBase
     private async Task<IPage> OpenLoadedEditingPageAsync(string query = "?editing=1", int? width = null, int? height = null, bool touch = false)
     {
         var context = touch
-            ? await Browser.NewContextAsync(new BrowserNewContextOptions
+            ? await CreateContextAsync(new BrowserNewContextOptions
             {
                 ViewportSize = new ViewportSize { Width = width!.Value, Height = height!.Value },
                 HasTouch = true,
@@ -309,7 +309,6 @@ public sealed class ModelingEditingF14E2ETests : WasmTestBase
                 IgnoreHTTPSErrors = true
             })
             : await CreateContextAsync();
-        RegisterContext(context);
         await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
         var page = await context.NewPageAsync();
         if (touch)
@@ -317,8 +316,7 @@ public sealed class ModelingEditingF14E2ETests : WasmTestBase
             await page.SetViewportSizeAsync(width!.Value, height!.Value);
         }
 
-        await page.GotoAsync($"{BaseUrl}{ModelingEditorUrl}{query}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{ModelingEditorUrl}{query}");
         await page.Locator("[data-testid='modeling-editor'][data-state='loaded']")
             .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
         await page.WaitForFunctionAsync(

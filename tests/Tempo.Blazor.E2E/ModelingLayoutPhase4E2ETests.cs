@@ -301,22 +301,19 @@ public sealed class ModelingLayoutPhase4E2ETests : WasmTestBase
 
     private async Task<IPage> OpenEditorAsync(string query, int width = 1440, int height = 900, bool touch = false)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = touch,
             Locale = "en-US",
             IgnoreHTTPSErrors = true
         });
-        RegisterContext(context);
         await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
         var page = await context.NewPageAsync();
         page.Console += (_, message) => _console.Add($"[{message.Type}] {message.Text}");
         page.PageError += (_, error) => _console.Add($"[pageerror] {error}");
         await page.SetViewportSizeAsync(width, height);
-        await page.GotoAsync($"{BaseUrl}{ModelingEditorUrl}{query}",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{ModelingEditorUrl}{query}");
         await WaitForLoadedAsync(page);
         return page;
     }

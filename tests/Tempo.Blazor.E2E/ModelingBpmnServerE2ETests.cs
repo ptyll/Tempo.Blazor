@@ -20,9 +20,7 @@ public sealed class ModelingBpmnServerE2ETests : ServerTestBase
         var context = await CreateContextAsync();
         await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/modeling-editor?bpmn=simple-process",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/modeling-editor?bpmn=simple-process");
 
         var status = page.Locator("[data-testid='modeling-demo-bpmn-status']");
         await Assertions.Expect(status).ToContainTextAsync("simple-process.bpmn",
