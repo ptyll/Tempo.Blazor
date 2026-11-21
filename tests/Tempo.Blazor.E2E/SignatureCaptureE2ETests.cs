@@ -14,8 +14,7 @@ public class SignatureCaptureE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         await DrawSignatureAsync(page, "[data-testid='signature-draw-capture']");
 
@@ -29,8 +28,7 @@ public class SignatureCaptureE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         await DrawSignatureAcrossCanvasEdgeAsync(page, "[data-testid='signature-draw-capture']");
 
@@ -44,8 +42,7 @@ public class SignatureCaptureE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         var root = page.Locator("[data-testid='signature-draw-capture']").First;
         await root.ScrollIntoViewIfNeededAsync();
@@ -85,8 +82,7 @@ public class SignatureCaptureE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         await DrawSignatureAsync(page, "[data-testid='signature-draw-capture']");
         await Expect(page.Locator("[data-testid='signature-draw-value']")).ToContainTextAsync("Value captured");
@@ -103,8 +99,7 @@ public class SignatureCaptureE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         var input = page.Locator("[data-testid='signature-typed-capture'] .tm-signature-capture__typed-input").First;
         await input.ScrollIntoViewIfNeededAsync();
@@ -123,8 +118,7 @@ public class SignatureCaptureE2ETests : WasmTestBase
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(390, 844);
 
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         await DrawSignatureAsync(page, "[data-testid='signature-draw-capture']");
 

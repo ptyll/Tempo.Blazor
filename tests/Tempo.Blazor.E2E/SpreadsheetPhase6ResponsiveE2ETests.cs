@@ -584,8 +584,7 @@ public partial class SpreadsheetE2ETests
         // absence of an embedded editor. The container-not-viewport contract is proven by
         // Phase6_DesktopPage_NarrowHosts_UseTheContainerMode (420px/760px hosts inside a 1440 page).
         var notion = await OpenPhase6DemoAsync(Phase6DesktopWidth, 1000, hasTouch: false);
-        await notion.GotoAsync($"{BaseUrl}/notion-editor");
-        await WaitForAppReadyAsync(notion);
+        await GotoAppReadyAsync(notion, $"{BaseUrl}/notion-editor");
         await notion.WaitForTimeoutAsync(4500);
         Assert.AreEqual(0, await notion.Locator(".tm-notion-spreadsheet-block .tm-spreadsheet").CountAsync(),
             "the Notion block hosts a preview, never the editor component; a width-based mode therefore "

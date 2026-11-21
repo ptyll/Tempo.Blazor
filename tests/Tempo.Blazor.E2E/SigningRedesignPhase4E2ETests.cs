@@ -152,23 +152,18 @@ public class SigningRedesignPhase4E2ETests : BaselineGeneratorTestBase
     }
 
     private async Task<IPage> OpenStepsPageAsync(int width, int height, bool touch)
-    {        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+    {
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
             HasTouch = touch
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
 
         await page.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
-        await page.GotoAsync($"{BaseUrl}{SigningComponentsUrl}", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60_000
-        });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{SigningComponentsUrl}", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync("[data-testid='signing-step-text']",
             new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 20_000 });
         return page;
@@ -236,8 +231,7 @@ public class SigningNumberCultureE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1280, 720);
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         var runner = page.Locator("[data-testid='signing-runner-demo']").First;
         await runner.ScrollIntoViewIfNeededAsync();

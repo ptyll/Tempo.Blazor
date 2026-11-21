@@ -32,7 +32,7 @@ public sealed class EmailEditorCanvasWysiwygF9AE2ETests : EmailTemplateE2ETestBa
 
     private async Task<IPage> OpenRouteAsync(string route, int width, int height, bool touch = false, bool fullWidth = false)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = touch,
@@ -40,7 +40,6 @@ public sealed class EmailEditorCanvasWysiwygF9AE2ETests : EmailTemplateE2ETestBa
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
 
         var page = await context.NewPageAsync();
         await page.AddInitScriptAsync(

@@ -16,8 +16,7 @@ public partial class SpreadsheetE2ETests
         // Redesign phase 6: the spreadsheet chrome follows its CONTAINER, so a 1280-wide page
         // is the TABLET chrome (no ribbon tabs). These specs assert the DESKTOP ribbon.
         await page.SetViewportSizeAsync(1440, 960);
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
         var grid = DemoGrid(page);
         await WaitForCanvasGridReadyAsync(page, grid);
         return page;

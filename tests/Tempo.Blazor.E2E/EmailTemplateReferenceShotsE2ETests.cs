@@ -44,7 +44,7 @@ public sealed class EmailTemplateReferenceShotsE2ETests : EmailTemplateE2ETestBa
 
     private async Task CaptureAllAsync(int width, int height, string size, string layout, bool touch)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = touch,
@@ -53,7 +53,6 @@ public sealed class EmailTemplateReferenceShotsE2ETests : EmailTemplateE2ETestBa
             IgnoreHTTPSErrors = true,
             AcceptDownloads = true,
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
 
         // ── 1. the template library ─────────────────────────────────────────────────────────

@@ -21,7 +21,7 @@ public sealed class EmailEditorUxPhase8E2ETests : EmailTemplateE2ETestBase
 
     private async Task<IPage> OpenEditorAsync(int width, int height, bool touch, bool pinDesktop, string route = WelcomeRoute)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = touch,
@@ -29,7 +29,6 @@ public sealed class EmailEditorUxPhase8E2ETests : EmailTemplateE2ETestBase
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
 
         var page = await context.NewPageAsync();
         await page.AddInitScriptAsync(

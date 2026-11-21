@@ -65,23 +65,17 @@ public class SigningRedesignPhase2E2ETests : BaselineGeneratorTestBase
         {
             // HasTouch only matters for the tablet viewport: Signing's coarse-pointer behaviour is
             // what the 1024 capture must show.
-            var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+            var context = await CreateContextAsync(new BrowserNewContextOptions
             {
                 ViewportSize = new ViewportSize { Width = width, Height = height },
                 Locale = "en-US",
                 IgnoreHTTPSErrors = true,
                 HasTouch = width == 1024
             });
-            RegisterContext(context);
             var page = await context.NewPageAsync();
 
             await page.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
-            await page.GotoAsync($"{BaseUrl}{SigningComponentsUrl}", new PageGotoOptions
-            {
-                WaitUntil = WaitUntilState.DOMContentLoaded,
-                Timeout = 60_000
-            });
-            await WaitForAppReadyAsync(page);
+            await GotoAppReadyAsync(page, $"{BaseUrl}{SigningComponentsUrl}", WaitUntilState.DOMContentLoaded);
             await page.WaitForSelectorAsync("[data-testid='signing-runner-demo']",
                 new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 20_000 });
 

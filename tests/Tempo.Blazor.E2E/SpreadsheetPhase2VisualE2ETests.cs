@@ -641,7 +641,7 @@ public partial class SpreadsheetE2ETests
         IPage page;
         if (touch)
         {
-            var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+            var context = await CreateContextAsync(new BrowserNewContextOptions
             {
                 HasTouch = true,
                 IsMobile = true,
@@ -649,7 +649,6 @@ public partial class SpreadsheetE2ETests
                 Locale = "en-US",
                 IgnoreHTTPSErrors = true,
             });
-            RegisterContext(context);
             page = await context.NewPageAsync();
         }
         else

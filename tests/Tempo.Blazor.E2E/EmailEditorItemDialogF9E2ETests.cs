@@ -29,7 +29,7 @@ public sealed class EmailEditorItemDialogF9E2ETests : EmailTemplateE2ETestBase
 
     private async Task<IPage> OpenEditorAsync(int width, int height, bool touch = false)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = touch,
@@ -37,7 +37,6 @@ public sealed class EmailEditorItemDialogF9E2ETests : EmailTemplateE2ETestBase
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
 
         var page = await context.NewPageAsync();
         // The WASM boot occasionally exceeds the harness's 60 s readiness window on a loaded machine (the

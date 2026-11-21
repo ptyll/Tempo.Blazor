@@ -13,8 +13,7 @@ public class SigningDocumentCommentsE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         var viewer = page.Locator("[data-testid='document-comments-viewer']").First;
         await viewer.ScrollIntoViewIfNeededAsync();
@@ -50,8 +49,7 @@ public class SigningDocumentCommentsE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         var viewer = page.Locator("[data-testid='document-comments-viewer']").First;
         await viewer.ScrollIntoViewIfNeededAsync();
@@ -86,8 +84,7 @@ public class SigningDocumentCommentsE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         var viewer = page.Locator("[data-testid='document-comments-viewer']").First;
         await viewer.ScrollIntoViewIfNeededAsync();
@@ -126,8 +123,7 @@ public class SigningDocumentCommentsE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         var viewer = await OpenCommentsViewerAsync(page);
         await Assertions.Expect(viewer.Locator(".tm-document-page-viewer__page-input")).ToHaveValueAsync("1 / 2");
@@ -154,8 +150,7 @@ public class SigningDocumentCommentsE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         var viewer = await OpenCommentsViewerAsync(page);
         await viewer.Locator(".tm-document-page-viewer__comment-toggle").ClickAsync();
@@ -182,8 +177,7 @@ public class SigningDocumentCommentsE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         var viewer = await OpenCommentsViewerAsync(page);
         var pageElement = viewer.Locator(".tm-document-page-viewer__page").First;
@@ -207,8 +201,7 @@ public class SigningDocumentCommentsE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         var viewer = await OpenCommentsViewerAsync(page);
         var panel = viewer.Locator("[data-testid='document-comments-panel']").First;
@@ -230,8 +223,7 @@ public class SigningDocumentCommentsE2ETests : WasmTestBase
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(390, 844);
 
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         var viewer = await OpenCommentsViewerAsync(page);
         await page.Locator("[data-testid='document-comments-layout'] select").SelectOptionAsync("Mobile");
@@ -253,8 +245,7 @@ public class SigningDocumentCommentsE2ETests : WasmTestBase
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1366, 768);
 
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         var viewer = await OpenCommentsViewerAsync(page);
         await Assertions.Expect(viewer.Locator("[data-testid='document-comments-panel']").First).ToBeVisibleAsync();

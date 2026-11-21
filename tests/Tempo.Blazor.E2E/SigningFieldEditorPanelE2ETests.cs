@@ -33,8 +33,7 @@ public class SigningFieldEditorPanelE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         var panel = await GetPanelAsync(page);
         await panel.Locator(".tm-signing-field-editor-panel__type").SelectOptionAsync(fieldType);
@@ -95,8 +94,7 @@ public class SigningFieldEditorPanelE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         var panel = await GetPanelAsync(page);
         await panel.Locator(".tm-signing-field-editor-panel__type").SelectOptionAsync(fieldType);
@@ -116,8 +114,7 @@ public class SigningFieldEditorPanelE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         var panel = await GetPanelAsync(page);
         await panel.Locator(".tm-signing-field-editor-panel__type").SelectOptionAsync("Select");
@@ -142,8 +139,7 @@ public class SigningFieldEditorPanelE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         var panel = await GetPanelAsync(page);
         var name = panel.Locator(".tm-signing-field-editor-panel__name").First;
@@ -162,8 +158,7 @@ public class SigningFieldEditorPanelE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         var panel = await GetPanelAsync(page);
         await panel.Locator(".tm-signing-field-editor-panel__add-option").ClickAsync();
@@ -179,8 +174,7 @@ public class SigningFieldEditorPanelE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         var panel = await GetPanelAsync(page);
         await panel.Locator(".tm-signing-field-editor-panel__type").SelectOptionAsync("Text");
@@ -202,8 +196,7 @@ public class SigningFieldEditorPanelE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         var panel = await GetPanelAsync(page);
         await panel.Locator(".tm-signing-field-editor-panel__open-conditions").ClickAsync();
@@ -221,8 +214,7 @@ public class SigningFieldEditorPanelE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         var panel = await GetPanelAsync(page);
         await panel.Locator(".tm-signing-field-editor-panel__open-conditions").ClickAsync();

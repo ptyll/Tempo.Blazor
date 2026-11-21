@@ -101,13 +101,12 @@ public sealed class EmailEditorKeystrokePerformanceE2ETests : EmailTemplateRende
 
         try
         {
-            var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+            var context = await CreateContextAsync(new BrowserNewContextOptions
             {
                 ViewportSize = new ViewportSize { Width = 1440, Height = 900 },
                 Locale = "en-US",
                 IgnoreHTTPSErrors = true,
-            });
-            RegisterContext(context);
+            }, trace: false); // a keystroke-latency budget: failure tracing would skew the timing
             var page = await context.NewPageAsync();
             await page.AddInitScriptAsync("try { localStorage.setItem('tm-demo-editor-layout', 'Desktop'); } catch (e) { }");
             await GotoAppReadyAsync(page, $"{BaseUrl}/email-templates/edit/{id}");

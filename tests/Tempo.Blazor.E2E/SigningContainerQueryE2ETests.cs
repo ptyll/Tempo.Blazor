@@ -173,12 +173,7 @@ public class SigningContainerQueryE2ETests : WasmTestBase
             var page = await context.NewPageAsync();
             await page.SetViewportSizeAsync(1440, 900);
             await page.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
-            await page.GotoAsync($"{BaseUrl}{url}", new PageGotoOptions
-            {
-                WaitUntil = WaitUntilState.DOMContentLoaded,
-                Timeout = 60_000
-            });
-            await WaitForAppReadyAsync(page);
+            await GotoAppReadyAsync(page, $"{BaseUrl}{url}", WaitUntilState.DOMContentLoaded);
             await page.AddStyleTagAsync(new PageAddStyleTagOptions
             {
                 Content = SigningRedesignPhase8Specs.WideLayoutStyle
@@ -253,12 +248,7 @@ public class SigningContainerQueryE2ETests : WasmTestBase
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 900);
         await page.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
-        await page.GotoAsync($"{BaseUrl}/signing-components", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60_000
-        });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync("[data-testid='field-editor-panel']",
             new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 20_000 });
         return page;
@@ -270,12 +260,7 @@ public class SigningContainerQueryE2ETests : WasmTestBase
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 900);
         await page.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
-        await page.GotoAsync($"{BaseUrl}/signing-components", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60_000
-        });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync("[data-testid='signing-runner-demo']",
             new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 20_000 });
         return page;

@@ -107,8 +107,7 @@ public class SigningProductPanelsE2ETests : WasmTestBase
     {
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
         return page;
     }
 

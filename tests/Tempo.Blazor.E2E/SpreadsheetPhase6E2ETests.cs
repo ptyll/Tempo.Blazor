@@ -13,8 +13,7 @@ public class SpreadsheetPhase6E2ETests : WasmTestBase
         // Redesign phase 6: the spreadsheet chrome follows its CONTAINER, so a 1280-wide page
         // is the TABLET chrome (no ribbon tabs). These specs assert the DESKTOP ribbon.
         await page.SetViewportSizeAsync(1440, 960);
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         // Navigate to A1 via Name Box
         await page.FillAsync(".tm-spreadsheet-formula-bar__ref", "A1");
@@ -62,8 +61,7 @@ public class SpreadsheetPhase6E2ETests : WasmTestBase
         // Redesign phase 6: the spreadsheet chrome follows its CONTAINER, so a 1280-wide page
         // is the TABLET chrome (no ribbon tabs). These specs assert the DESKTOP ribbon.
         await page.SetViewportSizeAsync(1440, 960);
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         await page.ClickAsync(".tm-spreadsheet-canvas-grid");
         await page.WaitForTimeoutAsync(300);
@@ -92,8 +90,7 @@ public class SpreadsheetPhase6E2ETests : WasmTestBase
         // Redesign phase 6: the spreadsheet chrome follows its CONTAINER, so a 1280-wide page
         // is the TABLET chrome (no ribbon tabs). These specs assert the DESKTOP ribbon.
         await page.SetViewportSizeAsync(1440, 960);
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         // Pre-create a named range via Name Manager
         await page.ClickAsync(".tm-spreadsheet-toolbar__tab:text-is('Data')");
@@ -143,8 +140,7 @@ public class SpreadsheetPhase6E2ETests : WasmTestBase
     {
         var page = await CreatePageAsync();
         await page.SetViewportSizeAsync(1440, 960);
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
         await DemoGrid(page).WaitForAsync(new LocatorWaitForOptions
         {
             State = WaitForSelectorState.Visible,
@@ -591,8 +587,7 @@ public class SpreadsheetPhase6E2ETests : WasmTestBase
         // its middle, or the Close button ends up below the fold and the dialog is a keyboard trap.
         var page = await CreatePageAsync();
         await page.SetViewportSizeAsync(1440, 500);
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
         await DemoGrid(page).WaitForAsync(new LocatorWaitForOptions
         {
             State = WaitForSelectorState.Visible,

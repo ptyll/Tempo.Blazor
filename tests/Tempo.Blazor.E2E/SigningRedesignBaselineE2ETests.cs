@@ -102,23 +102,17 @@ public class SigningRedesignBaselineE2ETests : BaselineGeneratorTestBase
             // HasTouch only matters for the tablet viewport: Signing's coarse-pointer behaviour
             // (touch targets, tap alternatives) is what the 1024 capture must show, and a mouse-only
             // context reports (hover: hover) / (pointer: fine) and would capture the desktop one.
-            var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+            var context = await CreateContextAsync(new BrowserNewContextOptions
             {
                 ViewportSize = new ViewportSize { Width = width, Height = height },
                 Locale = "en-US",
                 IgnoreHTTPSErrors = true,
                 HasTouch = width == 1024
             });
-            RegisterContext(context);
             var page = await context.NewPageAsync();
 
             await page.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
-            await page.GotoAsync($"{BaseUrl}{SigningComponentsUrl}", new PageGotoOptions
-            {
-                WaitUntil = WaitUntilState.DOMContentLoaded,
-                Timeout = 60_000
-            });
-            await WaitForAppReadyAsync(page);
+            await GotoAppReadyAsync(page, $"{BaseUrl}{SigningComponentsUrl}", WaitUntilState.DOMContentLoaded);
             await page.WaitForSelectorAsync("[data-testid='audit-trail-viewer']",
                 new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 20_000 });
 
@@ -146,12 +140,7 @@ public class SigningRedesignBaselineE2ETests : BaselineGeneratorTestBase
             }
 
             // The document-editor -> signing bridge page is a screen of its own (full page, not an element).
-            await page.GotoAsync($"{BaseUrl}{SigningFromEditorUrl}", new PageGotoOptions
-            {
-                WaitUntil = WaitUntilState.DOMContentLoaded,
-                Timeout = 60_000
-            });
-            await WaitForAppReadyAsync(page);
+            await GotoAppReadyAsync(page, $"{BaseUrl}{SigningFromEditorUrl}", WaitUntilState.DOMContentLoaded);
             await page.WaitForTimeoutAsync(600);
             var pagePath = Path.Combine(BaselineDir, $"signing-template-from-editor-page--{name}.png");
             await page.ScreenshotAsync(new PageScreenshotOptions
@@ -186,22 +175,16 @@ public class SigningRedesignBaselineE2ETests : BaselineGeneratorTestBase
     [Description("Writes the dark-mode 1440 Signing captures for the UX review")]
     public async Task CaptureSigningRedesignDarkBaselines()
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = 1440, Height = 900 },
             Locale = "en-US",
             IgnoreHTTPSErrors = true
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
 
         await page.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
-        await page.GotoAsync($"{BaseUrl}{SigningComponentsUrl}", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60_000
-        });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{SigningComponentsUrl}", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync("[data-testid='audit-trail-viewer']",
             new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 20_000 });
 

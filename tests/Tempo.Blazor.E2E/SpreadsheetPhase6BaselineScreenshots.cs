@@ -16,8 +16,7 @@ public class SpreadsheetPhase6BaselineScreenshots : BaselineGeneratorTestBase
         // Redesign phase 6: the spreadsheet chrome follows its CONTAINER, so a 1280-wide page
         // is the TABLET chrome (no ribbon tabs). These specs assert the DESKTOP ribbon.
         await page.SetViewportSizeAsync(1440, 960);
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         await page.ClickAsync(".tm-spreadsheet-toolbar__tab:text-is('Data')");
         await page.ClickAsync("button[title='Name Manager']");
@@ -39,8 +38,7 @@ public class SpreadsheetPhase6BaselineScreenshots : BaselineGeneratorTestBase
         // Redesign phase 6: the spreadsheet chrome follows its CONTAINER, so a 1280-wide page
         // is the TABLET chrome (no ribbon tabs). These specs assert the DESKTOP ribbon.
         await page.SetViewportSizeAsync(1440, 960);
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         await page.WaitForSelectorAsync(".tm-spreadsheet-formula-bar__ref", new() { State = WaitForSelectorState.Visible });
         await page.ClickAsync(".tm-spreadsheet-formula-bar__ref");
@@ -61,8 +59,7 @@ public class SpreadsheetPhase6BaselineScreenshots : BaselineGeneratorTestBase
         // Redesign phase 6: the spreadsheet chrome follows its CONTAINER, so a 1280-wide page
         // is the TABLET chrome (no ribbon tabs). These specs assert the DESKTOP ribbon.
         await page.SetViewportSizeAsync(1440, 960);
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         await page.ClickAsync(".tm-spreadsheet-toolbar__tab:text-is('Insert')");
         await page.ClickAsync("button[title='Insert link']");
@@ -84,8 +81,7 @@ public class SpreadsheetPhase6BaselineScreenshots : BaselineGeneratorTestBase
         // Redesign phase 6: the spreadsheet chrome follows its CONTAINER, so a 1280-wide page
         // is the TABLET chrome (no ribbon tabs). These specs assert the DESKTOP ribbon.
         await page.SetViewportSizeAsync(1440, 960);
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         // Insert a hyperlink first
         await page.ClickAsync(".tm-spreadsheet-canvas-grid");

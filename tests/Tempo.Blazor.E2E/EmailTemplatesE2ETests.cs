@@ -472,8 +472,7 @@ public sealed class EmailTemplatesE2ETests : EmailTemplateE2ETestBase
         await page.Locator("[data-tm-save]").ClickAsync();
         await page.WaitForTimeoutAsync(800);
 
-        await page.ReloadAsync(new() { WaitUntil = WaitUntilState.Load });
-        await WaitForAppReadyAsync(page);
+        await ReloadAppReadyAsync(page, WaitUntilState.Load);
         await page.WaitForSelectorAsync("[data-tm-prop='Subject'] input", new() { Timeout = 30000 });
         (await page.Locator("[data-tm-prop='Subject'] input").InputValueAsync())
             .Should().Be(subject, "the saved subject survives a page reload via the API");

@@ -14,8 +14,7 @@ public class SigningFieldOverlayE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         var pageElement = page.Locator("[data-testid='signing-document-viewer'] .tm-document-page-viewer__page").First;
         var overlay = page.Locator("[data-testid='signature-overlay']").First;
@@ -45,8 +44,7 @@ public class SigningFieldOverlayE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         var overlay = page.Locator("[data-testid='signature-overlay']").First;
         await overlay.ClickAsync();
@@ -62,8 +60,7 @@ public class SigningFieldOverlayE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         var overlay = page.Locator("[data-testid='signature-overlay']").First;
         await overlay.ClickAsync(new LocatorClickOptions { Button = MouseButton.Right });
@@ -79,8 +76,7 @@ public class SigningFieldOverlayE2ETests : WasmTestBase
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(390, 844);
 
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         var overlay = page.Locator("[data-testid='signature-overlay']").First;
         await overlay.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });

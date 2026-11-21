@@ -455,8 +455,7 @@ public class SigningFormRunnerE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(width, height);
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
         var runner = GetRunner(page);
         await runner.ScrollIntoViewIfNeededAsync();
         return page;

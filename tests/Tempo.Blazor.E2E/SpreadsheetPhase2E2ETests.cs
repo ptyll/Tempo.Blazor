@@ -18,8 +18,7 @@ public partial class SpreadsheetE2ETests
     private async Task<IPage> OpenCanvasDemoAsync()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
         var grid = DemoGrid(page);
         await WaitForCanvasGridReadyAsync(page, grid);
         return page;

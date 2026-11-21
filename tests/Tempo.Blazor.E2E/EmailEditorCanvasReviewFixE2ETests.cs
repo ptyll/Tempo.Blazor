@@ -30,7 +30,7 @@ public sealed class EmailEditorCanvasReviewFixE2ETests : EmailTemplateE2ETestBas
 
     private async Task<IPage> OpenEditorAsync(int width = 1440, int height = 900, bool touch = false)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = touch,
@@ -38,7 +38,6 @@ public sealed class EmailEditorCanvasReviewFixE2ETests : EmailTemplateE2ETestBas
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
 
         var page = await context.NewPageAsync();
         await page.AddInitScriptAsync(
@@ -171,17 +170,15 @@ public sealed class EmailEditorCanvasReviewFixE2ETests : EmailTemplateE2ETestBas
     [TestMethod]
     public async Task The_image_placeholder_is_a_framed_flex_box()
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = 1440, Height = 900 },
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
         await page.AddInitScriptAsync("try { localStorage.setItem('tm-demo-editor-layout', 'Auto'); } catch (e) { }");
-        await page.GotoAsync($"{BaseUrl}{NewsletterRoute}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{NewsletterRoute}", WaitUntilState.Load);
         await page.WaitForSelectorAsync("[data-tm-email-editor]", new() { Timeout = 60000 });
         await page.AddStyleTagAsync(new()
         {

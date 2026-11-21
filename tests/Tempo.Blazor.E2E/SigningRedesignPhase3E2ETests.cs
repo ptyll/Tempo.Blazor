@@ -78,22 +78,16 @@ public class SigningRedesignPhase3E2ETests : BaselineGeneratorTestBase
         // 1440 pass: runner + completion pair in every light/dark x default/indigo combination.
         foreach (var (dark, indigo, theme, brand) in Variants)
         {
-            var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+            var context = await CreateContextAsync(new BrowserNewContextOptions
             {
                 ViewportSize = new ViewportSize { Width = 1440, Height = 900 },
                 Locale = "en-US",
                 IgnoreHTTPSErrors = true
             });
-            RegisterContext(context);
             var page = await context.NewPageAsync();
 
             await page.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
-            await page.GotoAsync($"{BaseUrl}{SigningComponentsUrl}", new PageGotoOptions
-            {
-                WaitUntil = WaitUntilState.DOMContentLoaded,
-                Timeout = 60_000
-            });
-            await WaitForAppReadyAsync(page);
+            await GotoAppReadyAsync(page, $"{BaseUrl}{SigningComponentsUrl}", WaitUntilState.DOMContentLoaded);
             await page.WaitForSelectorAsync("[data-testid='signing-completion-panel']",
                 new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 20_000 });
 
@@ -121,23 +115,17 @@ public class SigningRedesignPhase3E2ETests : BaselineGeneratorTestBase
         // presentation instead of the full-bleed demo column.
         foreach (var (width, height, name, touch) in LightViewports)
         {
-            var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+            var context = await CreateContextAsync(new BrowserNewContextOptions
             {
                 ViewportSize = new ViewportSize { Width = width, Height = height },
                 Locale = "en-US",
                 IgnoreHTTPSErrors = true,
                 HasTouch = touch
             });
-            RegisterContext(context);
             var page = await context.NewPageAsync();
 
             await page.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
-            await page.GotoAsync($"{BaseUrl}{SigningComponentsUrl}", new PageGotoOptions
-            {
-                WaitUntil = WaitUntilState.DOMContentLoaded,
-                Timeout = 60_000
-            });
-            await WaitForAppReadyAsync(page);
+            await GotoAppReadyAsync(page, $"{BaseUrl}{SigningComponentsUrl}", WaitUntilState.DOMContentLoaded);
             await page.WaitForSelectorAsync("[data-testid='signing-completion-panel']",
                 new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 20_000 });
 

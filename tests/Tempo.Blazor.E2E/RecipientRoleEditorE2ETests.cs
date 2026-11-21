@@ -13,8 +13,7 @@ public class RecipientRoleEditorE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         var editor = page.Locator("[data-testid='recipient-role-editor-template']").First;
         await editor.ScrollIntoViewIfNeededAsync();
@@ -31,8 +30,7 @@ public class RecipientRoleEditorE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         var editor = page.Locator("[data-testid='recipient-role-editor-template']").First;
         await editor.ScrollIntoViewIfNeededAsync();
@@ -51,8 +49,7 @@ public class RecipientRoleEditorE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         var editor = page.Locator("[data-testid='recipient-role-editor-submission']").First;
         await editor.ScrollIntoViewIfNeededAsync();
@@ -77,8 +74,7 @@ public class RecipientRoleEditorE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         var editor = page.Locator("[data-testid='recipient-role-editor-template']").First;
         await editor.ScrollIntoViewIfNeededAsync();
@@ -97,8 +93,7 @@ public class RecipientRoleEditorE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         var row = page.Locator("[data-testid='recipient-role-editor-template'] .tm-recipient-role-editor__card").First;
         await row.ScrollIntoViewIfNeededAsync();

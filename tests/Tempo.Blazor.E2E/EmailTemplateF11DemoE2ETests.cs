@@ -184,9 +184,7 @@ public sealed class EmailTemplateF11DemoE2ETests : EmailTemplateE2ETestBase
         await page.WaitForURLAsync("**/email-templates", new() { Timeout = 30000 });
 
         // The save really went to the API: reopen the template and read the subject back.
-        await page.GotoAsync($"{BaseUrl}/email-templates/edit/{NewsletterTemplateId}",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/email-templates/edit/{NewsletterTemplateId}", WaitUntilState.Load);
         await page.WaitForSelectorAsync("[data-tm-canvas-doc]", new() { Timeout = 60000 });
         await page.WaitForFunctionAsync(
             "expected => document.querySelector(\"[data-tm-prop='Subject'] input\")?.value === expected",

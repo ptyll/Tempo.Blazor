@@ -28,12 +28,7 @@ public abstract class EmailTemplateRenderModeTestBase : PlaywrightTestBase
     private protected async Task<IPage> OpenLibraryAsync()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/email-templates", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.Load,
-            Timeout = 60000,
-        });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/email-templates", WaitUntilState.Load);
         await page.WaitForSelectorAsync("[data-tm-template-card]", new() { Timeout = 60000 });
         return page;
     }
@@ -62,8 +57,7 @@ public abstract class EmailTemplateRenderModeTestBase : PlaywrightTestBase
             null, new() { Timeout = 40000 });
 
         // Reload the EDITOR (a full page load, so the value can only come back from the API).
-        await page.GotoAsync(editorUrl, new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, editorUrl, WaitUntilState.Load);
         await page.WaitForSelectorAsync("[data-tm-canvas-doc]", new() { Timeout = 60000 });
         await page.WaitForFunctionAsync(
             "expected => document.querySelector(\"[data-tm-prop='Subject'] input\")?.value === expected",

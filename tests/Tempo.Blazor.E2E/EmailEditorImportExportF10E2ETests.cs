@@ -41,7 +41,7 @@ public sealed class EmailEditorImportExportF10E2ETests : EmailTemplateE2ETestBas
     private async Task<IPage> OpenEditorAsync(
         int width, int height, bool touch = false, string layout = "Desktop", bool clipboard = false)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = touch,
@@ -51,7 +51,6 @@ public sealed class EmailEditorImportExportF10E2ETests : EmailTemplateE2ETestBas
             AcceptDownloads = true,
             Permissions = clipboard ? ["clipboard-read", "clipboard-write"] : [],
         });
-        RegisterContext(context);
 
         var page = await context.NewPageAsync();
         await GotoAppReadyAsync(page, $"{BaseUrl}{WelcomeEditorRoute}");

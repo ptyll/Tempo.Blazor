@@ -39,7 +39,7 @@ public sealed class EmailEditorResponsiveF8E2ETests : EmailTemplateE2ETestBase
     /// <summary>Opens the editor on an explicit viewport (and, on a phone, a real coarse-pointer context).</summary>
     private async Task<IPage> OpenEditorAsync(int width, int height, bool touch = false)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = touch,
@@ -47,7 +47,6 @@ public sealed class EmailEditorResponsiveF8E2ETests : EmailTemplateE2ETestBase
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
 
         var page = await context.NewPageAsync();
         await GotoAppReadyAsync(page, $"{BaseUrl}{EditorRoute}");
