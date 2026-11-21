@@ -34,7 +34,7 @@ public class AdditiveExtensionsE2ETests : WasmTestBase
 
     private async Task<IPage> OpenAsync(string route, int width, int height, bool touch, string culture = "en")
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = touch,
@@ -46,10 +46,8 @@ public class AdditiveExtensionsE2ETests : WasmTestBase
         // tm-demo-culture, and seeding it here renders the requested culture from the first paint.
         await context.AddInitScriptAsync(
             $"localStorage.setItem('tm-demo-culture', '{culture}'); document.cookie = 'tm-demo-culture={culture};path=/;max-age=31536000;samesite=lax';");
-        RegisterContext(context);
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}{route}");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{route}");
         return page;
     }
 

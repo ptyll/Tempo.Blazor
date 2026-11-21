@@ -22,13 +22,12 @@ public class ActivityCommentsVisualE2ETests : WasmTestBase
 
     private async Task<IPage> OpenActivityAsync(int width = 1440, int height = 900, string? culture = null)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             Locale = culture == "cs" ? "cs-CZ" : "en-US",
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         if (culture is not null)
         {
             // The WASM host applies the culture stored here before the app renders.
@@ -36,9 +35,7 @@ public class ActivityCommentsVisualE2ETests : WasmTestBase
         }
 
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/activity",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/activity");
         await Assertions.Expect(page.Locator($"{SectionSelector} [data-comment-id='demo-c1']"))
             .ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 15000 });
         return page;

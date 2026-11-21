@@ -73,9 +73,9 @@ public partial class EditorShellE2ETests : WasmTestBase
         => page.EvaluateAsync<double[]>(
             """() => [...document.querySelectorAll("[data-testid='editor-shell'] .tm-editor-shell__sheet .tm-editor-shell__tab")].map(t => t.getBoundingClientRect().height)""");
 
-    private static async Task<IBrowserContext> CreateTouchContextAsync(int width, int height, string locale = "en-US")
+    private async Task<IBrowserContext> CreateTouchContextAsync(int width, int height, string locale = "en-US")
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = true,
@@ -89,8 +89,7 @@ public partial class EditorShellE2ETests : WasmTestBase
     private async Task<IPage> GotoEditorShellAsync(IBrowserContext context, int width, int height)
     {
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}{Route}");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{Route}");
         await page.SetViewportSizeAsync(width, height);
         if (width < 640)
         {
@@ -119,7 +118,6 @@ public partial class EditorShellE2ETests : WasmTestBase
     {
         var context = await CreateTouchContextAsync(1440, 900);
         var page = await GotoEditorShellAsync(context, 1440, 900);
-        RegisterContext(context);
 
         var left = page.Locator("[data-testid='editor-shell'] [data-region='left']");
         var canvas = page.Locator("[data-testid='editor-shell'] [data-region='canvas']");
@@ -147,7 +145,6 @@ public partial class EditorShellE2ETests : WasmTestBase
     {
         var context = await CreateTouchContextAsync(1440, 900);
         var page = await GotoEditorShellAsync(context, 1440, 900);
-        RegisterContext(context);
 
         var toggle = page.Locator("[data-testid='editor-shell'] .tm-editor-shell__panel-toggle--left");
         await Assertions.Expect(toggle).ToBeVisibleAsync();
@@ -177,7 +174,7 @@ public partial class EditorShellE2ETests : WasmTestBase
         // The demo binds LeftOpen two-way; drive the same state through the demo host buttons is
         // not exposed, so use the shell's own strip: collapse first, then verify the rail expand
         // path returns focus to a working toggle (keyboard).
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             // Pin the locale: the demo follows the browser language, and a context without one inherits the host machine's (cs-CZ on the dev box) while the specs read English labels.
             Locale = "en-US",
@@ -185,9 +182,7 @@ public partial class EditorShellE2ETests : WasmTestBase
             IgnoreHTTPSErrors = true,
         });
         var page = await context.NewPageAsync();
-        RegisterContext(context);
-        await page.GotoAsync($"{BaseUrl}{Route}");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{Route}");
 
         var toggle = page.Locator("[data-testid='editor-shell'] .tm-editor-shell__panel-toggle--left");
         await toggle.FocusAsync();
@@ -209,7 +204,6 @@ public partial class EditorShellE2ETests : WasmTestBase
     {
         var context = await CreateTouchContextAsync(390, 844);
         var page = await GotoEditorShellAsync(context, 390, 844);
-        RegisterContext(context);
 
         await Assertions.Expect(page.Locator($"{Shell} [data-region='canvas']")).ToBeVisibleAsync();
 
@@ -255,7 +249,6 @@ public partial class EditorShellE2ETests : WasmTestBase
     {
         var context = await CreateTouchContextAsync(390, 844);
         var page = await GotoEditorShellAsync(context, 390, 844);
-        RegisterContext(context);
 
         var tabs = page.Locator($"{Shell} .tm-editor-shell__sheet .tm-editor-shell__tab");
         await tabs.Nth(1).ClickAsync();
@@ -270,7 +263,6 @@ public partial class EditorShellE2ETests : WasmTestBase
     {
         var context = await CreateTouchContextAsync(390, 844);
         var page = await GotoEditorShellAsync(context, 390, 844);
-        RegisterContext(context);
 
         await page.Locator($"{Shell} .tm-editor-shell__sheet-close").ClickAsync();
         await Assertions.Expect(page.Locator($"{Shell} .tm-editor-shell__sheet")).ToBeHiddenAsync(
@@ -298,7 +290,6 @@ public partial class EditorShellE2ETests : WasmTestBase
     {
         var context = await CreateTouchContextAsync(390, 844);
         var page = await GotoEditorShellAsync(context, 390, 844);
-        RegisterContext(context);
 
         var bar = page.Locator("[data-testid='editor-shell'] .tm-mobile-action-bar__bar");
         await bar.Locator("[data-action-id='undo']").ClickAsync();
@@ -310,7 +301,6 @@ public partial class EditorShellE2ETests : WasmTestBase
     {
         var context = await CreateTouchContextAsync(320, 700, locale: "fr-FR");
         var page = await GotoEditorShellAsync(context, 320, 700);
-        RegisterContext(context);
 
         var overflow = await page.EvaluateAsync<int>("() => document.documentElement.scrollWidth");
         Assert.IsTrue(overflow <= 320, $"no horizontal overflow at 320 (scrollWidth {overflow})");
@@ -331,7 +321,7 @@ public partial class EditorShellE2ETests : WasmTestBase
 
     private async Task<IPage> OpenPlainPageAsync(int width, int height, string locale = "en-US", bool touch = false, ReducedMotion? motion = null)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = touch,
@@ -341,7 +331,7 @@ public partial class EditorShellE2ETests : WasmTestBase
             ReducedMotion = motion,
         });
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}{Route}");
+        await GotoAppReadyAsync(page, $"{BaseUrl}{Route}");
         return page;
     }
 
@@ -350,7 +340,6 @@ public partial class EditorShellE2ETests : WasmTestBase
     {
         var context = await CreateTouchContextAsync(390, 844);
         var page = await GotoEditorShellAsync(context, 390, 844);
-        RegisterContext(context);
 
         await page.Locator($"{Shell} .tm-editor-shell__sheet-close").ClickAsync();
         var reopen = page.Locator($"{Shell} .tm-editor-shell__panel-toggle--mobile");
@@ -389,8 +378,6 @@ public partial class EditorShellE2ETests : WasmTestBase
     public async Task Demo_1440_CollapseBothPanels_CanvasGrowsToRails()
     {
         var page = await OpenPlainPageAsync(1440, 900);
-        RegisterContext(page.Context);
-        await WaitForAppReadyAsync(page);
 
         var shell = page.Locator("[data-testid='editor-shell']");
         var before = (await shell.Locator("[data-region='canvas']").BoundingBoxAsync())!.Width;
@@ -409,7 +396,6 @@ public partial class EditorShellE2ETests : WasmTestBase
     {
         var context = await CreateTouchContextAsync(390, 520);
         var page = await GotoEditorShellAsync(context, 390, 520);
-        RegisterContext(context);
 
         await page.WaitForTimeoutAsync(700);
         var m = await page.EvaluateAsync<double[]>(
@@ -431,7 +417,6 @@ public partial class EditorShellE2ETests : WasmTestBase
     {
         var context = await CreateTouchContextAsync(320, 700, locale: "cs-CZ");
         var page = await GotoEditorShellAsync(context, 320, 700);
-        RegisterContext(context);
 
         var lines = await MeasureTabLineCountsAsync(page);
         Assert.AreEqual(2, lines.Length);
@@ -446,8 +431,6 @@ public partial class EditorShellE2ETests : WasmTestBase
     public async Task Demo_Dark_And_Indigo_PaintTheShellSurfaces()
     {
         var page = await OpenPlainPageAsync(1440, 900);
-        RegisterContext(page.Context);
-        await WaitForAppReadyAsync(page);
         var panel = "[data-testid='editor-shell'] [data-region='left']";
 
         // The demo frame owns the theme (its own data-theme island re-pins the light tokens under a bare <html> attribute).
@@ -470,8 +453,6 @@ public partial class EditorShellE2ETests : WasmTestBase
     public async Task Demo_390_ReducedMotion_SheetStillOpensAndCloses()
     {
         var page = await OpenPlainPageAsync(390, 844, touch: true, motion: ReducedMotion.Reduce);
-        RegisterContext(page.Context);
-        await WaitForAppReadyAsync(page);
         var close = page.Locator(".tm-side-panel-sheet .tm-drawer__close");
         if (await close.CountAsync() > 0) await close.First.ClickAsync();
 
@@ -501,8 +482,6 @@ public partial class EditorShellE2ETests : WasmTestBase
     public async Task Demo_1280_AutoShell_ResolvesTablet_DockedPanelsNoModalNoInert_FocusUntouched()
     {
         var page = await OpenPlainPageAsync(1280, 800);
-        RegisterContext(page.Context);
-        await WaitForAppReadyAsync(page);
 
         var shell = page.Locator(Shell);
         await Assertions.Expect(shell).ToHaveAttributeAsync("data-layout", "tablet");
@@ -529,8 +508,6 @@ public partial class EditorShellE2ETests : WasmTestBase
     public async Task Demo_1280_Tablet_ExpandingTheRail_RailsTheOtherPanel_WithoutAModalOrAnEscape()
     {
         var page = await OpenPlainPageAsync(1280, 800);
-        RegisterContext(page.Context);
-        await WaitForAppReadyAsync(page);
         var shell = page.Locator(Shell);
         await Assertions.Expect(shell).ToHaveAttributeAsync("data-layout", "tablet");
 
@@ -548,8 +525,6 @@ public partial class EditorShellE2ETests : WasmTestBase
     public async Task Demo_1440_To_1280_Flip_KeepsFocusAndAtMostOneExpandedPanel()
     {
         var page = await OpenPlainPageAsync(1440, 900);
-        RegisterContext(page.Context);
-        await WaitForAppReadyAsync(page);
         var shell = page.Locator(Shell);
         await Assertions.Expect(shell).ToHaveAttributeAsync("data-layout", "desktop");
         Assert.AreEqual(2, await shell.Locator("aside.tm-editor-shell__panel").CountAsync());
@@ -569,8 +544,6 @@ public partial class EditorShellE2ETests : WasmTestBase
     public async Task Demo_1440_To_1280_Flip_FocusOnTheCanvas_StaysOnTheCanvas()
     {
         var page = await OpenPlainPageAsync(1440, 900);
-        RegisterContext(page.Context);
-        await WaitForAppReadyAsync(page);
         var shell = page.Locator(Shell);
         await Assertions.Expect(shell).ToHaveAttributeAsync("data-layout", "desktop");
 
@@ -588,7 +561,6 @@ public partial class EditorShellE2ETests : WasmTestBase
     {
         var context = await CreateTouchContextAsync(768, 1024);
         var page = await GotoEditorShellAsync(context, 768, 1024);
-        RegisterContext(context);
 
         var shell = page.Locator(Shell);
         await Assertions.Expect(shell).ToHaveAttributeAsync("data-layout", "tablet");
@@ -604,7 +576,6 @@ public partial class EditorShellE2ETests : WasmTestBase
     {
         var context = await CreateTouchContextAsync(1024, 768);
         var page = await GotoEditorShellAsync(context, 1024, 768);
-        RegisterContext(context);
 
         var shell = page.Locator(Shell);
         var width = await WidthOfAsync(page, Shell);
@@ -618,8 +589,6 @@ public partial class EditorShellE2ETests : WasmTestBase
     public async Task Demo_1440_CustomThresholdShell_ClassifiesWithItsOwnPair_WhileTheDefaultShellDoesNot()
     {
         var page = await OpenPlainPageAsync(1440, 900);
-        RegisterContext(page.Context);
-        await WaitForAppReadyAsync(page);
 
         var defaults = page.Locator(Shell);
         var custom = page.Locator("[data-testid='editor-shell-thresholds']");
@@ -637,8 +606,6 @@ public partial class EditorShellE2ETests : WasmTestBase
     public async Task Demo_1280_CustomThresholdShell_TabletRail_UsesTheToolboxIconStrip()
     {
         var page = await OpenPlainPageAsync(1280, 800);
-        RegisterContext(page.Context);
-        await WaitForAppReadyAsync(page);
         var custom = page.Locator("[data-testid='editor-shell-thresholds']");
         await Assertions.Expect(custom).ToHaveAttributeAsync("data-layout", "tablet");
 
@@ -653,8 +620,6 @@ public partial class EditorShellE2ETests : WasmTestBase
         // 08a22db5 follow-up), so the tablet rail is imposed by the shell itself; its expand
         // button must still work.
         var page = await OpenPlainPageAsync(1280, 800);
-        RegisterContext(page.Context);
-        await WaitForAppReadyAsync(page);
         const string custom = "[data-testid='editor-shell-thresholds']";
         var shell = page.Locator(custom);
         await Assertions.Expect(shell).ToHaveAttributeAsync("data-layout", "tablet");
@@ -678,7 +643,6 @@ public partial class EditorShellE2ETests : WasmTestBase
         // must follow the shell (not re-measure with the 640/1024 defaults => tablet => hidden).
         var context = await CreateTouchContextAsync(1024, 900);
         var page = await GotoEditorShellAsync(context, 1024, 900);
-        RegisterContext(context);
         const string custom = "[data-testid='editor-shell-thresholds']";
         await page.EvaluateAsync("() => { const h = document.querySelector(\"[data-testid='editor-shell-thresholds-host']\"); h.style.width = '700px'; h.style.maxWidth = '700px'; }");
 
@@ -698,7 +662,6 @@ public partial class EditorShellE2ETests : WasmTestBase
     {
         var context = await CreateTouchContextAsync(390, 844);
         var page = await GotoEditorShellAsync(context, 390, 844);
-        RegisterContext(context);
 
         await Assertions.Expect(page.Locator($"{Shell} .tm-editor-shell__sheet")).ToBeVisibleAsync();
         Assert.AreEqual("0", await page.Locator($"{Shell} .tm-editor-shell__sheet").GetAttributeAsync("data-snap-index"), "the half snap");
@@ -734,7 +697,6 @@ public partial class EditorShellE2ETests : WasmTestBase
     {
         var context = await CreateTouchContextAsync(390, 844);
         var page = await GotoEditorShellAsync(context, 390, 844);
-        RegisterContext(context);
 
         await page.EvaluateAsync("() => { const h = document.querySelector('.es-shell-host'); h.style.blockSize = 'auto'; h.style.minBlockSize = '0'; }");
         await page.WaitForTimeoutAsync(300);
@@ -748,7 +710,6 @@ public partial class EditorShellE2ETests : WasmTestBase
     {
         var context = await CreateTouchContextAsync(390, 844);
         var page = await GotoEditorShellAsync(context, 390, 844);
-        RegisterContext(context);
 
         await page.Locator("[data-testid='es-presentation-toggle']").ClickAsync();
 
@@ -776,7 +737,6 @@ public partial class EditorShellE2ETests : WasmTestBase
     {
         var context = await CreateTouchContextAsync(390, 844);
         var page = await GotoEditorShellAsync(context, 390, 844);
-        RegisterContext(context);
         await Assertions.Expect(page.Locator($"{Shell} .tm-editor-shell__sheet")).ToBeVisibleAsync();
 
         // The host button closes the panels programmatically; it keeps the focus it just received.
@@ -796,7 +756,6 @@ public partial class EditorShellE2ETests : WasmTestBase
     {
         var context = await CreateTouchContextAsync(390, 844);
         var page = await GotoEditorShellAsync(context, 390, 844);
-        RegisterContext(context);
         var sheet = page.Locator($"{Shell} .tm-editor-shell__sheet");
         await Assertions.Expect(sheet).ToBeVisibleAsync();
 
@@ -841,7 +800,6 @@ public partial class EditorShellE2ETests : WasmTestBase
         // varies per load; Escape must close the one that holds focus every time. Several reloads.
         var context = await CreateTouchContextAsync(390, 844);
         var page = await GotoEditorShellAsync(context, 390, 844);
-        RegisterContext(context);
         const string thresholdsSheet = "[data-testid='editor-shell-thresholds'] .tm-editor-shell__sheet";
 
         // Positive control: the thresholds sheet CAN close — its own close button dismisses it and
@@ -869,8 +827,7 @@ public partial class EditorShellE2ETests : WasmTestBase
             await Assertions.Expect(sheet).ToBeHiddenAsync(new LocatorAssertionsToBeHiddenOptions { Timeout = 5000 });
             await Assertions.Expect(page.Locator(thresholdsSheet)).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 5000 });
 
-            await page.ReloadAsync();
-            await WaitForAppReadyAsync(page);
+            await ReloadAppReadyAsync(page);
             await page.SetViewportSizeAsync(390, 844);
             var close = page.Locator(".tm-side-panel-sheet .tm-drawer__close");
             if (await close.CountAsync() > 0) await close.First.ClickAsync();
@@ -886,7 +843,6 @@ public partial class EditorShellE2ETests : WasmTestBase
         // symmetric rather than vacuous (A9).
         var context = await CreateTouchContextAsync(390, 844);
         var page = await GotoEditorShellAsync(context, 390, 844);
-        RegisterContext(context);
         const string thresholdsSheet = "[data-testid='editor-shell-thresholds'] .tm-editor-shell__sheet";
         var thresholdsToggle = page.Locator("[data-testid='editor-shell-thresholds'] .tm-editor-shell__panel-toggle--mobile");
 
@@ -920,7 +876,6 @@ public partial class EditorShellE2ETests : WasmTestBase
     {
         var context = await CreateTouchContextAsync(390, 844);
         var page = await GotoEditorShellAsync(context, 390, 844);
-        RegisterContext(context);
         await Assertions.Expect(page.Locator($"{Shell} .tm-editor-shell__sheet")).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 10000 });
 
         await page.Locator("[data-testid='es-canvas-block']").FocusAsync();
@@ -939,7 +894,6 @@ public partial class EditorShellE2ETests : WasmTestBase
     {
         var context = await CreateTouchContextAsync(390, 844);
         var page = await GotoEditorShellAsync(context, 390, 844);
-        RegisterContext(context);
         await page.Locator($"{Shell} .tm-editor-shell__sheet-close").ClickAsync();
         var reopen = page.Locator($"{Shell} .tm-editor-shell__panel-toggle--mobile");
         await Assertions.Expect(reopen).ToBeVisibleAsync();
@@ -958,7 +912,6 @@ public partial class EditorShellE2ETests : WasmTestBase
     {
         var context = await CreateTouchContextAsync(390, 844);
         var page = await GotoEditorShellAsync(context, 390, 844);
-        RegisterContext(context);
         await page.Locator("[data-testid='es-presentation-toggle']").ClickAsync();
         var shell = page.Locator(Shell);
         await Assertions.Expect(shell.Locator("[role='tab'][aria-selected='true']")).ToHaveTextAsync("Canvas");
@@ -976,7 +929,6 @@ public partial class EditorShellE2ETests : WasmTestBase
     {
         var context = await CreateTouchContextAsync(390, 844);
         var page = await GotoEditorShellAsync(context, 390, 844);
-        RegisterContext(context);
         await page.Locator("[data-testid='es-presentation-toggle']").ClickAsync();
         var shell = page.Locator(Shell);
         await Assertions.Expect(shell.Locator("[role='tab'][aria-selected='true']")).ToHaveTextAsync("Canvas");
@@ -999,7 +951,6 @@ public partial class EditorShellE2ETests : WasmTestBase
         // F6 r2 G13: FooterContent and Side=Left are demonstrated, so they can be verified live.
         var context = await CreateTouchContextAsync(1440, 900);
         var page = await GotoEditorShellAsync(context, 1440, 900);
-        RegisterContext(context);
 
         var panel = page.Locator("[data-testid='side-panel'].tm-side-panel--docked");
         await Assertions.Expect(panel).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 5000 });
@@ -1021,7 +972,6 @@ public partial class EditorShellE2ETests : WasmTestBase
     {
         var context = await CreateTouchContextAsync(1440, 900);
         var page = await GotoEditorShellAsync(context, 1440, 900);
-        RegisterContext(context);
 
         var panel = page.Locator("[data-testid='side-panel'].tm-side-panel--docked");
         await Assertions.Expect(panel).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 5000 });

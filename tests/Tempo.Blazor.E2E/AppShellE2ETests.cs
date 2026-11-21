@@ -39,7 +39,7 @@ public abstract class AppShellE2EBase : PlaywrightTestBase
 
     private async Task<IPage> OpenAsync(int width = 1440, int height = 1000, bool touch = false)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = touch,
@@ -47,7 +47,6 @@ public abstract class AppShellE2EBase : PlaywrightTestBase
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
 
         var page = await context.NewPageAsync();
         await GotoAppReadyAsync(page, $"{BaseUrl}/app-shell");
@@ -255,8 +254,7 @@ public abstract class AppShellE2EBase : PlaywrightTestBase
         Assert.IsNotNull(stored, "a user resize persists under the frame's key");
         StringAssert.Contains(stored, "360");
 
-        await page.ReloadAsync();
-        await WaitForAppReadyAsync(page);
+        await ReloadAppReadyAsync(page);
         await page.WaitForSelectorAsync("[data-testid='app-shell-stage']", new PageWaitForSelectorOptions { Timeout = 30000 });
         await SelectWidthAsync(page, "desktop", "desktop");
         await OpenWorkAreaAsync(page);

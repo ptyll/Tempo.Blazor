@@ -40,14 +40,13 @@ public class DrawerPositionE2ETests : WasmTestBase
 
     private async Task<IPage> OpenFeedbackPageAsync(int width = 1440, int height = 900)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
             AcceptDownloads = true
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
         await GotoAppReadyAsync(page, $"{BaseUrl}{FeedbackPage}");
         return page;

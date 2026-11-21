@@ -14,8 +14,7 @@ public class FormulaBuilderE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         var builder = page.Locator("[data-testid='formula-builder']").First;
         await builder.ScrollIntoViewIfNeededAsync();
@@ -34,8 +33,7 @@ public class FormulaBuilderE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         var builder = page.Locator("[data-testid='formula-builder']").First;
         await builder.ScrollIntoViewIfNeededAsync();
@@ -55,8 +53,7 @@ public class FormulaBuilderE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         var builder = page.Locator("[data-testid='formula-builder']").First;
         await builder.ScrollIntoViewIfNeededAsync();

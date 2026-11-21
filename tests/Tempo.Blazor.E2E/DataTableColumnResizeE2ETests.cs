@@ -17,7 +17,7 @@ public class DataTableColumnResizeE2ETests : WasmTestBase
 
     private async Task<IPage> OpenDataTableAsync(bool touch, int width, int height)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             // Pin the locale: the demo follows the browser language, and a context without one inherits the host machine's (cs-CZ on the dev box) while the specs read English labels.
             Locale = "en-US",
@@ -26,10 +26,8 @@ public class DataTableColumnResizeE2ETests : WasmTestBase
             IsMobile = touch && width < 640,
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/data-table", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/data-table");
 
         var table = page.Locator($"{Section} .tm-data-table");
         await table.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });

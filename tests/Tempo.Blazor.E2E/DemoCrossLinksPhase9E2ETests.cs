@@ -182,8 +182,7 @@ public sealed class DemoCrossLinksPhase9E2ETests : WasmTestBase
         await ToggleThemeAsync(page);
 
         var back = page.Locator("[data-testid='data-display-usage-scenario']");
-        await page.GotoAsync($"{BaseUrl}{DataDisplayUrl}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{DataDisplayUrl}");
         await back.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached, Timeout = 20000 });
         await back.ScrollIntoViewIfNeededAsync();
         await page.WaitForTimeoutAsync(200);
@@ -235,7 +234,7 @@ public sealed class DemoCrossLinksPhase9E2ETests : WasmTestBase
 
     private async Task<IPage> OpenAsync(string path, int width = 1440, int height = 1000, bool touch = false)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = touch,
@@ -243,7 +242,6 @@ public sealed class DemoCrossLinksPhase9E2ETests : WasmTestBase
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         await context.AddInitScriptAsync(
             "localStorage.setItem('tm-demo-culture', 'en'); localStorage.removeItem('tm-demo-theme');");
 
@@ -268,14 +266,13 @@ public sealed class DemoCrossLinksPhase9E2ETests : WasmTestBase
 
     private async Task<IPage> OpenModelingEditorAsync(int width, int height, bool touch)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = touch,
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         await context.AddInitScriptAsync(
             "localStorage.setItem('tm-demo-culture', 'en'); localStorage.removeItem('tm-demo-theme');");
 

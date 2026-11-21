@@ -41,7 +41,7 @@ public class CommandPaletteE2ETests : WasmTestBase
 
     private async Task<IPage> OpenLayoutPageAsync(int width = 1440, int height = 900, bool hasTouch = false, string culture = "en")
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             Locale = culture == "en" ? "en-US" : culture,
@@ -49,7 +49,6 @@ public class CommandPaletteE2ETests : WasmTestBase
             IsMobile = hasTouch,
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
         await page.AddInitScriptAsync(
             $"localStorage.setItem('tm-demo-culture', '{culture}'); document.cookie = 'tm-demo-culture={culture};path=/;max-age=31536000;samesite=lax';");

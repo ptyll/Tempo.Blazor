@@ -27,18 +27,15 @@ public class ActivityCommentsFailureE2ETests : WasmTestBase
 
     private async Task<IPage> OpenActivityAsync(int width = 1440, int height = 1100)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
 
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/activity#activity-comments",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/activity#activity-comments");
         await Assertions.Expect(page.Locator($"{SectionSelector} [data-comment-id='demo-c1']"))
             .ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 15000 });
         return page;

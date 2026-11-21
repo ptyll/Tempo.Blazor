@@ -33,7 +33,7 @@ public abstract class DataDisplayKpiE2EBase : PlaywrightTestBase
 
     private async Task<IPage> OpenAsync(int width = 1440, int height = 1000, bool touch = false, bool reduceMotion = false)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = touch,
@@ -45,7 +45,6 @@ public abstract class DataDisplayKpiE2EBase : PlaywrightTestBase
         await context.AddInitScriptAsync(
             "localStorage.setItem('tm-demo-culture', 'en'); document.cookie = 'tm-demo-culture=en;path=/;max-age=31536000;samesite=lax';");
         await context.AddInitScriptAsync(FrameRecorderScript);
-        RegisterContext(context);
 
         var page = await context.NewPageAsync();
         await GotoAppReadyAsync(page, $"{BaseUrl}/data-display");

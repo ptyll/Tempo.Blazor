@@ -55,9 +55,7 @@ public class ActivityCommentsDraftE2ETests : WasmTestBase
     {
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/activity",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/activity");
 
         // The standalone comments section works on local data — it renders even when the demo
         // API is unreachable, so the wait below is not masked by an API outage.

@@ -19,7 +19,7 @@ public class ColorGradientE2ETests : WasmTestBase
 
     private async Task<IPage> OpenAsync(bool touch, int width, int height)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             // Pin the locale: the demo follows the browser language, and a context without one inherits the host machine's (cs-CZ on the dev box) while the specs read English labels.
             Locale = "en-US",
@@ -28,10 +28,8 @@ public class ColorGradientE2ETests : WasmTestBase
             IsMobile = touch && width < 640,
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/color-picker", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/color-picker");
 
         await page.Locator(Area).WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
         await page.EvaluateAsync("() => document.querySelector(\"[data-testid='color-gradient-section']\").scrollIntoView({ block: 'center', behavior: 'instant' })");

@@ -14,8 +14,7 @@ public class ConditionBuilderE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         var builder = page.Locator("[data-testid='condition-builder']").First;
         await builder.ScrollIntoViewIfNeededAsync();
@@ -38,8 +37,7 @@ public class ConditionBuilderE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         var builder = page.Locator("[data-testid='condition-builder']").First;
         await builder.ScrollIntoViewIfNeededAsync();
@@ -61,8 +59,7 @@ public class ConditionBuilderE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         var builder = page.Locator("[data-testid='condition-builder']").First;
         await builder.ScrollIntoViewIfNeededAsync();

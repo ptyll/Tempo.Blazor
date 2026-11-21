@@ -29,7 +29,7 @@ public sealed class EditorShellTabletOverlayE2ETests : WasmTestBase
     private async Task<IPage> OpenAsync(int width, int height, bool touch, bool dark = false)
     {
         Directory.CreateDirectory(ShotDir);
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = touch,
@@ -38,10 +38,8 @@ public sealed class EditorShellTabletOverlayE2ETests : WasmTestBase
             ColorScheme = dark ? ColorScheme.Dark : ColorScheme.Light,
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/editor-shell", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/editor-shell");
         await page.AddStyleTagAsync(new()
         {
             Content = "aside.fixed { display: none !important; } main { margin-left: 0 !important; width: 100vw !important; max-width: 100vw !important; }",

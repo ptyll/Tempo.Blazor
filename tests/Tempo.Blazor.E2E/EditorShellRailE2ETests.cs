@@ -20,21 +20,15 @@ public sealed class EditorShellRailE2ETests : WasmTestBase
 {
     private async Task<IPage> OpenShellAsync(int width, int height)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
 
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/editor-shell", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.Load,
-            Timeout = 60000,
-        });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/editor-shell");
         await page.WaitForSelectorAsync(".tm-editor-shell[data-layout]", new() { Timeout = 60000 });
 
         // The demo app's own 18 rem sidebar would leave the shell a narrower container than the viewport;

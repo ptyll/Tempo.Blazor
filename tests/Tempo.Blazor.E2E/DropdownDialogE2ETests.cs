@@ -19,8 +19,7 @@ public class DropdownDialogE2ETests : WasmTestBase
     {
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
-        await page.GotoAsync(PageUrl);
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, PageUrl);
 
         var trigger = page.Locator(
             "[data-testid='overlay-menu-dialog-dropdown'] .tm-dropdown-trigger");

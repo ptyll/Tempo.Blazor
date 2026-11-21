@@ -28,9 +28,7 @@ public class DataTableRedesignDemoE2ETests : WasmTestBase
         
 
         await page.SetViewportSizeAsync(1440, 1100);
-        await page.GotoAsync($"{BaseUrl}/data-table",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/data-table");
 
         var section = page.Locator("[data-testid='dt-redesign-section']");
         await section.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
@@ -47,9 +45,7 @@ public class DataTableRedesignDemoE2ETests : WasmTestBase
         await page.Locator("[data-testid='dt-redesign-appearance'] select").SelectOptionAsync("Card");
         await Assertions.Expect(table).ToHaveClassAsync(new System.Text.RegularExpressions.Regex("tm-data-table-wrapper--card-surface"));
 
-        await page.GotoAsync($"{BaseUrl}/multi-view-list",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/multi-view-list");
         await Assertions.Expect(page.Locator("[data-testid='mvl-redesign-section']")).ToBeVisibleAsync(new() { Timeout = 30000 });
         await Assertions.Expect(page.Locator("[data-testid='mvl-redesign-cards'] .tm-mvl-card").First).ToBeVisibleAsync();
 
@@ -61,9 +57,7 @@ public class DataTableRedesignDemoE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(width, height);
-        await page.GotoAsync($"{BaseUrl}/data-table",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/data-table");
         return page;
     }
 
@@ -317,16 +311,12 @@ public class DataTableRedesignDemoServerE2ETests : ServerTestBase
         page.PageError += (_, error) => errors.Add(error);
 
         await page.SetViewportSizeAsync(1440, 1100);
-        await page.GotoAsync($"{BaseUrl}/data-table",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/data-table");
         await Assertions.Expect(page.Locator("[data-testid='dt-redesign-section']")).ToBeVisibleAsync(new() { Timeout = 30000 });
         await Assertions.Expect(page.Locator("[data-testid='dt-redesign-mobile-cards']")).ToBeVisibleAsync();
         await Assertions.Expect(page.Locator("[data-testid='dt-views-demo']")).ToBeVisibleAsync();
 
-        await page.GotoAsync($"{BaseUrl}/multi-view-list",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/multi-view-list");
         await Assertions.Expect(page.Locator("[data-testid='mvl-redesign-section']")).ToBeVisibleAsync(new() { Timeout = 30000 });
         await Assertions.Expect(page.Locator("[data-testid='mvl-redesign-cards'] .tm-mvl-card").First).ToBeVisibleAsync();
 

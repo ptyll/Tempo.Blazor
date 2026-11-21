@@ -41,7 +41,6 @@ public partial class EditorShellE2ETests
     {
         var context = await CreateTouchContextAsync(390, 844);
         var page = await GotoEditorShellAsync(context, 390, 844);
-        RegisterContext(context);
         var sheet = page.Locator($"{Shell} .tm-editor-shell__sheet");
         await Assertions.Expect(sheet).ToBeVisibleAsync();
         await Assertions.Expect(sheet).ToHaveAttributeAsync("data-snap-index", "0",
@@ -64,7 +63,6 @@ public partial class EditorShellE2ETests
     {
         var context = await CreateTouchContextAsync(390, 844);
         var page = await GotoEditorShellAsync(context, 390, 844);
-        RegisterContext(context);
         var sheet = page.Locator($"{Shell} .tm-editor-shell__sheet");
         var panel = page.Locator($"{Shell} .tm-editor-shell__sheet .tm-drawer__panel");
         await Assertions.Expect(sheet).ToBeVisibleAsync();

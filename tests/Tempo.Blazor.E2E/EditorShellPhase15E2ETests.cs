@@ -35,9 +35,9 @@ public class EditorShellPhase15E2ETests : WasmTestBase
     [TestInitialize]
     public void EnsureShotDir() => Directory.CreateDirectory(ShotDir);
 
-    private static async Task<IBrowserContext> CreateTouchContextAsync(int width, int height, string locale = "en-US")
+    private async Task<IBrowserContext> CreateTouchContextAsync(int width, int height, string locale = "en-US")
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = true,
@@ -51,8 +51,7 @@ public class EditorShellPhase15E2ETests : WasmTestBase
     private async Task<IPage> GotoEditorShellAsync(IBrowserContext context, int width, int height)
     {
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}{Route}");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{Route}");
         await page.SetViewportSizeAsync(width, height);
         if (width < 640)
         {
@@ -88,7 +87,6 @@ public class EditorShellPhase15E2ETests : WasmTestBase
     {
         var context = await CreateTouchContextAsync(768, 1024);
         var page = await GotoEditorShellAsync(context, 768, 1024);
-        RegisterContext(context);
 
         var shell = page.Locator(Shell);
         await Assertions.Expect(shell).ToHaveAttributeAsync("data-layout", "tablet");
@@ -138,7 +136,6 @@ public class EditorShellPhase15E2ETests : WasmTestBase
     {
         var context = await CreateTouchContextAsync(390, 520);
         var page = await GotoEditorShellAsync(context, 390, 520);
-        RegisterContext(context);
 
         // Wait for the measured condition instead of a fixed delay: the half-snap sheet panel must
         // render at its floored height (14rem, never past the stage).
@@ -167,7 +164,6 @@ public class EditorShellPhase15E2ETests : WasmTestBase
     {
         var context = await CreateTouchContextAsync(390, 844);
         var page = await GotoEditorShellAsync(context, 390, 844);
-        RegisterContext(context);
 
         await page.Locator("[data-testid='es-snaps-toggle']").ClickAsync();
         var sheet = page.Locator($"{Shell} .tm-editor-shell__sheet");
@@ -195,16 +191,14 @@ public class EditorShellPhase15E2ETests : WasmTestBase
         // /overlay-no-scope renders no app-level viewport scope: the sheet measures the viewport
         // itself. A 500px (mobile-resolving) column would give a bottom sheet from the container;
         // the probe says desktop, so the panel must open a SIDE sheet.
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = 1440, Height = 900 },
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
         });
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/overlay-no-scope");
-        RegisterContext(context);
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/overlay-no-scope");
 
         // The narrow column resolves its container to mobile…
         await Assertions.Expect(page.Locator("[data-testid='noscope-side-panel-column'][data-layout='mobile']"))

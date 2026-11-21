@@ -53,7 +53,7 @@ public class Fze12TouchEmulationSweepE2ETests : PlaywrightTestBase
     /// </summary>
     private async Task<IPage> OpenAsync(string path, int width = 390, int height = 844, string waitFor = "")
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = true,
@@ -63,7 +63,6 @@ public class Fze12TouchEmulationSweepE2ETests : PlaywrightTestBase
         });
         await context.AddInitScriptAsync(
             "localStorage.setItem('tm-demo-culture', 'en'); document.cookie = 'tm-demo-culture=en;path=/;max-age=31536000;samesite=lax';");
-        RegisterContext(context);
 
         var page = await context.NewPageAsync();
         await GotoAppReadyAsync(page, $"{BaseUrl}{path}");

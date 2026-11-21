@@ -14,8 +14,6 @@ public partial class EditorShellE2ETests
     public async Task Demo_1440_Resizer_PointerDragAndKeyboard_ClampToMinMaxAndTheCanvas_Persist_AndRestoreAfterReload()
     {
         var page = await OpenPlainPageAsync(1440, 900);
-        RegisterContext(page.Context);
-        await WaitForAppReadyAsync(page);
 
         var separator = page.Locator($"{Shell} [role='separator'][data-side='left']");
         await Assertions.Expect(separator).ToBeVisibleAsync();
@@ -82,8 +80,7 @@ public partial class EditorShellE2ETests
         await page.Keyboard.PressAsync("Shift+ArrowRight");
         await Assertions.Expect(separator).ToHaveAttributeAsync("aria-valuenow", "264");
 
-        await page.ReloadAsync();
-        await WaitForAppReadyAsync(page);
+        await ReloadAppReadyAsync(page);
         var restored = page.Locator($"{Shell} [role='separator'][data-side='left']");
         await Assertions.Expect(restored).ToHaveAttributeAsync("aria-valuenow", "264", new LocatorAssertionsToHaveAttributeOptions { Timeout = 15000 });
         Assert.AreEqual(264, Math.Round(await WidthOfAsync(page, $"{Shell} aside[data-region='left']")), "the stored width is applied on load");
@@ -101,7 +98,6 @@ public partial class EditorShellE2ETests
         // dragging state) and the clamp keeps the parked width.
         var context = await CreateTouchContextAsync(768, 1024);
         var page = await GotoEditorShellAsync(context, 768, 1024);
-        RegisterContext(context);
         var shell = page.Locator(Shell);
         await Assertions.Expect(shell).ToHaveAttributeAsync("data-layout", "tablet");
         var separator = shell.Locator("[role='separator'][data-side='right']");
@@ -143,18 +139,16 @@ public partial class EditorShellE2ETests
     [TestMethod]
     public async Task Demo_1440_Resizer_MalformedStoredValue_IsIgnored_NeverInjectedIntoTheStyle()
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             // Pin the locale: the demo follows the browser language, and a context without one inherits the host machine's (cs-CZ on the dev box) while the specs read English labels.
             Locale = "en-US",
             ViewportSize = new ViewportSize { Width = 1440, Height = 900 },
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         await context.AddInitScriptAsync($"localStorage.setItem('{StorageKey}', JSON.stringify({{ left: {{ w: '300px; background:red', base: '280px' }}, right: {{ w: 99999, base: '320px' }} }}))");
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}{Route}");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{Route}");
 
         var aside = page.Locator($"{Shell} aside[data-region='left']");
         await Assertions.Expect(aside).ToBeVisibleAsync();
