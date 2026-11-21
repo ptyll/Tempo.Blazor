@@ -234,14 +234,13 @@ public sealed class WireframePhase6ZoomThemeE2ETests : WasmTestBase
 
     private async Task<(IPage Page, ILocator Editor)> OpenAsync(int width, int height, bool dark = false)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
             ColorScheme = dark ? ColorScheme.Dark : ColorScheme.Light,
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
         await page.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
         await GotoAppReadyAsync(page, $"{BaseUrl}{EditorUrl}");

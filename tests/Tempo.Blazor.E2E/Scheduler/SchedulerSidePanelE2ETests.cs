@@ -22,9 +22,7 @@ public sealed class SchedulerSidePanelE2ETests : WasmTestBase
         await page.SetViewportSizeAsync(width, height);
         if (touch)
             await page.EmulateMediaAsync(new PageEmulateMediaOptions { ReducedMotion = ReducedMotion.Reduce });
-        await page.GotoAsync($"{BaseUrl}/scheduler",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/scheduler");
         return page;
     }
 

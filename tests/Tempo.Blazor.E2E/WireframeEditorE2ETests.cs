@@ -24,18 +24,9 @@ public class WireframeEditorE2ETests : WasmTestBase
 
         // The layout resolves from the editor CONTAINER (desktop from 1200 px): drop the demo sidebar margin BEFORE the app boots.
         await page.AddInitScriptAsync("document.addEventListener('DOMContentLoaded', () => { const s = document.createElement('style'); s.textContent = 'aside.fixed.inset-y-0.left-0.z-30 { display: none !important; } main { margin-left: 0 !important; width: 100vw !important; max-width: 100vw !important; }'; document.head.appendChild(s); });");
-        await page.GotoAsync($"{BaseUrl}{WireframeEditorUrl}", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}{WireframeEditorUrl}", WaitUntilState.DOMContentLoaded);
         await page.EvaluateAsync("() => localStorage.setItem('tm-demo-culture', 'en')");
-        await page.ReloadAsync(new PageReloadOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60000
-        });
-        await WaitForAppReadyAsync(page);
+        await ReloadAppReadyAsync(page, WaitUntilState.DOMContentLoaded);
 
         // Scope everything to the first (interactive) editor on the page
         var editor = page.Locator(".tm-wd-editor").First;

@@ -424,7 +424,7 @@ public sealed class WireframePhase5TouchE2ETests : WasmTestBase
 
     private async Task<(IPage Page, ILocator Editor)> OpenAsync(int width, int height, bool touch)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             HasTouch = touch,
             IsMobile = false,
@@ -432,7 +432,6 @@ public sealed class WireframePhase5TouchE2ETests : WasmTestBase
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
 
         var page = await context.NewPageAsync();
         page.Console += (_, message) => { if (message.Type is "error" or "warning") TestContext.WriteLine($"[console.{message.Type}] {message.Text}"); };

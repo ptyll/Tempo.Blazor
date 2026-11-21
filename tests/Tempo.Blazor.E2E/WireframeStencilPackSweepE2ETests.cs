@@ -69,8 +69,7 @@ public sealed class WireframeStencilPackSweepE2ETests : WasmTestBase
             "document.head.appendChild(s); });");
         await GotoAppReadyAsync(page, $"{BaseUrl}{WireframeEditorUrl}");
         await page.EvaluateAsync("() => localStorage.setItem('tm-demo-culture', 'en')");
-        await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.Load, Timeout = 60_000 });
-        await WaitForAppReadyAsync(page);
+        await ReloadAppReadyAsync(page);
 
         if (mobile)
         {

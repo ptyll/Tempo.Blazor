@@ -19,7 +19,7 @@ public sealed class LocalizationPluralsE2ETests : WasmTestBase
 
     private async Task<IPage> OpenAsync(string culture, int width, int height = 900)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             IgnoreHTTPSErrors = true,
@@ -32,10 +32,8 @@ public sealed class LocalizationPluralsE2ETests : WasmTestBase
             localStorage.setItem('tm-demo-culture', '{culture}');
             document.cookie = 'tm-demo-culture={culture};path=/;max-age=31536000;samesite=lax';
             """);
-        RegisterContext(context);
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/localization", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 90000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/localization");
         return page;
     }
 

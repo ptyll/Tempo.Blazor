@@ -21,8 +21,7 @@ public class CzechUiE2ETests : WasmTestBase
         await context.AddInitScriptAsync("window.localStorage.setItem('tm-demo-culture','cs');");
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1000);
-        await page.GotoAsync($"{BaseUrl}/dashboard", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/dashboard");
 
         // Enter edit mode → open the widget selector.
         await page.GetByTestId("dashboard-edit").ClickAsync();
@@ -50,8 +49,7 @@ public class CzechUiE2ETests : WasmTestBase
         await context.AddInitScriptAsync("window.localStorage.setItem('tm-demo-culture','cs');");
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1000);
-        await page.GotoAsync($"{BaseUrl}/dashboard", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/dashboard");
 
         // Open the switcher menu and request the delete of the non-default dashboard.
         await page.Locator(".tm-dashboard-views button").First.ClickAsync();
@@ -80,8 +78,7 @@ public class CzechUiE2ETests : WasmTestBase
         await context.AddInitScriptAsync("window.localStorage.setItem('tm-demo-culture','cs');");
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1000);
-        await page.GotoAsync($"{BaseUrl}/dashboard", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/dashboard");
 
         await page.GetByTestId("dashboard-edit").ClickAsync();
         await page.GetByTestId("dashboard-add-widget").ClickAsync();
@@ -103,8 +100,7 @@ public class CzechUiE2ETests : WasmTestBase
         await context.AddInitScriptAsync("window.localStorage.setItem('tm-demo-culture','cs');");
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1000);
-        await page.GotoAsync($"{BaseUrl}/dashboard", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/dashboard");
 
         await page.Locator(".tm-dashboard-views button").First.ClickAsync();
         await page.Locator(".tm-dashboard-menu-item--action").ClickAsync();
@@ -137,8 +133,7 @@ public class CzechUiE2ETests : WasmTestBase
         await context.AddInitScriptAsync("window.localStorage.setItem('tm-demo-culture','cs');");
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1000);
-        await page.GotoAsync($"{BaseUrl}/dashboard", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/dashboard");
 
         await page.Locator(".tm-dashboard-views button").First.ClickAsync();
         var menu = page.Locator(".tm-dashboard-menu");

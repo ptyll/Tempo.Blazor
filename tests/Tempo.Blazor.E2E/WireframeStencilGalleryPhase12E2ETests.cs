@@ -60,8 +60,7 @@ public class WireframeStencilGalleryPhase12E2ETests : WasmTestBase
             "document.head.appendChild(s); });");
         await GotoAppReadyAsync(page, $"{BaseUrl}{WireframeEditorUrl}");
         await page.EvaluateAsync("() => localStorage.setItem('tm-demo-culture', 'en')");
-        await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await ReloadAppReadyAsync(page);
 
         await WireframeStencilHarness.PrepareAsync(page);
         return page;

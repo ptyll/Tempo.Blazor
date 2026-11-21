@@ -680,7 +680,7 @@ public sealed class WireframePhase7MobileE2ETests : WasmTestBase
 
     private async Task<(IPage Page, ILocator Editor)> OpenAsync(int width, int height, bool touch = true, bool hideSidebar = true)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             HasTouch = touch,
             IsMobile = false,
@@ -689,7 +689,6 @@ public sealed class WireframePhase7MobileE2ETests : WasmTestBase
             IgnoreHTTPSErrors = true,
             AcceptDownloads = true,
         });
-        RegisterContext(context);
 
         var page = await context.NewPageAsync();
         page.Console += (_, message) => { if (message.Type is "error") TestContext.WriteLine($"[console.{message.Type}] {message.Text}"); };

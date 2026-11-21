@@ -38,8 +38,7 @@ public sealed class K10FeaturesE2ETests : WasmTestBase
                 lock (_clientErrors) _clientErrors.Add("CONSOLE: " + m.Text);
         };
         await page.SetViewportSizeAsync(1440, 1000);
-        await page.GotoAsync($"{BaseUrl}{route}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{route}");
 
         var ready = page.Locator(readySelector).First;
         await ready.ScrollIntoViewIfNeededAsync();

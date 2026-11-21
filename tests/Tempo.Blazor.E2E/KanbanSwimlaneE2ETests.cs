@@ -32,8 +32,7 @@ public class KanbanSwimlaneE2ETests : WasmTestBase
     private async Task<(IPage page, ILocator board)> OpenSwimlaneBoardAsync()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/kanban");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/kanban");
         var board = page.Locator(".tm-kanban--swimlanes").First;
         await board.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
         await page.Locator(".tm-kanban__swimlane").First.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });

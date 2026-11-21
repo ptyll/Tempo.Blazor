@@ -278,14 +278,13 @@ public sealed class WireframePhase4DesktopE2ETests : WasmTestBase
 
     private async Task<IPage> OpenAsync(int width, int height, bool dark)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
             ColorScheme = dark ? ColorScheme.Dark : ColorScheme.Light,
         });
-        RegisterContext(context);
 
         var page = await context.NewPageAsync();
         await page.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
@@ -298,8 +297,8 @@ public sealed class WireframePhase4DesktopE2ETests : WasmTestBase
                 style.textContent = 'aside.fixed.inset-y-0.left-0.z-30 { display: none !important; } main { margin-left: 0 !important; width: 100vw !important; max-width: 100vw !important; }';
                 document.head.appendChild(style);
             });
-            """);        await page.GotoAsync($"{BaseUrl}{EditorUrl}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60_000 });
-        await WaitForAppReadyAsync(page);
+            """);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{EditorUrl}");
         await page.WaitForSelectorAsync(".tm-wd-editor .tm-wd-toolbox__item",
             new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 30_000 });
 

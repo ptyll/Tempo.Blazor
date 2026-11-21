@@ -131,9 +131,7 @@ public sealed class SchedulerVisualE2ETests : WasmTestBase
                 await SaveAsync(page, sectionId, $"{file}--{theme}");
         }
 
-        await page.GotoAsync($"{BaseUrl}/gantt",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 90000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/gantt");
         await page.Locator("button", new PageLocatorOptions { HasText = "Calendar" }).First.ClickAsync();
         var gantt = page.Locator("[data-testid='gantt-calendar-view'] .tm-scheduler");
         await gantt.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
@@ -286,9 +284,7 @@ public sealed class SchedulerVisualE2ETests : WasmTestBase
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1100);
         await page.SetExtraHTTPHeadersAsync(new Dictionary<string, string> { ["Cache-Control"] = "no-cache" });
-        await page.GotoAsync(SchedulerDemoUrl.For(BaseUrl),
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, SchedulerDemoUrl.For(BaseUrl));
 
         if (indigo)
         {

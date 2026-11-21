@@ -62,8 +62,7 @@ public class KanbanVisualE2ETests : WasmTestBase
     {
         var page = await CreatePageAsync();
         await page.SetViewportSizeAsync(1920, 1200);
-        await page.GotoAsync($"{BaseUrl}/kanban");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/kanban");
         await page.Locator(".tm-kanban__column-toggle").First.WaitForAsync(
             new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
         return page;

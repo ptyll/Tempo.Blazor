@@ -332,7 +332,7 @@ public sealed class WireframePhase6TabletE2ETests : WasmTestBase
 
     private async Task<(IPage Page, ILocator Editor)> OpenAsync(int width, int height, bool keepSidebar, bool dark, bool touch = true)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             HasTouch = touch,
             IsMobile = false,
@@ -341,7 +341,6 @@ public sealed class WireframePhase6TabletE2ETests : WasmTestBase
             IgnoreHTTPSErrors = true,
             ColorScheme = dark ? ColorScheme.Dark : ColorScheme.Light,
         });
-        RegisterContext(context);
 
         var page = await context.NewPageAsync();
         page.Console += (_, message) => { if (message.Type is "error") TestContext.WriteLine($"[console.{message.Type}] {message.Text}"); };

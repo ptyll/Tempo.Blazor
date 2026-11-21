@@ -23,8 +23,7 @@ public class NotificationsE2ETests : WasmTestBase
         }
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1280, 900);
-        await page.GotoAsync($"{BaseUrl}{Page}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{Page}");
         // Wait until the page's SignalR service reports connected.
         await Assertions.Expect(page.GetByTestId("notif-status")).ToContainTextAsync("Connected",
             new LocatorAssertionsToContainTextOptions { Timeout = 30000 });

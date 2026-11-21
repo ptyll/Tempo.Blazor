@@ -36,8 +36,7 @@ public class KanbanReorderE2ETests : WasmTestBase
     private async Task<(IPage page, ILocator board)> OpenKanbanAsync()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/kanban");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/kanban");
         var board = page.Locator(".tm-kanban").First;
         await board.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
         await page.Locator(".tm-kanban__card").First.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });

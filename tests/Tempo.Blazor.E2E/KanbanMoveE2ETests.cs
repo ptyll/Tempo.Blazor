@@ -44,8 +44,7 @@ public class KanbanMoveE2ETests : WasmTestBase
             await page.SetViewportSizeAsync(viewportWidth, 844);
         }
 
-        await page.GotoAsync($"{BaseUrl}/kanban");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/kanban");
         await page.Locator(".tm-kanban__card-move").First.WaitForAsync(
             new LocatorWaitForOptions { State = WaitForSelectorState.Attached, Timeout = 15000 });
         return page;

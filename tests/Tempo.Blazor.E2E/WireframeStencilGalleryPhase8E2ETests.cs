@@ -68,8 +68,7 @@ public class WireframeStencilGalleryPhase8E2ETests : WasmTestBase
             "document.head.appendChild(s); });");
         await GotoAppReadyAsync(page, $"{BaseUrl}{WireframeEditorUrl}");
         await page.EvaluateAsync("() => localStorage.setItem('tm-demo-culture', 'en')");
-        await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await ReloadAppReadyAsync(page);
 
         await FirstEditor(page).Locator(".tm-wd-editor__toolbar")
             .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });

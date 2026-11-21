@@ -91,12 +91,7 @@ public sealed class TmSchedulerMonthTemplateE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1100);
-        await page.GotoAsync($"{BaseUrl}/scheduler", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60000
-        });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/scheduler", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync("[data-testid='scheduler-month-template'] .tm-scheduler-month-event", new PageWaitForSelectorOptions
         {
             State = WaitForSelectorState.Visible,

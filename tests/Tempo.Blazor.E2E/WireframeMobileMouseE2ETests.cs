@@ -21,7 +21,7 @@ public sealed class WireframeMobileMouseE2ETests : WasmTestBase
 
     private async Task<(IPage Page, ILocator Editor)> OpenAsync()
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             HasTouch = false,
             IsMobile = false,
@@ -29,7 +29,6 @@ public sealed class WireframeMobileMouseE2ETests : WasmTestBase
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
 
         var page = await context.NewPageAsync();
         page.Console += (_, message) => { if (message.Type is "error") TestContext.WriteLine($"[console.{message.Type}] {message.Text}"); };

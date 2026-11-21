@@ -388,14 +388,13 @@ public sealed class WireframePhase2ThemeE2ETests : WasmTestBase
 
     private async Task<IPage> OpenAsync(string path, int width, int height, bool dark, bool indigo)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
             AcceptDownloads = true,
         });
-        RegisterContext(context);
 
         var page = await context.NewPageAsync();
         await page.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');"
@@ -407,8 +406,7 @@ public sealed class WireframePhase2ThemeE2ETests : WasmTestBase
                 "document.addEventListener('DOMContentLoaded', () => { const s = document.createElement('style'); s.textContent = 'aside.fixed.inset-y-0.left-0.z-30 { display: none !important; } main { margin-left: 0 !important; width: 100vw !important; max-width: 100vw !important; }'; document.head.appendChild(s); });");
         }
 
-        await page.GotoAsync($"{BaseUrl}{path}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60_000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{path}");
 
         if (indigo)
         {

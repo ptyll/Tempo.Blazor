@@ -30,8 +30,7 @@ public class KanbanCollapsedLayoutE2ETests : WasmTestBase
         // Wide enough that all five 280px columns fit side by side, so the boxes of the last columns are
         // measured on the same row instead of off the scrollport.
         await page.SetViewportSizeAsync(1920, 1200);
-        await page.GotoAsync($"{BaseUrl}/kanban");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/kanban");
         await page.Locator("[data-testid='cell-backlog-Alice']").First.WaitForAsync(
             new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
         return page;

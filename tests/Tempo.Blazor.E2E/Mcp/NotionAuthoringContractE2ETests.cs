@@ -96,14 +96,7 @@ public sealed class NotionAuthoringContractE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1366, 768);
-        await page.GotoAsync(
-            $"{BaseUrl}/notion-editor",
-            new PageGotoOptions
-            {
-                WaitUntil = WaitUntilState.DOMContentLoaded,
-                Timeout = 60000
-            });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/notion-editor", WaitUntilState.DOMContentLoaded);
 
         var advancedTable = page
             .Locator("[data-block-id='cf110000-0000-0000-0000-000000000010']")
@@ -260,14 +253,7 @@ public sealed class NotionAuthoringContractE2ETests : WasmTestBase
 
     private async Task OpenAdvancedTableAsync(IPage page)
     {
-        await page.GotoAsync(
-            $"{BaseUrl}/notion-editor",
-            new PageGotoOptions
-            {
-                WaitUntil = WaitUntilState.DOMContentLoaded,
-                Timeout = 60000
-            });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/notion-editor", WaitUntilState.DOMContentLoaded);
         var table = AdvancedTable(page);
         await table.WaitForAsync(new LocatorWaitForOptions
         {

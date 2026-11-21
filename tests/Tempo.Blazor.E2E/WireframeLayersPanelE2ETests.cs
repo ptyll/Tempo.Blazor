@@ -435,14 +435,13 @@ public sealed class WireframeLayersPanelE2ETests : WasmTestBase
 
     private async Task<IPage> OpenAsync(int width, int height, bool touch)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             HasTouch = touch,
             ViewportSize = new ViewportSize { Width = width, Height = height },
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
 
         var page = await context.NewPageAsync();
         // The layout resolves from the editor's CONTAINER and a panel the shell railed at a narrow first measurement stays a rail,
@@ -456,8 +455,7 @@ public sealed class WireframeLayersPanelE2ETests : WasmTestBase
                 document.head.appendChild(style);
             });
             """);
-        await page.GotoAsync($"{BaseUrl}{EditorUrl}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60_000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{EditorUrl}");
         // The Layers tab is not the default tab of the left panel (Components is): open it, the tab mounts lazily.
         // A tablet editor container (phase 6) keeps the left panel in an overlay drawer: open it from the toolbar first.
         await page.WaitForSelectorAsync(".tm-wd-editor .tm-wd-canvas__svg", new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 30_000 });

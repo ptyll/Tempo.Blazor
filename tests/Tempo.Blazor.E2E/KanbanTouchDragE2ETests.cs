@@ -21,8 +21,7 @@ public class KanbanTouchDragE2ETests : WasmTestBase
     private async Task<IPage> OpenKanbanTouchAsync()
     {
         var page = await CreatePageAsync(hasTouch: true);
-        await page.GotoAsync($"{BaseUrl}/kanban");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/kanban");
         await page.Locator(".tm-kanban__column-toggle").First.WaitForAsync(
             new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
         return page;
