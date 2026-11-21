@@ -45,7 +45,7 @@ public class PdfAnnotatorResponsiveE2ETests : WasmTestBase
 
     private async Task<IPage> OpenAsync(int width, int height, bool touch)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = touch,
@@ -53,11 +53,8 @@ public class PdfAnnotatorResponsiveE2ETests : WasmTestBase
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}{AnnotatorPage}",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{AnnotatorPage}");
         return page;
     }
 
@@ -825,8 +822,7 @@ el => {
 
         // Reload: the localStorage provider keeps the section's document — the stamp is
         // still anchored on page 4 (the per-page slot mounts it after the geometry report).
-        await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await ReloadAppReadyAsync(page);
         var reloaded = await OpenContinuousSectionAsync(page);
         await GoToPageAsync(page, reloaded, 4);
         await PageSlot(reloaded, 4).Locator("[data-testid='pdf-annotator-stamp']")
@@ -910,8 +906,7 @@ el => {
         await PageSlot(section, 2).Locator("[data-testid='pdf-annotator-marker']")
             .First.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
 
-        await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await ReloadAppReadyAsync(page);
         var second = await OpenContinuousSectionAsync(page);
 
         // The second session opens the thread from its page-2 marker and replies — the mode

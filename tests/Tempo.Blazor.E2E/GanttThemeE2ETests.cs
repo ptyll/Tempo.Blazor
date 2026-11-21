@@ -43,7 +43,7 @@ public sealed class GanttThemeE2ETests : WasmTestBase
 
     private async Task<IPage> OpenAsync(string route, bool indigo, bool dark)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = 1440, Height = 900 },
             IgnoreHTTPSErrors = true,
@@ -52,10 +52,8 @@ public sealed class GanttThemeE2ETests : WasmTestBase
         await context.AddInitScriptAsync(indigo
             ? "localStorage.setItem('tm-demo-culture', 'en'); localStorage.setItem('tm-demo-color-theme', 'indigo');"
             : "localStorage.setItem('tm-demo-culture', 'en');");
-        RegisterContext(context);
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}{route}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 90_000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{route}");
         await page.Locator(".tm-gantt").First.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
         await page.Locator(".tm-gantt__tree-row").First.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
 

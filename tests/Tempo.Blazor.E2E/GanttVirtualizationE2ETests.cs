@@ -22,7 +22,7 @@ public sealed class GanttVirtualizationE2ETests : WasmTestBase
 
     private async Task<IPage> OpenLargeAsync(int width, int height, int size = 10000, string mode = "Auto", bool hasTouch = false)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             IgnoreHTTPSErrors = true,
@@ -34,11 +34,8 @@ public sealed class GanttVirtualizationE2ETests : WasmTestBase
             localStorage.setItem('tm-demo-culture', 'en');
             document.cookie = 'tm-demo-culture=en;path=/;max-age=31536000;samesite=lax';
             """);
-        RegisterContext(context);
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/gantt-large?size={size}&mode={mode}",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 90_000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/gantt-large?size={size}&mode={mode}");
         var treeBody = page.Locator(".tm-gantt__tree-body").First;
         await treeBody.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 60_000 });
         return page;

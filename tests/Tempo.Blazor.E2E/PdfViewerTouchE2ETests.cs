@@ -44,7 +44,7 @@ public class PdfViewerTouchE2ETests : WasmTestBase
 
     private async Task<IPage> OpenTouchAsync(string route, int width, int height)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = true,
@@ -52,11 +52,8 @@ public class PdfViewerTouchE2ETests : WasmTestBase
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}{route}",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{route}");
         return page;
     }
 

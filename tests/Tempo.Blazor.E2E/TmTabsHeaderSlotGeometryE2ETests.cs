@@ -242,12 +242,7 @@ public sealed class TmTabsHeaderSlotGeometryE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(width, 900);
-        await page.GotoAsync($"{BaseUrl}/feedback", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60000
-        });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/feedback", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync($"{WrapSlotTabs} .tm-tabs__header-row", new PageWaitForSelectorOptions
         {
             State = WaitForSelectorState.Visible,

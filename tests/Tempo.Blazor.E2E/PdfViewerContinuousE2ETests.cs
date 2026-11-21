@@ -28,9 +28,7 @@ public class PdfViewerContinuousE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(DesktopWidth, 1000);
-        await page.GotoAsync($"{BaseUrl}{PdfPage}",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{PdfPage}");
 
         var section = page.Locator(SectionSelector);
         await section.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });

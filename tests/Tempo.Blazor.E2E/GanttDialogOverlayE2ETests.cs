@@ -18,7 +18,7 @@ public sealed class GanttDialogOverlayE2ETests : WasmTestBase
 
     private async Task<IPage> OpenGanttAsync(int width, int height = 900)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             IgnoreHTTPSErrors = true,
@@ -29,10 +29,8 @@ public sealed class GanttDialogOverlayE2ETests : WasmTestBase
             localStorage.setItem('tm-demo-culture', 'en');
             document.cookie = 'tm-demo-culture=en;path=/;max-age=31536000;samesite=lax';
             """);
-        RegisterContext(context);
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/gantt", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 90_000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/gantt");
         var gantt = page.Locator(".tm-gantt").First;
         await gantt.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
         return page;

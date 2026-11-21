@@ -42,7 +42,7 @@ public sealed class GanttPhase8MobileE2ETests : WasmTestBase
 
     private async Task<IPage> OpenAsync(int width, int height, bool dark = false, string path = "/gantt")
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = true,
@@ -50,10 +50,8 @@ public sealed class GanttPhase8MobileE2ETests : WasmTestBase
             Locale = "en-US",
         });
         await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
-        RegisterContext(context);
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}{path}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 90_000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{path}");
         await page.Locator(".tm-gantt, .tm-gantt-portfolio").First.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
         // Full-bleed: the demo page keeps a sidebar and gutters; the layout is container-owned, so give the Gantt the width the
         // test names. The showcase card's overflow:hidden would also pin the sticky action bar to a non-scrolling box (a

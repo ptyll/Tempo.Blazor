@@ -13,8 +13,7 @@ public class GanttPhase1E2ETests : WasmTestBase
         // Phase 7: the Gantt resolves its layout from its OWN container; the default 1280px viewport leaves the demo Gantt under 1024px (tablet: the
         // commands sit in "More"), so a spec of the desktop toolbar runs at the 1440px desktop viewport.
         await page.SetViewportSizeAsync(1440, 900);
-        await page.GotoAsync($"{BaseUrl}/gantt");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/gantt");
         var gantt = page.Locator(".tm-gantt").First;
         await gantt.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
         return (page, gantt);

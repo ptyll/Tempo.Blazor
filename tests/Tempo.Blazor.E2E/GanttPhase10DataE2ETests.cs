@@ -34,7 +34,7 @@ public sealed class GanttPhase10DataE2ETests : WasmTestBase
 
     private async Task<IPage> OpenAsync(string route = "/gantt", int width = 1440, int height = 900)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             IgnoreHTTPSErrors = true,
@@ -45,10 +45,8 @@ public sealed class GanttPhase10DataE2ETests : WasmTestBase
             localStorage.setItem('tm-demo-culture', 'en');
             document.cookie = 'tm-demo-culture=en;path=/;max-age=31536000;samesite=lax';
             """);
-        RegisterContext(context);
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}{route}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 90_000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{route}");
         var gantt = page.Locator(".tm-gantt").First;
         await gantt.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
         await gantt.Locator(".tm-gantt__tree-row").First.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });

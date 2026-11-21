@@ -358,8 +358,7 @@ public partial class PdfAnnotatorE2ETests
         Assert.IsNull(await card.Locator("[data-testid='pdf-annotator-undo']").First.GetAttributeAsync("disabled"),
             "the step is undoable before the reload");
 
-        await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await ReloadAppReadyAsync(page);
 
         var reloaded = UndoCard(page);
         var undo = reloaded.Locator("[data-testid='pdf-annotator-undo']").First;

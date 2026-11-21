@@ -30,12 +30,7 @@ public sealed class TmTabsOverflowStickyE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(width, height);
-        await page.GotoAsync($"{BaseUrl}/feedback", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60000
-        });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/feedback", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync($"{Strip} [role='tab']", new PageWaitForSelectorOptions
         {
             State = WaitForSelectorState.Visible,

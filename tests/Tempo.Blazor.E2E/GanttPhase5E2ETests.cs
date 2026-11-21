@@ -43,17 +43,15 @@ public sealed class GanttPhase5E2ETests : WasmTestBase
 
     private async Task<IPage> OpenAsync(string route = "/gantt", bool dark = false, int width = 1440, int height = 900)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             IgnoreHTTPSErrors = true,
             Locale = "en-US",
         });
         await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
-        RegisterContext(context);
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}{route}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 90_000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{route}");
         await Gantt(page).WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
         await Gantt(page).Locator(".tm-gantt__tree-row").First.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
 

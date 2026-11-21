@@ -20,9 +20,7 @@ public class GanttCalendarModeE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1100);
-        await page.GotoAsync($"{BaseUrl}/gantt",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 90000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/gantt");
 
         await page.Locator("button", new PageLocatorOptions { HasText = "Calendar" }).First.ClickAsync();
 

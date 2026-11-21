@@ -20,8 +20,7 @@ public class GanttTaskPanelE2ETests : WasmTestBase
         // The 1280 default classifies the demo Gantt as a tablet (TaskPanelMode Auto -> the panel is a
         // sheet): the legacy desktop specs pin the wide viewport, like every phase-7 desktop spec.
         await page.SetViewportSizeAsync(1440, 900);
-        await page.GotoAsync($"{BaseUrl}/gantt");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/gantt");
 
         var gantt = page.Locator(".tm-gantt").First;
         await gantt.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -57,8 +56,7 @@ public class GanttTaskPanelE2ETests : WasmTestBase
         // The 1280 default classifies the demo Gantt as a tablet (TaskPanelMode Auto -> the panel is a
         // sheet): the legacy desktop specs pin the wide viewport, like every phase-7 desktop spec.
         await page.SetViewportSizeAsync(1440, 900);
-        await page.GotoAsync($"{BaseUrl}/gantt");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/gantt");
 
         var gantt = page.Locator(".tm-gantt").First;
         await gantt.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -101,8 +99,7 @@ public class GanttTaskPanelE2ETests : WasmTestBase
         // The 1280 default classifies the demo Gantt as a tablet (TaskPanelMode Auto -> the panel is a
         // sheet): the legacy desktop specs pin the wide viewport, like every phase-7 desktop spec.
         await page.SetViewportSizeAsync(1440, 900);
-        await page.GotoAsync($"{BaseUrl}/gantt");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/gantt");
 
         var gantt = page.Locator(".tm-gantt").First;
         await gantt.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -146,8 +143,7 @@ public class GanttTaskPanelE2ETests : WasmTestBase
         // The 1280 default classifies the demo Gantt as a tablet (TaskPanelMode Auto -> the panel is a
         // sheet): the legacy desktop specs pin the wide viewport, like every phase-7 desktop spec.
         await page.SetViewportSizeAsync(1440, 900);
-        await page.GotoAsync($"{BaseUrl}/gantt");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/gantt");
 
         var gantt = page.Locator(".tm-gantt").First;
         await gantt.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -197,8 +193,7 @@ public class GanttTaskPanelE2ETests : WasmTestBase
         // The 1280 default classifies the demo Gantt as a tablet (TaskPanelMode Auto -> the panel is a
         // sheet): the legacy desktop specs pin the wide viewport, like every phase-7 desktop spec.
         await page.SetViewportSizeAsync(1440, 900);
-        await page.GotoAsync($"{BaseUrl}/gantt");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/gantt");
 
         var gantt = page.Locator(".tm-gantt").First;
         await gantt.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -244,8 +239,7 @@ public class GanttTaskPanelE2ETests : WasmTestBase
         // The 1280 default classifies the demo Gantt as a tablet (TaskPanelMode Auto -> the panel is a
         // sheet): the legacy desktop specs pin the wide viewport, like every phase-7 desktop spec.
         await page.SetViewportSizeAsync(1440, 900);
-        await page.GotoAsync($"{BaseUrl}/gantt");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/gantt");
 
         var gantt = page.Locator(".tm-gantt").First;
         await gantt.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });

@@ -17,8 +17,7 @@ public class PdfTemplateDesignerServerE2ETests : ServerTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 900);
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
         // The demo sidebar keeps a 1440 viewport's designer under the desktop breakpoint; this
         // style pins the designer to the viewport so the desktop layout is its own.
         await page.AddStyleTagAsync(new PageAddStyleTagOptions { Content = SigningRedesignPhase8Specs.WideLayoutStyle });
@@ -49,8 +48,7 @@ public class PdfTemplateDesignerServerE2ETests : ServerTestBase
         var page = await context.NewPageAsync();
         // Boot NARROW (tablet layout: the rail owns the palette, the docked one is hidden).
         await page.SetViewportSizeAsync(800, 900);
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         var designer = page.Locator("[data-testid='pdf-template-designer']").First;
         await designer.ScrollIntoViewIfNeededAsync();
@@ -442,8 +440,7 @@ public class PdfTemplateDesignerE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(390, 844);
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
 
         var designer = GetDesigner(page);
         await designer.ScrollIntoViewIfNeededAsync();
@@ -458,8 +455,7 @@ public class PdfTemplateDesignerE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 900);
-        await page.GotoAsync($"{BaseUrl}/signing-components");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/signing-components");
         // The demo sidebar keeps a 1440 viewport's designer under the desktop breakpoint, so the
         // palette opens as an overlay and covers the page the gestures land on.
         await page.AddStyleTagAsync(new PageAddStyleTagOptions { Content = SigningRedesignPhase8Specs.WideLayoutStyle });

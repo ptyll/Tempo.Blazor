@@ -15,8 +15,7 @@ public class GanttInteractionE2ETests : WasmTestBase
     public async Task Gantt_AddTask_CreatesNewRow()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/gantt");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/gantt");
 
         var gantt = page.Locator(".tm-gantt").First;
         await gantt.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -42,8 +41,7 @@ public class GanttInteractionE2ETests : WasmTestBase
         // The 1280 default classifies the demo Gantt as a tablet; the desktop context menu spec pins the wide
         // viewport, like every phase-7 desktop spec.
         await page.SetViewportSizeAsync(1440, 900);
-        await page.GotoAsync($"{BaseUrl}/gantt");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/gantt");
         // The viewport change re-classifies the container (the boot happened at 1280): wait for the flip
         // render to replace the rows before the right-click.
         await page.WaitForFunctionAsync("(l) => document.querySelector('.tm-gantt')?.getAttribute('data-layout') === l", "desktop", new PageWaitForFunctionOptions { Timeout = 20_000 });
@@ -78,8 +76,7 @@ public class GanttInteractionE2ETests : WasmTestBase
     public async Task Gantt_DragHandle_AppearsOnHover_And_IsDraggable()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/gantt");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/gantt");
 
         var gantt = page.Locator(".tm-gantt").First;
         await gantt.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -114,8 +111,7 @@ public class GanttInteractionE2ETests : WasmTestBase
     public async Task Gantt_AddTask_IncreasesTimelineContentHeight()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/gantt");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/gantt");
 
         var gantt = page.Locator(".tm-gantt").First;
         await gantt.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -143,8 +139,7 @@ public class GanttInteractionE2ETests : WasmTestBase
     public async Task Gantt_TimelineWheelScrolls_Vertically()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/gantt");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/gantt");
 
         var gantt = page.Locator(".tm-gantt").First;
         await gantt.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -176,8 +171,7 @@ public class GanttInteractionE2ETests : WasmTestBase
         // Phase 7: the Gantt resolves its layout from its OWN container; the default 1280px viewport leaves the demo Gantt under 1024px (tablet: the
         // commands sit in "More"), so a spec of the desktop toolbar runs at the 1440px desktop viewport.
         await page.SetViewportSizeAsync(1440, 900);
-        await page.GotoAsync($"{BaseUrl}/gantt");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/gantt");
 
         var gantt = page.Locator(".tm-gantt").First;
         await gantt.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -217,8 +211,7 @@ public class GanttInteractionE2ETests : WasmTestBase
         // Phase 7: the Gantt resolves its layout from its OWN container; the default 1280px viewport leaves the demo Gantt under 1024px (tablet: the
         // commands sit in "More"), so a spec of the desktop toolbar runs at the 1440px desktop viewport.
         await page.SetViewportSizeAsync(1440, 900);
-        await page.GotoAsync($"{BaseUrl}/gantt");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/gantt");
 
         var gantt = page.Locator(".tm-gantt").First;
         await gantt.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });

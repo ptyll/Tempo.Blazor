@@ -41,7 +41,7 @@ public sealed class GanttPhase7TabletE2ETests : WasmTestBase
 
     private async Task<IPage> OpenAsync(int width, int height, bool touch, bool dark = false)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = touch,
@@ -49,10 +49,8 @@ public sealed class GanttPhase7TabletE2ETests : WasmTestBase
             Locale = "en-US",
         });
         await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
-        RegisterContext(context);
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/gantt", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 90_000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/gantt");
         await Gantt(page).Locator(".tm-gantt__tree-row").First.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
         // Full-bleed: the demo page keeps a sidebar and gutters; the layout is container-owned, so give the Gantt the width the test names.
         await page.AddStyleTagAsync(new PageAddStyleTagOptions { Content = "aside, nav.tm-sidebar, .tm-sidebar { display: none !important; } main, .tm-main { margin: 0 !important; padding: 0 !important; max-width: none !important; width: 100% !important; }" });

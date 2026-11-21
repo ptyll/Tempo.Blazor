@@ -20,9 +20,7 @@ public class PdfViewerAnnotationsE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1000);
-        await page.GotoAsync($"{BaseUrl}{PdfPage}",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{PdfPage}");
         return page;
     }
 
@@ -139,7 +137,7 @@ public class PdfViewerAnnotationsE2ETests : WasmTestBase
         await SaveScreenshotAsync(page, "continuous-start");
 
         // Sharpness probe: at deviceScaleFactor=2 the backing store must be larger than the CSS size.
-        var dprContext = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var dprContext = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = 1440, Height = 1000 },
             DeviceScaleFactor = 2,
@@ -150,9 +148,7 @@ public class PdfViewerAnnotationsE2ETests : WasmTestBase
         {
             var dprPage = await dprContext.NewPageAsync();
             await dprPage.SetViewportSizeAsync(1440, 1000);
-            await dprPage.GotoAsync($"{BaseUrl}{PdfPage}",
-                new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-            await WaitForAppReadyAsync(dprPage);
+            await GotoAppReadyAsync(dprPage, $"{BaseUrl}{PdfPage}");
             var dprSection = dprPage.Locator("section:has(h2:has-text('Continuous Scroll'))");
             await dprSection.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
             await dprSection.ScrollIntoViewIfNeededAsync();
@@ -239,9 +235,7 @@ public class PdfViewerAnnotationsE2ETests : WasmTestBase
 
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1000);
-        await page.GotoAsync($"{BaseUrl}{PdfPage}",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{PdfPage}");
 
         var status = page.Locator(".tm-pdf-viewer__body [role='status']").First;
         await status.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });

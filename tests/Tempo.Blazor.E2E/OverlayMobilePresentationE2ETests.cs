@@ -17,7 +17,7 @@ public sealed class OverlayMobilePresentationE2ETests : WasmTestBase
 
     private async Task<IPage> OpenOverlayPageAsync(int width, int height = 844, bool touch = false, string culture = "en")
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             HasTouch = touch,
             IsMobile = touch,
@@ -32,10 +32,8 @@ public sealed class OverlayMobilePresentationE2ETests : WasmTestBase
             localStorage.setItem('tm-demo-culture', '{culture}');
             document.cookie = 'tm-demo-culture={culture};path=/;max-age=31536000;samesite=lax';
             """);
-        RegisterContext(context);
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/overlay", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 90000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/overlay");
         return page;
     }
 

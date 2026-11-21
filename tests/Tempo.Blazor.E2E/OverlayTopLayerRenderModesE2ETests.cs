@@ -170,16 +170,14 @@ public sealed class ServerOverlayTopLayerE2ETests : ServerTestBase
 {
     private async Task<IPage> OpenFeedbackAsync()
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = OverlayTopLayerScenarios.ViewportWidth, Height = OverlayTopLayerScenarios.ViewportHeight },
             IgnoreHTTPSErrors = true,
             Locale = "en-US",
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/feedback", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 90000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/feedback");
         return page;
     }
 
@@ -215,16 +213,14 @@ public sealed class InteractiveAutoOverlayTopLayerE2ETests : InteractiveAutoTest
 {
     private async Task<IPage> OpenFeedbackAsync()
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = OverlayTopLayerScenarios.ViewportWidth, Height = OverlayTopLayerScenarios.ViewportHeight },
             IgnoreHTTPSErrors = true,
             Locale = "en-US",
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/feedback", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 90000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/feedback");
         return page;
     }
 
@@ -287,7 +283,7 @@ public sealed class InteractiveAutoOverlayTopLayerE2ETests : InteractiveAutoTest
             """);
         Assert.IsTrue(booted, "WASM boot never completed: blazor-resource-hash was not persisted within 5 min.");
 
-        await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.NetworkIdle });
+        await ReloadAppReadyAsync(page, WaitUntilState.NetworkIdle);
         var mode = await page.EvaluateAsync<string>("""
             () => new Promise(resolve => {
                 const started = Date.now();

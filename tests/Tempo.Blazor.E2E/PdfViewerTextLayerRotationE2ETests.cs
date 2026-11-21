@@ -31,9 +31,7 @@ public class PdfViewerTextLayerRotationE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(DesktopWidth, 1000);
-        await page.GotoAsync($"{BaseUrl}{PdfPage}",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{PdfPage}");
         return page;
     }
 

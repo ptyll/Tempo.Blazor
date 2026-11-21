@@ -484,12 +484,7 @@ public sealed class TmTabsKeyboardFocusE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1366, 900);
-        await page.GotoAsync($"{BaseUrl}/feedback", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60000
-        });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/feedback", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync($"{LineTabs} [role='tab']", new PageWaitForSelectorOptions
         {
             State = WaitForSelectorState.Visible,

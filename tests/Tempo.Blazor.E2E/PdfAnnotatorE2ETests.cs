@@ -34,9 +34,7 @@ public partial class PdfAnnotatorE2ETests : WasmTestBase
             }
         };
 
-        await page.GotoAsync($"{BaseUrl}{AnnotatorPage}",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{AnnotatorPage}");
         return new AnnotatorPageHandle(page, errors);
     }
 
@@ -216,8 +214,7 @@ public partial class PdfAnnotatorE2ETests : WasmTestBase
             .WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
 
         // Reload the page: the same browser context keeps localStorage.
-        await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await ReloadAppReadyAsync(page);
 
         var aliceAfter = page.Locator("[data-testid='pdf-annotator-pane-alice']");
         await aliceAfter.ScrollIntoViewIfNeededAsync();

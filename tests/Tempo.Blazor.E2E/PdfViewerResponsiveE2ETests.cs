@@ -40,7 +40,7 @@ public class PdfViewerResponsiveE2ETests : WasmTestBase
 
     private async Task<IPage> OpenAsync(string route, int width, int height, bool touch)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = touch,
@@ -48,11 +48,8 @@ public class PdfViewerResponsiveE2ETests : WasmTestBase
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}{route}",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{route}");
         return page;
     }
 

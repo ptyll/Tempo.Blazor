@@ -22,9 +22,7 @@ public class PdfViewerToolbarE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(width, 1000);
-        await page.GotoAsync($"{BaseUrl}{PdfPage}",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{PdfPage}");
         return page;
     }
 
@@ -187,9 +185,7 @@ public class PdfViewerToolbarE2ETests : WasmTestBase
             route.FulfillAsync(new RouteFulfillOptions { Status = 404, ContentType = "text/plain", Body = "gone" }));
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(DesktopWidth, 1000);
-        await page.GotoAsync($"{BaseUrl}{PdfPage}",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{PdfPage}");
 
         await WaitForLoadedViewerAsync(page, "Document Header");
         var section = page.Locator("section:has(h2:has-text('Document Header'))");
