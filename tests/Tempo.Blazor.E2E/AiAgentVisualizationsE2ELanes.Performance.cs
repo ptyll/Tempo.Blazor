@@ -38,7 +38,7 @@ public sealed class AiAgentVisualizationsServerPerformanceE2ETests : AiAgentVisu
     [TestMethod]
     public async Task TheServerStreamIsSpreadAcrossEverySecond_NotBatchedAfterTheRoundTrip()
     {
-        var page = await OpenAsync();
+        var page = await OpenAsync(trace: false);
         await PlayAsync(page);
 
         var samples = new List<int>();
@@ -101,7 +101,7 @@ public abstract class AiAgentVisualizationsPerformanceE2EBase : AiAgentVisualiza
         const int windows = 12;
         const int windowMs = 10_000;
 
-        var page = await OpenAsync();
+        var page = await OpenAsync(trace: false);
         await PlayAsync(page);
 
         var samples = new List<(int Window, long Heap, int Events)>();

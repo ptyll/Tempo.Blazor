@@ -8,7 +8,7 @@
     <IsPackable>false</IsPackable>
     <!-- Playwright requires this -->
     <EnableMSTestRunner>true</EnableMSTestRunner>
-    <!-- Directory.Build.props silences CS0618 repo-wide; here it must stay visible: [Obsolete] on PlaywrightTestBase.WaitForAppReadyAsync/RegisterContext is the migration worklist (docs/e2e-test-lanes.md, Boot readiness). -->
+    <!-- Directory.Build.props silences CS0618 repo-wide; keep it visible here so a new [Obsolete] on the frozen boot API cannot hide. CS0618 is 0 after the phase-1a private conversion. -->
     <NoWarn>$([System.String]::Copy('$(NoWarn)').Replace('CS0618;', '').Replace(';CS0618', ''))</NoWarn>
   </PropertyGroup>
 

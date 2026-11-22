@@ -22,9 +22,9 @@ public class MobileActionBarE2ETests : WasmTestBase
     [TestInitialize]
     public void EnsureShotDir() => Directory.CreateDirectory(ShotDir);
 
-    private static async Task<IBrowserContext> CreateTouchContextAsync(int width, int height, string locale = "en-US")
+    private async Task<IBrowserContext> CreateTouchContextAsync(int width, int height, string locale = "en-US")
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = true,
@@ -109,9 +109,7 @@ public class MobileActionBarE2ETests : WasmTestBase
     {
         var context = await CreateTouchContextAsync(390, 844);
         var page = await context.NewPageAsync();
-        RegisterContext(context);
-        await page.GotoAsync($"{BaseUrl}/mobile-action-bar");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/mobile-action-bar");
 
         var root = page.Locator("[data-testid='mab-auto-bar']");
         var bar = root.Locator(".tm-mobile-action-bar__bar");
@@ -251,9 +249,7 @@ public class MobileActionBarE2ETests : WasmTestBase
         // header Done button).
         var context = await CreateTouchContextAsync(390, 844);
         var page = await context.NewPageAsync();
-        RegisterContext(context);
-        await page.GotoAsync($"{BaseUrl}/mobile-action-bar");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/mobile-action-bar");
 
         var moreButton = page.Locator("[data-testid='mab-auto-bar'] .tm-mobile-action-bar__more");
         await moreButton.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -323,9 +319,7 @@ public class MobileActionBarE2ETests : WasmTestBase
             document.cookie = 'tm-demo-culture=cs; path=/';
             """);
         var page = await context.NewPageAsync();
-        RegisterContext(context);
-        await page.GotoAsync($"{BaseUrl}/mobile-action-bar");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/mobile-action-bar");
 
         var bar = page.Locator("[data-testid='mab-auto-bar'] .tm-mobile-action-bar__bar");
         await bar.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -368,9 +362,7 @@ public class MobileActionBarE2ETests : WasmTestBase
             document.cookie = 'tm-demo-culture={{culture}}; path=/';
             """);
         var page = await context.NewPageAsync();
-        RegisterContext(context);
-        await page.GotoAsync($"{BaseUrl}/mobile-action-bar");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/mobile-action-bar");
 
         var bar = page.Locator("[data-testid='mab-auto-bar'] .tm-mobile-action-bar__bar");
         await bar.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -403,9 +395,7 @@ public class MobileActionBarE2ETests : WasmTestBase
             document.cookie = 'tm-demo-culture=fr; path=/';
             """);
         var page = await context.NewPageAsync();
-        RegisterContext(context);
-        await page.GotoAsync($"{BaseUrl}/mobile-action-bar");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/mobile-action-bar");
 
         await page.Locator("[data-testid='mab-toggle-fixed']").ClickAsync();
         var fixedRoot = page.Locator("[data-testid='mab-variant-fixed'] .tm-mobile-action-bar");
@@ -455,9 +445,7 @@ public class MobileActionBarE2ETests : WasmTestBase
         // ≈61px tall with one-line labels instead of the 71px two-line floor.
         var context = await CreateTouchContextAsync(390, 844);
         var page = await context.NewPageAsync();
-        RegisterContext(context);
-        await page.GotoAsync($"{BaseUrl}/mobile-action-bar");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/mobile-action-bar");
 
         var root = page.Locator("[data-testid='mab-auto-bar']");
         var bar = root.Locator(".tm-mobile-action-bar__bar");
@@ -507,9 +495,7 @@ public class MobileActionBarE2ETests : WasmTestBase
             document.cookie = 'tm-demo-culture=fr; path=/';
             """);
         var page = await context.NewPageAsync();
-        RegisterContext(context);
-        await page.GotoAsync($"{BaseUrl}/mobile-action-bar");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/mobile-action-bar");
 
         var bar = page.Locator("[data-testid='mab-auto-bar'] .tm-mobile-action-bar__bar");
         await bar.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -550,9 +536,7 @@ public class MobileActionBarE2ETests : WasmTestBase
             document.cookie = 'tm-demo-culture=fr; path=/';
             """);
         var page = await context.NewPageAsync();
-        RegisterContext(context);
-        await page.GotoAsync($"{BaseUrl}/mobile-action-bar");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/mobile-action-bar");
 
         await page.Locator("[data-testid='mab-toggle-fixed']").ClickAsync();
         var fixedRoot = page.Locator("[data-testid='mab-variant-fixed'] .tm-mobile-action-bar");
@@ -589,9 +573,7 @@ public class MobileActionBarE2ETests : WasmTestBase
         // aria-valid-attr-value, because aria-controls then points at an absent id).
         var context = await CreateTouchContextAsync(390, 844);
         var page = await context.NewPageAsync();
-        RegisterContext(context);
-        await page.GotoAsync($"{BaseUrl}/mobile-action-bar");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/mobile-action-bar");
 
         var bar = page.Locator("[data-testid='mab-auto-bar'] .tm-mobile-action-bar__bar");
         await bar.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -643,11 +625,9 @@ public class MobileActionBarE2ETests : WasmTestBase
         // the runs — #blazor-error-ui, a dead Server circuit in Blazor Server.
         var context = await CreateTouchContextAsync(390, 844);
         var page = await context.NewPageAsync();
-        RegisterContext(context);
         var pageErrors = new List<string>();
         page.PageError += (_, e) => pageErrors.Add(e);
-        await page.GotoAsync($"{BaseUrl}/mobile-action-bar");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/mobile-action-bar");
 
         var bar = page.Locator("[data-testid='mab-auto-bar'] .tm-mobile-action-bar__bar");
         await bar.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -688,9 +668,7 @@ public class MobileActionBarE2ETests : WasmTestBase
         // moves focus elsewhere must win, not race a late restore back to the More trigger.
         var context = await CreateTouchContextAsync(390, 844);
         var page = await context.NewPageAsync();
-        RegisterContext(context);
-        await page.GotoAsync($"{BaseUrl}/mobile-action-bar");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/mobile-action-bar");
 
         var bar = page.Locator("[data-testid='mab-auto-bar'] .tm-mobile-action-bar__bar");
         await bar.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -752,8 +730,7 @@ public class MobileActionBarE2ETests : WasmTestBase
     {
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/mobile-action-bar");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/mobile-action-bar");
 
         // Auto visibility: above the mobile breakpoint the bar does not exist...
         Assert.AreEqual(0, await page.Locator("[data-testid='mab-auto-bar'] .tm-mobile-action-bar__bar").CountAsync(),
@@ -810,8 +787,7 @@ public class MobileActionBarE2ETests : WasmTestBase
         // test carried a stale "1440" name until the A8 flake fix.)
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/mobile-action-bar");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/mobile-action-bar");
 
         var more = page.Locator("[data-testid='mab-variant-sticky'] .tm-mobile-action-bar__more");
         await more.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -899,8 +875,7 @@ public class MobileActionBarE2ETests : WasmTestBase
         // the pending initial focus lands then.
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/mobile-action-bar");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/mobile-action-bar");
 
         var more = page.Locator("[data-testid='mab-variant-sticky'] .tm-mobile-action-bar__more");
         await more.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -968,9 +943,7 @@ public class MobileActionBarE2ETests : WasmTestBase
         // the page scrolls. Never resize the viewport to the page height here.
         var context = await CreateTouchContextAsync(390, 844);
         var page = await context.NewPageAsync();
-        RegisterContext(context);
-        await page.GotoAsync($"{BaseUrl}/dashboard");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/dashboard");
 
         // Enter edit mode on the phone.
         var edit = page.Locator("[data-testid='dashboard-edit']");
@@ -1027,9 +1000,7 @@ public class MobileActionBarE2ETests : WasmTestBase
         // touch emulation; only FullPage screenshots reset it).
         var context = await CreateTouchContextAsync(390, 844);
         var page = await context.NewPageAsync();
-        RegisterContext(context);
-        await page.GotoAsync($"{BaseUrl}/mobile-action-bar");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/mobile-action-bar");
         await page.SetViewportSizeAsync(390, 700);
         // The tiles inherit the host webfont (font: inherit) — a late font swap or a Tailwind
         // Play CDN transition shifts the card layout between the scroll and the pin measurement.
@@ -1097,9 +1068,7 @@ public class MobileActionBarE2ETests : WasmTestBase
     {
         var context = await CreateTouchContextAsync(390, 844);
         var page = await context.NewPageAsync();
-        RegisterContext(context);
-        await page.GotoAsync($"{BaseUrl}/dashboard");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/dashboard");
 
         // Enter edit mode on the phone.
         var edit = page.Locator("[data-testid='dashboard-edit']");
@@ -1141,9 +1110,7 @@ public class MobileActionBarE2ETests : WasmTestBase
             document.cookie = 'tm-demo-culture=fr; path=/';
             """);
         var page = await context.NewPageAsync();
-        RegisterContext(context);
-        await page.GotoAsync($"{BaseUrl}/dashboard");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/dashboard");
 
         await page.Locator("[data-testid='dashboard-edit']").ClickAsync();
         var bar = page.Locator(".tm-dashboard .tm-mobile-action-bar__bar");
@@ -1170,8 +1137,7 @@ public class MobileActionBarE2ETests : WasmTestBase
     {
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/dashboard");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/dashboard");
 
         await page.Locator("[data-testid='dashboard-edit']").ClickAsync();
 

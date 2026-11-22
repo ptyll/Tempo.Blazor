@@ -53,9 +53,7 @@ public class TmDataTableSortButtonVisualE2ETests : WasmTestBase
     private async Task OpenDataTableAsync(IPage page)
     {
         await page.SetViewportSizeAsync(1440, 1100);
-        await page.GotoAsync($"{BaseUrl}{DataTablePage}",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{DataTablePage}");
         await page.Locator("[data-testid='dt-ergonomics-section']").WaitForAsync(
             new LocatorWaitForOptions { Timeout = 30000 });
     }

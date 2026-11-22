@@ -38,7 +38,7 @@ public sealed class ToolbarFileButtonE2ETests : WasmTestBase
 
     private async Task<IPage> OpenDemoAsync(int width, int height, bool touch = false)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = touch,
@@ -46,10 +46,8 @@ public sealed class ToolbarFileButtonE2ETests : WasmTestBase
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}{DemoUrl}");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{DemoUrl}");
         await page.Locator("[data-testid='toolbar-file-button-card']").WaitForAsync();
         return page;
     }
@@ -266,14 +264,13 @@ public sealed class ToolbarFileButtonE2ETests : WasmTestBase
 
     private async Task<(IPage Page, ILocator Editor)> OpenEditorAsync(int width, int height, bool touch = false)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = touch,
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
         // The layout resolves from the editor CONTAINER: drop the demo sidebar margin before the app boots.
         await page.AddInitScriptAsync("document.addEventListener('DOMContentLoaded', () => { const s = document.createElement('style'); s.textContent = 'aside.fixed.inset-y-0.left-0.z-30 { display: none !important; } main { margin-left: 0 !important; width: 100vw !important; max-width: 100vw !important; }'; document.head.appendChild(s); });");

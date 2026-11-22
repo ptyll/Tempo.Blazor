@@ -62,7 +62,7 @@ public class InteractiveAutoTests : InteractiveAutoTestBase
             """);
         Assert.IsTrue(booted, "WASM boot never completed: blazor-resource-hash was not persisted within 5 min.");
 
-        await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.NetworkIdle });
+        await ReloadAppReadyAsync(page, WaitUntilState.NetworkIdle);
         var mode = await page.EvaluateAsync<string>("""
             () => new Promise(resolve => {
                 const started = Date.now();
@@ -343,9 +343,6 @@ public class WasmTests : WasmTestBase
             State = WaitForSelectorState.Attached,
             Timeout = 10000
         });
-
-        // Wait for app to be ready
-        await WaitForAppReadyAsync(page);
 
         // Verify main content
         var main = page.Locator("main");

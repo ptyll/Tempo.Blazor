@@ -183,7 +183,6 @@ public class ReadinessInfrastructureTests
     // a navigation from GotoAppReadyAsync / ReloadAppReadyAsync. Existing offenders are listed below with their count;
     // converting one LOWERS its count (update the entry, delete it at zero), a new offender - or a growing count - fails.
 
-    private const string Debt = "debt: hand-rolled context/boot, convert to CreateContextAsync + GotoAppReadyAsync";
     private const string FirefoxLeg = "permanent: the shared browser is Chromium, this Firefox leg launches its own Playwright + browser";
     private const string OwnHost = "permanent: starts its own dotnet host (not the shared demo hosts), so it has no shared browser or boot recovery";
 
@@ -219,16 +218,9 @@ public class ReadinessInfrastructureTests
     private static readonly IReadOnlyDictionary<string, (int Count, string Reason)> KnownOffenders =
         new Dictionary<string, (int Count, string Reason)>(StringComparer.Ordinal)
         {
-        ["FilterableDropdownE2ETests.cs"] = (3, FirefoxLeg),
-        ["GalleryLightboxE2ETests.cs"] = (21, Debt),
-        ["MobileActionBarE2ETests.cs"] = (35, Debt),
-        ["NotionCommentsE2ETests.cs"] = (1, Debt),
-        ["NotionOverlayInModalE2ETests.cs"] = (2, FirefoxLeg),
-        ["NotionPhase1EvidenceScreenshots.cs"] = (7, Debt),
-        ["NotionPhase2ThemeScreenshots.cs"] = (1, Debt),
-        ["NotionPhase3ShellScreenshots.cs"] = (2, Debt),
-        ["NotionPhase4DialogScreenshots.cs"] = (3, Debt),
-        ["OverlayPanelE2ETests.cs"] = (4, FirefoxLeg),
+        ["FilterableDropdownE2ETests.cs"] = (1, FirefoxLeg),
+        ["NotionOverlayInModalE2ETests.cs"] = (1, FirefoxLeg),
+        ["OverlayPanelE2ETests.cs"] = (1, FirefoxLeg),
         ["ReportingF0FidelityE2ETests.cs"] = (1, OwnHost),
         ["ReportingF12ReportServerWebE2ETests.cs"] = (1, OwnHost),
         ["ReportingF13ReportDesignerE2ETests.cs"] = (1, OwnHost),
@@ -241,12 +233,8 @@ public class ReadinessInfrastructureTests
         ["ReportingF7TablixE2ETests.cs"] = (1, OwnHost),
         ["ReportingF8PdfRendererE2ETests.cs"] = (1, OwnHost),
         ["ReportingF9ReportViewerE2ETests.cs"] = (1, OwnHost),
-        ["SpreadsheetE2ETests.cs"] = (119, Debt),
-        ["TmDataTableSortButtonE2ETests.cs"] = (2, FirefoxLeg),
-        ["TmDataTableSortButtonVisualE2ETests.cs"] = (2, FirefoxLeg),
-        ["ToolbarFileButtonE2ETests.cs"] = (5, Debt),
-        ["ToolbarOverflowE2ETests.cs"] = (9, Debt),
-        ["TreeListGanttRecurrenceE2ETests.cs"] = (10, Debt),
+        ["TmDataTableSortButtonE2ETests.cs"] = (1, FirefoxLeg),
+        ["TmDataTableSortButtonVisualE2ETests.cs"] = (1, FirefoxLeg),
         };
 
     /// <summary>

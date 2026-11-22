@@ -3,7 +3,7 @@ using System.Globalization;
 namespace Tempo.Blazor.E2E;
 
 /// <summary>
-/// The wait budgets of <see cref="PlaywrightTestBase.WaitForAppReadyAsync"/>, resolved from one number.
+/// The wait budgets of the central boot gate (<see cref="PlaywrightTestBase.GotoAppReadyAsync"/>), resolved from one number.
 /// <para>
 /// A cold boot of a self-hosted WASM demo under full-lane CPU contention can take well over the former fixed
 /// 60 s / 15 s / 45 s windows without anything being broken; every wait here is on a STATE (a selector, the

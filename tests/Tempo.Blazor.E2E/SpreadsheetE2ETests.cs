@@ -11,8 +11,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task ArrowNavigation_ScrollsGridVertically()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         // A stable instance, not a positional one: the demo page order is not a selector contract.
         var grid = page.Locator("[data-testid='spreadsheet-demo'] .tm-spreadsheet-canvas-grid");
@@ -38,8 +37,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task ArrowNavigation_ScrollsGridHorizontally()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         // A stable instance, not a positional one: the demo page order is not a selector contract.
         var grid = page.Locator("[data-testid='spreadsheet-demo'] .tm-spreadsheet-canvas-grid");
@@ -71,8 +69,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_RendersNonBlankCanvasAndScrollsHorizontally()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await WaitForCanvasGridReadyAsync(page, grid);
@@ -108,8 +105,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
         // in bUnit); this spec used to click a DOM cell that no longer exists. It now guards the canvas
         // contract that replaced it: one grid root, and the keyboard moves its active cell.
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var component = page.Locator("[data-testid='spreadsheet-demo']");
         var grid = component.Locator(".tm-spreadsheet-canvas-grid");
@@ -130,8 +126,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_DoubleClickStartsCellEdit()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -160,8 +155,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_TypingStartsEditAndKeepsAcceptingCharacters()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await WaitForCanvasGridReadyAsync(page, grid);
@@ -180,8 +174,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_JsEditorTypingTwentyCharactersKeepsAllCharacters()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -223,8 +216,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_JsEditorFastEnterCommitKeepsNextActiveCell()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -281,8 +273,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_JsFormulaEditorClickInsertsReferenceWithinOneFrame()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -340,8 +331,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_JsFormulaEditorDragInsertsRangeLocally()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -400,8 +390,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_JsFormulaEditorEnterCommitsFormulaLocally()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -455,8 +444,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_ExistingFormulaOpensEditorWithFormulaText()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await WaitForCanvasGridReadyAsync(page, grid);
@@ -503,8 +491,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_EditingDependencyRecalculatesFormulaCell()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await WaitForCanvasGridReadyAsync(page, grid);
@@ -538,8 +525,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_F4CyclesAbsoluteReferencesInFormulaEditor()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await WaitForCanvasGridReadyAsync(page, grid);
@@ -566,8 +552,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_F4CyclesReferenceAtCaretForFirstFormulaToken()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await WaitForCanvasGridReadyAsync(page, grid);
@@ -607,8 +592,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_F4CyclesReferenceAtCaretForLastFormulaToken()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await WaitForCanvasGridReadyAsync(page, grid);
@@ -641,8 +625,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_F4CyclesRangeTokenAtCaret()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await WaitForCanvasGridReadyAsync(page, grid);
@@ -672,8 +655,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_F4OutsideReferenceLeavesFormulaUnchanged()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await WaitForCanvasGridReadyAsync(page, grid);
@@ -704,8 +686,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_FormulaSelfClickDoesNotInsertSelfReference()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await WaitForCanvasGridReadyAsync(page, grid);
@@ -763,8 +744,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_FormulaClickReplacesReferenceAtCaret()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await WaitForCanvasGridReadyAsync(page, grid);
@@ -817,8 +797,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_FormulaArrowLeftRightMoveCaretWithoutChangingActiveCell()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await WaitForCanvasGridReadyAsync(page, grid);
@@ -865,8 +844,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_FormulaHighlightFollowsCaretAcrossTokens()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await WaitForCanvasGridReadyAsync(page, grid);
@@ -911,8 +889,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_FormulaClickReplacesCorrectTokenInMixedRangeAndSingleReferenceFormula()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await WaitForCanvasGridReadyAsync(page, grid);
@@ -964,8 +941,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_FormulaBarF4MatchesInlineEditorSemantics()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var spreadsheet = page.Locator(".tm-spreadsheet").Filter(new() { Has = page.Locator(".tm-spreadsheet-canvas-grid") }).First;
         var input = await OpenFormulaBarEditorAsync(page, spreadsheet);
@@ -981,8 +957,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_FormulaBarAutocompleteAcceptsFunctionFromKeyboard()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var spreadsheet = page.Locator(".tm-spreadsheet").Filter(new() { Has = page.Locator(".tm-spreadsheet-canvas-grid") }).First;
         var input = await OpenFormulaBarEditorAsync(page, spreadsheet);
@@ -1004,8 +979,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_FormulaBarAutocompleteKeyboardSelectionAcceptsHighlightedSuggestion()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var spreadsheet = page.Locator(".tm-spreadsheet").Filter(new() { Has = page.Locator(".tm-spreadsheet-canvas-grid") }).First;
         var input = await OpenFormulaBarEditorAsync(page, spreadsheet);
@@ -1026,8 +1000,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_FormulaBarClickReplacesReferenceAtCaretWithoutChangingActiveCell()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var spreadsheet = page.Locator(".tm-spreadsheet").Filter(new() { Has = page.Locator(".tm-spreadsheet-canvas-grid") }).First;
         var grid = spreadsheet.Locator(".tm-spreadsheet-canvas-grid");
@@ -1053,8 +1026,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_FormulaBarDragRangeReplacesReferenceWithoutChangingActiveCell()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var spreadsheet = page.Locator(".tm-spreadsheet").Filter(new() { Has = page.Locator(".tm-spreadsheet-canvas-grid") }).First;
         var grid = spreadsheet.Locator(".tm-spreadsheet-canvas-grid");
@@ -1078,8 +1050,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_FormulaBarSelfClickKeepsSessionAndValue()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var spreadsheet = page.Locator(".tm-spreadsheet").Filter(new() { Has = page.Locator(".tm-spreadsheet-canvas-grid") }).First;
         var grid = spreadsheet.Locator(".tm-spreadsheet-canvas-grid");
@@ -1111,8 +1082,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_FormulaBarContextMenuAttemptKeepsSessionAndDoesNotOpenGridMenu()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var spreadsheet = page.Locator(".tm-spreadsheet").Filter(new() { Has = page.Locator(".tm-spreadsheet-canvas-grid") }).First;
         var grid = spreadsheet.Locator(".tm-spreadsheet-canvas-grid");
@@ -1166,8 +1136,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
         const string expected = "=SUM(A1:B5)+E6";
 
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var spreadsheet = page.Locator(".tm-spreadsheet").Filter(new() { Has = page.Locator(".tm-spreadsheet-canvas-grid") }).First;
         var grid = spreadsheet.Locator(".tm-spreadsheet-canvas-grid");
@@ -1206,8 +1175,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
         const string formula = "=SUM(A1)+B2";
 
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var spreadsheet = page.Locator(".tm-spreadsheet").Filter(new() { Has = page.Locator(".tm-spreadsheet-canvas-grid") }).First;
         var grid = spreadsheet.Locator(".tm-spreadsheet-canvas-grid");
@@ -1232,8 +1200,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
         const string formula = "=SUM(A1)+B2";
 
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var spreadsheet = page.Locator(".tm-spreadsheet").Filter(new() { Has = page.Locator(".tm-spreadsheet-canvas-grid") }).First;
         var grid = spreadsheet.Locator(".tm-spreadsheet-canvas-grid");
@@ -1259,8 +1226,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
         const string formula = "=SUM(A1)+B2";
 
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var spreadsheet = page.Locator(".tm-spreadsheet").Filter(new() { Has = page.Locator(".tm-spreadsheet-canvas-grid") }).First;
         var grid = spreadsheet.Locator(".tm-spreadsheet-canvas-grid");
@@ -1291,8 +1257,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
         const string formula = "=SUM(A1)+B2";
 
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var spreadsheet = page.Locator(".tm-spreadsheet").Filter(new() { Has = page.Locator(".tm-spreadsheet-canvas-grid") }).First;
         var grid = spreadsheet.Locator(".tm-spreadsheet-canvas-grid");
@@ -1324,8 +1289,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
         const string formula = "=SUM(A1:B5)+C7";
 
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var spreadsheet = page.Locator(".tm-spreadsheet").Filter(new() { Has = page.Locator(".tm-spreadsheet-canvas-grid") }).First;
         var grid = spreadsheet.Locator(".tm-spreadsheet-canvas-grid");
@@ -1352,8 +1316,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
         const string formula = "=SUM(A1:B5)+C7";
 
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var spreadsheet = page.Locator(".tm-spreadsheet").Filter(new() { Has = page.Locator(".tm-spreadsheet-canvas-grid") }).First;
         var grid = spreadsheet.Locator(".tm-spreadsheet-canvas-grid");
@@ -1375,8 +1338,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
         const string formula = "=SUM()";
 
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var spreadsheet = page.Locator(".tm-spreadsheet").Filter(new() { Has = page.Locator(".tm-spreadsheet-canvas-grid") }).First;
         var grid = spreadsheet.Locator(".tm-spreadsheet-canvas-grid");
@@ -1402,8 +1364,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
         const string formula = "=IF(A1>10,\"A1\",SUM(B2:B4)+C7)";
 
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var spreadsheet = page.Locator(".tm-spreadsheet").Filter(new() { Has = page.Locator(".tm-spreadsheet-canvas-grid") }).First;
         var grid = spreadsheet.Locator(".tm-spreadsheet-canvas-grid");
@@ -1429,8 +1390,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
         const string formula = "=IF(A1>10,\"A1\",SUM(B2:B4)+C7)";
 
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var spreadsheet = page.Locator(".tm-spreadsheet").Filter(new() { Has = page.Locator(".tm-spreadsheet-canvas-grid") }).First;
         var grid = spreadsheet.Locator(".tm-spreadsheet-canvas-grid");
@@ -1457,8 +1417,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
         const string formula = "=SUM(A1:B5)+C7";
 
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var spreadsheet = page.Locator(".tm-spreadsheet").Filter(new() { Has = page.Locator(".tm-spreadsheet-canvas-grid") }).First;
         var grid = spreadsheet.Locator(".tm-spreadsheet-canvas-grid");
@@ -1492,8 +1451,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
         const string formula = "=SUM(A1:B5)+C7";
 
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var spreadsheet = page.Locator(".tm-spreadsheet").Filter(new() { Has = page.Locator(".tm-spreadsheet-canvas-grid") }).First;
         var grid = spreadsheet.Locator(".tm-spreadsheet-canvas-grid");
@@ -1584,8 +1542,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_InlineFormulaCommitClearsFormulaHighlightsAndPointMode()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var spreadsheet = page.Locator(".tm-spreadsheet").Filter(new() { Has = page.Locator(".tm-spreadsheet-canvas-grid") }).First;
         var grid = spreadsheet.Locator(".tm-spreadsheet-canvas-grid");
@@ -1644,8 +1601,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_FormulaBarCommitClearsFormulaHighlightsAndRestoresMousePicking()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var spreadsheet = page.Locator(".tm-spreadsheet").Filter(new() { Has = page.Locator(".tm-spreadsheet-canvas-grid") }).First;
         var grid = spreadsheet.Locator(".tm-spreadsheet-canvas-grid");
@@ -1700,8 +1656,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_F2TransfersFormulaSessionFromFormulaBarToInlineEditorWithoutLosingCaret()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var spreadsheet = page.Locator(".tm-spreadsheet").Filter(new() { Has = page.Locator(".tm-spreadsheet-canvas-grid") }).First;
         var grid = spreadsheet.Locator(".tm-spreadsheet-canvas-grid");
@@ -1726,8 +1681,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_FormulaSessionTransfersFromInlineEditorToFormulaBarWithoutLosingCaret()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var spreadsheet = page.Locator(".tm-spreadsheet").Filter(new() { Has = page.Locator(".tm-spreadsheet-canvas-grid") }).First;
         var grid = spreadsheet.Locator(".tm-spreadsheet-canvas-grid");
@@ -1760,8 +1714,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_InlineFormulaEditorAutocompleteAcceptsFunctionFromKeyboard()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var spreadsheet = page.Locator(".tm-spreadsheet").Filter(new() { Has = page.Locator(".tm-spreadsheet-canvas-grid") }).First;
         var grid = spreadsheet.Locator(".tm-spreadsheet-canvas-grid");
@@ -1789,8 +1742,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_InlineFormulaEditorShowsSharedFunctionHint()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var spreadsheet = page.Locator(".tm-spreadsheet").Filter(new() { Has = page.Locator(".tm-spreadsheet-canvas-grid") }).First;
         var grid = spreadsheet.Locator(".tm-spreadsheet-canvas-grid");
@@ -1817,8 +1769,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_FormulaBarArrowUpDownKeepSessionAndDoNotChangeActiveCell()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var spreadsheet = page.Locator(".tm-spreadsheet").Filter(new() { Has = page.Locator(".tm-spreadsheet-canvas-grid") }).First;
         var grid = spreadsheet.Locator(".tm-spreadsheet-canvas-grid");
@@ -1851,8 +1802,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
         const string formula = "=SUM(A1:B5)+C7";
 
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await WaitForCanvasGridReadyAsync(page, grid);
@@ -1877,8 +1827,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_FormulaBarSelectionShortcutsDoNotChangeActiveCell()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var spreadsheet = page.Locator(".tm-spreadsheet").Filter(new() { Has = page.Locator(".tm-spreadsheet-canvas-grid") }).First;
         var grid = spreadsheet.Locator(".tm-spreadsheet-canvas-grid");
@@ -1921,8 +1870,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
         const string formula = "=SUM(A1:B5)+C7";
 
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var spreadsheet = page.Locator(".tm-spreadsheet").Filter(new() { Has = page.Locator(".tm-spreadsheet-canvas-grid") }).First;
         var grid = spreadsheet.Locator(".tm-spreadsheet-canvas-grid");
@@ -1963,8 +1911,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
         const string formula = "=SUM(A1:B5)+C7";
 
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var spreadsheet = page.Locator(".tm-spreadsheet").Filter(new() { Has = page.Locator(".tm-spreadsheet-canvas-grid") }).First;
         var grid = spreadsheet.Locator(".tm-spreadsheet-canvas-grid");
@@ -2003,8 +1950,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
         const string formula = "=SUM(A1:B5)+C7";
 
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var spreadsheet = page.Locator(".tm-spreadsheet").Filter(new() { Has = page.Locator(".tm-spreadsheet-canvas-grid") }).First;
         var grid = spreadsheet.Locator(".tm-spreadsheet-canvas-grid");
@@ -2039,8 +1985,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
         const string formula = "=SUM(A1:B5)+C7";
 
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await WaitForCanvasGridReadyAsync(page, grid);
@@ -2073,8 +2018,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
         const string formula = "=SUM(A1:B5)+C7";
 
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await WaitForCanvasGridReadyAsync(page, grid);
@@ -2105,8 +2049,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
         const string formula = "=SUM(A1:B5)+C7";
 
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await WaitForCanvasGridReadyAsync(page, grid);
@@ -2131,8 +2074,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_FormulaBarLongSessionCombinesAutocompleteReferencePickingScrollAndCommit()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var spreadsheet = page.Locator(".tm-spreadsheet").Filter(new() { Has = page.Locator(".tm-spreadsheet-canvas-grid") }).First;
         var grid = spreadsheet.Locator(".tm-spreadsheet-canvas-grid");
@@ -2192,8 +2134,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_FormulaBarShowsActiveFunctionArgumentHint()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var spreadsheet = page.Locator(".tm-spreadsheet").Filter(new() { Has = page.Locator(".tm-spreadsheet-canvas-grid") }).First;
         var input = await OpenFormulaBarEditorAsync(page, spreadsheet);
@@ -2212,10 +2153,9 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_FormulaBarCzechDecimalCommaDoesNotAdvanceArgumentHintPrematurely()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
         await page.EvaluateAsync("() => localStorage.setItem('tm-demo-culture', 'cs')");
-        await page.ReloadAsync();
-        await WaitForAppReadyAsync(page);
+        await ReloadAppReadyAsync(page);
 
         var spreadsheet = page.Locator(".tm-spreadsheet").Filter(new() { Has = page.Locator(".tm-spreadsheet-canvas-grid") }).First;
         Assert.AreEqual(";", await spreadsheet.GetAttributeAsync("data-formula-argument-separator"), "Expected Czech culture to advertise semicolon as the formula argument separator.");
@@ -2236,10 +2176,9 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_InlineFormulaEditorCzechDecimalCommaDoesNotAdvanceArgumentHintPrematurely()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
         await page.EvaluateAsync("() => localStorage.setItem('tm-demo-culture', 'cs')");
-        await page.ReloadAsync();
-        await WaitForAppReadyAsync(page);
+        await ReloadAppReadyAsync(page);
 
         var spreadsheet = page.Locator(".tm-spreadsheet").Filter(new() { Has = page.Locator(".tm-spreadsheet-canvas-grid") }).First;
         var grid = spreadsheet.Locator(".tm-spreadsheet-canvas-grid");
@@ -2262,8 +2201,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_ContextMenuClickKeepsOriginalActiveCell()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await WaitForCanvasGridReadyAsync(page, grid);
@@ -2298,8 +2236,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_PublicApiCellUpdatesReachCanvasStore()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await WaitForCanvasGridReadyAsync(page, grid);
@@ -2343,8 +2280,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_KeyboardNavigationKeepsGridFocusAndUpdatesAccessibilityState()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await WaitForCanvasGridReadyAsync(page, grid);
@@ -2382,8 +2318,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_FormulaEditorExposesTextboxAccessibilityAndCaret()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await WaitForCanvasGridReadyAsync(page, grid);
@@ -2419,8 +2354,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_Paste100x20UsesSingleRangeBatch()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await WaitForCanvasGridReadyAsync(page, grid);
@@ -2475,8 +2409,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_AutoFillCommitsAsSingleRangeBatch()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await WaitForCanvasGridReadyAsync(page, grid);
@@ -2540,8 +2473,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_JsFormulaReferenceHighlightsRemainVisibleAfterScroll()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -2596,8 +2528,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_JsSheetStateRejectsStaleBlazorSelectionFrame()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -2644,8 +2575,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_JsEditorStateRejectsStaleBlazorFrame()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -2696,8 +2626,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_CellStoreBatchUpdateRepaintsVisibleCell()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -2762,8 +2691,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_KeyboardSelectionUsesCellStoreWithoutFrameScans()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -2805,8 +2733,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_WheelScrollUsesJsLayoutWithoutBlazorFrame()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -2847,8 +2774,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_KeyboardScrollUsesJsLayoutWithoutBlazorFrame()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -2921,8 +2847,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_ArrowDownInViewportPaintsSelectionAndOneHeaderStrip()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -2968,8 +2893,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_ArrowDownAtScrollEdgePaintsContentAtMostOnce()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -3031,8 +2955,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_RapidArrowDownKeepsSelectionMonotonicWhileScrolling()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -3059,8 +2982,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_RapidArrowRightKeepsSelectionMonotonicWhileScrolling()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -3086,8 +3008,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_RapidArrowUpKeepsSelectionMonotonicWhileScrolling()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -3116,8 +3037,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_RapidArrowLeftKeepsSelectionMonotonicWhileScrolling()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -3146,8 +3066,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_KeyboardNavigationUsesSelectionOverlay()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -3171,8 +3090,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_RapidArrowDownStaysOnLocalHotPath()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -3243,8 +3161,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_CommandLogBatchesArrowNavigationWithoutLegacyCallbacks()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -3290,8 +3207,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_RapidLocalEditsShareOneCommandLogBatch()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -3344,8 +3260,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_RangeChangeBatchUsesSingleCommandLogCallback()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -3386,8 +3301,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_KeyboardScrollSyncsNativeScrollbarAfterDebounce()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -3434,8 +3348,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_KeyboardRepeatAcceleratesButClampsToSheetEnd()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -3492,8 +3405,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_ShortArrowPressesStaySingleStep()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -3538,7 +3450,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     [TestMethod]
     public async Task CanvasRenderer_LayersTrackDevicePixelRatioAndResize()
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = 960, Height = 540 },
             DeviceScaleFactor = 2,
@@ -3549,8 +3461,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
         try
         {
             var page = await context.NewPageAsync();
-            await page.GotoAsync($"{BaseUrl}/spreadsheet");
-            await WaitForAppReadyAsync(page);
+            await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
             var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
             await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -3579,8 +3490,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_UnchangedLocalEditDoesNotRedrawContent()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -3607,8 +3517,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_EnterAfterLocalEditMovesActiveCell()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -3636,8 +3545,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_MouseClickSyncsBlazorActiveCellImmediately()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -3686,8 +3594,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_ScrollDuringLocalEditKeepsEditorAlignedAndHidesWhenOutOfView()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -3742,8 +3649,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_SmallScrollUsesBitmapShiftAndLargeScrollFallsBack()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -3806,8 +3712,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_DragSelectionUpdatesRangeLocally()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -3873,8 +3778,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_DragSelectionAutoscrollsDown()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -3930,8 +3834,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_DragSelectionAutoscrollsRight()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -3987,8 +3890,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_DragSelectionAutoscrollStaysOnLogicalHotPath()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -4061,8 +3963,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_WheelScrollStaysOnLogicalHotPath()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -4113,8 +4014,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_ColumnResizeDragStaysJsOnlyUntilCommitAndSyncsModel()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await WaitForCanvasGridReadyAsync(page, grid);
@@ -4200,8 +4100,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_RowResizeDragStaysJsOnlyUntilCommitAndSyncsModel()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await WaitForCanvasGridReadyAsync(page, grid);
@@ -4287,8 +4186,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_RowResizeSecondDragStartsFromCommittedHeight()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await WaitForCanvasGridReadyAsync(page, grid);
@@ -4381,8 +4279,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_ColumnResizeSecondDragStartsFromCommittedWidth()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await WaitForCanvasGridReadyAsync(page, grid);
@@ -4475,8 +4372,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_ResizeCommitKeepsEditorSelectionAndFormulaHighlightAligned()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await WaitForCanvasGridReadyAsync(page, grid);
@@ -4599,8 +4495,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasJsEngine_ResizeHotPathWorksWithFrozenAxes()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await WaitForCanvasGridReadyAsync(page, grid);
@@ -4725,8 +4620,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_SelectedCellKeepsTextAndDrawsFormatting()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -4808,8 +4702,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_DrawsFormulaReferenceHighlights()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -4849,8 +4742,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_ExposesRedrawDebugMetrics()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -4938,8 +4830,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_SelectionOnlyRedrawDoesNotMissContentSnapshots()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -5004,8 +4895,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task CanvasRenderer_UsesTextAndLayoutCaches()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
 
         var grid = page.Locator(".tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -5071,8 +4961,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task BenchmarkPage_RunsCanvasBenchmark()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet-benchmark");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet-benchmark");
 
         await page.GetByTestId("spreadsheet-benchmark-run-canvas").ClickAsync();
 
@@ -5091,8 +4980,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     public async Task BenchmarkPage_ExposesPasteLatencyForCanvasAndCanvasJsEngine()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet-benchmark");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet-benchmark");
 
         await page.GetByTestId("spreadsheet-benchmark-run-both").ClickAsync();
         await page.WaitForFunctionAsync(
@@ -5121,7 +5009,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     [TestCategory("Performance")]
     public async Task BenchmarkPage_Phase11ReadinessMetricsPass()
     {
-        var page = await OpenBenchmarkRunBothAsync();
+        var page = await OpenBenchmarkRunBothAsync(trace: false);
 
         var canvas = page.Locator("[data-testid=\"spreadsheet-benchmark-result-row\"][data-renderer=\"Canvas\"]").First;
         var dom = page.Locator("[data-testid=\"spreadsheet-benchmark-result-row\"][data-renderer=\"Dom\"]").First;
@@ -5183,11 +5071,11 @@ public partial class SpreadsheetE2ETests : WasmTestBase
         Assert.IsTrue(canvasDragScrollTo <= 3, $"Expected drag autoscroll native sync to stay coalesced. scrollTo count: {canvasDragScrollTo:N0}.");
     }
 
-    private async Task<IPage> OpenBenchmarkRunBothAsync()
+    private async Task<IPage> OpenBenchmarkRunBothAsync(bool trace = true)
     {
-        var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet-benchmark");
-        await WaitForAppReadyAsync(page);
+        var context = await CreateContextAsync(new BrowserNewContextOptions(), trace);
+        var page = await context.NewPageAsync();
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet-benchmark");
 
         await page.GetByTestId("spreadsheet-benchmark-run-both").ClickAsync();
         await page.WaitForFunctionAsync(
@@ -5200,9 +5088,9 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     [TestCategory("Performance")]
     public async Task BenchmarkPage_CanvasKeyboardUsableOnLargeDataset()
     {
-        var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet-benchmark");
-        await WaitForAppReadyAsync(page);
+        var context = await CreateContextAsync(new BrowserNewContextOptions(), trace: false);
+        var page = await context.NewPageAsync();
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet-benchmark");
 
         await page.Locator("#benchmark-dataset").SelectOptionAsync("10000x100");
         await page.GetByTestId("spreadsheet-benchmark-run-canvas").ClickAsync();
@@ -5233,9 +5121,9 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     [TestCategory("Performance")]
     public async Task BenchmarkPage_CanvasResizeUsableOnLargeDataset()
     {
-        var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet-benchmark");
-        await WaitForAppReadyAsync(page);
+        var context = await CreateContextAsync(new BrowserNewContextOptions(), trace: false);
+        var page = await context.NewPageAsync();
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet-benchmark");
 
         await page.Locator("#benchmark-dataset").SelectOptionAsync("10000x100");
         await page.GetByTestId("spreadsheet-benchmark-load").ClickAsync();
@@ -5351,9 +5239,9 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     [TestCategory("Performance")]
     public async Task BenchmarkPage_Phase12LatencyProbeMatchesHotPathCriteria()
     {
-        var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet-benchmark");
-        await WaitForAppReadyAsync(page);
+        var context = await CreateContextAsync(new BrowserNewContextOptions(), trace: false);
+        var page = await context.NewPageAsync();
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet-benchmark");
 
         var grid = page.Locator("[data-spreadsheet-benchmark-surface] .tm-spreadsheet-canvas-grid").First;
         await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -5386,9 +5274,9 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     [TestCategory("Performance")]
     public async Task BenchmarkPage_Phase12BenchmarkRowExposesReadinessMetrics()
     {
-        var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet-benchmark");
-        await WaitForAppReadyAsync(page);
+        var context = await CreateContextAsync(new BrowserNewContextOptions(), trace: false);
+        var page = await context.NewPageAsync();
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet-benchmark");
 
         await page.GetByTestId("spreadsheet-benchmark-run-both").ClickAsync();
         await page.WaitForFunctionAsync(
@@ -5446,9 +5334,9 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     [TestCategory("Performance")]
     public async Task BenchmarkPage_ResizeReadinessMetricsPass()
     {
-        var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet-benchmark");
-        await WaitForAppReadyAsync(page);
+        var context = await CreateContextAsync(new BrowserNewContextOptions(), trace: false);
+        var page = await context.NewPageAsync();
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet-benchmark");
 
         await page.GetByTestId("spreadsheet-benchmark-run-canvas").ClickAsync();
 

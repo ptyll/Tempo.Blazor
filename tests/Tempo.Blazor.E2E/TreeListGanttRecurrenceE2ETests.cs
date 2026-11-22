@@ -16,8 +16,7 @@ public class TreeListGanttRecurrenceE2ETests : WasmTestBase
     public async Task TreeList_RendersAndExpands()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/tree-list");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/tree-list");
 
         var treeList = page.Locator(".tm-tree-list").First;
         await treeList.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -53,8 +52,7 @@ public class TreeListGanttRecurrenceE2ETests : WasmTestBase
     public async Task TreeList_SelectsRow()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/tree-list");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/tree-list");
 
         var treeList = page.Locator(".tm-tree-list").First;
         await treeList.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -77,8 +75,7 @@ public class TreeListGanttRecurrenceE2ETests : WasmTestBase
     {
         var page = await CreatePageAsync();
         page.Console += (_, msg) => TestContext.WriteLine($"[console] {msg.Text}");
-        await page.GotoAsync($"{BaseUrl}/gantt");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/gantt");
 
         var gantt = page.Locator(".tm-gantt").First;
         await gantt.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -120,8 +117,7 @@ public class TreeListGanttRecurrenceE2ETests : WasmTestBase
     public async Task Gantt_SelectsTask()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/gantt");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/gantt");
 
         var gantt = page.Locator(".tm-gantt").First;
         await gantt.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -144,8 +140,7 @@ public class TreeListGanttRecurrenceE2ETests : WasmTestBase
     public async Task Gantt_TimelinePan_DragsHorizontally()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/gantt");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/gantt");
 
         var gantt = page.Locator(".tm-gantt").First;
         await gantt.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -217,8 +212,7 @@ public class TreeListGanttRecurrenceE2ETests : WasmTestBase
     public async Task Gantt_ExpandCollapse()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/gantt");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/gantt");
 
         var gantt = page.Locator(".tm-gantt").First;
         await gantt.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -253,8 +247,7 @@ public class TreeListGanttRecurrenceE2ETests : WasmTestBase
         // Phase 7: the Gantt resolves its layout from its OWN container; the default 1280px viewport leaves the demo Gantt under 1024px (tablet: the
         // commands sit in "More"), so a spec of the desktop toolbar runs at the 1440px desktop viewport.
         await page.SetViewportSizeAsync(1440, 900);
-        await page.GotoAsync($"{BaseUrl}/gantt");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/gantt");
 
         var gantt = page.Locator(".tm-gantt").First;
         await gantt.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -293,8 +286,7 @@ public class TreeListGanttRecurrenceE2ETests : WasmTestBase
     public async Task RecurrenceEditor_RendersAndChangesPattern()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/recurrence-editor");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/recurrence-editor");
 
         var editor = page.Locator(".tm-recurrence-editor").First;
         await editor.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -318,8 +310,7 @@ public class TreeListGanttRecurrenceE2ETests : WasmTestBase
     public async Task RecurrenceEditor_WeeklyDaysToggle()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/recurrence-editor");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/recurrence-editor");
 
         var editor = page.Locator(".tm-recurrence-editor").First;
         await editor.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -349,8 +340,7 @@ public class TreeListGanttRecurrenceE2ETests : WasmTestBase
     public async Task RecurrenceEditor_EndCondition()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/recurrence-editor");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/recurrence-editor");
 
         var editor = page.Locator(".tm-recurrence-editor").First;
         await editor.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });

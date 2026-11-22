@@ -104,17 +104,12 @@ public sealed class NotionReadOnlyE2ETests : NotionE2ETestBase
 
     private async Task LoadReadOnlyPageAsync(IPage page)
     {
-        await page.GotoAsync($"{BaseUrl}/notion-editor?readonly=true", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/notion-editor?readonly=true", WaitUntilState.DOMContentLoaded);
         await WaitForReadOnlyPageAsync(page);
     }
 
     private async Task WaitForReadOnlyPageAsync(IPage page, string? seedSelector = null)
     {
-        await WaitForAppReadyAsync(page);
         await page.WaitForSelectorAsync(".tm-notion-editor", new PageWaitForSelectorOptions
         {
             State = WaitForSelectorState.Visible,

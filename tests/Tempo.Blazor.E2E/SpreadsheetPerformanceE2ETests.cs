@@ -71,7 +71,8 @@ public class SpreadsheetPerformanceE2ETests : WasmTestBase
         var current = await File.ReadAllTextAsync(Path.Combine(RepoRoot().FullName, CanvasRelativePath));
 
         var arm = "baseline";
-        var page = await CreatePageAsync();
+        var context = await CreateContextAsync(new BrowserNewContextOptions(), trace: false);
+        var page = await context.NewPageAsync();
         await page.RouteAsync("**/spreadsheet-canvas.js*", async route =>
         {
             await route.FulfillAsync(new RouteFulfillOptions

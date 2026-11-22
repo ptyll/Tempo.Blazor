@@ -27,10 +27,10 @@ public sealed class EmailEditorCanvasWysiwygF9AE2ETests : EmailTemplateE2ETestBa
     private const string WelcomeRoute = "/email-templates/edit/11111111-1111-1111-1111-111111111111";
 
     /// <summary>Opens the editor on an explicit viewport, with the demo's own chrome removed on request.</summary>
-    private Task<IPage> OpenEditorAsync(int width, int height, bool touch = false, bool fullWidth = false)
-        => OpenRouteAsync(WelcomeRoute, width, height, touch, fullWidth);
+    private Task<IPage> OpenEditorAsync(int width, int height, bool touch = false, bool fullWidth = false, bool trace = true)
+        => OpenRouteAsync(WelcomeRoute, width, height, touch, fullWidth, trace);
 
-    private async Task<IPage> OpenRouteAsync(string route, int width, int height, bool touch = false, bool fullWidth = false)
+    private async Task<IPage> OpenRouteAsync(string route, int width, int height, bool touch = false, bool fullWidth = false, bool trace = true)
     {
         var context = await CreateContextAsync(new BrowserNewContextOptions
         {
@@ -39,7 +39,7 @@ public sealed class EmailEditorCanvasWysiwygF9AE2ETests : EmailTemplateE2ETestBa
             IsMobile = touch,
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
-        });
+        }, trace);
 
         var page = await context.NewPageAsync();
         await page.AddInitScriptAsync(
@@ -213,7 +213,7 @@ public sealed class EmailEditorCanvasWysiwygF9AE2ETests : EmailTemplateE2ETestBa
     public async Task Typing_in_the_inspector_repaints_only_the_edited_block()
     {
         // A document with 50+ blocks: insert text blocks through the palette until the canvas is big.
-        var page = await OpenEditorAsync(1440, 900, fullWidth: true);
+        var page = await OpenEditorAsync(1440, 900, fullWidth: true, trace: false);
         await ForceEditorLayoutAsync(page, "Desktop");
 
         var blocks = await page.Locator("[data-tm-block-id]").CountAsync();

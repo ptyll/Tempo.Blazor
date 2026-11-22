@@ -55,7 +55,7 @@ public abstract class AiAgentVisualizationsPageBase : PlaywrightTestBase
 
     /// <summary>Opens the page with the culture pinned to English, the way every AI package spec does.</summary>
     protected async Task<IPage> OpenAsync(int width = 1440, int height = 1100, bool coarsePointer = false,
-        bool reduceMotion = false)
+        bool reduceMotion = false, bool trace = true)
     {
         var page = await OpenAppPageAsync(
             $"{BaseUrl}/ai-agent-visualizations",
@@ -68,7 +68,8 @@ public abstract class AiAgentVisualizationsPageBase : PlaywrightTestBase
                 HasTouch = coarsePointer,
             },
             context => context.AddInitScriptAsync(
-                "localStorage.setItem('tm-demo-culture', 'en'); document.cookie = 'tm-demo-culture=en;path=/;max-age=31536000;samesite=lax';"));
+                "localStorage.setItem('tm-demo-culture', 'en'); document.cookie = 'tm-demo-culture=en;path=/;max-age=31536000;samesite=lax';"),
+            trace: trace);
         await page.WaitForSelectorAsync(
             $"{SimulatorSection} [data-testid='ai-viz-play']",
             new PageWaitForSelectorOptions { Timeout = 30000 });

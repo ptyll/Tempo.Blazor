@@ -27,7 +27,7 @@ public sealed class DocumentEditorCanvasPerfBudgetE2ETests : WasmTestBase
     [TestMethod]
     public async Task LargeDocument_ScrollAndTypeStayIncremental_WithinBudgets()
     {
-        var context = await CreateContextAsync();
+        var context = await CreateContextAsync(new BrowserNewContextOptions(), trace: false);
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1000);
         await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?documentId={LargeDocId}");
@@ -90,7 +90,7 @@ public sealed class DocumentEditorCanvasPerfBudgetE2ETests : WasmTestBase
     [TestMethod]
     public async Task LargeDocument_ScrollDuringProgressiveLayout_LandsOnPaintedContent()
     {
-        var context = await CreateContextAsync();
+        var context = await CreateContextAsync(new BrowserNewContextOptions(), trace: false);
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1000);
         await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?documentId={LargeDocId}");

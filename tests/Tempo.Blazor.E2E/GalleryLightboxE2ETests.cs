@@ -20,7 +20,7 @@ public class GalleryLightboxE2ETests : WasmTestBase
     [TestMethod]
     public async Task Gallery_Lightbox_OpenNavigateClose_PromotedRoot()
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = 390, Height = 844 },
             HasTouch = true,
@@ -29,9 +29,7 @@ public class GalleryLightboxE2ETests : WasmTestBase
             IgnoreHTTPSErrors = true,
         });
         var page = await context.NewPageAsync();
-        RegisterContext(context);
-        await page.GotoAsync($"{BaseUrl}/gallery");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/gallery");
 
         // The seeded local images render as gallery items (no empty provider set).
         var items = page.Locator(".tm-gallery-item");
@@ -111,8 +109,7 @@ public class GalleryLightboxE2ETests : WasmTestBase
         // seeded SVGs had no width/height.
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/gallery");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/gallery");
 
         var items = page.Locator(".tm-gallery-item");
         await items.First.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -147,8 +144,7 @@ public class GalleryLightboxE2ETests : WasmTestBase
         // image that was on screen — not the one that opened it.
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/gallery");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/gallery");
 
         var items = page.Locator(".tm-gallery-item");
         await items.First.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -181,7 +177,7 @@ public class GalleryLightboxE2ETests : WasmTestBase
     {
         // d49c9776: below 640px the arrows lay over the image edges INSIDE the viewport (they used
         // to overflow past the right edge) and keep the 44px touch target.
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = true,
@@ -190,9 +186,7 @@ public class GalleryLightboxE2ETests : WasmTestBase
             IgnoreHTTPSErrors = true,
         });
         var page = await context.NewPageAsync();
-        RegisterContext(context);
-        await page.GotoAsync($"{BaseUrl}/gallery");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/gallery");
 
         var items = page.Locator(".tm-gallery-item");
         await items.First.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -222,8 +216,7 @@ public class GalleryLightboxE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 900);
-        await page.GotoAsync($"{BaseUrl}/gallery");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/gallery");
 
         var items = page.Locator(".tm-gallery-item");
         await items.First.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -246,7 +239,7 @@ public class GalleryLightboxE2ETests : WasmTestBase
         // F25a: in RTL the strip mirrors — the next image lies to the LEFT: the logical insets
         // already place prev at the right edge, the chevron glyphs flip, and the physical arrow
         // keys swap (ArrowLeft is next, ArrowRight is previous).
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = 390, Height = 844 },
             HasTouch = true,
@@ -256,9 +249,7 @@ public class GalleryLightboxE2ETests : WasmTestBase
         });
         await AddRtlInitScriptAsync(context);
         var page = await context.NewPageAsync();
-        RegisterContext(context);
-        await page.GotoAsync($"{BaseUrl}/gallery");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/gallery");
 
         // Precondition, asserted: the page itself renders rtl (if the init script ever stops
         // landing, this fails with a clear message instead of the lightbox sanity check below).
@@ -309,7 +300,7 @@ public class GalleryLightboxE2ETests : WasmTestBase
         // overlapped the delete button. The row now floors at one touch target, so the arrows
         // never leave the image band. The demo never enables CanDelete, so the overlap is proven
         // against the CLOSE button — it occupies the same band, at the same insets class.
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = 390, Height = 844 },
             HasTouch = true,
@@ -318,9 +309,7 @@ public class GalleryLightboxE2ETests : WasmTestBase
             IgnoreHTTPSErrors = true,
         });
         var page = await context.NewPageAsync();
-        RegisterContext(context);
-        await page.GotoAsync($"{BaseUrl}/gallery");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/gallery");
 
         var items = page.Locator(".tm-gallery-item");
         await items.First.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -373,7 +362,7 @@ public class GalleryLightboxE2ETests : WasmTestBase
         // the button really renders, and the arrow sharing its inline corner (next in LTR, prev
         // in RTL — both sit at inset-inline-end, mirrored with the strip) must keep ≥ 8px of
         // clearance from it.
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = 390, Height = 844 },
             HasTouch = true,
@@ -386,9 +375,7 @@ public class GalleryLightboxE2ETests : WasmTestBase
             await AddRtlInitScriptAsync(context);
         }
         var page = await context.NewPageAsync();
-        RegisterContext(context);
-        await page.GotoAsync($"{BaseUrl}/gallery");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/gallery");
 
         var deleteToggle = page.Locator("button").Filter(new() { HasText = "Delete Mode" }).First;
         await deleteToggle.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -449,7 +436,7 @@ public class GalleryLightboxE2ETests : WasmTestBase
     {
         const double allowance = 0.5;
 
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = width < 640,
@@ -459,9 +446,7 @@ public class GalleryLightboxE2ETests : WasmTestBase
         });
 
         var page = await context.NewPageAsync();
-        RegisterContext(context);
-        await page.GotoAsync($"{BaseUrl}/gallery");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/gallery");
 
         if (dark)
         {

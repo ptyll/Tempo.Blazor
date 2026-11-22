@@ -346,7 +346,7 @@ Verified: the seven converted classes (29 tests) pass; `InMemoryDocumentEditorPr
 
 ## Boot readiness and cold-boot recovery
 
-`PlaywrightTestBase.WaitForAppReadyAsync` waits on **states** (`DOMContentLoaded`, the app shell, then the
+The central boot gate (`GotoAppReadyAsync` / `ReloadAppReadyAsync` / `NavigateAppReadyAsync`) waits on **states** (`DOMContentLoaded`, the app shell, then the
 `data-blazor-ready` attribute the demo layout sets once an interactive runtime has rendered) - never on a sleep. A cold
 WASM boot under full-lane CPU load can exceed any fixed window without anything being broken, so the budgets are
 configurable:
@@ -361,15 +361,15 @@ configurable:
   **only** place that recovery lives: specs and per-feature harnesses (`EmailTemplateE2ETestBase.OpenAsync`, the
   Email F8/F9/F10 helpers, Wireframe, Audit log, charts, ...) call it instead of keeping a local `try/catch
   (TimeoutException) { ReloadAsync }` copy; `ReadinessInfrastructureTests.NoSpecKeepsALocalColdBootRecoveryCopy`
-  fails a test (it does not break the build) as soon as a spec reintroduces a copy. The guard flags a file that calls
-  `WaitForAppReadyAsync` and has `catch (TimeoutException|PlaywrightException|Exception ...) { ... ReloadAsync }` or a
+  fails a test (it does not break the build) as soon as a spec reintroduces a copy. The guard flags a file that still
+  names `WaitForAppReadyAsync` (now private, so such a file no longer compiles in a spec) and has `catch (TimeoutException|PlaywrightException|Exception ...) { ... ReloadAsync }` or a
   `catch (<those types> ...) when (... attempt ...)` retry loop. The logic itself (`ReadinessTimeouts` in
   `ReadinessTimeouts.cs`, `ColdBootRecovery` in `ColdBootRecovery.cs`) is browser-free and unit tested in
   `ReadinessInfrastructureTests`.
 - **First attempt includes the navigation.** `GotoAppReadyAsync` runs `GotoAsync` *inside* the first attempt, so a
   navigation that itself times out on a slow cold boot gets the same single recovery (a reload, or a fresh navigation
   when the page never left `about:blank`).
-- **One deadline per attempt.** `WaitForAppReadyAsync` measures one `ReadyMs` deadline per attempt; each sub-wait
+- **One deadline per attempt.** The boot gate measures one `ReadyMs` deadline per attempt; each sub-wait
   (DOMContentLoaded, shell selector, text fallback, `data-blazor-ready`) gets only the time that is left (at least 1 ms),
   so the pre-gates can never add up to more than `TM_E2E_READY_TIMEOUT_MS`.
 - **Rule: contexts and navigations go through the base.** A spec creates its browser context ONLY with
@@ -378,11 +378,12 @@ configurable:
   `en-US`, `IgnoreHTTPSErrors`, `AcceptDownloads` and a 1280x720 viewport) and navigates ONLY with `GotoAppReadyAsync`
   (a page) or `ReloadAppReadyAsync` (a reload of the current page). Both give the failure trace, the bounded,
   relaunching context creation, the cleanup registration and the one controlled cold-boot reload; a hand-written
-  `Browser.NewContextAsync` + `GotoAsync` + `WaitForAppReadyAsync` has none of them (the 2026-11-20
+  `Browser.NewContextAsync` + `GotoAsync` + a bare `data-blazor-ready` wait has none of them (the 2026-11-20
   `Scheduler_Touch_SwipeFromEventCentre_Scrolls_AndDoesNotResize (768)` run lost 120 s to exactly that).
-  **Exceptions** (permanent, with a reason in the guard): the Firefox legs that launch their own Playwright + Firefox
+  **Exceptions** (permanent, with a reason in `KnownOffenders`): the Firefox legs that launch their own Playwright + Firefox
   (`FilterableDropdown`, `NotionOverlayInModal`, `OverlayPanel`, `TmDataTableSortButton`, `TmDataTableSortButtonVisual`)
-  and the `ReportingF*` specs that start their own `dotnet` host.
+  and the `ReportingF*` specs that start their own `dotnet` host. Performance specs pass `trace: false` so tracing
+  does not skew the budget they measure.
 - **Central helpers (phase 1a).** Besides `GotoAppReadyAsync` / `ReloadAppReadyAsync(page, waitUntil = Load)`:
   - `NavigateAppReadyAsync(page, trigger)` runs a trigger that loads a NEW document (a culture switch, a `forceLoad`
     link) and gates on the NEW document (the old one is ALWAYS marked first, so the gate can never pass on it) with the
@@ -400,21 +401,18 @@ configurable:
     `test.OpenAppPageAsync(...)` / `test.CreateContextAsync(...)` / `test.GotoAppReadyAsync(...)` (the base URL is
     `test.AppBaseUrl`); it never takes an `IBrowser` + `baseUrl` + `registerContext` + a readiness delegate, and never keeps
     its own `data-blazor-ready` gate (rule R3).
-  - `WaitForAppReadyAsync` and `RegisterContext` are `[Obsolete]` (warning CS0618, which the E2E project keeps visible
-    although `Directory.Build.props` silences it repo-wide): they are the migration worklist and become private in the final
-    step of the phase. Measured after steps 1-2 (`dotnet build tests/Tempo.Blazor.E2E --no-incremental`, distinct warnings):
-    831 × CS0618 (607 × `WaitForAppReadyAsync`, 224 × `RegisterContext`), other warnings 0. This is the ceiling for step 3: the
-    count only falls and is 0 in step 4. (The kit conversions of steps 1-2 already removed ~150 call sites of the two members; the
-    attribute was introduced together with them, so 831 is the first measured value.)
+  - `WaitForAppReadyAsync` and `RegisterContext` are **private** (the `[Obsolete]` migration warnings are gone; CS0618 = 0).
+    Specs never call them. The shared Chromium instance (`Browser`) is `private static`; specs go through
+    `CreateContextAsync` / `OpenAppPageAsync`.
 - **Ratchet.** `ReadinessInfrastructureTests.NoSpecOpensItsOwnContextOrBootsPastTheCentralRecovery_RatchetedByKnownOffenders`
   scans every `*.cs` of the E2E project (comments stripped; the `PlaywrightTestBase.cs` / `PlaywrightTestBase.<Part>.cs` partials and the guard itself excluded) for
   `.NewContextAsync(`, `.GotoAsync(...); await WaitForAppReadyAsync(` (and the `ReloadAsync` twin),
   `WaitForFunctionAsync("...data-blazor-ready` and `RegisterContext(`. A sixth rule, R6, is NOT ratcheted: `AddInitScriptAsync("() => ...` (an
   arrow-function init script) must have zero hits - Playwright .NET evaluates the string as a script, so an arrow function is
-  only an uncalled expression and the script silently does nothing. The hits of today are frozen in
-  `KnownOffenders` (file -> count + reason). The test fails for a NEW file, for a count that GROWS and for a count that
+  only an uncalled expression and the script silently does nothing. `KnownOffenders` holds **only the permanent exceptions**
+  (Firefox legs, `ReportingF*` with their own host) with a reason. The test fails for a NEW file, for a count that GROWS and for a count that
   DROPS without the entry being lowered (delete the entry at zero), so converted code cannot regress and the list only
-  shrinks. Converting a file means: `CreateContextAsync(...)` + `GotoAppReadyAsync(page, url)`, then lower its entry.
+  shrinks.
 - **Cold-boot recovery proof.** `BootRecoveryE2ETests` cuts EVERY `_framework/*.wasm` request while the first document
   is active (the runtime's `enableDownloadRetry` absorbs a single abort, so one cut proves nothing) and asserts that
   `GotoAppReadyAsync` recovers with exactly one reload (two main-frame navigations). It fails when the recovery in

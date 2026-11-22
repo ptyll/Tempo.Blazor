@@ -92,8 +92,7 @@ public sealed class NotionPhase2ThemeScreenshots : NotionE2ETestBase
     {
         var page = await OpenNotionEditorAsync(1440, 900);
         await SeedAsync("default");
-        await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await ReloadAppReadyAsync(page, WaitUntilState.DOMContentLoaded);
 
         // The task list higher up the page is also a table. The database block is the one
         // under the "Inline Database" heading, below the fold.

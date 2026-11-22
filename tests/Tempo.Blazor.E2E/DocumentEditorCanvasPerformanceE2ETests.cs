@@ -17,7 +17,7 @@ public sealed class DocumentEditorCanvasPerformanceE2ETests : WasmTestBase
     [TestMethod]
     public async Task Phase22_Performance_LargeDocumentVirtualizesAndPublishesLatencyMetrics()
     {
-        var context = await CreateContextAsync();
+        var context = await CreateContextAsync(new BrowserNewContextOptions(), trace: false);
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1000);
         await OpenPhase22DocumentAsync(page);

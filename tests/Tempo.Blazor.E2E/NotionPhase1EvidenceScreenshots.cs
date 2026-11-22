@@ -76,8 +76,7 @@ public sealed class NotionPhase1EvidenceScreenshots : NotionE2ETestBase
         }
 
         await page.SetViewportSizeAsync(390, 844);
-        await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await ReloadAppReadyAsync(page, WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync(".tm-db", new PageWaitForSelectorOptions
         {
             State = WaitForSelectorState.Visible,
@@ -108,8 +107,7 @@ public sealed class NotionPhase1EvidenceScreenshots : NotionE2ETestBase
                 .EnsureSuccessStatusCode();
         }
 
-        await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await ReloadAppReadyAsync(page, WaitUntilState.DOMContentLoaded);
         var db = page.Locator(".tm-db").First;
         await db.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 30000 });
         await db.ScrollIntoViewIfNeededAsync();
@@ -153,8 +151,7 @@ public sealed class NotionPhase1EvidenceScreenshots : NotionE2ETestBase
                 .EnsureSuccessStatusCode();
         }
 
-        await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await ReloadAppReadyAsync(page, WaitUntilState.DOMContentLoaded);
         var db = page.Locator(".tm-db").First;
         await db.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
         await db.ScrollIntoViewIfNeededAsync();
@@ -214,8 +211,7 @@ public sealed class NotionPhase1EvidenceScreenshots : NotionE2ETestBase
                 .EnsureSuccessStatusCode();
         }
 
-        await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await ReloadAppReadyAsync(page, WaitUntilState.DOMContentLoaded);
         var db = page.Locator(".tm-db").First;
         await db.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
         await db.ScrollIntoViewIfNeededAsync();
@@ -240,8 +236,7 @@ public sealed class NotionPhase1EvidenceScreenshots : NotionE2ETestBase
                 .EnsureSuccessStatusCode();
         }
 
-        await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await ReloadAppReadyAsync(page, WaitUntilState.DOMContentLoaded);
         var db = page.Locator(".tm-db").First;
         await db.ScrollIntoViewIfNeededAsync();
         await page.Locator(".tm-dbt__row").First.WaitForAsync(new LocatorWaitForOptions { Timeout = 10000 });
@@ -342,8 +337,7 @@ public sealed class NotionPhase1EvidenceScreenshots : NotionE2ETestBase
         });
         await SetThemeAsync(page, "light");
 
-        await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await ReloadAppReadyAsync(page, WaitUntilState.DOMContentLoaded);
         var db = page.Locator(".tm-db").First;
         await db.ScrollIntoViewIfNeededAsync();
         await page.Locator(".tm-dbt__row").First.WaitForAsync(new LocatorWaitForOptions { Timeout = 10000 });
@@ -369,8 +363,7 @@ public sealed class NotionPhase1EvidenceScreenshots : NotionE2ETestBase
                 .EnsureSuccessStatusCode();
         }
 
-        await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await ReloadAppReadyAsync(page, WaitUntilState.DOMContentLoaded);
         var db = page.Locator(".tm-db").First;
         await db.ScrollIntoViewIfNeededAsync();
         var footer = page.GetByTestId("notion-db-table-footer");

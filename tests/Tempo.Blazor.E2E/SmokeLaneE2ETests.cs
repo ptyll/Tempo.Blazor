@@ -60,23 +60,26 @@ public sealed class SmokeLaneE2ETests : WasmTestBase
     }
 
     /// <summary>
-    /// N193: <c>WaitForAppReadyAsync</c> used to end with an unconditional 1000 ms sleep, so every
-    /// page open paid a full second of dead time. Now that the wait is stateful
-    /// (<c>[data-blazor-ready]</c> on <c>&lt;body&gt;</c>), calling it on an already-ready page must
-    /// return well under the old fixed cost — a fixed sleep would land at ≥1000 ms every time.
+    /// N193: the boot gate used to end with an unconditional 1000 ms sleep, so every
+    /// page open paid a full second of dead time. ReloadAppReadyAsync must add well under
+    /// 1000 ms over a plain reload + ready-attribute wait — a fixed sleep would land at
+    /// ≥1000 ms of overhead every time.
     /// </summary>
     [TestMethod]
     public async Task Smoke_AppReady_OnReadyPage_ReturnsBelowOldFixedSleep()
     {
         var (page, errors) = await OpenPageWithErrorCaptureAsync("/");
 
-        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-        await WaitForAppReadyAsync(page); // second call: the page is already fully ready
-        stopwatch.Stop();
-
-        TestContext.WriteLine($"WaitForAppReadyAsync on ready page: {stopwatch.ElapsedMilliseconds} ms");
-        Assert.IsTrue(stopwatch.ElapsedMilliseconds < 1000,
-            $"ready-page call took {stopwatch.ElapsedMilliseconds} ms — the old fixed 1000 ms sleep (or another fixed wait) is back");
+        var plain = System.Diagnostics.Stopwatch.StartNew();
+        await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.Load });
+        await page.Locator("body[data-blazor-ready='true']").WaitForAsync();
+        plain.Stop();
+        var gated = System.Diagnostics.Stopwatch.StartNew();
+        await ReloadAppReadyAsync(page);
+        gated.Stop();
+        var overhead = gated.ElapsedMilliseconds - plain.ElapsedMilliseconds;
+        TestContext.WriteLine($"boot gate overhead vs plain reload: {overhead} ms (plain {plain.ElapsedMilliseconds} ms, gated {gated.ElapsedMilliseconds} ms)");
+        Assert.IsTrue(overhead < 1000, $"boot gate added {overhead} ms over a plain reload — the old fixed 1000 ms sleep (or another fixed wait) is back");
         await AssertPageHealthyAsync(page, errors, "/");
     }
 

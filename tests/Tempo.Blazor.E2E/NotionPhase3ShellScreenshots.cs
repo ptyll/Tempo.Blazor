@@ -276,12 +276,7 @@ public sealed class NotionPhase3ShellScreenshots : NotionE2ETestBase
         await context.AddInitScriptAsync("window.localStorage.setItem('tm-demo-culture', 'en');");
         var publicPage = await context.NewPageAsync();
         await publicPage.SetViewportSizeAsync(1440, 900);
-        await publicPage.GotoAsync(publicUrl, new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60000,
-        });
-        await WaitForAppReadyAsync(publicPage);
+        await GotoAppReadyAsync(publicPage, publicUrl, WaitUntilState.DOMContentLoaded);
         await publicPage.GetByTestId("notion-public-page").WaitForAsync(
             new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 60000 });
 
@@ -402,12 +397,7 @@ public sealed class NotionPhase3ShellScreenshots : NotionE2ETestBase
         await context.AddInitScriptAsync("window.localStorage.setItem('tm-demo-culture', 'en');");
         var publicPage = await context.NewPageAsync();
         await publicPage.SetViewportSizeAsync(768, 900);
-        await publicPage.GotoAsync(publicUrl, new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60000,
-        });
-        await WaitForAppReadyAsync(publicPage);
+        await GotoAppReadyAsync(publicPage, publicUrl, WaitUntilState.DOMContentLoaded);
         await publicPage.GetByTestId("notion-public-page").WaitForAsync(
             new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 60000 });
 

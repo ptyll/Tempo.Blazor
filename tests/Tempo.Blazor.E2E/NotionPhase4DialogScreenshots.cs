@@ -331,7 +331,7 @@ public sealed class NotionPhase4DialogScreenshots : NotionE2ETestBase
         // The demo's seed refreshes the client through the desktop sidebar path; reload so the
         // mobile drawer picks the seeded trash up on its own load, then reopen the drawer.
         await InvokeSeedAsync("seedSidebarTrashPage");
-        await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 60000 });
+        await ReloadAppReadyAsync(page, WaitUntilState.DOMContentLoaded);
         await page.Locator(".tm-notion-editor").First.WaitForAsync(new LocatorWaitForOptions { Timeout = 60000 });
         await page.Locator(".tm-notion-sidebar-toggle").First.EvaluateAsync("el => el.click()");
         await page.Locator(".tm-notion-sidebar--visible").First.WaitForAsync(new LocatorWaitForOptions
@@ -826,7 +826,7 @@ public sealed class NotionPhase4DialogScreenshots : NotionE2ETestBase
         using var databaseResponse = await http.PostAsync("/api/notion/databases/e2e/seed/default", null);
         databaseResponse.EnsureSuccessStatusCode();
 
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = true,
@@ -835,14 +835,8 @@ public sealed class NotionPhase4DialogScreenshots : NotionE2ETestBase
             IgnoreHTTPSErrors = true,
         });
         await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
-        RegisterContext(context);
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/notion-editor", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60000,
-        });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/notion-editor", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync(".tm-notion-editor", new PageWaitForSelectorOptions
         {
             State = WaitForSelectorState.Visible,

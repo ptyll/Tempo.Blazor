@@ -78,8 +78,7 @@ public class FilterableDropdownE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(800, 360);
-        await page.GotoAsync(PageUrl);
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, PageUrl);
 
         var trigger = page.Locator(
             "[data-testid='overlay-constrain-height-dropdown'] .tm-filterable-dropdown-trigger");
@@ -118,8 +117,7 @@ public class FilterableDropdownE2ETests : WasmTestBase
     private async Task AssertCapRegrowsAsync(IPage page)
     {
         await page.SetViewportSizeAsync(800, 360);
-        await page.GotoAsync(PageUrl);
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, PageUrl);
 
         var trigger = page.Locator(
             "[data-testid='overlay-constrain-height-dropdown'] .tm-filterable-dropdown-trigger");

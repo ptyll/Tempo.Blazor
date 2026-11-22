@@ -10,8 +10,8 @@ namespace Tempo.Blazor.E2E;
 /// return after closing the open-editor overlay and the tree drag bridge (both run through the
 /// <c>modeling-editor.js</c> ES module, imported via <c>IJSObjectReference</c>).
 /// <para>
-/// IMPORTANT: this spec deliberately avoids <c>page.WaitForFunctionAsync</c> (and the shared
-/// <c>WaitForAppReadyAsync</c>) — Playwright evaluates its predicate with <c>eval</c>, which a
+/// IMPORTANT: this spec deliberately avoids <c>page.WaitForFunctionAsync</c> (and the central boot gate behind
+/// <c>GotoAppReadyAsync</c> / <c>OpenAppPageAsync</c>) — Playwright evaluates its predicate with <c>eval</c>, which a
 /// no-<c>unsafe-eval</c> CSP refuses. All waits here go through locator waits and
 /// <see cref="ILocator.WaitForAsync"/>, which never evaluate strings as JavaScript.
 /// </para>

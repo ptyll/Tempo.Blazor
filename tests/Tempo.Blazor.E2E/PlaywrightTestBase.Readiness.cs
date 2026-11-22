@@ -32,7 +32,7 @@ public abstract partial class PlaywrightTestBase
                     await page.GotoAsync(url, new PageGotoOptions { WaitUntil = waitUntil, Timeout = timeouts.DomContentLoadedMs });
                 }
 
-                await WaitForBootGateAsync(page);
+                await WaitForAppReadyAsync(page);
             },
             () => RecoverBootAsync(ReloadOrNavigateAsync));
 
@@ -64,7 +64,7 @@ public abstract partial class PlaywrightTestBase
                     await page.ReloadAsync(new PageReloadOptions { WaitUntil = waitUntil, Timeout = timeouts.DomContentLoadedMs });
                 }
 
-                await WaitForBootGateAsync(page);
+                await WaitForAppReadyAsync(page);
             },
             () => RecoverBootAsync(() => page.ReloadAsync(new PageReloadOptions { WaitUntil = waitUntil, Timeout = timeouts.DomContentLoadedMs })));
     }
@@ -109,7 +109,7 @@ public abstract partial class PlaywrightTestBase
         }
 
         await ColdBootRecovery.RunAsync(
-            () => WaitForBootGateAsync(page),
+            () => WaitForAppReadyAsync(page),
             () => RecoverBootAsync(() => page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.Load, Timeout = timeouts.DomContentLoadedMs })));
     }
 
@@ -206,9 +206,10 @@ public abstract partial class PlaywrightTestBase
 
     /// <summary>
     /// Waits for the Blazor application to be ready. NO recovery: a cold boot that stalls fails the spec.
+    /// Specs must not call this — they go through <see cref="GotoAppReadyAsync"/> / <see cref="ReloadAppReadyAsync"/> /
+    /// <see cref="NavigateAppReadyAsync"/> / <see cref="OpenAppPageAsync"/>.
     /// </summary>
-    [Obsolete("A bare readiness wait has no cold-boot recovery: use GotoAppReadyAsync / ReloadAppReadyAsync / NavigateAppReadyAsync (or OpenAppPageAsync). Becomes private once every spec is migrated (E2E harness phase 1a).")]
-    protected Task WaitForAppReadyAsync(IPage page) => WaitForBootGateAsync(page);
+    private Task WaitForAppReadyAsync(IPage page) => WaitForBootGateAsync(page);
 
     /// <summary>
     /// The readiness gate itself (one deadline per attempt); every central helper ends in it.

@@ -657,7 +657,7 @@ public sealed class WireframeStencilPackSweepE2ETests : WasmTestBase
     [TestMethod]
     [TestCategory("Performance")]
     [Timeout(5_400_000)] // 90 min backstop - the per-call guards below fail a wedge long before this.
-    public async Task Perf_TwoHundredElements_FirstRender_AndRerender() => await RunInsertPerfAsync(200);
+    public async Task Perf_TwoHundredElements_FirstRender_AndRerender() => await RunInsertPerfAsync(200, trace: false);
 
     /// <summary>The same flow at a size the normal lane can afford: every insert must succeed, nothing may fail, the
     /// re-render of one moved element must complete. Keeps the invariants covered while the 200-element benchmark
@@ -666,9 +666,9 @@ public sealed class WireframeStencilPackSweepE2ETests : WasmTestBase
     [Timeout(900_000)] // 15 min backstop - the per-call guards below should fail a wedge long before this.
     public async Task Perf_ThirtyElements_FirstRender_AndRerender() => await RunInsertPerfAsync(30);
 
-    private async Task RunInsertPerfAsync(int count)
+    private async Task RunInsertPerfAsync(int count, bool trace = true)
     {
-        await using var context = await CreateContextAsync();
+        await using var context = await CreateContextAsync(new BrowserNewContextOptions(), trace);
         var page = await context.NewPageAsync();
         await OpenEditorInContextAsync(page, dark: false);
 

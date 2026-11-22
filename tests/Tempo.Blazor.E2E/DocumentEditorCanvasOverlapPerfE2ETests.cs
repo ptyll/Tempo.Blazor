@@ -23,7 +23,7 @@ public sealed class DocumentEditorCanvasOverlapPerfE2ETests : WasmTestBase
     {
         Directory.CreateDirectory(OutputDir);
 
-        var context = await CreateContextAsync();
+        var context = await CreateContextAsync(new BrowserNewContextOptions(), trace: false);
         var page = await context.NewPageAsync();
         await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor", WaitUntilState.NetworkIdle);
 
@@ -128,7 +128,7 @@ public sealed class DocumentEditorCanvasOverlapPerfE2ETests : WasmTestBase
     [TestMethod]
     public async Task Scrolling_RepaintsFromCachedPlan_WithoutRecomputingLayout()
     {
-        var context = await CreateContextAsync();
+        var context = await CreateContextAsync(new BrowserNewContextOptions(), trace: false);
         var page = await context.NewPageAsync();
         await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor", WaitUntilState.NetworkIdle);
         await page.WaitForSelectorAsync("[data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']", new PageWaitForSelectorOptions
@@ -165,7 +165,7 @@ public sealed class DocumentEditorCanvasOverlapPerfE2ETests : WasmTestBase
     [TestMethod]
     public async Task ReRender_ReusesCachedBlockLayout_InsteadOfFullRelayout()
     {
-        var context = await CreateContextAsync();
+        var context = await CreateContextAsync(new BrowserNewContextOptions(), trace: false);
         var page = await context.NewPageAsync();
         await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor", WaitUntilState.NetworkIdle);
         await page.WaitForSelectorAsync("[data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']", new PageWaitForSelectorOptions

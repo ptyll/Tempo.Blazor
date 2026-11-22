@@ -15,8 +15,7 @@ public class NotionOverlayInModalE2ETests : WasmTestBase
 
     private async Task<IPage> OpenPageInModalAsync(IPage page)
     {
-        await page.GotoAsync(PageUrl);
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, PageUrl);
 
         await page.GetByTestId("overlay-modal-open").ClickAsync();
         await page.Locator(".tm-modal").WaitForAsync(new LocatorWaitForOptions

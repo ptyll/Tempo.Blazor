@@ -14,14 +14,7 @@ public class OverlayPanelE2ETests : WasmTestBase
 {
     private string PageUrl => $"{BaseUrl}/overlay";
 
-    private async Task<IPage> OpenOverlayPageAsync()
-    {
-        var context = await CreateContextAsync();
-        var page = await context.NewPageAsync();
-        await page.GotoAsync(PageUrl);
-        await WaitForAppReadyAsync(page);
-        return page;
-    }
+    private Task<IPage> OpenOverlayPageAsync() => OpenAppPageAsync(PageUrl);
 
     [TestMethod]
     [TestCategory("Smoke")]
@@ -487,8 +480,7 @@ public class OverlayPanelE2ETests : WasmTestBase
         // module evaluation, to choose between the top layer and the fixed+fallback path (N165).
         await context.AddInitScriptAsync("delete HTMLElement.prototype.showPopover;");
         var page = await context.NewPageAsync();
-        await page.GotoAsync(PageUrl);
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, PageUrl);
         return page;
     }
 
@@ -513,8 +505,7 @@ public class OverlayPanelE2ETests : WasmTestBase
         try
         {
             var page = await context.NewPageAsync();
-            await page.GotoAsync(PageUrl);
-            await WaitForAppReadyAsync(page);
+            await GotoAppReadyAsync(page, PageUrl);
 
             await page.GetByTestId("overlay-open-bottom").ClickAsync();
             var panel = page.GetByTestId("overlay-panel-bottom");

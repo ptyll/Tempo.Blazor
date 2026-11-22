@@ -683,7 +683,8 @@ public partial class SpreadsheetE2ETests
         var currentPath = Path.Combine(
             Phase2RepoRoot().FullName, "src", "Tempo.Blazor.Spreadsheet", "wwwroot", "js", "spreadsheet-canvas.js");
         var arm = "current";
-        var page = await CreatePageAsync();
+        var context = await CreateContextAsync(new BrowserNewContextOptions(), trace: false);
+        var page = await context.NewPageAsync();
         await page.RouteAsync("**/spreadsheet-canvas.js*", async route =>
         {
             var source = arm == "baseline" ? baselinePath : currentPath;

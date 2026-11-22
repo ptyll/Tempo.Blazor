@@ -131,14 +131,15 @@ public class MyNewTests : ServerTestBase
 - `TakeScreenshotAsync(page, "name")` - Takes screenshot
 - `GetHeapSizeAsync(page)` - Gets JS heap size
 
-Boot and context helpers (never hand-write `Browser.NewContextAsync`, `GotoAsync` + a `data-blazor-ready` wait or `RegisterContext`; see "Boot readiness and cold-boot recovery" in [docs/e2e-test-lanes.md](../../docs/e2e-test-lanes.md)):
-- `CreateContextAsync(options, trace: true)` - The ONE context factory (suite defaults, failure trace, bounded relaunching creation, cleanup registration)
+Boot and context helpers (never hand-write `Browser.NewContextAsync` or `GotoAsync` + a `data-blazor-ready` wait; see "Boot readiness and cold-boot recovery" in [docs/e2e-test-lanes.md](../../docs/e2e-test-lanes.md)):
+- `CreateContextAsync(options, trace: true)` - The ONE context factory (suite defaults, failure trace, bounded relaunching creation, cleanup registration). Performance specs pass `trace: false`.
 - `OpenAppPageAsync(url, options?, beforeNavigate?, waitUntil, trace)` - Context + `beforeNavigate(context)` (init scripts, routes, cookies) + one page + the controlled boot; `page.Context` is the context
 - `GotoAppReadyAsync(page, url, waitUntil)` - Navigates and waits for `data-blazor-ready`; a stalled cold boot gets ONE controlled reload
 - `ReloadAppReadyAsync(page, waitUntil)` - The same recovery for a reload of the current page
 - `NavigateAppReadyAsync(page, trigger)` - Runs a trigger that loads a NEW document (language switch, `forceLoad` link) and gates on the new document, never on the old one
 - `GotoWithoutBootRecoveryAsync(page, url, reason, waitUntil)` - Only for specs whose subject is the boot itself (use `CreateContextAsync(options, trace: false)` for the context)
 - An init script is a statement list (`"localStorage.setItem(...);"`), never an arrow function (`"() => ..."`): guard rule R6
+- The shared Chromium instance, `WaitForAppReadyAsync` and `RegisterContext` are private. Specs never call them.
 ### Document Editor Tests
 
 Document editor E2E tests should exercise the canvas editor host. Open `/document-editor` or a dedicated canvas route, wait for `[data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']`, and prefer user-visible DOM/provider assertions plus canvas pixel checks over implementation-only probes.

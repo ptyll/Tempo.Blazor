@@ -36,7 +36,7 @@ public class ToolbarOverflowE2ETests : WasmTestBase
 
     private async Task<IPage> OpenAsync(int width, int height, bool touch, string locale = "en-US", bool reducedMotion = false)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = touch,
@@ -45,10 +45,8 @@ public class ToolbarOverflowE2ETests : WasmTestBase
             IgnoreHTTPSErrors = true,
             ReducedMotion = reducedMotion ? ReducedMotion.Reduce : ReducedMotion.NoPreference,
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/toolbar-forms");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/toolbar-forms");
         await page.Locator("[data-testid='toolbar-overflow-demo']").WaitForAsync();
         return page;
     }
@@ -563,7 +561,7 @@ public class ToolbarOverflowE2ETests : WasmTestBase
     {
         foreach (var (width, height, touch) in new[] { (1440, 900, false), (390, 844, true) })
         {
-            var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+            var context = await CreateContextAsync(new BrowserNewContextOptions
             {
                 // Pin the locale: the demo follows the browser language, and a context without one inherits the host machine's (cs-CZ on the dev box) while the specs read English labels.
                 Locale = "en-US",
@@ -572,10 +570,8 @@ public class ToolbarOverflowE2ETests : WasmTestBase
                 IsMobile = touch,
                 IgnoreHTTPSErrors = true,
             });
-            RegisterContext(context);
             var page = await context.NewPageAsync();
-            await page.GotoAsync($"{BaseUrl}/overlay", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 90000 });
-            await WaitForAppReadyAsync(page);
+            await GotoAppReadyAsync(page, $"{BaseUrl}/overlay");
 
             var trigger = page.Locator("[data-testid='overlay-mobile-dropdown'] .tm-dropdown-trigger");
             await trigger.ScrollIntoViewIfNeededAsync();
@@ -901,17 +897,15 @@ public class ToolbarOverflowE2ETests : WasmTestBase
     [TestMethod]
     public async Task H10_SplitButtonAndContextMenu_OpenedFromTheKeyboard_FocusTheirFirstItem_AndReturnFocusOnActivation()
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             // Pin the locale: the demo follows the browser language, and a context without one inherits the host machine's (cs-CZ on the dev box) while the specs read English labels.
             Locale = "en-US",
             ViewportSize = new ViewportSize { Width = 1440, Height = 900 },
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/feedback", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 90000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/feedback");
 
         var split = page.Locator(".tm-split-button__toggle").First;
         await split.ScrollIntoViewIfNeededAsync();

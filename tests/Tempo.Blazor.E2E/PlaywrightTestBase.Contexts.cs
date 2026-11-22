@@ -24,10 +24,10 @@ public abstract partial class PlaywrightTestBase
     private readonly HashSet<IBrowserContext> _contextsWithTrace = [];
 
     /// <summary>
-    /// Gets the browser instance for tests. If the shared Chromium process died since the last
-    /// use, it is relaunched here so direct <c>Browser.NewContextAsync</c> callers are covered too.
+    /// Gets the shared Chromium instance. If the process died since the last use, it is relaunched
+    /// here so <see cref="CreateContextAsync(BrowserNewContextOptions, bool)"/> stays covered.
     /// </summary>
-    protected static IBrowser Browser
+    private static IBrowser Browser
     {
         get
         {
@@ -192,7 +192,7 @@ public abstract partial class PlaywrightTestBase
             _contextsWithTrace.Add(context);
         }
 
-        _contextsToDispose.Add(context);
+        RegisterContext(context);
         return context;
     }
 
@@ -264,9 +264,8 @@ public abstract partial class PlaywrightTestBase
         _playwright = playwright;
     }
 
-    /// <summary>Tracks a context this test opened itself, so cleanup closes it.</summary>
-    [Obsolete("A context that needs RegisterContext was not created by CreateContextAsync (no failure trace, no bounded relaunching creation): use CreateContextAsync(options) / OpenAppPageAsync. Becomes private once every spec is migrated (E2E harness phase 1a).")]
-    protected void RegisterContext(IBrowserContext context) => _contextsToDispose.Add(context);
+    /// <summary>Tracks a context this test opened itself, so cleanup closes it. Specs must not call this — they go through <see cref="CreateContextAsync(BrowserNewContextOptions, bool)"/>.</summary>
+    private void RegisterContext(IBrowserContext context) => _contextsToDispose.Add(context);
 
     /// <summary>
     /// Creates a new page and navigates to the base URL.
