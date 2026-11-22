@@ -709,11 +709,7 @@ public sealed class DocumentEditorCanvasMathEquationsE2ETests : WasmTestBase
         {
             try
             {
-                await page.GotoAsync(url, new PageGotoOptions
-                {
-                    WaitUntil = WaitUntilState.DOMContentLoaded,
-                    Timeout = 60_000
-                });
+                await GotoAppReadyAsync(page, url, WaitUntilState.DOMContentLoaded);
                 await WaitForPhaseE8ReadyAsync(page);
                 await WaitForPhaseE8SettledAsync(page);
                 return;
@@ -802,15 +798,11 @@ public sealed class DocumentEditorCanvasMathEquationsE2ETests : WasmTestBase
         await CanvasInteropBridge.WaitForFramesAsync(page, 5); // paint after the settled state, frame-counted instead of a fixed sleep
     }
 
-    private static async Task TryResetPhaseE8NavigationAsync(IPage page)
+    private async Task TryResetPhaseE8NavigationAsync(IPage page)
     {
         try
         {
-            await page.GotoAsync("about:blank", new PageGotoOptions
-            {
-                WaitUntil = WaitUntilState.DOMContentLoaded,
-                Timeout = 10_000
-            });
+            await GotoWithoutBootRecoveryAsync(page, "about:blank", "reset to about:blank between retry attempts; there is no Blazor boot to recover", WaitUntilState.DOMContentLoaded);
         }
         catch (TimeoutException)
         {

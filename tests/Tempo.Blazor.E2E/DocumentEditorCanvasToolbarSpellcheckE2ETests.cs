@@ -129,11 +129,7 @@ public sealed class DocumentEditorCanvasToolbarSpellcheckE2ETests : WasmTestBase
 
     private async Task OpenPhase13DocumentAsync(IPage page)
     {
-        await page.GotoAsync($"{BaseUrl}/canvas-engine-host?documentId={Phase13DocumentId}&showToolbar=true", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.Load,
-            Timeout = 60_000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/canvas-engine-host?documentId={Phase13DocumentId}&showToolbar=true");
         await page.WaitForSelectorAsync(
             "[data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']",
             new PageWaitForSelectorOptions { Timeout = 30_000 });

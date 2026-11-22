@@ -255,11 +255,7 @@ public sealed class DocumentEditorCanvasCommentsRevisionsE2ETests : WasmTestBase
 
     private async Task OpenPhase17DocumentAsync(IPage page)
     {
-        await page.GotoAsync($"{BaseUrl}/canvas-engine-host?documentId={Phase17DocumentId}&showToolbar=true", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60_000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/canvas-engine-host?documentId={Phase17DocumentId}&showToolbar=true", WaitUntilState.DOMContentLoaded);
         await page.WaitForFunctionAsync(
             """
             () => document.querySelector('[data-testid="document-canvas-engine-host"]')

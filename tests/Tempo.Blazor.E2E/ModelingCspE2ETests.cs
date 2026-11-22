@@ -143,11 +143,7 @@ public sealed class ModelingCspE2ETests : ServerTestBase
         };
         CaptureEvalViolations(page, violations);
 
-        await page.GotoAsync($"{BaseUrl}{CspModelingEditorUrl}{querySuffix}", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.Load,
-            Timeout = 60000
-        });
+        await GotoWithoutBootRecoveryAsync(page, $"{BaseUrl}{CspModelingEditorUrl}{querySuffix}", "CSP without unsafe-eval forbids WaitForFunction eval used by the boot gate; this spec waits via locators instead");
 
         // Eval-free readiness gates (see the class remark).
         await page.Locator("body[data-blazor-ready]").First

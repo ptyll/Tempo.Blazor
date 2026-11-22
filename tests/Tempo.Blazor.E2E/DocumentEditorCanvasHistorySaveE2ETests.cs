@@ -115,11 +115,7 @@ public sealed class DocumentEditorCanvasHistorySaveE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1000);
-        await page.GotoAsync($"{BaseUrl}/canvas-engine-host?documentId={Phase12DocumentId}&showToolbar=true&autosaveMs=3000", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60_000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/canvas-engine-host?documentId={Phase12DocumentId}&showToolbar=true&autosaveMs=3000", WaitUntilState.DOMContentLoaded);
         await WaitForPhase12ReadyAsync(page);
 
         var marker = $"autosave{DateTimeOffset.UtcNow:HHmmssfff}";
@@ -154,11 +150,7 @@ public sealed class DocumentEditorCanvasHistorySaveE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1000);
-        await page.GotoAsync($"{BaseUrl}/canvas-engine-host?documentId={Phase12DocumentId}&showToolbar=true&autosaveMs=30000&failSaves=true", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60_000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/canvas-engine-host?documentId={Phase12DocumentId}&showToolbar=true&autosaveMs=30000&failSaves=true", WaitUntilState.DOMContentLoaded);
         await WaitForPhase12ReadyAsync(page);
 
         var marker = $"retry{DateTimeOffset.UtcNow:HHmmssfff}";
@@ -191,11 +183,7 @@ public sealed class DocumentEditorCanvasHistorySaveE2ETests : WasmTestBase
 
     private async Task OpenPhase12DocumentAsync(IPage page)
     {
-        await page.GotoAsync($"{BaseUrl}/canvas-engine-host?documentId={Phase12DocumentId}&showToolbar=true", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60_000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/canvas-engine-host?documentId={Phase12DocumentId}&showToolbar=true", WaitUntilState.DOMContentLoaded);
         await WaitForPhase12ReadyAsync(page);
     }
 

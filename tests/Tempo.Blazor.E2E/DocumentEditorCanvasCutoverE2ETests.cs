@@ -18,11 +18,7 @@ public sealed class DocumentEditorCanvasCutoverE2ETests : WasmTestBase
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1000);
 
-        await page.GotoAsync($"{BaseUrl}/document-editor?documentId=contract-demo", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60_000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?documentId=contract-demo", WaitUntilState.DOMContentLoaded);
 
         await WaitForEditorEngineAsync(page, "CanvasEnginePreview");
         await Assertions.Expect(page.GetByTestId("document-canvas-engine-host"))
@@ -38,11 +34,7 @@ public sealed class DocumentEditorCanvasCutoverE2ETests : WasmTestBase
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1000);
 
-        await page.GotoAsync($"{BaseUrl}/document-editor?documentId=contract-demo&renderEngine=legacy", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60_000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?documentId=contract-demo&renderEngine=legacy", WaitUntilState.DOMContentLoaded);
 
         await WaitForEditorEngineAsync(page, "CanvasEnginePreview");
         await Assertions.Expect(page.GetByTestId("document-canvas-engine-host"))

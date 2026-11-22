@@ -514,11 +514,7 @@ public sealed class DocumentEditorCanvasImageFormattingFixE2ETests : WasmTestBas
 
     private async Task OpenContractDocumentAsync(IPage page)
     {
-        await page.GotoAsync($"{BaseUrl}/document-editor?documentId={ContractDocumentId}", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.Load,
-            Timeout = 120_000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?documentId={ContractDocumentId}");
         var host = page.GetByTestId("document-canvas-engine-host");
         await Assertions.Expect(host).ToBeVisibleAsync(new() { Timeout = 120_000 });
         await Assertions.Expect(host).ToHaveAttributeAsync("data-canvas-engine-ready", "true", new() { Timeout = 120_000 });
@@ -533,11 +529,7 @@ public sealed class DocumentEditorCanvasImageFormattingFixE2ETests : WasmTestBas
 
     private async Task OpenContractOnCanvasHostAsync(IPage page)
     {
-        await page.GotoAsync($"{BaseUrl}/canvas-engine-host?documentId={ContractDocumentId}&showToolbar=true&preferLocalDraft=false", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.Load,
-            Timeout = 120_000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/canvas-engine-host?documentId={ContractDocumentId}&showToolbar=true&preferLocalDraft=false");
         var host = page.GetByTestId("document-canvas-engine-host");
         await Assertions.Expect(host).ToBeVisibleAsync(new() { Timeout = 120_000 });
         await Assertions.Expect(host).ToHaveAttributeAsync("data-canvas-engine-ready", "true", new() { Timeout = 120_000 });

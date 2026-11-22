@@ -89,11 +89,7 @@ public sealed class DocumentEditorWatermarkPdfE2ETests : WasmTestBase
 
     private async Task OpenAsync(IPage page, string url)
     {
-        await page.GotoAsync($"{BaseUrl}{url}", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60_000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}{url}", WaitUntilState.DOMContentLoaded);
         await page.WaitForFunctionAsync(
             """
             () => document.querySelector('[data-testid="document-canvas-engine-host"][data-canvas-engine-ready="true"]')

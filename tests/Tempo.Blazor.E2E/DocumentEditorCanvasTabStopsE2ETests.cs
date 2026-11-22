@@ -153,11 +153,7 @@ public sealed class DocumentEditorCanvasTabStopsE2ETests : WasmTestBase
 
     private async Task OpenPhaseE2DocumentAsync(IPage page)
     {
-        await page.GotoAsync($"{BaseUrl}/canvas-engine-host?documentId={PhaseE2DocumentId}&showToolbar=true&preferLocalDraft=false", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60_000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/canvas-engine-host?documentId={PhaseE2DocumentId}&showToolbar=true&preferLocalDraft=false", WaitUntilState.DOMContentLoaded);
         await WaitForPhaseE2ReadyAsync(page);
     }
 

@@ -104,9 +104,7 @@ public sealed class DocumentEditorProofingE2ETests : WasmTestBase
 
     private async Task OpenProofingDocumentAsync(IPage page, string proofingMode)
     {
-        await page.GotoAsync(
-            $"{BaseUrl}/canvas-engine-host?documentId={DocumentId}&showToolbar=true&proofing={proofingMode}&preferLocalDraft=false&disableCollaboration=true&resetSeed=true",
-            new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 60_000 });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/canvas-engine-host?documentId={DocumentId}&showToolbar=true&proofing={proofingMode}&preferLocalDraft=false&disableCollaboration=true&resetSeed=true", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync(
             "[data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']",
             new PageWaitForSelectorOptions { Timeout = 45_000 });

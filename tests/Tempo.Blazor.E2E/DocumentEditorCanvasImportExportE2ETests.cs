@@ -177,11 +177,7 @@ public sealed class DocumentEditorCanvasImportExportE2ETests : WasmTestBase
 
     private async Task OpenCanvasDocumentAsync(IPage page, string documentId)
     {
-        await page.GotoAsync($"{BaseUrl}/canvas-engine-host?documentId={documentId}&showToolbar=true&preferLocalDraft=false", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60_000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/canvas-engine-host?documentId={documentId}&showToolbar=true&preferLocalDraft=false", WaitUntilState.DOMContentLoaded);
         await page.WaitForFunctionAsync(
             """
             documentId => document.querySelector('[data-testid="document-canvas-engine-host"][data-canvas-engine-ready="true"]')

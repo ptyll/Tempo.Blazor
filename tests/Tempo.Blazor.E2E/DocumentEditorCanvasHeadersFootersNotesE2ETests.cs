@@ -438,11 +438,7 @@ public sealed class DocumentEditorCanvasHeadersFootersNotesE2ETests : WasmTestBa
 
     private async Task OpenPhase16DocumentAsync(IPage page)
     {
-        await page.GotoAsync($"{BaseUrl}/canvas-engine-host?documentId={Phase16DocumentId}&showToolbar=true", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.Load,
-            Timeout = 60_000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/canvas-engine-host?documentId={Phase16DocumentId}&showToolbar=true");
         await WaitForPhase16ReadyAsync(page);
     }
 

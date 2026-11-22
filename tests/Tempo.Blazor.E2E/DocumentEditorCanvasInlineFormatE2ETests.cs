@@ -176,11 +176,7 @@ public sealed class DocumentEditorCanvasInlineFormatE2ETests : WasmTestBase
 
     private async Task OpenInlineFormattingDocumentAsync(IPage page)
     {
-        await page.GotoAsync($"{BaseUrl}/canvas-engine-host?documentId=phase-9-canvas-inline-format&showToolbar=true", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.Load,
-            Timeout = 60_000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/canvas-engine-host?documentId=phase-9-canvas-inline-format&showToolbar=true");
         await page.WaitForSelectorAsync(
             "[data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']",
             new PageWaitForSelectorOptions { Timeout = 30_000 });

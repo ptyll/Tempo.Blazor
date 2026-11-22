@@ -19,7 +19,7 @@ public class TmDataTableGridKeyboardE2ETests : WasmTestBase
     {
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}{DataTablePage}", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
+        await GotoAppReadyAsync(page, $"{BaseUrl}{DataTablePage}", WaitUntilState.NetworkIdle);
 
         var section = page.Locator("[data-testid='dt-grid-keyboard-section']");
         await section.ScrollIntoViewIfNeededAsync();
@@ -81,7 +81,7 @@ public class TmDataTableGridKeyboardE2ETests : WasmTestBase
     {
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}{DataTablePage}", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
+        await GotoAppReadyAsync(page, $"{BaseUrl}{DataTablePage}", WaitUntilState.NetworkIdle);
 
         var grouped = page.Locator("[data-testid='dt-grid-grouped']");
         await grouped.ScrollIntoViewIfNeededAsync();
@@ -107,7 +107,7 @@ public class TmDataTableGridKeyboardE2ETests : WasmTestBase
     {
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}{DataTablePage}", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
+        await GotoAppReadyAsync(page, $"{BaseUrl}{DataTablePage}", WaitUntilState.NetworkIdle);
 
         var virtualized = page.Locator("[data-testid='dt-grid-virtualized']");
         await virtualized.ScrollIntoViewIfNeededAsync();
@@ -127,7 +127,7 @@ public class TmDataTableGridKeyboardE2ETests : WasmTestBase
     {
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}{DataTablePage}", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
+        await GotoAppReadyAsync(page, $"{BaseUrl}{DataTablePage}", WaitUntilState.NetworkIdle);
 
         var section = page.Locator("[data-testid='dt-grid-edit']");
         await section.ScrollIntoViewIfNeededAsync();
@@ -151,7 +151,7 @@ public class TmDataTableGridKeyboardE2ETests : WasmTestBase
     {
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}{DataTablePage}", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
+        await GotoAppReadyAsync(page, $"{BaseUrl}{DataTablePage}", WaitUntilState.NetworkIdle);
 
         var section = page.Locator("[data-testid='dt-grid-keyboard-section']");
         await section.ScrollIntoViewIfNeededAsync();

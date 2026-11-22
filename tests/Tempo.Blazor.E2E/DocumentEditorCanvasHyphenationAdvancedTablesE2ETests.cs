@@ -114,11 +114,7 @@ public sealed class DocumentEditorCanvasHyphenationAdvancedTablesE2ETests : Wasm
 
     private async Task OpenPhaseE12DocumentAsync(IPage page)
     {
-        await page.GotoAsync($"{BaseUrl}/canvas-engine-host?documentId={PhaseE12DocumentId}&showToolbar=true", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.Load,
-            Timeout = 60_000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/canvas-engine-host?documentId={PhaseE12DocumentId}&showToolbar=true");
         await WaitForPhaseE12ReadyAsync(page);
     }
 

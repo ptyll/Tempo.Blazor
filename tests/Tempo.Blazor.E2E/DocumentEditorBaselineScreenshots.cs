@@ -26,11 +26,7 @@ public class DocumentEditorBaselineScreenshots : BaselineGeneratorTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(width, height);
-        await page.GotoAsync($"{BaseUrl}/document-editor", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync("[data-testid='document-editor-demo']", new PageWaitForSelectorOptions
         {
             State = WaitForSelectorState.Attached,
@@ -260,11 +256,7 @@ public class DocumentEditorBaselineScreenshots : BaselineGeneratorTestBase
         // ═══════════════════════════════════════════════════════════════
         // 6. COMPACT TOOLBAR
         // ═══════════════════════════════════════════════════════════════
-        await page.GotoAsync($"{BaseUrl}/document-editor?toolbarMode=compact", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?toolbarMode=compact", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync("[data-testid='document-editor-demo']", new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 60000 });
         await page.WaitForTimeoutAsync(800);
         await CaptureAsync(page, "06-toolbar-compact.png");
@@ -272,11 +264,7 @@ public class DocumentEditorBaselineScreenshots : BaselineGeneratorTestBase
         // ═══════════════════════════════════════════════════════════════
         // 7. DISTRACTION-FREE
         // ═══════════════════════════════════════════════════════════════
-        await page.GotoAsync($"{BaseUrl}/document-editor?toolbarMode=distractionFree", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?toolbarMode=distractionFree", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync("[data-testid='document-editor-demo']", new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 60000 });
         await page.WaitForTimeoutAsync(800);
         await CaptureAsync(page, "07-toolbar-distraction-free.png");
@@ -284,11 +272,7 @@ public class DocumentEditorBaselineScreenshots : BaselineGeneratorTestBase
         // ═══════════════════════════════════════════════════════════════
         // 8. MINI TOOLBAR (text selection)
         // ═══════════════════════════════════════════════════════════════
-        await page.GotoAsync($"{BaseUrl}/document-editor", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync("[data-testid='document-wysiwyg-host'] .tm-wysiwyg-block", new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 60000 });
         await page.WaitForTimeoutAsync(600);
         await SelectFirstInlineRangeAsync(page, 0, 5);
@@ -317,11 +301,7 @@ public class DocumentEditorBaselineScreenshots : BaselineGeneratorTestBase
         // ═══════════════════════════════════════════════════════════════
         // 11. SIDE PANEL – COMMENTS
         // ═══════════════════════════════════════════════════════════════
-        await page.GotoAsync($"{BaseUrl}/document-editor?documentId=contract-demo", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?documentId=contract-demo", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync("[data-testid='document-side-panel']", new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 60000 });
         await page.WaitForTimeoutAsync(600);
         await OpenSidePanelTabAsync(page, "Comments");
@@ -360,11 +340,7 @@ public class DocumentEditorBaselineScreenshots : BaselineGeneratorTestBase
         // ═══════════════════════════════════════════════════════════════
         // 17. SIDE PANEL – IMAGE INSPECTOR
         // ═══════════════════════════════════════════════════════════════
-        await page.GotoAsync($"{BaseUrl}/document-editor?documentId=exhibits-demo", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?documentId=exhibits-demo", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync("[data-testid='document-wysiwyg-host'] img, [data-testid='document-wysiwyg-host'] figure", new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 60000 });
         await page.WaitForTimeoutAsync(600);
         await ClickOnImageAsync(page);
@@ -375,11 +351,7 @@ public class DocumentEditorBaselineScreenshots : BaselineGeneratorTestBase
         // ═══════════════════════════════════════════════════════════════
         // 18. FIND / REPLACE PANEL
         // ═══════════════════════════════════════════════════════════════
-        await page.GotoAsync($"{BaseUrl}/document-editor?documentId=contract-demo", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?documentId=contract-demo", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync("[data-testid='document-editor-demo']", new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 60000 });
         await page.WaitForTimeoutAsync(600);
         var docBody2 = page.Locator("[data-testid='document-wysiwyg-host'] .tm-wysiwyg-page__body[contenteditable]").First;
@@ -426,11 +398,7 @@ public class DocumentEditorBaselineScreenshots : BaselineGeneratorTestBase
         // ═══════════════════════════════════════════════════════════════
         // 22. FULL SHELL (overview)
         // ═══════════════════════════════════════════════════════════════
-        await page.GotoAsync($"{BaseUrl}/document-editor?documentId=filing-demo", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?documentId=filing-demo", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync("[data-testid='document-editor-demo']", new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 60000 });
         await page.WaitForTimeoutAsync(800);
         await CaptureAsync(page, "22-full-shell-filing.png");
@@ -474,11 +442,7 @@ public class DocumentEditorBaselineScreenshots : BaselineGeneratorTestBase
         // ═══════════════════════════════════════════════════════════════
         // 25. RIBBON WITH RULER VISIBLE
         // ═══════════════════════════════════════════════════════════════
-        await page.GotoAsync($"{BaseUrl}/document-editor?documentId=contract-demo", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?documentId=contract-demo", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync("[data-testid='document-editor-demo']", new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 60000 });
         await page.WaitForTimeoutAsync(600);
         await ClickTabAsync(page, "document-ribbon-tab-view");
@@ -493,11 +457,7 @@ public class DocumentEditorBaselineScreenshots : BaselineGeneratorTestBase
         // ═══════════════════════════════════════════════════════════════
         // 26. DARK MODE OVERVIEW
         // ═══════════════════════════════════════════════════════════════
-        await page.GotoAsync($"{BaseUrl}/document-editor?documentId=contract-demo", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?documentId=contract-demo", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync("[data-testid='document-editor-demo']", new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 60000 });
         await page.WaitForTimeoutAsync(600);
         await ToggleDarkModeAsync(page);

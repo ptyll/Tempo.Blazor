@@ -60,9 +60,7 @@ public sealed class DocumentEditorRedactionE2ETests : WasmTestBase
         await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'cs')");
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1000);
-        await page.GotoAsync(
-            $"{BaseUrl}/canvas-engine-host?documentId={documentId}&showToolbar=true&preferLocalDraft=false&disableCollaboration=true&resetSeed=true",
-            new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 60_000 });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/canvas-engine-host?documentId={documentId}&showToolbar=true&preferLocalDraft=false&disableCollaboration=true&resetSeed=true", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync(
             "[data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']",
             new PageWaitForSelectorOptions { Timeout = 45_000 });

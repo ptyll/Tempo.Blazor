@@ -24,11 +24,7 @@ public abstract class CanvasEngineTestBase : WasmTestBase
         await page.SetViewportSizeAsync(viewport.Width, viewport.Height);
 
         var url = $"{BaseUrl}{CanvasHarnessRoute}?seedId={Uri.EscapeDataString(seedId)}";
-        await page.GotoAsync(url, new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.Load,
-            Timeout = 60_000
-        });
+        await GotoWithoutBootRecoveryAsync(page, url, "static canvas-engine-harness.html is not the Blazor app; there is no data-blazor-ready boot to recover");
 
         var canvasPage = new CanvasEnginePage(
             page,

@@ -86,11 +86,7 @@ public sealed class DocumentEditorCanvasEnginePhase1E2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(width, height);
-        await page.GotoAsync($"{BaseUrl}{HarnessUrl}", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.Load,
-            Timeout = 60_000
-        });
+        await GotoWithoutBootRecoveryAsync(page, $"{BaseUrl}{HarnessUrl}", "static canvas-engine-harness.html is not the Blazor app; there is no data-blazor-ready boot to recover");
         await page.WaitForFunctionAsync(
             "() => window.__canvasDocumentEngineHarness && window.__canvasDocumentEngineHarness.ready === true",
             null,

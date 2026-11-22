@@ -24,7 +24,7 @@ public sealed class DocumentEditorHeadlessAssemblyE2ETests : WasmTestBase
     {
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/", new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 60_000 });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/", WaitUntilState.DOMContentLoaded);
 
         // ── Dataset A: amount 25 000 → IF branch (director approval), two items. ────────────────
         var highText = await RenderPdfTextAsync(page, amount: 25000,

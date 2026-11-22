@@ -336,11 +336,7 @@ public sealed class DocumentEditorCanvasContentControlsE2ETests : WasmTestBase
 
     private async Task OpenPhaseE9DocumentAsync(IPage page)
     {
-        await page.GotoAsync($"{BaseUrl}/canvas-engine-host?documentId={PhaseE9DocumentId}&showToolbar=true", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.Load,
-            Timeout = 60_000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/canvas-engine-host?documentId={PhaseE9DocumentId}&showToolbar=true");
         await WaitForPhaseE9ReadyAsync(page);
     }
 

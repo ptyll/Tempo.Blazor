@@ -131,11 +131,7 @@ public sealed class DocumentEditorCanvasAutocorrectE2ETests : WasmTestBase
 
     private async Task OpenPhaseE10DocumentAsync(IPage page)
     {
-        await page.GotoAsync($"{BaseUrl}/canvas-engine-host?documentId={PhaseE10DocumentId}&showToolbar=true", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.Load,
-            Timeout = 60_000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/canvas-engine-host?documentId={PhaseE10DocumentId}&showToolbar=true");
         await WaitForPhaseE10ReadyAsync(page);
     }
 

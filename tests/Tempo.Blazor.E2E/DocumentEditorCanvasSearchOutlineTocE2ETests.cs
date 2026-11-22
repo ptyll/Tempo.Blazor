@@ -181,11 +181,7 @@ public sealed class DocumentEditorCanvasSearchOutlineTocE2ETests : WasmTestBase
 
     private async Task OpenPhase18DocumentAsync(IPage page)
     {
-        await page.GotoAsync($"{BaseUrl}/canvas-engine-host?documentId={Phase18DocumentId}&showToolbar=true&autosaveMs=30000", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.Load,
-            Timeout = 60_000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/canvas-engine-host?documentId={Phase18DocumentId}&showToolbar=true&autosaveMs=30000");
         await WaitForPhase18ReadyAsync(page);
     }
 

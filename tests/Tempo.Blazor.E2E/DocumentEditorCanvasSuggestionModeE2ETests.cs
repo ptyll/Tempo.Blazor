@@ -24,9 +24,7 @@ public sealed class DocumentEditorCanvasSuggestionModeE2ETests : WasmTestBase
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1000);
 
-        await page.GotoAsync(
-            $"{BaseUrl}/canvas-engine-host?documentId={DocumentId}&showToolbar=true&suggestionMode=true",
-            new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 60_000 });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/canvas-engine-host?documentId={DocumentId}&showToolbar=true&suggestionMode=true", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync(
             "[data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']",
             new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 30_000 });

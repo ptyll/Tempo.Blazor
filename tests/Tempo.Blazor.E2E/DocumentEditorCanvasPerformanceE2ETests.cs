@@ -99,11 +99,7 @@ public sealed class DocumentEditorCanvasPerformanceE2ETests : WasmTestBase
 
     private async Task OpenPhase22DocumentAsync(IPage page)
     {
-        await page.GotoAsync($"{BaseUrl}/canvas-engine-host?documentId={Phase22DocumentId}&showToolbar=true", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60_000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/canvas-engine-host?documentId={Phase22DocumentId}&showToolbar=true", WaitUntilState.DOMContentLoaded);
         await page.WaitForFunctionAsync(
             """
             () => document.querySelector('[data-testid="document-canvas-engine-host"][data-canvas-engine-ready="true"]') !== null

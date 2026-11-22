@@ -116,11 +116,7 @@ public sealed class DocumentEditorCanvasEngineBaselineE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(width, height);
-        await page.GotoAsync($"{BaseUrl}{pathAndQuery}", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60_000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}{pathAndQuery}", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync("[data-testid='document-editor-demo']", new PageWaitForSelectorOptions
         {
             State = WaitForSelectorState.Attached,

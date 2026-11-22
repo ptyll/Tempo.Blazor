@@ -12,7 +12,7 @@ public class ConsoleProbe : WasmTestBase
         var page = await CreatePageAsync();
         var logs = new List<string>();
         page.Console += (_, msg) => logs.Add($"[{msg.Type}] {msg.Text}");
-        await page.GotoAsync(BaseUrl + "/diagram-editor");
+        await GotoAppReadyAsync(page, BaseUrl + "/diagram-editor");
         await page.WaitForTimeoutAsync(5000);
         foreach (var log in logs) TestContext.WriteLine(log);
         var html = await page.ContentAsync();

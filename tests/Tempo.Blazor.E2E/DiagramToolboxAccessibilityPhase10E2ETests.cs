@@ -58,9 +58,9 @@ public sealed class DiagramToolboxAccessibilityPhase10E2ETests : PlaywrightTestB
         await TakeScreenshotAsync(page, "diagram_toolbox_phase10_mobile");
     }
 
-    private static async Task OpenDiagramEditorAsync(IPage page, bool requireCanvas)
+    private async Task OpenDiagramEditorAsync(IPage page, bool requireCanvas)
     {
-        await page.GotoAsync("http://localhost:5010" + DiagramEditorUrl);
+        await GotoAppReadyAsync(page, "http://localhost:5010" + DiagramEditorUrl);
         // The editor root renders in every band; the toolbox does NOT (on mobile it lives in the
         // closed-at-load panels sheet), so only the root is awaited here.
         await page.WaitForSelectorAsync(".tm-diagram-editor", new PageWaitForSelectorOptions

@@ -28,11 +28,7 @@ public partial class SpreadsheetBaselineScreenshots : BaselineGeneratorTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(width, height);
-        await page.GotoAsync($"{BaseUrl}/spreadsheet", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync(
             "[data-testid='spreadsheet-demo'] .tm-spreadsheet-canvas-grid canvas.tm-spreadsheet-canvas-grid__canvas",
             new PageWaitForSelectorOptions

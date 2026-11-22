@@ -785,11 +785,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
         {
             try
             {
-                await page.GotoAsync(url, new PageGotoOptions
-                {
-                    WaitUntil = WaitUntilState.DOMContentLoaded,
-                    Timeout = 120_000
-                });
+                await GotoAppReadyAsync(page, url, WaitUntilState.DOMContentLoaded);
                 await WaitForCanvasDocumentReadyAsync(page, blockId);
 
                 // N211: the page is "ready" from here on — count every subsequent frame navigation
@@ -830,15 +826,11 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
         }
     }
 
-    private static async Task TryResetCanvasDocumentNavigationAsync(IPage page)
+    private async Task TryResetCanvasDocumentNavigationAsync(IPage page)
     {
         try
         {
-            await page.GotoAsync("about:blank", new PageGotoOptions
-            {
-                WaitUntil = WaitUntilState.DOMContentLoaded,
-                Timeout = 10_000
-            });
+            await GotoWithoutBootRecoveryAsync(page, "about:blank", "reset to about:blank between retry attempts; there is no Blazor boot to recover", WaitUntilState.DOMContentLoaded);
         }
         catch (TimeoutException)
         {

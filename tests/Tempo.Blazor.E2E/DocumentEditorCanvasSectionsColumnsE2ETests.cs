@@ -108,11 +108,7 @@ public sealed class DocumentEditorCanvasSectionsColumnsE2ETests : WasmTestBase
 
     private async Task OpenPhaseE3DocumentAsync(IPage page)
     {
-        await page.GotoAsync($"{BaseUrl}/canvas-engine-host?documentId={PhaseE3DocumentId}&showToolbar=true&preferLocalDraft=false", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.Load,
-            Timeout = 60_000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/canvas-engine-host?documentId={PhaseE3DocumentId}&showToolbar=true&preferLocalDraft=false");
         await WaitForPhaseE3ReadyAsync(page);
     }
 

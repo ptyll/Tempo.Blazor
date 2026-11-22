@@ -125,11 +125,7 @@ public sealed class DocumentEditorToolbarOverflowAndRenderersE2ETests : WasmTest
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1280, 900);
-        await page.GotoAsync($"{BaseUrl}/document-toolbar-renderers", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 120_000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-toolbar-renderers", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync("[data-testid='toolbar-renderers-toolbar']",
             new PageWaitForSelectorOptions { Timeout = 60_000 });
         var output = CreateOutputDirectory("renderers-demo");
@@ -183,11 +179,7 @@ public sealed class DocumentEditorToolbarOverflowAndRenderersE2ETests : WasmTest
 
     private async Task OpenDocumentAsync(IPage page)
     {
-        await page.GotoAsync($"{BaseUrl}/document-editor?documentId={ContractDocumentId}", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 120_000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?documentId={ContractDocumentId}", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync(
             "[data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']",
             new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 120_000 });

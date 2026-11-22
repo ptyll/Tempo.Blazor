@@ -30,11 +30,7 @@ public sealed class DocumentEditorCanvasPerfBudgetE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1000);
-        await page.GotoAsync($"{BaseUrl}/document-editor?documentId={LargeDocId}", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.Load,
-            Timeout = 120_000,
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?documentId={LargeDocId}");
         await page.WaitForSelectorAsync("[data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']", new PageWaitForSelectorOptions
         {
             State = WaitForSelectorState.Attached,
@@ -97,11 +93,7 @@ public sealed class DocumentEditorCanvasPerfBudgetE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1000);
-        await page.GotoAsync($"{BaseUrl}/document-editor?documentId={LargeDocId}", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.Load,
-            Timeout = 120_000,
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?documentId={LargeDocId}");
         await page.WaitForSelectorAsync("[data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']", new PageWaitForSelectorOptions
         {
             State = WaitForSelectorState.Attached,

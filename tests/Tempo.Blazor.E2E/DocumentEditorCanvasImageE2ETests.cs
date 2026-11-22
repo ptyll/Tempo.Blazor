@@ -220,11 +220,7 @@ public sealed class DocumentEditorCanvasImageE2ETests : WasmTestBase
 
     private async Task OpenPhase15DocumentAsync(IPage page)
     {
-        await page.GotoAsync($"{BaseUrl}/canvas-engine-host?documentId={Phase15DocumentId}&showToolbar=true&preferLocalDraft=false", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60_000
-        });
+        await GotoAppReadyAsync(page, $"{BaseUrl}/canvas-engine-host?documentId={Phase15DocumentId}&showToolbar=true&preferLocalDraft=false", WaitUntilState.DOMContentLoaded);
 
         try
         {
@@ -232,11 +228,7 @@ public sealed class DocumentEditorCanvasImageE2ETests : WasmTestBase
         }
         catch (TimeoutException)
         {
-            await page.ReloadAsync(new PageReloadOptions
-            {
-                WaitUntil = WaitUntilState.DOMContentLoaded,
-                Timeout = 60_000
-            });
+            await ReloadAppReadyAsync(page, WaitUntilState.DOMContentLoaded);
             await WaitForPhase15ReadyAsync(page);
         }
     }
