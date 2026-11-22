@@ -63,8 +63,7 @@ public class McpAgentScreenshotE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1600, 1000);
-        await page.GotoAsync($"{BaseUrl}/wireframe-editor", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/wireframe-editor");
 
         await page.ClickAsync("[data-testid=wf-open-btn]");
         await page.WaitForSelectorAsync(".tm-document-open-dialog", new PageWaitForSelectorOptions { Timeout = 15000 });

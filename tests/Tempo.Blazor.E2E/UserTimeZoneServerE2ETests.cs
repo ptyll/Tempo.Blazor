@@ -16,14 +16,13 @@ public class UserTimeZoneServerE2ETests : ServerTestBase
 {
     private async Task<IPage> OpenFeedbackInZoneAsync(string timeZoneId)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = 1280, Height = 900 },
             Locale = "en-US",
             TimezoneId = timeZoneId,
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         // The Server demo localizes from the tm-demo-culture cookie (its middleware sets the process
         // defaults); without it the stamps would come out in the host OS locale and the English
         // assertions below would not hold.
@@ -32,8 +31,7 @@ public class UserTimeZoneServerE2ETests : ServerTestBase
             new Cookie { Name = "tm-demo-culture", Value = "en", Url = BaseUrl },
         });
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/feedback", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/feedback");
         await page.Locator(".tm-timeline").First.ScrollIntoViewIfNeededAsync();
         await page.WaitForSelectorAsync(".tm-timeline-timestamp");
         return page;

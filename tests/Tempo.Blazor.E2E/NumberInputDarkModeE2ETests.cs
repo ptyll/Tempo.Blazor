@@ -26,9 +26,7 @@ public class NumberInputDarkModeE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 900);
-        await page.GotoAsync($"{BaseUrl}{FeedbackPage}",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{FeedbackPage}");
 
         var section = page.Locator("[data-testid='number-input-section']");
         await section.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });

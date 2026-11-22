@@ -50,7 +50,7 @@ public abstract class ModelPickerE2EBase : PlaywrightTestBase
 
     private async Task<IPage> OpenAsync(int width = 1440, int height = 1100, bool coarsePointer = false)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             Locale = "en-US",
@@ -59,7 +59,6 @@ public abstract class ModelPickerE2EBase : PlaywrightTestBase
         });
         await context.AddInitScriptAsync(
             "localStorage.setItem('tm-demo-culture', 'en'); document.cookie = 'tm-demo-culture=en;path=/;max-age=31536000;samesite=lax';");
-        RegisterContext(context);
 
         var page = await context.NewPageAsync();
         await GotoAppReadyAsync(page, $"{BaseUrl}/model-picker");

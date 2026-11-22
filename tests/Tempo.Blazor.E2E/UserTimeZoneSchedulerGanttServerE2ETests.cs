@@ -18,21 +18,19 @@ public class UserTimeZoneSchedulerGanttServerE2ETests : ServerTestBase
 
     private async Task<IPage> OpenAsync(string path)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = 1440, Height = 1100 },
             Locale = "en-US",
             TimezoneId = Auckland,
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         await context.AddCookiesAsync(new[]
         {
             new Cookie { Name = "tm-demo-culture", Value = "en", Url = BaseUrl },
         });
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}{path}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{path}");
         return page;
     }
 

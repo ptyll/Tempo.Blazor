@@ -25,16 +25,14 @@ public class RteDialogsTopLayerE2ETests : WasmTestBase
     /// <summary>Opens /richtext, opens the promoted bottom drawer with a full editor inside.</summary>
     private async Task<IPage> OpenEditorInDrawerAsync(int width, int height)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             Locale = "en-US",
             IgnoreHTTPSErrors = true
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/richtext");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/richtext");
 
         await page.Locator("[data-testid='open-editor-drawer']").ClickAsync();
         var drawer = page.Locator(".tm-drawer--bottom");

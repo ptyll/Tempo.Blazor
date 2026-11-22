@@ -17,8 +17,7 @@ public class NotificationBellKeyboardE2ETests : WasmTestBase
     {
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/feedback");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/feedback");
 
         // Guarantee at least one unread entry: the demo's "Add Notification" button seeds one.
         var add = page.Locator("button").Filter(new() { HasText = "Add Notification" }).First;

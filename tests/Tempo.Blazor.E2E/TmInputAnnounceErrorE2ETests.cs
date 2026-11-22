@@ -32,9 +32,7 @@ public class TmInputAnnounceErrorE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 900);
-        await page.GotoAsync($"{BaseUrl}{FormsPage}",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{FormsPage}");
 
         var muted = page.Locator($"input[data-testid='{MutedInputId}']");
         await muted.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
@@ -166,9 +164,7 @@ public class TmInputAnnounceErrorServerE2ETests : ServerTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 900);
-        await page.GotoAsync($"{BaseUrl}/forms",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/forms");
 
         var mutedInput = page.Locator("input[data-testid='announce-demo-amount']");
         await mutedInput.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });

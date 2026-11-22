@@ -14,7 +14,7 @@ public class ToolbarItemsE2ETests : WasmTestBase
 {
     private async Task<IPage> OpenAsync(int width, int height, bool touch)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = touch,
@@ -22,10 +22,8 @@ public class ToolbarItemsE2ETests : WasmTestBase
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/toolbar-forms");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/toolbar-forms");
         await page.Locator("[data-testid='toolbar-overflow-demo']").WaitForAsync();
         return page;
     }

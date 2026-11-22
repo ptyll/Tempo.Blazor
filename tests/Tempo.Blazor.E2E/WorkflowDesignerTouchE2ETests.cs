@@ -50,7 +50,7 @@ public class WorkflowDesignerTouchE2ETests : WasmTestBase
 
     private async Task<IPage> OpenDesignerAsync(bool touch, int width, int height)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             // Pin the locale: the demo follows the browser language, and a context without one inherits the host machine's (cs-CZ on the dev box) while the specs read English labels.
             Locale = "en-US",
@@ -59,10 +59,8 @@ public class WorkflowDesignerTouchE2ETests : WasmTestBase
             IsMobile = touch && width < 640,
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/workflow-designer", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/workflow-designer");
 
         var canvas = CanvasSvg(page);
         await canvas.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });

@@ -22,8 +22,7 @@ public sealed class MapsE2ETests : WasmTestBase
         await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1000);
-        await page.GotoAsync($"{BaseUrl}/maps", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/maps");
         await page.WaitForSelectorAsync(".tm-map .leaflet-container", new PageWaitForSelectorOptions { Timeout = 30000 });
         // Give tiles + canvas a moment to paint.
         await page.WaitForTimeoutAsync(1500);
@@ -162,10 +161,8 @@ public sealed class MapsE2ETests : WasmTestBase
             }
         };
 
-        await page.GotoAsync($"{BaseUrl}/buttons", new PageGotoOptions { WaitUntil = WaitUntilState.Load });
-        await WaitForAppReadyAsync(page);
-        await page.GotoAsync($"{BaseUrl}/maps", new PageGotoOptions { WaitUntil = WaitUntilState.Load });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/buttons");
+        await GotoAppReadyAsync(page, $"{BaseUrl}/maps");
         await page.WaitForSelectorAsync(".tm-map .leaflet-container", new PageWaitForSelectorOptions { Timeout = 30000 });
         await page.WaitForTimeoutAsync(1000);
 

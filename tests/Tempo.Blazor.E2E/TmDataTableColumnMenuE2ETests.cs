@@ -19,9 +19,7 @@ public class TmDataTableColumnMenuE2ETests : WasmTestBase
         var page = await context.NewPageAsync();
 
         await page.SetViewportSizeAsync(1440, 1100);
-        await page.GotoAsync($"{BaseUrl}/data-table",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/data-table");
 
         var section = page.Locator("[data-testid='dt-column-menu-section']");
         await section.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
@@ -69,7 +67,7 @@ public class TmDataTableColumnMenuE2ETests : WasmTestBase
 
     private async Task<IPage> OpenAsync(int width, int height, bool touch)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             // Pin the locale: the demo follows the browser language, and a context without one inherits the host machine's (cs-CZ on the dev box) while the specs read English labels.
             Locale = "en-US",
@@ -78,11 +76,8 @@ public class TmDataTableColumnMenuE2ETests : WasmTestBase
             IsMobile = touch,
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/data-table",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/data-table");
 
         var section = page.Locator(Section);
         await section.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });

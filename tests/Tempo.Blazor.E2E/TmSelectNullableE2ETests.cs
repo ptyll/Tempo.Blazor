@@ -23,9 +23,7 @@ public class TmSelectNullableE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 900);
-        await page.GotoAsync($"{BaseUrl}{FormsPage}",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{FormsPage}");
 
         var card = page.Locator("[data-testid='select-nullable-card']");
         await card.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
@@ -127,9 +125,7 @@ public class TmSelectNullableServerE2ETests : ServerTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 900);
-        await page.GotoAsync($"{BaseUrl}{FormsPage}",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{FormsPage}");
 
         var card = page.Locator("[data-testid='select-nullable-card']");
         await card.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
@@ -157,9 +153,7 @@ public class TmSelectNullableServerE2ETests : ServerTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 900);
-        await page.GotoAsync($"{BaseUrl}{FormsPage}",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{FormsPage}");
 
         var card = page.Locator("[data-testid='select-clearable-card']");
         await card.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });

@@ -40,7 +40,7 @@ public class RangeSliderE2ETests : WasmTestBase
 
     private async Task<IPage> OpenAsync(int width, int height, bool touch)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             // Pin the locale: the demo follows the browser language, and a context without one inherits the host machine's (cs-CZ on the dev box) while the specs read English labels.
             Locale = "en-US",
@@ -49,10 +49,8 @@ public class RangeSliderE2ETests : WasmTestBase
             IsMobile = touch && width < 640,
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}{Route}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{Route}");
         var slider = page.Locator(Slider).First;
         await slider.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
         await slider.ScrollIntoViewIfNeededAsync();

@@ -38,8 +38,7 @@ public class QueryInputE2ETests : WasmTestBase
     private async Task<(IPage page, ILocator input)> OpenAsync()
     {
         var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/query-input");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/query-input");
         var input = page.Locator("[data-testid='query-input-demo'] .tm-query-input__input");
         await input.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = LongTimeout });
         return (page, input);

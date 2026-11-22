@@ -39,7 +39,7 @@ public sealed class TmQRCodeE2ETests : WasmTestBase
 
     private async Task<IPage> OpenAsync(int width = 1440, int height = 1000)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             // The assertions read the ENGLISH default label / action text: pin the browser locale and the demo
@@ -49,10 +49,8 @@ public sealed class TmQRCodeE2ETests : WasmTestBase
         });
         await context.AddInitScriptAsync(
             "localStorage.setItem('tm-demo-culture', 'en'); document.cookie = 'tm-demo-culture=en;path=/;max-age=31536000;samesite=lax';");
-        RegisterContext(context);
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}{Route}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{Route}");
         var section = page.Locator(Section).First;
         await section.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
         await section.ScrollIntoViewIfNeededAsync();

@@ -18,7 +18,7 @@ public sealed class SmallGaps10cE2ETests : WasmTestBase
 
     private async Task<IPage> OpenAsync(string path, string readySelector, int width = 1440, int height = 1000)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             Locale = "en-US",
@@ -26,7 +26,6 @@ public sealed class SmallGaps10cE2ETests : WasmTestBase
         });
         await context.AddInitScriptAsync(
             "localStorage.setItem('tm-demo-culture', 'en'); document.cookie = 'tm-demo-culture=en;path=/;max-age=31536000;samesite=lax';");
-        RegisterContext(context);
 
         var page = await context.NewPageAsync();
         await GotoAppReadyAsync(page, $"{BaseUrl}{path}");

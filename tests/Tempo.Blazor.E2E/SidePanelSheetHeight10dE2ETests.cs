@@ -21,7 +21,7 @@ public sealed class SidePanelSheetHeight10dE2ETests : WasmTestBase
 
     private async Task<IPage> OpenAsync(int width, int height, string theme = "light")
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = 1440, Height = 900 },
             Locale = "en-US",
@@ -30,7 +30,6 @@ public sealed class SidePanelSheetHeight10dE2ETests : WasmTestBase
         });
         await context.AddInitScriptAsync(
             "localStorage.setItem('tm-demo-culture', 'en'); document.cookie = 'tm-demo-culture=en;path=/;max-age=31536000;samesite=lax';");
-        RegisterContext(context);
 
         var page = await context.NewPageAsync();
         await GotoAppReadyAsync(page, $"{BaseUrl}/editor-shell");

@@ -38,7 +38,7 @@ public sealed class TmTopBarNarrowE2ETests : WasmTestBase
 
     private async Task<IPage> OpenAsync(int width, int height = 844, bool touch = false, bool reducedMotion = false)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = touch,
@@ -47,12 +47,10 @@ public sealed class TmTopBarNarrowE2ETests : WasmTestBase
             IgnoreHTTPSErrors = true,
             ReducedMotion = reducedMotion ? ReducedMotion.Reduce : ReducedMotion.NoPreference,
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
         var errors = new List<string>();
         page.PageError += (_, message) => errors.Add(message);
-        await page.GotoAsync($"{BaseUrl}{Route}");
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{Route}");
         var demo = page.Locator(Demo).First;
         await demo.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
         await page.WaitForTimeoutAsync(400);

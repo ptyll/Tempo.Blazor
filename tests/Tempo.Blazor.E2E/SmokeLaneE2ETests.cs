@@ -107,12 +107,7 @@ public sealed class SmokeLaneE2ETests : WasmTestBase
             }
         };
 
-        await page.GotoAsync($"{BaseUrl}{route}", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60_000
-        });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{route}", WaitUntilState.DOMContentLoaded);
         return (page, errors);
     }
 

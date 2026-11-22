@@ -56,14 +56,13 @@ public class OtpInputE2ETests : WasmTestBase
     /// <summary>Opens /otp-input at an arbitrary viewport; optionally switches to dark mode.</summary>
     private async Task<IPage> OpenPageAsync(int width = 1440, int height = 900, bool hasTouch = false, bool dark = false)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
             HasTouch = hasTouch
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
         await GotoAppReadyAsync(page, $"{BaseUrl}/otp-input");
         if (dark)
@@ -157,14 +156,13 @@ public class OtpInputE2ETests : WasmTestBase
     [Description("E2E-OTP.3: Pasting a dashed code through the clipboard API distributes over the cells and verifies")]
     public async Task OtpInput_Paste_DistributesAndVerifies()
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = 1440, Height = 900 },
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
             Permissions = ["clipboard-read", "clipboard-write"]
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
         await GotoAppReadyAsync(page, $"{BaseUrl}/otp-input");
         var input = await SendCodeAndGetInputAsync(page);

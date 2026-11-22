@@ -158,12 +158,7 @@ public sealed class TmButtonDataTableScopeE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1366, 900);
-        await page.GotoAsync($"{BaseUrl}{path}", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60000
-        });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{path}", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync(readySelector, new PageWaitForSelectorOptions
         {
             State = WaitForSelectorState.Visible,

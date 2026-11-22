@@ -36,7 +36,7 @@ public sealed class TmBottomNavigationE2ETests : WasmTestBase
 
     private async Task<IPage> OpenAsync(int width = 1440, int height = 1000, bool reducedMotion = false)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             // Pin the locale: the demo follows the browser language, and a context without one inherits the host machine's (cs-CZ on the dev box) while the specs read English labels.
             Locale = "en-US",
@@ -44,12 +44,10 @@ public sealed class TmBottomNavigationE2ETests : WasmTestBase
             IgnoreHTTPSErrors = true,
             ReducedMotion = reducedMotion ? ReducedMotion.Reduce : ReducedMotion.NoPreference,
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
         var errors = new List<string>();
         page.PageError += (_, message) => errors.Add(message);
-        await page.GotoAsync($"{BaseUrl}{Route}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}{Route}");
         var section = page.Locator(Section).First;
         await section.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
         await section.ScrollIntoViewIfNeededAsync();

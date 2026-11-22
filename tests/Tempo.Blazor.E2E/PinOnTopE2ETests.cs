@@ -34,13 +34,12 @@ public class PinOnTopE2ETests : WasmTestBase
 
     private async Task<IPage> OpenPageAsync(int width = 1440, int height = 900, bool dark = false)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
         });
-        RegisterContext(context);
         var page = await context.NewPageAsync();
         await GotoAppReadyAsync(page, $"{BaseUrl}/pin-on-top");
         await page.Locator("[data-testid='pin-toggle-banner']").WaitForAsync(new LocatorWaitForOptions { Timeout = LongTimeout });

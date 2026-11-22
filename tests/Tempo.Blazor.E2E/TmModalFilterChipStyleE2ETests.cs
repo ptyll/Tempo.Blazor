@@ -91,12 +91,7 @@ public sealed class TmModalFilterChipStyleE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1366, 900);
-        await page.GotoAsync($"{BaseUrl}/data-table", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60000
-        });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/data-table", WaitUntilState.DOMContentLoaded);
 
         // Build one filter through the real UI so a live .tm-filter-chip-remove exists.
         var addButton = page.Locator(".tm-filter-builder-add").First;
@@ -127,12 +122,7 @@ public sealed class TmModalFilterChipStyleE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(width, height);
-        await page.GotoAsync($"{BaseUrl}/modal-dialog", new PageGotoOptions
-        {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60000
-        });
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/modal-dialog", WaitUntilState.DOMContentLoaded);
         return page;
     }
 

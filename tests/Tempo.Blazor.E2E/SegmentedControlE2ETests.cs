@@ -43,7 +43,7 @@ public abstract class SegmentedControlE2EBase : PlaywrightTestBase
         int width = 1440, int height = 1000, bool reduceMotion = false, string path = "/data-display",
         string waitFor = "[data-testid='segmented-control-section'] [role='radiogroup']")
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        var context = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             Locale = "en-US",
@@ -52,7 +52,6 @@ public abstract class SegmentedControlE2EBase : PlaywrightTestBase
         });
         await context.AddInitScriptAsync(
             "localStorage.setItem('tm-demo-culture', 'en'); document.cookie = 'tm-demo-culture=en;path=/;max-age=31536000;samesite=lax';");
-        RegisterContext(context);
 
         var page = await context.NewPageAsync();
         await GotoAppReadyAsync(page, $"{BaseUrl}{path}");

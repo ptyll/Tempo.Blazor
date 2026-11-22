@@ -23,8 +23,7 @@ public class MultiColumnComboBoxE2ETests : WasmTestBase
         // viewport edge — the only geometry where the pre-N324 math (anchor width instead of
         // the rendered min-width) could push the panel out.
         await page.SetViewportSizeAsync(460, 800);
-        await page.GotoAsync(PageUrl);
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, PageUrl);
 
         var host = page.Locator("[data-testid='mccb-narrow-host']");
         var trigger = host.Locator(".tm-multi-column-combo-box__trigger");

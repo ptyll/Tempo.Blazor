@@ -16,16 +16,20 @@ public class RelativeTimeE2ETests : WasmTestBase
 
     private async Task<IPage> OpenFeedbackAsync(string locale)
     {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
-        {
-            ViewportSize = new ViewportSize { Width = 1280, Height = 900 },
-            Locale = locale,
-            IgnoreHTTPSErrors = true,
-        });
-        RegisterContext(context);
-        var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/feedback", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
+        // The formatter says "5 h ago" only inside the SAME calendar day (older = "yesterday at ..."), and the demo
+        // seeds entries 1/3/5 h before "now". Run after midnight (< 05:00) the 5 h entry would read "yesterday", so the
+        // browser clock is pinned to a midday instant of a pinned zone: the stamps no longer depend on the time of day
+        // the suite runs at. SetFixedTime keeps timers running (Blazor boot is unaffected).
+        var page = await OpenAppPageAsync(
+            $"{BaseUrl}/feedback",
+            new BrowserNewContextOptions
+            {
+                ViewportSize = new ViewportSize { Width = 1280, Height = 900 },
+                Locale = locale,
+                IgnoreHTTPSErrors = true,
+                TimezoneId = "UTC",
+            },
+            beforeNavigate: context => context.Clock.SetFixedTimeAsync(new DateTime(2026, 6, 15, 12, 0, 0, DateTimeKind.Utc)));
         await page.Locator(".tm-timeline").First.ScrollIntoViewIfNeededAsync();
         await page.WaitForSelectorAsync(".tm-timeline-timestamp");
         return page;
