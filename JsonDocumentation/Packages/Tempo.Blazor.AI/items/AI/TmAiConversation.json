@@ -109,5 +109,12 @@
       "isRequired": false,
       "description": "Prompts offered by the empty state. They render only while the conversation has no turn AND OnSuggestion is bound."
     }
+  ],
+  "methods": [
+    {
+      "name": "ExpandRenderWindowToAsync",
+      "signature": "Task<bool> ExpandRenderWindowToAsync(string messageId)",
+      "description": "Grows a render window so the named turn is in the DOM, without scrolling. Answers whether messageId is in Messages. An unknown id, a host without a window, or a turn already inside the window leaves the slice unchanged. A jump above the window steps back from the current start by RenderWindowStep (the same grid as Load older messages). ScrollToMessageAsync uses this internally so a jump above RenderWindowSize mounts the row before the module is asked to scroll."
+    }
   ]
 }

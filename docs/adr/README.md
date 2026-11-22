@@ -12,3 +12,4 @@ Report Server. Formát: kontext → rozhodnutí → důsledky → zamítnuté al
 | [0005](0005-editor-shell-tablet-presentation.md) | Prezentace panelů editorového rámce na tabletu (EDITOR-SHELL-TABLET-PRESENTATION) | Přijato | 2026-10-24 |
 | [0006](0006-top-layer-pin.md) | Veřejné API „pin on top“ pro stavové UI hostitele (TOP-LAYER-PIN) | Přijato | 2026-11-15 |
 | [0007](0007-time-selector.md) | Zadávání času na dotyku: `TmTimeSelector` + `TmTimePicker.Presentation` (TIME-SELECTOR) | Přijato | 2026-11-20 |
+| [0008](0008-input-options-immediate.md) | Commit textových vstupů při `input`: `TmInputOptions.ImmediateByDefault` (INPUT-OPTIONS-IMMEDIATE) | Navrženo | 2026-11-22 |

@@ -53,7 +53,9 @@ public partial class TmAiConversation
     private bool _focusLogWhenIdle;
     private bool _attached;
     private bool _focusLogAfterRender;
+    private bool _hasRendered;
     private bool _disposed;
+    private TaskCompletionSource<bool>? _renderCompletion;
 
     /// <summary>
     /// The turns of the conversation, oldest first. The host owns the list: append a turn before it starts
@@ -243,6 +245,8 @@ public partial class TmAiConversation
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        CompletePendingRender(succeeded: !_disposed);
+        _hasRendered = true;
         if (_disposed)
         {
             return;
@@ -396,6 +400,110 @@ public partial class TmAiConversation
         }
 
         await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// Completes a waiter that asked to see the next paint (an expand that must land in the DOM before
+    /// the module is asked to scroll to the newly mounted row). A disposed component answers
+    /// <see langword="false"/> so the waiter cannot hang.
+    /// </summary>
+    private void CompletePendingRender(bool succeeded)
+    {
+        var pending = _renderCompletion;
+        if (pending is null)
+        {
+            return;
+        }
+
+        _renderCompletion = null;
+        pending.TrySetResult(succeeded);
+    }
+
+    /// <summary>
+    /// Grows the render window so the named turn is in the DOM, without scrolling. Answers whether
+    /// <paramref name="messageId"/> is in <see cref="Messages"/>. An unknown id, a host without a
+    /// window, or a turn already inside the window leaves the slice unchanged.
+    /// </summary>
+    /// <param name="messageId">The <see cref="AiMessage.Id"/> of the turn that must be rendered.</param>
+    /// <returns>Whether the named turn is in the host list.</returns>
+    public Task<bool> ExpandRenderWindowToAsync(string messageId)
+    {
+        var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _ = InvokeAsync(async () =>
+        {
+            try
+            {
+                completion.TrySetResult(await ExpandWindowToCoreAsync(messageId));
+            }
+            catch (Exception exception)
+            {
+                completion.TrySetException(exception);
+            }
+        });
+
+        return completion.Task;
+    }
+
+    /// <summary>Runs on the component's dispatcher — the guarded body of <see cref="ExpandRenderWindowToAsync"/>.</summary>
+    private async Task<bool> ExpandWindowToCoreAsync(string messageId)
+    {
+        if (_disposed || string.IsNullOrWhiteSpace(messageId))
+        {
+            return false;
+        }
+
+        var messages = MessageList;
+        var index = -1;
+        for (var i = 0; i < messages.Count; i++)
+        {
+            if (string.Equals(messages[i].Id, messageId, StringComparison.Ordinal))
+            {
+                index = i;
+                break;
+            }
+        }
+
+        if (index < 0)
+        {
+            return false;
+        }
+
+        if (RenderWindowSize is not { } requested)
+        {
+            return true;
+        }
+
+        if (_windowStart < 0)
+        {
+            var size = Math.Max(MinRenderWindowSize, requested);
+            _windowStart = Math.Max(0, messages.Count - size);
+        }
+
+        if (index >= _windowStart)
+        {
+            return true;
+        }
+
+        var steps = (_windowStart - index + WindowStep - 1) / WindowStep;
+        _windowStart = Math.Max(0, _windowStart - steps * WindowStep);
+        _windowExpanded = true;
+        RebuildWindow();
+
+        if (_windowStart == 0)
+        {
+            _focusLogAfterRender = true;
+        }
+
+        if (!_hasRendered)
+        {
+            await InvokeAsync(StateHasChanged);
+            return !_disposed;
+        }
+
+        var renderCompletion = _renderCompletion ??= new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        await InvokeAsync(StateHasChanged);
+        await renderCompletion.Task;
+        return !_disposed;
     }
 
     private async Task RaiseSuggestionAsync(string suggestion)
@@ -714,10 +822,12 @@ public partial class TmAiConversation
     /// honours reduced motion; the mark's release reports the honest position when it differs from the
     /// detached baseline the jump set. Unless the named turn IS the newest one, the jump also detaches the
     /// follow: the next appended turn is news for a reader who was just taken somewhere else, so it pops
-    /// the "New messages" pill instead of being followed. The method answers whether the named turn
+    /// the "New messages" pill instead of being followed. When a render window is in effect and the named
+    /// turn sits above it, the window grows first (see <see cref="ExpandRenderWindowToAsync"/>) so the row
+    /// is in the DOM before the module is asked to scroll. The method answers whether the named turn
     /// actually moved: <see langword="false"/> for an empty id, without the browser module
-    /// (<c>AutoScroll="false"</c>, static rendering), for an id the transcript cannot resolve, or when the
-    /// interop failed.
+    /// (<c>AutoScroll="false"</c>, static rendering), for an id that is in neither the host list nor the
+    /// transcript, or when the interop failed.
     /// </summary>
     /// <param name="messageId">The <see cref="AiMessage.Id"/> of the turn to show.</param>
     /// <returns>Whether the transcript scrolled to the named turn.</returns>
@@ -746,6 +856,12 @@ public partial class TmAiConversation
     private async Task<bool> ScrollToMessageCoreAsync(string messageId)
     {
         if (_disposed || string.IsNullOrWhiteSpace(messageId))
+        {
+            return false;
+        }
+
+        await ExpandWindowToCoreAsync(messageId);
+        if (_disposed)
         {
             return false;
         }
@@ -884,6 +1000,7 @@ public partial class TmAiConversation
         }
 
         _disposed = true;
+        CompletePendingRender(succeeded: false);
         _streamCts?.Cancel();
 
         var module = _module;

@@ -59,8 +59,9 @@ styling and for E2E.
 
 Public members: `IsGenerating`, `StreamAsync(AiMessage, IAsyncEnumerable<AiStreamDelta>,
 CancellationToken)`, `StopAsync()`, `ScrollToBottomAsync()`, `ScrollToMessageAsync(string messageId)`
-(which answers whether the named turn actually moved), plus the two `[JSInvokable]` scroll reports
-`OnScrollStateAsync` and `OnContentResizedAsync`.
+(which answers whether the named turn actually moved), `ExpandRenderWindowToAsync(string messageId)`
+(which grows a render window so the named turn is in the DOM, without scrolling), plus the two
+`[JSInvokable]` scroll reports `OnScrollStateAsync` and `OnContentResizedAsync`.
 
 ## Host-driven generation (`Generating`)
 
@@ -165,7 +166,11 @@ The host can drive the same scrolling from its own state: the public `ScrollToBo
 the same jump the built-in pill performs — it dismisses the "New messages" pill and re-arms the follow,
 so the next appended turn is followed again — and `ScrollToMessageAsync(messageId)` brings the turn with
 `data-message-id` into view and answers **whether the turn actually moved** (`false` for an empty id,
-without the module, for an id the transcript cannot resolve, or on an interop failure). The scroll is
+without the module, for an id that is in neither the host list nor the transcript, or on an interop
+failure). When a render window is in effect and the named turn sits above it, the window grows first
+(stepping back from the current start by `RenderWindowStep`, the same grid as "Load older messages")
+so the row is in the DOM before the module is asked to scroll; `ExpandRenderWindowToAsync(messageId)`
+is the same growth without the scroll (it answers whether the id is in the host list). The scroll is
 measured against the transcript itself (minus the log's `padding-top`), so the page the component sits
 on never moves, and marked as the module's own scroll, so not one animation frame is reported as the
 reader detaching. Unless the named turn IS the newest one, the jump also detaches the follow: the next
@@ -202,7 +207,11 @@ the reader is looking at and break the message anchors and focus. The rows hold 
 The window follows appended turns until the reader pulls the older ones in; after that it grows at the
 bottom instead of unmounting the rows above the viewport, and survives a parameter-only re-render (the
 reader's expansion is a choice, not a derived default). A shrinking list clamps it, a replaced list
-resets it to the new tail. The default is `null`: no window, every turn rendered.
+resets it to the new tail. A host jump to a turn above the window (`ScrollToMessageAsync` /
+`ExpandRenderWindowToAsync`) expands the same way: it steps back from the current start onto the
+"Load older" grid, the first rendered row is kept, a jump that lands at index 0 hands focus to the
+transcript (the "Load older" control has left the DOM), and a jump that is not the newest turn
+detaches the follow. The default is `null`: no window, every turn rendered.
 
 ## Accessibility
 
