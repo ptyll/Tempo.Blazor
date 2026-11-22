@@ -21,7 +21,7 @@
        (Invalid=@IsOutOfRange below) and painted by the --invalid class on the wrapper. *@
     <div class="tm-time-picker-body"
          role="group"
-         aria-labelledby="@(string.IsNullOrEmpty(Label) ? null : _labelId)"
+         aria-labelledby="@GroupLabelledBy"
          aria-readonly="@(ReadOnly ? "true" : null)"
          @attributes="AriaAttributes">
         @if (ShowSegments)
@@ -35,6 +35,7 @@
                          ReadOnly="@ReadOnly"
                          MinTime="@MinTime"
                          MaxTime="@MaxTime"
+                         AllowOvernightRange="@AllowOvernightRange"
                          Invalid="@IsOutOfRange"
                          HourCycle="@HourCycle"
                          Culture="@Culture"
@@ -55,7 +56,7 @@
         {
             <button type="button"
                     @ref="_triggerRef"
-                    id="@_triggerId"
+                    id="@EffectiveTriggerId"
                     class="tm-time-picker__trigger"
                     disabled="@Disabled"
                     aria-haspopup="dialog"
@@ -88,8 +89,8 @@
                         TrapFocus="true"
                         Title="@EffectiveSheetTitle"
                         SheetTitle="@EffectiveSheetTitle"
-                        AriaLabelledBy="@(string.IsNullOrEmpty(Label) ? null : _labelId)"
-                        AriaLabel="@(string.IsNullOrEmpty(Label) ? EffectiveSheetTitle : null)"
+                        AriaLabelledBy="@GroupLabelledBy"
+                        AriaLabel="@(string.IsNullOrEmpty(GroupLabelledBy) ? EffectiveSheetTitle : null)"
                         MobilePresentation="PanelPresentation.Auto"
                         LayoutMode="LayoutMode"
                         SheetInitialFocusSelector="[data-tm-time-segment='hours']"
@@ -99,6 +100,7 @@
                             ValueChanged="OnSelectorChanged"
                             MinTime="@MinTime"
                             MaxTime="@MaxTime"
+                            AllowOvernightRange="@AllowOvernightRange"
                             ShowSeconds="@ShowSeconds"
                             HourCycle="@HourCycle"
                             Culture="@Culture"
@@ -111,7 +113,7 @@
                             AmbiguousTimeResolution="@AmbiguousTimeResolution"
                             AmbiguousOffsetChanged="@AmbiguousOffsetChanged"
                             AriaDescribedBy="@AriaDescribedBy"
-                            AriaLabelledBy="@(string.IsNullOrEmpty(Label) ? null : _labelId)"
+                            AriaLabelledBy="@GroupLabelledBy"
                             LayoutMode="ResolvedLayout" />
             @if (UsesOnConfirm && !IsSheetPresentation)
             {

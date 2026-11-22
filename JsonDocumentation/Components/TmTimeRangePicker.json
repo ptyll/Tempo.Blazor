@@ -2,7 +2,7 @@
   "itemName": "TmTimeRangePicker",
   "kind": "Component",
   "category": "Pickers",
-  "description": "Time range picker with from/to time inputs, optional swap button, duration display, and validation for invalid ranges where end is before start.",
+  "description": "Time range picker with from/to time inputs, optional swap button, duration display, and validation for invalid ranges where end is before start. Additive AllowOvernightRange treats End before Start as a night shift; Presentation Popup/Auto adopts TmTimePicker / TmTimeSelector with a shared CommitMode. Default Presentation=Segments keeps today's two TmTimeInput DOM.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Pickers"
   ],
@@ -47,7 +47,7 @@
       "type": "TimeHourCycle",
       "isRequired": false,
       "default": "Auto",
-      "description": "12-hour versus 24-hour clock forwarded to both TmTimeInput ends. Default Auto follows Culture."
+      "description": "12-hour versus 24-hour clock forwarded to both ends (TmTimeInput in Segments, TmTimePicker in Popup/Auto). Default Auto follows Culture."
     },
     {
       "name": "Culture",
@@ -59,6 +59,64 @@
       "name": "Class",
       "type": "string?",
       "isRequired": false
+    },
+    {
+      "name": "AllowOvernightRange",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true, End before Start is a valid range that crosses midnight (night shifts). Defaults to false so today's same-day comparison is unchanged."
+    },
+    {
+      "name": "Presentation",
+      "type": "TimePickerPresentation",
+      "isRequired": false,
+      "default": "Segments",
+      "description": "How each end presents. Default Segments keeps today's two TmTimeInput DOM. Popup/Auto render two TmTimePickers that open TmTimeSelector in a dialog (sheet on a mobile viewport)."
+    },
+    {
+      "name": "CommitMode",
+      "type": "TimeCommitMode",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "Shared commit mode for both ends when Presentation is Popup or Auto; ignored by Segments. Default Auto: a sheet holds a draft until Done; a popover commits live."
+    },
+    {
+      "name": "MinuteStep",
+      "type": "int",
+      "isRequired": false,
+      "default": "1",
+      "description": "Minute step forwarded to both ends when Presentation is Popup or Auto; ignored by Segments. Defaults to 1."
+    },
+    {
+      "name": "EnforceStep",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true, an off-step bound value is marked invalid and never rewritten. Popup/Auto only; ignored by Segments. Defaults to false."
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Renders both ends read-only and hides the swap button. Never assigned inside the component. Defaults to false."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "Layout forwarded to both overlay pickers. Auto follows the viewport cascade."
+    },
+    {
+      "name": "StartLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Visible label of the start group. Falls back to localized TmTimeRangePicker_From."
+    },
+    {
+      "name": "EndLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Visible label of the end group. Falls back to localized TmTimeRangePicker_To."
     }
   ],
   "cssClasses": [
@@ -72,6 +130,7 @@
     "tm-time-range-swap-btn",
     "tm-time-range--invalid",
     "tm-time-range-duration",
+    "tm-time-range-overnight",
     "tm-picker-label",
     "tm-field-error"
   ],
@@ -83,6 +142,10 @@
     {
       "title": "Time range with swap, duration, and seconds",
       "code": "<TmTimeRangePicker @bind-Value=\"timeRange\"\n                   Label=\"Shift\"\n                   ShowSwapButton=\"true\"\n                   ShowDuration=\"true\"\n                   ShowSeconds=\"true\" />"
+    },
+    {
+      "title": "Overnight night shift",
+      "code": "<TmTimeRangePicker @bind-Value=\"shift\"\n                   AllowOvernightRange=\"true\"\n                   Presentation=\"TimePickerPresentation.Auto\"\n                   MinuteStep=\"15\"\n                   ShowDuration=\"true\"\n                   Label=\"Night shift\" />"
     }
   ]
 }

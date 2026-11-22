@@ -53,6 +53,11 @@
 - **`CommitMode`** — `Auto` (sheet OnConfirm / popover Live), `Live`, `OnConfirm`. The picker owns the draft; Done commits, Escape/backdrop/swipe discard. ReadOnly never opens. Popover OnConfirm renders `.tm-time-picker__done`; the sheet uses overlay Done via additive `TmOverlayPanel.OnSheetDone`.
 - **`EnforceStep` / DST** — an off-step bound value is marked invalid and never rewritten; first +/− or typed minutes snap. `ReferenceDate` + `TimeZone` disable a DST gap hour and offer earlier/later offset radios for an ambiguous civil time. Additive `Id` / `InputId` / `AriaDescribedBy` / `ValueExpression` keep generated segment ids when unset.
 
+### Added — TmTimeRangePicker adoption and overnight range (`Tempo.Blazor`, Fáze 7)
+
+- **`AllowOvernightRange`** (default `false`) on `TmTimeInput`, `TmTimePicker` and `TmTimeRangePicker` (`TmTimeSelector` already had it). A 22:00–06:00 bound is read as `[22:00, 24:00) ∪ [00:00, 06:00]` in range checks, stepping, the hour grid and the out-of-range message (`MinTime` then `MaxTime`, no swap). **Impact:** additive; without the flag today's same-day comparison is unchanged.
+- **`TmTimeRangePicker` adopts `TmTimeSelector`.** Additive `Presentation` (default `Segments` — today's two `TmTimeInput` DOM), shared `CommitMode` / `MinuteStep` / `EnforceStep` / `ReadOnly` / `LayoutMode`, and `StartLabel` / `EndLabel`. Popup/Auto render two `TmTimePicker`s so each end reuses the Fáze 6 draft/Done/sheet path. Overnight duration uses `TimeOfDayFormat.Duration` and localized `TmTimeRangePicker_DurationHoursMinutes` (`"{0}h {1:D2}m"` in English, so the default `"1h 30m"` shape is unchanged) and `TmTimeRangePicker_DurationMinutes` (`"{0}m"`) plus `TmTimeRangePicker_Overnight` (`(+1 day)`). Additive `TmTimePicker.AriaLabelledBy` (default `null`) names the picker group, overlay and trigger and wins over `Label`; the range picker uses it to name each end by its From/To group. Additive `TmTimePicker.TriggerId` (default the generated trigger id) lets a parent `<label for>` target the clock trigger when Auto on mobile hides the segments. `data-tm-overnight="true"` marks a wrapping range. **Impact:** additive; default Segments DOM and the existing six bUnit tests are unchanged.
+
 ## 2.12.0 - 2026-11-20
 
 > Plan "Tempo: public pin-on-top API for host status UI" (4ce1b994; decision `TOP-LAYER-PIN`,

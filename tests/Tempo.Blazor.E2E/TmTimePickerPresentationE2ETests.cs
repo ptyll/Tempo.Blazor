@@ -79,4 +79,19 @@ public sealed class TmTimePickerPresentationE2ETests : WasmTestBase
         await Assertions.Expect(card.Locator("#time-selector-dst-gap-hours")).ToBeVisibleAsync();
         await Assertions.Expect(card.Locator("#time-selector-dst-ambiguous-hours")).ToBeVisibleAsync();
     }
+
+    [TestMethod]
+    public async Task OvernightPicker_TwentyThreeThirty_OpensSelectorInRange()
+    {
+        var page = await OpenTimeInputAsync(1280, 800);
+        var card = page.Locator("[data-testid='time-picker-overnight-card']");
+        await Assertions.Expect(card.Locator(".tm-time-picker--invalid")).ToHaveCountAsync(0);
+        await Assertions.Expect(card.Locator(".tm-time-seg--hours")).ToHaveValueAsync("23");
+
+        await card.Locator(".tm-time-picker__trigger").ClickAsync();
+        var selector = page.Locator(".tm-time-picker__popup [data-testid='time-selector']");
+        await Assertions.Expect(selector).ToBeVisibleAsync();
+        await Assertions.Expect(selector.Locator("[data-tm-time-segment='hours']")).ToHaveTextAsync("23");
+        await Assertions.Expect(selector.Locator(".tm-time-selector__error")).ToHaveCountAsync(0);
+    }
 }

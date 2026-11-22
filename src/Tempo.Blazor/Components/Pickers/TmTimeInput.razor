@@ -97,6 +97,13 @@
     /// </summary>
     [Parameter] public TimeOnly? MaxTime { get; set; }
 
+    /// <summary>
+    /// When true, <see cref="MinTime"/> after <see cref="MaxTime"/> is read as a range that
+    /// crosses midnight (<c>[min, 24:00) ∪ [00:00, max]</c>). Defaults to false so today's
+    /// same-day comparison is unchanged.
+    /// </summary>
+    [Parameter] public bool AllowOvernightRange { get; set; }
+
     /// <summary>Optional id applied to the hours segment so a parent <c>&lt;label for&gt;</c> can target it.</summary>
     [Parameter] public string? InputId { get; set; }
 
@@ -211,7 +218,8 @@
         get
         {
             var shown = _hasDraft ? _draft : Value;
-            return shown.HasValue && ((MinTime.HasValue && shown.Value < MinTime.Value) || (MaxTime.HasValue && shown.Value > MaxTime.Value));
+            return shown.HasValue
+                && !TimeOfDayFormat.IsInRange(shown.Value, MinTime, MaxTime, AllowOvernightRange);
         }
     }
 

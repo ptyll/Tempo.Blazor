@@ -42,4 +42,18 @@ public class TimeSelectorLocalizationTests : LocalizationTestBase
         cs["TmTimeSelector_HoursTab"].Should().Be(cs["TmTimePicker_Hours"]);
         cs["TmTimeSelector_MinutesTab"].Should().Be(cs["TmTimePicker_Minutes"]);
     }
+
+    [Fact]
+    public void TimeRangePicker_DurationAndOvernight_AreLocalizedInTheMockMaps()
+    {
+        var en = BuildEnglishLocalizer();
+        en["TmTimeRangePicker_DurationHoursMinutes"].Should().Be("{0}h {1:D2}m");
+        en["TmTimeRangePicker_DurationMinutes"].Should().Be("{0}m");
+        en["TmTimeRangePicker_Overnight"].Should().Be("(+1 day)");
+
+        var cs = BuildCzechLocalizer();
+        cs["TmTimeRangePicker_DurationHoursMinutes"].Should().Be("{0} h {1:D2} min");
+        cs["TmTimeRangePicker_DurationMinutes"].Should().Be("{0} min");
+        cs["TmTimeRangePicker_Overnight"].Should().Be("(+1 den)");
+    }
 }

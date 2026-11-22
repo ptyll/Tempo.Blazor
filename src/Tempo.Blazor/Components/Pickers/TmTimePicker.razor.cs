@@ -42,6 +42,13 @@ public partial class TmTimePicker
     /// <summary>Inclusive upper bound forwarded to the nested input/selector.</summary>
     [Parameter] public TimeOnly? MaxTime { get; set; }
 
+    /// <summary>
+    /// When true, <see cref="MinTime"/> after <see cref="MaxTime"/> is read as a range that
+    /// crosses midnight. Forwarded to the nested <c>TmTimeInput</c> and <c>TmTimeSelector</c>.
+    /// Defaults to false so today's same-day comparison is unchanged.
+    /// </summary>
+    [Parameter] public bool AllowOvernightRange { get; set; }
+
     /// <summary>When true, a seconds segment / spinbutton is rendered. Defaults to false.</summary>
     [Parameter] public bool ShowSeconds { get; set; }
 
@@ -127,10 +134,24 @@ public partial class TmTimePicker
     [Parameter] public string? InputId { get; set; }
 
     /// <summary>
+    /// Optional explicit id for the clock trigger so a parent <c>&lt;label for&gt;</c> can target it
+    /// when Auto on mobile hides the segments. Defaults to the generated
+    /// <c>tm-time-picker-trigger-{{guid}}</c> id.
+    /// </summary>
+    [Parameter] public string? TriggerId { get; set; }
+
+    /// <summary>
     /// Extra ids referenced from every segment / spinbutton <c>aria-describedby</c>. Forwarded to
     /// the nested input and selector.
     /// </summary>
     [Parameter] public string? AriaDescribedBy { get; set; }
+
+    /// <summary>
+    /// Optional id(s) that name the picker group and overlay. Wins over the visible
+    /// <see cref="Label"/> for <c>aria-labelledby</c>. Used by <c>TmTimeRangePicker</c> so each
+    /// end is named by its From/To group without setting <see cref="Label"/>.
+    /// </summary>
+    [Parameter] public string? AriaLabelledBy { get; set; }
 
     /// <summary>Minute step forwarded to the overlay selector. Defaults to 1.</summary>
     [Parameter] public int MinuteStep { get; set; } = 1;
@@ -181,15 +202,23 @@ public partial class TmTimePicker
             ? $"{Id}-input"
             : _generatedInputId;
 
-    private string LabelFor => ShowSegments ? EffectiveInputId : _triggerId;
+    private string EffectiveTriggerId => !string.IsNullOrEmpty(TriggerId) ? TriggerId! : _triggerId;
+
+    private string LabelFor => ShowSegments ? EffectiveInputId : EffectiveTriggerId;
 
     private string EffectiveSheetTitle
         => FirstNonEmpty(SheetTitle, Label, Loc["TmTimePicker_SheetTitle"])!;
 
+    private string? GroupLabelledBy => !string.IsNullOrEmpty(AriaLabelledBy)
+        ? AriaLabelledBy
+        : (string.IsNullOrEmpty(Label) ? null : _labelId);
+
     private string? TriggerAriaLabel => IsMobileAuto ? null : Loc["TmTimePicker_OpenSelector"];
 
     private string? TriggerLabelledBy => IsMobileAuto
-        ? (string.IsNullOrEmpty(Label) ? _valueId : $"{_labelId} {_valueId}")
+        ? (!string.IsNullOrEmpty(AriaLabelledBy)
+            ? $"{AriaLabelledBy} {_valueId}"
+            : (string.IsNullOrEmpty(Label) ? _valueId : $"{_labelId} {_valueId}"))
         : null;
 
     private string DisplayedValue
@@ -208,8 +237,7 @@ public partial class TmTimePicker
 
     private bool IsOutOfRange =>
         Value.HasValue &&
-        ((MinTime.HasValue && Value.Value < MinTime.Value) ||
-         (MaxTime.HasValue && Value.Value > MaxTime.Value));
+        !TimeOfDayFormat.IsInRange(Value.Value, MinTime, MaxTime, AllowOvernightRange);
 
     /// <summary>Consumer <c>aria-*</c> attributes target the input group; everything else the root.</summary>
     private IReadOnlyDictionary<string, object>? AriaAttributes =>

@@ -234,4 +234,30 @@ public class TmTimePickerPresentationTests : LocalizationTestBase
             "localized <c>TmTimePicker_SheetTitle</c>",
             "SheetTitle XML doc must name the resource key, matching CHANGELOG and the JSON overlay");
     }
+
+    [Fact]
+    public void TriggerId_HostValue_LandsOnTheTrigger()
+    {
+        var cut = RenderPicker(p => p
+            .Add(c => c.Presentation, TimePickerPresentation.Popup)
+            .Add(c => c.TriggerId, "host-time-trigger"));
+
+        cut.Find(".tm-time-picker__trigger").Id.Should().Be("host-time-trigger");
+        new TmTimePicker().TriggerId.Should().BeNull("TriggerId is additive and defaults to the generated id");
+    }
+
+    [Fact]
+    public void Popup_AllowOvernightRange_ForwardsToSelector()
+    {
+        var cut = RenderPicker(p => p
+            .Add(c => c.Presentation, TimePickerPresentation.Popup)
+            .Add(c => c.MinTime, new TimeOnly(22, 0))
+            .Add(c => c.MaxTime, new TimeOnly(6, 0))
+            .Add(c => c.AllowOvernightRange, true));
+
+        cut.Find(".tm-time-picker__trigger").Click();
+
+        cut.FindComponent<TmTimeSelector>().Instance.AllowOvernightRange.Should().BeTrue();
+        cut.FindComponent<TmTimeInput>().Instance.AllowOvernightRange.Should().BeTrue();
+    }
 }

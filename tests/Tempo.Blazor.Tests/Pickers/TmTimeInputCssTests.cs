@@ -65,6 +65,30 @@ public sealed class TmTimeInputCssTests
         css.Should().Contain(".tm-time-input-wrap");
     }
 
+    [Fact]
+    public void TimeRangePicker_OvernightAndWrap_UseTokensOnly()
+    {
+        var css = ThemeCss.ComponentCss("_time-range-picker.css");
+        css.Should().Contain(".tm-time-range-overnight");
+        css.Should().Contain(".tm-time-range-body");
+        css.Should().Contain("flex-wrap: wrap");
+        css.Should().Contain("var(--tm-space-");
+        css.Should().Contain("var(--tm-touch-target)");
+        css.Should().NotContain("#", "component CSS uses tokens, never a hex colour");
+        Regex.IsMatch(css, @"(?<![\w.-])\d+px(?![\w.-])").Should().BeFalse(
+            "range-picker CSS must not introduce a literal px size — 44 px is --tm-touch-target");
+    }
+
+    [Fact]
+    public void BundledStylesheet_CarriesTheOvernightAndWrapRules()
+    {
+        var bundled = ThemeCss.BundledCss();
+        bundled.Should().Contain(".tm-time-range-overnight",
+            "the committed bundle must carry the overnight class — a partial edited without rebundling ships nothing");
+        bundled.Should().Contain("flex-wrap:wrap",
+            "the committed bundle must wrap the range body so 374 px cover does not overflow");
+    }
+
     private static string CoarseBlockOf(string file)
     {
         var css = ThemeCss.ComponentCss(file);

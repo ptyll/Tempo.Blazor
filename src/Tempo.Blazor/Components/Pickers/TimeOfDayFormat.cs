@@ -159,6 +159,38 @@ internal static class TimeOfDayFormat
     }
 
     /// <summary>
+    /// Duration from <paramref name="start"/> to <paramref name="end"/>. When
+    /// <paramref name="end"/> is before <paramref name="start"/> and <paramref name="overnight"/>
+    /// is set, the span wraps midnight as <c>(24h − start) + end</c>. Without overnight a reversed
+    /// pair returns a negative <see cref="TimeSpan"/> (the caller must not render it). Equal ends
+    /// are a zero-length range.
+    /// </summary>
+    public static TimeSpan Duration(TimeOnly start, TimeOnly end, bool overnight)
+    {
+        if (end >= start)
+        {
+            return end - start;
+        }
+
+        if (overnight)
+        {
+            return TimeSpan.FromHours(24) - start.ToTimeSpan() + end.ToTimeSpan();
+        }
+
+        // TimeOnly subtraction wraps the day; callers that disabled overnight need the
+        // signed civil difference so they can skip rendering a negative span.
+        return end.ToTimeSpan() - start.ToTimeSpan();
+    }
+
+    /// <summary>
+    /// <see langword="true"/> when <paramref name="end"/> is on or after <paramref name="start"/>,
+    /// or when <paramref name="overnight"/> allows a range that crosses midnight.
+    /// Equal ends are valid with duration zero (same as today's picker).
+    /// </summary>
+    public static bool IsValidRange(TimeOnly start, TimeOnly end, bool overnight)
+        => end >= start || overnight;
+
+    /// <summary>
     /// Snaps minutes onto <paramref name="minuteStep"/> in <paramref name="direction"/> without
     /// carrying into the hour. Already-on-step values are unchanged.
     /// </summary>

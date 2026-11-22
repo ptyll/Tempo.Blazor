@@ -578,4 +578,39 @@ public class TmTimeSelectorGridTests : LocalizationTestBase
         act.Should().Throw<ArgumentOutOfRangeException>()
             .Which.ParamName.Should().Be("GridMinuteStep");
     }
+
+    [Fact]
+    public void OvernightRange_HourGrid_DisablesNoon_AndEnablesTwentyThree()
+    {
+        var cut = RenderSelector(p => p
+                .Add(c => c.Value, new TimeOnly(23, 0))
+                .Add(c => c.MinTime, new TimeOnly(22, 0))
+                .Add(c => c.MaxTime, new TimeOnly(6, 0))
+                .Add(c => c.AllowOvernightRange, true),
+            layout: TmLayoutMode.Mobile);
+
+        cut.Find("[data-tm-time-hour='12']").GetAttribute("aria-disabled").Should().Be("true");
+        cut.Find("[data-tm-time-hour='23']").GetAttribute("aria-disabled").Should().BeNull();
+        cut.Find("[data-tm-time-hour='0']").GetAttribute("aria-disabled").Should().BeNull();
+        cut.Find("[data-tm-time-hour='6']").GetAttribute("aria-disabled").Should().BeNull();
+    }
+
+    [Fact]
+    public void OvernightRange_StartingTime_DoesNotSnapToMin()
+    {
+        var clock = new FakeTimeProvider(new DateTimeOffset(2031, 7, 4, 12, 0, 0, TimeSpan.Zero));
+        Services.AddSingleton<TimeProvider>(clock);
+
+        var cut = RenderSelector(p => p
+                .Add(c => c.Value, new TimeOnly(23, 0))
+                .Add(c => c.ShowNowPreset, true)
+                .Add(c => c.MinTime, new TimeOnly(22, 0))
+                .Add(c => c.MaxTime, new TimeOnly(6, 0))
+                .Add(c => c.AllowOvernightRange, true),
+            layout: TmLayoutMode.Mobile);
+
+        cut.Find("[data-testid='time-selector-preset-now']")
+            .GetAttribute("data-tm-time-preset").Should().Be("12:00",
+                "overnight StartingTime must keep the rounded now instead of snapping to MinTime");
+    }
 }

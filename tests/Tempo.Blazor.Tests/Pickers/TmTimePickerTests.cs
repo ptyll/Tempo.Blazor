@@ -217,4 +217,33 @@ public class TmTimePickerTests : LocalizationTestBase
         cut.Markup.Should().NotContain("tm-overlay-panel");
         cut.Markup.Should().NotContain("tm-time-selector");
     }
+
+    [Fact]
+    public void TimePicker_AllowOvernightRange_ForwardsToTimeInput()
+    {
+        var cut = Render<TmTimePicker>(p => p
+            .Add(c => c.Value, new TimeOnly(23, 30))
+            .Add(c => c.MinTime, new TimeOnly(22, 0))
+            .Add(c => c.MaxTime, new TimeOnly(6, 0))
+            .Add(c => c.AllowOvernightRange, true)
+            .Add(c => c.HourCycle, TimeHourCycle.H23));
+
+        cut.FindComponent<TmTimeInput>().Instance.AllowOvernightRange.Should().BeTrue();
+        cut.FindAll(".tm-time-picker--invalid").Should().BeEmpty();
+        cut.Find(".tm-time-seg--hours").HasAttribute("aria-invalid").Should().BeFalse();
+    }
+
+    [Fact]
+    public void TimePicker_Overnight_TwentyThreeThirty_IsInRange()
+    {
+        var cut = Render<TmTimePicker>(p => p
+            .Add(c => c.Value, new TimeOnly(23, 30))
+            .Add(c => c.MinTime, new TimeOnly(22, 0))
+            .Add(c => c.MaxTime, new TimeOnly(6, 0))
+            .Add(c => c.AllowOvernightRange, true)
+            .Add(c => c.HourCycle, TimeHourCycle.H23));
+
+        cut.FindAll(".tm-time-picker--invalid").Should().BeEmpty(
+            "IsOutOfRange must use IsInRange so 23:30 stays valid in 22:00–06:00");
+    }
 }

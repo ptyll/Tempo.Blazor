@@ -1,13 +1,18 @@
 @namespace Tempo.Blazor.Components.Pickers
 @using System.Globalization
+@using Tempo.Blazor.Abstractions.Layout
 
-<div class="tm-time-range-picker @Class @(IsInvalid ? "tm-time-range--invalid" : "")" @attributes="RootAttributes">
+<div class="tm-time-range-picker @Class @(IsInvalid ? "tm-time-range--invalid" : "")"
+     data-tm-overnight="@(IsOvernight ? "true" : null)"
+     @attributes="RootAttributes">
     @if (!string.IsNullOrEmpty(Label))
     {
-        <label id="@_labelId" class="tm-picker-label" for="@_startInputId">@Label</label>
+        <label id="@_labelId" class="tm-picker-label" for="@(UsesOverlay ? null : _startInputId)">@Label</label>
     }
 
-    @* Composite control: `for` targets the start-hours segment; the body is a named group. *@
+    @* Composite control: `for` targets the start-hours segment in Segments; overlay mode drops
+       `for` because Auto on mobile hides the segments and the group is already named by
+       aria-labelledby. *@
     <div class="tm-time-range-body"
          role="group"
          aria-labelledby="@(string.IsNullOrEmpty(Label) ? null : _labelId)"
@@ -17,14 +22,36 @@
         <div class="tm-time-range-section tm-time-range-from"
              role="group"
              aria-labelledby="@_fromLabelId">
-            <span id="@_fromLabelId" class="tm-time-range-label">@Loc["TmTimeRangePicker_From"]</span>
-            <TmTimeInput Value="@Value.Start"
-                         ValueChanged="OnStartChanged"
-                         InputId="@_startInputId"
-                         ShowSeconds="@ShowSeconds"
-                         Disabled="@Disabled"
-                         HourCycle="@HourCycle"
-                         Culture="@Culture" />
+            <span id="@_fromLabelId" class="tm-time-range-label">@ResolvedStartLabel</span>
+            @if (UsesOverlay)
+            {
+                <TmTimePicker Value="@Value.Start"
+                              ValueChanged="OnStartChanged"
+                              InputId="@_startInputId"
+                              TriggerId="@_startTriggerId"
+                              Presentation="@Presentation"
+                              CommitMode="@CommitMode"
+                              MinuteStep="@MinuteStep"
+                              EnforceStep="@EnforceStep"
+                              ShowSeconds="@ShowSeconds"
+                              Disabled="@Disabled"
+                              ReadOnly="@ReadOnly"
+                              HourCycle="@HourCycle"
+                              Culture="@Culture"
+                              LayoutMode="@LayoutMode"
+                              AriaLabelledBy="@_fromLabelId" />
+            }
+            else
+            {
+                <TmTimeInput Value="@Value.Start"
+                             ValueChanged="OnStartChanged"
+                             InputId="@_startInputId"
+                             ShowSeconds="@ShowSeconds"
+                             Disabled="@Disabled"
+                             ReadOnly="@ReadOnly"
+                             HourCycle="@HourCycle"
+                             Culture="@Culture" />
+            }
         </div>
 
         <span class="tm-time-range-sep" aria-hidden="true">–</span>
@@ -32,16 +59,39 @@
         <div class="tm-time-range-section tm-time-range-to"
              role="group"
              aria-labelledby="@_toLabelId">
-            <span id="@_toLabelId" class="tm-time-range-label">@Loc["TmTimeRangePicker_To"]</span>
-            <TmTimeInput Value="@Value.End"
-                         ValueChanged="OnEndChanged"
-                         ShowSeconds="@ShowSeconds"
-                         Disabled="@Disabled"
-                         HourCycle="@HourCycle"
-                         Culture="@Culture" />
+            <span id="@_toLabelId" class="tm-time-range-label">@ResolvedEndLabel</span>
+            @if (UsesOverlay)
+            {
+                <TmTimePicker Value="@Value.End"
+                              ValueChanged="OnEndChanged"
+                              InputId="@_endInputId"
+                              TriggerId="@_endTriggerId"
+                              Presentation="@Presentation"
+                              CommitMode="@CommitMode"
+                              MinuteStep="@MinuteStep"
+                              EnforceStep="@EnforceStep"
+                              ShowSeconds="@ShowSeconds"
+                              Disabled="@Disabled"
+                              ReadOnly="@ReadOnly"
+                              HourCycle="@HourCycle"
+                              Culture="@Culture"
+                              LayoutMode="@LayoutMode"
+                              AriaLabelledBy="@_toLabelId" />
+            }
+            else
+            {
+                <TmTimeInput Value="@Value.End"
+                             ValueChanged="OnEndChanged"
+                             InputId="@_endInputId"
+                             ShowSeconds="@ShowSeconds"
+                             Disabled="@Disabled"
+                             ReadOnly="@ReadOnly"
+                             HourCycle="@HourCycle"
+                             Culture="@Culture" />
+            }
         </div>
 
-        @if (ShowSwapButton && !Disabled)
+        @if (ShowSwapButton && !Disabled && !ReadOnly)
         {
             <button type="button"
                     class="tm-time-range-swap-btn tm-btn-icon"
@@ -62,38 +112,132 @@
     {
         <span class="tm-time-range-duration">
             @Loc["TmTimeRangePicker_Duration"]: @FormatDuration()
+            @if (IsOvernight)
+            {
+                <span class="tm-time-range-overnight">@Loc["TmTimeRangePicker_Overnight"]</span>
+            }
         </span>
     }
 </div>
 
 @code {
-    [Parameter] public (TimeOnly? Start, TimeOnly? End) Value        { get; set; }
+    /// <summary>The bound start and end times of day.</summary>
+    [Parameter] public (TimeOnly? Start, TimeOnly? End) Value { get; set; }
+
+    /// <summary>Fires when either end of the range changes.</summary>
     [Parameter] public EventCallback<(TimeOnly? Start, TimeOnly? End)> ValueChanged { get; set; }
-    [Parameter] public bool    ShowDuration   { get; set; }
-    [Parameter] public bool    ShowSwapButton { get; set; }
-    [Parameter] public bool    ShowSeconds    { get; set; }
-    [Parameter] public string? Label          { get; set; }
-    [Parameter] public bool    Disabled       { get; set; }
+
+    /// <summary>When true, a localized duration is rendered below the range. Defaults to false.</summary>
+    [Parameter] public bool ShowDuration { get; set; }
+
+    /// <summary>When true, a swap button exchanges start and end. Hidden while Disabled or ReadOnly.</summary>
+    [Parameter] public bool ShowSwapButton { get; set; }
+
+    /// <summary>When true, a seconds segment is rendered on both ends. Defaults to false.</summary>
+    [Parameter] public bool ShowSeconds { get; set; }
+
+    /// <summary>Visible label that names the composite group.</summary>
+    [Parameter] public string? Label { get; set; }
+
+    /// <summary>Disables both ends and the swap button. Distinct from <see cref="ReadOnly"/>.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
     /// <summary>
-    /// 12-hour versus 24-hour clock forwarded to both <c>TmTimeInput</c> ends. Default
+    /// 12-hour versus 24-hour clock forwarded to both ends (<c>TmTimeInput</c> in Segments,
+    /// <c>TmTimePicker</c> in Popup/Auto). Default
     /// <see cref="TimeHourCycle.Auto"/> follows <see cref="Culture"/>.
     /// </summary>
     [Parameter] public TimeHourCycle HourCycle { get; set; } = TimeHourCycle.Auto;
+
     /// <summary>
     /// Culture used to resolve <see cref="HourCycle"/>.<see cref="TimeHourCycle.Auto"/>.
     /// Null uses <see cref="CultureInfo.CurrentCulture"/>.
     /// </summary>
     [Parameter] public CultureInfo? Culture { get; set; }
-    [Parameter] public string? Class          { get; set; }
+
+    /// <summary>Additional CSS class(es) for the root element.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>
+    /// When true, <c>End &lt; Start</c> is a valid range that crosses midnight (night shifts).
+    /// Defaults to false so today's same-day comparison is unchanged.
+    /// </summary>
+    [Parameter] public bool AllowOvernightRange { get; set; }
+
+    /// <summary>
+    /// How each end presents. Default <see cref="TimePickerPresentation.Segments"/> keeps today's
+    /// two <c>TmTimeInput</c> DOM with no overlay. Popup/Auto render two <c>TmTimePicker</c>s that
+    /// open <c>TmTimeSelector</c> in a dialog (sheet on a mobile viewport).
+    /// </summary>
+    [Parameter] public TimePickerPresentation Presentation { get; set; } = TimePickerPresentation.Segments;
+
+    /// <summary>
+    /// Shared commit mode for both ends when Presentation is Popup or Auto; ignored by Segments.
+    /// Default <see cref="TimeCommitMode.Auto"/>: a sheet holds a draft until Done; a popover
+    /// commits live.
+    /// </summary>
+    [Parameter] public TimeCommitMode CommitMode { get; set; } = TimeCommitMode.Auto;
+
+    /// <summary>
+    /// Minute step forwarded to both ends when Presentation is Popup or Auto; ignored by Segments.
+    /// Defaults to 1.
+    /// </summary>
+    [Parameter] public int MinuteStep { get; set; } = 1;
+
+    /// <summary>
+    /// When true, an off-step bound value is marked invalid and never rewritten. Popup/Auto only;
+    /// ignored by Segments. Defaults to false.
+    /// </summary>
+    [Parameter] public bool EnforceStep { get; set; }
+
+    /// <summary>
+    /// Renders both ends read-only and hides the swap button. Never assigned inside the component.
+    /// Defaults to false.
+    /// </summary>
+    [Parameter] public bool ReadOnly { get; set; }
+
+    /// <summary>
+    /// Layout forwarded to both overlay pickers. Auto follows the viewport cascade.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>
+    /// Visible label of the start group. Falls back to localized <c>TmTimeRangePicker_From</c>.
+    /// </summary>
+    [Parameter] public string? StartLabel { get; set; }
+
+    /// <summary>
+    /// Visible label of the end group. Falls back to localized <c>TmTimeRangePicker_To</c>.
+    /// </summary>
+    [Parameter] public string? EndLabel { get; set; }
+
+    /// <summary>
+    /// Unmatched attributes. <c>aria-*</c> land on the named group; everything else on the root.
+    /// </summary>
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
-    private readonly string _labelId      = $"tm-time-range-label-{Guid.NewGuid():N}";
-    private readonly string _startInputId = $"tm-time-range-start-{Guid.NewGuid():N}";
-    private readonly string _fromLabelId  = $"tm-time-range-from-label-{Guid.NewGuid():N}";
-    private readonly string _toLabelId    = $"tm-time-range-to-label-{Guid.NewGuid():N}";
+    private readonly string _labelId        = $"tm-time-range-label-{Guid.NewGuid():N}";
+    private readonly string _startInputId   = $"tm-time-range-start-{Guid.NewGuid():N}";
+    private readonly string _endInputId     = $"tm-time-range-end-{Guid.NewGuid():N}";
+    private readonly string _startTriggerId = $"tm-time-range-start-trigger-{Guid.NewGuid():N}";
+    private readonly string _endTriggerId   = $"tm-time-range-end-trigger-{Guid.NewGuid():N}";
+    private readonly string _fromLabelId    = $"tm-time-range-from-label-{Guid.NewGuid():N}";
+    private readonly string _toLabelId      = $"tm-time-range-to-label-{Guid.NewGuid():N}";
+
+    private bool UsesOverlay => Presentation is TimePickerPresentation.Popup or TimePickerPresentation.Auto;
 
     private bool IsInvalid =>
-        Value.Start.HasValue && Value.End.HasValue && Value.End.Value < Value.Start.Value;
+        Value.Start.HasValue && Value.End.HasValue
+        && !AllowOvernightRange && Value.End.Value < Value.Start.Value;
+
+    private bool IsOvernight =>
+        AllowOvernightRange
+        && Value.Start.HasValue && Value.End.HasValue
+        && Value.End.Value < Value.Start.Value;
+
+    private string ResolvedStartLabel => string.IsNullOrEmpty(StartLabel) ? Loc["TmTimeRangePicker_From"] : StartLabel!;
+
+    private string ResolvedEndLabel => string.IsNullOrEmpty(EndLabel) ? Loc["TmTimeRangePicker_To"] : EndLabel!;
 
     /// <summary>Consumer <c>aria-*</c> attributes target the input group; everything else the root.</summary>
     private IReadOnlyDictionary<string, object>? AriaAttributes =>
@@ -121,10 +265,22 @@
 
     private string FormatDuration()
     {
-        if (!Value.Start.HasValue || !Value.End.HasValue) return string.Empty;
-        var span = Value.End.Value - Value.Start.Value;
+        if (!Value.Start.HasValue || !Value.End.HasValue)
+        {
+            return string.Empty;
+        }
+
+        var span = TimeOfDayFormat.Duration(Value.Start.Value, Value.End.Value, AllowOvernightRange);
+        if (span < TimeSpan.Zero)
+        {
+            return string.Empty;
+        }
+
         if (span.Hours > 0)
-            return $"{span.Hours}h {span.Minutes:D2}m";
-        return $"{span.Minutes}m";
+        {
+            return Loc["TmTimeRangePicker_DurationHoursMinutes", span.Hours, span.Minutes];
+        }
+
+        return Loc["TmTimeRangePicker_DurationMinutes", span.Minutes];
     }
 }

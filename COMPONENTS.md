@@ -3188,6 +3188,8 @@ Výběr času s dropdownem.
 | `Disabled` | `bool` | `false` | Zakázáno |
 | `Required` | `bool` | `false` | Povinné |
 | `Label` | `string?` | `null` | Popisek |
+| `TriggerId` | `string?` | `null` | Volitelné explicitní id clock triggeru, aby ho mohla cílit `<label for>` nadřazené komponenty, když Auto na mobilu skryje segmenty |
+| `AriaLabelledBy` | `string?` | `null` | Id, která pojmenují group / overlay / trigger a přebijí `Label` |
 | `Class` | `string?` | `null` | Další CSS třídy |
 | `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 

@@ -658,6 +658,42 @@ public class TmTimeSelectorTests : LocalizationTestBase
         captured.Should().Be(new TimeOnly(11, 15, 30));
     }
 
+    [Fact]
+    public void OvernightRange_IncreaseHour_FromTwentyThree_WrapsToMidnight()
+    {
+        TimeOnly? captured = new TimeOnly(23, 0);
+        var cut = RenderSelector(p => p
+            .Add(c => c.Value, captured)
+            .Add(c => c.MinTime, new TimeOnly(22, 0))
+            .Add(c => c.MaxTime, new TimeOnly(6, 0))
+            .Add(c => c.AllowOvernightRange, true)
+            .Add(c => c.ValueChanged, (TimeOnly? v) => captured = v));
+
+        IncreaseHours(cut).HasAttribute("disabled").Should().BeFalse();
+        IncreaseHours(cut).Click();
+
+        captured.Should().Be(new TimeOnly(0, 0));
+        Hours(cut).TextContent.Trim().Should().Be("00");
+    }
+
+    [Fact]
+    public void OvernightRange_IncreaseHour_FromSix_IsRejected()
+    {
+        TimeOnly? captured = new TimeOnly(6, 0);
+        var cut = RenderSelector(p => p
+            .Add(c => c.Value, captured)
+            .Add(c => c.MinTime, new TimeOnly(22, 0))
+            .Add(c => c.MaxTime, new TimeOnly(6, 0))
+            .Add(c => c.AllowOvernightRange, true)
+            .Add(c => c.ValueChanged, (TimeOnly? v) => captured = v));
+
+        cut.Find("[data-testid='time-selector-increase-hours']").HasAttribute("disabled").Should().BeTrue();
+        cut.Find("[data-testid='time-selector-increase-hours']").Click();
+
+        captured.Should().Be(new TimeOnly(6, 0), "stepping 06:00 → 07:00 is outside the overnight union");
+        Hours(cut).TextContent.Trim().Should().Be("06");
+    }
+
     private sealed class AppointmentModel
     {
         public TimeOnly? Start { get; set; }

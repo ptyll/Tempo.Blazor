@@ -121,6 +121,68 @@ public class TmTimeInputTests : LocalizationTestBase
         cut.Find(".tm-time-seg--hours").GetAttribute("aria-invalid").Should().Be("true");
     }
 
+    [Fact]
+    public void OvernightRange_TwentyThreeThirty_IsValid()
+    {
+        var cut = Render<TmTimeInput>(p => p
+            .Add(c => c.Value, new TimeOnly(23, 30))
+            .Add(c => c.MinTime, new TimeOnly(22, 0))
+            .Add(c => c.MaxTime, new TimeOnly(6, 0))
+            .Add(c => c.AllowOvernightRange, true)
+            .Add(c => c.HourCycle, TimeHourCycle.H23));
+
+        cut.Find(".tm-time-seg--hours").HasAttribute("aria-invalid").Should().BeFalse();
+        cut.FindAll(".tm-time-input__error").Should().BeEmpty();
+        cut.Find(".tm-time-input").ClassList.Should().NotContain("tm-time-input--invalid");
+    }
+
+    [Fact]
+    public void OvernightRange_TwoAM_IsValid()
+    {
+        var cut = Render<TmTimeInput>(p => p
+            .Add(c => c.Value, new TimeOnly(2, 0))
+            .Add(c => c.MinTime, new TimeOnly(22, 0))
+            .Add(c => c.MaxTime, new TimeOnly(6, 0))
+            .Add(c => c.AllowOvernightRange, true)
+            .Add(c => c.HourCycle, TimeHourCycle.H23));
+
+        cut.Find(".tm-time-seg--hours").HasAttribute("aria-invalid").Should().BeFalse();
+        cut.FindAll(".tm-time-input__error").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void OvernightRange_Noon_IsInvalid_AndKeepsMinMaxOrderInMessage()
+    {
+        var cut = Render<TmTimeInput>(p => p
+            .Add(c => c.Value, new TimeOnly(12, 0))
+            .Add(c => c.MinTime, new TimeOnly(22, 0))
+            .Add(c => c.MaxTime, new TimeOnly(6, 0))
+            .Add(c => c.AllowOvernightRange, true)
+            .Add(c => c.HourCycle, TimeHourCycle.H23));
+
+        cut.Find(".tm-time-seg--hours").GetAttribute("aria-invalid").Should().Be("true");
+        cut.Find(".tm-time-input__error").TextContent
+            .Should().Contain("22:00")
+            .And.Contain("06:00");
+        var text = cut.Find(".tm-time-input__error").TextContent;
+        text.IndexOf("22:00", StringComparison.Ordinal)
+            .Should().BeLessThan(text.IndexOf("06:00", StringComparison.Ordinal),
+                "overnight OutOfRange must print MinTime then MaxTime without swapping");
+    }
+
+    [Fact]
+    public void OvernightRange_Disabled_KeepsTodaysRejection()
+    {
+        var cut = Render<TmTimeInput>(p => p
+            .Add(c => c.Value, new TimeOnly(23, 30))
+            .Add(c => c.MinTime, new TimeOnly(22, 0))
+            .Add(c => c.MaxTime, new TimeOnly(6, 0))
+            .Add(c => c.HourCycle, TimeHourCycle.H23));
+
+        cut.Find(".tm-time-seg--hours").GetAttribute("aria-invalid").Should().Be("true");
+        cut.Find(".tm-time-input").ClassList.Should().Contain("tm-time-input--invalid");
+    }
+
     // ── Hour cycle ───────────────────────────────────────────────────────────
 
     [Fact]

@@ -326,6 +326,47 @@ public class TimeOfDayFormatTests
             .Should().Be(value);
     }
 
+    [Fact]
+    public void Duration_Overnight_TwentyTwoToSix_IsEightHours()
+    {
+        TimeOfDayFormat.Duration(new TimeOnly(22, 0), new TimeOnly(6, 0), overnight: true)
+            .Should().Be(TimeSpan.FromHours(8));
+    }
+
+    [Fact]
+    public void Duration_SameDay_NineToSeventeenThirty_IsEightHoursThirty()
+    {
+        TimeOfDayFormat.Duration(new TimeOnly(9, 0), new TimeOnly(17, 30), overnight: false)
+            .Should().Be(TimeSpan.FromHours(8.5));
+    }
+
+    [Fact]
+    public void Duration_OvernightDisabled_TwentyTwoToSix_IsNegative()
+    {
+        TimeOfDayFormat.Duration(new TimeOnly(22, 0), new TimeOnly(6, 0), overnight: false)
+            .Should().BeNegative();
+    }
+
+    [Fact]
+    public void Duration_StartEqualsEnd_IsZero()
+    {
+        TimeOfDayFormat.Duration(new TimeOnly(9, 0), new TimeOnly(9, 0), overnight: false)
+            .Should().Be(TimeSpan.Zero);
+        TimeOfDayFormat.Duration(new TimeOnly(22, 0), new TimeOnly(22, 0), overnight: true)
+            .Should().Be(TimeSpan.Zero);
+    }
+
+    [Fact]
+    public void IsValidRange_Overnight_AllowsEndBeforeStart()
+    {
+        TimeOfDayFormat.IsValidRange(new TimeOnly(22, 0), new TimeOnly(6, 0), overnight: true)
+            .Should().BeTrue();
+        TimeOfDayFormat.IsValidRange(new TimeOnly(22, 0), new TimeOnly(6, 0), overnight: false)
+            .Should().BeFalse();
+        TimeOfDayFormat.IsValidRange(new TimeOnly(9, 0), new TimeOnly(9, 0), overnight: false)
+            .Should().BeTrue("equal ends are a zero-length range, same as today");
+    }
+
     // ── DST ─────────────────────────────────────────────────────────────────
 
     [Fact]

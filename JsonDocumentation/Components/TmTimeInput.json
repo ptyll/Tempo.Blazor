@@ -56,6 +56,12 @@
       "description": "Inclusive upper bound. A typed value above this bound is kept on screen and announced as invalid — it is never silently discarded."
     },
     {
+      "name": "AllowOvernightRange",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true, MinTime after MaxTime is read as a range that crosses midnight ([min, 24:00) ∪ [00:00, max]). Defaults to false so today's same-day comparison is unchanged."
+    },
+    {
       "name": "InputId",
       "type": "string?",
       "isRequired": false,

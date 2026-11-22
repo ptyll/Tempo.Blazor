@@ -1,4 +1,9 @@
-.tm-time-picker { display: inline-flex; flex-direction: column; gap: var(--tm-space-1); }
+.tm-time-picker {
+  display: inline-flex;
+  flex-direction: column;
+  gap: var(--tm-space-1);
+  --tm-time-picker-trigger-min-width: calc(var(--tm-space-10) * 4);
+}
 .tm-time-picker-body { display: inline-flex; align-items: center; gap: var(--tm-space-1); position: relative; }
 .tm-time-picker--invalid .tm-time-input { border-color: var(--tm-color-danger); }
 
@@ -16,7 +21,7 @@
 }
 
 .tm-time-picker--trigger-only .tm-time-picker__trigger {
-  min-inline-size: var(--tm-time-picker-trigger-min-width, calc(var(--tm-space-10) * 4));
+  min-inline-size: var(--tm-time-picker-trigger-min-width);
   padding-inline: var(--tm-space-3);
   text-align: start;
 }

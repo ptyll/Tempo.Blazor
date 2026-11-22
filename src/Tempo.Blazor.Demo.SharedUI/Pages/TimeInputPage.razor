@@ -10,6 +10,9 @@
         <code class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">&lt;TmTimePicker /&gt;</code>
         default <code>Presentation=Segments</code> keeps today's DOM; Popup/Auto compose the selector
         into a dialog overlay (sheet on a mobile viewport).
+        <code class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">&lt;TmTimeRangePicker /&gt;</code>
+        default Segments keeps two <code>TmTimeInput</code>s; Popup/Auto adopt the picker, and
+        additive <code>AllowOvernightRange</code> treats 22:00–06:00 as a night shift.
         A host <code class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">&lt;input&gt;</code>
         sits beside the selector so E2E can open the software keyboard.
     </p>
@@ -170,6 +173,53 @@
     </div>
 </section>
 
+<section class="demo-section" data-testid="time-range-overnight">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Overnight range</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 rounded-full">AllowOvernightRange</span>
+    </div>
+
+    <div class="showcase-card" data-testid="time-range-overnight-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            A night shift 22:00–06:00 is a valid range when <code>AllowOvernightRange</code> is set. Duration includes +1 day.
+        </p>
+        <TmTimeRangePicker @bind-Value="_overnightRange"
+                           AllowOvernightRange="true"
+                           Presentation="TimePickerPresentation.Auto"
+                           MinuteStep="15"
+                           ShowDuration="true"
+                           ShowSwapButton="true"
+                           HourCycle="TimeHourCycle.H23"
+                           Label="Night shift" />
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-3" data-testid="time-range-overnight-echo">
+            Value: @(_overnightRange.Start?.ToString("HH:mm") ?? "—") – @(_overnightRange.End?.ToString("HH:mm") ?? "—")
+        </p>
+    </div>
+</section>
+
+<section class="demo-section" data-testid="time-picker-overnight">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Overnight picker bounds</h2>
+    </div>
+
+    <div class="showcase-card" data-testid="time-picker-overnight-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            Min 22:00 / Max 06:00 with <code>AllowOvernightRange</code>: 23:30 is in range, noon is not.
+        </p>
+        <TmTimePicker @bind-Value="_overnightPicker"
+                      Label="Shift start"
+                      Presentation="TimePickerPresentation.Popup"
+                      MinTime="@(new TimeOnly(22, 0))"
+                      MaxTime="@(new TimeOnly(6, 0))"
+                      AllowOvernightRange="true"
+                      HourCycle="TimeHourCycle.H23"
+                      Id="time-picker-overnight" />
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-3">
+            Value: @(_overnightPicker?.ToString("HH:mm") ?? "—")
+        </p>
+    </div>
+</section>
+
 <section class="demo-section" data-testid="time-picker-dst">
     <div class="flex items-center space-x-2 mb-4">
         <h2 class="text-lg font-semibold text-slate-900 dark:text-white">DST gap and ambiguous</h2>
@@ -204,6 +254,8 @@
     private TimeOnly? _seconds = new TimeOnly(14, 30, 15);
     private TimeOnly? _popup = new TimeOnly(14, 30);
     private TimeOnly? _auto = new TimeOnly(9, 0);
+    private (TimeOnly? Start, TimeOnly? End) _overnightRange = (new TimeOnly(22, 0), new TimeOnly(6, 0));
+    private TimeOnly? _overnightPicker = new TimeOnly(23, 30);
     private TimeOnly? _dstGap = new TimeOnly(2, 30);
     private TimeOnly? _dstAmbiguous = new TimeOnly(2, 30);
     private string _hostNote = "";

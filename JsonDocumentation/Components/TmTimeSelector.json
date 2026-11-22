@@ -77,6 +77,12 @@
       "description": "12-hour versus 24-hour clock. Default Auto follows Culture (or CurrentCulture). Pass H23 to force 24-hour."
     },
     {
+      "name": "Culture",
+      "type": "CultureInfo?",
+      "isRequired": false,
+      "description": "Culture used to resolve HourCycle.Auto and to format bounds. Null uses CurrentCulture."
+    },
+    {
       "name": "Fit",
       "type": "TimeSelectorFit",
       "isRequired": false,
@@ -122,6 +128,12 @@
       "description": "Typeahead in the spinbuttons and the Type the time switch on a coarse pointer. The switch is never offered in a square fit (decision 15). Defaults to true."
     },
     {
+      "name": "EnableSwipe",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Vertical swipe on a spinbutton. Unused until the swipe phase. Defaults to false."
+    },
+    {
       "name": "Disabled",
       "type": "bool",
       "isRequired": false,
@@ -132,6 +144,30 @@
       "type": "bool",
       "isRequired": false,
       "description": "Renders the time visible and focusable but not editable: +/− are hidden (not merely disabled). Never assigned inside the component. Defaults to false."
+    },
+    {
+      "name": "Invalid",
+      "type": "bool",
+      "isRequired": false,
+      "description": "External invalid state (host validation). Combined with the selector's own min/max check."
+    },
+    {
+      "name": "ErrorText",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Error message rendered below the readout while invalid. Host text wins over the localized min/max message."
+    },
+    {
+      "name": "AriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "aria-label of the group. Defaults to the localized Time picker label; ignored when AriaLabelledBy is set."
+    },
+    {
+      "name": "AriaLabelledBy",
+      "type": "string?",
+      "isRequired": false,
+      "description": "aria-labelledby of the group. When set, AriaLabel is not rendered."
     },
     {
       "name": "MinTime",
@@ -146,6 +182,12 @@
       "description": "Inclusive upper bound. A value above this bound stays on screen and is announced as invalid."
     },
     {
+      "name": "AllowOvernightRange",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true, MinTime after MaxTime is read as a range that crosses midnight ([min, 24:00) ∪ [00:00, max]). Defaults to false so today's same-day comparison is unchanged."
+    },
+    {
       "name": "AriaDescribedBy",
       "type": "string?",
       "isRequired": false,
@@ -157,6 +199,43 @@
       "isRequired": false,
       "default": "Auto",
       "description": "Layout of the wrapping observer. Auto measures; any other value pins the mode and never imports the observer script. Never pair with ResolvedLayoutChanged as a two-way bind."
+    },
+    {
+      "name": "InitialMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Desktop",
+      "description": "Mode rendered before the first measurement. Defaults to desktop."
+    },
+    {
+      "name": "ResolvedLayoutChanged",
+      "type": "EventCallback<TmLayoutMode>",
+      "isRequired": false,
+      "description": "Raised when the resolved layout changes. Never pair with a two-way bind of LayoutMode."
+    },
+    {
+      "name": "AutoFocus",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Moves focus to the hours spinbutton after the first render."
+    },
+    {
+      "name": "OnCommitted",
+      "type": "EventCallback<TimeOnly?>",
+      "isRequired": false,
+      "description": "Fires once on a completed change (tap, typeahead with advance, end of auto-repeat), not on every arrow key."
+    },
+    {
+      "name": "Id",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional id used as the prefix of the hours spinbutton ({Id}-hours) and the error element ({Id}-error). When omitted a per-instance id is generated."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es) applied to the group."
     }
   ],
   "cssClasses": [

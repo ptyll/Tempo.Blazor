@@ -596,4 +596,15 @@ public sealed class TmTimeSelectorE2ETests : WasmTestBase
                 .ToHaveAttributeAsync("aria-label", label);
         }
     }
+
+    [TestMethod]
+    public async Task TimePicker_Overnight_TwentyThreeThirty_IsValid()
+    {
+        var page = await OpenTimeInputAsync(1280, 800);
+        var card = page.Locator("[data-testid='time-picker-overnight-card']");
+        await Assertions.Expect(card).ToBeVisibleAsync();
+        await Assertions.Expect(card.Locator(".tm-time-picker--invalid")).ToHaveCountAsync(0);
+        await Assertions.Expect(card.Locator(".tm-time-seg--hours")).ToHaveValueAsync("23");
+        await Assertions.Expect(card.Locator(".tm-time-seg--hours")).Not.ToHaveAttributeAsync("aria-invalid", "true");
+    }
 }

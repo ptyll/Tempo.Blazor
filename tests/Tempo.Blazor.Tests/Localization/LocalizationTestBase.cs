@@ -1411,6 +1411,9 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmTimeRangePicker_From"]         = "From",
         ["TmTimeRangePicker_To"]           = "To",
         ["TmTimeRangePicker_Duration"]     = "Duration",
+        ["TmTimeRangePicker_DurationHoursMinutes"] = "{0}h {1:D2}m",
+        ["TmTimeRangePicker_DurationMinutes"] = "{0}m",
+        ["TmTimeRangePicker_Overnight"]    = "(+1 day)",
         ["TmTimeRangePicker_Swap"]         = "Swap",
         ["TmTimeRangePicker_InvalidRange"] = "End time must be after start time",
 
@@ -7750,6 +7753,9 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmTimeRangePicker_From"]         = "Od",
         ["TmTimeRangePicker_To"]           = "Do",
         ["TmTimeRangePicker_Duration"]     = "Trvání",
+        ["TmTimeRangePicker_DurationHoursMinutes"] = "{0} h {1:D2} min",
+        ["TmTimeRangePicker_DurationMinutes"] = "{0} min",
+        ["TmTimeRangePicker_Overnight"]    = "(+1 den)",
         ["TmTimeRangePicker_Swap"]         = "Prohodit",
         ["TmTimeRangePicker_InvalidRange"] = "Konec musí být po začátku",
 
