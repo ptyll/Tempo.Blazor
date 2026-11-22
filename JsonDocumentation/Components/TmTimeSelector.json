@@ -1,0 +1,128 @@
+{
+  "itemName": "TmTimeSelector",
+  "kind": "Component",
+  "category": "Pickers",
+  "description": "Inline APG spinbutton time-of-day selector: hours/minutes/(seconds) with +/−, optional AM/PM, and a JS module for keys, typeahead, auto-repeat and fit. Null Value renders -- in the readout; +/− starts from now rounded to the step. Square fit + seconds collapses ShowGrid to None. The hour/minute grid, presets and picker popup are later phases.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Pickers"
+  ],
+  "parameters": [
+    {
+      "name": "Value",
+      "type": "TimeOnly?",
+      "isRequired": false,
+      "description": "The bound time of day. Null renders -- in the readout; +/− starts from now rounded to the step (or MinTime)."
+    },
+    {
+      "name": "ValueChanged",
+      "type": "EventCallback<TimeOnly?>",
+      "isRequired": false,
+      "description": "Fires on every accepted step, typeahead or period change, including a value outside MinTime/MaxTime."
+    },
+    {
+      "name": "ValueExpression",
+      "type": "Expression<Func<TimeOnly?>>?",
+      "isRequired": false,
+      "description": "Expression identifying the bound model field. Blazor supplies it automatically with @bind-Value; it links the selector to EditContext.NotifyFieldChanged."
+    },
+    {
+      "name": "MinuteStep",
+      "type": "int",
+      "isRequired": false,
+      "default": "1",
+      "description": "Minute step. Must be a positive divisor of 60 other than 60. Defaults to 1."
+    },
+    {
+      "name": "ShowSeconds",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true, a seconds spinbutton is rendered after minutes. In a square fit the readout wraps two 44 px rows and ShowGrid collapses to None."
+    },
+    {
+      "name": "HourCycle",
+      "type": "TimeHourCycle",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "12-hour versus 24-hour clock. Default Auto follows Culture (or CurrentCulture). Pass H23 to force 24-hour."
+    },
+    {
+      "name": "Fit",
+      "type": "TimeSelectorFit",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "Fine layout. Auto is measured (square when width < 640 and height < 480); Square / Regular pin it and win over measurement. Prerender / no JS is regular."
+    },
+    {
+      "name": "ShowGrid",
+      "type": "TimeSelectorGrid",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "Whether the hour/minute grid would show. This phase does not render the grid, but square + seconds still collapses the effective value to None."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Disables every spinbutton and stepper. Distinct from ReadOnly."
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Renders the time visible and focusable but not editable: +/− are hidden (not merely disabled). Never assigned inside the component. Defaults to false."
+    },
+    {
+      "name": "MinTime",
+      "type": "TimeOnly?",
+      "isRequired": false,
+      "description": "Inclusive lower bound. A value below this bound stays on screen and is announced as invalid."
+    },
+    {
+      "name": "MaxTime",
+      "type": "TimeOnly?",
+      "isRequired": false,
+      "description": "Inclusive upper bound. A value above this bound stays on screen and is announced as invalid."
+    },
+    {
+      "name": "AriaDescribedBy",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Extra ids referenced from every spinbutton's aria-describedby. Joined with the selector's own error id and the surrounding TmFormField cascade."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "Layout of the wrapping observer. Auto measures; any other value pins the mode and never imports the observer script. Never pair with ResolvedLayoutChanged as a two-way bind."
+    }
+  ],
+  "cssClasses": [
+    "tm-time-selector",
+    "tm-time-selector--disabled",
+    "tm-time-selector--readonly",
+    "tm-time-selector--invalid",
+    "tm-time-selector--with-seconds",
+    "tm-time-selector__readout",
+    "tm-time-selector__cluster",
+    "tm-time-selector__spin",
+    "tm-time-selector__step",
+    "tm-time-selector__sep",
+    "tm-time-selector__period",
+    "tm-time-selector__error"
+  ],
+  "examples": [
+    {
+      "title": "Basic 24-hour selector",
+      "code": "<TmTimeSelector @bind-Value=\"time\" HourCycle=\"TimeHourCycle.H23\" />"
+    },
+    {
+      "title": "12-hour clock with bounds",
+      "code": "<TmTimeSelector @bind-Value=\"time\" HourCycle=\"TimeHourCycle.H12\" MinTime=\"@(new TimeOnly(9, 0))\" MaxTime=\"@(new TimeOnly(17, 0))\" />"
+    },
+    {
+      "title": "Pinned square fit",
+      "code": "<TmTimeSelector @bind-Value=\"time\" Fit=\"TimeSelectorFit.Square\" />"
+    }
+  ]
+}

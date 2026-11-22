@@ -121,6 +121,7 @@ Dvě rozhodnutí přibyla po měření (tentýž den):
 |---|--------|------------|
 | 14 | Cílový prohlížeč | **Jen Chrome.** Samsung Internet se neměří ani netestuje (E2E, ruční ověření, akceptace). |
 | 15 | Zadání z klávesnice ve fit `square` | **Nenabízí se „Zadat z klávesnice“**, protože s SW klávesnicí zbude 93 px. Hardwarová klávesnice a psaní do spinbuttonů fungují dál. Segment je needitovatelný prvek (`<span role="spinbutton" tabindex="0">`); pokud by implementace použila `<input>`, platí ve fit `square` na `(pointer: coarse)` `inputmode="none"`, takže tap ani fokus SW klávesnici neotevřou. Když se SW klávesnice přesto otevře (stav `keyboard=open` je pojistka pro případ, kdy fokus přesune hostitel), zobrazí se jen jednořádkový readout bez gridu: výška 44 px + padding 2 × 8 px = 60 px ≤ 79 px. Hlavička sheetu (Hotovo) může být mimo `visualViewport`. Potvrzuje se Enterem (= Hotovo) a ruší Escapem nebo swipem. Aktivní spinbutton se posune do `visualViewport` (`scrollIntoView({block:'nearest'})`). |
+| 16 | Velikost cíle ve fit `regular` | **44 px platí jen na `(pointer: coarse)` a ve fit `square`.** Ve fit `regular` na jemném pointeru (desktop 1440) zůstávají spinbuttony i +/− na `--tm-space-8` (32 px). To je nad AA podlahou WCAG 2.5.8 (24 px); 44 px (`--tm-touch-target`) by na úzkém 12h readoutu zbytečně přetékalo. |
 
 ## Důsledky
 

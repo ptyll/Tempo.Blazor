@@ -1,0 +1,114 @@
+@page "/time-input"
+<PageTitle>Time selector – Tempo.Blazor</PageTitle>
+
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">Time selector</h1>
+    <p class="text-slate-600 dark:text-slate-400">
+        <code class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">&lt;TmTimeSelector /&gt;</code>
+        is the inline APG spinbutton readout: hours/minutes with +/−, optional AM/PM, and a JS module
+        for keys, typeahead, auto-repeat and fit. The hour/minute grid and picker popup arrive in later phases.
+        A host <code class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">&lt;input&gt;</code>
+        sits beside the selector so E2E can open the software keyboard.
+    </p>
+</div>
+
+<section class="demo-section" data-testid="time-selector-inline">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Inline 24-hour selector</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">HourCycle=H23</span>
+    </div>
+
+    <div class="showcase-card" data-testid="time-selector-inline-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            Tap +/− or use the arrow keys on a spinbutton. Minutes wrap inside the hour and never carry.
+        </p>
+        <div class="flex flex-wrap items-end gap-4">
+            <TmTimeSelector @bind-Value="_inline"
+                            HourCycle="TimeHourCycle.H23"
+                            Id="time-selector-inline" />
+            <label class="text-sm text-slate-600 dark:text-slate-400">
+                Host field
+                <input type="text"
+                       class="mt-1 block w-40 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1"
+                       data-testid="time-selector-host-input"
+                       autocomplete="off"
+                       @bind="_hostNote"
+                       @bind:event="oninput" />
+            </label>
+        </div>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-3" data-testid="time-selector-inline-echo">
+            Value: @(_inline?.ToString("HH:mm") ?? "—")
+        </p>
+    </div>
+</section>
+
+<section class="demo-section" data-testid="time-selector-12h">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">12-hour clock</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded-full">HourCycle=H12</span>
+    </div>
+
+    <div class="showcase-card" data-testid="time-selector-12h-card">
+        <TmTimeSelector @bind-Value="_twelve"
+                        HourCycle="TimeHourCycle.H12"
+                        Culture="@_enUs"
+                        Id="time-selector-12h" />
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-3">
+            Value: @(_twelve?.ToString("HH:mm") ?? "—")
+        </p>
+    </div>
+</section>
+
+<section class="demo-section" data-testid="time-selector-range">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Min / max</h2>
+    </div>
+
+    <div class="showcase-card" data-testid="time-selector-range-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            08:00 is below 09:00–17:00, so the value stays on screen and is marked invalid.
+        </p>
+        <TmTimeSelector @bind-Value="_ranged"
+                        HourCycle="TimeHourCycle.H23"
+                        MinTime="@(new TimeOnly(9, 0))"
+                        MaxTime="@(new TimeOnly(17, 0))"
+                        Id="time-selector-range" />
+    </div>
+</section>
+
+<section class="demo-section" data-testid="time-selector-readonly">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Read-only</h2>
+    </div>
+
+    <div class="showcase-card" data-testid="time-selector-readonly-card">
+        <TmTimeSelector Value="@(new TimeOnly(10, 0))"
+                        ReadOnly="true"
+                        HourCycle="TimeHourCycle.H23"
+                        Id="time-selector-readonly" />
+    </div>
+</section>
+
+<section class="demo-section" data-testid="time-selector-form">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Inside TmFormField</h2>
+    </div>
+
+    <div class="showcase-card" data-testid="time-selector-form-card">
+        <TmFormField Label="Opening time" HelpText="Weekday opening hours." Id="time-selector-form">
+            <TmTimeSelector @bind-Value="_form"
+                            HourCycle="TimeHourCycle.H23" />
+        </TmFormField>
+    </div>
+</section>
+
+@code {
+    private static readonly System.Globalization.CultureInfo _enUs =
+        System.Globalization.CultureInfo.GetCultureInfo("en-US");
+
+    private TimeOnly? _inline = new TimeOnly(14, 30);
+    private TimeOnly? _twelve = new TimeOnly(14, 30);
+    private TimeOnly? _ranged = new TimeOnly(8, 0);
+    private TimeOnly? _form = new TimeOnly(9, 0);
+    private string _hostNote = "";
+}

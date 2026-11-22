@@ -4,8 +4,8 @@
 
 > Plan "Tempo: zadávání času na telefonu a vnějším displeji Z Flip 5" (1c95309c; decision
 > `TIME-SELECTOR`, [ADR-0007](docs/adr/0007-time-selector.md), proposal
-> [docs/proposals/time-input-mobile.md](docs/proposals/time-input-mobile.md)). Additive public API
-> only; no UI changes in this slice.
+> [docs/proposals/time-input-mobile.md](docs/proposals/time-input-mobile.md)). Additive public API;
+> `TmTimePicker.Presentation` stays `Segments` (today's DOM).
 
 ### Added — time-of-day core (`Tempo.Blazor` / `Tempo.Blazor.Abstractions`, Fáze 2: Jádro)
 
@@ -32,6 +32,14 @@
 - **Coarse-pointer segments are 44 px.** `.tm-time-seg` was `2.5rem` wide with no block-size floor, so a finger on a phone or Flex Window missed the hours/minutes fields. `@media (pointer: coarse)` now sizes every segment to `min-block-size`/`min-inline-size: var(--tm-touch-target)`. Fine pointers keep the compact size. **Impact:** existing desktop layouts are unchanged; a host that overrode `.tm-time-seg` height on touch devices can drop the override.
 - **Hour cycle follows culture.** Hours were always padded 24-hour (`"D2"`, 00–23) regardless of culture. `HourCycle` (default `Auto`) now resolves through `TimeOfDayFormat.ResolveHourCycle`: `en-US` is 12-hour with an AM/PM `TmSegmentedControl`, `cs`/`sk`/`fr`/`en-GB` stay 24-hour. Pass `HourCycle="H23"` to force 24-hour. **Impact:** a host on a 12-hour `CurrentCulture` (typical E2E `Locale=en-US`) that filled hours as `"14"` must either pass `HourCycle="H23"` or type `"02"` + PM. Additive parameters `HourCycle` and `Culture` are also forwarded from `TmTimePicker`, `TmTimeRangePicker`, `TmDateTimePicker` and `TmDateTimeRangePicker`.
 - **ReadOnly, AriaDescribedBy, TmFormField cascade and EditContext.** Segments had no `readonly`, no `aria-describedby` and no `ValueExpression`, so a surrounding `TmFormField` could not name its help/error and an `EditForm` never saw `NotifyFieldChanged`. New additive parameters: `ReadOnly`, `AriaDescribedBy`, `ValueExpression`, `ErrorText`, `Id`. **Impact:** existing call sites are unchanged (`ReadOnly` defaults false; no described-by is emitted until a host or field supplies ids). A host wrapping `TmTimeInput` in `TmFormField` now gets the same cascade as `TmDecimalInput`. `TmTimePicker` gains an additive `ReadOnly` (forwarded to `TmTimeInput`; the clear button is hidden while read-only).
+
+### Added — TmTimeSelector readout (`Tempo.Blazor`, Fáze 4: TmTimeSelector – readout a JS modul)
+
+- **`TmTimeSelector`** (`Tempo.Blazor.Components.Pickers`) — inline APG spinbutton time-of-day selector: hours/minutes/(seconds) as `<span role="spinbutton" tabindex="0">`, native +/− (`tabindex="-1"`, `aria-controls`), optional AM/PM `TmSegmentedControl` (`Role=RadioGroup`), one polite live region, `tm-time-selector.js` (keys, 24h/12h typeahead, auto-repeat, fit, software-keyboard heuristic) and `_time-selector.css` (tokens, coarse/`square` 44 px via `--tm-touch-target`, forced-colors). Null `Value` renders `--`; +/− starts from an injected `TimeProvider` (fallback `TimeProvider.System`) rounded to the step. Square fit + seconds collapses `ShowGrid` to `None` even when `Always`. `ReadOnly` hides +/− (never assigned internally). Demo `/time-input`. **Impact:** additive; `TmTimePicker` default `Presentation=Segments` and today's DOM are unchanged.
+
+### Fixed — TmTimeSelector 12h reflow (`Tempo.Blazor`, Fáze 4)
+
+- **Readout no longer clips at 390 px / Flex Window.** A nowrap hours+minutes row already overflowed a 306 px Flex Window (scrollWidth 312), and the 12-hour row also clipped the hours − and the PM option (WCAG 1.4.10 / 2.5.8). The readout now wraps by default; `h12` parks AM/PM on its own centred row (`flex-basis: 100%`). Square + `keyboard=open` stays one line (`flex-wrap: nowrap`). Fine-pointer regular fit keeps 32 px (`--tm-space-8`) targets; coarse and square stay 44 px (ADR-0007 decision 16). **Impact:** hosts at phone / Flex Window widths may see the readout on two rows; desktop 1440 is unchanged.
 
 ## 2.12.0 - 2026-11-20
 

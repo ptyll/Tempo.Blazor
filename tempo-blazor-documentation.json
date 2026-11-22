@@ -29304,6 +29304,279 @@
       ]
     },
     {
+      "itemName": "TmTimeSelector",
+      "kind": "Component",
+      "category": "Pickers",
+      "namespace": "Tempo.Blazor.Components.Pickers",
+      "description": "Inline APG spinbutton time-of-day selector: hours/minutes/(seconds) with +/−, optional AM/PM, and a JS module for keys, typeahead, auto-repeat and fit. Null Value renders -- in the readout; +/− starts from now rounded to the step. Square fit + seconds collapses ShowGrid to None. The hour/minute grid, presets and picker popup are later phases.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Pickers/TmTimeSelector.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.Pickers"
+      ],
+      "parameters": [
+        {
+          "name": "AllowOvernightRange",
+          "type": "bool",
+          "isRequired": false,
+          "description": "When true, MinTime after MaxTime is read as a range that crosses midnight."
+        },
+        {
+          "name": "AllowTyping",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Typeahead in the spinbuttons and the \"Type the time\" switch on a coarse pointer. The switch is never offered in a square fit (decision 15). Defaults to true."
+        },
+        {
+          "name": "AmbiguousOffsetChanged",
+          "type": "EventCallback<TimeSpan>",
+          "isRequired": false,
+          "description": "Raised with the chosen offset when the user resolves an ambiguous time."
+        },
+        {
+          "name": "AmbiguousTimeResolution",
+          "type": "AmbiguousTimeResolution",
+          "isRequired": false,
+          "default": "AmbiguousTimeResolution.Earlier",
+          "description": "Which occurrence of an ambiguous civil time to prefer. Defaults to earlier."
+        },
+        {
+          "name": "AriaDescribedBy",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Extra ids referenced from every spinbutton's aria-describedby. Joined with the selector's own error id and the surrounding TmFormField cascade."
+        },
+        {
+          "name": "AriaLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "aria-label of the group. Defaults to the localized \"Time picker\" label; ignored when AriaLabelledBy is set."
+        },
+        {
+          "name": "AriaLabelledBy",
+          "type": "string?",
+          "isRequired": false,
+          "description": "aria-labelledby of the group. When set, AriaLabel is not rendered."
+        },
+        {
+          "name": "AutoFocus",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Moves focus to the hours spinbutton after the first render."
+        },
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS class(es) applied to the group."
+        },
+        {
+          "name": "Culture",
+          "type": "CultureInfo?",
+          "isRequired": false,
+          "description": "Culture used to resolve HourCycle.Auto and to format bounds. Null uses CurrentCulture."
+        },
+        {
+          "name": "Disabled",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Disables every spinbutton and stepper. Distinct from ReadOnly."
+        },
+        {
+          "name": "EnableSwipe",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Vertical swipe on a spinbutton. Unused until the swipe phase. Defaults to false."
+        },
+        {
+          "name": "EnforceStep",
+          "type": "bool",
+          "isRequired": false,
+          "description": "When true, typed values snap onto MinuteStep. Defaults to false."
+        },
+        {
+          "name": "ErrorText",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Error message rendered below the readout while invalid. Host text wins over the localized min/max message. Null or empty with Invalid true is the supported way to surface a message owned by a surrounding TmFormField."
+        },
+        {
+          "name": "Fit",
+          "type": "TimeSelectorFit",
+          "isRequired": false,
+          "default": "TimeSelectorFit.Auto",
+          "description": "Fine layout. Auto is measured (square when width < 640 and height < 480); Square / Regular pin it and win over measurement. Prerender / no JS is regular."
+        },
+        {
+          "name": "GridMinuteStep",
+          "type": "int?",
+          "isRequired": false,
+          "description": "Grid minute step. Null uses max(MinuteStep, 5). Unused until the grid phase."
+        },
+        {
+          "name": "HourCycle",
+          "type": "TimeHourCycle",
+          "isRequired": false,
+          "default": "TimeHourCycle.Auto",
+          "description": "12-hour versus 24-hour clock. Default Auto follows Culture (or CurrentCulture). Pass H23 to force 24-hour."
+        },
+        {
+          "name": "Id",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Optional id used as the prefix of the hours spinbutton ({Id}-hours) and the error element ({Id}-error). When omitted a per-instance id is generated."
+        },
+        {
+          "name": "InitialMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Desktop",
+          "description": "Mode rendered before the first measurement. Defaults to desktop."
+        },
+        {
+          "name": "Invalid",
+          "type": "bool",
+          "isRequired": false,
+          "description": "External invalid state (host validation). Combined with the selector's own min/max check."
+        },
+        {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "Layout of the wrapping observer. Auto measures; any other value pins the mode and never imports the observer script. Never pair with ResolvedLayoutChanged as a two-way bind."
+        },
+        {
+          "name": "MaxTime",
+          "type": "TimeOnly?",
+          "isRequired": false,
+          "description": "Inclusive upper bound. A value above this bound stays on screen and is announced as invalid."
+        },
+        {
+          "name": "MinTime",
+          "type": "TimeOnly?",
+          "isRequired": false,
+          "description": "Inclusive lower bound. A value below this bound stays on screen and is announced as invalid."
+        },
+        {
+          "name": "MinuteStep",
+          "type": "int",
+          "isRequired": false,
+          "default": "1",
+          "description": "Minute step. Must be a positive divisor of 60 other than 60. Defaults to 1."
+        },
+        {
+          "name": "OnCommitted",
+          "type": "EventCallback<TimeOnly?>",
+          "isRequired": false,
+          "description": "Fires once on a completed change (tap, typeahead with advance, end of auto-repeat), not on every arrow key."
+        },
+        {
+          "name": "Presets",
+          "type": "IReadOnlyList<TimePreset>?",
+          "isRequired": false,
+          "description": "Optional preset chips. Unused until the presets phase."
+        },
+        {
+          "name": "ReadOnly",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Renders the time visible and focusable but not editable: +/− are hidden (not merely disabled). Never assigned inside the component. Defaults to false."
+        },
+        {
+          "name": "RecentTimes",
+          "type": "IReadOnlyList<TimeOnly>?",
+          "isRequired": false,
+          "description": "Host-owned recent times. Unused until the presets phase."
+        },
+        {
+          "name": "ReferenceDate",
+          "type": "DateOnly?",
+          "isRequired": false,
+          "description": "Date used with TimeZone for DST gap/ambiguity. Both must be set."
+        },
+        {
+          "name": "ResolvedLayoutChanged",
+          "type": "EventCallback<TmLayoutMode>",
+          "isRequired": false,
+          "description": "Raised when the resolved layout changes. Never pair with a two-way bind of LayoutMode."
+        },
+        {
+          "name": "ShowGrid",
+          "type": "TimeSelectorGrid",
+          "isRequired": false,
+          "default": "TimeSelectorGrid.Auto",
+          "description": "Whether the hour/minute grid would show. This phase does not render the grid, but square + seconds still collapses the effective value to None."
+        },
+        {
+          "name": "ShowNowPreset",
+          "type": "bool",
+          "isRequired": false,
+          "description": "When true, a \"Now\" chip is offered. Unused until the presets phase."
+        },
+        {
+          "name": "ShowSeconds",
+          "type": "bool",
+          "isRequired": false,
+          "description": "When true, a seconds spinbutton is rendered after minutes. In a square fit the readout wraps two 44 px rows and ShowGrid collapses to None."
+        },
+        {
+          "name": "TimeZone",
+          "type": "TimeZoneInfo?",
+          "isRequired": false,
+          "description": "Time zone used with ReferenceDate for DST gap/ambiguity. Both must be set."
+        },
+        {
+          "name": "Value",
+          "type": "TimeOnly?",
+          "isRequired": false,
+          "description": "The bound time of day. Null renders -- in the readout; +/− starts from now rounded to the step (or MinTime)."
+        },
+        {
+          "name": "ValueChanged",
+          "type": "EventCallback<TimeOnly?>",
+          "isRequired": false,
+          "description": "Fires on every accepted step, typeahead or period change, including a value outside MinTime/MaxTime."
+        },
+        {
+          "name": "ValueExpression",
+          "type": "Expression<Func<TimeOnly?>>?",
+          "isRequired": false,
+          "description": "Expression identifying the bound model field. Blazor supplies it automatically with @bind-Value; it links the selector to EditContext.NotifyFieldChanged."
+        }
+      ],
+      "cssClasses": [
+        "tm-time-selector",
+        "tm-time-selector--disabled",
+        "tm-time-selector--readonly",
+        "tm-time-selector--invalid",
+        "tm-time-selector--with-seconds",
+        "tm-time-selector__readout",
+        "tm-time-selector__cluster",
+        "tm-time-selector__spin",
+        "tm-time-selector__step",
+        "tm-time-selector__sep",
+        "tm-time-selector__period",
+        "tm-time-selector__error"
+      ],
+      "examples": [
+        {
+          "title": "Basic 24-hour selector",
+          "code": "<TmTimeSelector @bind-Value=\"time\" HourCycle=\"TimeHourCycle.H23\" />"
+        },
+        {
+          "title": "12-hour clock with bounds",
+          "code": "<TmTimeSelector @bind-Value=\"time\" HourCycle=\"TimeHourCycle.H12\" MinTime=\"@(new TimeOnly(9, 0))\" MaxTime=\"@(new TimeOnly(17, 0))\" />"
+        },
+        {
+          "title": "Pinned square fit",
+          "code": "<TmTimeSelector @bind-Value=\"time\" Fit=\"TimeSelectorFit.Square\" />"
+        }
+      ]
+    },
+    {
       "itemName": "TmPivotFieldChip",
       "kind": "Component",
       "category": "Pivot Table",
@@ -36980,6 +37253,10 @@
       "kind": "Css"
     },
     {
+      "path": "src/Tempo.Blazor/wwwroot/css/components/_time-selector.css",
+      "kind": "Css"
+    },
+    {
       "path": "src/Tempo.Blazor/wwwroot/css/components/_timeline.css",
       "kind": "Css"
     },
@@ -37216,6 +37493,10 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor/wwwroot/js/tm-time-selector.js",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor/wwwroot/js/tm-toast-swipe.js",
       "kind": "JavaScript"
     },
@@ -37372,6 +37653,10 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-time-selector.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-toast-swipe.test.mjs",
       "kind": "JavaScript"
     },
@@ -37405,11 +37690,11 @@
     }
   ],
   "summary": {
-    "itemCount": 467,
-    "manualItemCount": 467,
-    "generatedItemCount": 459,
+    "itemCount": 468,
+    "manualItemCount": 468,
+    "generatedItemCount": 460,
     "generatedOnlyItemCount": 0,
-    "componentCount": 238,
+    "componentCount": 239,
     "publicApiTypeCount": 221
   }
 }

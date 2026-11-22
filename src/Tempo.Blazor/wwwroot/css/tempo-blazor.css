@@ -116,6 +116,7 @@
 @import "components/_calendar-grid.css";
 @import "components/_time-input.css";
 @import "components/_time-picker.css";
+@import "components/_time-selector.css";
 @import "components/_date-picker.css";
 @import "components/_datetime-picker.css";
 @import "components/_time-range-picker.css";

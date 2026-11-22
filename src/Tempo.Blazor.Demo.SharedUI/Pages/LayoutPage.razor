@@ -530,6 +530,7 @@
             new SidebarNavItem("nav-pickers", "Pickers", "calendar", "/pickers", children: new()
             {
                 new SidebarNavItem("nav-pickers-date", "Date pickers", null, "/pickers"),
+                new SidebarNavItem("nav-pickers-time", "Time selector", null, "/time-input"),
             }),
         }),
     };
@@ -643,6 +644,7 @@
             new CommandPaletteAction("forms", "Go to Forms", "Form components demo", "file-text", Execute: async () => await ExecuteCommand("forms", "/forms")),
             new CommandPaletteAction("feedback", "Go to Feedback", "Alerts, toasts, and notifications", "bell", Execute: async () => await ExecuteCommand("feedback", "/feedback")),
             new CommandPaletteAction("pickers", "Go to Pickers", "Date and time pickers", "calendar", Execute: async () => await ExecuteCommand("pickers", "/pickers")),
+            new CommandPaletteAction("time-input", "Go to Time selector", "Inline time-of-day selector", "clock", Execute: async () => await ExecuteCommand("time-input", "/time-input")),
             new CommandPaletteAction("richtext", "Go to Rich Text", "Text editors", "type", Execute: async () => await ExecuteCommand("richtext", "/richtext")),
             new CommandPaletteAction("gallery", "Go to Gallery", "Image gallery", "image", Execute: async () => await ExecuteCommand("gallery", "/gallery")),
             new CommandPaletteAction("layout", "Go to Layout", "Layout components", "layout", Execute: async () => await ExecuteCommand("layout", "/layout")),
