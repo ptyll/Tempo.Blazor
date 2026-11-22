@@ -1,3 +1,10 @@
+.tm-time-input-wrap {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--tm-space-1);
+}
+
 .tm-time-input {
   display: inline-flex;
   align-items: center;
@@ -14,6 +21,18 @@
   box-shadow: var(--tm-focus-ring);
 }
 .tm-time-input--disabled { opacity: 0.5; pointer-events: none; }
+
+.tm-time-input--invalid {
+  border-color: var(--tm-color-danger);
+}
+.tm-time-input--invalid:focus-within {
+  border-color: var(--tm-color-danger);
+  box-shadow: var(--tm-focus-ring-danger);
+}
+
+.tm-time-input--readonly {
+  background: var(--tm-bg-surface-secondary);
+}
 
 .tm-time-seg {
   width: 2.5rem;
@@ -34,4 +53,22 @@
   font-size: var(--tm-font-size-sm);
   font-weight: var(--tm-font-weight-bold);
   color: var(--tm-text-secondary);
+}
+
+.tm-time-input__error {
+  margin: 0;
+  font-family: var(--tm-font-sans);
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-color-danger-text);
+}
+
+.tm-time-input__period {
+  margin-inline-start: var(--tm-space-1);
+}
+
+@media (pointer: coarse) {
+  .tm-time-seg {
+    min-block-size: var(--tm-touch-target);
+    min-inline-size: var(--tm-touch-target);
+  }
 }

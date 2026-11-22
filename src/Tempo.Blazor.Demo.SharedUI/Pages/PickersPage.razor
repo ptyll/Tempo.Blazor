@@ -1,4 +1,5 @@
 @page "/pickers"
+@using System.Globalization
 @using Tempo.Blazor.Models
 @using Tempo.Blazor.Interfaces
 @using Tempo.Blazor.Components.Pickers
@@ -53,7 +54,8 @@
             <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Basic Time Picker</h3>
             <TmTimePicker Label="Start time"
                           Value="@_time"
-                          ValueChanged="@(t => _time = t)" />
+                          ValueChanged="@(t => _time = t)"
+                          HourCycle="TimeHourCycle.H23" />
             <p class="text-sm text-slate-500 dark:text-slate-400 mt-3">Value: <span class="font-mono">@(_time?.ToString("HH:mm") ?? "—")</span></p>
         </div>
         
@@ -64,7 +66,8 @@
                           ValueChanged="@(t => _timeSeconds = t)"
                           ShowSeconds="true"
                           MinTime="@(new TimeOnly(8, 0))"
-                          MaxTime="@(new TimeOnly(18, 0))" />
+                          MaxTime="@(new TimeOnly(18, 0))"
+                          HourCycle="TimeHourCycle.H23" />
             <p class="text-sm text-slate-500 dark:text-slate-400 mt-3">Value: <span class="font-mono">@(_timeSeconds?.ToString("HH:mm:ss") ?? "—")</span></p>
             <p class="text-xs text-slate-500 dark:text-slate-400">Allowed: 08:00–18:00</p>
         </div>
@@ -74,7 +77,8 @@
             <TmTimePicker Label="Locked time"
                           Value="@(new TimeOnly(14, 30))"
                           ValueChanged="@(_ => {})"
-                          Disabled="true" />
+                          Disabled="true"
+                          HourCycle="TimeHourCycle.H23" />
         </div>
 
         <div class="showcase-card" data-testid="time-picker-hide-clear-card">
@@ -84,9 +88,53 @@
                           HideClear="true"
                           Value="@_timeRequired"
                           ValueChanged="@(t => _timeRequired = t)"
+                          HourCycle="TimeHourCycle.H23"
                           data-testid="time-picker-hide-clear" />
             <p class="text-sm text-slate-500 dark:text-slate-400 mt-3">Value: <span class="font-mono">@(_timeRequired?.ToString("HH:mm") ?? "—")</span></p>
             <p class="text-xs text-slate-500 dark:text-slate-400">No clear button: the value can be edited, not emptied in one click.</p>
+        </div>
+
+        <div class="showcase-card" data-testid="time-input-12h-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">12-hour clock</h3>
+            <TmTimeInput Value="@_time12h"
+                         ValueChanged="@(t => _time12h = t)"
+                         HourCycle="TimeHourCycle.H12"
+                         Culture="@EnglishUs"
+                         data-testid="time-input-12h" />
+            <p class="text-sm text-slate-500 dark:text-slate-400 mt-3">Value: <span class="font-mono">@(_time12h?.ToString("HH:mm") ?? "—")</span></p>
+            <p class="text-xs text-slate-500 dark:text-slate-400">HourCycle=H12: hours 1–12 plus AM/PM.</p>
+        </div>
+
+        <div class="showcase-card" data-testid="time-input-out-of-range-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Out of range stays visible</h3>
+            <TmTimeInput Value="@_timeOutOfRange"
+                         ValueChanged="@(t => _timeOutOfRange = t)"
+                         MinTime="@(new TimeOnly(9, 0))"
+                         MaxTime="@(new TimeOnly(12, 0))"
+                         HourCycle="TimeHourCycle.H23"
+                         data-testid="time-input-out-of-range" />
+            <p class="text-sm text-slate-500 dark:text-slate-400 mt-3">Value: <span class="font-mono">@(_timeOutOfRange?.ToString("HH:mm") ?? "—")</span></p>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Type 08:00 — the value stays and is announced invalid.</p>
+        </div>
+
+        <div class="showcase-card" data-testid="time-input-readonly-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Read-only</h3>
+            <TmTimeInput Value="@_timeReadOnly"
+                         ReadOnly="true"
+                         HourCycle="TimeHourCycle.H23"
+                         data-testid="time-input-readonly" />
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-3">Visible and focusable, not editable.</p>
+        </div>
+
+        <div class="showcase-card" data-testid="time-input-form-field-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Inside TmFormField</h3>
+            <TmFormField Id="time-input-form-field"
+                         Label="Opening time"
+                         HelpText="Business hours 09:00–17:00.">
+                <TmTimeInput @bind-Value="_timeFormField"
+                             HourCycle="TimeHourCycle.H23"
+                             data-testid="time-input-form-field" />
+            </TmFormField>
         </div>
     </div>
 </section>
@@ -104,7 +152,8 @@
                                Value="@_timeRange"
                                ValueChanged="@(v => _timeRange = v)"
                                ShowDuration="true"
-                               ShowSwapButton="true" />
+                               ShowSwapButton="true"
+                               HourCycle="TimeHourCycle.H23" />
             <p class="text-sm text-slate-500 dark:text-slate-400 mt-3">
                 From: <span class="font-mono">@(_timeRange.Start?.ToString("HH:mm") ?? "—")</span> 
                 to <span class="font-mono">@(_timeRange.End?.ToString("HH:mm") ?? "—")</span>
@@ -117,7 +166,8 @@
                                Value="@_timeRangeSec"
                                ValueChanged="@(v => _timeRangeSec = v)"
                                ShowSeconds="true"
-                               ShowDuration="true" />
+                               ShowDuration="true"
+                               HourCycle="TimeHourCycle.H23" />
         </div>
     </div>
 </section>
@@ -205,7 +255,8 @@
             <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Basic DateTime</h3>
             <TmDateTimePicker Label="Event date & time"
                               Value="@_dateTime"
-                              ValueChanged="@(dt => _dateTime = dt)" />
+                              ValueChanged="@(dt => _dateTime = dt)"
+                              HourCycle="TimeHourCycle.H23" />
             <p class="text-sm text-slate-500 dark:text-slate-400 mt-3">Value: <span class="font-mono">@(_dateTime?.ToString("dd.MM.yyyy HH:mm") ?? "—")</span></p>
         </div>
         
@@ -216,7 +267,8 @@
                               ValueChanged="@(dt => _dateTimeSeconds = dt)"
                               ShowSeconds="true"
                               MinValue="@DateTime.Today"
-                              MaxValue="@DateTime.Today.AddDays(90)" />
+                              MaxValue="@DateTime.Today.AddDays(90)"
+                              HourCycle="TimeHourCycle.H23" />
             <p class="text-sm text-slate-500 dark:text-slate-400 mt-3">Value: <span class="font-mono">@(_dateTimeSeconds?.ToString("dd.MM.yyyy HH:mm:ss") ?? "—")</span></p>
         </div>
         
@@ -225,7 +277,8 @@
             <TmDateTimePicker Label="Completed at"
                               Value="@(DateTime.Today.AddHours(9))"
                               ValueChanged="@(_ => {})"
-                              Disabled="true" />
+                              Disabled="true"
+                              HourCycle="TimeHourCycle.H23" />
         </div>
     </div>
 </section>
@@ -242,7 +295,8 @@
             <TmDateTimeRangePicker Label="Event period"
                                    Value="@_dateTimeRange"
                                    ValueChanged="@(v => _dateTimeRange = v)"
-                                   ShowSeconds="false" />
+                                   ShowSeconds="false"
+                                   HourCycle="TimeHourCycle.H23" />
             <p class="text-sm text-slate-500 dark:text-slate-400 mt-3">
                 <span class="font-mono">@(_dateTimeRange.Start?.ToString("dd.MM.yyyy HH:mm") ?? "—")</span>
                 –
@@ -255,7 +309,8 @@
             <TmDateTimeRangePicker Label="Past event"
                                    Value="@((DateTime.Today.AddDays(-2), DateTime.Today.AddDays(-1)))"
                                    ValueChanged="@(_ => {})"
-                                   Disabled="true" />
+                                   Disabled="true"
+                                   HourCycle="TimeHourCycle.H23" />
         </div>
     </div>
 </section>
@@ -529,9 +584,15 @@
     ];
 
     // Time Pickers
+    private static readonly CultureInfo EnglishUs = CultureInfo.GetCultureInfo("en-US");
+
     private TimeOnly? _time;
     private TimeOnly? _timeSeconds;
     private TimeOnly? _timeRequired = new TimeOnly(9, 0);
+    private TimeOnly? _time12h = new TimeOnly(14, 30);
+    private TimeOnly? _timeOutOfRange = new TimeOnly(10, 0);
+    private TimeOnly? _timeReadOnly = new TimeOnly(9, 15);
+    private TimeOnly? _timeFormField = new TimeOnly(11, 0);
     private (TimeOnly? Start, TimeOnly? End) _timeRange;
     private (TimeOnly? Start, TimeOnly? End) _timeRangeSec;
 

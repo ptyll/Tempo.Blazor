@@ -2632,13 +2632,21 @@ to{transform:translateY(0);opacity:1;}
 @media (forced-colors:active){.tm-cal-day--comparison,.tm-cal-day--comparison-start,.tm-cal-day--comparison-end{border:2px dashed CanvasText;}
 }
 .tm-cal-day--disabled{opacity:var(--tm-cal-disabled-opacity);cursor:not-allowed;pointer-events:none;}
+.tm-time-input-wrap{display:inline-flex;flex-direction:column;align-items:flex-start;gap:var(--tm-space-1);}
 .tm-time-input{display:inline-flex;align-items:center;gap:2px;background:var(--tm-bg-surface);border:1px solid var(--tm-border-color);border-radius:var(--tm-radius-md);padding:var(--tm-space-1) var(--tm-space-2);transition:border-color var(--tm-transition-fast),box-shadow var(--tm-transition-fast);}
 .tm-time-input:focus-within{outline:2px solid transparent;border-color:var(--tm-color-primary);box-shadow:var(--tm-focus-ring);}
 .tm-time-input--disabled{opacity:0.5;pointer-events:none;}
+.tm-time-input--invalid{border-color:var(--tm-color-danger);}
+.tm-time-input--invalid:focus-within{border-color:var(--tm-color-danger);box-shadow:var(--tm-focus-ring-danger);}
+.tm-time-input--readonly{background:var(--tm-bg-surface-secondary);}
 .tm-time-seg{width:2.5rem;text-align:center;border:none;background:none;font-size:var(--tm-font-size-sm);font-family:inherit;color:var(--tm-text-primary);padding:0;-moz-appearance:textfield;}
 .tm-time-seg::-webkit-inner-spin-button,.tm-time-seg::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
 .tm-time-seg:focus{outline:none;color:var(--tm-color-primary);}
 .tm-time-sep{font-size:var(--tm-font-size-sm);font-weight:var(--tm-font-weight-bold);color:var(--tm-text-secondary);}
+.tm-time-input__error{margin:0;font-family:var(--tm-font-sans);font-size:var(--tm-font-size-sm);color:var(--tm-color-danger-text);}
+.tm-time-input__period{margin-inline-start:var(--tm-space-1);}
+@media (pointer:coarse){.tm-time-seg{min-block-size:var(--tm-touch-target);min-inline-size:var(--tm-touch-target);}
+}
 .tm-time-picker{display:inline-flex;flex-direction:column;gap:var(--tm-space-1);}
 .tm-time-picker-body{display:inline-flex;align-items:center;gap:var(--tm-space-1);position:relative;}
 .tm-time-picker--invalid .tm-time-input{border-color:var(--tm-color-danger);}

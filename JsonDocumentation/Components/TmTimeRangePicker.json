@@ -43,6 +43,19 @@
       "isRequired": false
     },
     {
+      "name": "HourCycle",
+      "type": "TimeHourCycle",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "12-hour versus 24-hour clock forwarded to both TmTimeInput ends. Default Auto follows Culture."
+    },
+    {
+      "name": "Culture",
+      "type": "CultureInfo?",
+      "isRequired": false,
+      "description": "Culture used to resolve HourCycle.Auto. Null uses CurrentCulture."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false

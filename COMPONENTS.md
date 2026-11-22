@@ -3203,14 +3203,19 @@ Výběr času s dropdownem.
 
 ### TmTimeInput
 
-Nízkoúrovňový vstup pro čas (hodiny:minuty:sekundy).
+Nízkoúrovňový vstup pro čas (hodiny:minuty[:sekundy]). Hodnota mimo `MinTime`/`MaxTime` zůstane na obrazovce a je `aria-invalid` — nikdy se tiše nezahodí. `HourCycle=Auto` následuje kulturu (`en-US` 12h s AM/PM, `cs`/`sk`/`fr` 24h). Na `(pointer: coarse)` mají segmenty podlahu `--tm-touch-target` (44 px).
 
 #### CSS třídy
 
 | Třída | Popis |
 |-------|-------|
-| `tm-time-input` | Kořenový kontejner |
+| `tm-time-input-wrap` | Obal (segmenty + chybová zpráva) |
+| `tm-time-input` | Kontejner segmentů |
 | `tm-time-input--disabled` | Zakázaný stav |
+| `tm-time-input--invalid` | Nevalidní stav (mimo rozsah / host `Invalid`) |
+| `tm-time-input--readonly` | Pouze pro čtení |
+| `tm-time-input__error` | Chybová zpráva pod segmenty |
+| `tm-time-input__period` | AM/PM přepínač (12h) |
 | `tm-time-seg` | Segment času |
 | `tm-time-seg--hours` | Segment hodin |
 | `tm-time-seg--minutes` | Segment minut |
@@ -3221,18 +3226,31 @@ Nízkoúrovňový vstup pro čas (hodiny:minuty:sekundy).
 
 | Parametr | Typ | Výchozí | Popis |
 |----------|-----|---------|-------|
-| `Value` | `TimeSpan?` | `null` | Hodnota |
-| `ValueChanged` | `EventCallback<TimeSpan?>` | — | Událost změny |
+| `Value` | `TimeOnly?` | `null` | Hodnota |
+| `ValueChanged` | `EventCallback<TimeOnly?>` | — | Událost změny (včetně hodnoty mimo min/max) |
+| `ValueExpression` | `Expression<Func<TimeOnly?>>?` | `null` | Vazba na `EditContext.NotifyFieldChanged` (`@bind-Value`) |
 | `ShowSeconds` | `bool` | `false` | Zobrazit sekundy |
 | `Disabled` | `bool` | `false` | Zakázáno |
-| `MinTime` | `TimeSpan?` | `null` | Minimum |
-| `MaxTime` | `TimeSpan?` | `null` | Maximum |
+| `ReadOnly` | `bool` | `false` | Pouze pro čtení (nikdy se nepřiřazuje uvnitř komponenty) |
+| `MinTime` | `TimeOnly?` | `null` | Inclusive minimum — mimo rozsah se nezahodí |
+| `MaxTime` | `TimeOnly?` | `null` | Inclusive maximum — mimo rozsah se nezahodí |
 | `InputId` | `string?` | `null` | Volitelné id aplikované na segment hodin, aby ho mohla cílit nadřazená `<label for>` |
+| `Id` | `string?` | `null` | Prefix chybového elementu (`{Id}-error`) |
+| `Invalid` | `bool` | `false` | `aria-invalid` na segmentech (vlastník pickeru / TmFormField) |
+| `ErrorText` | `string?` | `null` | Hostovská chybová zpráva (přebije lokalizovanou min/max) |
+| `AriaDescribedBy` | `string?` | `null` | Extra `aria-describedby` na každém segmentu |
+| `HourCycle` | `TimeHourCycle` | `Auto` | 12h / 24h; `Auto` z kultury |
+| `Culture` | `CultureInfo?` | `null` | Kultura pro `HourCycle.Auto` a formát chyby |
 
 #### Příklady
 
 ```razor
 <TmTimeInput @bind-Value="_time" ShowSeconds="true" />
+
+<TmTimeInput @bind-Value="_time"
+             MinTime="@(new TimeOnly(8, 0))"
+             MaxTime="@(new TimeOnly(17, 0))"
+             HourCycle="TimeHourCycle.H12" />
 ```
 
 ### TmTimeRangePicker

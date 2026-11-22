@@ -1,6 +1,7 @@
 using Bunit;
 using FluentAssertions;
 using Tempo.Blazor.Components.Pickers;
+using Tempo.Blazor.Models;
 using Tempo.Blazor.Tests.Localization;
 
 namespace Tempo.Blazor.Tests.Pickers;
@@ -31,6 +32,7 @@ public class TmTimePickerTests : LocalizationTestBase
         TimeOnly? captured = null;
         var cut = Render<TmTimePicker>(p => p
             .Add(c => c.Value, new TimeOnly(14, 30))
+            .Add(c => c.HourCycle, TimeHourCycle.H23)
             .Add(c => c.ValueChanged, (TimeOnly? v) => captured = v));
 
         // Hours field should show 14

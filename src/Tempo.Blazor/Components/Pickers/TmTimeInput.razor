@@ -1,98 +1,453 @@
 @namespace Tempo.Blazor.Components.Pickers
+@using System.Globalization
+@using System.Linq.Expressions
+@using Tempo.Blazor.Components.Forms
+@using Tempo.Blazor.Components.Inputs
+@implements IDisposable
 
-<div class="tm-time-input @(Disabled ? "tm-time-input--disabled" : "")">
-    <input type="number"
-           id="@InputId"
-           class="tm-time-seg tm-time-seg--hours"
-           min="0" max="23"
-           value="@_hours"
-           disabled="@Disabled"
-           aria-label="@Loc["TmTimePicker_Hours"]"
-           aria-invalid="@(Invalid ? "true" : null)"
-           @onchange="OnHoursChange" />
-    <span class="tm-time-sep" aria-hidden="true">:</span>
-    <input type="number"
-           class="tm-time-seg tm-time-seg--minutes"
-           min="0" max="59"
-           value="@_minutes"
-           disabled="@Disabled"
-           aria-label="@Loc["TmTimePicker_Minutes"]"
-           aria-invalid="@(Invalid ? "true" : null)"
-           @onchange="OnMinutesChange" />
-    @if (ShowSeconds)
-    {
+<div class="tm-time-input-wrap" @attributes="AdditionalAttributes">
+    <div class="@RootClass">
+        <input type="number"
+               id="@InputId"
+               class="tm-time-seg tm-time-seg--hours"
+               min="@HourMin"
+               max="@HourMax"
+               value="@_hours"
+               disabled="@Disabled"
+               readonly="@ReadOnly"
+               aria-label="@Loc["TmTimePicker_Hours"]"
+               aria-invalid="@(IsInvalid ? "true" : null)"
+               aria-readonly="@(ReadOnly ? "true" : null)"
+               aria-describedby="@SegmentDescribedBy"
+               @onchange="OnHoursChange" />
         <span class="tm-time-sep" aria-hidden="true">:</span>
         <input type="number"
-               class="tm-time-seg tm-time-seg--seconds"
+               class="tm-time-seg tm-time-seg--minutes"
                min="0" max="59"
-               value="@_seconds"
+               value="@_minutes"
                disabled="@Disabled"
-               aria-label="@Loc["TmTimePicker_Seconds"]"
-               aria-invalid="@(Invalid ? "true" : null)"
-               @onchange="OnSecondsChange" />
+               readonly="@ReadOnly"
+               aria-label="@Loc["TmTimePicker_Minutes"]"
+               aria-invalid="@(IsInvalid ? "true" : null)"
+               aria-readonly="@(ReadOnly ? "true" : null)"
+               aria-describedby="@SegmentDescribedBy"
+               @onchange="OnMinutesChange" />
+        @if (ShowSeconds)
+        {
+            <span class="tm-time-sep" aria-hidden="true">:</span>
+            <input type="number"
+                   class="tm-time-seg tm-time-seg--seconds"
+                   min="0" max="59"
+                   value="@_seconds"
+                   disabled="@Disabled"
+                   readonly="@ReadOnly"
+                   aria-label="@Loc["TmTimePicker_Seconds"]"
+                   aria-invalid="@(IsInvalid ? "true" : null)"
+                   aria-readonly="@(ReadOnly ? "true" : null)"
+                   aria-describedby="@SegmentDescribedBy"
+                   @onchange="OnSecondsChange" />
+        }
+        @if (Uses12HourClock)
+        {
+            <TmSegmentedControl TValue="bool"
+                                Class="tm-time-input__period"
+                                Size="SegmentedControlSize.Sm"
+                                AriaLabel="@Loc["TmTimeSelector_DayPeriod"]"
+                                Disabled="@(Disabled || ReadOnly)"
+                                Value="@_isPm"
+                                ValueChanged="OnPeriodChanged"
+                                Options="@PeriodOptions" />
+        }
+    </div>
+    @if (!string.IsNullOrEmpty(ResolvedErrorText))
+    {
+        <p id="@ErrorId" class="tm-time-input__error">@ResolvedErrorText</p>
     }
 </div>
 
 @code {
-    [Parameter] public TimeOnly?  Value        { get; set; }
-    [Parameter] public EventCallback<TimeOnly?> ValueChanged { get; set; }
-    [Parameter] public bool       ShowSeconds  { get; set; }
-    [Parameter] public bool       Disabled     { get; set; }
-    [Parameter] public TimeOnly?  MinTime      { get; set; }
-    [Parameter] public TimeOnly?  MaxTime      { get; set; }
-    /// <summary>Optional id applied to the hours segment so a parent <c>&lt;label for&gt;</c> can target it.</summary>
-    [Parameter] public string?    InputId      { get; set; }
-    /// <summary>Marks every segment <c>aria-invalid="true"</c> — used by the owning picker when the
-    /// value is out of range. The segments stay editable; this only announces the invalid state
-    /// (N148).</summary>
-    [Parameter] public bool       Invalid      { get; set; }
+    /// <summary>The bound time of day. Null renders midnight in the segments until the user types.</summary>
+    [Parameter] public TimeOnly? Value { get; set; }
 
-    private string _hours   = "00";
+    /// <summary>Fires when the user commits a time, including a value outside <see cref="MinTime"/>/<see cref="MaxTime"/>.</summary>
+    [Parameter] public EventCallback<TimeOnly?> ValueChanged { get; set; }
+
+    /// <summary>
+    /// Expression identifying the bound model field. Blazor supplies it automatically with
+    /// <c>@bind-Value</c>; it is what links the input to <c>EditContext.NotifyFieldChanged</c>
+    /// (the same contract as <c>TmDecimalInput</c>).
+    /// </summary>
+    [Parameter] public Expression<Func<TimeOnly?>>? ValueExpression { get; set; }
+
+    /// <summary>When true, a seconds segment is rendered after minutes. Defaults to false.</summary>
+    [Parameter] public bool ShowSeconds { get; set; }
+
+    /// <summary>Disables every segment and the period switch. Distinct from <see cref="ReadOnly"/>.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>
+    /// Inclusive lower bound. A typed value below this bound is kept on screen and announced as
+    /// invalid — it is never silently discarded. Defaults to null (no lower bound).
+    /// </summary>
+    [Parameter] public TimeOnly? MinTime { get; set; }
+
+    /// <summary>
+    /// Inclusive upper bound. A typed value above this bound is kept on screen and announced as
+    /// invalid — it is never silently discarded. Defaults to null (no upper bound).
+    /// </summary>
+    [Parameter] public TimeOnly? MaxTime { get; set; }
+
+    /// <summary>Optional id applied to the hours segment so a parent <c>&lt;label for&gt;</c> can target it.</summary>
+    [Parameter] public string? InputId { get; set; }
+
+    /// <summary>
+    /// Optional id used as the prefix of the error element (<c>{Id}-error</c>). When omitted a
+    /// per-instance id is generated. Does not replace <see cref="InputId"/> on the hours segment.
+    /// </summary>
+    [Parameter] public string? Id { get; set; }
+
+    /// <summary>
+    /// Marks every segment <c>aria-invalid="true"</c> — used by the owning picker when the
+    /// value is out of range. The segments stay editable; this only announces the invalid state
+    /// (N148). Combined with the input's own min/max check so a typed out-of-range value is
+    /// announced even when the host has not yet echoed it.
+    /// </summary>
+    [Parameter] public bool Invalid { get; set; }
+
+    /// <summary>
+    /// Error message rendered below the segments while invalid. Host text wins over the localized
+    /// min/max message. Null or empty with <see cref="Invalid"/> true and an in-range value is the
+    /// supported way to surface a message owned by a surrounding <c>TmFormField</c>.
+    /// </summary>
+    [Parameter] public string? ErrorText { get; set; }
+
+    /// <summary>
+    /// Renders every segment <c>readonly</c> and applies <c>tm-time-input--readonly</c>: the time
+    /// stays visible and focusable but cannot be edited. Never assigned inside the component.
+    /// Distinct from <see cref="Disabled"/>, which greys the control out and removes it from
+    /// interaction. Defaults to false.
+    /// </summary>
+    [Parameter] public bool ReadOnly { get; set; }
+
+    /// <summary>
+    /// Extra ids referenced from every segment's <c>aria-describedby</c>. Joined with the input's
+    /// own error id and the surrounding <c>TmFormField</c> cascade (help and error).
+    /// </summary>
+    [Parameter] public string? AriaDescribedBy { get; set; }
+
+    /// <summary>
+    /// 12-hour versus 24-hour clock. Default <see cref="TimeHourCycle.Auto"/> follows
+    /// <see cref="Culture"/> (or <see cref="CultureInfo.CurrentCulture"/>) via
+    /// <c>ShortTimePattern</c> — <c>en-US</c> is 12-hour with an AM/PM switch, <c>cs</c>/<c>sk</c>/
+    /// <c>fr</c>/<c>en-GB</c> stay 24-hour. Pass <see cref="TimeHourCycle.H23"/> to force 24-hour.
+    /// </summary>
+    [Parameter] public TimeHourCycle HourCycle { get; set; } = TimeHourCycle.Auto;
+
+    /// <summary>
+    /// Culture used to resolve <see cref="HourCycle"/>.<see cref="TimeHourCycle.Auto"/> and to
+    /// format the min/max error. Null uses <see cref="CultureInfo.CurrentCulture"/>.
+    /// </summary>
+    [Parameter] public CultureInfo? Culture { get; set; }
+
+    /// <summary>Unmatched attributes (for example <c>data-testid</c>) land on the wrap.</summary>
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    /// <summary>The <c>EditForm</c>'s edit context, when the input is used inside one.</summary>
+    [CascadingParameter] private EditContext? CascadedEditContext { get; set; }
+
+    /// <summary>
+    /// Id of the error message a surrounding <c>TmFormField</c> currently renders (cascaded as
+    /// <c>TmFormField.ErrorIdCascadingName</c>; null when the field shows no error).
+    /// </summary>
+    [CascadingParameter(Name = TmFormField.ErrorIdCascadingName)]
+    private string? FormFieldErrorId { get; set; }
+
+    /// <summary>
+    /// Ids a surrounding <c>TmFormField</c> publishes for its own help text (cascaded as
+    /// <c>TmFormField.DescribedByIdsCascadingName</c>; null while the field shows no help).
+    /// </summary>
+    [CascadingParameter(Name = TmFormField.DescribedByIdsCascadingName)]
+    private string? FormFieldDescribedByIds { get; set; }
+
+    private readonly string _generatedId = $"tm-time-input-{Guid.NewGuid():N}"[..24];
+
+    private string _hours = "00";
     private string _minutes = "00";
     private string _seconds = "00";
+    private bool _isPm;
+
+    private bool _hasDraft;
+    private TimeOnly _draft;
+    private TimeOnly? _lastSeenValue;
+
+    private EditContext? _subscribedEditContext;
+    private FieldIdentifier? _fieldIdentifier;
+    private Expression<Func<TimeOnly?>>? _seenValueExpression;
+
+    private CultureInfo EffectiveCulture => Culture ?? CultureInfo.CurrentCulture;
+
+    private TimeHourCycle ResolvedHourCycle => TimeOfDayFormat.ResolveHourCycle(HourCycle, EffectiveCulture);
+
+    private bool Uses12HourClock => ResolvedHourCycle == TimeHourCycle.H12;
+
+    private int HourMin => Uses12HourClock ? 1 : 0;
+
+    private int HourMax => Uses12HourClock ? 12 : 23;
+
+    private string EffectiveId => string.IsNullOrEmpty(Id) ? _generatedId : Id!;
+
+    private string ErrorId => $"{EffectiveId}-error";
+
+    private IReadOnlyList<SegmentedOption<bool>> PeriodOptions =>
+    [
+        new() { Label = Loc["TmTimeSelector_Am"], Value = false },
+        new() { Label = Loc["TmTimeSelector_Pm"], Value = true },
+    ];
+
+    private TimeOnly DisplayedTime => _hasDraft ? _draft : Value ?? TimeOnly.MinValue;
+
+    private bool IsOutOfRange
+    {
+        get
+        {
+            var shown = _hasDraft ? _draft : Value;
+            return shown.HasValue && ((MinTime.HasValue && shown.Value < MinTime.Value) || (MaxTime.HasValue && shown.Value > MaxTime.Value));
+        }
+    }
+
+    private bool IsInvalid => Invalid || IsOutOfRange || FormFieldErrorId is { Length: > 0 };
+
+    private string? ValidationMessage =>
+        CascadedEditContext?.GetValidationMessages(FieldIdentifier).FirstOrDefault();
+
+    private string? ResolvedErrorText
+    {
+        get
+        {
+            if (!string.IsNullOrEmpty(ErrorText))
+            {
+                return ErrorText;
+            }
+
+            if (IsOutOfRange)
+            {
+                var min = FormatBound(MinTime ?? TimeOnly.MinValue);
+                var max = FormatBound(MaxTime ?? TimeOnly.MaxValue);
+                return Loc["TmTimeSelector_OutOfRange", min, max];
+            }
+
+            return ValidationMessage;
+        }
+    }
+
+    private string RootClass
+    {
+        get
+        {
+            var classes = "tm-time-input";
+            if (Disabled)
+            {
+                classes += " tm-time-input--disabled";
+            }
+
+            if (ReadOnly)
+            {
+                classes += " tm-time-input--readonly";
+            }
+
+            if (IsInvalid)
+            {
+                classes += " tm-time-input--invalid";
+            }
+
+            return classes;
+        }
+    }
+
+    private string? SegmentDescribedBy => TmDescribedBy.Join(
+        string.IsNullOrEmpty(ResolvedErrorText) ? null : ErrorId,
+        FormFieldDescribedByIds,
+        FormFieldErrorId,
+        AriaDescribedBy);
+
+    private FieldIdentifier FieldIdentifier
+    {
+        get
+        {
+            if (_fieldIdentifier is null && ValueExpression is not null)
+            {
+                _fieldIdentifier = FieldIdentifier.Create(ValueExpression);
+            }
+
+            return _fieldIdentifier ?? new FieldIdentifier(this, nameof(Value));
+        }
+    }
 
     protected override void OnParametersSet()
     {
-        if (Value.HasValue)
+        if (!ReferenceEquals(ValueExpression, _seenValueExpression))
         {
-            _hours   = Value.Value.Hour.ToString("D2");
-            _minutes = Value.Value.Minute.ToString("D2");
-            _seconds = Value.Value.Second.ToString("D2");
+            _seenValueExpression = ValueExpression;
+            _fieldIdentifier = null;
+        }
+
+        if (_hasDraft)
+        {
+            if (Value == _draft)
+            {
+                _hasDraft = false;
+            }
+            else if (!Nullable.Equals(Value, _lastSeenValue))
+            {
+                _hasDraft = false;
+            }
+        }
+
+        _lastSeenValue = Value;
+        SyncDisplayFrom(_hasDraft ? _draft : Value);
+
+        if (!ReferenceEquals(CascadedEditContext, _subscribedEditContext))
+        {
+            DetachValidationStateChanged();
+            _fieldIdentifier = null;
+            _subscribedEditContext = CascadedEditContext;
+            if (_subscribedEditContext is not null)
+            {
+                _subscribedEditContext.OnValidationStateChanged += HandleValidationStateChanged;
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    public void Dispose() => DetachValidationStateChanged();
+
+    private void HandleValidationStateChanged(object? sender, ValidationStateChangedEventArgs e) =>
+        InvokeAsync(StateHasChanged);
+
+    private void DetachValidationStateChanged()
+    {
+        if (_subscribedEditContext is not null)
+        {
+            _subscribedEditContext.OnValidationStateChanged -= HandleValidationStateChanged;
+            _subscribedEditContext = null;
+        }
+    }
+
+    private void SyncDisplayFrom(TimeOnly? value)
+    {
+        var t = value ?? TimeOnly.MinValue;
+        if (Uses12HourClock)
+        {
+            var hour12 = t.Hour % 12;
+            if (hour12 == 0)
+            {
+                hour12 = 12;
+            }
+
+            _hours = hour12.ToString("D2", CultureInfo.InvariantCulture);
         }
         else
         {
-            _hours = _minutes = _seconds = "00";
+            _hours = t.Hour.ToString("D2", CultureInfo.InvariantCulture);
         }
+
+        _isPm = t.Hour >= 12;
+
+        _minutes = t.Minute.ToString("D2", CultureInfo.InvariantCulture);
+        _seconds = t.Second.ToString("D2", CultureInfo.InvariantCulture);
     }
 
     private async Task OnHoursChange(ChangeEventArgs e)
     {
-        if (!int.TryParse(e.Value?.ToString(), out var h) || h < 0 || h > 23) return;
-        var m = Value?.Minute   ?? 0;
-        var s = Value?.Second   ?? 0;
-        await Commit(new TimeOnly(h, m, s));
+        if (!int.TryParse(e.Value?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed))
+        {
+            return;
+        }
+
+        int hour24;
+        if (Uses12HourClock)
+        {
+            if (parsed is < 1 or > 12)
+            {
+                return;
+            }
+
+            hour24 = ToHour24(parsed, _isPm);
+        }
+        else
+        {
+            if (parsed is < 0 or > 23)
+            {
+                return;
+            }
+
+            hour24 = parsed;
+        }
+
+        var current = DisplayedTime;
+        await Commit(new TimeOnly(hour24, current.Minute, current.Second));
     }
 
     private async Task OnMinutesChange(ChangeEventArgs e)
     {
-        if (!int.TryParse(e.Value?.ToString(), out var m) || m < 0 || m > 59) return;
-        var h = Value?.Hour   ?? 0;
-        var s = Value?.Second ?? 0;
-        await Commit(new TimeOnly(h, m, s));
+        if (!int.TryParse(e.Value?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var m) || m is < 0 or > 59)
+        {
+            return;
+        }
+
+        var current = DisplayedTime;
+        await Commit(new TimeOnly(current.Hour, m, current.Second));
     }
 
     private async Task OnSecondsChange(ChangeEventArgs e)
     {
-        if (!int.TryParse(e.Value?.ToString(), out var s) || s < 0 || s > 59) return;
-        var h = Value?.Hour   ?? 0;
-        var m = Value?.Minute ?? 0;
-        await Commit(new TimeOnly(h, m, s));
+        if (!int.TryParse(e.Value?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var s) || s is < 0 or > 59)
+        {
+            return;
+        }
+
+        var current = DisplayedTime;
+        await Commit(new TimeOnly(current.Hour, current.Minute, s));
+    }
+
+    private Task OnPeriodChanged(bool isPm)
+    {
+        var current = DisplayedTime;
+        var hour12 = current.Hour % 12;
+        if (hour12 == 0)
+        {
+            hour12 = 12;
+        }
+
+        return Commit(new TimeOnly(ToHour24(hour12, isPm), current.Minute, current.Second));
     }
 
     private async Task Commit(TimeOnly t)
     {
-        if (MinTime.HasValue && t < MinTime.Value) return;
-        if (MaxTime.HasValue && t > MaxTime.Value) return;
+        if (Disabled || ReadOnly)
+        {
+            return;
+        }
+
+        _draft = t;
+        _hasDraft = true;
+        SyncDisplayFrom(t);
         await ValueChanged.InvokeAsync(t);
+        CascadedEditContext?.NotifyFieldChanged(FieldIdentifier);
+    }
+
+    private string FormatBound(TimeOnly value) =>
+        Uses12HourClock
+            ? TimeOfDayFormat.Format(value, HourCycle, EffectiveCulture)
+            : value.ToString(ShowSeconds ? "HH:mm:ss" : "HH:mm", CultureInfo.InvariantCulture);
+
+    private static int ToHour24(int hour12, bool isPm)
+    {
+        if (hour12 == 12)
+        {
+            return isPm ? 12 : 0;
+        }
+
+        return isPm ? hour12 + 12 : hour12;
     }
 }

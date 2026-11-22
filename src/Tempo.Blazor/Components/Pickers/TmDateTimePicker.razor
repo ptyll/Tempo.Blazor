@@ -1,4 +1,5 @@
 @namespace Tempo.Blazor.Components.Pickers
+@using System.Globalization
 
 <div class="tm-datetime-picker @Class @(IsOutOfRange ? "tm-datetime-picker--invalid" : "")" @attributes="RootAttributes">
     @if (!string.IsNullOrEmpty(Label))
@@ -90,7 +91,9 @@
                          ShowSeconds="@ShowSeconds"
                          Disabled="@Disabled"
                          MinTime="@_minTime"
-                         MaxTime="@_maxTime" />
+                         MaxTime="@_maxTime"
+                         HourCycle="@HourCycle"
+                         Culture="@Culture" />
         </div>
     </div>
 </div>
@@ -104,6 +107,16 @@
     [Parameter] public bool       ShowSeconds  { get; set; }
     [Parameter] public string?    Placeholder  { get; set; }
     [Parameter] public bool       Disabled     { get; set; }
+    /// <summary>
+    /// 12-hour versus 24-hour clock forwarded to the nested <c>TmTimeInput</c>. Default
+    /// <see cref="TimeHourCycle.Auto"/> follows <see cref="Culture"/>.
+    /// </summary>
+    [Parameter] public TimeHourCycle HourCycle { get; set; } = TimeHourCycle.Auto;
+    /// <summary>
+    /// Culture used to resolve <see cref="HourCycle"/>.<see cref="TimeHourCycle.Auto"/>.
+    /// Null uses <see cref="CultureInfo.CurrentCulture"/>.
+    /// </summary>
+    [Parameter] public CultureInfo? Culture { get; set; }
     [Parameter] public bool       Required     { get; set; }
     [Parameter] public bool       HideClear    { get; set; }
     [Parameter] public string?    Label        { get; set; }

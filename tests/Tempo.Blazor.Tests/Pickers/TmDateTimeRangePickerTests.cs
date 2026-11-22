@@ -1,6 +1,7 @@
 using Bunit;
 using FluentAssertions;
 using Tempo.Blazor.Components.Pickers;
+using Tempo.Blazor.Models;
 using Tempo.Blazor.Tests.Localization;
 
 namespace Tempo.Blazor.Tests.Pickers;
@@ -23,7 +24,8 @@ public class TmDateTimeRangePickerTests : LocalizationTestBase
         var start = new DateTime(2025, 6, 1, 8, 0, 0);
         var end   = new DateTime(2025, 6, 30, 18, 0, 0);
         var cut   = Render<TmDateTimeRangePicker>(p => p
-            .Add(c => c.Value, (start, end)));
+            .Add(c => c.Value, (start, end))
+            .Add(c => c.HourCycle, TimeHourCycle.H23));
 
         // Start section shows hours 08
         cut.Find(".tm-datetime-range-start .tm-time-seg--hours")

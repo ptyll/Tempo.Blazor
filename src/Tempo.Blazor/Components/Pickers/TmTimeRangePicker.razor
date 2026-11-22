@@ -1,4 +1,5 @@
 @namespace Tempo.Blazor.Components.Pickers
+@using System.Globalization
 
 <div class="tm-time-range-picker @Class @(IsInvalid ? "tm-time-range--invalid" : "")" @attributes="RootAttributes">
     @if (!string.IsNullOrEmpty(Label))
@@ -21,7 +22,9 @@
                          ValueChanged="OnStartChanged"
                          InputId="@_startInputId"
                          ShowSeconds="@ShowSeconds"
-                         Disabled="@Disabled" />
+                         Disabled="@Disabled"
+                         HourCycle="@HourCycle"
+                         Culture="@Culture" />
         </div>
 
         <span class="tm-time-range-sep" aria-hidden="true">–</span>
@@ -33,7 +36,9 @@
             <TmTimeInput Value="@Value.End"
                          ValueChanged="OnEndChanged"
                          ShowSeconds="@ShowSeconds"
-                         Disabled="@Disabled" />
+                         Disabled="@Disabled"
+                         HourCycle="@HourCycle"
+                         Culture="@Culture" />
         </div>
 
         @if (ShowSwapButton && !Disabled)
@@ -69,6 +74,16 @@
     [Parameter] public bool    ShowSeconds    { get; set; }
     [Parameter] public string? Label          { get; set; }
     [Parameter] public bool    Disabled       { get; set; }
+    /// <summary>
+    /// 12-hour versus 24-hour clock forwarded to both <c>TmTimeInput</c> ends. Default
+    /// <see cref="TimeHourCycle.Auto"/> follows <see cref="Culture"/>.
+    /// </summary>
+    [Parameter] public TimeHourCycle HourCycle { get; set; } = TimeHourCycle.Auto;
+    /// <summary>
+    /// Culture used to resolve <see cref="HourCycle"/>.<see cref="TimeHourCycle.Auto"/>.
+    /// Null uses <see cref="CultureInfo.CurrentCulture"/>.
+    /// </summary>
+    [Parameter] public CultureInfo? Culture { get; set; }
     [Parameter] public string? Class          { get; set; }
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 

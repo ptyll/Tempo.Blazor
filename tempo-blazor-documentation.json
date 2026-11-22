@@ -28721,6 +28721,12 @@
           "isRequired": false
         },
         {
+          "name": "Culture",
+          "type": "CultureInfo?",
+          "isRequired": false,
+          "description": "Culture used to resolve HourCycle.Auto. Null uses CurrentCulture."
+        },
+        {
           "name": "DateFormat",
           "type": "string",
           "isRequired": false,
@@ -28735,6 +28741,13 @@
           "name": "HideClear",
           "type": "bool",
           "isRequired": false
+        },
+        {
+          "name": "HourCycle",
+          "type": "TimeHourCycle",
+          "isRequired": false,
+          "default": "TimeHourCycle.Auto",
+          "description": "12-hour versus 24-hour clock forwarded to the nested TmTimeInput. Default Auto follows Culture."
         },
         {
           "name": "Label",
@@ -28827,9 +28840,22 @@
           "isRequired": false
         },
         {
+          "name": "Culture",
+          "type": "CultureInfo?",
+          "isRequired": false,
+          "description": "Culture used to resolve HourCycle.Auto. Null uses CurrentCulture."
+        },
+        {
           "name": "Disabled",
           "type": "bool",
           "isRequired": false
+        },
+        {
+          "name": "HourCycle",
+          "type": "TimeHourCycle",
+          "isRequired": false,
+          "default": "TimeHourCycle.Auto",
+          "description": "12-hour versus 24-hour clock forwarded to both nested TmDateTimePickers. Default Auto follows Culture."
         },
         {
           "name": "Label",
@@ -28948,7 +28974,7 @@
       "kind": "Component",
       "category": "Pickers",
       "namespace": "Tempo.Blazor.Components.Pickers",
-      "description": "Low-level time input with separate numeric fields for hours, minutes, and optional seconds. Enforces min/max time constraints. Used internally by TmTimePicker and other picker components.",
+      "description": "Low-level time input with separate numeric fields for hours, minutes, and optional seconds. An out-of-range value stays on screen and is announced invalid instead of being silently discarded. HourCycle Auto follows the culture (12-hour with AM/PM on en-US). Used internally by TmTimePicker, TmTimeRangePicker and TmDateTimePicker.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Pickers/TmTimeInput.razor",
       "documentationStatus": "merged",
@@ -28957,51 +28983,105 @@
       ],
       "parameters": [
         {
+          "name": "AriaDescribedBy",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Extra ids referenced from every segment's aria-describedby. Joined with the input's own error id and the surrounding TmFormField cascade."
+        },
+        {
+          "name": "Culture",
+          "type": "CultureInfo?",
+          "isRequired": false,
+          "description": "Culture used to resolve HourCycle.Auto and to format the min/max error. Null uses CurrentCulture."
+        },
+        {
           "name": "Disabled",
           "type": "bool",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Disables every segment and the period switch. Distinct from ReadOnly."
+        },
+        {
+          "name": "ErrorText",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Error message rendered below the segments while invalid. Host text wins over the localized min/max message. Null or empty with Invalid true is the supported way to surface a message owned by a surrounding TmFormField."
+        },
+        {
+          "name": "HourCycle",
+          "type": "TimeHourCycle",
+          "isRequired": false,
+          "default": "TimeHourCycle.Auto",
+          "description": "12-hour versus 24-hour clock. Default Auto follows Culture (or CurrentCulture) via ShortTimePattern — en-US is 12-hour with an AM/PM switch, cs/sk/fr/en-GB stay 24-hour. Pass H23 to force 24-hour."
+        },
+        {
+          "name": "Id",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Optional id used as the prefix of the error element ({Id}-error). When omitted a per-instance id is generated."
         },
         {
           "name": "InputId",
           "type": "string?",
           "isRequired": false,
-          "description": "Optional id applied to the hours segment so a parent <label for> can target it."
+          "description": "Optional id applied to the hours segment so a parent label for can target it."
         },
         {
           "name": "Invalid",
           "type": "bool",
           "isRequired": false,
-          "description": "Marks every segment aria-invalid=\"true\" — used by the owning picker when the value is out of range. The segments stay editable; this only announces the invalid state (N148)."
+          "description": "Marks every segment aria-invalid=\"true\" — used by the owning picker when the value is out of range. Combined with the input's own min/max check so a typed out-of-range value is announced even when the host has not yet echoed it."
         },
         {
           "name": "MaxTime",
           "type": "TimeOnly?",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Inclusive upper bound. A typed value above this bound is kept on screen and announced as invalid — it is never silently discarded."
         },
         {
           "name": "MinTime",
           "type": "TimeOnly?",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Inclusive lower bound. A typed value below this bound is kept on screen and announced as invalid — it is never silently discarded."
+        },
+        {
+          "name": "ReadOnly",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Renders every segment readonly: the time stays visible and focusable but cannot be edited. Never assigned inside the component. Defaults to false."
         },
         {
           "name": "ShowSeconds",
           "type": "bool",
-          "isRequired": false
+          "isRequired": false,
+          "description": "When true, a seconds segment is rendered after minutes. Defaults to false."
         },
         {
           "name": "Value",
           "type": "TimeOnly?",
-          "isRequired": false
+          "isRequired": false,
+          "description": "The bound time of day. Null renders midnight in the segments until the user types."
         },
         {
           "name": "ValueChanged",
           "type": "EventCallback<TimeOnly?>",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Fires when the user commits a time, including a value outside MinTime/MaxTime. The typed value is never silently discarded."
+        },
+        {
+          "name": "ValueExpression",
+          "type": "Expression<Func<TimeOnly?>>?",
+          "isRequired": false,
+          "description": "Expression identifying the bound model field. Blazor supplies it automatically with @bind-Value; it links the input to EditContext.NotifyFieldChanged."
         }
       ],
       "cssClasses": [
+        "tm-time-input-wrap",
         "tm-time-input",
         "tm-time-input--disabled",
+        "tm-time-input--invalid",
+        "tm-time-input--readonly",
+        "tm-time-input__error",
+        "tm-time-input__period",
         "tm-time-seg",
         "tm-time-seg--hours",
         "tm-time-seg--minutes",
@@ -29016,6 +29096,10 @@
         {
           "title": "Time input with constraints",
           "code": "<TmTimeInput @bind-Value=\"time\" MinTime=\"@(new TimeOnly(8, 0))\" MaxTime=\"@(new TimeOnly(17, 0))\" />"
+        },
+        {
+          "title": "12-hour clock",
+          "code": "<TmTimeInput @bind-Value=\"time\" HourCycle=\"TimeHourCycle.H12\" Culture=\"@(System.Globalization.CultureInfo.GetCultureInfo(\"en-US\"))\" />"
         }
       ]
     },
@@ -29038,6 +29122,12 @@
           "isRequired": false
         },
         {
+          "name": "Culture",
+          "type": "CultureInfo?",
+          "isRequired": false,
+          "description": "Culture used to resolve HourCycle.Auto. Null uses CurrentCulture."
+        },
+        {
           "name": "Disabled",
           "type": "bool",
           "isRequired": false
@@ -29047,6 +29137,13 @@
           "type": "bool",
           "isRequired": false,
           "description": "Hides the \"✕\" clear button that is otherwise rendered while a Value is set and the picker is not Disabled. Parity with TmDateTimePicker.HideClear. The value stays editable segment by segment; only the one-click clear is removed. Defaults to false. Required does not hide the button implicitly (same as TmDatePicker / TmDateTimePicker) — a host with a mandatory field passes HideClear=\"true\" explicitly."
+        },
+        {
+          "name": "HourCycle",
+          "type": "TimeHourCycle",
+          "isRequired": false,
+          "default": "TimeHourCycle.Auto",
+          "description": "12-hour versus 24-hour clock forwarded to TmTimeInput. Default Auto follows Culture."
         },
         {
           "name": "Label",
@@ -29067,6 +29164,12 @@
           "name": "Placeholder",
           "type": "string?",
           "isRequired": false
+        },
+        {
+          "name": "ReadOnly",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Renders the nested TmTimeInput read-only. Never assigned inside the picker. Defaults to false."
         },
         {
           "name": "Required",
@@ -29127,9 +29230,22 @@
           "isRequired": false
         },
         {
+          "name": "Culture",
+          "type": "CultureInfo?",
+          "isRequired": false,
+          "description": "Culture used to resolve HourCycle.Auto. Null uses CurrentCulture."
+        },
+        {
           "name": "Disabled",
           "type": "bool",
           "isRequired": false
+        },
+        {
+          "name": "HourCycle",
+          "type": "TimeHourCycle",
+          "isRequired": false,
+          "default": "TimeHourCycle.Auto",
+          "description": "12-hour versus 24-hour clock forwarded to both TmTimeInput ends. Default Auto follows Culture."
         },
         {
           "name": "Label",
