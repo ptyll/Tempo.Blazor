@@ -119,6 +119,37 @@ public sealed class TmTimeSelectorCssTests
     }
 
     [Fact]
+    public void GridAndPresets_UseTokens_AndForcedColorsSelectedState()
+    {
+        var css = ThemeCss.ComponentCss("_time-selector.css");
+        css.Should().Contain(".tm-time-selector__grid");
+        css.Should().Contain(".tm-time-selector__cell");
+        css.Should().Contain(".tm-time-selector__presets");
+        css.Should().Contain(".tm-time-selector--grid-open");
+        css.Should().Contain("gap: var(--tm-space-1);");
+        css.Should().Contain("var(--tm-space-2)");
+        css.Should().Contain("var(--tm-space-3)");
+        css.Should().Contain("[data-tm-time-grid-columns=\"4\"]");
+        css.Should().Contain("[data-tm-time-grid-columns=\"6\"]");
+        css.Should().Contain("[data-tm-time-grid-columns=\"8\"]");
+        css.Should().Contain("repeat(4, minmax(0, 1fr))");
+        css.Should().Contain("repeat(6, minmax(0, 1fr))");
+        css.Should().Contain("repeat(8, minmax(0, 1fr))");
+        css.Should().NotContain("text-underline-offset: 2px");
+        css.Should().NotContain("text-decoration-thickness: 2px");
+
+        var match = ForcedColorsBlock.Match(css);
+        match.Success.Should().BeTrue();
+        var body = match.Groups["body"].Value;
+        body.Should().Contain("Highlight");
+        body.Should().Contain("HighlightText");
+        body.Should().Contain("GrayText");
+        body.Should().Contain("text-decoration-color: CanvasText");
+        body.Should().Contain(".tm-time-selector__cell[aria-checked=\"true\"]");
+        body.Should().Contain(".tm-time-selector__preset[aria-pressed=\"true\"]");
+    }
+
+    [Fact]
     public void BundledStylesheet_CarriesTheSelectorRules()
     {
         var bundled = ThemeCss.BundledCss();

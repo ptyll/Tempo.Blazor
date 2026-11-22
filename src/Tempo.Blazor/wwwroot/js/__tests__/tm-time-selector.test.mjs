@@ -31,7 +31,12 @@ function makeEl(attrs = {}) {
         },
         focus() { this.focusCalls++; },
         scrollIntoView(opts) { this.scrollCalls.push(opts); },
-        closest() { return null; },
+        closest(sel) {
+            if (sel === '[data-tm-time-grid-cell]' && this.attrs['data-tm-time-grid-cell'] != null) {
+                return this;
+            }
+            return null;
+        },
         getBoundingClientRect() { return { width: this.clientWidth ?? 400, height: 80 }; },
         clientWidth: 400,
         _listeners: listeners,
@@ -339,6 +344,21 @@ test('p reports period PM', () => {
     host.restore();
 });
 
+test('grid-cell arrows preventDefault so the page does not scroll, Enter stays native', () => {
+    const host = installWindow();
+    const root = makeRoot();
+    const cell = makeEl({ 'data-tm-time-grid-cell': '', tagName: 'BUTTON' });
+    const dotNet = dotnetStub();
+    attach(root, dotNet);
+    const arrow = root.dispatch('keydown', keyEvent(cell, 'ArrowRight'));
+    assert.equal(arrow.defaultPrevented, true);
+    const enter = root.dispatch('keydown', keyEvent(cell, 'Enter'));
+    assert.equal(enter.defaultPrevented, false);
+    assert.equal(dotNet.calls.filter((c) => c.method === 'OnKeyStepAsync').length, 0);
+    detach(root);
+    host.restore();
+});
+
 test('Backspace clears the segment to 0', () => {
     const host = installWindow();
     const root = makeRoot();
@@ -358,7 +378,26 @@ test('attach reports measured width and innerHeight, never the root block-size',
     const dotNet = dotnetStub();
     attach(root, dotNet);
     const vp = dotNet.calls.filter((c) => c.method === 'OnViewportChanged').at(-1);
-    assert.deepEqual(vp, { method: 'OnViewportChanged', args: [390, 844] });
+    assert.deepEqual(vp, { method: 'OnViewportChanged', args: [390, 844, 390] });
+    detach(root);
+    host.restore();
+});
+
+test('viewport width for hour columns is clientWidth minus padding, not the outer box', () => {
+    const host = installWindow({ innerHeight: 306, vvHeight: 306 });
+    const root = makeRoot({ width: 399 });
+    root.clientWidth = 399;
+    root.getBoundingClientRect = () => ({ width: 399, height: 80 });
+    host.window.getComputedStyle = () => ({
+        getPropertyValue: () => '',
+        paddingLeft: '8px',
+        paddingRight: '8px',
+    });
+    const dotNet = dotnetStub();
+    attach(root, dotNet);
+    const vp = dotNet.calls.filter((c) => c.method === 'OnViewportChanged').at(-1);
+    assert.equal(vp.args[0], 399, 'fit still uses the outer inline-size');
+    assert.equal(vp.args[2], 383, 'HourColumns uses content-box width (399 − 8 − 8)');
     detach(root);
     host.restore();
 });

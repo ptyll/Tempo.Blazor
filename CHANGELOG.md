@@ -41,6 +41,12 @@
 
 - **Readout no longer clips at 390 px / Flex Window.** A nowrap hours+minutes row already overflowed a 306 px Flex Window (scrollWidth 312), and the 12-hour row also clipped the hours − and the PM option (WCAG 1.4.10 / 2.5.8). The readout now wraps by default; `h12` parks AM/PM on its own centred row (`flex-basis: 100%`). Square + `keyboard=open` stays one line (`flex-wrap: nowrap`). Fine-pointer regular fit keeps 32 px (`--tm-space-8`) targets; coarse and square stay 44 px (ADR-0007 decision 16). **Impact:** hosts at phone / Flex Window widths may see the readout on two rows; desktop 1440 is unchanged.
 
+### Added — TmTimeSelector grid, presets and layouts (`Tempo.Blazor`, Fáze 5: TmTimeSelector – grid, předvolby, layouty)
+
+- **Hour/minute radiogroup grid** — native `<button role="radio">` cells, `role="radiogroup"`, 2D roving tabindex (arrows/Home/End move focus only; Enter/Space stay native). Mobile regular uses `TmSegmentedControl Role=Tabs` (Hours|Minutes) and one grid at a time; picking an hour switches to Minutes. Tablet/desktop show both grids. Square opens the grid on a hours/minutes spinbutton tap (`tm-time-selector--grid-open` / `data-tm-time-grid-open`) and replaces the preset row. Compact square: minutes 6×2; 24h hours 8×3 when inner width ≥ 396, else 6×4 with scroll only inside the grid; 12h hours 6×2. Square + seconds still collapses `ShowGrid` to `None`. Out-of-range cells are `aria-disabled`.
+- **Host-owned presets** — `Presets`, `ShowNowPreset` (default false; `TimeProvider` via `IServiceProvider`, never `[Inject] TimeProvider`) and `RecentTimes` (max 3, deduped against presets; never persisted). Native chips, `aria-pressed`, group `role="group"` labelled `TmTimeSelector_Presets`. Out-of-range chips are `aria-disabled`.
+- **Layouts and TypeTime** — `data-tm-time-layout` mobile/tablet/desktop. Square + `keyboard=open` hides grid, presets and +/− (one-line readout). Regular + `keyboard=open` keeps full chrome. `TmTimeSelector_TypeTime` is offered on mobile/tablet regular when `AllowTyping` (default true) and never in square. **Impact:** additive; `TmTimePicker` default `Presentation=Segments` and today's DOM are unchanged.
+
 ## 2.12.0 - 2026-11-20
 
 > Plan "Tempo: public pin-on-top API for host status UI" (4ce1b994; decision `TOP-LAYER-PIN`,

@@ -14,9 +14,10 @@ namespace Tempo.Blazor.Components.Pickers;
 
 /// <summary>
 /// Inline APG spinbutton time-of-day selector: hours/minutes/(seconds) with +/−, optional AM/PM,
-/// and a JS module for keys, typeahead, auto-repeat and fit. The hour/minute grid, presets and
-/// picker popup are later phases; this surface still evaluates <see cref="ShowGrid"/> collapse
-/// in markup (square + seconds → <see cref="TimeSelectorGrid.None"/>).
+/// an hour/minute radiogroup grid (2D roving tabindex), host-owned presets / Now / recents, and a
+/// JS module for keys, typeahead, auto-repeat and fit. Square fit opens the grid on a segment tap
+/// (replacing presets) and collapses it when seconds would overflow the 260 px sheet.
+/// The picker popup is a later phase.
 /// </summary>
 public partial class TmTimeSelector
 {
@@ -44,6 +45,11 @@ public partial class TmTimeSelector
     private EditContext? _subscribedEditContext;
     private FieldIdentifier? _fieldIdentifier;
     private Expression<Func<TimeOnly?>>? _seenValueExpression;
+    private double _viewportWidth;
+    private bool _typing;
+    private string _typedText = string.Empty;
+    private bool _typedInvalid;
+    private TmLayoutMode _resolvedLayout = TmLayoutMode.Desktop;
 
     [Inject] private IJSRuntime JS { get; set; } = default!;
 
@@ -78,7 +84,10 @@ public partial class TmTimeSelector
     /// <summary>Minute step. Must be a positive divisor of 60 other than 60. Defaults to 1.</summary>
     [Parameter] public int MinuteStep { get; set; } = 1;
 
-    /// <summary>Grid minute step. Null uses <c>max(MinuteStep, 5)</c>. Unused until the grid phase.</summary>
+    /// <summary>
+    /// Grid minute step. Null uses <c>max(<see cref="MinuteStep"/>, 5)</c>. Must be a positive
+    /// divisor of 60 other than 60 when set.
+    /// </summary>
     [Parameter] public int? GridMinuteStep { get; set; }
 
     /// <summary>When true, typed values snap onto <see cref="MinuteStep"/>. Defaults to false.</summary>
@@ -96,18 +105,30 @@ public partial class TmTimeSelector
     /// <summary>Culture used to resolve <see cref="HourCycle"/>.<see cref="TimeHourCycle.Auto"/> and to format bounds. Null uses <see cref="CultureInfo.CurrentCulture"/>.</summary>
     [Parameter] public CultureInfo? Culture { get; set; }
 
-    /// <summary>Optional preset chips. Unused until the presets phase.</summary>
+    /// <summary>
+    /// Host-owned named shortcuts rendered as native chips. The selector never persists them.
+    /// A chip whose time is outside <see cref="MinTime"/>/<see cref="MaxTime"/> is
+    /// <c>aria-disabled</c>.
+    /// </summary>
     [Parameter] public IReadOnlyList<TimePreset>? Presets { get; set; }
 
-    /// <summary>When true, a "Now" chip is offered. Unused until the presets phase.</summary>
+    /// <summary>
+    /// When true, a "Now" chip is offered. The time comes from the injected
+    /// <see cref="TimeProvider"/> (fallback <see cref="TimeProvider.System"/>), rounded to
+    /// <see cref="MinuteStep"/>. Defaults to false.
+    /// </summary>
     [Parameter] public bool ShowNowPreset { get; set; }
 
-    /// <summary>Host-owned recent times. Unused until the presets phase.</summary>
+    /// <summary>
+    /// Host-owned recent times. The selector never persists them. At most three chips render,
+    /// deduplicated against <see cref="Presets"/>.
+    /// </summary>
     [Parameter] public IReadOnlyList<TimeOnly>? RecentTimes { get; set; }
 
     /// <summary>
-    /// Whether the hour/minute grid would show. This phase does not render the grid, but square +
-    /// seconds still collapses the effective value to <see cref="TimeSelectorGrid.None"/>.
+    /// Whether the hour/minute grid shows. Square + seconds collapses the effective value to
+    /// <see cref="TimeSelectorGrid.None"/> even when this is <see cref="TimeSelectorGrid.Always"/>
+    /// (304 px would overflow the 260 px Flex-Window sheet).
     /// </summary>
     [Parameter] public TimeSelectorGrid ShowGrid { get; set; } = TimeSelectorGrid.Auto;
 
@@ -206,6 +227,9 @@ public partial class TmTimeSelector
     [CascadingParameter(Name = TmFormField.DescribedByIdsCascadingName)]
     private string? FormFieldDescribedByIds { get; set; }
 
+    /// <summary>Resolved layout from the wrapping <c>TmLayoutObserver</c>.</summary>
+    [CascadingParameter] private TmLayoutContext? Layout { get; set; }
+
     /// <summary>Id of the hours spinbutton (<c>{Id}-hours</c>) so a parent <c>&lt;label for&gt;</c> can target it.</summary>
     public string InputId => SegmentId(TimeSegment.Hours);
 
@@ -258,6 +282,19 @@ public partial class TmTimeSelector
     };
 
     private bool ShowSteppers => !ReadOnly && !(_keyboardOpen && ResolvedFit == TimeSelectorFit.Square);
+
+    private TmLayoutMode ResolvedLayout
+        => LayoutMode != TmLayoutMode.Auto
+            ? LayoutMode
+            : Layout?.Resolved ?? _resolvedLayout;
+
+    private bool ShowTypeTime
+        => AllowTyping
+           && !_typing
+           && !Disabled
+           && !ReadOnly
+           && ResolvedFit != TimeSelectorFit.Square
+           && ResolvedLayout is TmLayoutMode.Mobile or TmLayoutMode.Tablet;
 
     private TimeOnly? ShownValue => _hasDraft ? _draft : Value;
 
@@ -335,6 +372,16 @@ public partial class TmTimeSelector
                 classes += " tm-time-selector--with-seconds";
             }
 
+            if (ShowOpenGrid)
+            {
+                classes += " tm-time-selector--grid-open";
+            }
+
+            if (ShowBothGrids)
+            {
+                classes += " tm-time-selector--both-grids";
+            }
+
             if (!string.IsNullOrWhiteSpace(Class))
             {
                 classes += " " + Class;
@@ -361,6 +408,10 @@ public partial class TmTimeSelector
     protected override void OnParametersSet()
     {
         TimeMinuteStep.Validate(MinuteStep);
+        if (GridMinuteStep is { } gridStep)
+        {
+            TimeMinuteStep.Validate(gridStep, nameof(GridMinuteStep));
+        }
 
         if (!ReferenceEquals(ValueExpression, _seenValueExpression))
         {
@@ -409,6 +460,14 @@ public partial class TmTimeSelector
         {
             await UpdateAsync();
         }
+
+        await FocusPendingGridCellsAsync();
+    }
+
+    private Task OnResolvedLayoutAsync(TmLayoutMode mode)
+    {
+        _resolvedLayout = mode;
+        return ResolvedLayoutChanged.InvokeAsync(mode);
     }
 
     /// <summary>Moves focus to the hours spinbutton. No-op while <see cref="Disabled"/>.</summary>
@@ -464,22 +523,42 @@ public partial class TmTimeSelector
         });
 
     /// <summary>
-    /// Called by the module with the measured inline-size and the layout height (never the root
-    /// block-size). Ignored while the software keyboard is open so fit stays locked.
+    /// Called by the module with the measured outer inline-size, the layout height (never the root
+    /// block-size), and the inner content-box width used for hour-grid columns. Ignored while the
+    /// software keyboard is open so fit stays locked. <paramref name="innerWidth"/> of 0 falls back
+    /// to <paramref name="width"/> so existing two-argument callers keep compiling.
     /// </summary>
     [JSInvokable]
-    public Task OnViewportChanged(double width, double height)
+    public Task OnViewportChanged(double width, double height, double innerWidth = 0)
         => InvokeAsync(() =>
         {
+            var resolvedInner = innerWidth > 0 ? innerWidth : width;
+            var widthChanged = width > 0 && Math.Abs(_viewportWidth - width) >= 0.5;
+            var innerChanged = resolvedInner > 0 && Math.Abs(_innerWidth - resolvedInner) >= 0.5;
+            if (widthChanged)
+            {
+                _viewportWidth = width;
+            }
+
+            if (innerChanged)
+            {
+                _innerWidth = resolvedInner;
+            }
+
             if (_keyboardOpen || Fit != TimeSelectorFit.Auto || width <= 0 || height <= 0)
             {
+                if (widthChanged || innerChanged)
+                {
+                    StateHasChanged();
+                }
+
                 return;
             }
 
             var next = width < SquareWidthPx && height < SquareHeightPx
                 ? TimeSelectorFit.Square
                 : TimeSelectorFit.Regular;
-            if (_measuredFit == next)
+            if (_measuredFit == next && !widthChanged && !innerChanged)
             {
                 return;
             }
@@ -664,6 +743,14 @@ public partial class TmTimeSelector
 
         StateHasChanged();
     }
+
+
+    private string LayoutAttr => ResolvedLayout switch
+    {
+        TmLayoutMode.Mobile => "mobile",
+        TmLayoutMode.Tablet => "tablet",
+        _ => "desktop",
+    };
 
     private TimeOnly StartingTime()
     {

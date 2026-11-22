@@ -1,10 +1,11 @@
-/* TmTimeSelector — APG spinbutton readout with +/− and AM/PM (plan 1c95309c Fáze 4).
-   Fine-pointer regular fit keeps 32 px (--tm-space-8) targets (WCAG 2.5.8 AA floor is 24 px).
-   Coarse pointers and square fit use --tm-touch-target (44 px). See ADR-0007. */
+/* TmTimeSelector — APG spinbutton readout, hour/minute grid and host-owned presets
+   (plan 1c95309c Fáze 5). Fine-pointer regular fit keeps 32 px (--tm-space-8) targets
+   (WCAG 2.5.8 AA floor is 24 px). Coarse pointers and square fit use --tm-touch-target
+   (44 px). See ADR-0007. */
 
 .tm-time-selector {
-  --tm-time-selector-cutout-block: 0;
-  --tm-time-selector-cutout-inline: 0;
+  --tm-time-selector-cutout-block: 0rem;
+  --tm-time-selector-cutout-inline: 0rem;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -135,9 +136,173 @@
   flex-wrap: nowrap;
 }
 
+.tm-time-selector__presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--tm-space-1);
+}
+
+.tm-time-selector__preset,
+.tm-time-selector__type-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-block-size: var(--tm-space-8);
+  margin: 0;
+  padding-inline: var(--tm-space-3);
+  color: var(--tm-text-primary);
+  background: var(--tm-bg-surface-secondary);
+  border: var(--tm-border-width) solid var(--tm-border-color);
+  border-radius: var(--tm-radius-pill);
+  font-family: inherit;
+  font-size: var(--tm-font-size-sm);
+  cursor: pointer;
+}
+
+.tm-time-selector__preset[aria-pressed="true"] {
+  background: var(--tm-color-primary-subtle);
+  border-color: var(--tm-color-primary);
+  color: var(--tm-color-primary);
+}
+
+.tm-time-selector__preset:focus-visible,
+.tm-time-selector__type-toggle:focus-visible,
+.tm-time-selector__cell:focus-visible {
+  outline: var(--tm-border-width) solid transparent;
+  box-shadow: var(--tm-focus-ring);
+}
+
+.tm-time-selector__preset[aria-disabled="true"],
+.tm-time-selector__cell[aria-disabled="true"] {
+  opacity: var(--tm-opacity-disabled);
+  cursor: not-allowed;
+}
+
+.tm-time-selector__tabs {
+  display: flex;
+  justify-content: center;
+}
+
+.tm-time-selector__grids {
+  display: grid;
+  gap: var(--tm-space-2);
+}
+
+.tm-time-selector--both-grids .tm-time-selector__grids {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.tm-time-selector[data-tm-time-layout="tablet"] {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+}
+
+.tm-time-selector[data-tm-time-layout="tablet"] .tm-time-selector__readout,
+.tm-time-selector[data-tm-time-layout="tablet"] .tm-time-selector__grids,
+.tm-time-selector[data-tm-time-layout="tablet"] .tm-time-selector__type-toggle,
+.tm-time-selector[data-tm-time-layout="tablet"] .tm-time-selector__error,
+.tm-time-selector[data-tm-time-layout="tablet"] .tm-sr-only {
+  grid-column: 2;
+}
+
+.tm-time-selector[data-tm-time-layout="tablet"] .tm-time-selector__presets {
+  grid-column: 1;
+  grid-row: 1 / span 4;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.tm-time-selector__grid {
+  display: grid;
+  gap: var(--tm-space-1);
+}
+
+.tm-time-selector__grid[data-tm-time-grid-columns="4"] {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.tm-time-selector__grid[data-tm-time-grid-columns="6"] {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.tm-time-selector__grid[data-tm-time-grid-columns="8"] {
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+}
+
+.tm-time-selector__cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-block-size: var(--tm-space-8);
+  min-inline-size: var(--tm-space-8);
+  margin: 0;
+  padding: 0;
+  color: var(--tm-text-primary);
+  background: var(--tm-bg-surface-secondary);
+  border: var(--tm-border-width) solid var(--tm-border-color);
+  border-radius: var(--tm-radius-control);
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.tm-time-selector__cell[aria-checked="true"] {
+  background: var(--tm-color-primary-subtle);
+  border-color: var(--tm-color-primary);
+  color: var(--tm-color-primary);
+  font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-time-selector__type {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--tm-space-2);
+  align-items: center;
+}
+
+.tm-time-selector__type-input {
+  flex: 1 1 auto;
+  min-inline-size: var(--tm-space-16);
+  min-block-size: var(--tm-space-8);
+  padding-inline: var(--tm-space-2);
+  color: var(--tm-text-primary);
+  background: var(--tm-bg-surface);
+  border: var(--tm-border-width) solid var(--tm-border-color);
+  border-radius: var(--tm-radius-control);
+  font-family: inherit;
+  font-size: var(--tm-font-size-lg);
+  font-variant-numeric: tabular-nums;
+}
+
+.tm-time-selector[data-tm-time-fit="square"] .tm-time-selector__cell,
+.tm-time-selector[data-tm-time-fit="square"] .tm-time-selector__preset,
+.tm-time-selector[data-tm-time-fit="square"] .tm-time-selector__type-toggle {
+  min-block-size: var(--tm-touch-target);
+  min-inline-size: var(--tm-touch-target);
+}
+
+.tm-time-selector[data-tm-time-fit="square"].tm-time-selector--grid-open {
+  gap: var(--tm-space-1);
+}
+
+.tm-time-selector[data-tm-time-fit="square"] .tm-time-selector__grid--hours {
+  max-block-size: calc((3 * var(--tm-touch-target)) + (2 * var(--tm-space-1)));
+  overflow-y: auto;
+}
+
+.tm-time-selector[data-tm-time-fit="square"][data-tm-hour-cycle="h12"] .tm-time-selector__grid--hours,
+.tm-time-selector[data-tm-time-fit="square"] .tm-time-selector__grid--minutes {
+  max-block-size: calc((2 * var(--tm-touch-target)) + var(--tm-space-1));
+  overflow-y: auto;
+}
+
 @media (pointer: coarse) {
   .tm-time-selector__spin,
-  .tm-time-selector__step {
+  .tm-time-selector__step,
+  .tm-time-selector__cell,
+  .tm-time-selector__preset,
+  .tm-time-selector__type-toggle {
     min-block-size: var(--tm-touch-target);
     min-inline-size: var(--tm-touch-target);
   }
@@ -153,14 +318,35 @@
     border: 2px solid CanvasText;
   }
 
-  .tm-time-selector__step {
+  .tm-time-selector__step,
+  .tm-time-selector__cell,
+  .tm-time-selector__preset,
+  .tm-time-selector__type-toggle {
     border: 1px solid ButtonText;
     background: ButtonFace;
     color: ButtonText;
   }
 
+  .tm-time-selector__cell[aria-checked="true"],
+  .tm-time-selector__preset[aria-pressed="true"] {
+    background: Highlight;
+    color: HighlightText;
+    text-decoration: underline;
+    text-underline-offset: var(--tm-space-0-5);
+    text-decoration-thickness: var(--tm-space-0-5);
+    text-decoration-color: CanvasText;
+  }
+
+  .tm-time-selector__cell[aria-disabled="true"],
+  .tm-time-selector__preset[aria-disabled="true"] {
+    color: GrayText;
+  }
+
   .tm-time-selector__spin:focus,
-  .tm-time-selector__step:focus-visible {
+  .tm-time-selector__step:focus-visible,
+  .tm-time-selector__cell:focus-visible,
+  .tm-time-selector__preset:focus-visible,
+  .tm-time-selector__type-toggle:focus-visible {
     outline: 2px solid Highlight;
     outline-offset: 2px;
   }

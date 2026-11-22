@@ -29308,7 +29308,7 @@
       "kind": "Component",
       "category": "Pickers",
       "namespace": "Tempo.Blazor.Components.Pickers",
-      "description": "Inline APG spinbutton time-of-day selector: hours/minutes/(seconds) with +/−, optional AM/PM, and a JS module for keys, typeahead, auto-repeat and fit. Null Value renders -- in the readout; +/− starts from now rounded to the step. Square fit + seconds collapses ShowGrid to None. The hour/minute grid, presets and picker popup are later phases.",
+      "description": "Inline APG spinbutton time-of-day selector: hours/minutes/(seconds) with +/−, optional AM/PM, an hour/minute radiogroup grid (2D roving tabindex), host-owned presets / Now / recents, and a JS module for keys, typeahead, auto-repeat and fit. Null Value renders -- in the readout; +/− starts from now rounded to the step. Square fit opens the grid on a segment tap (replacing presets) and collapses ShowGrid to None when seconds would overflow the 260 px sheet. The picker popup is a later phase.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Pickers/TmTimeSelector.razor",
       "documentationStatus": "merged",
@@ -29327,7 +29327,7 @@
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "Typeahead in the spinbuttons and the \"Type the time\" switch on a coarse pointer. The switch is never offered in a square fit (decision 15). Defaults to true."
+          "description": "Typeahead in the spinbuttons and the Type the time switch on a coarse pointer. The switch is never offered in a square fit (decision 15). Defaults to true."
         },
         {
           "name": "AmbiguousOffsetChanged",
@@ -29413,7 +29413,7 @@
           "name": "GridMinuteStep",
           "type": "int?",
           "isRequired": false,
-          "description": "Grid minute step. Null uses max(MinuteStep, 5). Unused until the grid phase."
+          "description": "Grid minute step. Null uses max(MinuteStep, 5). Must be a positive divisor of 60 other than 60 when set."
         },
         {
           "name": "HourCycle",
@@ -29477,7 +29477,7 @@
           "name": "Presets",
           "type": "IReadOnlyList<TimePreset>?",
           "isRequired": false,
-          "description": "Optional preset chips. Unused until the presets phase."
+          "description": "Host-owned named shortcuts rendered as native chips. The selector never persists them. A chip whose time is outside MinTime/MaxTime is aria-disabled."
         },
         {
           "name": "ReadOnly",
@@ -29489,7 +29489,7 @@
           "name": "RecentTimes",
           "type": "IReadOnlyList<TimeOnly>?",
           "isRequired": false,
-          "description": "Host-owned recent times. Unused until the presets phase."
+          "description": "Host-owned recent times. The selector never persists them. At most three chips render, deduplicated against Presets."
         },
         {
           "name": "ReferenceDate",
@@ -29508,13 +29508,13 @@
           "type": "TimeSelectorGrid",
           "isRequired": false,
           "default": "TimeSelectorGrid.Auto",
-          "description": "Whether the hour/minute grid would show. This phase does not render the grid, but square + seconds still collapses the effective value to None."
+          "description": "Whether the hour/minute grid shows. Square + seconds collapses the effective value to None even when Always (304 px would overflow the 260 px Flex-Window sheet). Square Auto opens the grid on a hours/minutes tap."
         },
         {
           "name": "ShowNowPreset",
           "type": "bool",
           "isRequired": false,
-          "description": "When true, a \"Now\" chip is offered. Unused until the presets phase."
+          "description": "When true, a Now chip is offered. The time comes from the injected TimeProvider (fallback TimeProvider.System), rounded to MinuteStep. Defaults to false."
         },
         {
           "name": "ShowSeconds",
@@ -29559,7 +29559,18 @@
         "tm-time-selector__step",
         "tm-time-selector__sep",
         "tm-time-selector__period",
-        "tm-time-selector__error"
+        "tm-time-selector__error",
+        "tm-time-selector--grid-open",
+        "tm-time-selector--both-grids",
+        "tm-time-selector__presets",
+        "tm-time-selector__preset",
+        "tm-time-selector__tabs",
+        "tm-time-selector__grids",
+        "tm-time-selector__grid",
+        "tm-time-selector__cell",
+        "tm-time-selector__type",
+        "tm-time-selector__type-input",
+        "tm-time-selector__type-toggle"
       ],
       "examples": [
         {
@@ -29573,6 +29584,10 @@
         {
           "title": "Pinned square fit",
           "code": "<TmTimeSelector @bind-Value=\"time\" Fit=\"TimeSelectorFit.Square\" />"
+        },
+        {
+          "title": "Presets, Now and recents",
+          "code": "<TmTimeSelector @bind-Value=\"time\" ShowNowPreset=\"true\" Presets=\"presets\" RecentTimes=\"recents\" />"
         }
       ]
     },

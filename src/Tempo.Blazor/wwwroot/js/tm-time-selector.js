@@ -200,8 +200,23 @@ function pageDelta(segment, sign) {
     return sign * 15;
 }
 
+function isGridCell(el) {
+    return !!el?.closest?.('[data-tm-time-grid-cell]');
+}
+
 function handleKey(session, event) {
     const target = event.target;
+    if (isGridCell(target)) {
+        const gridKey = event.key;
+        if (gridKey === 'ArrowUp' || gridKey === 'ArrowDown'
+            || gridKey === 'ArrowLeft' || gridKey === 'ArrowRight'
+            || gridKey === 'Home' || gridKey === 'End') {
+            event.preventDefault?.();
+        }
+
+        return;
+    }
+
     if (!isSpin(target)) {
         return;
     }
@@ -391,20 +406,40 @@ function inlineSize(root) {
     return root?.clientWidth ?? 0;
 }
 
+function contentInlineSize(root) {
+    const width = root?.clientWidth ?? 0;
+    if (!(width > 0)) {
+        return inlineSize(root);
+    }
+
+    let pad = 0;
+    try {
+        const style = win()?.getComputedStyle?.(root);
+        pad = (Number.parseFloat(style?.paddingLeft) || 0)
+            + (Number.parseFloat(style?.paddingRight) || 0);
+    } catch {
+        pad = 0;
+    }
+
+    return Math.max(0, width - pad);
+}
+
 function reportViewport(session) {
     const width = inlineSize(session.root);
+    const inner = contentInlineSize(session.root);
     const height = layoutHeight(session.root);
     if (width <= 0 || height <= 0) {
         return;
     }
 
-    if (session.lastWidth === width && session.lastHeight === height) {
+    if (session.lastWidth === width && session.lastHeight === height && session.lastInner === inner) {
         return;
     }
 
     session.lastWidth = width;
     session.lastHeight = height;
-    invoke(session.dotNetRef, 'OnViewportChanged', width, height);
+    session.lastInner = inner;
+    invoke(session.dotNetRef, 'OnViewportChanged', width, height, inner);
 }
 
 function reportKeyboard(session) {
@@ -489,6 +524,7 @@ export function attach(root, dotNetRef) {
         maxVv: 0,
         lastWidth: undefined,
         lastHeight: undefined,
+        lastInner: undefined,
         repeating: false,
         now: () => Date.now(),
     };

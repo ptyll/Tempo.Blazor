@@ -5,8 +5,9 @@
     <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">Time selector</h1>
     <p class="text-slate-600 dark:text-slate-400">
         <code class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">&lt;TmTimeSelector /&gt;</code>
-        is the inline APG spinbutton readout: hours/minutes with +/−, optional AM/PM, and a JS module
-        for keys, typeahead, auto-repeat and fit. The hour/minute grid and picker popup arrive in later phases.
+        is the inline APG spinbutton readout: hours/minutes with +/−, optional AM/PM, an hour/minute
+        grid, host-owned presets and a JS module for keys, typeahead, auto-repeat and fit. The picker
+        popup arrives in a later phase.
         A host <code class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">&lt;input&gt;</code>
         sits beside the selector so E2E can open the software keyboard.
     </p>
@@ -25,6 +26,9 @@
         <div class="flex flex-wrap items-end gap-4">
             <TmTimeSelector @bind-Value="_inline"
                             HourCycle="TimeHourCycle.H23"
+                            ShowNowPreset="true"
+                            Presets="_presets"
+                            RecentTimes="_recents"
                             Id="time-selector-inline" />
             <label class="text-sm text-slate-600 dark:text-slate-400">
                 Host field
@@ -76,6 +80,26 @@
     </div>
 </section>
 
+<section class="demo-section" data-testid="time-selector-seconds">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">With seconds</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 rounded-full">ShowSeconds</span>
+    </div>
+
+    <div class="showcase-card" data-testid="time-selector-seconds-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            Square fit collapses the hour/minute grid when seconds would overflow the 260 px sheet.
+        </p>
+        <TmTimeSelector @bind-Value="_seconds"
+                        HourCycle="TimeHourCycle.H23"
+                        ShowSeconds="true"
+                        Id="time-selector-seconds" />
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-3" data-testid="time-selector-seconds-echo">
+            Value: @(_seconds?.ToString("HH:mm:ss") ?? "—")
+        </p>
+    </div>
+</section>
+
 <section class="demo-section" data-testid="time-selector-readonly">
     <div class="flex items-center space-x-2 mb-4">
         <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Read-only</h2>
@@ -110,5 +134,19 @@
     private TimeOnly? _twelve = new TimeOnly(14, 30);
     private TimeOnly? _ranged = new TimeOnly(8, 0);
     private TimeOnly? _form = new TimeOnly(9, 0);
+    private TimeOnly? _seconds = new TimeOnly(14, 30, 15);
     private string _hostNote = "";
+
+    private readonly TimePreset[] _presets =
+    [
+        new("Noon", new TimeOnly(12, 0)),
+        new("Evening", new TimeOnly(18, 0)),
+    ];
+
+    private readonly TimeOnly[] _recents =
+    [
+        new TimeOnly(8, 15),
+        new TimeOnly(9, 45),
+        new TimeOnly(11, 0),
+    ];
 }

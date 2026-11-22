@@ -9,7 +9,7 @@
 
 <TmLayoutObserver LayoutMode="LayoutMode"
                   InitialMode="InitialMode"
-                  ResolvedLayoutChanged="ResolvedLayoutChanged"
+                  ResolvedLayoutChanged="OnResolvedLayoutAsync"
                   IsContainer="false">
     <LayoutContent>
         <div @ref="_root"
@@ -22,106 +22,85 @@
              data-tm-time-fit="@FitAttr"
              data-tm-time-keyboard="@(_keyboardOpen ? "open" : null)"
              data-tm-time-grid="@GridAttr"
+             data-tm-time-grid-open="@(ShowOpenGrid ? "true" : null)"
+             data-tm-time-layout="@LayoutAttr"
              data-tm-hour-cycle="@(Uses12HourClock ? "h12" : "h23")"
              @attributes="AdditionalAttributes">
-            <div class="tm-time-selector__readout">
-                <div class="tm-time-selector__cluster">
-                    @if (ShowSteppers)
-                    {
-                        <button type="button"
-                                class="tm-time-selector__step"
-                                tabindex="-1"
-                                disabled="@(Disabled || !CanStep(TimeSegment.Hours, -1))"
-                                aria-controls="@SegmentId(TimeSegment.Hours)"
-                                aria-label="@DecreaseLabel(TimeSegment.Hours)"
-                                data-testid="@TestId("time-selector-decrease-hours")"
-                                data-tm-time-step="hours"
-                                data-tm-time-delta="-1"
-                                @onclick="() => OnStepperAsync(TimeSegment.Hours, -1)">
-                            <TmIcon Name="@IconNames.Minus" Size="IconSize.Sm" />
-                        </button>
-                    }
-                    <span @ref="_hoursRef"
-                          id="@SegmentId(TimeSegment.Hours)"
-                          class="tm-time-selector__spin"
-                          role="spinbutton"
-                          tabindex="@(Disabled ? "-1" : "0")"
-                          aria-label="@SegmentAriaLabel(TimeSegment.Hours)"
-                          aria-valuenow="@SegmentValueNow(TimeSegment.Hours)"
-                          aria-valuemin="@SegmentValueMin(TimeSegment.Hours)"
-                          aria-valuemax="@SegmentValueMax(TimeSegment.Hours)"
-                          aria-valuetext="@SegmentValueText(TimeSegment.Hours)"
-                          aria-invalid="@(IsInvalid ? "true" : null)"
-                          aria-readonly="@(ReadOnly ? "true" : null)"
-                          aria-disabled="@(Disabled ? "true" : null)"
-                          aria-describedby="@SegmentDescribedBy"
-                          data-tm-time-segment="hours">@SegmentDisplay(TimeSegment.Hours)</span>
-                    @if (ShowSteppers)
-                    {
-                        <button type="button"
-                                class="tm-time-selector__step"
-                                tabindex="-1"
-                                disabled="@(Disabled || !CanStep(TimeSegment.Hours, 1))"
-                                aria-controls="@SegmentId(TimeSegment.Hours)"
-                                aria-label="@IncreaseLabel(TimeSegment.Hours)"
-                                data-testid="@TestId("time-selector-increase-hours")"
-                                data-tm-time-step="hours"
-                                data-tm-time-delta="1"
-                                @onclick="() => OnStepperAsync(TimeSegment.Hours, 1)">
-                            <TmIcon Name="@IconNames.Plus" Size="IconSize.Sm" />
-                        </button>
-                    }
+            @if (_typing)
+            {
+                <div class="tm-time-selector__type">
+                    <input type="text"
+                           class="tm-time-selector__type-input"
+                           inputmode="numeric"
+                           autocomplete="off"
+                           enterkeyhint="done"
+                           aria-label="@Loc["TmTimeSelector_TypeTime"]"
+                           aria-invalid="@(_typedInvalid ? "true" : null)"
+                           aria-describedby="@SegmentDescribedBy"
+                           data-testid="@TestId("time-selector-type-input")"
+                           value="@_typedText"
+                           @oninput="OnTypedInput"
+                           @onkeydown="OnTypedKeyDownAsync"
+                           @onblur="OnTypedBlurAsync" />
+                    <button type="button"
+                            class="tm-time-selector__type-toggle"
+                            data-testid="@TestId("time-selector-use-controls")"
+                            @onclick="OnUseControls">
+                        @Loc["TmTimeSelector_UseControls"]
+                    </button>
                 </div>
-                <span class="tm-time-selector__sep" aria-hidden="true">:</span>
-                <div class="tm-time-selector__cluster">
-                    @if (ShowSteppers)
-                    {
-                        <button type="button"
-                                class="tm-time-selector__step"
-                                tabindex="-1"
-                                disabled="@(Disabled || !CanStep(TimeSegment.Minutes, -1))"
-                                aria-controls="@SegmentId(TimeSegment.Minutes)"
-                                aria-label="@DecreaseLabel(TimeSegment.Minutes)"
-                                data-testid="@TestId("time-selector-decrease-minutes")"
-                                data-tm-time-step="minutes"
-                                data-tm-time-delta="-1"
-                                @onclick="() => OnStepperAsync(TimeSegment.Minutes, -1)">
-                            <TmIcon Name="@IconNames.Minus" Size="IconSize.Sm" />
-                        </button>
-                    }
-                    <span @ref="_minutesRef"
-                          id="@SegmentId(TimeSegment.Minutes)"
-                          class="tm-time-selector__spin"
-                          role="spinbutton"
-                          tabindex="@(Disabled ? "-1" : "0")"
-                          aria-label="@SegmentAriaLabel(TimeSegment.Minutes)"
-                          aria-valuenow="@SegmentValueNow(TimeSegment.Minutes)"
-                          aria-valuemin="@SegmentValueMin(TimeSegment.Minutes)"
-                          aria-valuemax="@SegmentValueMax(TimeSegment.Minutes)"
-                          aria-valuetext="@SegmentValueText(TimeSegment.Minutes)"
-                          aria-invalid="@(IsInvalid ? "true" : null)"
-                          aria-readonly="@(ReadOnly ? "true" : null)"
-                          aria-disabled="@(Disabled ? "true" : null)"
-                          aria-describedby="@SegmentDescribedBy"
-                          data-tm-time-segment="minutes">@SegmentDisplay(TimeSegment.Minutes)</span>
-                    @if (ShowSteppers)
-                    {
-                        <button type="button"
-                                class="tm-time-selector__step"
-                                tabindex="-1"
-                                disabled="@(Disabled || !CanStep(TimeSegment.Minutes, 1))"
-                                aria-controls="@SegmentId(TimeSegment.Minutes)"
-                                aria-label="@IncreaseLabel(TimeSegment.Minutes)"
-                                data-testid="@TestId("time-selector-increase-minutes")"
-                                data-tm-time-step="minutes"
-                                data-tm-time-delta="1"
-                                @onclick="() => OnStepperAsync(TimeSegment.Minutes, 1)">
-                            <TmIcon Name="@IconNames.Plus" Size="IconSize.Sm" />
-                        </button>
-                    }
-                </div>
-                @if (ShowSeconds)
-                {
+            }
+            else
+            {
+                <div class="tm-time-selector__readout">
+                    <div class="tm-time-selector__cluster">
+                        @if (ShowSteppers)
+                        {
+                            <button type="button"
+                                    class="tm-time-selector__step"
+                                    tabindex="-1"
+                                    disabled="@(Disabled || !CanStep(TimeSegment.Hours, -1))"
+                                    aria-controls="@SegmentId(TimeSegment.Hours)"
+                                    aria-label="@DecreaseLabel(TimeSegment.Hours)"
+                                    data-testid="@TestId("time-selector-decrease-hours")"
+                                    data-tm-time-step="hours"
+                                    data-tm-time-delta="-1"
+                                    @onclick="() => OnStepperAsync(TimeSegment.Hours, -1)">
+                                <TmIcon Name="@IconNames.Minus" Size="IconSize.Sm" />
+                            </button>
+                        }
+                        <span @ref="_hoursRef"
+                              id="@SegmentId(TimeSegment.Hours)"
+                              class="tm-time-selector__spin"
+                              role="spinbutton"
+                              tabindex="@(Disabled ? "-1" : "0")"
+                              aria-label="@SegmentAriaLabel(TimeSegment.Hours)"
+                              aria-valuenow="@SegmentValueNow(TimeSegment.Hours)"
+                              aria-valuemin="@SegmentValueMin(TimeSegment.Hours)"
+                              aria-valuemax="@SegmentValueMax(TimeSegment.Hours)"
+                              aria-valuetext="@SegmentValueText(TimeSegment.Hours)"
+                              aria-invalid="@(IsInvalid ? "true" : null)"
+                              aria-readonly="@(ReadOnly ? "true" : null)"
+                              aria-disabled="@(Disabled ? "true" : null)"
+                              aria-describedby="@SegmentDescribedBy"
+                              data-tm-time-segment="hours"
+                              @onclick="OnHoursSpinClickAsync">@SegmentDisplay(TimeSegment.Hours)</span>
+                        @if (ShowSteppers)
+                        {
+                            <button type="button"
+                                    class="tm-time-selector__step"
+                                    tabindex="-1"
+                                    disabled="@(Disabled || !CanStep(TimeSegment.Hours, 1))"
+                                    aria-controls="@SegmentId(TimeSegment.Hours)"
+                                    aria-label="@IncreaseLabel(TimeSegment.Hours)"
+                                    data-testid="@TestId("time-selector-increase-hours")"
+                                    data-tm-time-step="hours"
+                                    data-tm-time-delta="1"
+                                    @onclick="() => OnStepperAsync(TimeSegment.Hours, 1)">
+                                <TmIcon Name="@IconNames.Plus" Size="IconSize.Sm" />
+                            </button>
+                        }
+                    </div>
                     <span class="tm-time-selector__sep" aria-hidden="true">:</span>
                     <div class="tm-time-selector__cluster">
                         @if (ShowSteppers)
@@ -129,61 +108,251 @@
                             <button type="button"
                                     class="tm-time-selector__step"
                                     tabindex="-1"
-                                    disabled="@(Disabled || !CanStep(TimeSegment.Seconds, -1))"
-                                    aria-controls="@SegmentId(TimeSegment.Seconds)"
-                                    aria-label="@DecreaseLabel(TimeSegment.Seconds)"
-                                    data-testid="@TestId("time-selector-decrease-seconds")"
-                                    data-tm-time-step="seconds"
+                                    disabled="@(Disabled || !CanStep(TimeSegment.Minutes, -1))"
+                                    aria-controls="@SegmentId(TimeSegment.Minutes)"
+                                    aria-label="@DecreaseLabel(TimeSegment.Minutes)"
+                                    data-testid="@TestId("time-selector-decrease-minutes")"
+                                    data-tm-time-step="minutes"
                                     data-tm-time-delta="-1"
-                                    @onclick="() => OnStepperAsync(TimeSegment.Seconds, -1)">
+                                    @onclick="() => OnStepperAsync(TimeSegment.Minutes, -1)">
                                 <TmIcon Name="@IconNames.Minus" Size="IconSize.Sm" />
                             </button>
                         }
-                        <span @ref="_secondsRef"
-                              id="@SegmentId(TimeSegment.Seconds)"
+                        <span @ref="_minutesRef"
+                              id="@SegmentId(TimeSegment.Minutes)"
                               class="tm-time-selector__spin"
                               role="spinbutton"
                               tabindex="@(Disabled ? "-1" : "0")"
-                              aria-label="@SegmentAriaLabel(TimeSegment.Seconds)"
-                              aria-valuenow="@SegmentValueNow(TimeSegment.Seconds)"
-                              aria-valuemin="@SegmentValueMin(TimeSegment.Seconds)"
-                              aria-valuemax="@SegmentValueMax(TimeSegment.Seconds)"
-                              aria-valuetext="@SegmentValueText(TimeSegment.Seconds)"
+                              aria-label="@SegmentAriaLabel(TimeSegment.Minutes)"
+                              aria-valuenow="@SegmentValueNow(TimeSegment.Minutes)"
+                              aria-valuemin="@SegmentValueMin(TimeSegment.Minutes)"
+                              aria-valuemax="@SegmentValueMax(TimeSegment.Minutes)"
+                              aria-valuetext="@SegmentValueText(TimeSegment.Minutes)"
                               aria-invalid="@(IsInvalid ? "true" : null)"
                               aria-readonly="@(ReadOnly ? "true" : null)"
                               aria-disabled="@(Disabled ? "true" : null)"
                               aria-describedby="@SegmentDescribedBy"
-                              data-tm-time-segment="seconds">@SegmentDisplay(TimeSegment.Seconds)</span>
+                              data-tm-time-segment="minutes"
+                              @onclick="OnMinutesSpinClickAsync">@SegmentDisplay(TimeSegment.Minutes)</span>
                         @if (ShowSteppers)
                         {
                             <button type="button"
                                     class="tm-time-selector__step"
                                     tabindex="-1"
-                                    disabled="@(Disabled || !CanStep(TimeSegment.Seconds, 1))"
-                                    aria-controls="@SegmentId(TimeSegment.Seconds)"
-                                    aria-label="@IncreaseLabel(TimeSegment.Seconds)"
-                                    data-testid="@TestId("time-selector-increase-seconds")"
-                                    data-tm-time-step="seconds"
+                                    disabled="@(Disabled || !CanStep(TimeSegment.Minutes, 1))"
+                                    aria-controls="@SegmentId(TimeSegment.Minutes)"
+                                    aria-label="@IncreaseLabel(TimeSegment.Minutes)"
+                                    data-testid="@TestId("time-selector-increase-minutes")"
+                                    data-tm-time-step="minutes"
                                     data-tm-time-delta="1"
-                                    @onclick="() => OnStepperAsync(TimeSegment.Seconds, 1)">
+                                    @onclick="() => OnStepperAsync(TimeSegment.Minutes, 1)">
                                 <TmIcon Name="@IconNames.Plus" Size="IconSize.Sm" />
                             </button>
                         }
                     </div>
-                }
-                @if (Uses12HourClock)
-                {
-                    <TmSegmentedControl TValue="bool"
-                                        Class="tm-time-selector__period"
+                    @if (ShowSeconds)
+                    {
+                        <span class="tm-time-selector__sep" aria-hidden="true">:</span>
+                        <div class="tm-time-selector__cluster">
+                            @if (ShowSteppers)
+                            {
+                                <button type="button"
+                                        class="tm-time-selector__step"
+                                        tabindex="-1"
+                                        disabled="@(Disabled || !CanStep(TimeSegment.Seconds, -1))"
+                                        aria-controls="@SegmentId(TimeSegment.Seconds)"
+                                        aria-label="@DecreaseLabel(TimeSegment.Seconds)"
+                                        data-testid="@TestId("time-selector-decrease-seconds")"
+                                        data-tm-time-step="seconds"
+                                        data-tm-time-delta="-1"
+                                        @onclick="() => OnStepperAsync(TimeSegment.Seconds, -1)">
+                                    <TmIcon Name="@IconNames.Minus" Size="IconSize.Sm" />
+                                </button>
+                            }
+                            <span @ref="_secondsRef"
+                                  id="@SegmentId(TimeSegment.Seconds)"
+                                  class="tm-time-selector__spin"
+                                  role="spinbutton"
+                                  tabindex="@(Disabled ? "-1" : "0")"
+                                  aria-label="@SegmentAriaLabel(TimeSegment.Seconds)"
+                                  aria-valuenow="@SegmentValueNow(TimeSegment.Seconds)"
+                                  aria-valuemin="@SegmentValueMin(TimeSegment.Seconds)"
+                                  aria-valuemax="@SegmentValueMax(TimeSegment.Seconds)"
+                                  aria-valuetext="@SegmentValueText(TimeSegment.Seconds)"
+                                  aria-invalid="@(IsInvalid ? "true" : null)"
+                                  aria-readonly="@(ReadOnly ? "true" : null)"
+                                  aria-disabled="@(Disabled ? "true" : null)"
+                                  aria-describedby="@SegmentDescribedBy"
+                                  data-tm-time-segment="seconds">@SegmentDisplay(TimeSegment.Seconds)</span>
+                            @if (ShowSteppers)
+                            {
+                                <button type="button"
+                                        class="tm-time-selector__step"
+                                        tabindex="-1"
+                                        disabled="@(Disabled || !CanStep(TimeSegment.Seconds, 1))"
+                                        aria-controls="@SegmentId(TimeSegment.Seconds)"
+                                        aria-label="@IncreaseLabel(TimeSegment.Seconds)"
+                                        data-testid="@TestId("time-selector-increase-seconds")"
+                                        data-tm-time-step="seconds"
+                                        data-tm-time-delta="1"
+                                        @onclick="() => OnStepperAsync(TimeSegment.Seconds, 1)">
+                                    <TmIcon Name="@IconNames.Plus" Size="IconSize.Sm" />
+                                </button>
+                            }
+                        </div>
+                    }
+                    @if (Uses12HourClock)
+                    {
+                        <TmSegmentedControl TValue="bool"
+                                            Class="tm-time-selector__period"
+                                            Size="SegmentedControlSize.Sm"
+                                            Role="SegmentedControlRole.RadioGroup"
+                                            AriaLabel="@Loc["TmTimeSelector_DayPeriod"]"
+                                            Disabled="@(Disabled || ReadOnly)"
+                                            Value="@IsPm"
+                                            ValueChanged="OnPeriodChanged"
+                                            Options="@PeriodOptions" />
+                    }
+                </div>
+            }
+            @if (ShowPresetRow)
+            {
+                <div class="tm-time-selector__presets"
+                     role="group"
+                     aria-label="@Loc["TmTimeSelector_Presets"]"
+                     data-testid="@TestId("time-selector-presets")">
+                    @if (ShowNowPreset)
+                    {
+                        <button type="button"
+                                class="tm-time-selector__preset"
+                                aria-pressed="@(PresetPressed(StartingTime()) ? "true" : "false")"
+                                aria-disabled="@(TimeDisabled(StartingTime()) ? "true" : null)"
+                                data-testid="@TestId("time-selector-preset-now")"
+                                data-tm-time-preset="@PresetAttr(StartingTime())"
+                                @onclick="OnNowAsync">
+                            @Loc["TmTimeSelector_Now"]
+                        </button>
+                    }
+                    @if (Presets is { Count: > 0 })
+                    {
+                        @foreach (var preset in Presets)
+                        {
+                            var chip = preset;
+                            <button type="button"
+                                    class="tm-time-selector__preset"
+                                    aria-pressed="@(PresetPressed(chip.Time) ? "true" : "false")"
+                                    aria-disabled="@(TimeDisabled(chip.Time) ? "true" : null)"
+                                    data-testid="@TestId("time-selector-preset")"
+                                    data-tm-time-preset="@PresetAttr(chip.Time)"
+                                    @onclick="() => OnPresetAsync(chip.Time)">
+                                @PresetLabel(chip)
+                            </button>
+                        }
+                    }
+                    @foreach (var recent in VisibleRecents)
+                    {
+                        var chip = recent;
+                        <button type="button"
+                                class="tm-time-selector__preset tm-time-selector__preset--recent"
+                                aria-pressed="@(PresetPressed(chip) ? "true" : "false")"
+                                aria-label="@RecentChipLabel(chip)"
+                                aria-disabled="@(TimeDisabled(chip) ? "true" : null)"
+                                data-testid="@TestId("time-selector-preset-recent")"
+                                data-tm-time-preset="@PresetAttr(chip)"
+                                @onclick="() => OnPresetAsync(chip)">
+                            @FormatValue(chip)
+                        </button>
+                    }
+                </div>
+            }
+            @if (ShowGridTabs)
+            {
+                <div class="tm-time-selector__tabs" data-testid="@TestId("time-selector-grid-tabs")">
+                    <TmSegmentedControl TValue="string"
                                         Size="SegmentedControlSize.Sm"
-                                        Role="SegmentedControlRole.RadioGroup"
-                                        AriaLabel="@Loc["TmTimeSelector_DayPeriod"]"
-                                        Disabled="@(Disabled || ReadOnly)"
-                                        Value="@IsPm"
-                                        ValueChanged="OnPeriodChanged"
-                                        Options="@PeriodOptions" />
-                }
-            </div>
+                                        Role="SegmentedControlRole.Tabs"
+                                        AriaLabel="@Loc["TmTimeSelector_GridTabs"]"
+                                        Value="@_gridTab"
+                                        ValueChanged="OnGridTabChanged"
+                                        Options="@GridTabOptions" />
+                </div>
+            }
+            @if (ShowHoursGrid || ShowMinutesGrid)
+            {
+                <div class="tm-time-selector__grids">
+                    @if (ShowHoursGrid)
+                    {
+                        EnsureHourCellRefs(HourValues.Count);
+                        <div id="@HoursGridId"
+                             class="tm-time-selector__grid tm-time-selector__grid--hours"
+                             role="radiogroup"
+                             aria-label="@Loc["TmTimeSelector_HoursTab"]"
+                             data-testid="@TestId("time-selector-grid-hours")"
+                             data-tm-time-grid-columns="@HourColumns">
+                            @for (var index = 0; index < HourValues.Count; index++)
+                            {
+                                var hour = HourValues[index];
+                                var hourIndex = index;
+                                <button type="button"
+                                        @ref="_hourCellRefs[hourIndex]"
+                                        class="tm-time-selector__cell"
+                                        role="radio"
+                                        aria-checked="@(HourCellSelected(hour) ? "true" : "false")"
+                                        aria-disabled="@(HourCellDisabled(hour) ? "true" : null)"
+                                        aria-label="@HourCellLabel(hour)"
+                                        tabindex="@HourTabIndex(hourIndex)"
+                                        data-tm-time-grid-cell
+                                        data-tm-time-hour="@hour.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                        @onclick="() => OnHourCellAsync(hour)"
+                                        @onkeydown="args => HandleHourGridKeyDown(args, hourIndex)"
+                                        @onkeydown:preventDefault="_gridKeyHandled">
+                                    @hour.ToString("D2", System.Globalization.CultureInfo.InvariantCulture)
+                                </button>
+                            }
+                        </div>
+                    }
+                    @if (ShowMinutesGrid)
+                    {
+                        EnsureMinuteCellRefs(MinuteValues.Count);
+                        <div id="@MinutesGridId"
+                             class="tm-time-selector__grid tm-time-selector__grid--minutes"
+                             role="radiogroup"
+                             aria-label="@Loc["TmTimeSelector_MinutesTab"]"
+                             data-testid="@TestId("time-selector-grid-minutes")"
+                             data-tm-time-grid-columns="@MinuteColumns">
+                            @for (var index = 0; index < MinuteValues.Count; index++)
+                            {
+                                var minute = MinuteValues[index];
+                                var minuteIndex = index;
+                                <button type="button"
+                                        @ref="_minuteCellRefs[minuteIndex]"
+                                        class="tm-time-selector__cell"
+                                        role="radio"
+                                        aria-checked="@(MinuteCellSelected(minute) ? "true" : "false")"
+                                        aria-disabled="@(MinuteCellDisabled(minute) ? "true" : null)"
+                                        aria-label="@MinuteCellLabel(minute)"
+                                        tabindex="@MinuteTabIndex(minuteIndex)"
+                                        data-tm-time-grid-cell
+                                        data-tm-time-minute="@minute.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                        @onclick="() => OnMinuteCellAsync(minute)"
+                                        @onkeydown="args => HandleMinuteGridKeyDown(args, minuteIndex)"
+                                        @onkeydown:preventDefault="_gridKeyHandled">
+                                    @minute.ToString("D2", System.Globalization.CultureInfo.InvariantCulture)
+                                </button>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+            @if (ShowTypeTime)
+            {
+                <button type="button"
+                        class="tm-time-selector__type-toggle"
+                        data-testid="@TestId("time-selector-type-time")"
+                        @onclick="OnTypeTime">
+                    @Loc["TmTimeSelector_TypeTime"]
+                </button>
+            }
             @if (!string.IsNullOrEmpty(ResolvedErrorText))
             {
                 <p id="@ErrorId" class="tm-time-selector__error">@ResolvedErrorText</p>
