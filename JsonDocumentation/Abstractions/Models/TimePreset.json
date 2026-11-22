@@ -1,0 +1,10 @@
+{
+  "kind": "Record",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Models",
+  "description": "A named time-of-day shortcut for TmTimeSelector and TmTimePicker. A null Label means the host wants the formatted time shown as the chip text.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/TimePreset.cs",
+  "documentationStatus": "documented",
+  "itemName": "TimePreset"
+}

@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Models",
+  "description": "Fine layout of TmTimeSelector. Auto is measured from the container (inline-size and height); Square and Regular pin it for tests and hosts such as a Flex-Window app.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/TimeSelectorFit.cs",
+  "documentationStatus": "documented",
+  "itemName": "TimeSelectorFit"
+}

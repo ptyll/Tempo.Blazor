@@ -1,5 +1,31 @@
 # Changelog
 
+## 2.13.0 - unreleased
+
+> Plan "Tempo: zadávání času na telefonu a vnějším displeji Z Flip 5" (1c95309c; decision
+> `TIME-SELECTOR`, [ADR-0007](docs/adr/0007-time-selector.md), proposal
+> [docs/proposals/time-input-mobile.md](docs/proposals/time-input-mobile.md)). Additive public API
+> only; no UI changes in this slice.
+
+### Added — time-of-day core (`Tempo.Blazor` / `Tempo.Blazor.Abstractions`, Fáze 2: Jádro)
+
+- **`TimeOfDayFormat`** (internal, `Tempo.Blazor.Components.Pickers`) — culture hour cycle from
+  `ShortTimePattern` (`en-US` 12-hour, `en-GB`/`cs`/`sk`/`fr` 24-hour), parse matrix (`1430`,
+  `14:30`, `14.30`, `14h30`, `2:30 PM`, `2:30p`, `12:00 AM` → 00:00; `24:00` and empty rejected),
+  independent segment step/clamp (minutes never carry into hours — ADR-0007 decision 6), snap,
+  overnight range, DST gap/ambiguous for `ReferenceDate` + `TimeZone` (`Europe/Prague` 2026-03-29
+  / 2026-10-25) and a zone without DST.
+- **Models and enums** in `Tempo.Blazor.Abstractions` (`Tempo.Blazor.Models`): `TimePreset`,
+  `TimePickerPresentation` (`Segments` / `Popup` / `Auto`), `TimeCommitMode` (`Auto` / `Live` /
+  `OnConfirm`), `TimeHourCycle` (`Auto` / `H23` / `H12`), `TimeSelectorGrid`, `TimeSelectorFit`,
+  `TimeSegment`, `AmbiguousTimeResolution`, and `TimeMinuteStep` validation (positive divisors of
+  60 other than 60; anything else throws `ArgumentOutOfRangeException` whose parameter name
+  defaults to `MinuteStep` and can be overridden).
+- **Localization keys** for the forthcoming `TmTimeSelector` (en / cs / sk / fr), including
+  plural families `TmTimeSelector_HourValue_*` (`"{0} hour"` / `"{0} hours"` in English — not
+  `"o'clock"`, which is wrong on a 24-hour clock) and `TmTimeSelector_MinuteValue_*` for
+  `aria-valuetext` (Czech 1 / 2–4 / 5+ hours).
+
 ## 2.12.0 - 2026-11-20
 
 > Plan "Tempo: public pin-on-top API for host status UI" (4ce1b994; decision `TOP-LAYER-PIN`,

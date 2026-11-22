@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Models",
+  "description": "When a time-selector interaction writes ValueChanged: every step (Live) or only on confirm (OnConfirm, a draft). Auto follows the overlay — sheet commits on confirm, popover commits live.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/TimeCommitMode.cs",
+  "documentationStatus": "documented",
+  "itemName": "TimeCommitMode"
+}

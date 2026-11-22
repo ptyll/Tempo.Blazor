@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Models",
+  "description": "Allowed minute-step values for TmTimeSelector / TmTimePicker: the positive divisors of 60 other than 60 itself (1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30). Validate throws ArgumentOutOfRangeException; the parameter name defaults to MinuteStep and a caller such as a range picker can pass EndMinuteStep.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/TimeMinuteStep.cs",
+  "documentationStatus": "documented",
+  "itemName": "TimeMinuteStep"
+}

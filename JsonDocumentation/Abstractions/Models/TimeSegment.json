@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Models",
+  "description": "Which piece of a time-of-day value a stepper or typeahead is editing. Minutes wrap inside the hour and seconds inside the minute without carrying (ADR-0007 decision 6).",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/TimeSegment.cs",
+  "documentationStatus": "documented",
+  "itemName": "TimeSegment"
+}

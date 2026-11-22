@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Models",
+  "description": "Which occurrence of an ambiguous local time (the fall-back DST hour) a time selector reports. The offset itself is raised separately because TimeOnly cannot carry it. Earlier is the default (still on summer time).",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/AmbiguousTimeResolution.cs",
+  "documentationStatus": "documented",
+  "itemName": "AmbiguousTimeResolution"
+}

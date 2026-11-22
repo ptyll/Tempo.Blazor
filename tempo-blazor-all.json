@@ -105024,6 +105024,16 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "AmbiguousTimeResolution",
+          "kind": "Enum",
+          "category": "Models",
+          "namespace": "Tempo.Blazor.Models",
+          "description": "Which occurrence of an ambiguous local time (the fall-back DST hour) a time selector reports. The offset itself is raised separately because TimeOnly cannot carry it. Earlier is the default (still on summer time).",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Models/AmbiguousTimeResolution.cs",
+          "documentationStatus": "merged"
+        },
+        {
           "itemName": "ApprovalDecision",
           "kind": "Record",
           "category": "Models",
@@ -112026,6 +112036,26 @@
           ]
         },
         {
+          "itemName": "TimeCommitMode",
+          "kind": "Enum",
+          "category": "Models",
+          "namespace": "Tempo.Blazor.Models",
+          "description": "When a time-selector interaction writes ValueChanged: every step (Live) or only on confirm (OnConfirm, a draft). Auto follows the overlay — sheet commits on confirm, popover commits live.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Models/TimeCommitMode.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "TimeHourCycle",
+          "kind": "Enum",
+          "category": "Models",
+          "namespace": "Tempo.Blazor.Models",
+          "description": "12-hour versus 24-hour clock for a time selector. Auto follows the culture's ShortTimePattern (h → 12-hour, otherwise 24-hour), so en-US is 12-hour and en-GB/cs/sk/fr are 24-hour.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Models/TimeHourCycle.cs",
+          "documentationStatus": "merged"
+        },
+        {
           "itemName": "TimelineHeader",
           "kind": "Record",
           "category": "Models",
@@ -112033,6 +112063,111 @@
           "description": "A header cell in the two-row Gantt timeline header.",
           "packageId": "Tempo.Blazor.Abstractions",
           "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttHelper.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "TimeMinuteStep",
+          "kind": "Class",
+          "category": "Models",
+          "namespace": "Tempo.Blazor.Models",
+          "description": "Allowed minute-step values for TmTimeSelector / TmTimePicker: the positive divisors of 60 other than 60 itself (1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30). Validate throws ArgumentOutOfRangeException; the parameter name defaults to MinuteStep and a caller such as a range picker can pass EndMinuteStep.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Models/TimeMinuteStep.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "IsAllowed",
+              "kind": "Method",
+              "type": "bool",
+              "description": "Returns true when minuteStep is a permitted step.",
+              "parameters": [
+                {
+                  "name": "minuteStep",
+                  "type": "int"
+                }
+              ]
+            },
+            {
+              "name": "Validate",
+              "kind": "Method",
+              "type": "void",
+              "description": "Throws ArgumentOutOfRangeException when minuteStep is not a divisor of 60 in the open interval (0, 60). The default parameter name is MinuteStep so it matches the component parameter that calls this from OnParametersSet; a range picker can pass EndMinuteStep (or another name) instead.",
+              "parameters": [
+                {
+                  "name": "minuteStep",
+                  "type": "int"
+                },
+                {
+                  "name": "paramName",
+                  "type": "string",
+                  "default": "\"MinuteStep\""
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "itemName": "TimePickerPresentation",
+          "kind": "Enum",
+          "category": "Models",
+          "namespace": "Tempo.Blazor.Models",
+          "description": "How TmTimePicker presents the time-of-day value. Additive; the default Segments keeps the pre-2.13 DOM (TmTimeInput with no overlay). Popup opens TmTimeSelector in TmOverlayPanel; Auto uses a sheet on a mobile viewport and Popup otherwise.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Models/TimePickerPresentation.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "TimePreset",
+          "kind": "Record",
+          "category": "Models",
+          "namespace": "Tempo.Blazor.Models",
+          "description": "A named time-of-day shortcut for TmTimeSelector and TmTimePicker. A null Label means the host wants the formatted time shown as the chip text.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Models/TimePreset.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Label",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Display label; null falls back to the formatted Time."
+            },
+            {
+              "name": "Time",
+              "kind": "Property",
+              "type": "TimeOnly",
+              "description": "The time the preset commits."
+            }
+          ]
+        },
+        {
+          "itemName": "TimeSegment",
+          "kind": "Enum",
+          "category": "Models",
+          "namespace": "Tempo.Blazor.Models",
+          "description": "Which piece of a time-of-day value a stepper or typeahead is editing. Minutes wrap inside the hour and seconds inside the minute without carrying (ADR-0007 decision 6).",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Models/TimeSegment.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "TimeSelectorFit",
+          "kind": "Enum",
+          "category": "Models",
+          "namespace": "Tempo.Blazor.Models",
+          "description": "Fine layout of TmTimeSelector. Auto is measured from the container (inline-size and height); Square and Regular pin it for tests and hosts such as a Flex-Window app.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Models/TimeSelectorFit.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "TimeSelectorGrid",
+          "kind": "Enum",
+          "category": "Models",
+          "namespace": "Tempo.Blazor.Models",
+          "description": "Whether TmTimeSelector shows the hour/minute grid under the readout. Auto shows it when the layout has room; None is stepper and presets only; Always keeps the grid except the square + seconds combination which still collapses it.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Models/TimeSelectorGrid.cs",
           "documentationStatus": "merged"
         },
         {
@@ -131199,12 +131334,12 @@
       ],
       "libraryExamples": [],
       "summary": {
-        "itemCount": 1713,
-        "manualItemCount": 1713,
-        "generatedItemCount": 1697,
+        "itemCount": 1722,
+        "manualItemCount": 1722,
+        "generatedItemCount": 1706,
         "generatedOnlyItemCount": 0,
         "componentCount": 0,
-        "publicApiTypeCount": 1697
+        "publicApiTypeCount": 1706
       }
     },
     {
@@ -148288,10 +148423,10 @@
   ],
   "summary": {
     "packageCount": 29,
-    "itemCount": 3752,
-    "manualItemCount": 3752,
+    "itemCount": 3761,
+    "manualItemCount": 3761,
     "generatedOnlyItemCount": 0,
     "componentCount": 566,
-    "publicApiTypeCount": 3134
+    "publicApiTypeCount": 3143
   }
 }

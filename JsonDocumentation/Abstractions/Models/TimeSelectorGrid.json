@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Models",
+  "description": "Whether TmTimeSelector shows the hour/minute grid under the readout. Auto shows it when the layout has room; None is stepper and presets only; Always keeps the grid except the square + seconds combination which still collapses it.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/TimeSelectorGrid.cs",
+  "documentationStatus": "documented",
+  "itemName": "TimeSelectorGrid"
+}

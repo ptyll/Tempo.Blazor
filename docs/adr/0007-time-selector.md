@@ -124,9 +124,10 @@ Dvě rozhodnutí přibyla po měření (tentýž den):
 
 ## Důsledky
 
-- Nové veřejné API je aditivní, takže cílová verze je minor **2.13.0**. Nové typy: `TmTimeSelector`,
+- Nové veřejné API je aditivní, takže cílová verze je minor **2.13.0**. Nové typy:
   `TimePickerPresentation`, `TimeCommitMode`, `TimeHourCycle`, `TimeSelectorGrid`, `TimeSelectorFit`,
-  `TimeSegment`, `AmbiguousTimeResolution` (`Tempo.Blazor`) a `TimePreset` (`Tempo.Blazor.Abstractions`).
+  `TimeSegment`, `AmbiguousTimeResolution`, `TimePreset` a validátor `TimeMinuteStep`
+  (`Tempo.Blazor.Abstractions`, namespace `Tempo.Blazor.Models`); `TmTimeSelector` (`Tempo.Blazor`).
   Existující `TmTimePicker` / `TmTimeInput` / `TmTimeRangePicker` / `TmDateTimePicker` renderují stejný DOM,
   dokud se `Presentation` neopt-inuje.
 - **E2E viewporty (Chrome):** 399 × 306 (lišta; grid hodin i minut bez scrollu, tap na segment neotevře

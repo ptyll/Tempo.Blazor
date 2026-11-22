@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Models",
+  "description": "How TmTimePicker presents the time-of-day value. Additive; the default Segments keeps the pre-2.13 DOM (TmTimeInput with no overlay). Popup opens TmTimeSelector in TmOverlayPanel; Auto uses a sheet on a mobile viewport and Popup otherwise.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/TimePickerPresentation.cs",
+  "documentationStatus": "documented",
+  "itemName": "TimePickerPresentation"
+}

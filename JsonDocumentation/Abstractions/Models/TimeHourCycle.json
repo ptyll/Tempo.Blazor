@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Models",
+  "description": "12-hour versus 24-hour clock for a time selector. Auto follows the culture's ShortTimePattern (h → 12-hour, otherwise 24-hour), so en-US is 12-hour and en-GB/cs/sk/fr are 24-hour.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/TimeHourCycle.cs",
+  "documentationStatus": "documented",
+  "itemName": "TimeHourCycle"
+}

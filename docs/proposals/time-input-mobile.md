@@ -482,11 +482,11 @@ a placeholdery; množná čísla podle `localization-plurals.md`):
 | `TmTimeSelector_AriaLabel` | Time picker | Výběr času | Výber času | Sélecteur d'heure |
 | `TmTimeSelector_IncreaseHour` / `_DecreaseHour` | Add an hour / Remove an hour | Přidat hodinu / Ubrat hodinu | Pridať hodinu / Ubrať hodinu | Ajouter une heure / Retirer une heure |
 | `TmTimeSelector_IncreaseMinute` / `_DecreaseMinute` | Add {0} min / Remove {0} min | Přidat {0} min / Ubrat {0} min | Pridať {0} min / Ubrať {0} min | Ajouter {0} min / Retirer {0} min |
-| `TmTimeSelector_HourValue_*` (plural) | {0} o'clock | {0} hodina/hodiny/hodin | {0} hodina/hodiny/hodín | {0} heure/heures |
+| `TmTimeSelector_HourValue_*` (plural) | {0} hour(s) | {0} hodina/hodiny/hodin | {0} hodina/hodiny/hodín | {0} heure/heures |
 | `TmTimeSelector_MinuteValue_*` (plural) | {0} minute(s) | {0} minuta/minuty/minut | {0} minúta/minúty/minút | {0} minute(s) |
 | `TmTimeSelector_DayPeriod` | Part of day | Část dne | Časť dňa | Moment de la journée |
 | `TmTimeSelector_Am` / `_Pm` (fallback) | AM / PM | dop. / odp. | dop. / odp. | AM / PM |
-| `TmTimeSelector_HoursTab` / `_MinutesTab` | Hours / Minutes | (reuse `TmTimePicker_Hours`/`_Minutes`) | | |
+| `TmTimeSelector_HoursTab` / `_MinutesTab` | Hours / Minutes | Hodiny / Minuty | Hodiny / Minúty | Heures / Minutes |
 | `TmTimeSelector_Presets` | Quick picks | Rychlá volba | Rýchla voľba | Choix rapides |
 | `TmTimeSelector_Now` | Now | Teď | Teraz | Maintenant |
 | `TmTimeSelector_Recent` | Recent | Nedávné | Nedávne | Récents |
@@ -498,6 +498,15 @@ a placeholdery; množná čísla podle `localization-plurals.md`):
 | `TmTimeSelector_DstAmbiguous` | This time occurs twice. Which one? | Tento čas nastane dvakrát. Který? | Tento čas nastane dvakrát. Ktorý? | Cette heure se produit deux fois. Laquelle ? |
 | `TmTimePicker_OpenSelector` | Choose time | Vybrat čas | Vybrať čas | Choisir l'heure |
 | `TmTimePicker_SheetTitle` (fallback bez labelu) | Time | Čas | Čas | Heure |
+
+`TmTimeSelector_HourValue_*` je `aria-valuetext` hodinového segmentu v 24hodinovém režimu
+(`"{0} hour"` / `"{0} hours"` v en, nikoli `"o'clock"` — 14 o'clock / 0 o'clock je v angličtině
+špatně). 12hodinový readout se skládá z hodiny plus `TmTimeSelector_Am` / `_Pm` (např. „2 PM“),
+ne z této plural family.
+
+`TmTimeSelector_HoursTab` / `_MinutesTab` jsou záměrně samostatné klíče (UI fáze je čte pod
+vlastním prefixem), naplněné stejným textem jako `TmTimePicker_Hours` / `_Minutes`. Shodu ve
+všech čtyřech souborech hlídá `TmResourceCompletenessTests`, aby se texty časem nerozejely.
 
 Formátování všech zobrazených časů: `TimeOnly.ToString(pattern, culture)` s patternem odvozeným
 z `HourCycle` a kultury (ne `"D2"` natvrdo); `aria-valuenow` vždy invariantní. Ukázka formátu ve

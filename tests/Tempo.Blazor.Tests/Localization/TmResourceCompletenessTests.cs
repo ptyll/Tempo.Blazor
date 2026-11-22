@@ -164,6 +164,27 @@ public class TmResourceCompletenessTests
         sk["TmColorPalette_SelectColorNamed"].Should().Be("Vybrať farbu {0}");
     }
 
+    [Fact]
+    public void TimeSelector_HourValue_English_IsHourNotOClock()
+    {
+        Tables["en"]["TmTimeSelector_HourValue_One"].Should().Be("{0} hour");
+        Tables["en"]["TmTimeSelector_HourValue_Other"].Should().Be("{0} hours");
+    }
+
+    [Fact]
+    public void TimeSelector_HoursAndMinutesTabs_MatchTheTimePickerKeys_InEveryLanguage()
+    {
+        foreach (var language in new[] { "en", "cs", "sk", "fr" })
+        {
+            Tables[language]["TmTimeSelector_HoursTab"].Should().Be(
+                Tables[language]["TmTimePicker_Hours"],
+                "{0}: HoursTab is a separate key filled with the same text as TmTimePicker_Hours", language);
+            Tables[language]["TmTimeSelector_MinutesTab"].Should().Be(
+                Tables[language]["TmTimePicker_Minutes"],
+                "{0}: MinutesTab is a separate key filled with the same text as TmTimePicker_Minutes", language);
+        }
+    }
+
     private static bool SamePlaceholders(string english, string translated)
     {
         static string[] Extract(string text)
