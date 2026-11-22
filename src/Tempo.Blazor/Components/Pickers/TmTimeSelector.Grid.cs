@@ -488,7 +488,29 @@ public partial class TmTimeSelector
     }
 
     private bool TimeDisabled(TimeOnly time)
-        => !TimeOfDayFormat.IsInRange(time, MinTime, MaxTime, AllowOvernightRange);
+    {
+        if (!TimeOfDayFormat.IsInRange(time, MinTime, MaxTime, AllowOvernightRange))
+        {
+            return true;
+        }
+
+        return HasDstContext && TimeOfDayFormat.IsInvalid(ReferenceDate!.Value, time, TimeZone!);
+    }
+
+    private bool HourCellInDstGap(int hour)
+    {
+        if (!HasDstContext)
+        {
+            return false;
+        }
+
+        var current = ShownValue ?? StartingTime();
+        var hour24 = Uses12HourClock ? ToHour24(hour, current.Hour >= 12) : hour;
+        return TimeOfDayFormat.IsInvalid(ReferenceDate!.Value, new TimeOnly(hour24, current.Minute, current.Second), TimeZone!);
+    }
+
+    private string? HourCellDescribedBy(int hour)
+        => HourCellInDstGap(hour) && !string.IsNullOrEmpty(ResolvedErrorText) ? ErrorId : null;
 
     private bool PresetPressed(TimeOnly time)
         => ShownValue is { } shown && shown == time;

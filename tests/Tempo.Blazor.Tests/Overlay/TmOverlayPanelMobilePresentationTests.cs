@@ -66,6 +66,63 @@ public class TmOverlayPanelMobilePresentationTests : LocalizationTestBase
     }
 
     [Fact]
+    public async Task MobilePresentationSheet_Done_RaisesOnSheetDone_NotOnDismissed()
+    {
+        var done = 0;
+        string? dismissed = "unset";
+        var cut = Render<TmOverlayPanel>(p => p
+            .Add(c => c.MobilePresentation, PanelPresentation.Sheet)
+            .Add(c => c.Title, "Filters")
+            .Add(c => c.OnSheetDone, EventCallback.Factory.Create(this, () => done++))
+            .Add(c => c.OnDismissed, EventCallback.Factory.Create<string>(this, r => dismissed = r))
+            .AddChildContent("<div>Body</div>"));
+
+        await cut.InvokeAsync(() => cut.Instance.SetOpenAsync(true));
+        cut.Find(".tm-overlay-panel-sheet__done").Click();
+
+        done.Should().Be(1);
+        dismissed.Should().Be("unset");
+        cut.FindAll(".tm-drawer").Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task MobilePresentationSheet_Backdrop_DoesNotRaiseOnSheetDone()
+    {
+        var done = 0;
+        string? dismissed = "unset";
+        var cut = Render<TmOverlayPanel>(p => p
+            .Add(c => c.MobilePresentation, PanelPresentation.Sheet)
+            .Add(c => c.Title, "Filters")
+            .Add(c => c.OnSheetDone, EventCallback.Factory.Create(this, () => done++))
+            .Add(c => c.OnDismissed, EventCallback.Factory.Create<string>(this, r => dismissed = r))
+            .AddChildContent("<div>Body</div>"));
+
+        await cut.InvokeAsync(() => cut.Instance.SetOpenAsync(true));
+        cut.Find(".tm-drawer__overlay").Click();
+
+        done.Should().Be(0, "backdrop is a dismiss, not Done");
+        dismissed.Should().Be("unset", "sheet backdrop still closes through IsOpenChanged without OnDismissed, same as before");
+        cut.FindAll(".tm-drawer").Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task MobilePresentationSheet_Done_WithoutOnSheetDone_StillCloses_DefaultUnchanged()
+    {
+        string? dismissed = "unset";
+        var cut = Render<TmOverlayPanel>(p => p
+            .Add(c => c.MobilePresentation, PanelPresentation.Sheet)
+            .Add(c => c.Title, "Filters")
+            .Add(c => c.OnDismissed, EventCallback.Factory.Create<string>(this, r => dismissed = r))
+            .AddChildContent("<div>Body</div>"));
+
+        await cut.InvokeAsync(() => cut.Instance.SetOpenAsync(true));
+        cut.Find(".tm-overlay-panel-sheet__done").Click();
+
+        dismissed.Should().Be("unset");
+        cut.FindAll(".tm-drawer").Should().BeEmpty();
+    }
+
+    [Fact]
     public void MobilePresentationSheet_ForwardsCloseOnEscapeAndOutsidePointerDown()
     {
         var cut = Render<TmOverlayPanel>(p => p

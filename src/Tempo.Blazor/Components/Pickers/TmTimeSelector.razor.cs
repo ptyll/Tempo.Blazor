@@ -17,7 +17,7 @@ namespace Tempo.Blazor.Components.Pickers;
 /// an hour/minute radiogroup grid (2D roving tabindex), host-owned presets / Now / recents, and a
 /// JS module for keys, typeahead, auto-repeat and fit. Square fit opens the grid on a segment tap
 /// (replacing presets) and collapses it when seconds would overflow the 260 px sheet.
-/// The picker popup is a later phase.
+/// Popup/Auto presentation of <c>TmTimePicker</c> composes this selector into a dialog overlay.
 /// </summary>
 public partial class TmTimeSelector
 {
@@ -90,7 +90,10 @@ public partial class TmTimeSelector
     /// </summary>
     [Parameter] public int? GridMinuteStep { get; set; }
 
-    /// <summary>When true, typed values snap onto <see cref="MinuteStep"/>. Defaults to false.</summary>
+    /// <summary>
+    /// When true, an off-step bound value is marked invalid and never rewritten; the first +/−
+    /// and a typed commit snap onto <see cref="MinuteStep"/>. Defaults to false.
+    /// </summary>
     [Parameter] public bool EnforceStep { get; set; }
 
     /// <summary>When true, a seconds spinbutton is rendered after minutes. Defaults to false.</summary>
@@ -298,6 +301,80 @@ public partial class TmTimeSelector
 
     private TimeOnly? ShownValue => _hasDraft ? _draft : Value;
 
+    private TimeSpan? _ambiguousOffset;
+    private AmbiguousTimeResolution _lastAmbiguousResolution = AmbiguousTimeResolution.Earlier;
+
+    private bool HasDstContext => ReferenceDate is not null && TimeZone is not null;
+
+    private bool IsDstGap
+        => ShownValue is { } shown
+           && HasDstContext
+           && TimeOfDayFormat.IsInvalid(ReferenceDate!.Value, shown, TimeZone!);
+
+    private bool IsAmbiguous
+        => ShownValue is { } shown
+           && HasDstContext
+           && TimeOfDayFormat.IsAmbiguous(ReferenceDate!.Value, shown, TimeZone!);
+
+    private bool IsOffStep
+        => EnforceStep
+           && MinuteStep > 1
+           && ShownValue is { } shown
+           && shown.Minute % MinuteStep != 0;
+
+    private TimeSpan[] AmbiguousOffsets
+        => ShownValue is { } shown && HasDstContext
+            ? TimeOfDayFormat.GetAmbiguousOffsets(ReferenceDate!.Value, shown, TimeZone!)
+            : [];
+
+    private TimeSpan SelectedAmbiguousOffset
+    {
+        get
+        {
+            var offsets = AmbiguousOffsets;
+            if (offsets.Length == 0)
+            {
+                return TimeSpan.Zero;
+            }
+
+            if (_ambiguousOffset is { } chosen && Array.IndexOf(offsets, chosen) >= 0)
+            {
+                return chosen;
+            }
+
+            return AmbiguousTimeResolution == AmbiguousTimeResolution.Later && offsets.Length > 1
+                ? offsets[^1]
+                : offsets[0];
+        }
+    }
+
+    private List<RadioOption<TimeSpan>> AmbiguousOptions
+    {
+        get
+        {
+            var offsets = AmbiguousOffsets;
+            if (offsets.Length < 2)
+            {
+                return [];
+            }
+
+            return
+            [
+                new RadioOption<TimeSpan>(FormatOffsetLabel(offsets[0], earlier: true), offsets[0]),
+                new RadioOption<TimeSpan>(FormatOffsetLabel(offsets[^1], earlier: false), offsets[^1]),
+            ];
+        }
+    }
+
+    private string FormatOffsetLabel(TimeSpan offset, bool earlier)
+    {
+        var sign = offset < TimeSpan.Zero ? "-" : "+";
+        var formatted = $"{sign}{Math.Abs(offset.Hours):00}:{Math.Abs(offset.Minutes):00}";
+        return earlier
+            ? Loc["TmTimeSelector_DstEarlier", formatted]
+            : Loc["TmTimeSelector_DstLater", formatted];
+    }
+
     private bool IsPm => (ShownValue ?? TimeOnly.MinValue).Hour >= 12;
 
     private IReadOnlyList<SegmentedOption<bool>> PeriodOptions =>
@@ -312,7 +389,7 @@ public partial class TmTimeSelector
 
     private string LiveText => _liveTextOverride ?? _liveText;
 
-    private bool IsInvalid => Invalid || IsOutOfRange || FormFieldErrorId is { Length: > 0 };
+    private bool IsInvalid => Invalid || IsOutOfRange || IsOffStep || IsDstGap || FormFieldErrorId is { Length: > 0 };
 
     private string? ValidationMessage =>
         CascadedEditContext?.GetValidationMessages(FieldIdentifier).FirstOrDefault();
@@ -326,11 +403,25 @@ public partial class TmTimeSelector
                 return ErrorText;
             }
 
+            if (IsDstGap && HasDstContext)
+            {
+                var gap = TimeOfDayFormat.GetDstGap(ReferenceDate!.Value, TimeZone!);
+                if (gap is { } range)
+                {
+                    return Loc["TmTimeSelector_DstGap", FormatValue(range.Start), FormatValue(range.End)];
+                }
+            }
+
             if (IsOutOfRange)
             {
                 var min = FormatValue(MinTime ?? TimeOnly.MinValue);
                 var max = FormatValue(MaxTime ?? TimeOnly.MaxValue);
                 return Loc["TmTimeSelector_OutOfRange", min, max];
+            }
+
+            if (IsOffStep)
+            {
+                return Loc["TmTimeSelector_OffStep", MinuteStep];
             }
 
             return ValidationMessage;
@@ -432,6 +523,12 @@ public partial class TmTimeSelector
         }
 
         _lastSeenValue = Value;
+
+        if (_lastAmbiguousResolution != AmbiguousTimeResolution)
+        {
+            _lastAmbiguousResolution = AmbiguousTimeResolution;
+            _ambiguousOffset = null;
+        }
 
         if (!ReferenceEquals(CascadedEditContext, _subscribedEditContext))
         {
@@ -637,7 +734,39 @@ public partial class TmTimeSelector
         }
 
         var current = ShownValue ?? StartingTime();
-        var next = TimeOfDayFormat.Step(current, segment, delta, MinuteStep, MinTime, MaxTime, AllowOvernightRange);
+        TimeOnly next;
+        if (segment == TimeSegment.Minutes && MinuteStep > 1 && current.Minute % MinuteStep != 0)
+        {
+            // TimeOfDayFormat.Step always snaps an off-step minute. EnforceStep marks the bound
+            // value invalid and snaps on the first +/−; with EnforceStep false the minute just
+            // moves by MinuteStep (14:07 + 15 → 14:22) and the host model is never rewritten
+            // until the user actually steps.
+            if (EnforceStep)
+            {
+                next = TimeOfDayFormat.SnapToStep(current, MinuteStep, delta);
+            }
+            else
+            {
+                var minutes = current.Minute + (delta * MinuteStep);
+                minutes %= 60;
+                if (minutes < 0)
+                {
+                    minutes += 60;
+                }
+
+                next = new TimeOnly(current.Hour, minutes, current.Second);
+            }
+
+            if (!TimeOfDayFormat.IsInRange(next, MinTime, MaxTime, AllowOvernightRange))
+            {
+                next = current;
+            }
+        }
+        else
+        {
+            next = TimeOfDayFormat.Step(current, segment, delta, MinuteStep, MinTime, MaxTime, AllowOvernightRange);
+        }
+
         await CommitAsync(next, announce);
     }
 
@@ -657,7 +786,13 @@ public partial class TmTimeSelector
                 next = new TimeOnly(hour, current.Minute, current.Second);
                 break;
             case TimeSegment.Minutes:
-                next = new TimeOnly(current.Hour, Math.Clamp(value, 0, 59), current.Second);
+                var minute = Math.Clamp(value, 0, 59);
+                next = new TimeOnly(current.Hour, minute, current.Second);
+                if (EnforceStep && MinuteStep > 1 && minute % MinuteStep != 0)
+                {
+                    next = TimeOfDayFormat.SnapToStep(next, MinuteStep, +1);
+                }
+
                 break;
             case TimeSegment.Seconds:
                 next = new TimeOnly(current.Hour, current.Minute, Math.Clamp(value, 0, 59));
@@ -733,6 +868,11 @@ public partial class TmTimeSelector
 
         _draft = value;
         _hasDraft = true;
+        if (!IsAmbiguousFor(value))
+        {
+            _ambiguousOffset = null;
+        }
+
         await ValueChanged.InvokeAsync(value);
         CascadedEditContext?.NotifyFieldChanged(FieldIdentifier);
         if (announce)
@@ -751,6 +891,21 @@ public partial class TmTimeSelector
         TmLayoutMode.Tablet => "tablet",
         _ => "desktop",
     };
+
+    private bool IsAmbiguousFor(TimeOnly value)
+        => HasDstContext && TimeOfDayFormat.IsAmbiguous(ReferenceDate!.Value, value, TimeZone!);
+
+    private async Task OnAmbiguousOffsetChanged(TimeSpan offset)
+    {
+        if (Disabled || ReadOnly)
+        {
+            return;
+        }
+
+        _ambiguousOffset = offset;
+        await AmbiguousOffsetChanged.InvokeAsync(offset);
+        StateHasChanged();
+    }
 
     private TimeOnly StartingTime()
     {

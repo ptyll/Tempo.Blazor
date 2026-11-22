@@ -1,115 +1,135 @@
 @namespace Tempo.Blazor.Components.Pickers
-@using System.Globalization
+@using Tempo.Blazor.Abstractions.Layout
+@using Tempo.Blazor.Components.Icons
 
-<div class="tm-time-picker @Class @(IsOutOfRange ? "tm-time-picker--invalid" : "")"
+<div class="tm-time-picker @Class @(IsOutOfRange ? "tm-time-picker--invalid" : "") @(IsMobileAuto ? "tm-time-picker--trigger-only" : null)"
+     id="@Id"
      @attributes="RootAttributes">
 
     @if (!string.IsNullOrEmpty(Label))
     {
         <label id="@_labelId"
                class="tm-picker-label @(Required ? "tm-input-label-required" : "")"
-               for="@_inputId">@Label</label>
+               for="@LabelFor">@Label</label>
     }
 
-    @* Composite control (hours/minutes/seconds + clear): the label's `for` targets the first
-       segment, and the body is a named group so assistive tech announces "{label}, group".
+    @* Composite control (hours/minutes/seconds + clear / clock trigger): the label's `for`
+       targets the first segment (or the trigger in Auto-mobile), and the body is a named group
+       so assistive tech announces "{label}, group".
        N148: no aria-disabled for out-of-range values — the segments stay editable, so "disabled"
        was the wrong signal; the invalid state is announced via aria-invalid on the segments
        (Invalid=@IsOutOfRange below) and painted by the --invalid class on the wrapper. *@
     <div class="tm-time-picker-body"
          role="group"
          aria-labelledby="@(string.IsNullOrEmpty(Label) ? null : _labelId)"
+         aria-readonly="@(ReadOnly ? "true" : null)"
          @attributes="AriaAttributes">
-        <TmTimeInput Value="@Value"
-                     ValueChanged="OnTimeChanged"
-                     InputId="@_inputId"
-                     ShowSeconds="@ShowSeconds"
-                     Disabled="@Disabled"
-                     ReadOnly="@ReadOnly"
-                     MinTime="@MinTime"
-                     MaxTime="@MaxTime"
-                     Invalid="@IsOutOfRange"
-                     HourCycle="@HourCycle"
-                     Culture="@Culture" />
+        @if (ShowSegments)
+        {
+            <TmTimeInput Value="@Value"
+                         ValueChanged="OnTimeChanged"
+                         ValueExpression="ValueExpression"
+                         InputId="@EffectiveInputId"
+                         ShowSeconds="@ShowSeconds"
+                         Disabled="@Disabled"
+                         ReadOnly="@ReadOnly"
+                         MinTime="@MinTime"
+                         MaxTime="@MaxTime"
+                         Invalid="@IsOutOfRange"
+                         HourCycle="@HourCycle"
+                         Culture="@Culture"
+                         AriaDescribedBy="@AriaDescribedBy" />
 
-        @if (Value.HasValue && !Disabled && !ReadOnly && !HideClear)
+            @if (Value.HasValue && !Disabled && !ReadOnly && !HideClear)
+            {
+                <button type="button"
+                        class="tm-picker-clear"
+                        aria-label="@Loc["TmTimePicker_Clear"]"
+                        @onclick="ClearValue">
+                    &#x2715;
+                </button>
+            }
+        }
+
+        @if (UsesOverlay)
         {
             <button type="button"
-                    class="tm-picker-clear"
-                    aria-label="@Loc["TmTimePicker_Clear"]"
-                    @onclick="ClearValue">
-                &#x2715;
+                    @ref="_triggerRef"
+                    id="@_triggerId"
+                    class="tm-time-picker__trigger"
+                    disabled="@Disabled"
+                    aria-haspopup="dialog"
+                    aria-expanded="@(_isOpen ? "true" : "false")"
+                    aria-controls="@_overlayId"
+                    aria-label="@TriggerAriaLabel"
+                    aria-labelledby="@TriggerLabelledBy"
+                    @onclick="ToggleOverlayAsync">
+                @if (IsMobileAuto)
+                {
+                    <span id="@_valueId" class="tm-time-picker__value">@DisplayedValue</span>
+                }
+                <span class="tm-time-picker__icon" aria-hidden="true">
+                    <TmIcon Name="@IconNames.Clock" Size="IconSize.Sm" />
+                </span>
             </button>
         }
     </div>
 
-    @if (!Value.HasValue)
+    @if (UsesOverlay && _isOpen)
+    {
+        <TmOverlayPanel Id="@_overlayId"
+                        Anchor="_triggerRef"
+                        IsOpen="_isOpen"
+                        IsOpenChanged="OnOverlayOpenChanged"
+                        Placement="OverlayPlacement.Bottom"
+                        Align="OverlayAlign.Start"
+                        Offset="4"
+                        Role="dialog"
+                        TrapFocus="true"
+                        Title="@EffectiveSheetTitle"
+                        SheetTitle="@EffectiveSheetTitle"
+                        AriaLabelledBy="@(string.IsNullOrEmpty(Label) ? null : _labelId)"
+                        AriaLabel="@(string.IsNullOrEmpty(Label) ? EffectiveSheetTitle : null)"
+                        MobilePresentation="PanelPresentation.Auto"
+                        LayoutMode="LayoutMode"
+                        SheetInitialFocusSelector="[data-tm-time-segment='hours']"
+                        OnSheetDone="OnSheetDoneAsync"
+                        Class="tm-time-picker__popup">
+            <TmTimeSelector Value="@SelectorValue"
+                            ValueChanged="OnSelectorChanged"
+                            MinTime="@MinTime"
+                            MaxTime="@MaxTime"
+                            ShowSeconds="@ShowSeconds"
+                            HourCycle="@HourCycle"
+                            Culture="@Culture"
+                            Disabled="@Disabled"
+                            ReadOnly="@ReadOnly"
+                            MinuteStep="@MinuteStep"
+                            EnforceStep="@EnforceStep"
+                            ReferenceDate="@ReferenceDate"
+                            TimeZone="@TimeZone"
+                            AmbiguousTimeResolution="@AmbiguousTimeResolution"
+                            AmbiguousOffsetChanged="@AmbiguousOffsetChanged"
+                            AriaDescribedBy="@AriaDescribedBy"
+                            AriaLabelledBy="@(string.IsNullOrEmpty(Label) ? null : _labelId)"
+                            LayoutMode="ResolvedLayout" />
+            @if (UsesOnConfirm && !IsSheetPresentation)
+            {
+                <div class="tm-time-picker__footer">
+                    <button type="button"
+                            class="tm-time-picker__done"
+                            @onclick="ConfirmPopoverAsync">
+                        @Loc["Tm_Done"]
+                    </button>
+                </div>
+            }
+        </TmOverlayPanel>
+    }
+
+    @if (ShowSegments && !Value.HasValue)
     {
         <span class="tm-picker-placeholder" aria-hidden="true">
             @(Placeholder ?? (ShowSeconds ? Loc["TmTimePicker_PlaceholderSeconds"] : Loc["TmTimePicker_Placeholder"]))
         </span>
     }
 </div>
-
-@code {
-    [Parameter] public TimeOnly?  Value        { get; set; }
-    [Parameter] public EventCallback<TimeOnly?> ValueChanged { get; set; }
-    [Parameter] public TimeOnly?  MinTime      { get; set; }
-    [Parameter] public TimeOnly?  MaxTime      { get; set; }
-    [Parameter] public bool       ShowSeconds  { get; set; }
-    [Parameter] public string?    Placeholder  { get; set; }
-    [Parameter] public bool       Disabled     { get; set; }
-    /// <summary>
-    /// Renders the segments read-only. Never assigned inside the picker. Defaults to false.
-    /// </summary>
-    [Parameter] public bool       ReadOnly     { get; set; }
-    /// <summary>
-    /// 12-hour versus 24-hour clock forwarded to <c>TmTimeInput</c>. Default
-    /// <see cref="TimeHourCycle.Auto"/> follows <see cref="Culture"/>.
-    /// </summary>
-    [Parameter] public TimeHourCycle HourCycle { get; set; } = TimeHourCycle.Auto;
-    /// <summary>
-    /// Culture used to resolve <see cref="HourCycle"/>.<see cref="TimeHourCycle.Auto"/>.
-    /// Null uses <see cref="CultureInfo.CurrentCulture"/>.
-    /// </summary>
-    [Parameter] public CultureInfo? Culture { get; set; }
-    [Parameter] public bool       Required     { get; set; }
-    /// <summary>
-    /// Hides the "✕" clear button that is otherwise rendered while a <see cref="Value"/> is set and the picker is
-    /// not <see cref="Disabled"/>. Parity with <c>TmDateTimePicker.HideClear</c>. The value stays editable segment by
-    /// segment; only the one-click clear is removed. Defaults to <c>false</c>. <see cref="Required"/> does not hide
-    /// the button implicitly (same as <c>TmDatePicker</c> / <c>TmDateTimePicker</c>) — a host with a mandatory field
-    /// passes <c>HideClear="true"</c> explicitly.
-    /// </summary>
-    [Parameter] public bool       HideClear    { get; set; }
-    [Parameter] public string?    Label        { get; set; }
-    [Parameter] public string?    Class        { get; set; }
-    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
-
-    private readonly string _labelId = $"tm-time-picker-label-{Guid.NewGuid():N}";
-    private readonly string _inputId = $"tm-time-picker-input-{Guid.NewGuid():N}";
-
-    private bool IsOutOfRange =>
-        Value.HasValue &&
-        ((MinTime.HasValue && Value.Value < MinTime.Value) ||
-         (MaxTime.HasValue && Value.Value > MaxTime.Value));
-
-    /// <summary>Consumer <c>aria-*</c> attributes target the input group; everything else the root.</summary>
-    private IReadOnlyDictionary<string, object>? AriaAttributes =>
-        AdditionalAttributes is null
-            ? null
-            : AdditionalAttributes
-                .Where(kv => kv.Key.StartsWith("aria-", StringComparison.OrdinalIgnoreCase))
-                .ToDictionary(kv => kv.Key, kv => kv.Value);
-
-    private IReadOnlyDictionary<string, object>? RootAttributes =>
-        AdditionalAttributes is null
-            ? null
-            : AdditionalAttributes
-                .Where(kv => !kv.Key.StartsWith("aria-", StringComparison.OrdinalIgnoreCase))
-                .ToDictionary(kv => kv.Key, kv => kv.Value);
-
-    private async Task OnTimeChanged(TimeOnly? t) => await ValueChanged.InvokeAsync(t);
-
-    private async Task ClearValue() => await ValueChanged.InvokeAsync(null);
-}

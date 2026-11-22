@@ -1388,6 +1388,9 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmTimeSelector_InvalidFormat"]    = "Enter a time such as {0}",
         ["TmTimeSelector_DstGap"]           = "On this day {0}–{1} does not exist (clocks go forward)",
         ["TmTimeSelector_DstAmbiguous"]     = "This time occurs twice. Which one?",
+        ["TmTimeSelector_DstEarlier"]       = "Summer time (UTC{0})",
+        ["TmTimeSelector_DstLater"]         = "Winter time (UTC{0})",
+        ["TmTimeSelector_OffStep"]          = "Use a {0}-minute step",
 
         // TmDatePicker
         ["TmDatePicker_Placeholder"]    = "dd.MM.yyyy",
@@ -7724,6 +7727,9 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmTimeSelector_InvalidFormat"]    = "Zadejte čas ve tvaru {0}",
         ["TmTimeSelector_DstGap"]           = "V tento den čas {0}–{1} neexistuje (posun na letní čas)",
         ["TmTimeSelector_DstAmbiguous"]     = "Tento čas nastane dvakrát. Který?",
+        ["TmTimeSelector_DstEarlier"]       = "Letní čas (UTC{0})",
+        ["TmTimeSelector_DstLater"]         = "Zimní čas (UTC{0})",
+        ["TmTimeSelector_OffStep"]          = "Použijte krok po {0} minutách",
 
         // TmDatePicker
         ["TmDatePicker_Placeholder"]   = "dd.MM.yyyy",

@@ -30,7 +30,8 @@ Anchored panels carry `MobilePresentation` (`PanelPresentation`):
   popover otherwise. The choice resolves from the **viewport** (the `TmLayoutScopes.Viewport`
   cascade or the internal probe), because the sheet is positioned against the viewport; the
   popover's *size* still follows the **trigger's container**. `TmDropdown` and `TmPopover` keep
-  `Auto` as their wrapper default; the column picker, the date/time pickers and — since F11 —
+  `Auto` as their wrapper default; the column picker, the date/time pickers (including
+  `TmTimePicker` Popup/Auto since 2.13.0) and — since F11 —
   the deliberate `TmContextMenu` / `TmSplitButton` / `TmNotificationBell` opt-ins
   (`MobilePresentation="Auto"`, sheet title from `SheetTitle` or a per-component localized
   default) opt into `Auto` explicitly.
@@ -59,7 +60,9 @@ never copies sheet, gesture or focus logic. The sheet header shows `Title` (fall
 without selecting; a consumer mid-task can keep Done disabled through
 `TmOverlayPanel.SheetDoneEnabled` — the date-range picker disables it until BOTH dates are
 picked, while Escape, the backdrop click and the swipe keep closing with the partial selection
-(cancel semantics). The sheet renders **in place** — a sheet opened inside a `TmModal` stays in
+(cancel semantics). Additive `OnSheetDone` (2.13.0) fires only from the header Done, so a picker
+in OnConfirm mode can commit a draft from Done and discard it from backdrop/swipe/Escape;
+unbound Done still closes and does not raise `OnDismissed`. The sheet renders **in place** — a sheet opened inside a `TmModal` stays in
 the modal's DOM, stacks above the modal content, and nests inside the modal's focus trap — and
 its root is **promoted to the browser top layer** (`popover="manual"` + `showPopover`), so an
 ancestor stacking context (a sticky `TmTopBar` under `TmBottomNavigation`, a transformed host)

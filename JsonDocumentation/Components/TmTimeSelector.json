@@ -2,7 +2,7 @@
   "itemName": "TmTimeSelector",
   "kind": "Component",
   "category": "Pickers",
-  "description": "Inline APG spinbutton time-of-day selector: hours/minutes/(seconds) with +/−, optional AM/PM, an hour/minute radiogroup grid (2D roving tabindex), host-owned presets / Now / recents, and a JS module for keys, typeahead, auto-repeat and fit. Null Value renders -- in the readout; +/− starts from now rounded to the step. Square fit opens the grid on a segment tap (replacing presets) and collapses ShowGrid to None when seconds would overflow the 260 px sheet. The picker popup is a later phase.",
+  "description": "Inline APG spinbutton time-of-day selector: hours/minutes/(seconds) with +/−, optional AM/PM, an hour/minute radiogroup grid (2D roving tabindex), host-owned presets / Now / recents, and a JS module for keys, typeahead, auto-repeat and fit. Null Value renders -- in the readout; +/− starts from now rounded to the step. Square fit opens the grid on a segment tap (replacing presets) and collapses ShowGrid to None when seconds would overflow the 260 px sheet. Popup/Auto presentation of TmTimePicker composes this selector into a dialog overlay.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Pickers"
   ],
@@ -31,6 +31,37 @@
       "isRequired": false,
       "default": "1",
       "description": "Minute step. Must be a positive divisor of 60 other than 60. Defaults to 1."
+    },
+    {
+      "name": "EnforceStep",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true, an off-step bound value is marked invalid (aria-invalid + TmTimeSelector_OffStep) and never rewritten. The first +/− or a typed minute snaps onto the step. Defaults to false."
+    },
+    {
+      "name": "ReferenceDate",
+      "type": "DateOnly?",
+      "isRequired": false,
+      "description": "Date used with TimeZone for DST gap/ambiguity. Both must be set; a missing pair is a no-op."
+    },
+    {
+      "name": "TimeZone",
+      "type": "TimeZoneInfo?",
+      "isRequired": false,
+      "description": "Time zone used with ReferenceDate for DST gap/ambiguity. Both must be set."
+    },
+    {
+      "name": "AmbiguousTimeResolution",
+      "type": "AmbiguousTimeResolution",
+      "isRequired": false,
+      "default": "Earlier",
+      "description": "Which occurrence of an ambiguous civil time to prefer. Defaults to earlier."
+    },
+    {
+      "name": "AmbiguousOffsetChanged",
+      "type": "EventCallback<TimeSpan>",
+      "isRequired": false,
+      "description": "Raised with the chosen offset when the user resolves an ambiguous time."
     },
     {
       "name": "ShowSeconds",
@@ -151,7 +182,10 @@
     "tm-time-selector__cell",
     "tm-time-selector__type",
     "tm-time-selector__type-input",
-    "tm-time-selector__type-toggle"
+    "tm-time-selector__type-toggle",
+    "tm-time-selector__dst",
+    "tm-time-selector__dst-prompt",
+    "tm-time-selector__dst-options"
   ],
   "examples": [
     {

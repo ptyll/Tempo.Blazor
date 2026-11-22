@@ -386,6 +386,15 @@ public sealed class TmOverlayPanelDialogNamingTests : LocalizationTestBase
                 cut.Find(".tm-date-picker-trigger").Click();
                 return cut.Find("[role='dialog']");
             },
+            ["TmTimePicker"] = () =>
+            {
+                var cut = Render<TmTimePicker>(p => p
+                    .Add(c => c.Presentation, TimePickerPresentation.Popup)
+                    .Add(c => c.LayoutMode, Tempo.Blazor.Abstractions.Layout.TmLayoutMode.Desktop)
+                    .Add(c => c.Label, "Start"));
+                cut.Find(".tm-time-picker__trigger").Click();
+                return cut.Find(".tm-time-picker__popup");
+            },
             ["TmDateRangePicker"] = () =>
             {
                 var cut = Render<TmDateRangePicker>(p => p.Add(c => c.Label, "Period"));

@@ -6,8 +6,10 @@
     <p class="text-slate-600 dark:text-slate-400">
         <code class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">&lt;TmTimeSelector /&gt;</code>
         is the inline APG spinbutton readout: hours/minutes with +/−, optional AM/PM, an hour/minute
-        grid, host-owned presets and a JS module for keys, typeahead, auto-repeat and fit. The picker
-        popup arrives in a later phase.
+        grid, host-owned presets and a JS module for keys, typeahead, auto-repeat and fit.
+        <code class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">&lt;TmTimePicker /&gt;</code>
+        default <code>Presentation=Segments</code> keeps today's DOM; Popup/Auto compose the selector
+        into a dialog overlay (sheet on a mobile viewport).
         A host <code class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">&lt;input&gt;</code>
         sits beside the selector so E2E can open the software keyboard.
     </p>
@@ -126,6 +128,71 @@
     </div>
 </section>
 
+<section class="demo-section" data-testid="time-picker-popup">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Picker popup</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">Presentation=Popup</span>
+    </div>
+
+    <div class="showcase-card" data-testid="time-picker-popup-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            Segments stay on screen; the clock trigger opens <code>TmTimeSelector</code> in a dialog.
+        </p>
+        <TmTimePicker @bind-Value="_popup"
+                      Label="Meeting"
+                      Presentation="TimePickerPresentation.Popup"
+                      HourCycle="TimeHourCycle.H23"
+                      Id="time-picker-popup" />
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-3">
+            Value: @(_popup?.ToString("HH:mm") ?? "—")
+        </p>
+    </div>
+</section>
+
+<section class="demo-section" data-testid="time-picker-auto">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Picker Auto</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded-full">Presentation=Auto</span>
+    </div>
+
+    <div class="showcase-card" data-testid="time-picker-auto-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            On a mobile viewport this is a trigger that opens a sheet; on desktop it matches Popup.
+        </p>
+        <TmTimePicker @bind-Value="_auto"
+                      Label="Start"
+                      Presentation="TimePickerPresentation.Auto"
+                      HourCycle="TimeHourCycle.H23"
+                      Id="time-picker-auto" />
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-3">
+            Value: @(_auto?.ToString("HH:mm") ?? "—")
+        </p>
+    </div>
+</section>
+
+<section class="demo-section" data-testid="time-picker-dst">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">DST gap and ambiguous</h2>
+    </div>
+
+    <div class="showcase-card" data-testid="time-picker-dst-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            Europe/Prague 2026-03-29 skips 02:00; 2026-10-25 02:30 occurs twice (summer then winter offset).
+        </p>
+        <TmTimeSelector @bind-Value="_dstGap"
+                        HourCycle="TimeHourCycle.H23"
+                        ReferenceDate="@(new DateOnly(2026, 3, 29))"
+                        TimeZone="@_prague"
+                        Id="time-selector-dst-gap" />
+        <TmTimeSelector @bind-Value="_dstAmbiguous"
+                        HourCycle="TimeHourCycle.H23"
+                        ReferenceDate="@(new DateOnly(2026, 10, 25))"
+                        TimeZone="@_prague"
+                        Id="time-selector-dst-ambiguous"
+                        Class="mt-4" />
+    </div>
+</section>
+
 @code {
     private static readonly System.Globalization.CultureInfo _enUs =
         System.Globalization.CultureInfo.GetCultureInfo("en-US");
@@ -135,7 +202,32 @@
     private TimeOnly? _ranged = new TimeOnly(8, 0);
     private TimeOnly? _form = new TimeOnly(9, 0);
     private TimeOnly? _seconds = new TimeOnly(14, 30, 15);
+    private TimeOnly? _popup = new TimeOnly(14, 30);
+    private TimeOnly? _auto = new TimeOnly(9, 0);
+    private TimeOnly? _dstGap = new TimeOnly(2, 30);
+    private TimeOnly? _dstAmbiguous = new TimeOnly(2, 30);
     private string _hostNote = "";
+
+    private static readonly TimeZoneInfo _prague = ResolvePrague();
+
+    private static TimeZoneInfo ResolvePrague()
+    {
+        foreach (var id in new[] { "Europe/Prague", "Central Europe Standard Time" })
+        {
+            try
+            {
+                return TimeZoneInfo.FindSystemTimeZoneById(id);
+            }
+            catch (TimeZoneNotFoundException)
+            {
+            }
+            catch (InvalidTimeZoneException)
+            {
+            }
+        }
+
+        return TimeZoneInfo.Utc;
+    }
 
     private readonly TimePreset[] _presets =
     [

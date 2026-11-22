@@ -197,4 +197,24 @@ public class TmTimePickerTests : LocalizationTestBase
 
         cut.Find(".tm-picker-label").ClassList.Should().Contain("tm-input-label-required");
     }
+
+    // ── Fáze 6: default Presentation=Segments keeps today's DOM ──────────────
+
+    [Fact]
+    public void TimePicker_Default_KeepsSegmentsDom_WithoutPopupChrome()
+    {
+        var cut = Render<TmTimePicker>(p => p
+            .Add(c => c.Value, new TimeOnly(14, 30))
+            .Add(c => c.Label, "Meeting")
+            .Add(c => c.HourCycle, TimeHourCycle.H23));
+
+        cut.Find(".tm-time-picker").Should().NotBeNull();
+        cut.Find(".tm-time-picker-body").GetAttribute("role").Should().Be("group");
+        cut.FindAll(".tm-time-seg").Should().HaveCount(2);
+        cut.Find(".tm-time-seg--hours").GetAttribute("value").Should().Be("14");
+        cut.Find(".tm-time-seg--minutes").GetAttribute("value").Should().Be("30");
+        cut.FindAll("[aria-haspopup]").Should().BeEmpty();
+        cut.Markup.Should().NotContain("tm-overlay-panel");
+        cut.Markup.Should().NotContain("tm-time-selector");
+    }
 }

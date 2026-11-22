@@ -104,6 +104,10 @@ public sealed class OverlayPanelComputedStyleRegressionTests
         // TmDateTimePicker intentionally shares TmDatePicker's panel class.
         new("TmDateTimePicker.razor", "tm-date-picker-popup",
             "var(--tm-bg-surface)", "var(--tm-border-color)", "var(--tm-space-2)", null),
+        // Fáze 6: TmTimePicker Popup/Auto compose TmTimeSelector into TmOverlayPanel. The popup
+        // class owns surface/border/padding so the zero-specificity overlay reset cannot win it.
+        new("TmTimePicker.razor", "tm-time-picker__popup",
+            "var(--tm-bg-surface)", "var(--tm-border-color)", "var(--tm-space-2)", null),
         new("TmTagPicker.razor", "tm-tag-picker-dropdown",
             "var(--tm-bg-surface)", "var(--tm-border-color)", "var(--tm-space-2)", "flex"),
         // F3: TmColumnPicker migrated from an absolute-positioned div onto the shared panel — its

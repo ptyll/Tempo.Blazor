@@ -2,7 +2,7 @@
   "itemName": "TmTimePicker",
   "kind": "Component",
   "category": "Pickers",
-  "description": "Time picker wrapping TmTimeInput with label, placeholder, clear button, and validation styling for out-of-range values.",
+  "description": "Time picker wrapping TmTimeInput with label, placeholder, clear button, and validation styling for out-of-range values. Additive Presentation keeps today's segments DOM by default; Popup/Auto compose TmTimeSelector into a TmOverlayPanel dialog (sheet on a mobile viewport).",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Pickers"
   ],
@@ -10,50 +10,63 @@
     {
       "name": "Value",
       "type": "TimeOnly?",
-      "isRequired": false
+      "isRequired": false,
+      "description": "The bound time of day."
     },
     {
       "name": "ValueChanged",
       "type": "EventCallback<TimeOnly?>",
-      "isRequired": false
+      "isRequired": false,
+      "description": "Fires when the committed time changes (live, or on Done in OnConfirm)."
+    },
+    {
+      "name": "ValueExpression",
+      "type": "Expression<Func<TimeOnly?>>?",
+      "isRequired": false,
+      "description": "Expression identifying the bound model field. Blazor supplies it automatically with @bind-Value; it links the nested input/selector to EditContext.NotifyFieldChanged."
     },
     {
       "name": "MinTime",
       "type": "TimeOnly?",
-      "isRequired": false
+      "isRequired": false,
+      "description": "Inclusive lower bound forwarded to the nested input/selector."
     },
     {
       "name": "MaxTime",
       "type": "TimeOnly?",
-      "isRequired": false
+      "isRequired": false,
+      "description": "Inclusive upper bound forwarded to the nested input/selector."
     },
     {
       "name": "ShowSeconds",
       "type": "bool",
-      "isRequired": false
+      "isRequired": false,
+      "description": "When true, a seconds segment / spinbutton is rendered. Defaults to false."
     },
     {
       "name": "Placeholder",
       "type": "string?",
-      "isRequired": false
+      "isRequired": false,
+      "description": "Placeholder shown while Value is null."
     },
     {
       "name": "Disabled",
       "type": "bool",
-      "isRequired": false
+      "isRequired": false,
+      "description": "Disables the nested input and the clock trigger. Distinct from ReadOnly."
     },
     {
       "name": "ReadOnly",
       "type": "bool",
       "isRequired": false,
-      "description": "Renders the nested TmTimeInput read-only. Never assigned inside the picker. Defaults to false."
+      "description": "Renders the nested TmTimeInput read-only and blocks the overlay from opening. Never assigned inside the picker. Defaults to false."
     },
     {
       "name": "HourCycle",
       "type": "TimeHourCycle",
       "isRequired": false,
       "default": "Auto",
-      "description": "12-hour versus 24-hour clock forwarded to TmTimeInput. Default Auto follows Culture."
+      "description": "12-hour versus 24-hour clock forwarded to TmTimeInput / TmTimeSelector. Default Auto follows Culture."
     },
     {
       "name": "Culture",
@@ -64,28 +77,122 @@
     {
       "name": "Required",
       "type": "bool",
-      "isRequired": false
+      "isRequired": false,
+      "description": "Marks the label as required. Does not hide the clear button."
     },
     {
       "name": "HideClear",
       "type": "bool",
-      "isRequired": false
+      "isRequired": false,
+      "description": "Hides the clear button that is otherwise rendered while a Value is set and the picker is not Disabled. Defaults to false. Required does not hide the button implicitly."
     },
     {
       "name": "Label",
       "type": "string?",
-      "isRequired": false
+      "isRequired": false,
+      "description": "Visible label. Also names the overlay dialog when SheetTitle is unset."
     },
     {
       "name": "Class",
       "type": "string?",
-      "isRequired": false
+      "isRequired": false,
+      "description": "Additional CSS class(es) for the root element."
+    },
+    {
+      "name": "Presentation",
+      "type": "TimePickerPresentation",
+      "isRequired": false,
+      "default": "Segments",
+      "description": "How the picker presents. Default Segments keeps today's TmTimeInput DOM with no overlay. Popup adds a clock trigger that opens TmTimeSelector in a dialog. Auto is a trigger+sheet on a mobile viewport and Popup otherwise."
+    },
+    {
+      "name": "CommitMode",
+      "type": "TimeCommitMode",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "When the overlay writes ValueChanged. Default Auto: a sheet holds a draft until Done; a popover commits live. OnConfirm always drafts (popover then renders its own Done). Close without Done discards the draft."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "Layout used to resolve Auto presentation and forwarded to the overlay. Auto follows the viewport cascade; a forced value never measures."
+    },
+    {
+      "name": "SheetTitle",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Visible title of the mobile sheet header. Falls back to Label, then the localized TmTimePicker_SheetTitle."
+    },
+    {
+      "name": "Id",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Stable id of the picker root. When set and InputId is unset, the hours segment uses {Id}-input."
+    },
+    {
+      "name": "InputId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional id applied to the hours segment so a parent label for can target it. Wins over the {Id}-input default. When both this and Id are unset the generated tm-time-picker-input-{guid} id is kept."
+    },
+    {
+      "name": "AriaDescribedBy",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Extra ids referenced from every segment / spinbutton aria-describedby. Forwarded to the nested input and selector."
+    },
+    {
+      "name": "MinuteStep",
+      "type": "int",
+      "isRequired": false,
+      "default": "1",
+      "description": "Minute step forwarded to the overlay selector. Defaults to 1."
+    },
+    {
+      "name": "EnforceStep",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true, an off-step bound value is marked invalid and never rewritten (forwarded to the overlay selector). Defaults to false."
+    },
+    {
+      "name": "ReferenceDate",
+      "type": "DateOnly?",
+      "isRequired": false,
+      "description": "Date used with TimeZone for DST gap/ambiguity. Both must be set."
+    },
+    {
+      "name": "TimeZone",
+      "type": "TimeZoneInfo?",
+      "isRequired": false,
+      "description": "Time zone used with ReferenceDate for DST gap/ambiguity. Both must be set."
+    },
+    {
+      "name": "AmbiguousTimeResolution",
+      "type": "AmbiguousTimeResolution",
+      "isRequired": false,
+      "default": "Earlier",
+      "description": "Which occurrence of an ambiguous civil time to prefer. Defaults to earlier."
+    },
+    {
+      "name": "AmbiguousOffsetChanged",
+      "type": "EventCallback<TimeSpan>",
+      "isRequired": false,
+      "description": "Raised with the chosen offset when the user resolves an ambiguous time in the overlay."
     }
   ],
   "cssClasses": [
     "tm-time-picker",
     "tm-time-picker-body",
     "tm-time-picker--invalid",
+    "tm-time-picker--trigger-only",
+    "tm-time-picker__trigger",
+    "tm-time-picker__value",
+    "tm-time-picker__icon",
+    "tm-time-picker__popup",
+    "tm-time-picker__footer",
+    "tm-time-picker__done",
     "tm-picker-label",
     "tm-picker-clear",
     "tm-picker-placeholder"
@@ -98,6 +205,14 @@
     {
       "title": "Time picker with seconds and constraints",
       "code": "<TmTimePicker @bind-Value=\"selectedTime\"\n              Label=\"Alarm\"\n              ShowSeconds=\"true\"\n              MinTime=\"@(new TimeOnly(6, 0))\"\n              MaxTime=\"@(new TimeOnly(22, 0))\" />"
+    },
+    {
+      "title": "Popup selector",
+      "code": "<TmTimePicker @bind-Value=\"selectedTime\" Label=\"Meeting\" Presentation=\"TimePickerPresentation.Popup\" HourCycle=\"TimeHourCycle.H23\" />"
+    },
+    {
+      "title": "Auto sheet on mobile",
+      "code": "<TmTimePicker @bind-Value=\"selectedTime\" Label=\"Start\" Presentation=\"TimePickerPresentation.Auto\" />"
     }
   ]
 }

@@ -47,6 +47,12 @@
 - **Host-owned presets** — `Presets`, `ShowNowPreset` (default false; `TimeProvider` via `IServiceProvider`, never `[Inject] TimeProvider`) and `RecentTimes` (max 3, deduped against presets; never persisted). Native chips, `aria-pressed`, group `role="group"` labelled `TmTimeSelector_Presets`. Out-of-range chips are `aria-disabled`.
 - **Layouts and TypeTime** — `data-tm-time-layout` mobile/tablet/desktop. Square + `keyboard=open` hides grid, presets and +/− (one-line readout). Regular + `keyboard=open` keeps full chrome. `TmTimeSelector_TypeTime` is offered on mobile/tablet regular when `AllowTyping` (default true) and never in square. **Impact:** additive; `TmTimePicker` default `Presentation=Segments` and today's DOM are unchanged.
 
+### Added — TmTimePicker Presentation Popup/Auto (`Tempo.Blazor`, Fáze 6: TmTimePicker – Presentation Popup/Auto)
+
+- **`TmTimePicker.Presentation`** — `Segments` (default, today's `TmTimeInput` DOM, no overlay), `Popup` (segments + clock trigger opening `TmTimeSelector` in a `TmOverlayPanel` `Role=dialog` `TrapFocus` `MobilePresentation=Auto`) and `Auto` (trigger-only sheet on a mobile viewport, Popup otherwise). Sheet title falls back SheetTitle → Label → localized `TmTimePicker_SheetTitle`. **Impact:** additive; default Segments unchanged.
+- **`CommitMode`** — `Auto` (sheet OnConfirm / popover Live), `Live`, `OnConfirm`. The picker owns the draft; Done commits, Escape/backdrop/swipe discard. ReadOnly never opens. Popover OnConfirm renders `.tm-time-picker__done`; the sheet uses overlay Done via additive `TmOverlayPanel.OnSheetDone`.
+- **`EnforceStep` / DST** — an off-step bound value is marked invalid and never rewritten; first +/− or typed minutes snap. `ReferenceDate` + `TimeZone` disable a DST gap hour and offer earlier/later offset radios for an ambiguous civil time. Additive `Id` / `InputId` / `AriaDescribedBy` / `ValueExpression` keep generated segment ids when unset.
+
 ## 2.12.0 - 2026-11-20
 
 > Plan "Tempo: public pin-on-top API for host status UI" (4ce1b994; decision `TOP-LAYER-PIN`,

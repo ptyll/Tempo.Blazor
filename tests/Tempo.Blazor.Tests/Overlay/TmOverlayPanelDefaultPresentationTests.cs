@@ -97,6 +97,7 @@ public class TmOverlayPanelMobilePresentationSweepTests
         "TmDatePicker.razor",
         "TmDateRangePicker.razor",
         "TmDateTimePicker.razor",
+        "TmTimePicker.razor",
         "TmNotionFloatingMenu.razor",
         "TmNotionAiMenu.razor",
     ];

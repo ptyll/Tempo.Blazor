@@ -263,6 +263,24 @@ internal static class TimeOfDayFormat
         return timeZone.IsAmbiguousTime(ToUnspecified(date, time));
     }
 
+    /// <summary>
+    /// Offsets of an ambiguous civil time, ordered earlier (DST, typically UTC+2 in Prague)
+    /// then later (standard, typically UTC+1). Empty when the instant is not ambiguous.
+    /// </summary>
+    public static TimeSpan[] GetAmbiguousOffsets(DateOnly date, TimeOnly time, TimeZoneInfo timeZone)
+    {
+        ArgumentNullException.ThrowIfNull(timeZone);
+        var unspecified = ToUnspecified(date, time);
+        if (!timeZone.IsAmbiguousTime(unspecified))
+        {
+            return [];
+        }
+
+        var offsets = timeZone.GetAmbiguousTimeOffsets(unspecified);
+        Array.Sort(offsets, (a, b) => b.CompareTo(a));
+        return offsets;
+    }
+
     private static DateTime ToUnspecified(DateOnly date, TimeOnly time)
         => DateTime.SpecifyKind(date.ToDateTime(time), DateTimeKind.Unspecified);
 

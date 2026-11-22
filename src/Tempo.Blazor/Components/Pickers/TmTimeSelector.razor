@@ -299,6 +299,7 @@
                                         role="radio"
                                         aria-checked="@(HourCellSelected(hour) ? "true" : "false")"
                                         aria-disabled="@(HourCellDisabled(hour) ? "true" : null)"
+                                        aria-describedby="@HourCellDescribedBy(hour)"
                                         aria-label="@HourCellLabel(hour)"
                                         tabindex="@HourTabIndex(hourIndex)"
                                         data-tm-time-grid-cell
@@ -352,6 +353,19 @@
                         @onclick="OnTypeTime">
                     @Loc["TmTimeSelector_TypeTime"]
                 </button>
+            }
+            @if (IsAmbiguous)
+            {
+                <div class="tm-time-selector__dst">
+                    <p class="tm-time-selector__dst-prompt">@Loc["TmTimeSelector_DstAmbiguous"]</p>
+                    <TmRadioGroup T="TimeSpan"
+                                  Class="tm-time-selector__dst-options"
+                                  Layout="RadioLayout.Vertical"
+                                  Value="@SelectedAmbiguousOffset"
+                                  ValueChanged="OnAmbiguousOffsetChanged"
+                                  Options="@AmbiguousOptions"
+                                  Disabled="@(Disabled || ReadOnly)" />
+                </div>
             }
             @if (!string.IsNullOrEmpty(ResolvedErrorText))
             {

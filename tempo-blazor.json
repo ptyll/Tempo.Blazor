@@ -28175,6 +28175,12 @@
           "description": "Raised after the panel has finished opening: in popover mode once overlay.js open() ran showPopover() (the panel is displayed and in the top layer), in sheet mode after the sheet's opening render. Use for post-open focus moves — e.g. focusing a filter input — because a consumer's OnAfterRenderAsync can run before the panel is displayed, and a focus move against a still-hidden popover is dropped. Fires once per open; closing resets it (since 2.9.1)."
         },
         {
+          "name": "OnSheetDone",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised when the sheet header's Done action closes the sheet. Backdrop, swipe and Escape do not raise it — they keep closing through IsOpenChanged (and Escape also through OnDismissed). Default unbound: Done still closes, so existing consumers are unchanged. A picker in OnConfirm mode commits its draft from this callback and discards it from any other close (since 2.13.0)."
+        },
+        {
           "name": "Placement",
           "type": "OverlayPlacement",
           "isRequired": false,
@@ -29108,7 +29114,7 @@
       "kind": "Component",
       "category": "Pickers",
       "namespace": "Tempo.Blazor.Components.Pickers",
-      "description": "Time picker wrapping TmTimeInput with label, placeholder, clear button, and validation styling for out-of-range values.",
+      "description": "Time picker wrapping TmTimeInput with label, placeholder, clear button, and validation styling for out-of-range values. Additive Presentation keeps today's segments DOM by default; Popup/Auto compose TmTimeSelector into a TmOverlayPanel dialog (sheet on a mobile viewport).",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Pickers/TmTimePicker.razor",
       "documentationStatus": "merged",
@@ -29117,9 +29123,36 @@
       ],
       "parameters": [
         {
+          "name": "AmbiguousOffsetChanged",
+          "type": "EventCallback<TimeSpan>",
+          "isRequired": false,
+          "description": "Raised with the chosen offset when the user resolves an ambiguous time in the overlay."
+        },
+        {
+          "name": "AmbiguousTimeResolution",
+          "type": "AmbiguousTimeResolution",
+          "isRequired": false,
+          "default": "AmbiguousTimeResolution.Earlier",
+          "description": "Which occurrence of an ambiguous civil time to prefer. Defaults to earlier."
+        },
+        {
+          "name": "AriaDescribedBy",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Extra ids referenced from every segment / spinbutton aria-describedby. Forwarded to the nested input and selector."
+        },
+        {
           "name": "Class",
           "type": "string?",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Additional CSS class(es) for the root element."
+        },
+        {
+          "name": "CommitMode",
+          "type": "TimeCommitMode",
+          "isRequired": false,
+          "default": "TimeCommitMode.Auto",
+          "description": "When the overlay writes ValueChanged. Default Auto: a sheet holds a draft until Done; a popover commits live. OnConfirm always drafts (popover then renders its own Done). Close without Done discards the draft."
         },
         {
           "name": "Culture",
@@ -29130,72 +29163,151 @@
         {
           "name": "Disabled",
           "type": "bool",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Disables the nested input and the clock trigger. Distinct from ReadOnly."
+        },
+        {
+          "name": "EnforceStep",
+          "type": "bool",
+          "isRequired": false,
+          "description": "When true, an off-step bound value is marked invalid and never rewritten (forwarded to the overlay selector). Defaults to false."
         },
         {
           "name": "HideClear",
           "type": "bool",
           "isRequired": false,
-          "description": "Hides the \"✕\" clear button that is otherwise rendered while a Value is set and the picker is not Disabled. Parity with TmDateTimePicker.HideClear. The value stays editable segment by segment; only the one-click clear is removed. Defaults to false. Required does not hide the button implicitly (same as TmDatePicker / TmDateTimePicker) — a host with a mandatory field passes HideClear=\"true\" explicitly."
+          "description": "Hides the clear button that is otherwise rendered while a Value is set and the picker is not Disabled. Defaults to false. Required does not hide the button implicitly."
         },
         {
           "name": "HourCycle",
           "type": "TimeHourCycle",
           "isRequired": false,
           "default": "TimeHourCycle.Auto",
-          "description": "12-hour versus 24-hour clock forwarded to TmTimeInput. Default Auto follows Culture."
+          "description": "12-hour versus 24-hour clock forwarded to TmTimeInput / TmTimeSelector. Default Auto follows Culture."
+        },
+        {
+          "name": "Id",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Stable id of the picker root. When set and InputId is unset, the hours segment uses {Id}-input."
+        },
+        {
+          "name": "InputId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Optional id applied to the hours segment so a parent label for can target it. Wins over the {Id}-input default. When both this and Id are unset the generated tm-time-picker-input-{guid} id is kept."
         },
         {
           "name": "Label",
           "type": "string?",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Visible label. Also names the overlay dialog when SheetTitle is unset."
+        },
+        {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "Layout used to resolve Auto presentation and forwarded to the overlay. Auto follows the viewport cascade; a forced value never measures."
         },
         {
           "name": "MaxTime",
           "type": "TimeOnly?",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Inclusive upper bound forwarded to the nested input/selector."
         },
         {
           "name": "MinTime",
           "type": "TimeOnly?",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Inclusive lower bound forwarded to the nested input/selector."
+        },
+        {
+          "name": "MinuteStep",
+          "type": "int",
+          "isRequired": false,
+          "default": "1",
+          "description": "Minute step forwarded to the overlay selector. Defaults to 1."
         },
         {
           "name": "Placeholder",
           "type": "string?",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Placeholder shown while Value is null."
+        },
+        {
+          "name": "Presentation",
+          "type": "TimePickerPresentation",
+          "isRequired": false,
+          "default": "TimePickerPresentation.Segments",
+          "description": "How the picker presents. Default Segments keeps today's TmTimeInput DOM with no overlay. Popup adds a clock trigger that opens TmTimeSelector in a dialog. Auto is a trigger+sheet on a mobile viewport and Popup otherwise."
         },
         {
           "name": "ReadOnly",
           "type": "bool",
           "isRequired": false,
-          "description": "Renders the nested TmTimeInput read-only. Never assigned inside the picker. Defaults to false."
+          "description": "Renders the nested TmTimeInput read-only and blocks the overlay from opening. Never assigned inside the picker. Defaults to false."
+        },
+        {
+          "name": "ReferenceDate",
+          "type": "DateOnly?",
+          "isRequired": false,
+          "description": "Date used with TimeZone for DST gap/ambiguity. Both must be set."
         },
         {
           "name": "Required",
           "type": "bool",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Marks the label as required. Does not hide the clear button."
+        },
+        {
+          "name": "SheetTitle",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Visible title of the mobile sheet header. Falls back to Label, then the localized TmTimePicker_SheetTitle."
         },
         {
           "name": "ShowSeconds",
           "type": "bool",
-          "isRequired": false
+          "isRequired": false,
+          "description": "When true, a seconds segment / spinbutton is rendered. Defaults to false."
+        },
+        {
+          "name": "TimeZone",
+          "type": "TimeZoneInfo?",
+          "isRequired": false,
+          "description": "Time zone used with ReferenceDate for DST gap/ambiguity. Both must be set."
         },
         {
           "name": "Value",
           "type": "TimeOnly?",
-          "isRequired": false
+          "isRequired": false,
+          "description": "The bound time of day."
         },
         {
           "name": "ValueChanged",
           "type": "EventCallback<TimeOnly?>",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Fires when the committed time changes (live, or on Done in OnConfirm)."
+        },
+        {
+          "name": "ValueExpression",
+          "type": "Expression<Func<TimeOnly?>>?",
+          "isRequired": false,
+          "description": "Expression identifying the bound model field. Blazor supplies it automatically with @bind-Value; it links the nested input/selector to EditContext.NotifyFieldChanged."
         }
       ],
       "cssClasses": [
         "tm-time-picker",
         "tm-time-picker-body",
         "tm-time-picker--invalid",
+        "tm-time-picker--trigger-only",
+        "tm-time-picker__trigger",
+        "tm-time-picker__value",
+        "tm-time-picker__icon",
+        "tm-time-picker__popup",
+        "tm-time-picker__footer",
+        "tm-time-picker__done",
         "tm-picker-label",
         "tm-picker-clear",
         "tm-picker-placeholder"
@@ -29208,6 +29320,14 @@
         {
           "title": "Time picker with seconds and constraints",
           "code": "<TmTimePicker @bind-Value=\"selectedTime\"\n              Label=\"Alarm\"\n              ShowSeconds=\"true\"\n              MinTime=\"@(new TimeOnly(6, 0))\"\n              MaxTime=\"@(new TimeOnly(22, 0))\" />"
+        },
+        {
+          "title": "Popup selector",
+          "code": "<TmTimePicker @bind-Value=\"selectedTime\" Label=\"Meeting\" Presentation=\"TimePickerPresentation.Popup\" HourCycle=\"TimeHourCycle.H23\" />"
+        },
+        {
+          "title": "Auto sheet on mobile",
+          "code": "<TmTimePicker @bind-Value=\"selectedTime\" Label=\"Start\" Presentation=\"TimePickerPresentation.Auto\" />"
         }
       ]
     },
@@ -29308,7 +29428,7 @@
       "kind": "Component",
       "category": "Pickers",
       "namespace": "Tempo.Blazor.Components.Pickers",
-      "description": "Inline APG spinbutton time-of-day selector: hours/minutes/(seconds) with +/−, optional AM/PM, an hour/minute radiogroup grid (2D roving tabindex), host-owned presets / Now / recents, and a JS module for keys, typeahead, auto-repeat and fit. Null Value renders -- in the readout; +/− starts from now rounded to the step. Square fit opens the grid on a segment tap (replacing presets) and collapses ShowGrid to None when seconds would overflow the 260 px sheet. The picker popup is a later phase.",
+      "description": "Inline APG spinbutton time-of-day selector: hours/minutes/(seconds) with +/−, optional AM/PM, an hour/minute radiogroup grid (2D roving tabindex), host-owned presets / Now / recents, and a JS module for keys, typeahead, auto-repeat and fit. Null Value renders -- in the readout; +/− starts from now rounded to the step. Square fit opens the grid on a segment tap (replacing presets) and collapses ShowGrid to None when seconds would overflow the 260 px sheet. Popup/Auto presentation of TmTimePicker composes this selector into a dialog overlay.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Pickers/TmTimeSelector.razor",
       "documentationStatus": "merged",
@@ -29394,7 +29514,7 @@
           "name": "EnforceStep",
           "type": "bool",
           "isRequired": false,
-          "description": "When true, typed values snap onto MinuteStep. Defaults to false."
+          "description": "When true, an off-step bound value is marked invalid (aria-invalid + TmTimeSelector_OffStep) and never rewritten. The first +/− or a typed minute snaps onto the step. Defaults to false."
         },
         {
           "name": "ErrorText",
@@ -29495,7 +29615,7 @@
           "name": "ReferenceDate",
           "type": "DateOnly?",
           "isRequired": false,
-          "description": "Date used with TimeZone for DST gap/ambiguity. Both must be set."
+          "description": "Date used with TimeZone for DST gap/ambiguity. Both must be set; a missing pair is a no-op."
         },
         {
           "name": "ResolvedLayoutChanged",
@@ -29570,7 +29690,10 @@
         "tm-time-selector__cell",
         "tm-time-selector__type",
         "tm-time-selector__type-input",
-        "tm-time-selector__type-toggle"
+        "tm-time-selector__type-toggle",
+        "tm-time-selector__dst",
+        "tm-time-selector__dst-prompt",
+        "tm-time-selector__dst-options"
       ],
       "examples": [
         {

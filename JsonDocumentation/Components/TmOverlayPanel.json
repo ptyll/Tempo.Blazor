@@ -121,6 +121,12 @@
       "description": "Whether the sheet header's Done action is enabled. A consumer mid-task can keep Done disabled until its input is complete — TmDateRangePicker disables it until BOTH dates are picked, so a half range can never close the sheet silently (Escape, the backdrop click and the swipe still close and keep the partial selection). Sheet mode only (since 2.9.1)."
     },
     {
+      "name": "OnSheetDone",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when the sheet header's Done action closes the sheet. Backdrop, swipe and Escape do not raise it — they keep closing through IsOpenChanged (and Escape also through OnDismissed). Default unbound: Done still closes, so existing consumers are unchanged. A picker in OnConfirm mode commits its draft from this callback and discards it from any other close (since 2.13.0)."
+    },
+    {
       "name": "Role",
       "type": "string?",
       "isRequired": false,

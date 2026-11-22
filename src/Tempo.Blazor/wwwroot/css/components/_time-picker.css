@@ -1,3 +1,88 @@
 .tm-time-picker { display: inline-flex; flex-direction: column; gap: var(--tm-space-1); }
 .tm-time-picker-body { display: inline-flex; align-items: center; gap: var(--tm-space-1); position: relative; }
 .tm-time-picker--invalid .tm-time-input { border-color: var(--tm-color-danger); }
+
+.tm-time-picker__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tm-space-2);
+  padding: var(--tm-space-2);
+  background: var(--tm-bg-surface);
+  border: var(--tm-border-width) solid var(--tm-border-color);
+  border-radius: var(--tm-radius-md);
+  color: var(--tm-text-primary);
+  cursor: pointer;
+  font-size: var(--tm-font-size-sm);
+}
+
+.tm-time-picker--trigger-only .tm-time-picker__trigger {
+  min-inline-size: var(--tm-time-picker-trigger-min-width, calc(var(--tm-space-10) * 4));
+  padding-inline: var(--tm-space-3);
+  text-align: start;
+}
+
+.tm-time-picker__trigger:hover:not(:disabled) { border-color: var(--tm-color-primary); }
+.tm-time-picker__trigger:focus-visible {
+  outline: 2px solid transparent;
+  border-color: var(--tm-color-primary);
+  box-shadow: var(--tm-focus-ring);
+}
+.tm-time-picker__trigger:disabled { opacity: var(--tm-opacity-disabled); cursor: not-allowed; }
+
+.tm-time-picker__icon { margin-inline-start: auto; color: var(--tm-text-tertiary); }
+
+.tm-time-picker__popup {
+  background: var(--tm-bg-surface);
+  border: var(--tm-border-width) solid var(--tm-border-color);
+  border-radius: var(--tm-radius-lg);
+  box-shadow: var(--tm-shadow-lg);
+  padding: var(--tm-space-2);
+  min-inline-size: max-content;
+}
+
+.tm-time-picker__footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-block-start: var(--tm-space-2);
+  border-block-start: var(--tm-border-width) solid var(--tm-border-color);
+  margin-block-start: var(--tm-space-2);
+}
+
+.tm-time-picker__done {
+  padding: var(--tm-space-1) var(--tm-space-3);
+  background: var(--tm-color-primary);
+  color: var(--tm-color-on-primary);
+  border: none;
+  border-radius: var(--tm-radius-md);
+  font-size: var(--tm-font-size-sm);
+  font-weight: var(--tm-font-weight-medium);
+  cursor: pointer;
+}
+
+.tm-time-picker__done:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
+}
+
+@media (pointer: coarse) {
+  .tm-time-picker__trigger,
+  .tm-time-picker__done {
+    min-block-size: var(--tm-touch-target);
+    min-inline-size: var(--tm-touch-target);
+  }
+}
+
+@media (forced-colors: active) {
+  .tm-time-picker__trigger,
+  .tm-time-picker__done {
+    border: 1px solid ButtonText;
+    background: ButtonFace;
+    color: ButtonText;
+  }
+
+  .tm-time-picker__trigger:focus-visible,
+  .tm-time-picker__done:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+}
