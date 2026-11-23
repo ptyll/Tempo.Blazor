@@ -290,6 +290,25 @@ public partial class TmAiComposer
         }
     }
 
+    /// <summary>
+    /// Moves keyboard focus to the prompt. The textarea stays active while a generation runs, so a host
+    /// can return the reader to the composer without waiting for the answer. Without a browser (static
+    /// rendering) the call is a silent no-op.
+    /// </summary>
+    /// <param name="preventScroll">When true the browser does not scroll the textarea into view.</param>
+    /// <returns>A task that completes when focus has been moved, or immediately on an interop failure.</returns>
+    public async ValueTask FocusAsync(bool preventScroll = false)
+    {
+        try
+        {
+            await _textareaRef.FocusAsync(preventScroll);
+        }
+        catch (Exception exception) when (IsInteropFailure(exception))
+        {
+            // Static rendering / a detached circuit: the host asked, the page has no DOM to focus.
+        }
+    }
+
     // ── Submit ─────────────────────────────────────────────────────────────────────────────────
 
     /// <summary>

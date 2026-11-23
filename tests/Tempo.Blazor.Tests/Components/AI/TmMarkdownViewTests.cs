@@ -218,6 +218,50 @@ public sealed class TmMarkdownViewTests : LocalizationTestBase
     }
 
     [Fact]
+    public void ImagePolicyBlock_RendersNoImg()
+    {
+        var cut = Render<TmMarkdownView>(parameters => parameters
+            .Add(view => view.Markdown, "See ![logo](https://example.test/logo.png).")
+            .Add(view => view.ImagePolicy, AiMarkdownImagePolicy.Block));
+
+        cut.FindAll("img").Should().BeEmpty();
+        cut.Markup.Should().NotContain("example.test/logo.png");
+    }
+
+    [Fact]
+    public void LinkPolicyTextOnly_RendersNoAnchor()
+    {
+        var cut = Render<TmMarkdownView>(parameters => parameters
+            .Add(view => view.Markdown, "See [docs](https://example.test/a).")
+            .Add(view => view.LinkPolicy, AiMarkdownLinkPolicy.TextOnly));
+
+        cut.FindAll("a").Should().BeEmpty();
+        cut.Find(".tm-markdown-view").TextContent.Should().Contain("docs");
+    }
+
+    [Fact]
+    public void DefaultPolicies_KeepTodaysImgAndAnchor()
+    {
+        var cut = Render<TmMarkdownView>(parameters => parameters
+            .Add(view => view.Markdown, "See [docs](https://example.test/a) and ![logo](https://example.test/logo.png)."));
+
+        cut.Find("a").GetAttribute("href").Should().Be("https://example.test/a");
+        cut.Find("img").GetAttribute("src").Should().Be("https://example.test/logo.png");
+        cut.Instance.ImagePolicy.Should().Be(AiMarkdownImagePolicy.Allow);
+        cut.Instance.LinkPolicy.Should().Be(AiMarkdownLinkPolicy.Allow);
+    }
+
+    [Fact]
+    public void ImageUrlFilterFalse_DropsTheImage()
+    {
+        var cut = Render<TmMarkdownView>(parameters => parameters
+            .Add(view => view.Markdown, "![logo](https://example.test/logo.png)")
+            .Add(view => view.ImageUrlFilter, static (Uri _) => false));
+
+        cut.FindAll("img").Should().BeEmpty();
+    }
+
+    [Fact]
     public void DataTestId_OverridesTheRootTestId()
     {
         var cut = Render<TmMarkdownView>(parameters => parameters

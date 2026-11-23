@@ -667,6 +667,8 @@
   "TmDemo_HumanInTheLoop_DiffAccepted": "Accepted changes: {0} of {1}",
   "TmDemo_HumanInTheLoop_DiffStackedHeading": "Stacked proposal of a whole value",
   "TmDemo_HumanInTheLoop_DiffStackedHint": "Layout=Stacked presents the one-hunk proposal of a whole field value with the deletion and the insertion one below the other, instead of interleaved inline.",
+  "TmDemo_HumanInTheLoop_DiffWholeHeading": "Whole-value comparison of two named boxes",
+  "TmDemo_HumanInTheLoop_DiffWholeHint": "Layout=Whole shows the proposed value first and the current value below it, each in its own named box — the presentation for a long field value.",
   "TmDemo_HumanInTheLoop_SuggestionHeading": "Suggestion with confidence and alternatives",
   "TmDemo_HumanInTheLoop_SuggestionIntro": "A recommendation the reader can take, dismiss, or take back inside the Undo window. The confidence is a localized word plus an optional percentage; the reasoning sits behind a disclosure and the alternatives are a native radio group.",
   "TmDemo_HumanInTheLoop_SuggestionTitle": "Reuse the approval model",

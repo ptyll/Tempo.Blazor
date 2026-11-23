@@ -80,6 +80,18 @@
       "description": "Raised with the text of an activated suggestion prompt. The chips render only while the conversation has no turn AND this handler is bound — a chip that raises nothing is not offered."
     },
     {
+      "name": "SuggestionsLayout",
+      "type": "AiSuggestionsLayout",
+      "isRequired": false,
+      "description": "How the empty-state suggestion chips sit. Wrap (the default) is today's wrapping, centred row. ScrollRow is a nowrap horizontal scroller that reveals a partially visible focused chip without moving the transcript. Auto is ScrollRow under 640 px via a container query; desktop Auto stays Wrap."
+    },
+    {
+      "name": "CompletionAnnouncement",
+      "type": "Func<AiMessage, string?>?",
+      "isRequired": false,
+      "description": "Optional host formatter for the completion note spoken into the transcript live region. Invoked on the true→false generating edge and at the end of StreamAsync, only for the last Completed turn. A null return (or a null parameter) keeps the localized TmAiConversation_Completed. Stopped and Failed turns never call it."
+    },
+    {
       "name": "RenderThrottle",
       "type": "TimeSpan",
       "isRequired": false,
@@ -115,6 +127,11 @@
       "name": "ExpandRenderWindowToAsync",
       "signature": "Task<bool> ExpandRenderWindowToAsync(string messageId)",
       "description": "Grows a render window so the named turn is in the DOM, without scrolling. Answers whether messageId is in Messages. An unknown id, a host without a window, or a turn already inside the window leaves the slice unchanged. A jump above the window steps back from the current start by RenderWindowStep (the same grid as Load older messages). ScrollToMessageAsync uses this internally so a jump above RenderWindowSize mounts the row before the module is asked to scroll."
+    },
+    {
+      "name": "AnnounceAsync",
+      "signature": "Task AnnounceAsync(string text)",
+      "description": "Speaks text into the transcript live region. Each call is a new keyed node (even when the text repeats), so a screen reader hears it again. Null or whitespace is a no-op."
     }
   ]
 }

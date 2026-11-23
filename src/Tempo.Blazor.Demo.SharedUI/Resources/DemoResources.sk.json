@@ -667,6 +667,8 @@
   "TmDemo_HumanInTheLoop_DiffAccepted": "Prijaté zmeny: {0} z {1}",
   "TmDemo_HumanInTheLoop_DiffStackedHeading": "Návrh celej hodnoty pod sebou",
   "TmDemo_HumanInTheLoop_DiffStackedHint": "Layout=Stacked zobrazí návrh celej hodnoty poľa ako jednu zmenu s vymazanou a vloženou verziou pod sebou, namiesto prepletenia na jednom riadku.",
+  "TmDemo_HumanInTheLoop_DiffWholeHeading": "Porovnanie celej hodnoty v dvoch pomenovaných rámečkoch",
+  "TmDemo_HumanInTheLoop_DiffWholeHint": "Layout=Whole ukáže najprv navrhovanú hodnotu a pod ňou aktuálnu, každú vo vlastnom pomenovanom rámečku — prezentácia pre dlhú hodnotu poľa.",
   "TmDemo_HumanInTheLoop_SuggestionHeading": "Odporúčanie s istotou a alternatívami",
   "TmDemo_HumanInTheLoop_SuggestionIntro": "Odporúčanie, ktoré čitateľ môže prijať, odmietnuť alebo vrátiť v okne pre Undo. Istota je lokalizované slovo a voliteľné percento; zdôvodnenie je za rozbaľovacím prvkom a alternatívy sú natívna radio skupina.",
   "TmDemo_HumanInTheLoop_SuggestionTitle": "Znovupoužiť model schválenia",

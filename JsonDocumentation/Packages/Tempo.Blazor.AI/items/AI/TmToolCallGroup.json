@@ -40,6 +40,12 @@
       "description": "Raised with the call that failed when the reader asks to run it again; forwarded to every card in the run. The cards' Retry buttons render only when a handler is bound."
     },
     {
+      "name": "ErrorTemplate",
+      "type": "RenderFragment<AiToolCall>?",
+      "isRequired": false,
+      "description": "Host error body for each card in the run. Forwarded to TmToolCallCard.ErrorTemplate."
+    },
+    {
       "name": "ToolCalls",
       "type": "IReadOnlyList<AiToolCall>?",
       "isRequired": true,

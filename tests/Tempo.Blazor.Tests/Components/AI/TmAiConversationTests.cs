@@ -111,6 +111,9 @@ public sealed class TmAiConversationTests : LocalizationTestBase
 
         ownLiveRegions.Should().ContainSingle(
             "the conversation owns exactly one live region — the transcript; every message keeps its own");
+
+        cut.FindAll("[data-testid='ai-conversation-announcement']").Should().BeEmpty(
+            "without a completion there is no announcement node — default DOM 1:1");
     }
 
     [Fact]
@@ -362,5 +365,70 @@ public sealed class TmAiConversationTests : LocalizationTestBase
 
         cut.Find("[role='log']").GetAttribute("aria-label").Should().NotBeNullOrWhiteSpace();
         cut.Find("[role='log']").GetAttribute("aria-label").Should().NotStartWith("[");
+    }
+
+    // ── Suggestions layout (Fáze 10 E) ────────────────────────────────────────────────────────
+
+    [Fact]
+    public void DefaultSuggestionsLayout_IsWrap_AndDoesNotAddAScrollRowModifier()
+    {
+        var cut = Render<TmAiConversation>(parameters => parameters
+            .Add(component => component.Messages, Array.Empty<AiMessage>())
+            .Add(component => component.Suggestions, new[] { "Summarize this page", "Draft a reply" })
+            .Add(component => component.OnSuggestion, (string _) => { }));
+
+        var group = cut.Find(".tm-ai-conversation__suggestions");
+        group.GetAttribute("data-layout").Should().Be("wrap");
+        group.ClassList.Should().NotContain("tm-ai-conversation__suggestions--scroll-row");
+        group.ClassList.Should().NotContain("tm-ai-conversation__suggestions--auto");
+        cut.Find(".tm-ai-conversation").ClassList.Should().NotContain("tm-ai-conversation--suggestions-scroll-row");
+        cut.Find(".tm-ai-conversation").ClassList.Should().NotContain("tm-ai-conversation--suggestions-auto");
+    }
+
+    [Fact]
+    public void ScrollRowLayout_AddsTheScrollRowModifier()
+    {
+        var cut = Render<TmAiConversation>(parameters => parameters
+            .Add(component => component.Messages, Array.Empty<AiMessage>())
+            .Add(component => component.Suggestions, new[] { "One", "Two", "Three" })
+            .Add(component => component.OnSuggestion, (string _) => { })
+            .Add(component => component.SuggestionsLayout, AiSuggestionsLayout.ScrollRow));
+
+        var group = cut.Find(".tm-ai-conversation__suggestions");
+        group.GetAttribute("data-layout").Should().Be("scroll-row");
+        group.ClassList.Should().Contain("tm-ai-conversation__suggestions--scroll-row");
+        cut.Find(".tm-ai-conversation").ClassList.Should().Contain("tm-ai-conversation--suggestions-scroll-row");
+    }
+
+    [Fact]
+    public void AutoLayout_AddsTheAutoModifier_WithoutForcingScrollRowOnTheDefaultPaint()
+    {
+        var cut = Render<TmAiConversation>(parameters => parameters
+            .Add(component => component.Messages, Array.Empty<AiMessage>())
+            .Add(component => component.Suggestions, new[] { "One", "Two", "Three" })
+            .Add(component => component.OnSuggestion, (string _) => { })
+            .Add(component => component.SuggestionsLayout, AiSuggestionsLayout.Auto));
+
+        var group = cut.Find(".tm-ai-conversation__suggestions");
+        group.GetAttribute("data-layout").Should().Be("auto");
+        group.ClassList.Should().Contain("tm-ai-conversation__suggestions--auto");
+        group.ClassList.Should().NotContain("tm-ai-conversation__suggestions--scroll-row",
+            "Auto is a container-query switch; the class that paints the row is applied by CSS, not by a second modifier");
+        cut.Find(".tm-ai-conversation").ClassList.Should().Contain("tm-ai-conversation--suggestions-auto");
+    }
+
+    [Fact]
+    public void SuggestionsRow_HasNoBlazorFocusInHandler()
+    {
+        var cut = Render<TmAiConversation>(parameters => parameters
+            .Add(component => component.Messages, Array.Empty<AiMessage>())
+            .Add(component => component.Suggestions, new[] { "One", "Two", "Three" })
+            .Add(component => component.OnSuggestion, (string _) => { })
+            .Add(component => component.SuggestionsLayout, AiSuggestionsLayout.Auto));
+
+        var group = cut.Find(".tm-ai-conversation__suggestions");
+        group.HasAttribute("blazor:onfocusin").Should().BeFalse(
+            "the native focusin listener is the only reveal path; a Blazor round-trip double-scrolls the row");
+        group.HasAttribute("onfocusin").Should().BeFalse();
     }
 }

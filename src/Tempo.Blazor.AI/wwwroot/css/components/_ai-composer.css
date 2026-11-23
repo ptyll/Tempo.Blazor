@@ -15,6 +15,10 @@
    and --tm-ai-composer-caret-block-end, and the fallbacks anchor the list to the composer corner
    when no caret measurement ever arrived (a static render, a test). */
 
+/* Host-bar clearance defaults to 0px in the var() fallback (and on :root in
+   tokens.css). Do not redeclare --tm-ai-composer-bottom-clearance here: a :root
+   or wrapper override must keep cascading. */
+
 .tm-ai-composer {
     position: relative;
     display: flex;
@@ -36,7 +40,8 @@
    above the transcript it rests on. */
 .tm-ai-composer--sticky {
     position: sticky;
-    inset-block-end: var(--tm-ai-composer-keyboard-inset, 0px);
+    inset-block-end: max(var(--tm-ai-composer-keyboard-inset, 0px), var(--tm-ai-composer-bottom-clearance, 0px));
+    scroll-margin-block-end: var(--tm-ai-composer-bottom-clearance, 0px);
     z-index: 1;
 }
 
@@ -317,7 +322,8 @@
 @media (width < 640px) {
     .tm-ai-composer {
         position: sticky;
-        inset-block-end: var(--tm-ai-composer-keyboard-inset, 0px);
+        inset-block-end: max(var(--tm-ai-composer-keyboard-inset, 0px), var(--tm-ai-composer-bottom-clearance, 0px));
+        scroll-margin-block-end: var(--tm-ai-composer-bottom-clearance, 0px);
         z-index: 1;
     }
 

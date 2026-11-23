@@ -73,6 +73,27 @@ public class HumanInTheLoopDemoPageTests : DemoPageLocalizationTestBase
     }
 
     /// <summary>
+    /// Fáze 10 D: the third diff card is the Whole layout — two named boxes, proposed first.
+    /// The E2E lane keys off <c>[data-testid='hitl-diff-whole']</c>; a page that never renders it
+    /// is a Server-smoke miss, not a component miss.
+    /// </summary>
+    [Fact]
+    public void Diff_WholeCardRendersTwoNamedBoxes()
+    {
+        var cut = Render<HumanInTheLoopPage>();
+
+        var whole = cut.Find("[data-testid='hitl-diff-whole']");
+        whole.GetAttribute("data-layout").Should().Be("whole");
+        cut.FindAll("[data-testid='hitl-diff-whole'] [data-testid='inline-diff-whole-region']")
+            .Should().HaveCount(2, "Whole is the proposed box and the current box");
+        cut.Find("[data-testid='hitl-diff-whole'] [data-testid='inline-diff-whole-new-caption']")
+            .TextContent.Should().Contain("Proposed");
+        cut.Find("[data-testid='hitl-diff-whole'] [data-testid='inline-diff-whole-old-caption']")
+            .TextContent.Should().Contain("Current");
+        cut.Find("[data-testid='hitl-diff-whole-card']").Should().NotBeNull();
+    }
+
+    /// <summary>
     /// Each section's status list is named after its own surface. One shared name ("Demo state") would turn the
     /// three definition lists into three identically-named regions, so a screen-reader user walking the page by
     /// landmark could not tell the approval readout from the queue's or the suggestion's (WCAG 1.3.1 / 2.4.6).

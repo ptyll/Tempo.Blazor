@@ -419,6 +419,21 @@
      declaration on the component's own class would beat every inherited value. */
   --tm-tabs-sticky-top: 0;
 
+  /* TmInlineDiff host knobs (2.13.0 Whole layout). Declared on :root — NOT on
+     .tm-inline-diff / .tm-inline-diff--whole — so a host override on documentElement
+     or a wrapper (EmusCz: .emus-ai-proposal) still cascades. Component rules keep
+     today's values as var() fallbacks. */
+  --tm-inline-diff-padding: var(--tm-space-3);
+  --tm-inline-diff-bg: var(--tm-bg-surface);
+  --tm-inline-diff-border-width: var(--tm-border-width);
+  --tm-inline-diff-whole-new-max-lines: 4;
+  --tm-inline-diff-whole-old-max-lines: 2;
+
+  /* TmAiComposer host-bar clearance (2.13.0). Declared on :root — NOT on
+     .tm-ai-composer — so a host override on documentElement or a wrapper still
+     cascades. Sticky rules keep today's 0px as the var() fallback. */
+  --tm-ai-composer-bottom-clearance: 0px;
+
   /* TmSegmentedControl FullWidth inline padding (2.12.0). A FullWidth segment shares the row equally,
      so short labels (Mo–Su in a 360–390 px column) need a thin gutter instead of the size padding.
      Declared on :root — NOT on .tm-segmented--full-width — so a host sets it to 0 on :root or on any

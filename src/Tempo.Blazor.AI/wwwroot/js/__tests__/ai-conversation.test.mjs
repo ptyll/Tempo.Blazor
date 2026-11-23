@@ -8,7 +8,7 @@
 // quiet until it lands, while a real reader gesture still releases the mark immediately.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { attach, detach, isNearBottom, scrollToBottom, scrollToMessage } from '../ai-conversation.js';
+import { attach, detach, isNearBottom, scrollToBottom, scrollToMessage, revealFocusedSuggestion } from '../ai-conversation.js';
 
 /** A scripted stand-in for the transcript element: geometry plus a listener registry. */
 class FakeRoot {
@@ -466,5 +466,162 @@ test('scrollToMessage subtracts the log padding-top from the target offset', () 
     }
 
     detach(root);
+});
+
+test('revealFocusedSuggestion scrolls the row by the overflow, never the log', () => {
+    const log = { scrollTop: 80, scrollLeft: 0 };
+    const row = {
+        scrollLeft: 0,
+        getBoundingClientRect: () => ({ left: 10, right: 110, width: 100 }),
+        scrollToCalls: [],
+        scrollTo({ left, behavior }) {
+            this.scrollToCalls.push({ left, behavior });
+            this.scrollLeft = left;
+        },
+    };
+    const chip = {
+        getBoundingClientRect: () => ({ left: 90, right: 140, width: 50 }),
+    };
+
+    const original = globalThis.matchMedia;
+    try {
+        globalThis.matchMedia = () => ({ matches: false });
+        const moved = revealFocusedSuggestion(row, chip, log);
+        assert.equal(moved, true);
+        assert.equal(row.scrollToCalls.length, 1);
+        assert.equal(row.scrollToCalls[0].left, 30, 'right overflow 30px is the only scroll');
+        assert.equal(row.scrollToCalls[0].behavior, 'smooth');
+        assert.equal(log.scrollTop, 80, 'the transcript never moves');
+    } finally {
+        if (original === undefined) {
+            delete globalThis.matchMedia;
+        } else {
+            globalThis.matchMedia = original;
+        }
+    }
+});
+
+test('revealFocusedSuggestion uses auto when reduced motion is preferred', () => {
+    const row = {
+        scrollLeft: 0,
+        getBoundingClientRect: () => ({ left: 0, right: 100, width: 100 }),
+        scrollToCalls: [],
+        scrollTo({ left, behavior }) {
+            this.scrollToCalls.push({ left, behavior });
+        },
+    };
+    const chip = {
+        getBoundingClientRect: () => ({ left: -20, right: 30, width: 50 }),
+    };
+    const original = globalThis.matchMedia;
+    try {
+        globalThis.matchMedia = () => ({ matches: true });
+        revealFocusedSuggestion(row, chip, { scrollTop: 12 });
+        assert.equal(row.scrollToCalls[0].behavior, 'auto');
+        assert.equal(row.scrollToCalls[0].left, -20, 'left overflow is subtracted from scrollLeft');
+    } finally {
+        if (original === undefined) {
+            delete globalThis.matchMedia;
+        } else {
+            globalThis.matchMedia = original;
+        }
+    }
+});
+
+test('revealFocusedSuggestion is a no-op when the chip is fully visible', () => {
+    const row = {
+        scrollLeft: 4,
+        getBoundingClientRect: () => ({ left: 0, right: 200, width: 200 }),
+        scrollToCalls: [],
+        scrollTo() { this.scrollToCalls.push('called'); },
+    };
+    const chip = {
+        getBoundingClientRect: () => ({ left: 20, right: 80, width: 60 }),
+    };
+    assert.equal(revealFocusedSuggestion(row, chip, { scrollTop: 0 }), false);
+    assert.equal(row.scrollToCalls.length, 0);
+});
+
+function suggestionRow({ className, chip }) {
+    return {
+        className,
+        scrollLeft: 0,
+        matches(selector) {
+            return selector.split(',').some((part) => this.className.split(/\s+/).includes(part.trim().replace(/^\./, '')));
+        },
+        contains(node) { return node === chip; },
+        getBoundingClientRect: () => ({ left: 10, right: 110, width: 100 }),
+        scrollToCalls: [],
+        scrollTo({ left, behavior }) {
+            this.scrollToCalls.push({ left, behavior });
+            this.scrollLeft = left;
+        },
+    };
+}
+
+test('attach reveals an overflowing focused suggestion without moving the log', () => {
+    const original = globalThis.matchMedia;
+    const log = new FakeRoot({ scrollTop: 80 });
+    const chip = {
+        getBoundingClientRect: () => ({ left: 90, right: 140, width: 50 }),
+    };
+    const row = suggestionRow({
+        className: 'tm-ai-conversation__suggestions tm-ai-conversation__suggestions--auto',
+        chip,
+    });
+    const originalQuery = log.querySelector.bind(log);
+    log.querySelector = (selector) =>
+        selector === '.tm-ai-conversation__suggestions' ? row : originalQuery(selector);
+
+    try {
+        globalThis.matchMedia = () => ({ matches: false });
+        attach(log, null, fakeDotNet());
+
+        const handlers = log.listeners.get('focusin');
+        assert.ok(handlers?.length > 0, 'attach registers a focusin listener on the log');
+        handlers[0].handler({ type: 'focusin', target: chip, currentTarget: log });
+
+        assert.equal(row.scrollToCalls.length, 1, 'the overflowing chip is revealed');
+        assert.equal(row.scrollToCalls[0].left, 30);
+        assert.equal(log.scrollTop, 80, 'the transcript never moves');
+
+        detach(log);
+        assert.equal(log.listeners.has('focusin'), false, 'detach releases the focusin listener');
+    } finally {
+        if (original === undefined) {
+            delete globalThis.matchMedia;
+        } else {
+            globalThis.matchMedia = original;
+        }
+    }
+});
+
+test('attach does not scroll a Wrap suggestions row', () => {
+    const original = globalThis.matchMedia;
+    const log = new FakeRoot({ scrollTop: 80 });
+    const chip = {
+        getBoundingClientRect: () => ({ left: 90, right: 140, width: 50 }),
+    };
+    const row = suggestionRow({
+        className: 'tm-ai-conversation__suggestions',
+        chip,
+    });
+    const originalQuery = log.querySelector.bind(log);
+    log.querySelector = (selector) =>
+        selector === '.tm-ai-conversation__suggestions' ? row : originalQuery(selector);
+
+    try {
+        globalThis.matchMedia = () => ({ matches: false });
+        attach(log, null, fakeDotNet());
+        log.listeners.get('focusin')[0].handler({ type: 'focusin', target: chip, currentTarget: log });
+        assert.equal(row.scrollToCalls.length, 0, 'Wrap never scrolls on focus');
+        detach(log);
+    } finally {
+        if (original === undefined) {
+            delete globalThis.matchMedia;
+        } else {
+            globalThis.matchMedia = original;
+        }
+    }
 });
 

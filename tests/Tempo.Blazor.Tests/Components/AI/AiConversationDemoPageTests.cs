@@ -102,6 +102,23 @@ public class AiConversationDemoPageTests : DemoPageLocalizationTestBase
         cut.Markup.Should().NotContain("[TmDemo_");
     }
 
+    /// <summary>
+    /// Fáze 10 E: the demo pins <c>SuggestionsLayout=Auto</c> so the 375 px E2E can prove the
+    /// container-query row without a second conversation.
+    /// </summary>
+    [Fact]
+    public void Conversation_UsesTheAutoSuggestionsLayout()
+    {
+        var cut = Render<AiConversationPage>();
+
+        var group = cut.Find(".tm-ai-conversation__suggestions");
+        group.GetAttribute("data-layout").Should().Be("auto");
+        group.ClassList.Should().Contain("tm-ai-conversation__suggestions--auto");
+        group.ClassList.Should().NotContain("tm-ai-conversation__suggestions--scroll-row",
+            "Auto is a container-query switch, not an always-on nowrap row");
+        cut.Find(".tm-ai-conversation").ClassList.Should().Contain("tm-ai-conversation--suggestions-auto");
+    }
+
     [Fact]
     public async Task Suggestion_StreamsAnAnswerWithTableCodeCitationsReasoningAndTwoToolCalls()
     {

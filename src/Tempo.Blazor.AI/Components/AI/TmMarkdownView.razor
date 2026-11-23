@@ -68,6 +68,26 @@
     /// </summary>
     [Parameter] public EventCallback<string> OnCitationClick { get; set; }
 
+    /// <summary>
+    /// How images in the markdown are rendered. Default <see cref="AiMarkdownImagePolicy.Allow"/>
+    /// keeps today's http/https images. Folded into <see cref="AiMarkdownRenderOptions.Images"/>.
+    /// </summary>
+    [Parameter] public AiMarkdownImagePolicy ImagePolicy { get; set; } = AiMarkdownImagePolicy.Allow;
+
+    /// <summary>
+    /// How hyperlinks in the markdown are rendered. Default <see cref="AiMarkdownLinkPolicy.Allow"/>
+    /// keeps today's hardened anchors. Folded into <see cref="AiMarkdownRenderOptions.Links"/>.
+    /// Citation chips are unaffected.
+    /// </summary>
+    [Parameter] public AiMarkdownLinkPolicy LinkPolicy { get; set; } = AiMarkdownLinkPolicy.Allow;
+
+    /// <summary>
+    /// Optional extra allowlist on top of the scheme policy. A <see langword="false"/> result drops
+    /// the image (same as <see cref="AiMarkdownImagePolicy.Block"/>). Folded into
+    /// <see cref="AiMarkdownRenderOptions.ImageUrlFilter"/>.
+    /// </summary>
+    [Parameter] public Func<Uri, bool>? ImageUrlFilter { get; set; }
+
     /// <summary>Additional CSS class(es) for the root element.</summary>
     [Parameter] public string? Class { get; set; }
 
@@ -88,7 +108,11 @@
             Loc["TmMarkdownView_Citation"],
             Loc["TmMarkdownView_Table"],
             CodeBlockTemplate?.Method,
-            CodeBlockTemplate?.Target);
+            CodeBlockTemplate?.Target,
+            ImagePolicy,
+            LinkPolicy,
+            ImageUrlFilter?.Method,
+            ImageUrlFilter?.Target);
 
         if (_hasCacheKey && key.Equals(_cacheKey))
         {
@@ -107,6 +131,9 @@
             CitationLabelFormat = key.CitationLabelFormat,
             TableLabel = key.TableLabel,
             CodeBlockRenderer = _codeBlockTemplate,
+            Images = ImagePolicy,
+            Links = LinkPolicy,
+            ImageUrlFilter = ImageUrlFilter,
         });
     }
 
@@ -204,5 +231,9 @@
         string CitationLabelFormat,
         string TableLabel,
         MethodInfo? CodeBlockTemplateMethod,
-        object? CodeBlockTemplateTarget);
+        object? CodeBlockTemplateTarget,
+        AiMarkdownImagePolicy ImagePolicy,
+        AiMarkdownLinkPolicy LinkPolicy,
+        MethodInfo? ImageUrlFilterMethod,
+        object? ImageUrlFilterTarget);
 }

@@ -17,6 +17,7 @@
     <div class="tm-tool-call tm-tool-call--@StatusModifier @Class"
          data-testid="@RootTestId("tool-call")"
          data-status="@StatusModifier"
+         data-error-code="@(IsFailed ? call.ErrorCode : null)"
          data-tool-call-id="@call.Id"
          @attributes="AdditionalAttributes">
         <div class="tm-tool-call__header">
@@ -98,7 +99,14 @@
                 {
                     <p class="tm-tool-call__error">
                         <span class="tm-tool-call__error-label">@Loc["TmToolCallCard_Error"]</span>
-                        <span class="tm-tool-call__error-text">@call.Error</span>
+                        @if (ErrorTemplate is not null)
+                        {
+                            @ErrorTemplate(call)
+                        }
+                        else
+                        {
+                            <span class="tm-tool-call__error-text">@call.Error</span>
+                        }
                     </p>
                 }
             </div>
@@ -157,6 +165,12 @@
     /// </summary>
     [Parameter] public EventCallback OnRetry { get; set; }
 
+    /// <summary>
+    /// Replaces the default error text inside the card's error block. Tempo still owns the "Error" caption
+    /// and still auto-expands a failed call. Null keeps today's <c>.tm-tool-call__error-text</c>.
+    /// </summary>
+    [Parameter] public RenderFragment<AiToolCall>? ErrorTemplate { get; set; }
+
     /// <summary>Additional CSS class(es) for the root element.</summary>
     [Parameter] public string? Class { get; set; }
 
@@ -205,7 +219,9 @@
 
     private bool CanCopy => ToolCall is { IsRedacted: false } && _copyText is { Length: > 0 };
 
-    private bool CanRetry => OnRetry.HasDelegate && ToolCall?.Status == AiToolCallStatus.Failed;
+    private bool IsFailed => ToolCall?.Status == AiToolCallStatus.Failed;
+
+    private bool CanRetry => OnRetry.HasDelegate && IsFailed;
 
     private bool CanExpand => ToolCall is { IsRedacted: false }
         && (_prettyArguments is not null

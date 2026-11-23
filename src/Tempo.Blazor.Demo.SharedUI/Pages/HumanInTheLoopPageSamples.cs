@@ -46,6 +46,17 @@ internal static class HumanInTheLoopPageSamples
     internal const string StackedProposedValue = "Northwind Traders Limited";
 
     /// <summary>
+    /// The current field value for the Whole layout sample — a multi-line description long enough
+    /// that a word-level interleave is harder to read than the two complete sides.
+    /// </summary>
+    internal const string WholeOriginalValue =
+        "Contoso Services s.r.o. handles invoice intake for the Prague office and files each batch by Friday noon.";
+
+    /// <summary>The proposed replacement shown in the Whole layout sample.</summary>
+    internal const string WholeProposedValue =
+        "Northwind Traders Limited owns invoice intake for every EU office and files each batch by Thursday 16:00.";
+
+    /// <summary>
     /// The twelve invoices the queue reviews. Risk and priority deliberately disagree, so switching
     /// <c>SortMode</c> is visible and a test cannot pass on an accidentally ordered list.
     /// </summary>

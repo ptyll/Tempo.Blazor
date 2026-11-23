@@ -37,7 +37,19 @@
       "name": "Layout",
       "type": "InlineDiffLayout",
       "isRequired": false,
-      "description": "How the changes sit in the text. Inline (the default) keeps them flowing with their context; Stacked gives each hunk its own row, so the deletion and the insertion of a change read one below the other — the presentation for a one-hunk proposal of a whole value (an assistant suggesting the complete replacement text of a field). The comparison and every decision surface are unchanged."
+      "description": "How the changes sit in the text. Inline (the default) keeps them flowing with their context; Stacked gives each hunk its own row, so the deletion and the insertion of a change read one below the other — the presentation for a one-hunk proposal of a whole value; Whole is two named boxes (proposed first as ins, then current as del) for a long or multi-line field value. The comparison and every decision surface are unchanged."
+    },
+    {
+      "name": "NewCaption",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Visible caption of the Whole layout's proposed (new) box. Null or whitespace falls back to the localized TmInlineDiff_NewCaption."
+    },
+    {
+      "name": "OldCaption",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Visible caption of the Whole layout's current (old) box. Null or whitespace falls back to the localized TmInlineDiff_OldCaption."
     },
     {
       "name": "ReadOnly",

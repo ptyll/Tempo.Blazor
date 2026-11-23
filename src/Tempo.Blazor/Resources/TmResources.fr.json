@@ -6816,6 +6816,8 @@
   "TmInlineDiff_DecisionAccepted": "acceptée",
   "TmInlineDiff_DecisionRejected": "refusée",
   "TmInlineDiff_DecisionPending": "non vérifiée",
+  "TmInlineDiff_NewCaption": "Proposées",
+  "TmInlineDiff_OldCaption": "Actuelles",
   "TmSuggestionCard_AriaLabel": "Suggestion",
   "TmSuggestionCard_Confidence": "Confiance",
   "TmSuggestionCard_ConfidenceHigh": "Confiance élevée",

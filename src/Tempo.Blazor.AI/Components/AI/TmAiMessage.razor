@@ -54,6 +54,9 @@
                     var streaming = IsStreaming && index == Parts.Count - 1;
                     <TmMarkdownView Markdown="@text.Markdown"
                                      Class="@(streaming ? "tm-ai-message__markdown tm-ai-streaming" : "tm-ai-message__markdown")"
+                                     ImagePolicy="ImagePolicy"
+                                     LinkPolicy="LinkPolicy"
+                                     ImageUrlFilter="ImageUrlFilter"
                                      OnCitationClick="HandleCitationClickAsync" />
                 }
                 else if (part is AiSourcesPart sourcesPart)
@@ -111,11 +114,11 @@
                     {
                         if (run.Count > 1)
                         {
-                            <TmToolCallGroup ToolCalls="@run" OnRetry="OnToolCallRetry" />
+                            <TmToolCallGroup ToolCalls="@run" OnRetry="OnToolCallRetry" ErrorTemplate="ToolCallErrorTemplate" />
                         }
                         else
                         {
-                            <TmToolCallCard ToolCall="@run[0]" OnRetry="@RetryCallback(run[0])" />
+                            <TmToolCallCard ToolCall="@run[0]" OnRetry="@RetryCallback(run[0])" ErrorTemplate="ToolCallErrorTemplate" />
                         }
                     }
                 }
@@ -145,10 +148,20 @@
 
         @if (ShowFollowUps && FollowUps.Count > 0)
         {
-            <div class="tm-ai-message__follow-ups" role="group" aria-label="@Loc["TmAiMessage_FollowUps"]">
+            @if (HasFollowUpsCaption)
+            {
+                <p id="@_followUpsCaptionId" class="tm-ai-message__follow-ups-caption">@FollowUpsCaption</p>
+            }
+            <div class="tm-ai-message__follow-ups"
+                 role="group"
+                 aria-label="@(HasFollowUpsCaption ? null : Loc["TmAiMessage_FollowUps"])"
+                 aria-labelledby="@(HasFollowUpsCaption ? _followUpsCaptionId : null)">
                 @foreach (var followUp in FollowUps)
                 {
-                    <button type="button" class="tm-ai-message__follow-up" @onclick="() => FollowUpAsync(followUp)">
+                    <button type="button"
+                            class="tm-ai-message__follow-up"
+                            disabled="@FollowUpsDisabled"
+                            @onclick="() => FollowUpAsync(followUp)">
                         @followUp
                     </button>
                 }

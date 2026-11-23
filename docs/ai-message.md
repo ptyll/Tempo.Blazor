@@ -32,6 +32,12 @@ references them without Blazor or Markdig.
 | `ActionsTemplate` | `RenderFragment?` | `null` | Replaces the whole built-in bar with host actions (the host then owns the keyboard model). |
 | `ShowSources` | `bool` | `true` | Render the cited sources as cards, in part order. |
 | `ShowFollowUps` | `bool` | `true` | Render `Message.FollowUps` as chips. |
+| `FollowUpsCaption` | `string?` | `null` | **2.13.0** Visible caption of the follow-up group. When set, the group uses `aria-labelledby` pointing at the caption and drops `aria-label`. Null/blank keeps today's `aria-label`. |
+| `FollowUpsDisabled` | `bool` | `false` | **2.13.0** Disables every follow-up chip without hiding the group. |
+| `ImagePolicy` | `AiMarkdownImagePolicy` | `Allow` | **2.13.0** How images in this turn's markdown are rendered. Flows to `TmMarkdownView`. `Block` drops every `<img>`; `AltText` renders escaped alt instead of fetching. |
+| `LinkPolicy` | `AiMarkdownLinkPolicy` | `Allow` | **2.13.0** How hyperlinks in this turn's markdown are rendered. `TextOnly` renders escaped link text with no `<a>`. Citation chips are unaffected. |
+| `ImageUrlFilter` | `Func<Uri, bool>?` | `null` | **2.13.0** Extra allowlist on top of the scheme policy. A `false` result is treated as `Block`. |
+| `ToolCallErrorTemplate` | `RenderFragment<AiToolCall>?` | `null` | **2.13.0** Replaces the built-in failed-call error body. The card still carries `data-error-code` only while the call is Failed. |
 | `ReadAloud` | `bool` | `false` | Offer the "Read aloud" action (feature-detected `speechSynthesis`; hidden when the browser has none). The detect is not tied to the first render, so a host that turns this on later still gets the action. |
 | `OnRegenerate` | `EventCallback` | — | Raised when the reader asks for another generation. The action renders only when a handler is bound. |
 | `OnFeedback` | `EventCallback<AiFeedback>` | — | Raised with the rating; a negative rating is raised again with the optional reason. The thumbs render only when a handler is bound. |
@@ -210,7 +216,7 @@ the reader has moved past.
 
 | Asset | Path |
 |-------|------|
-| Styles | `_content/Tempo.Blazor.AI/css/components/_ai-message.css`, `_ai-tool-call.css` and `_ai-thinking.css` (all imported by `tempo-blazor-ai.css`) |
+| Styles | `_content/Tempo.Blazor.AI/css/components/_ai-message.css`, `_ai-tool-call.css` and `_ai-thinking.css` (all imported by `tempo-blazor-ai.css`). Host token `--tm-ai-message-font-size` (fallback `--tm-font-size-base`). |
 | Interop | `_content/Tempo.Blazor.AI/js/ai-message.js` |
 
 The module exposes `copyText(text)`, `isSpeechSupported()`, `speak(text, lang, dotNetRef)`,

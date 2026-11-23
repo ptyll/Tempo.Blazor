@@ -178,6 +178,70 @@ public sealed class TmAiConversationGeneratingTests : LocalizationTestBase
         cut.FindAll(AnnouncementTestId).Should().BeEmpty("a render that never generated is not an edge");
     }
 
+    [Fact]
+    public void CompletionAnnouncement_ReplacesTheDefaultText_OnTheHostEdge()
+    {
+        var messages = CompletedConversation();
+        var last = messages[^1];
+        var calls = 0;
+        var cut = Render<TmAiConversation>(parameters => parameters
+            .Add(component => component.Messages, messages)
+            .Add(component => component.Generating, true)
+            .Add(component => component.CompletionAnnouncement, (AiMessage message) =>
+            {
+                calls++;
+                message.Should().BeSameAs(last);
+                return "X. Návrhy: 2";
+            }));
+
+        cut.Render(parameters => parameters.Add(component => component.Generating, false));
+
+        var announcements = cut.FindAll(AnnouncementTestId);
+        announcements.Should().ContainSingle("the host edge announces once");
+        announcements[0].TextContent.Should().Be("X. Návrhy: 2");
+        calls.Should().Be(1, "a mutant that ignores the formatter never calls it and stays RED");
+    }
+
+    [Fact]
+    public void CompletionAnnouncement_IsNotCalled_WhenTheLastTurnStoppedOrFailed()
+    {
+        foreach (var status in new[] { AiMessageStatus.Stopped, AiMessageStatus.Failed })
+        {
+            var calls = 0;
+            var messages = new List<AiMessage>
+            {
+                new() { Id = "answer-1", Role = AiMessageRole.Assistant, Status = status },
+            };
+            var cut = Render<TmAiConversation>(parameters => parameters
+                .Add(component => component.Messages, messages)
+                .Add(component => component.Generating, true)
+                .Add(component => component.CompletionAnnouncement, _ =>
+                {
+                    calls++;
+                    return "X. Návrhy: 2";
+                }));
+
+            cut.Render(parameters => parameters.Add(component => component.Generating, false));
+
+            cut.FindAll(AnnouncementTestId).Should().BeEmpty($"status {status} is not a completion");
+            calls.Should().Be(0, $"the formatter must not run for {status}");
+        }
+    }
+
+    [Fact]
+    public async Task AnnounceAsync_SameTextTwice_ProducesTwoNodes()
+    {
+        var cut = Render<TmAiConversation>(parameters => parameters
+            .Add(component => component.Messages, CompletedConversation()));
+
+        await cut.InvokeAsync(() => cut.Instance.AnnounceAsync("same"));
+        await cut.InvokeAsync(() => cut.Instance.AnnounceAsync("same"));
+
+        var announcements = cut.FindAll(AnnouncementTestId);
+        announcements.Should().HaveCount(2, "each AnnounceAsync is a new keyed node, even with identical text");
+        announcements.Select(node => node.TextContent).Should().Equal("same", "same");
+    }
+
     // ── Stop during a host-driven window ────────────────────────────────────────────────────────
 
     /// <summary>

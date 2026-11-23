@@ -174,6 +174,89 @@ public sealed class TmAiConversationStreamingTests : LocalizationTestBase
         cut.FindAll("[data-testid='ai-conversation-announcement']").Should().BeEmpty();
     }
 
+    [Fact]
+    public async Task CompletionAnnouncement_ReplacesTheDefaultText_OnTheStreamPath()
+    {
+        var message = Pending();
+        var calls = 0;
+        var cut = Render<TmAiConversation>(parameters => parameters
+            .Add(component => component.Messages, Answers(message))
+            .Add(component => component.CompletionAnnouncement, (AiMessage last) =>
+            {
+                calls++;
+                last.Should().BeSameAs(message);
+                return "X. Návrhy: 2";
+            }));
+
+        await cut.InvokeAsync(() => cut.Instance.StreamAsync(message, Stream(
+        [
+            new AiTextDelta { Text = "answer" },
+            new AiCompletedDelta(),
+        ])));
+
+        var announcements = cut.FindAll("[data-testid='ai-conversation-announcement']");
+        announcements.Should().ContainSingle();
+        announcements[0].TextContent.Should().Be("X. Návrhy: 2");
+        calls.Should().Be(1, "a mutant that ignores the formatter never calls it and stays RED");
+    }
+
+    [Fact]
+    public async Task CompletionAnnouncement_IsNotCalled_WhenTheStreamStopsOrFails()
+    {
+        var stopped = Pending("stopped");
+        var stopCalls = 0;
+        var stopCut = Render<TmAiConversation>(parameters => parameters
+            .Add(component => component.Messages, Answers(stopped))
+            .Add(component => component.CompletionAnnouncement, _ =>
+            {
+                stopCalls++;
+                return "X. Návrhy: 2";
+            }));
+
+        var parked = new TaskCompletionSource();
+        var streaming = stopCut.InvokeAsync(() => stopCut.Instance.StreamAsync(stopped, Parked(parked)));
+        await parked.Task;
+        await stopCut.InvokeAsync(() => stopCut.Instance.StopAsync());
+        await streaming;
+
+        stopCut.FindAll("[data-testid='ai-conversation-announcement']").Should().BeEmpty();
+        stopCalls.Should().Be(0);
+
+        var failed = Pending("failed");
+        var failCalls = 0;
+        var failCut = Render<TmAiConversation>(parameters => parameters
+            .Add(component => component.Messages, Answers(failed))
+            .Add(component => component.CompletionAnnouncement, _ =>
+            {
+                failCalls++;
+                return "X. Návrhy: 2";
+            }));
+
+        await FluentActions.Awaiting(() =>
+                failCut.InvokeAsync(() => failCut.Instance.StreamAsync(failed, Failing())))
+            .Should().ThrowAsync<InvalidOperationException>();
+
+        failCut.FindAll("[data-testid='ai-conversation-announcement']").Should().BeEmpty();
+        failCalls.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task CompletionAnnouncementReturningNull_KeepsTheDefaultText()
+    {
+        var message = Pending();
+        var cut = Render<TmAiConversation>(parameters => parameters
+            .Add(component => component.Messages, Answers(message))
+            .Add(component => component.CompletionAnnouncement, _ => null));
+
+        await cut.InvokeAsync(() => cut.Instance.StreamAsync(message, Stream(
+        [
+            new AiTextDelta { Text = "answer" },
+            new AiCompletedDelta(),
+        ])));
+
+        cut.Find("[data-testid='ai-conversation-announcement']").TextContent.Should().Be("Answer complete");
+    }
+
     // ── Throttling ──────────────────────────────────────────────────────────────────────────────
 
     /// <summary>

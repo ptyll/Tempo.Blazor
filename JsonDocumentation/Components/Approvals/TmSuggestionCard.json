@@ -114,6 +114,24 @@
       "type": "string?",
       "isRequired": false,
       "description": "Accessible name of the card when Title is omitted. Defaults to a localized 'Suggestion'."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Disables Accept, Dismiss and the alternative radios while the card stays focusable (no inert on the pending body). Default false."
+    },
+    {
+      "name": "DisabledReason",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Accessible description of why Accept is disabled; wired as the Accept button's aria-describedby."
+    },
+    {
+      "name": "ErrorText",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Host-owned error announced once through the live region. The card stays Pending."
     }
   ],
   "methods": [

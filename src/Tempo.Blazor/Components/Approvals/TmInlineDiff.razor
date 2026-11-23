@@ -75,6 +75,41 @@
         <p class="tm-inline-diff__error" data-testid="@TestId("inline-diff-error")">@ErrorMessage</p>
     }
 
+    @if (IsWhole)
+    {
+        <div class="tm-inline-diff__whole" data-testid="@TestId("inline-diff-whole")">
+            <div class="tm-inline-diff__whole-region"
+                 data-testid="@TestId("inline-diff-whole-region")"
+                 data-side="new"
+                 role="group"
+                 aria-labelledby="@WholeNewCaptionId">
+                <p id="@WholeNewCaptionId"
+                   class="tm-inline-diff__whole-caption"
+                   data-testid="@TestId("inline-diff-whole-new-caption")">@EffectiveNewCaption</p>
+                <div @ref="_wholeNewBox"
+                     class="tm-inline-diff__whole-box tm-inline-diff__whole-box--new"
+                     data-testid="@TestId("inline-diff-whole-new")">
+                    <span class="tm-sr-only">@Loc["TmInlineDiff_Inserted"]</span><ins class="tm-inline-diff__ins" data-testid="@TestId("inline-diff-ins")">@(NewText ?? string.Empty)</ins>
+                </div>
+            </div>
+            <div class="tm-inline-diff__whole-region"
+                 data-testid="@TestId("inline-diff-whole-region")"
+                 data-side="old"
+                 role="group"
+                 aria-labelledby="@WholeOldCaptionId">
+                <p id="@WholeOldCaptionId"
+                   class="tm-inline-diff__whole-caption"
+                   data-testid="@TestId("inline-diff-whole-old-caption")">@EffectiveOldCaption</p>
+                <div @ref="_wholeOldBox"
+                     class="tm-inline-diff__whole-box tm-inline-diff__whole-box--old"
+                     data-testid="@TestId("inline-diff-whole-old")">
+                    <span class="tm-sr-only">@Loc["TmInlineDiff_Removed"]</span><del class="tm-inline-diff__del" data-testid="@TestId("inline-diff-del")">@(OldText ?? string.Empty)</del>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
     <div class="tm-inline-diff__content"
          data-testid="@TestId("inline-diff-content")"
          @onclick="HandleContentClick">
@@ -156,6 +191,7 @@
             }
         }
     </div>
+    }
 
     @if (!HasChanges)
     {

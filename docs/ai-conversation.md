@@ -42,7 +42,9 @@ model records and `AiMessageStreamApplier` live in `Tempo.Blazor.Abstractions` (
 | `MessageTemplate` | `RenderFragment<AiMessage>?` | `null` | Replaces the built-in `TmAiMessage` of every turn, so a host attaches its own per-turn actions without the conversation re-declaring them. |
 | `MessagePendingText` | `string?` | `null` | **2.12.0** Text of the placeholder a turn with no content yet renders while it waits for its first part (`Pending`). Flows to the built-in `TmAiMessage` as its `PendingText`; a host with its own `MessageTemplate` passes `PendingText` itself. `null` renders no placeholder (the pre-2.12 behaviour; a localized default is planned for 3.0). |
 | `Generating` | `bool` | `false` | **2.12.0** Whether the host's OWN generation — one that does not travel through `StreamAsync` — is running. The component treats the window exactly like a stream: `IsGenerating` follows (the root's `data-generating`, the log's `aria-busy`, the built-in Stop pill), the true→false edge announces the completed answer when the last turn is `Completed`, and `StopAsync` raises `OnStop` so the host can cancel its own work. A host that streams through `StreamAsync` binds nothing — the component drives the state itself and the edge stays silent, so a completion is never announced twice. |
+| `CompletionAnnouncement` | `Func<AiMessage, string?>?` | `null` | **2.13.0** Host formatter for the completion note spoken into the transcript live region. Invoked on the true→false generating edge and at the end of `StreamAsync`, only for the last `Completed` turn. A null return (or a null parameter) keeps `TmAiConversation_Completed`. Stopped and Failed turns never call it. |
 | `Suggestions` | `IReadOnlyList<string>?` | `null` | Prompts offered by the empty state. They render only while the conversation has no turn **and** `OnSuggestion` is bound. |
+| `SuggestionsLayout` | `AiSuggestionsLayout` | `Wrap` | **2.13.0** How the empty-state chips sit. `Wrap` is today's wrapping, centred row. `ScrollRow` is a nowrap horizontal scroller that reveals a partially visible focused chip without moving the transcript (inner focus ring, `outline-offset: -4px`). `Auto` is ScrollRow under 640 px via a container query on `.tm-ai-conversation`; desktop Auto stays Wrap. |
 | `OnSuggestion` | `EventCallback<string>` | — | Raised with the text of an activated suggestion prompt. |
 | `OnStop` | `EventCallback` | — | Raised once after a running generation was stopped (by the built-in control or by a host calling `StopAsync`). The component cancels the token itself, so a handler must not call `StopAsync` again — it is a no-op, so it cannot loop. During a host-driven window (`Generating` set, no stream) the raised stop asks the host to cancel its own work, once per window. |
 | `RenderWindowSize` | `int?` | `null` | How many of the newest turns are rendered; `null` renders every turn. Values below 10 are raised to 10. |
@@ -58,7 +60,8 @@ The root carries `data-generating` (`true`/`false`), which is the stable hook fo
 styling and for E2E.
 
 Public members: `IsGenerating`, `StreamAsync(AiMessage, IAsyncEnumerable<AiStreamDelta>,
-CancellationToken)`, `StopAsync()`, `ScrollToBottomAsync()`, `ScrollToMessageAsync(string messageId)`
+CancellationToken)`, `StopAsync()`, `AnnounceAsync(string text)` (**2.13.0** — speaks into the
+transcript live region as a new keyed node so an identical wording is re-announced), `ScrollToBottomAsync()`, `ScrollToMessageAsync(string messageId)`
 (which answers whether the named turn actually moved), `ExpandRenderWindowToAsync(string messageId)`
 (which grows a render window so the named turn is in the DOM, without scrolling), plus the two
 `[JSInvokable]` scroll reports `OnScrollStateAsync` and `OnContentResizedAsync`.
@@ -272,9 +275,10 @@ hostile markdown sample that neutralises raw HTML and `javascript:` / `data:` / 
 
 The page is also the E2E subject: `tests/Tempo.Blazor.E2E/AI/AiConversationE2ETests.cs` (WASM, plus a Server
 smoke) drives the stream, Stop, the citation preview with its focus return, the composer's `/` combobox and
-Enter/Shift+Enter contract, and axe-core scans of the empty and the finished state; light/dark desktop and
+Enter/Shift+Enter contract, the Auto suggestion row at 375 px (Tab to the third chip leaves the log unmoved)
+and the sticky composer clearing a 56 px `--tm-ai-composer-bottom-clearance` bar, and axe-core scans of the empty and the finished state; light/dark desktop and
 375 px screenshots land in `tests/Tempo.Blazor.E2E/__screenshots__/ai-conversation/`. The bUnit half is
-`tests/Tempo.Blazor.Tests/Components/AI/AiConversationDemoPageTests.cs`.
+`tests/Tempo.Blazor.Tests/Components/AI/AiConversationDemoPageTests.cs`. The demo binds `SuggestionsLayout="Auto"`.
 
 The demo strings are `TmDemo_AiConversation_*` keys in `DemoResources{,.cs,.sk,.fr}.json`. The page's LABELS —
 including the two tool-call display names and the slash-command titles, which a reader sees in the tool cards and
@@ -296,9 +300,12 @@ default is planned for 3.0 as a deliberate visual change.
   `components/_ai-conversation.css` (tokens only — no colour literal, no raw palette step, no
   `[data-theme]` block).
 - `_content/Tempo.Blazor.AI/js/ai-conversation.js` — the ES module: `attach`, `detach`,
-  `isNearBottom`, `scrollToBottom`, `scrollToMessage`. Every entry point is null-safe (a component that
+  `isNearBottom`, `scrollToBottom`, `scrollToMessage`, `revealFocusedSuggestion` (**2.13.0** — scrolls
+  only the suggestion row by the overflow of a focused chip; `behavior: 'auto'` under reduced motion;
+  never writes the transcript's `scrollTop`). Every entry point is null-safe (a component that
   lost its root element gets a quiet `false`, never a throw), and a host CSP needs no `unsafe-inline`
   for it. Its Node tests live in `wwwroot/js/__tests__/ai-conversation.test.mjs` (`npm run test:ai`) and
   cover the own-scroll suppression, the gesture / `scrollend` / fallback release, the box-own
-  ResizeObserver (the log box resizing keeps a bottom-riding reader pinned) and the
-  `scrollToMessage` contract.
+  ResizeObserver (the log box resizing keeps a bottom-riding reader pinned), the
+  `scrollToMessage` contract and the suggestion-row reveal. Host tokens: `--tm-ai-conversation-empty-padding-block`
+  (fallback `--tm-space-8`).

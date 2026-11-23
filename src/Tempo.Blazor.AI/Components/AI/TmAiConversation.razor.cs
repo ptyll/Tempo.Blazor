@@ -42,7 +42,7 @@ public partial class TmAiConversation
     private bool _hostStopRaised;
 
     private CancellationTokenSource? _streamCts;
-    private string? _announcement;
+    private readonly List<(int Sequence, string Text)> _announcements = [];
     private int _announcementSequence;
     private int _windowStart = -1;
     private bool _windowExpanded;
@@ -82,6 +82,15 @@ public partial class TmAiConversation
     [Parameter] public EventCallback<string> OnSuggestion { get; set; }
 
     /// <summary>
+    /// How the empty-state suggestion chips sit in the panel. Default
+    /// <see cref="AiSuggestionsLayout.Wrap"/> keeps today's wrapping, centred row.
+    /// <see cref="AiSuggestionsLayout.ScrollRow"/> is a nowrap horizontal scroller that reveals a
+    /// partially visible focused chip without moving the transcript; <see cref="AiSuggestionsLayout.Auto"/>
+    /// is ScrollRow under 640 px via a container query.
+    /// </summary>
+    [Parameter] public AiSuggestionsLayout SuggestionsLayout { get; set; } = AiSuggestionsLayout.Wrap;
+
+    /// <summary>
     /// Raised once after a running generation was stopped — by the built-in Stop control or by a host calling
     /// <see cref="StopAsync"/>. The component cancels the token it handed to the stream itself, so this is a
     /// notification, not a request: a handler must not call <see cref="StopAsync"/> again (it is a no-op, so
@@ -102,6 +111,15 @@ public partial class TmAiConversation
     /// silent, so a completion is never announced twice.
     /// </summary>
     [Parameter] public bool Generating { get; set; }
+
+    /// <summary>
+    /// Optional host formatter for the completion note spoken into the transcript live region. Invoked on
+    /// the true→false generating edge and at the end of <see cref="StreamAsync"/>, only for the last turn
+    /// whose <see cref="AiMessage.Status"/> is <see cref="AiMessageStatus.Completed"/>. A
+    /// <see langword="null"/> return (or a null parameter) keeps the localized default
+    /// <c>TmAiConversation_Completed</c>. Stopped and Failed turns never call the formatter.
+    /// </summary>
+    [Parameter] public Func<AiMessage, string?>? CompletionAnnouncement { get; set; }
 
     /// <summary>
     /// Text of the placeholder a turn with no content yet renders while it waits for its first part
@@ -178,6 +196,26 @@ public partial class TmAiConversation
 
     private string? HeightStyle => string.IsNullOrWhiteSpace(Height) ? null : $"block-size: {Height}";
 
+    private string SuggestionsLayoutName => SuggestionsLayout switch
+    {
+        AiSuggestionsLayout.ScrollRow => "scroll-row",
+        AiSuggestionsLayout.Auto => "auto",
+        _ => "wrap",
+    };
+
+    private string SuggestionsClass => SuggestionsLayout switch
+    {
+        AiSuggestionsLayout.ScrollRow => "tm-ai-conversation__suggestions tm-ai-conversation__suggestions--scroll-row",
+        AiSuggestionsLayout.Auto => "tm-ai-conversation__suggestions tm-ai-conversation__suggestions--auto",
+        _ => "tm-ai-conversation__suggestions",
+    };
+
+    private string RootClass => string.Concat(
+        "tm-ai-conversation",
+        SuggestionsLayout == AiSuggestionsLayout.ScrollRow ? " tm-ai-conversation--suggestions-scroll-row" : string.Empty,
+        SuggestionsLayout == AiSuggestionsLayout.Auto ? " tm-ai-conversation--suggestions-auto" : string.Empty,
+        string.IsNullOrWhiteSpace(Class) ? string.Empty : $" {Class}");
+
     /// <summary>
     /// Whether a generation is running right now — a stream the component folded itself
     /// (<see cref="StreamAsync"/>) or a host-driven one (<see cref="Generating"/>). The host reads it to
@@ -236,7 +274,7 @@ public partial class TmAiConversation
             && messages.Count > 0
             && messages[^1].Status == AiMessageStatus.Completed)
         {
-            Announce(Loc["TmAiConversation_Completed"]);
+            Announce(ResolveCompletionText(messages[^1]));
         }
 
         _generating = Generating;
@@ -548,7 +586,7 @@ public partial class TmAiConversation
 
         var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _streamCts = cts;
-        _announcement = null;
+        _announcements.Clear();
         _completionAnnounced = false;
         _hostStopRaised = false;
         _contentDirty = true;
@@ -628,7 +666,7 @@ public partial class TmAiConversation
 
         if (failure is null && !stopped && message.Status == AiMessageStatus.Completed)
         {
-            Announce(Loc["TmAiConversation_Completed"]);
+            Announce(ResolveCompletionText(message));
             _completionAnnounced = true;
         }
 
@@ -694,10 +732,41 @@ public partial class TmAiConversation
         await StopAsync();
     }
 
+    /// <summary>
+    /// Speaks <paramref name="text"/> into the transcript live region. Each call is a new keyed node
+    /// (even when the text repeats), so a screen reader hears it again. Dispatched through
+    /// <see cref="ComponentBase.InvokeAsync(Action)"/> so a host can call it from outside the renderer.
+    /// </summary>
+    /// <param name="text">The announcement. Null or whitespace is a no-op.</param>
+    public Task AnnounceAsync(string text) => InvokeAsync(() =>
+    {
+        Announce(text);
+        StateHasChanged();
+    });
+
     private void Announce(string text)
     {
-        _announcement = text;
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return;
+        }
+
         _announcementSequence++;
+        _announcements.Add((_announcementSequence, text));
+    }
+
+    /// <summary>
+    /// The text spoken on a completed last turn: the host formatter when it returns a value, otherwise
+    /// the localized default. The formatter is invoked only for <see cref="AiMessageStatus.Completed"/>.
+    /// </summary>
+    private string ResolveCompletionText(AiMessage last)
+    {
+        if (last.Status != AiMessageStatus.Completed)
+        {
+            return Loc["TmAiConversation_Completed"];
+        }
+
+        return CompletionAnnouncement?.Invoke(last) ?? Loc["TmAiConversation_Completed"];
     }
 
     private static bool IsTerminal(AiMessageStatus status)
@@ -965,8 +1034,11 @@ public partial class TmAiConversation
     }
 
     private async Task<IJSObjectReference?> EnsureModuleAsync()
+        => AutoScroll ? await EnsureInteropModuleAsync() : null;
+
+    private async Task<IJSObjectReference?> EnsureInteropModuleAsync()
     {
-        if (_disposed || !AutoScroll)
+        if (_disposed)
         {
             return null;
         }

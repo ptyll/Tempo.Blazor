@@ -44,6 +44,24 @@
       "type": "EventCallback<string>",
       "isRequired": false,
       "description": "Raised with the source id when a citation chip is activated, so the host can open the source preview (the chips are rendered for markdown links written as [1](cite:<sourceId>))."
+    },
+    {
+      "name": "ImagePolicy",
+      "type": "AiMarkdownImagePolicy",
+      "isRequired": false,
+      "description": "How images in the markdown are rendered. Allow (default) keeps today's http/https images; Block drops every img (no alt); AltText renders escaped alt instead of fetching."
+    },
+    {
+      "name": "LinkPolicy",
+      "type": "AiMarkdownLinkPolicy",
+      "isRequired": false,
+      "description": "How hyperlinks in the markdown are rendered. Allow (default) keeps today's hardened anchors; TextOnly renders escaped link text with no a. Citation chips (cite:) are unaffected."
+    },
+    {
+      "name": "ImageUrlFilter",
+      "type": "Func<Uri, bool>?",
+      "isRequired": false,
+      "description": "Extra allowlist on top of the scheme policy. A false result is treated as Block."
     }
   ]
 }

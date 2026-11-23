@@ -86,7 +86,7 @@ public class AiMarkdownRenderer
         Pipeline.Setup(renderer);
 
         ReplaceDefault<LinkInlineRenderer>(renderer, new AiMarkdownLinkRenderer(options));
-        ReplaceDefault<AutolinkInlineRenderer>(renderer, new AiMarkdownAutolinkRenderer());
+        ReplaceDefault<AutolinkInlineRenderer>(renderer, new AiMarkdownAutolinkRenderer(options));
         ReplaceDefault<CodeBlockRenderer>(renderer, new AiMarkdownCodeBlockRenderer(options));
         ReplaceDefault<HtmlTableRenderer>(renderer, new AiMarkdownTableRenderer(options));
         return renderer;
@@ -138,6 +138,12 @@ internal sealed class AiMarkdownLinkRenderer : HtmlObjectRenderer<LinkInline>
             return;
         }
 
+        if (_options.Links == AiMarkdownLinkPolicy.TextOnly)
+        {
+            renderer.WriteEscape(AiMarkdownInlineText.Of(link));
+            return;
+        }
+
         var href = AiMarkdownUrlPolicy.SanitizeLink(link.Url);
         renderer.Write("<a href=\"");
         renderer.WriteEscapeUrl(href);
@@ -154,10 +160,15 @@ internal sealed class AiMarkdownLinkRenderer : HtmlObjectRenderer<LinkInline>
         renderer.Write("</a>");
     }
 
-    private static void WriteImage(HtmlRenderer renderer, LinkInline link)
+    private void WriteImage(HtmlRenderer renderer, LinkInline link)
     {
         var alt = AiMarkdownInlineText.Of(link);
-        if (!AiMarkdownUrlPolicy.IsSafeImageUrl(link.Url))
+        if (_options.Images == AiMarkdownImagePolicy.Block || !PassesImageFilter(link.Url))
+        {
+            return;
+        }
+
+        if (_options.Images == AiMarkdownImagePolicy.AltText || !AiMarkdownUrlPolicy.IsSafeImageUrl(link.Url))
         {
             // A refused image never becomes a request: the alt text is the whole surviving content.
             renderer.WriteEscape(alt);
@@ -177,6 +188,16 @@ internal sealed class AiMarkdownLinkRenderer : HtmlObjectRenderer<LinkInline>
         }
 
         renderer.Write(" loading=\"lazy\" referrerpolicy=\"no-referrer\" />");
+    }
+
+    private bool PassesImageFilter(string? url)
+    {
+        if (_options.ImageUrlFilter is not { } filter)
+        {
+            return true;
+        }
+
+        return Uri.TryCreate(url, UriKind.Absolute, out var uri) && filter(uri);
     }
 
     private void WriteCitation(HtmlRenderer renderer, LinkInline link, string sourceId)
@@ -206,8 +227,18 @@ internal sealed class AiMarkdownLinkRenderer : HtmlObjectRenderer<LinkInline>
 /// <summary>Renders an autolink (<c>&lt;https://…&gt;</c>) through the same hardening as a normal link.</summary>
 internal sealed class AiMarkdownAutolinkRenderer : HtmlObjectRenderer<AutolinkInline>
 {
+    private readonly AiMarkdownRenderOptions _options;
+
+    public AiMarkdownAutolinkRenderer(AiMarkdownRenderOptions options) => _options = options;
+
     protected override void Write(HtmlRenderer renderer, AutolinkInline inline)
     {
+        if (_options.Links == AiMarkdownLinkPolicy.TextOnly)
+        {
+            renderer.WriteEscape(inline.Url ?? string.Empty);
+            return;
+        }
+
         var url = inline.IsEmail ? "mailto:" + inline.Url : inline.Url;
         var href = AiMarkdownUrlPolicy.SanitizeLink(url);
 

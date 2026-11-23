@@ -307,6 +307,39 @@ public sealed class HumanInTheLoopE2ETests : WasmTestBase
         AssertNoClientErrors();
     }
 
+    /// <summary>
+    /// Fáze 10 D: the Whole layout is two named boxes — proposed first, then current — each a real
+    /// <c>ins</c> / <c>del</c>. The page's third diff card carries <c>data-layout="whole"</c>.
+    /// </summary>
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task Diff_WholeLayoutRendersTwoNamedBoxes()
+    {
+        var page = await OpenPageAsync();
+
+        var whole = page.Locator("[data-testid='hitl-diff-whole']");
+        await Microsoft.Playwright.Assertions.Expect(whole).ToHaveAttributeAsync("data-layout", "whole");
+        await Microsoft.Playwright.Assertions.Expect(
+                whole.Locator("[data-testid='inline-diff-whole-region']"))
+            .ToHaveCountAsync(2);
+        await Microsoft.Playwright.Assertions.Expect(
+                whole.Locator("[data-testid='inline-diff-whole-new-caption']"))
+            .ToHaveTextAsync("Proposed");
+        await Microsoft.Playwright.Assertions.Expect(
+                whole.Locator("[data-testid='inline-diff-whole-old-caption']"))
+            .ToHaveTextAsync("Current");
+
+        var newBox = await whole.Locator("[data-testid='inline-diff-whole-new']").BoundingBoxAsync();
+        var oldBox = await whole.Locator("[data-testid='inline-diff-whole-old']").BoundingBoxAsync();
+        Assert.IsNotNull(newBox);
+        Assert.IsNotNull(oldBox);
+        Assert.IsTrue(oldBox.Y >= newBox.Y + newBox.Height - 0.5,
+            $"the current box must sit below the proposed box (old.y={oldBox.Y}, "
+            + $"new.y={newBox.Y}, new.height={newBox.Height})");
+
+        AssertNoClientErrors();
+    }
+
     // ── Permission request (on the AI conversation page) ─────────────────────────────────
 
     [TestMethod]
@@ -387,6 +420,7 @@ public sealed class HumanInTheLoopE2ETests : WasmTestBase
                      ("[data-testid='hitl-queue']", 1),
                      ("[data-testid='hitl-diff']", 1),
                      ("[data-testid='hitl-diff-stacked']", 1),
+                     ("[data-testid='hitl-diff-whole']", 1),
                      ("[data-testid='hitl-suggestion']", 1),
                  })
         {
@@ -399,7 +433,7 @@ public sealed class HumanInTheLoopE2ETests : WasmTestBase
         var pageRegions = await page.EvaluateAsync<int>(
             LiveRegionCountScript,
             RootSelector);
-        Assert.AreEqual(5, pageRegions, "the page announces nothing itself — the five decision surfaces do");
+        Assert.AreEqual(6, pageRegions, "the page announces nothing itself — the six decision surfaces do");
 
         AssertNoClientErrors();
     }
@@ -592,5 +626,31 @@ public sealed class HumanInTheLoopE2ETests : WasmTestBase
         }
 
         throw new InvalidOperationException("repo root not found");
+    }
+}
+
+/// <summary>
+/// Server smoke of the same demo page (Server demo @ 7107): the Whole layout boxes render over a
+/// circuit — the interactive keyboard/queue paths stay on the WASM lane.
+/// </summary>
+[TestClass]
+public sealed class HumanInTheLoopServerSmokeE2ETests : ServerTestBase
+{
+    [TestMethod]
+    public async Task Diff_WholeLayoutRendersTwoNamedBoxes()
+    {
+        var context = await CreateContextAsync();
+        await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
+        var page = await context.NewPageAsync();
+        await page.SetViewportSizeAsync(1440, 1000);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/human-in-the-loop");
+        await page.Locator("[data-testid='hitl-demo']").WaitForAsync(
+            new LocatorWaitForOptions { Timeout = 30000 });
+
+        var whole = page.Locator("[data-testid='hitl-diff-whole']");
+        await Microsoft.Playwright.Assertions.Expect(whole).ToHaveAttributeAsync("data-layout", "whole");
+        await Microsoft.Playwright.Assertions.Expect(
+                whole.Locator("[data-testid='inline-diff-whole-region']"))
+            .ToHaveCountAsync(2);
     }
 }

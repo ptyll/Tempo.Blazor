@@ -239,7 +239,9 @@ public class ProvenanceComparisonTests
         // the same Pack=false treatment, one more excluded file.
         // tm-top-layer.test.mjs + tm-pin-on-top.test.mjs (plan 4ce1b994 phase 2, decision TOP-LAYER-PIN:
         // the pinned-on-top registry and the public pin module) — two more excluded files.
-        denominator.PackExcludedFiles.Should().Be(39);
+        // tm-time-selector.test.mjs (plan 1c95309c Fáze 8) + tm-inline-diff.test.mjs (plan 1c95309c
+        // Fáze 10 Whole layout overflow stop) — two more excluded files.
+        denominator.PackExcludedFiles.Should().Be(41);
     }
 
     /// <summary>

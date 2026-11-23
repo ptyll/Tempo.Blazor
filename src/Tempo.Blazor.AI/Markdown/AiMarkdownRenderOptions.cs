@@ -41,4 +41,23 @@ public sealed class AiMarkdownRenderOptions
     /// the delegate's <c>Method</c> and <c>Target</c>, not the delegate instance.
     /// </remarks>
     public Func<AiMarkdownCodeBlockContext, string>? CodeBlockRenderer { get; init; }
+
+    /// <summary>
+    /// How images in the markdown are rendered. Default <see cref="AiMarkdownImagePolicy.Allow"/>
+    /// keeps today's behaviour (http/https images load).
+    /// </summary>
+    public AiMarkdownImagePolicy Images { get; init; } = AiMarkdownImagePolicy.Allow;
+
+    /// <summary>
+    /// How hyperlinks in the markdown are rendered. Default <see cref="AiMarkdownLinkPolicy.Allow"/>
+    /// keeps today's hardened anchors. Citation chips are unaffected.
+    /// </summary>
+    public AiMarkdownLinkPolicy Links { get; init; } = AiMarkdownLinkPolicy.Allow;
+
+    /// <summary>
+    /// Optional extra allowlist on top of the scheme policy. A <see langword="false"/> result is
+    /// treated as <see cref="AiMarkdownImagePolicy.Block"/> (the image is dropped, not reduced to
+    /// alt text). <see langword="null"/> means no extra filter.
+    /// </summary>
+    public Func<Uri, bool>? ImageUrlFilter { get; init; }
 }

@@ -1,8 +1,10 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.JSInterop;
 using Tempo.Blazor.Abstractions.Models.Diffs;
 using Tempo.Blazor.Diff;
+using Tempo.Blazor.Helpers;
 using Tempo.Blazor.Localization;
 
 namespace Tempo.Blazor.Components.Approvals;
@@ -31,10 +33,11 @@ namespace Tempo.Blazor.Components.Approvals;
 /// fire from a repeat or a modified key press.
 /// </para>
 /// </summary>
-public partial class TmInlineDiff : TmComponentBase
+public partial class TmInlineDiff : TmComponentBase, IAsyncDisposable
 {
     private static readonly string AcceptShortcutKeys = "A";
     private static readonly string RejectShortcutKeys = "R";
+    private const string OverflowModulePath = "./_content/Tempo.Blazor/js/tm-inline-diff.js";
 
     private readonly string _id = $"tm-inline-diff-{Guid.NewGuid():N}";
 
@@ -60,6 +63,13 @@ public partial class TmInlineDiff : TmComponentBase
     private ElementReference _rootElement;
     private ElementReference _popoverAcceptElement;
     private ElementReference _undoElement;
+    private ElementReference _wholeNewBox;
+    private ElementReference _wholeOldBox;
+
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+
+    private LazyJsModule? _overflowModule;
+    private bool _disposed;
 
     // ── Parameters ───────────────────────────────────────────────────────────
 
@@ -79,10 +89,23 @@ public partial class TmInlineDiff : TmComponentBase
     /// <summary>
     /// How the changes sit in the text. <see cref="InlineDiffLayout.Inline"/> (the default) keeps them
     /// flowing with their context; <see cref="InlineDiffLayout.Stacked"/> gives each hunk its own row,
-    /// so the deletion and the insertion of a change read one below the other — the presentation for a
-    /// one-hunk proposal of a whole value. The comparison and every decision surface are unchanged.
+    /// so the deletion and the insertion of a change read one below the other; <see cref="InlineDiffLayout.Whole"/>
+    /// presents two named boxes (proposed first, then current) instead of the hunk run. The comparison
+    /// and every decision surface are unchanged.
     /// </summary>
     [Parameter] public InlineDiffLayout Layout { get; set; } = InlineDiffLayout.Inline;
+
+    /// <summary>
+    /// Visible caption of the proposed (new) box in <see cref="InlineDiffLayout.Whole"/>. Default
+    /// <see langword="null"/> uses the localized "Proposed".
+    /// </summary>
+    [Parameter] public string? NewCaption { get; set; }
+
+    /// <summary>
+    /// Visible caption of the current (old) box in <see cref="InlineDiffLayout.Whole"/>. Default
+    /// <see langword="null"/> uses the localized "Current".
+    /// </summary>
+    [Parameter] public string? OldCaption { get; set; }
 
     /// <summary>When true, every decision surface is removed even in
     /// <see cref="InlineDiffMode.Review"/> — the diff degrades to the read-only presentation. Default
@@ -259,6 +282,24 @@ public partial class TmInlineDiff : TmComponentBase
         {
             _focusTarget = FocusTarget.None;
             await FocusAsync(_rootElement);
+        }
+
+        await SyncWholeOverflowAsync();
+    }
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        if (_overflowModule is not null)
+        {
+            await _overflowModule.DisposeAsync();
+            _overflowModule = null;
         }
     }
 
@@ -547,6 +588,34 @@ public partial class TmInlineDiff : TmComponentBase
         return Task.CompletedTask;
     }
 
+    private async Task SyncWholeOverflowAsync()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        if (!IsWhole)
+        {
+            if (_overflowModule is { IsImported: true })
+            {
+                await _overflowModule.TryInvokeVoidAsync("release", _id);
+            }
+
+            return;
+        }
+
+        _overflowModule ??= new LazyJsModule(JS, OverflowModulePath, async module =>
+            await module.InvokeVoidAsync("release", _id));
+        await _overflowModule.TryInvokeVoidAsync(
+            "syncOverflow",
+            _id,
+            _wholeNewBox,
+            EffectiveNewCaption,
+            _wholeOldBox,
+            EffectiveOldCaption);
+    }
+
     private async Task FocusAsync(ElementReference element)
     {
         try
@@ -636,7 +705,24 @@ public partial class TmInlineDiff : TmComponentBase
 
     private string ModeName => IsReview ? "review" : "display";
 
-    private string LayoutName => Layout == InlineDiffLayout.Stacked ? "stacked" : "inline";
+    private string LayoutName => Layout switch
+    {
+        InlineDiffLayout.Stacked => "stacked",
+        InlineDiffLayout.Whole => "whole",
+        _ => "inline",
+    };
+
+    private bool IsWhole => Layout == InlineDiffLayout.Whole;
+
+    private string EffectiveNewCaption
+        => string.IsNullOrWhiteSpace(NewCaption) ? Loc["TmInlineDiff_NewCaption"] : NewCaption;
+
+    private string EffectiveOldCaption
+        => string.IsNullOrWhiteSpace(OldCaption) ? Loc["TmInlineDiff_OldCaption"] : OldCaption;
+
+    private string WholeNewCaptionId => $"{_id}-whole-new-caption";
+
+    private string WholeOldCaptionId => $"{_id}-whole-old-caption";
 
     private string GranularityName => _result.Granularity == TextDiffGranularity.Lines ? "lines" : "words";
 
@@ -673,6 +759,7 @@ public partial class TmInlineDiff : TmComponentBase
         "tm-inline-diff",
         _result.Granularity == TextDiffGranularity.Lines ? " tm-inline-diff--lines" : string.Empty,
         Layout == InlineDiffLayout.Stacked ? " tm-inline-diff--stacked" : string.Empty,
+        Layout == InlineDiffLayout.Whole ? " tm-inline-diff--whole" : string.Empty,
         IsReview ? " tm-inline-diff--review" : string.Empty,
         _result.IsDegraded ? " tm-inline-diff--degraded" : string.Empty,
         string.IsNullOrWhiteSpace(Class) ? string.Empty : $" {Class}");

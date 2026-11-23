@@ -74,6 +74,11 @@ public sealed class AiToolCallCompletedDelta : AiStreamDelta
     /// <summary>Failure reason when <see cref="Status"/> is <see cref="AiToolCallStatus.Failed"/>.</summary>
     public string? Error { get; set; }
 
+    /// <summary>
+    /// Optional structured failure code copied onto <see cref="AiToolCall.ErrorCode"/> by the stream applier.
+    /// </summary>
+    public string? ErrorCode { get; set; }
+
     /// <summary>When true the arguments and result stay hidden.</summary>
     public bool IsRedacted { get; set; }
 }

@@ -1622,6 +1622,12 @@
           "description": "Additional CSS class(es) for the root element."
         },
         {
+          "name": "CompletionAnnouncement",
+          "type": "Func<AiMessage, string?>?",
+          "isRequired": false,
+          "description": "Optional host formatter for the completion note spoken into the transcript live region. Invoked on the true→false generating edge and at the end of StreamAsync, only for the last Completed turn. A null return (or a null parameter) keeps the localized TmAiConversation_Completed. Stopped and Failed turns never call it."
+        },
+        {
           "name": "Generating",
           "type": "bool",
           "isRequired": false,
@@ -1695,6 +1701,13 @@
           "type": "IReadOnlyList<string>?",
           "isRequired": false,
           "description": "Prompts offered by the empty state. They render only while the conversation has no turn AND OnSuggestion is bound."
+        },
+        {
+          "name": "SuggestionsLayout",
+          "type": "AiSuggestionsLayout",
+          "isRequired": false,
+          "default": "AiSuggestionsLayout.Wrap",
+          "description": "How the empty-state suggestion chips sit. Wrap (the default) is today's wrapping, centred row. ScrollRow is a nowrap horizontal scroller that reveals a partially visible focused chip without moving the transcript. Auto is ScrollRow under 640 px via a container query; desktop Auto stays Wrap."
         }
       ],
       "examples": [
@@ -1716,6 +1729,11 @@
           "name": "ExpandRenderWindowToAsync",
           "signature": "Task<bool> ExpandRenderWindowToAsync(string messageId)",
           "description": "Grows a render window so the named turn is in the DOM, without scrolling. Answers whether messageId is in Messages. An unknown id, a host without a window, or a turn already inside the window leaves the slice unchanged. A jump above the window steps back from the current start by RenderWindowStep (the same grid as Load older messages). ScrollToMessageAsync uses this internally so a jump above RenderWindowSize mounts the row before the module is asked to scroll."
+        },
+        {
+          "name": "AnnounceAsync",
+          "signature": "Task AnnounceAsync(string text)",
+          "description": "Speaks text into the transcript live region. Each call is a new keyed node (even when the text repeats), so a screen reader hears it again. Null or whitespace is a no-op."
         }
       ]
     },
@@ -1755,6 +1773,38 @@
           "type": "string?",
           "isRequired": false,
           "description": "Additional CSS class(es) for the root element."
+        },
+        {
+          "name": "FollowUpsCaption",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Visible caption of the follow-up group. When set, the group uses aria-labelledby pointing at the caption and drops aria-label. Null or blank keeps today's aria-label."
+        },
+        {
+          "name": "FollowUpsDisabled",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Disables every follow-up chip without hiding the group. Default false."
+        },
+        {
+          "name": "ImagePolicy",
+          "type": "AiMarkdownImagePolicy",
+          "isRequired": false,
+          "default": "AiMarkdownImagePolicy.Allow",
+          "description": "How images in this turn's markdown are rendered. Flows to TmMarkdownView. Allow (default) keeps today's http/https images; Block drops every img; AltText renders escaped alt instead of fetching."
+        },
+        {
+          "name": "ImageUrlFilter",
+          "type": "Func<Uri, bool>?",
+          "isRequired": false,
+          "description": "Extra allowlist on top of the scheme policy. A false result is treated as Block."
+        },
+        {
+          "name": "LinkPolicy",
+          "type": "AiMarkdownLinkPolicy",
+          "isRequired": false,
+          "default": "AiMarkdownLinkPolicy.Allow",
+          "description": "How hyperlinks in this turn's markdown are rendered. Allow (default) keeps today's hardened anchors; TextOnly renders escaped link text with no a. Citation chips are unaffected."
         },
         {
           "name": "Message",
@@ -1838,6 +1888,12 @@
           "isRequired": false,
           "default": "true",
           "description": "Render the cited sources as cards in part order. Default true."
+        },
+        {
+          "name": "ToolCallErrorTemplate",
+          "type": "RenderFragment<AiToolCall>?",
+          "isRequired": false,
+          "description": "Replaces the built-in failed-call error body. The card still carries data-error-code only while the call is Failed."
         }
       ],
       "examples": [
@@ -2880,6 +2936,26 @@
           "type": "Func<AiMarkdownCodeBlockContext, string>?",
           "isRequired": false,
           "description": "Optional host renderer for a code block, replacing the built-in <pre><code> plus copy affordance (for example with syntax-highlighted markup). The returned HTML is trusted verbatim, so the host owns its escaping: pass context.Code through HtmlEncoder.Default.Encode. Pass a stable reference — a cached field, a static method or a method group — because the render cache compares the delegate's Method and Target, not the delegate instance."
+        },
+        {
+          "name": "ImagePolicy",
+          "type": "AiMarkdownImagePolicy",
+          "isRequired": false,
+          "default": "AiMarkdownImagePolicy.Allow",
+          "description": "How images in the markdown are rendered. Allow (default) keeps today's http/https images; Block drops every img (no alt); AltText renders escaped alt instead of fetching."
+        },
+        {
+          "name": "ImageUrlFilter",
+          "type": "Func<Uri, bool>?",
+          "isRequired": false,
+          "description": "Extra allowlist on top of the scheme policy. A false result is treated as Block."
+        },
+        {
+          "name": "LinkPolicy",
+          "type": "AiMarkdownLinkPolicy",
+          "isRequired": false,
+          "default": "AiMarkdownLinkPolicy.Allow",
+          "description": "How hyperlinks in the markdown are rendered. Allow (default) keeps today's hardened anchors; TextOnly renders escaped link text with no a. Citation chips (cite:) are unaffected."
         },
         {
           "name": "Markdown",
@@ -4079,6 +4155,12 @@
           "description": "Whether the arguments/result disclosure starts open. Default false. The value seeds the initial state only: after that the reader owns it, and a call that FAILS while on screen opens itself so the error is visible without a second interaction."
         },
         {
+          "name": "ErrorTemplate",
+          "type": "RenderFragment<AiToolCall>?",
+          "isRequired": false,
+          "description": "Host error body for a failed call. Replaces the built-in error copy. The card still carries data-error-code only while the call is Failed."
+        },
+        {
           "name": "OnRetry",
           "type": "EventCallback",
           "isRequired": false,
@@ -4127,6 +4209,12 @@
           "type": "bool",
           "isRequired": false,
           "description": "Whether the run starts expanded. Default false: a long agent loop stays one tidy line."
+        },
+        {
+          "name": "ErrorTemplate",
+          "type": "RenderFragment<AiToolCall>?",
+          "isRequired": false,
+          "description": "Host error body for each card in the run. Forwarded to TmToolCallCard.ErrorTemplate."
         },
         {
           "name": "OnRetry",
@@ -4255,6 +4343,30 @@
         }
       ],
       "usageExample": "// Open the lanes on their table presentation (the text alternative).\n<TmAgentLanes Snapshot=\"@lanes\" @bind-ViewMode=\"_view\" />\n\n@code {\n    private AgentLanesViewMode _view = AgentLanesViewMode.Table;\n}"
+    },
+    {
+      "itemName": "AiSuggestionsLayout",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.AI",
+      "description": "How the empty-state suggestion chips of TmAiConversation sit in the panel. Wrap (the default) keeps today's wrapping, centred row. ScrollRow is a nowrap horizontal scroller that reveals a partially visible focused chip without moving the transcript. Auto is ScrollRow under 640 px via a CSS container query; desktop Auto stays Wrap.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Components/AI/AiSuggestionsLayout.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Wrap",
+          "description": "The chips wrap and stay centred (the default). The empty-state DOM is unchanged."
+        },
+        {
+          "name": "ScrollRow",
+          "description": "A single nowrap row that scrolls horizontally. A partially visible focused chip is revealed inside the row (never by scrolling the transcript or the page)."
+        },
+        {
+          "name": "Auto",
+          "description": "ScrollRow when the conversation is narrower than 640 px, Wrap otherwise. The switch is a CSS container query."
+        }
+      ]
     },
     {
       "itemName": "AutonomyDialPresentation",
@@ -4577,6 +4689,50 @@
       ]
     },
     {
+      "itemName": "AiMarkdownImagePolicy",
+      "kind": "Enum",
+      "category": "Markdown",
+      "namespace": "Tempo.Blazor.AI.Markdown",
+      "description": "How AiMarkdownRenderer treats an image in untrusted model markdown. Allow (the default) keeps today's behaviour (http/https images load; everything else degrades to the alt text). Block drops the image entirely. AltText renders the escaped alt instead of an img, so nothing is fetched.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Markdown/AiMarkdownImagePolicy.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Allow",
+          "description": "Load a safe http/https image (the default). An unsafe source still degrades to its alt text."
+        },
+        {
+          "name": "Block",
+          "description": "Drop the image entirely: no img and no alt text."
+        },
+        {
+          "name": "AltText",
+          "description": "Render the escaped alt text instead of an img, so nothing is fetched."
+        }
+      ]
+    },
+    {
+      "itemName": "AiMarkdownLinkPolicy",
+      "kind": "Enum",
+      "category": "Markdown",
+      "namespace": "Tempo.Blazor.AI.Markdown",
+      "description": "How AiMarkdownRenderer treats a hyperlink in untrusted model markdown. Allow (the default) keeps today's hardened anchors. TextOnly renders the escaped link text with no a. Citation chips are not links and are unaffected.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Markdown/AiMarkdownLinkPolicy.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Allow",
+          "description": "Render a hardened a (the default)."
+        },
+        {
+          "name": "TextOnly",
+          "description": "Render the escaped link text with no a."
+        }
+      ]
+    },
+    {
       "itemName": "AiMarkdownRenderer",
       "kind": "Class",
       "category": "Markdown",
@@ -4644,6 +4800,24 @@
           "kind": "Property",
           "type": "string?",
           "description": "Accessible name of the copy button of a language-labelled code block; {0} is the language."
+        },
+        {
+          "name": "Images",
+          "kind": "Property",
+          "type": "AiMarkdownImagePolicy",
+          "description": "How images in the markdown are rendered. Default Allow keeps today's behaviour (http/https images load)."
+        },
+        {
+          "name": "ImageUrlFilter",
+          "kind": "Property",
+          "type": "Func<Uri, bool>?",
+          "description": "Optional extra allowlist on top of the scheme policy. A false result is treated as Block (the image is dropped, not reduced to alt text). null means no extra filter."
+        },
+        {
+          "name": "Links",
+          "kind": "Property",
+          "type": "AiMarkdownLinkPolicy",
+          "description": "How hyperlinks in the markdown are rendered. Default Allow keeps today's hardened anchors. Citation chips are unaffected."
         },
         {
           "name": "TableLabel",
@@ -4872,11 +5046,11 @@
     }
   ],
   "summary": {
-    "itemCount": 57,
-    "manualItemCount": 57,
-    "generatedItemCount": 57,
+    "itemCount": 60,
+    "manualItemCount": 60,
+    "generatedItemCount": 60,
     "generatedOnlyItemCount": 0,
     "componentCount": 28,
-    "publicApiTypeCount": 29
+    "publicApiTypeCount": 32
   }
 }

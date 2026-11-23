@@ -13,7 +13,7 @@
    aria-relevant is reduced to "additions" on purpose — a log with the default "additions text" announces
    every streamed token, so a screen reader would read the answer character by character. Inserted turns
    and the completion note are what gets announced; the text of a reply is read on demand. *@
-<div class="tm-ai-conversation @Class"
+<div class="@RootClass"
      data-testid="@RootTestId("ai-conversation")"
      data-generating="@(IsGenerating ? "true" : "false")"
      style="@HeightStyle"
@@ -71,7 +71,8 @@
                         <p class="tm-ai-conversation__empty-text">@Loc["TmAiConversation_EmptyDescription"]</p>
                         @if (SuggestionList.Count > 0 && OnSuggestion.HasDelegate)
                         {
-                            <div class="tm-ai-conversation__suggestions"
+                            <div class="@SuggestionsClass"
+                                 data-layout="@SuggestionsLayoutName"
                                  role="group"
                                  aria-label="@Loc["TmAiConversation_Suggestions"]">
                                 @foreach (var suggestion in SuggestionList)
@@ -92,11 +93,11 @@
                    thing a screen reader hears when a generation finishes: it is keyed by the announcement
                    sequence so a second completion replaces the node instead of silently changing the text
                    of the existing one (a live region ignores an unchanged text node). *@
-                @if (_announcement is not null)
+                @foreach (var announcement in _announcements)
                 {
                     <p class="tm-sr-only"
                        data-testid="@TestId("ai-conversation-announcement")"
-                       @key="_announcementSequence">@_announcement</p>
+                       @key="announcement.Sequence">@announcement.Text</p>
                 }
             </div>
         </div>

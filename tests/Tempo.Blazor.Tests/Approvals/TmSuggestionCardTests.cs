@@ -536,4 +536,96 @@ public class TmSuggestionCardTests : LocalizationTestBase
         cut.Find("[data-testid='wording-suggestion-accept']").Should().NotBeNull();
         cut.Find("[data-testid='wording-suggestion-announcements']").Should().NotBeNull();
     }
+
+    [Fact]
+    public void DefaultPendingCard_HasNoDisabledReasonAndNoHostError()
+    {
+        var cut = RenderCard(parameters => parameters.Add(card => card.Alternatives, Alternatives()));
+
+        cut.Find("[data-testid='suggestion-accept']").HasAttribute("disabled").Should().BeFalse();
+        cut.Find("[data-testid='suggestion-dismiss']").HasAttribute("disabled").Should().BeFalse();
+        cut.FindAll("[data-testid='suggestion-alternative']")
+            .Should().OnlyContain(input => !input.HasAttribute("disabled"));
+        cut.FindAll(".tm-suggestion-card__disabled-reason").Should().BeEmpty();
+        cut.FindAll("[data-testid='suggestion-error']").Should().BeEmpty();
+        cut.Find(".tm-suggestion-card").HasAttribute("inert").Should().BeFalse("Disabled must not inert the card");
+        cut.Find("[data-testid='suggestion-announcements']").TextContent.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Disabled_DisablesDecisionControls_AndDoesNotRaiseCallbacks()
+    {
+        var accepted = 0;
+        var dismissed = 0;
+        var cut = RenderCard(parameters => parameters
+            .Add(card => card.Disabled, true)
+            .Add(card => card.Alternatives, Alternatives())
+            .Add(card => card.OnAccept, _ =>
+            {
+                accepted++;
+                return Task.CompletedTask;
+            })
+            .Add(card => card.OnDismiss, () =>
+            {
+                dismissed++;
+                return Task.CompletedTask;
+            }));
+
+        cut.Find("[data-testid='suggestion-accept']").HasAttribute("disabled").Should().BeTrue();
+        cut.Find("[data-testid='suggestion-dismiss']").HasAttribute("disabled").Should().BeTrue();
+        cut.FindAll("[data-testid='suggestion-alternative']")
+            .Should().OnlyContain(input => input.HasAttribute("disabled"));
+        cut.Find(".tm-suggestion-card").HasAttribute("inert").Should().BeFalse();
+        cut.Find(".tm-suggestion-card").GetAttribute("tabindex").Should().Be("-1",
+            "the card stays focusable while Disabled");
+
+        await cut.Find("[data-testid='suggestion-accept']").ClickAsync(new MouseEventArgs());
+        await cut.Find("[data-testid='suggestion-dismiss']").ClickAsync(new MouseEventArgs());
+        await cut.InvokeAsync(() => cut.Instance.AcceptAsync());
+
+        accepted.Should().Be(0);
+        dismissed.Should().Be(0);
+        cut.Find(".tm-suggestion-card").GetAttribute("data-state").Should().Be("pending");
+    }
+
+    [Fact]
+    public void DisabledReason_IsVisibleAndDescribesTheAcceptButton()
+    {
+        var cut = RenderCard(parameters => parameters
+            .Add(card => card.Disabled, true)
+            .Add(card => card.DisabledReason, "Waiting for the parent field."));
+
+        var hint = cut.Find(".tm-suggestion-card__disabled-reason");
+        hint.TagName.Should().Be("P");
+        hint.TextContent.Trim().Should().Be("Waiting for the parent field.");
+        hint.Id.Should().NotBeNullOrWhiteSpace();
+        cut.Find("[data-testid='suggestion-accept']").GetAttribute("aria-describedby").Should().Be(hint.Id);
+    }
+
+    [Fact]
+    public void ErrorText_ShowsOnceInTheAlertAndAnnouncesOnce_WhilePending()
+    {
+        var cut = RenderCard();
+
+        cut.Render(parameters => parameters.Add(card => card.ErrorText, "Could not apply the proposal."));
+
+        cut.Find("[data-testid='suggestion-error']").TextContent.Trim()
+            .Should().Be("Could not apply the proposal.");
+        cut.Find("[data-testid='suggestion-announcements']").TextContent.Trim()
+            .Should().Be("Could not apply the proposal.");
+        cut.Find(".tm-suggestion-card").GetAttribute("data-state").Should().Be("pending");
+        cut.FindAll("[data-testid='suggestion-error']").Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task AFailingAcceptWithoutErrorText_StillShowsTheGenericMessage()
+    {
+        var cut = RenderCard(parameters => parameters
+            .Add(card => card.OnAccept, _ => throw new InvalidOperationException("save failed")));
+
+        await cut.Find("[data-testid='suggestion-accept']").ClickAsync(new MouseEventArgs());
+
+        cut.Find("[data-testid='suggestion-error']").TextContent.Trim()
+            .Should().Be("The decision could not be saved. Try again.");
+    }
 }

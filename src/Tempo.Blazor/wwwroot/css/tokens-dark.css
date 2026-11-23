@@ -14,6 +14,9 @@
   /* Surfaces */
   --tm-bg-page:              #0f172a;
   --tm-bg-surface:           #1e293b;
+  /* Re-declared so a nested dark region recomputes the alias with this surface
+     (a :root-only alias would inherit the finished light colour). */
+  --tm-inline-diff-bg:       var(--tm-bg-surface);
   --tm-bg-surface-secondary: #0f172a;
   --tm-bg-muted:             #334155;
   /* TmAiMessage user bubble — see tokens.css. The light alias points at primary-100, which would stay
@@ -428,6 +431,7 @@
   color-scheme:                     light;
   --tm-bg-page:                     var(--tm-color-white);
   --tm-bg-surface:                  var(--tm-color-white);
+  --tm-inline-diff-bg:              var(--tm-bg-surface);
   --tm-bg-surface-secondary:        var(--tm-color-gray-50);
   --tm-bg-muted:                    var(--tm-color-gray-100);
   --tm-ai-user-bubble-bg:           var(--tm-color-primary-100);

@@ -13,6 +13,7 @@ public sealed class AiToolCall
     private string? _argumentsJson;
     private string? _resultJson;
     private string? _error;
+    private string? _errorCode;
 
     /// <summary>Model-supplied call identifier; updates and the completion target it.</summary>
     public string Id
@@ -57,6 +58,16 @@ public sealed class AiToolCall
     {
         get => _error;
         set => _error = value;
+    }
+
+    /// <summary>
+    /// Optional structured failure code when <see cref="Status"/> is <see cref="AiToolCallStatus.Failed"/>.
+    /// The card exposes it as <c>data-error-code</c>; the visible "Error" caption stays Tempo's.
+    /// </summary>
+    public string? ErrorCode
+    {
+        get => _errorCode;
+        set => _errorCode = value;
     }
 
     /// <summary>UTC start of the execution, set by the start delta.</summary>

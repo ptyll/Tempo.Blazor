@@ -2,6 +2,7 @@ using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
+using Tempo.Blazor.AI.Markdown;
 using Tempo.Blazor.AI.Models;
 using Tempo.Blazor.Components.AI;
 using Tempo.Blazor.Tests.Localization;
@@ -247,6 +248,141 @@ public sealed class TmAiMessageTests : LocalizationTestBase
     }
 
     [Fact]
+    public void ToolCallErrorTemplate_ReplacesTheCardErrorText()
+    {
+        var failed = new AiToolCall
+        {
+            Id = "call-1",
+            Name = "search",
+            DisplayName = "Search",
+            Status = AiToolCallStatus.Failed,
+            Error = "The index is unreachable.",
+            ErrorCode = "index.unreachable",
+        };
+        var message = Assistant("answer");
+        message.Parts.Add(new AiToolCallPart(failed));
+
+        var cut = Render<TmAiMessage>(parameters => parameters
+            .Add(component => component.Message, message)
+            .Add(component => component.ToolCallErrorTemplate, (AiToolCall value) => builder =>
+            {
+                builder.OpenElement(0, "span");
+                builder.AddAttribute(1, "data-testid", "message-host-error");
+                builder.AddContent(2, value.ErrorCode);
+                builder.CloseElement();
+            }));
+
+        cut.Find(".tm-tool-call__toggle").Click();
+
+        cut.Find("[data-testid='message-host-error']").TextContent.Should().Be("index.unreachable");
+        cut.FindAll(".tm-tool-call__error-text").Should().BeEmpty();
+        cut.Find(".tm-tool-call").GetAttribute("data-error-code").Should().Be("index.unreachable");
+    }
+
+    [Fact]
+    public void ToolCallErrorTemplate_PassesThroughAGroupedRun()
+    {
+        var message = Assistant("answer");
+        var failed = new AiToolCall
+        {
+            Id = "call-0",
+            Name = "search",
+            DisplayName = "Search",
+            Status = AiToolCallStatus.Failed,
+            Error = "boom",
+            ErrorCode = "search.boom",
+            StartedAt = new DateTimeOffset(2026, 10, 31, 12, 0, 0, TimeSpan.Zero),
+            CompletedAt = new DateTimeOffset(2026, 10, 31, 12, 0, 1, TimeSpan.Zero),
+        };
+        message.Parts.Add(new AiToolCallPart(failed));
+        message.Parts.Add(new AiToolCallPart(new AiToolCall
+        {
+            Id = "call-1",
+            Name = "fetch",
+            DisplayName = "Fetch",
+            Status = AiToolCallStatus.Succeeded,
+            StartedAt = new DateTimeOffset(2026, 10, 31, 12, 0, 0, TimeSpan.Zero),
+            CompletedAt = new DateTimeOffset(2026, 10, 31, 12, 0, 1, TimeSpan.Zero),
+        }));
+
+        var cut = Render<TmAiMessage>(parameters => parameters
+            .Add(component => component.Message, message)
+            .Add(component => component.ToolCallErrorTemplate, (AiToolCall value) => builder =>
+            {
+                builder.OpenElement(0, "span");
+                builder.AddAttribute(1, "data-testid", "grouped-host-error");
+                builder.AddContent(2, value.ErrorCode);
+                builder.CloseElement();
+            }));
+
+        cut.Find(".tm-tool-call-group__toggle").Click();
+        cut.Find(".tm-tool-call__toggle").Click();
+
+        cut.Find("[data-testid='grouped-host-error']").TextContent.Should().Be("search.boom");
+        cut.FindAll(".tm-tool-call__error-text").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void WithoutToolCallErrorTemplate_DefaultCardErrorMarkupIsUnchanged()
+    {
+        var failed = new AiToolCall
+        {
+            Id = "call-1",
+            Name = "search",
+            DisplayName = "Search",
+            Status = AiToolCallStatus.Failed,
+            Error = "The index is unreachable.",
+        };
+        var message = Assistant("answer");
+        message.Parts.Add(new AiToolCallPart(failed));
+
+        var cut = Render<TmAiMessage>(parameters => parameters.Add(component => component.Message, message));
+
+        cut.Find(".tm-tool-call__toggle").Click();
+
+        cut.Find(".tm-tool-call__error-text").TextContent.Should().Be("The index is unreachable.");
+        cut.Find(".tm-tool-call").GetAttribute("data-error-code").Should().BeNull();
+        cut.FindAll("[data-testid='message-host-error']").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ImagePolicyBlock_IsPassedToTheMarkdownView()
+    {
+        var message = Assistant("See ![logo](https://example.test/logo.png).");
+
+        var cut = Render<TmAiMessage>(parameters => parameters
+            .Add(component => component.Message, message)
+            .Add(component => component.ImagePolicy, AiMarkdownImagePolicy.Block));
+
+        cut.FindAll("img").Should().BeEmpty();
+        cut.FindComponent<TmMarkdownView>().Instance.ImagePolicy.Should().Be(AiMarkdownImagePolicy.Block);
+    }
+
+    [Fact]
+    public void LinkPolicyTextOnly_IsPassedToTheMarkdownView()
+    {
+        var message = Assistant("See [docs](https://example.test/a).");
+
+        var cut = Render<TmAiMessage>(parameters => parameters
+            .Add(component => component.Message, message)
+            .Add(component => component.LinkPolicy, AiMarkdownLinkPolicy.TextOnly));
+
+        cut.FindAll("a").Should().BeEmpty();
+        cut.Find(".tm-markdown-view").TextContent.Should().Contain("docs");
+    }
+
+    [Fact]
+    public void DefaultMarkdownPolicies_KeepTodaysImgAndAnchor()
+    {
+        var message = Assistant("See [docs](https://example.test/a) and ![logo](https://example.test/logo.png).");
+
+        var cut = Render<TmAiMessage>(parameters => parameters.Add(component => component.Message, message));
+
+        cut.Find(".tm-markdown-view a").GetAttribute("href").Should().Be("https://example.test/a");
+        cut.Find(".tm-markdown-view img").GetAttribute("src").Should().Be("https://example.test/logo.png");
+    }
+
+    [Fact]
     public void AReasoningPartOfAStreamingTurn_KeepsItsLiveTimer()
     {
         var message = new AiMessage
@@ -391,6 +527,50 @@ public sealed class TmAiMessageTests : LocalizationTestBase
 
         chips[1].Click();
         picked.Should().Be("Show the source.");
+
+        var group = cut.Find(".tm-ai-message__follow-ups");
+        group.GetAttribute("aria-label").Should().Be("Suggested follow-up questions");
+        group.HasAttribute("aria-labelledby").Should().BeFalse("default DOM 1:1 — no caption, so the group keeps aria-label");
+        cut.FindAll(".tm-ai-message__follow-ups-caption").Should().BeEmpty();
+        chips.Should().OnlyContain(chip => !chip.HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public void FollowUpsCaption_IsTheVisibleLabel_AndNamesTheGroup()
+    {
+        var message = Assistant();
+        message.FollowUps.Add("Why?");
+
+        var cut = Render<TmAiMessage>(parameters => parameters
+            .Add(component => component.Message, message)
+            .Add(component => component.FollowUpsCaption, "Offers for this turn"));
+
+        var caption = cut.Find(".tm-ai-message__follow-ups-caption");
+        caption.TagName.Should().Be("P");
+        caption.TextContent.Should().Be("Offers for this turn");
+        caption.Id.Should().NotBeNullOrWhiteSpace();
+
+        var group = cut.Find(".tm-ai-message__follow-ups");
+        group.GetAttribute("aria-labelledby").Should().Be(caption.Id);
+        group.HasAttribute("aria-label").Should().BeFalse("a visible caption replaces the aria-label");
+    }
+
+    [Fact]
+    public void FollowUpsDisabled_DisablesTheChips_AndDoesNotRaiseOnFollowUp()
+    {
+        var message = Assistant();
+        message.FollowUps.Add("Why?");
+        var calls = 0;
+
+        var cut = Render<TmAiMessage>(parameters => parameters
+            .Add(component => component.Message, message)
+            .Add(component => component.FollowUpsDisabled, true)
+            .Add(component => component.OnFollowUp, (string _) => calls++));
+
+        var chip = cut.Find(".tm-ai-message__follow-up");
+        chip.HasAttribute("disabled").Should().BeTrue();
+        chip.Click();
+        calls.Should().Be(0, "a disabled follow-up must not raise OnFollowUp");
     }
 
     [Fact]

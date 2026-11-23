@@ -8,6 +8,13 @@
    prefers-reduced-motion block, and the scroll itself is smoothed by the JS module only when the reader's
    motion preference allows it. */
 
+/* Default on :root so a host can override on documentElement or a wrapper
+   (EmusCz: .emus-ai-proposal). Redeclaring the token on .tm-ai-conversation
+   would shadow that cascade and pin today's empty-state padding. */
+:root {
+    --tm-ai-conversation-empty-padding-block: var(--tm-space-8);
+}
+
 .tm-ai-conversation {
     display: flex;
     flex-direction: column;
@@ -89,7 +96,7 @@
     flex-direction: column;
     align-items: center;
     gap: var(--tm-space-3);
-    padding-block: var(--tm-space-8);
+    padding-block: var(--tm-ai-conversation-empty-padding-block, var(--tm-space-8));
     text-align: center;
 }
 
@@ -133,6 +140,63 @@
 .tm-ai-conversation__suggestion:focus-visible {
     outline: 2px solid var(--tm-border-color-focus);
     outline-offset: 2px;
+}
+
+/* ScrollRow: a nowrap horizontal scroller. The chip's focus ring sits INSIDE the
+   overflow box (outline-offset pulls it in) so the scroller cannot clip it.
+   flex: none keeps a long chip from shrinking. Auto is the same paint under a
+   640 px container query. Only ScrollRow and Auto opt the root into a size
+   container — the default Wrap layout must keep its intrinsic width. */
+.tm-ai-conversation--suggestions-scroll-row,
+.tm-ai-conversation--suggestions-auto {
+    container-type: inline-size;
+    container-name: tm-ai-conversation;
+}
+
+.tm-ai-conversation__suggestions--scroll-row {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    max-inline-size: 100%;
+    padding-block: var(--tm-space-1);
+    scrollbar-width: thin;
+}
+
+.tm-ai-conversation__suggestions--scroll-row .tm-ai-conversation__suggestion {
+    flex: none;
+    max-inline-size: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: start;
+    border-radius: var(--tm-radius-lg);
+}
+
+.tm-ai-conversation__suggestions--scroll-row .tm-ai-conversation__suggestion:focus-visible {
+    outline-offset: calc(-1 * var(--tm-space-1));
+}
+
+@container tm-ai-conversation (width < 640px) {
+    .tm-ai-conversation__suggestions--auto {
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+        overflow-x: auto;
+        max-inline-size: 100%;
+        padding-block: var(--tm-space-1);
+        scrollbar-width: thin;
+    }
+
+    .tm-ai-conversation__suggestions--auto .tm-ai-conversation__suggestion {
+        flex: none;
+        max-inline-size: 100%;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        text-align: start;
+        border-radius: var(--tm-radius-lg);
+    }
+
+    .tm-ai-conversation__suggestions--auto .tm-ai-conversation__suggestion:focus-visible {
+        outline-offset: calc(-1 * var(--tm-space-1));
+    }
 }
 
 /* The pills float over the scroller: bottom-centred, out of the content flow. The bar itself is

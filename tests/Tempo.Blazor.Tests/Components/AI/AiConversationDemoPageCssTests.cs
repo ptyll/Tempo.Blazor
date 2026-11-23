@@ -52,6 +52,21 @@ public sealed class AiConversationDemoPageCssTests
                 "the demo frame follows the token, exactly like the button and the conversation card above it");
     }
 
+    /// <summary>
+    /// Fáze 10 G: the conversation host must not become a sticky containing block. <c>overflow: hidden</c>
+    /// on any ancestor stops the narrow composer from pinning to the viewport, so a 56 px host bar
+    /// cannot clear and the E2E gap reads as a large negative number.
+    /// </summary>
+    [Fact]
+    public void ConversationHost_DoesNotClipTheStickyComposer()
+    {
+        var host = ThemeCss.RuleDeclarations(PageStyle(), ".ai-demo-conversation");
+        host.Should().NotContain("overflow: hidden",
+            "overflow:hidden on the host makes it the sticky containing block; the composer then sits at the bottom of the card, below the fold");
+        host.Should().Contain("overflow: visible",
+            "visible overflow lets the narrow sticky composer pin to the viewport");
+    }
+
     private static string PageStyle()
     {
         var path = Path.Combine(

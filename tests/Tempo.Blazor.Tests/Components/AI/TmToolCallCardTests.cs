@@ -417,6 +417,79 @@ public sealed class TmToolCallCardTests : LocalizationTestBase
     }
 
     [Fact]
+    public void FailedCall_ExposesErrorCodeOnTheRoot()
+    {
+        UseFakeClock();
+        var call = Call(AiToolCallStatus.Failed);
+        call.Error = "The index is unreachable.";
+        call.ErrorCode = "index.unreachable";
+
+        var cut = Render<TmToolCallCard>(parameters => parameters
+            .Add(card => card.ToolCall, call)
+            .Add(card => card.DefaultExpanded, true));
+
+        cut.Find(".tm-tool-call").GetAttribute("data-error-code").Should().Be("index.unreachable");
+    }
+
+    [Fact]
+    public void SucceededCall_DoesNotExposeErrorCodeEvenWhenSet()
+    {
+        UseFakeClock();
+        var call = Call(AiToolCallStatus.Succeeded);
+        call.ErrorCode = "should-not-leak";
+
+        var cut = Render<TmToolCallCard>(parameters => parameters.Add(card => card.ToolCall, call));
+
+        cut.Find(".tm-tool-call").GetAttribute("data-error-code").Should().BeNull(
+            "data-error-code is only for Failed; a leftover code on a succeeded call must not leak");
+    }
+
+    [Fact]
+    public void ErrorTemplate_ReplacesTheDefaultErrorText_AndKeepsTheErrorLabel()
+    {
+        UseFakeClock();
+        var call = Call(AiToolCallStatus.Failed);
+        call.Error = "The index is unreachable.";
+        call.ErrorCode = "index.unreachable";
+
+        var cut = Render<TmToolCallCard>(parameters => parameters
+            .Add(card => card.ToolCall, call)
+            .Add(card => card.DefaultExpanded, true)
+            .Add(card => card.ErrorTemplate, (AiToolCall value) => builder =>
+            {
+                builder.OpenElement(0, "span");
+                builder.AddAttribute(1, "class", "host-error");
+                builder.AddAttribute(2, "data-testid", "host-error");
+                builder.AddContent(3, $"{value.ErrorCode}: {value.Error}");
+                builder.CloseElement();
+            }));
+
+        cut.Find(".tm-tool-call__error-label").TextContent.Trim().Should().Be("Error",
+            "Tempo still owns the Error caption; the template only replaces the text");
+        cut.Find("[data-testid='host-error']").TextContent.Should().Be("index.unreachable: The index is unreachable.");
+        cut.FindAll(".tm-tool-call__error-text").Should().BeEmpty(
+            "ErrorTemplate replaces the default error text, not sits next to it");
+    }
+
+    [Fact]
+    public void WithoutErrorTemplate_DefaultErrorMarkupIsUnchanged()
+    {
+        UseFakeClock();
+        var call = Call(AiToolCallStatus.Failed);
+        call.Error = "The index is unreachable.";
+
+        var cut = Render<TmToolCallCard>(parameters => parameters
+            .Add(card => card.ToolCall, call)
+            .Add(card => card.DefaultExpanded, true));
+
+        var error = cut.Find(".tm-tool-call__error");
+        error.Children.Should().HaveCount(2, "label + default text; a template must not appear by default");
+        cut.Find(".tm-tool-call__error-text").TextContent.Should().Be("The index is unreachable.");
+        cut.Find(".tm-tool-call").GetAttribute("data-error-code").Should().BeNull(
+            "no code on the model means no data-error-code attribute");
+    }
+
+    [Fact]
     public async Task AStatusChange_IsAnnouncedThroughTheCardsSingleLiveRegion()
     {
         UseFakeClock();

@@ -304,6 +304,15 @@
                           Layout="InlineDiffLayout.Stacked" />
             <p class="hitl-demo-hint" data-testid="hitl-diff-stacked-hint">@Loc["TmDemo_HumanInTheLoop_DiffStackedHint"]</p>
         </div>
+
+        <div class="showcase-card" data-testid="hitl-diff-whole-card">
+            <h3 class="hitl-card-heading">@Loc["TmDemo_HumanInTheLoop_DiffWholeHeading"]</h3>
+            <TmInlineDiff DataTestId="hitl-diff-whole"
+                          OldText="@HumanInTheLoopPageSamples.WholeOriginalValue"
+                          NewText="@HumanInTheLoopPageSamples.WholeProposedValue"
+                          Layout="InlineDiffLayout.Whole" />
+            <p class="hitl-demo-hint" data-testid="hitl-diff-whole-hint">@Loc["TmDemo_HumanInTheLoop_DiffWholeHint"]</p>
+        </div>
     </section>
 
     @* ── A machine suggestion ───────────────────────────────────────────────────────────────── *@

@@ -100,6 +100,42 @@ public sealed class TmAiComposerTests : LocalizationTestBase
     }
 
     [Fact]
+    public async Task FocusAsync_MovesFocusToTheTextarea()
+    {
+        SetupInterop();
+        var cut = RenderComposer();
+
+        await cut.InvokeAsync(() => cut.Instance.FocusAsync());
+
+        var focus = JSInterop.VerifyFocusAsyncInvoke();
+        focus.Arguments[0].ShouldBeElementReferenceTo(cut.Find("textarea"));
+        focus.Arguments[1].Should().Be(false, "preventScroll defaults to false");
+    }
+
+    [Fact]
+    public async Task FocusAsync_PreventScrollTrue_IsPassedToTheElement()
+    {
+        SetupInterop();
+        var cut = RenderComposer();
+
+        await cut.InvokeAsync(() => cut.Instance.FocusAsync(preventScroll: true));
+
+        JSInterop.VerifyFocusAsyncInvoke().Arguments[1].Should().Be(true);
+    }
+
+    [Fact]
+    public async Task FocusAsync_WhileGenerating_StillFocusesTheTextarea()
+    {
+        SetupInterop();
+        var cut = RenderComposer(parameters => parameters.Add(component => component.IsGenerating, true));
+
+        cut.Find("textarea").HasAttribute("disabled").Should().BeFalse("the prompt stays active during generation");
+        await cut.InvokeAsync(() => cut.Instance.FocusAsync());
+
+        JSInterop.VerifyFocusAsyncInvoke().Arguments[0].ShouldBeElementReferenceTo(cut.Find("textarea"));
+    }
+
+    [Fact]
     public void Placeholder_IsLocalizedUnlessTheHostSuppliesOne()
     {
         SetupInterop();

@@ -179,4 +179,102 @@ public sealed class TmInlineDiffCssTests
         ThemeCss.Property(Stylesheet, ".tm-inline-diff__marker", "margin-inline-end")
             .Should().Be("var(--tm-space-1)");
     }
+
+    [Fact]
+    public void RootSurfaceTokensFallBackToTodaysValues()
+    {
+        var tokens = ThemeCss.Declarations(ThemeCss.CssPath("tokens.css"));
+        tokens["--tm-inline-diff-padding"].Should().Be("var(--tm-space-3)",
+            "the host token defaults to today's padding on :root so a missing override is a no-op");
+        tokens["--tm-inline-diff-bg"].Should().Be("var(--tm-bg-surface)",
+            "the host token defaults to today's surface on :root so a missing override is a no-op");
+        tokens["--tm-inline-diff-border-width"].Should().Be("var(--tm-border-width)",
+            "the host token defaults to today's 1px border on :root so a missing override is a no-op");
+        Css().Should().NotMatchRegex(@":root\s*\{",
+            "a component stylesheet must not declare :root custom properties — they belong in tokens.css");
+        ThemeCss.TryProperty(Stylesheet, ".tm-inline-diff", "--tm-inline-diff-padding")
+            .Should().BeNull("redeclaring the token on the component would shadow a wrapper override");
+        ThemeCss.TryProperty(Stylesheet, ".tm-inline-diff", "--tm-inline-diff-bg")
+            .Should().BeNull("redeclaring the token on the component would shadow a wrapper override");
+        ThemeCss.TryProperty(Stylesheet, ".tm-inline-diff", "--tm-inline-diff-border-width")
+            .Should().BeNull("redeclaring the token on the component would shadow a wrapper override");
+        ThemeCss.Property(Stylesheet, ".tm-inline-diff", "padding")
+            .Should().Be("var(--tm-inline-diff-padding, var(--tm-space-3))",
+                "a host that never sets the token must keep today's --tm-space-3 padding");
+        ThemeCss.Property(Stylesheet, ".tm-inline-diff", "background")
+            .Should().Be("var(--tm-inline-diff-bg, var(--tm-bg-surface))",
+                "a host that never sets the token must keep today's surface background");
+        ThemeCss.Property(Stylesheet, ".tm-inline-diff", "border")
+            .Should().Be("var(--tm-inline-diff-border-width, 1px) solid var(--tm-border-color)",
+                "a host that never sets the token must keep today's 1px border");
+    }
+
+    [Fact]
+    public void WholeLayoutCapsEachBoxThroughLineTokens()
+    {
+        ThemeCss.Property(Stylesheet, ".tm-inline-diff--whole .tm-inline-diff__whole-box--new", "max-block-size")
+            .Should().Be("calc(var(--tm-inline-diff-whole-new-max-lines, 4) * 1.6em)",
+                "the proposed box height is a host-overridable line count with today's four-line fallback");
+        ThemeCss.Property(Stylesheet, ".tm-inline-diff--whole .tm-inline-diff__whole-box--old", "max-block-size")
+            .Should().Be("calc(var(--tm-inline-diff-whole-old-max-lines, 2) * 1.6em)",
+                "the current box height is a host-overridable line count with today's two-line fallback");
+        var tokens = ThemeCss.Declarations(ThemeCss.CssPath("tokens.css"));
+        tokens["--tm-inline-diff-whole-new-max-lines"].Should().Be("4",
+            "the proposed box defaults to four lines on :root — the EmusCz WholeValues cap");
+        tokens["--tm-inline-diff-whole-old-max-lines"].Should().Be("2",
+            "the current box defaults to two lines on :root — the EmusCz WholeValues cap");
+        ThemeCss.TryProperty(Stylesheet, ".tm-inline-diff--whole", "--tm-inline-diff-whole-new-max-lines")
+            .Should().BeNull("redeclaring the line-count tokens on the component would shadow a wrapper override");
+        ThemeCss.TryProperty(Stylesheet, ".tm-inline-diff--whole", "--tm-inline-diff-whole-old-max-lines")
+            .Should().BeNull("redeclaring the line-count tokens on the component would shadow a wrapper override");
+    }
+
+    [Fact]
+    public void AHostWrapperToken_ChangesTheComputedPadding()
+    {
+        var css = File.ReadAllText(ThemeCss.CssPath("tokens.css"))
+            + "\n.emus-ai-proposal { --tm-inline-diff-padding: 0px; }\n"
+            + Css();
+
+        InheritedCustomProperty(css, "--tm-inline-diff-padding", ":root", ".emus-ai-proposal", ".tm-inline-diff")
+            .Should().Be("0px",
+                "EmusCz sets the token on .emus-ai-proposal; a declaration on .tm-inline-diff would pin today's padding");
+        ThemeCss.Property(Stylesheet, ".tm-inline-diff", "padding")
+            .Should().Be("var(--tm-inline-diff-padding, var(--tm-space-3))",
+                "computed padding follows the inherited token, so a wrapper value of 0px is what paints");
+    }
+
+    /// <summary>
+    /// Walks <paramref name="selectors"/> outermost-first and returns the last declared value of
+    /// <paramref name="token"/>. Custom properties inherit unless a later element redeclares them —
+    /// the same shadowing a host wrapper hits when the library pins the token on the component.
+    /// </summary>
+    private static string? InheritedCustomProperty(string css, string token, params string[] selectors)
+    {
+        string? value = null;
+        foreach (var selector in selectors)
+        {
+            var body = ThemeCss.RuleDeclarations(css, selector);
+            if (string.IsNullOrEmpty(body))
+            {
+                continue;
+            }
+
+            foreach (var declaration in body.Split(';'))
+            {
+                var separator = declaration.IndexOf(':');
+                if (separator < 0)
+                {
+                    continue;
+                }
+
+                if (string.Equals(declaration[..separator].Trim(), token, StringComparison.Ordinal))
+                {
+                    value = ThemeCss.Normalise(declaration[(separator + 1)..]);
+                }
+            }
+        }
+
+        return value;
+    }
 }

@@ -68,13 +68,18 @@
                                    name="@AlternativeGroupName"
                                    value="@alternative"
                                    checked="@IsSelected(alternative)"
-                                   disabled="@IsBusy"
+                                   disabled="@(IsBusy || Disabled)"
                                    data-testid="@TestId("suggestion-alternative")"
                                    @onchange="() => SelectAlternative(alternative)" />
                             <span class="tm-suggestion-card__alternative-text">@alternative</span>
                         </label>
                     }
                 </div>
+            }
+
+            @if (HasDisabledReason)
+            {
+                <p id="@DisabledReasonId" class="tm-suggestion-card__disabled-reason">@DisabledReason</p>
             }
 
             @if (ErrorMessage is not null)
@@ -89,7 +94,8 @@
                         @ref="_acceptElement"
                         class="tm-btn tm-btn-primary tm-btn-sm tm-suggestion-card__action"
                         data-testid="@TestId("suggestion-accept")"
-                        disabled="@IsBusy"
+                        disabled="@(IsBusy || Disabled)"
+                        aria-describedby="@(HasDisabledReason ? DisabledReasonId : null)"
                         @onclick="AcceptAsync">
                     <TmIcon Name="@IconNames.Check" Size="IconSize.Xs" />
                     <span class="tm-btn-label">@Loc["TmSuggestionCard_Accept"]</span>
@@ -97,7 +103,7 @@
                 <button type="button"
                         class="tm-btn tm-btn-ghost tm-btn-sm tm-suggestion-card__action"
                         data-testid="@TestId("suggestion-dismiss")"
-                        disabled="@IsBusy"
+                        disabled="@(IsBusy || Disabled)"
                         @onclick="DismissAsync">
                     <TmIcon Name="@IconNames.X" Size="IconSize.Xs" />
                     <span class="tm-btn-label">@Loc["TmSuggestionCard_Dismiss"]</span>

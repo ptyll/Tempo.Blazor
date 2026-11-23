@@ -667,6 +667,8 @@
   "TmDemo_HumanInTheLoop_DiffAccepted": "Changements acceptés : {0} sur {1}",
   "TmDemo_HumanInTheLoop_DiffStackedHeading": "Proposition empilée d'une valeur entière",
   "TmDemo_HumanInTheLoop_DiffStackedHint": "Layout=Stacked présente la proposition d'une valeur entière avec la suppression et l'insertion l'une sous l'autre, au lieu de l'entrelacement en ligne.",
+  "TmDemo_HumanInTheLoop_DiffWholeHeading": "Comparaison d'une valeur entière dans deux encadrés nommés",
+  "TmDemo_HumanInTheLoop_DiffWholeHint": "Layout=Whole affiche d'abord la valeur proposée puis la valeur actuelle, chacune dans son propre encadré nommé — la présentation d'une longue valeur de champ.",
   "TmDemo_HumanInTheLoop_SuggestionHeading": "Suggestion avec confiance et alternatives",
   "TmDemo_HumanInTheLoop_SuggestionIntro": "Une recommandation que le lecteur peut accepter, ignorer ou annuler dans la fenêtre d'annulation. La confiance est un mot localisé et un pourcentage facultatif ; le raisonnement est derrière un dépliant et les alternatives sont un groupe de boutons radio natif.",
   "TmDemo_HumanInTheLoop_SuggestionTitle": "Réutiliser le modèle d'approbation",

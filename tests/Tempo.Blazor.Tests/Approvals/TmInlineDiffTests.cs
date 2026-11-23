@@ -931,6 +931,84 @@ public class TmInlineDiffTests : LocalizationTestBase
         cut.Find("[data-testid='inline-diff-popover']").Should().NotBeNull();
     }
 
+    /// <summary>
+    /// Fáze 10 D: <see cref="InlineDiffLayout.Whole"/> presents two named boxes — the proposed
+    /// (new) value first, then the current (old) value — instead of a word-level interleave.
+    /// Each box is labelled by a visible caption via <c>aria-labelledby</c>, the new side is an
+    /// <c>&lt;ins&gt;</c> and the old side a <c>&lt;del&gt;</c>, and the default captions come from
+    /// the localizer. The comparison itself is unchanged.
+    /// </summary>
+    [Fact]
+    public void WholeLayout_RendersTwoNamedBoxes_NewFirstThenOld()
+    {
+        var cut = RenderDiff(
+            oldText: "Contoso Services s.r.o.",
+            newText: "Northwind Traders Limited",
+            parameters => parameters.Add(diff => diff.Layout, InlineDiffLayout.Whole));
+
+        var root = cut.Find(".tm-inline-diff");
+        root.ClassList.Should().Contain("tm-inline-diff--whole");
+        root.GetAttribute("data-layout").Should().Be("whole");
+
+        var regions = cut.FindAll("[data-testid='inline-diff-whole-region']");
+        regions.Should().HaveCount(2, "Whole is two named areas, never a word-level run");
+
+        var newRegion = regions[0];
+        var oldRegion = regions[1];
+        newRegion.GetAttribute("data-side").Should().Be("new");
+        oldRegion.GetAttribute("data-side").Should().Be("old");
+
+        var newCaption = cut.Find("[data-testid='inline-diff-whole-new-caption']");
+        var oldCaption = cut.Find("[data-testid='inline-diff-whole-old-caption']");
+        newCaption.TextContent.Should().Be("Proposed");
+        oldCaption.TextContent.Should().Be("Current");
+        newRegion.GetAttribute("aria-labelledby").Should().Be(newCaption.Id);
+        oldRegion.GetAttribute("aria-labelledby").Should().Be(oldCaption.Id);
+
+        newRegion.QuerySelector("ins")!.TextContent.Should().Be("Northwind Traders Limited");
+        oldRegion.QuerySelector("del")!.TextContent.Should().Be("Contoso Services s.r.o.");
+
+        cut.FindAll("[data-testid='inline-diff-change']").Should().BeEmpty(
+            "Whole does not render the inline hunk run — the two boxes replace it");
+        cut.Instance.ResultText.Should().Be("Contoso Services s.r.o.",
+            "the layout is presentation only: an empty accepted set is still the old text");
+    }
+
+    /// <summary>
+    /// Host-owned captions replace the localized defaults; whitespace-only falls back.
+    /// </summary>
+    [Fact]
+    public void WholeLayout_HostCaptionsReplaceTheLocalizedDefaults()
+    {
+        var cut = RenderDiff(
+            oldText: "old",
+            newText: "new",
+            parameters => parameters
+                .Add(diff => diff.Layout, InlineDiffLayout.Whole)
+                .Add(diff => diff.NewCaption, "Suggested value")
+                .Add(diff => diff.OldCaption, "Field today"));
+
+        cut.Find("[data-testid='inline-diff-whole-new-caption']").TextContent
+            .Should().Be("Suggested value");
+        cut.Find("[data-testid='inline-diff-whole-old-caption']").TextContent
+            .Should().Be("Field today");
+    }
+
+    /// <summary>
+    /// Default <see cref="InlineDiffLayout.Inline"/> keeps today's DOM: no whole regions, no
+    /// whole modifier, <c>data-layout="inline"</c>.
+    /// </summary>
+    [Fact]
+    public void DefaultLayout_DoesNotRenderWholeRegions()
+    {
+        var cut = RenderDiff();
+        var root = cut.Find(".tm-inline-diff");
+        root.ClassList.Should().NotContain("tm-inline-diff--whole");
+        root.GetAttribute("data-layout").Should().Be("inline");
+        cut.FindAll("[data-testid='inline-diff-whole-region']").Should().BeEmpty();
+        cut.FindAll("[data-testid='inline-diff-change']").Should().HaveCount(2);
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private static IReadOnlyList<string> topLevelLabels(IRenderedComponent<TmInlineDiff> cut)

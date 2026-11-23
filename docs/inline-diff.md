@@ -30,7 +30,7 @@ Models: `Tempo.Blazor.Abstractions.Models.Diffs` (`InlineDiffMode`, `InlineDiffD
 | `InlineDiffMode.Review` | The same diff plus the toolbar (`Changes: N`, Accept all, Reject all, Undo), one marker button per change and the non-modal Accept / Reject popover. |
 | `ReadOnly="true"` | Removes every decision surface even in `Review` — the effective switch is `IsReview` (public), and the root carries `data-readonly="true"`. |
 
-The root carries `data-mode` (`display` / `review`), `data-layout` (`inline` / `stacked`),
+The root carries `data-mode` (`display` / `review`), `data-layout` (`inline` / `stacked` / `whole`),
 `data-granularity` (`words` / `lines` — the granularity the engine actually used) and `data-fallback`
 (`none` / `line-level` / `single-change`).
 
@@ -42,6 +42,7 @@ The root carries `data-mode` (`display` / `review`), `data-layout` (`inline` / `
 |---|---|
 | `InlineDiffLayout.Inline` (default) | The changes flow inside the surrounding text — the deletion and the insertion of a change sit one after another in the line, with the decision marker following the insertion. |
 | `InlineDiffLayout.Stacked` | Only the change hunks break onto their own rows (`tm-inline-diff--stacked`): the change span becomes a block and its `<del>` / `<ins>` sides become block rows, so the deletion and the insertion read one below the other. Equal text after a change starts on a new line — a block span ends the line it sits on, so the unchanged context following a change is never glued to the row above it. The content wrapper itself stays a plain block, never a flex column: the layout adds no row breaks between two equal fragments, it only inherits the break each change already introduces. The decision marker rides the insertion row (it renders inside the `<ins>`); a pure deletion has no insertion row, so its marker stays the sibling after the `<del>` — the inline placement, the pre-2.12 markup — so a stacked delete keeps its decision. Meant for a one-hunk proposal of a whole value (an assistant suggesting the complete replacement text of a field), where the inline interleave of two full-length sides is hard to read. The geometry is pinned by the HumanInTheLoop E2E (`ins.y >= del.y + del.height`) and the stylesheet by `TheStackedLayoutPresentsEachSideOfAChangeAsItsOwnRow`. |
+| `InlineDiffLayout.Whole` (**2.13.0**) | Two named boxes — proposed (`<ins>`) first, then current (`<del>`) — each a `role="group"` labelled by its caption (`NewCaption` / `OldCaption`; whitespace-only falls back to `TmInlineDiff_NewCaption` / `_OldCaption`). Overflowing boxes become a keyboard focus stop through `tm-inline-diff.js` (`syncOverflow`). Tokens: `--tm-inline-diff-padding` (fallback `--tm-space-3`), `--tm-inline-diff-bg` (fallback `--tm-bg-surface`), `--tm-inline-diff-border-width` (fallback `1px`), `--tm-inline-diff-whole-new-max-lines` (default 4), `--tm-inline-diff-whole-old-max-lines` (default 2). Demo card `hitl-diff-whole`. |
 
 The layout is presentation only: the hunks, the decisions and the `Apply` output are exactly the ones
 the inline layout renders.

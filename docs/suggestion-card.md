@@ -32,7 +32,10 @@ Plan: `10b3966f` (human-in-the-loop, phase 4). Package: `Tempo.Blazor` (core).
 
 The pending half and the decided half are BOTH mounted so the collapse can transition the height
 (`grid-template-rows: 1fr` → `0fr`); the inactive half carries `inert`, so it leaves the tab order and
-the accessibility tree. The card is self-managed: render it with `@key` when a host reuses one instance
+the accessibility tree. **2.13.0** `Disabled` disables Accept / Dismiss / alternatives while the card
+stays focusable (no `inert` on the pending body). `DisabledReason` is the Accept button's
+`aria-describedby`. Host `ErrorText` is announced once through the live region and the card stays
+Pending. The card is self-managed: render it with `@key` when a host reuses one instance
 for a different suggestion.
 
 ## Confidence
@@ -98,6 +101,7 @@ error. Dismissal is not undoable.
 | `CanDecide` | Whether the suggestion is still decidable. |
 | `CurrentAlternative` | The picked alternative, or `null`. |
 | `Announcement` | The latest announcement (mirrored into the live region). |
+| `Disabled` / `DisabledReason` / `ErrorText` | **2.13.0** Host-owned disable (no `inert`) and a one-shot host error that does not change state. |
 | `AcceptAsync()` / `DismissAsync()` | Run the decision programmatically. |
 | `UndoAsync()` | Withdraw an acceptance while the window is open. |
 
@@ -106,4 +110,4 @@ error. Dismissal is not undoable.
 The demo page is `/human-in-the-loop` (demo `HumanInTheLoopPage`): a suggestion with a confidence, a
 rationale disclosure, two alternatives and an Undo window. Component contract:
 `tests/Tempo.Blazor.Tests/Approvals/TmSuggestionCardTests.cs`; demo contract:
-`HumanInTheLoopDemoPageTests`; browser lane: `HumanInTheLoopE2ETests` (WASM).
+`HumanInTheLoopDemoPageTests`; browser lane: `HumanInTheLoopE2ETests` (WASM + Server smoke).

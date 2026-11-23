@@ -256,6 +256,113 @@ public sealed class AiMarkdownRendererTests
         unsafeImage.Should().Contain("tracker");
     }
 
+    [Fact]
+    public void DefaultImageAndLinkOutput_MatchesTheAllowSnapshot()
+    {
+        const string markdown = """
+            See [docs](https://example.test/a) and ![logo](https://example.test/logo.png).
+
+            Also [docs][link] and ![logo][img].
+
+            Autolink: https://example.test/auto and <https://example.test/explicit>.
+
+            [link]: https://example.test/ref
+            [img]: https://example.test/ref.png
+            """;
+
+        var html = Render(markdown);
+        var again = Render(markdown, new AiMarkdownRenderOptions
+        {
+            CopyCodeLabel = Options.CopyCodeLabel,
+            CopyCodeWithLanguageLabel = Options.CopyCodeWithLanguageLabel,
+            CopiedLabel = Options.CopiedLabel,
+            CitationLabelFormat = Options.CitationLabelFormat,
+            TableLabel = Options.TableLabel,
+            Images = AiMarkdownImagePolicy.Allow,
+            Links = AiMarkdownLinkPolicy.Allow,
+        });
+
+        html.Should().Be(again, "Allow/Allow is the default; a snapshot of the default output must stay 1:1");
+        html.Should().Contain("<img src=\"https://example.test/logo.png\"");
+        html.Should().Contain("<img src=\"https://example.test/ref.png\"");
+        html.Should().Contain("href=\"https://example.test/a\"");
+        html.Should().Contain("href=\"https://example.test/ref\"");
+        html.Should().Contain("href=\"https://example.test/auto\"");
+        html.Should().Contain("href=\"https://example.test/explicit\"");
+    }
+
+    [Theory]
+    [InlineData("![logo](https://example.test/logo.png)")]
+    [InlineData("![logo][img]\n\n[img]: https://example.test/logo.png")]
+    public void ImagePolicyBlock_RendersNoImg_ForInlineAndReferenceForms(string markdown)
+    {
+        var html = Render(markdown, new AiMarkdownRenderOptions { Images = AiMarkdownImagePolicy.Block });
+
+        html.Should().NotContain("<img");
+        html.Should().NotContain("example.test/logo.png");
+        html.Should().NotContain("logo", "Block drops the image entirely, including its alt text");
+    }
+
+    [Theory]
+    [InlineData("![logo](https://example.test/logo.png)")]
+    [InlineData("![logo][img]\n\n[img]: https://example.test/logo.png")]
+    public void ImagePolicyAltText_RendersEscapedAlt_WithoutAnImg(string markdown)
+    {
+        var html = Render(markdown, new AiMarkdownRenderOptions { Images = AiMarkdownImagePolicy.AltText });
+
+        html.Should().NotContain("<img");
+        html.Should().NotContain("example.test/logo.png");
+        html.Should().Contain("logo");
+    }
+
+    [Fact]
+    public void ImageUrlFilterFalse_BehavesLikeBlock()
+    {
+        var html = Render("![logo](https://example.test/logo.png)", new AiMarkdownRenderOptions
+        {
+            Images = AiMarkdownImagePolicy.Allow,
+            ImageUrlFilter = static _ => false,
+        });
+
+        html.Should().NotContain("<img", "a filter result of false is Block, not AltText");
+        html.Should().NotContain("logo");
+    }
+
+    [Theory]
+    [InlineData("[docs](https://example.test/a)")]
+    [InlineData("[docs][link]\n\n[link]: https://example.test/a")]
+    [InlineData("https://example.test/a")]
+    [InlineData("<https://example.test/a>")]
+    public void LinkPolicyTextOnly_RendersNoAnchor_ForInlineReferenceAndAutolinkForms(string markdown)
+    {
+        var html = Render(markdown, new AiMarkdownRenderOptions { Links = AiMarkdownLinkPolicy.TextOnly });
+
+        html.Should().NotContain("<a");
+        html.Should().NotContain("href=");
+        html.Should().NotContain("<img");
+        if (markdown.Contains("[docs]", StringComparison.Ordinal))
+        {
+            html.Should().Contain("docs");
+        }
+        else
+        {
+            html.Should().Contain("https://example.test/a");
+        }
+    }
+
+    [Fact]
+    public void CiteChips_SurviveLinkPolicyTextOnly()
+    {
+        var html = Render("Answer [1](cite:src-1).", new AiMarkdownRenderOptions
+        {
+            CitationLabelFormat = Options.CitationLabelFormat,
+            Links = AiMarkdownLinkPolicy.TextOnly,
+        });
+
+        html.Should().Contain("data-source-id=\"src-1\"");
+        html.Should().NotContain("<a");
+    }
+
     // ── Citations ───────────────────────────────────────────────────────────────────────────
 
     [Fact]

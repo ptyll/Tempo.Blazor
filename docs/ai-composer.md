@@ -176,10 +176,15 @@ disabling the composer or turning the opt-in off stops a running session.
 The narrow layout (`@media (width < 640px)`, the shared Sm breakpoint) is sticky on the composer's bottom edge; `Sticky="true"`
 forces the same at any width. `TrackVirtualKeyboard` adds the `visualViewport` tracker: while an on-screen
 keyboard covers part of the visual viewport the module writes the measured gap as the runtime knob
-`--tm-ai-composer-keyboard-inset` (plus `data-tm-keyboard-open`) on the root, and the sticky offset adds it
-— so iOS Safari, which shrinks only the visual viewport, keeps the composer above the keyboard. The knob is
-never declared by CSS (its default lives in the `var()` fallback), so a host override keeps cascading. The
+`--tm-ai-composer-keyboard-inset` (plus `data-tm-keyboard-open`) on the root, and the sticky offset is
+`max(var(--tm-ai-composer-keyboard-inset, 0px), var(--tm-ai-composer-bottom-clearance, 0px))`
+(**2.13.0** — a host bottom bar and the on-screen keyboard compete; both fallbacks are today's `0px`).
+`scroll-margin-block-end` uses the same clearance so a scroll-into-view of the composer clears the bar.
+`--tm-ai-composer-bottom-clearance` defaults to `0px` on `:root` (`tokens.css`) and is **not** redeclared on `.tm-ai-composer`, so a host override on `:root` or a wrapper keeps cascading; the runtime keyboard inset is written on the composer itself. Both reads keep a `var()` fallback of today's `0px`. The
 tracker ignores browser-chrome-sized shrinks, a zoomed page (`scale ≠ 1`) and a degenerate 1×1 viewport.
+An ancestor whose overflow is not `visible` becomes the sticky containing block: a conversation host
+that clips with `overflow: hidden` pins the composer to that card (below the fold) instead of the
+viewport, so a 56 px `--tm-ai-composer-bottom-clearance` never shows as a gap against `innerHeight`.
 
 ## Accessibility
 

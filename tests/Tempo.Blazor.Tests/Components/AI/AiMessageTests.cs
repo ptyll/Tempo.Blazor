@@ -206,6 +206,37 @@ public sealed class AiMessageTests
     }
 
     [Fact]
+    public void ToolCallCompleted_CopiesErrorCodeFromTheDelta()
+    {
+        var message = NewMessage();
+        AiMessageStreamApplier.Apply(message, new AiToolCallStartedDelta
+        {
+            ToolCall = new AiToolCall { Id = "call-1", Name = "search" },
+        }, T0);
+
+        AiMessageStreamApplier.Apply(message, new AiToolCallCompletedDelta
+        {
+            ToolCallId = "call-1",
+            Status = AiToolCallStatus.Failed,
+            Error = "timeout",
+            ErrorCode = "tool.timeout",
+        }, T0.AddSeconds(2)).Should().BeTrue();
+
+        var call = message.Parts.OfType<AiToolCallPart>().Single().ToolCall;
+        call.Error.Should().Be("timeout");
+        call.ErrorCode.Should().Be("tool.timeout",
+            "the applier copies ErrorCode the same way it copies Error; a mutant that ignores the field is RED");
+
+        AiMessageStreamApplier.Apply(message, new AiToolCallCompletedDelta
+        {
+            ToolCallId = "call-1",
+            Status = AiToolCallStatus.Failed,
+            Error = "timeout",
+            ErrorCode = "tool.timeout",
+        }, T0.AddSeconds(9)).Should().BeFalse("an identical ErrorCode is not a change");
+    }
+
+    [Fact]
     public void ToolCallCompleted_ForAnUnknownId_CreatesACompletedPart()
     {
         var message = NewMessage();

@@ -207,6 +207,65 @@ public sealed class TmAiMessageCssTests
             "the 1 px subtle border is the bubble's boundary against the transcript");
     }
 
+    [Fact]
+    public void MessageFontSizeFallsBackToTodaysBase()
+    {
+        var documentRoot = ThemeCss.Normalise(ForRule(":root"));
+        documentRoot.Should().Contain("--tm-ai-message-font-size: var(--tm-font-size-base)",
+            "the host token defaults to today's base on :root so an undefined alias never paints");
+        var root = ThemeCss.Normalise(ForRule(".tm-ai-message"));
+        root.Should().NotContain("--tm-ai-message-font-size:",
+            "redeclaring the token on the message would shadow a wrapper override");
+        root.Should().Contain("font-size: var(--tm-ai-message-font-size, var(--tm-font-size-base))",
+            "a host can shrink the turn without a ::deep override; without the token the size is today's base");
+    }
+
+    [Fact]
+    public void AHostWrapperToken_ChangesTheComputedFontSize()
+    {
+        var css = ".emus-ai-proposal { --tm-ai-message-font-size: 12px; }\n" + Stylesheet();
+
+        InheritedCustomProperty(css, "--tm-ai-message-font-size", ":root", ".emus-ai-proposal", ".tm-ai-message")
+            .Should().Be("12px",
+                "EmusCz sets the token on .emus-ai-proposal; a declaration on .tm-ai-message would pin today's base");
+        ThemeCss.Normalise(ForRule(".tm-ai-message"))
+            .Should().Contain("font-size: var(--tm-ai-message-font-size, var(--tm-font-size-base))",
+                "computed font-size follows the inherited token, so a wrapper value of 12px is what paints");
+    }
+
+    /// <summary>
+    /// Walks <paramref name="selectors"/> outermost-first and returns the last declared value of
+    /// <paramref name="token"/>. Custom properties inherit unless a later element redeclares them.
+    /// </summary>
+    private static string? InheritedCustomProperty(string css, string token, params string[] selectors)
+    {
+        string? value = null;
+        foreach (var selector in selectors)
+        {
+            var body = ThemeCss.RuleDeclarations(css, selector);
+            if (string.IsNullOrEmpty(body))
+            {
+                continue;
+            }
+
+            foreach (var declaration in body.Split(';'))
+            {
+                var separator = declaration.IndexOf(':');
+                if (separator < 0)
+                {
+                    continue;
+                }
+
+                if (string.Equals(declaration[..separator].Trim(), token, StringComparison.Ordinal))
+                {
+                    value = ThemeCss.Normalise(declaration[(separator + 1)..]);
+                }
+            }
+        }
+
+        return value;
+    }
+
     /// <summary>The declarations of the rule whose selector is exactly <paramref name="selector"/>.</summary>
     private static string ForRule(string selector)
     {

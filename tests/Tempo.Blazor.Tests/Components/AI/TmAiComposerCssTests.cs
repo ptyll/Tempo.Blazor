@@ -210,4 +210,30 @@ public sealed class TmAiComposerCssTests
             "the module writes the caret's position; the stylesheet places the list");
         suggestions.Should().Contain("max-block-size", "a long list scrolls instead of covering the prompt");
     }
+
+    [Fact]
+    public void StickyComposer_ClearsAHostBarThroughTheBottomClearanceToken()
+    {
+        var css = Stylesheet();
+        css.Should().NotMatchRegex(@":root\s*\{",
+            "the default 0px lives in the var() fallback; a :root declaration belongs in a token file, not a component stylesheet");
+        ThemeCss.Declarations(ThemeCss.CssPath("tokens.css"))["--tm-ai-composer-bottom-clearance"]
+            .Should().Be("0px",
+                "the host-bar token defaults to today's 0px on :root so a host override still cascades");
+        var root = Regex.Match(css, @"\.tm-ai-composer\s*\{([^}]*)\}").Groups[1].Value;
+        root.Should().NotContain("--tm-ai-composer-bottom-clearance",
+            "redeclaring the token on the composer would shadow a :root or wrapper override");
+        var sticky = Regex.Match(css, @"\.tm-ai-composer--sticky\s*\{([^}]*)\}").Groups[1].Value;
+        sticky.Should().Contain(
+            "inset-block-end: max(var(--tm-ai-composer-keyboard-inset, 0px), var(--tm-ai-composer-bottom-clearance, 0px))",
+            "a host bar and the on-screen keyboard compete; the larger inset wins, both fallbacks are today's 0px");
+
+        var narrow = Regex.Match(css, @"@media\s*\(\s*width\s*<\s*640px\s*\)\s*\{(?<body>(?:[^{}]|\{[^{}]*\})*)\}").Groups["body"].Value;
+        narrow.Should().Contain(
+            "inset-block-end: max(var(--tm-ai-composer-keyboard-inset, 0px), var(--tm-ai-composer-bottom-clearance, 0px))",
+            "the narrow sticky branch uses the same max() as --sticky");
+
+        css.Should().Contain("scroll-margin-block-end: var(--tm-ai-composer-bottom-clearance, 0px)",
+            "a scroll-into-view of the composer must clear the same host bar");
+    }
 }

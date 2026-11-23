@@ -8,16 +8,17 @@
     display: flex;
     flex-direction: column;
     gap: var(--tm-space-2);
-    padding: var(--tm-space-3);
-    background: var(--tm-bg-surface);
+    padding: var(--tm-inline-diff-padding, var(--tm-space-3));
+    background: var(--tm-inline-diff-bg, var(--tm-bg-surface));
     color: var(--tm-text-primary);
-    border: 1px solid var(--tm-border-color);
+    border: var(--tm-inline-diff-border-width, 1px) solid var(--tm-border-color);
     border-radius: var(--tm-radius-card);
     font-size: var(--tm-font-size-sm);
     line-height: 1.6;
 }
 
-.tm-inline-diff:focus-visible {
+.tm-inline-diff:focus-visible,
+.tm-inline-diff__whole-box:focus-visible {
     outline: 2px solid transparent;
     box-shadow: var(--tm-focus-ring);
 }
@@ -104,6 +105,51 @@
 
 .tm-inline-diff--stacked .tm-inline-diff__del,
 .tm-inline-diff--stacked .tm-inline-diff__ins {
+    display: block;
+}
+
+/* Whole layout: two named boxes (proposed first, then current). Each box is a
+   height-capped scroller; tabindex is owned by tm-inline-diff.js so a short
+   value is not an extra tab stop. Line-count tokens live in tokens.css. */
+.tm-inline-diff__whole {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+}
+
+.tm-inline-diff__whole-region {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    min-inline-size: 0;
+}
+
+.tm-inline-diff__whole-caption {
+    margin: 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-inline-diff__whole-box {
+    overflow: auto;
+    max-inline-size: 100%;
+    padding: var(--tm-space-2);
+    border: var(--tm-inline-diff-border-width, 1px) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+    background: var(--tm-bg-surface-secondary);
+}
+
+.tm-inline-diff--whole .tm-inline-diff__whole-box--new {
+    max-block-size: calc(var(--tm-inline-diff-whole-new-max-lines, 4) * 1.6em);
+}
+
+.tm-inline-diff--whole .tm-inline-diff__whole-box--old {
+    max-block-size: calc(var(--tm-inline-diff-whole-old-max-lines, 2) * 1.6em);
+}
+
+.tm-inline-diff--whole .tm-inline-diff__ins,
+.tm-inline-diff--whole .tm-inline-diff__del {
     display: block;
 }
 
@@ -295,7 +341,12 @@
         border: 1px solid GrayText;
     }
 
+    .tm-inline-diff__whole-box {
+        border-color: CanvasText;
+    }
+
     .tm-inline-diff:focus-visible,
+    .tm-inline-diff__whole-box:focus-visible,
     .tm-inline-diff__marker:focus-visible,
     .tm-inline-diff__action:focus-visible,
     .tm-inline-diff__undo:focus-visible,

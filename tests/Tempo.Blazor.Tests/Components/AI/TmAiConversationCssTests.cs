@@ -27,6 +27,39 @@ public sealed class TmAiConversationCssTests
 
     private static readonly Regex CssClassSelector = new(@"\.(tm-[a-zA-Z][\w-]*)", RegexOptions.Compiled, RegexTimeout);
 
+    private static readonly Regex RuleBlock = new(
+        @"(?<selector>[^{}]+)\{(?<body>[^{}]*)\}",
+        RegexOptions.Compiled | RegexOptions.Singleline,
+        RegexTimeout);
+
+    private static string PropertyOf(string css, string selector, string property)
+    {
+        foreach (Match rule in RuleBlock.Matches(css))
+        {
+            if (!ThemeCss.SelectorParts(rule.Groups["selector"].Value).Contains(selector, StringComparer.Ordinal))
+            {
+                continue;
+            }
+
+            foreach (var declaration in rule.Groups["body"].Value.Split(';'))
+            {
+                var separator = declaration.IndexOf(':', StringComparison.Ordinal);
+                if (separator < 0)
+                {
+                    continue;
+                }
+
+                if (string.Equals(declaration[..separator].Trim(), property, StringComparison.Ordinal))
+                {
+                    return ThemeCss.Normalise(declaration[(separator + 1)..]);
+                }
+            }
+        }
+
+        throw new InvalidOperationException(
+            $"_ai-conversation.css has no rule with the exact selector '{selector}' declaring '{property}'.");
+    }
+
     private static string Root => ThemeCss.RepositoryRoot().FullName;
 
     private static string Stylesheet()
@@ -220,5 +253,137 @@ public sealed class TmAiConversationCssTests
         css.Should().NotContain("animation:");
         css.Should().NotContain("@keyframes");
         css.Should().NotContain("transition:");
+    }
+
+    [Fact]
+    public void EmptyStatePaddingFallsBackToTodaysSpace8()
+    {
+        var css = Stylesheet();
+        PropertyOf(css, ":root", "--tm-ai-conversation-empty-padding-block")
+            .Should().Be("var(--tm-space-8)",
+                "the host token defaults to today's empty-state padding on :root so a missing override is a no-op");
+        ThemeCss.RuleDeclarations(css, ".tm-ai-conversation")
+            .Should().NotContain("--tm-ai-conversation-empty-padding-block",
+                "redeclaring the token on the conversation would shadow a wrapper override");
+        PropertyOf(css, ".tm-ai-conversation__empty", "padding-block")
+            .Should().Be("var(--tm-ai-conversation-empty-padding-block, var(--tm-space-8))",
+                "the compact empty state is a host token; without it the padding is today's --tm-space-8");
+    }
+
+    [Fact]
+    public void DefaultConversationRoot_DoesNotDeclareContainerType()
+    {
+        var css = Stylesheet();
+        foreach (Match rule in RuleBlock.Matches(css))
+        {
+            var parts = ThemeCss.SelectorParts(rule.Groups["selector"].Value);
+            if (!parts.Contains(".tm-ai-conversation", StringComparer.Ordinal))
+            {
+                continue;
+            }
+
+            rule.Groups["body"].Value.Should().NotContain("container-type",
+                "inline-size containment on the default root collapses a shrink-to-fit host; only ScrollRow and Auto opt in");
+        }
+
+        PropertyOf(css, ".tm-ai-conversation--suggestions-scroll-row", "container-type")
+            .Should().Be("inline-size");
+        PropertyOf(css, ".tm-ai-conversation--suggestions-auto", "container-type")
+            .Should().Be("inline-size");
+        PropertyOf(css, ".tm-ai-conversation--suggestions-auto", "container-name")
+            .Should().Be("tm-ai-conversation");
+    }
+
+    [Fact]
+    public void ScrollRowLayout_IsNowrapOverflowWithAnInnerFocusRing()
+    {
+        var css = Stylesheet();
+        PropertyOf(css, ".tm-ai-conversation__suggestions--scroll-row", "flex-wrap")
+            .Should().Be("nowrap");
+        PropertyOf(css, ".tm-ai-conversation__suggestions--scroll-row", "overflow-x")
+            .Should().Be("auto");
+        PropertyOf(css, ".tm-ai-conversation__suggestions--scroll-row .tm-ai-conversation__suggestion", "flex")
+            .Should().Be("none");
+        PropertyOf(css, ".tm-ai-conversation__suggestions--scroll-row .tm-ai-conversation__suggestion", "max-inline-size")
+            .Should().Be("100%",
+                "a chip wider than the row cannot be revealed fully; wrap the label instead of overflowing the scroller");
+        PropertyOf(css, ".tm-ai-conversation__suggestions--scroll-row .tm-ai-conversation__suggestion", "white-space")
+            .Should().Be("normal");
+        PropertyOf(css, ".tm-ai-conversation__suggestions--scroll-row .tm-ai-conversation__suggestion", "overflow-wrap")
+            .Should().Be("anywhere");
+        PropertyOf(css, ".tm-ai-conversation__suggestions--scroll-row .tm-ai-conversation__suggestion", "text-align")
+            .Should().Be("start");
+        PropertyOf(css, ".tm-ai-conversation__suggestions--scroll-row .tm-ai-conversation__suggestion", "border-radius")
+            .Should().Be("var(--tm-radius-lg)",
+                "a wrapped label on --tm-radius-full becomes a lozenge with clipped corners");
+        PropertyOf(css, ".tm-ai-conversation__suggestions--scroll-row .tm-ai-conversation__suggestion:focus-visible", "outline-offset")
+            .Should().Be("calc(-1 * var(--tm-space-1))",
+                "an outward 2px ring would be clipped by the overflow-x scroller; --tm-space-1 is 4px");
+    }
+
+    [Fact]
+    public void AutoLayoutInsideNarrowContainer_MatchesScrollRow()
+    {
+        var css = Stylesheet();
+        css.Should().Contain("@container tm-ai-conversation (width < 640px)",
+            "Auto is a half-open container query at TmBreakpoints.Sm, not a max-width: 639px legacy form");
+
+        var auto = ContainerQueryBody(css, "tm-ai-conversation");
+        foreach (var property in new[]
+                 {
+                     "flex-wrap", "justify-content", "overflow-x", "max-inline-size", "padding-block", "scrollbar-width",
+                 })
+        {
+            PropertyOf(auto, ".tm-ai-conversation__suggestions--auto", property)
+                .Should().Be(
+                    PropertyOf(css, ".tm-ai-conversation__suggestions--scroll-row", property),
+                    "Auto inside the container query must not drift from ScrollRow on {0}",
+                    property);
+        }
+
+        const string scrollChip = ".tm-ai-conversation__suggestions--scroll-row .tm-ai-conversation__suggestion";
+        const string autoChip = ".tm-ai-conversation__suggestions--auto .tm-ai-conversation__suggestion";
+        foreach (var property in new[] { "flex", "max-inline-size", "white-space", "overflow-wrap", "text-align", "border-radius" })
+        {
+            PropertyOf(auto, autoChip, property)
+                .Should().Be(
+                    PropertyOf(css, scrollChip, property),
+                    "Auto chip inside the container query must not drift from ScrollRow on {0}",
+                    property);
+        }
+
+        PropertyOf(auto, autoChip + ":focus-visible", "outline-offset")
+            .Should().Be(
+                PropertyOf(css, scrollChip + ":focus-visible", "outline-offset"),
+                "the inner focus ring of Auto must stay identical to ScrollRow");
+    }
+
+    /// <summary>The body of <c>@container {containerName}</c>, so inner selectors match exactly.</summary>
+    private static string ContainerQueryBody(string css, string containerName)
+    {
+        var start = css.IndexOf($"@container {containerName}", StringComparison.Ordinal);
+        start.Should().BeGreaterThan(-1, "the stylesheet must declare @{0}", $"container {containerName}");
+
+        var open = css.IndexOf('{', start);
+        var depth = 0;
+        for (var index = open; index < css.Length; index++)
+        {
+            switch (css[index])
+            {
+                case '{':
+                    depth++;
+                    break;
+                case '}':
+                    depth--;
+                    if (depth == 0)
+                    {
+                        return css[(open + 1)..index];
+                    }
+
+                    break;
+            }
+        }
+
+        throw new InvalidOperationException($"The @container {containerName} block is not closed.");
     }
 }

@@ -1,0 +1,20 @@
+{
+  "kind": "Enum",
+  "category": "Markdown",
+  "namespace": "Tempo.Blazor.AI.Markdown",
+  "description": "How AiMarkdownRenderer treats a hyperlink in untrusted model markdown. Allow (the default) keeps today's hardened anchors. TextOnly renders the escaped link text with no a. Citation chips are not links and are unaffected.",
+  "packageId": "Tempo.Blazor.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Markdown/AiMarkdownLinkPolicy.cs",
+  "documentationStatus": "documented",
+  "itemName": "AiMarkdownLinkPolicy",
+  "members": [
+    {
+      "name": "Allow",
+      "description": "Render a hardened a (the default)."
+    },
+    {
+      "name": "TextOnly",
+      "description": "Render the escaped link text with no a."
+    }
+  ]
+}

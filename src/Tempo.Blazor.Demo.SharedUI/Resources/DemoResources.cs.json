@@ -667,6 +667,8 @@
   "TmDemo_HumanInTheLoop_DiffAccepted": "Přijaté změny: {0} z {1}",
   "TmDemo_HumanInTheLoop_DiffStackedHeading": "Návrh celé hodnoty pod sebou",
   "TmDemo_HumanInTheLoop_DiffStackedHint": "Layout=Stacked zobrazí návrh celé hodnoty pole jako jednu změnu s vymazanou a vloženou verzí pod sebou, místo propletení na jednom řádku.",
+  "TmDemo_HumanInTheLoop_DiffWholeHeading": "Porovnání celé hodnoty ve dvou pojmenovaných rámečcích",
+  "TmDemo_HumanInTheLoop_DiffWholeHint": "Layout=Whole ukáže nejdřív navrhovanou hodnotu a pod ní aktuální, každou ve vlastním pojmenovaném rámečku — prezentace pro dlouhou hodnotu pole.",
   "TmDemo_HumanInTheLoop_SuggestionHeading": "Doporučení s jistotou a alternativami",
   "TmDemo_HumanInTheLoop_SuggestionIntro": "Doporučení, které čtenář může přijmout, odmítnout nebo vzít zpět v okně pro Undo. Jistota je lokalizované slovo a volitelné procento; zdůvodnění je za rozbalovacím prvkem a alternativy jsou nativní radio skupina.",
   "TmDemo_HumanInTheLoop_SuggestionTitle": "Znovupoužít model schválení",

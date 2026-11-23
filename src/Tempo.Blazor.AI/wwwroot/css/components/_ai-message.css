@@ -9,12 +9,19 @@
    the text itself stays left-aligned (a right-aligned paragraph is measurably slower to read), only the
    block moves to its own side. */
 
+/* Default on :root so a host can override on documentElement or a wrapper
+   (EmusCz: .emus-ai-proposal). Redeclaring the token on .tm-ai-message
+   would shadow that cascade and pin today's base size. */
+:root {
+    --tm-ai-message-font-size: var(--tm-font-size-base);
+}
+
 .tm-ai-message {
     display: flex;
     align-items: flex-start;
     gap: var(--tm-space-3);
     color: var(--tm-color-text);
-    font-size: var(--tm-font-size-base);
+    font-size: var(--tm-ai-message-font-size, var(--tm-font-size-base));
     line-height: var(--tm-line-height-relaxed);
 }
 
@@ -207,6 +214,12 @@
 }
 
 /* ── Follow-up chips ────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-message__follow-ups-caption {
+    margin: 0;
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+}
 
 .tm-ai-message__follow-ups {
     display: flex;

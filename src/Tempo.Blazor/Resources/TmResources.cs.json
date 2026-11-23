@@ -6882,6 +6882,8 @@
   "TmInlineDiff_DecisionAccepted": "přijato",
   "TmInlineDiff_DecisionRejected": "odmítnuto",
   "TmInlineDiff_DecisionPending": "nezkontrolováno",
+  "TmInlineDiff_NewCaption": "Navrhováno",
+  "TmInlineDiff_OldCaption": "Aktuální",
   "TmSuggestionCard_AriaLabel": "Návrh",
   "TmSuggestionCard_Confidence": "Jistota",
   "TmSuggestionCard_ConfidenceHigh": "Vysoká jistota",

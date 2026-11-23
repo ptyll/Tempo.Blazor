@@ -24,6 +24,9 @@ may become.
 | `Markdown` | `string?` | `null` | Untrusted markdown. Whitespace renders nothing. |
 | `CodeBlockTemplate` | `Func<AiMarkdownCodeBlockContext, string>?` | `null` | Takes over a code block's HTML (e.g. syntax highlighting). The returned HTML is trusted verbatim — escape `context.Code` yourself (see below). |
 | `OnCitationClick` | `EventCallback<string>` | — | Raised with the source id of an activated citation chip. |
+| `ImagePolicy` | `AiMarkdownImagePolicy` | `Allow` | **2.13.0** How images are rendered. `Allow` keeps today's http/https images; `Block` drops every `<img>` (no alt); `AltText` renders escaped alt instead of fetching. Folded into `AiMarkdownRenderOptions.Images`. |
+| `LinkPolicy` | `AiMarkdownLinkPolicy` | `Allow` | **2.13.0** How hyperlinks are rendered. `Allow` keeps today's hardened `<a>`; `TextOnly` renders escaped link text with no `<a>`. Citation chips (`cite:`) are unaffected. Folded into `AiMarkdownRenderOptions.Links`. |
+| `ImageUrlFilter` | `Func<Uri, bool>?` | `null` | **2.13.0** Extra allowlist on top of the scheme policy. A `false` result is treated as `Block`. |
 | `Class` | `string?` | `null` | Extra CSS class(es) on the root `.tm-markdown-view`. |
 | `DataTestId` / `TestIdPrefix` | `string?` | `null` | Inherited from `TmComponentBase`; the default root test id is `markdown-view`. |
 
@@ -84,7 +87,9 @@ Two rules, both enforced by the component contract:
 4. **Every link is hardened**: `target="_blank" rel="noopener noreferrer nofollow"`, including
    autolinks (`<https://…>` and `www.…`).
 5. **Images load only from absolute http(s)**: a refused image is replaced by its alt text, so it never
-   becomes a request (no `data:` payload, no tracking pixel through a refused scheme).
+   becomes a request (no `data:` payload, no tracking pixel through a refused scheme). **2.13.0**
+   `AiMarkdownRenderOptions.Images` (`Allow` / `Block` / `AltText`) and `ImageUrlFilter` let a host
+   refuse every image or restrict the origin without wrapping the markdown first.
 6. **Citation chips, not links**: `[1](cite:<sourceId>)` renders as
    `<button class="tm-markdown-view__citation" data-source-id="<sourceId>">` with the localized
    accessible name; a `cite:` link without an id stays ordinary text.

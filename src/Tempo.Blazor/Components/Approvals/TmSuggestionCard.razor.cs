@@ -36,6 +36,7 @@ public partial class TmSuggestionCard : TmComponentBase, IDisposable
     private bool _busy;
     private DateTimeOffset? _undoDeadline;
     private FocusTarget _focusTarget;
+    private string? _lastErrorText;
 
     private ElementReference _rootElement;
     private ElementReference _acceptElement;
@@ -112,6 +113,25 @@ public partial class TmSuggestionCard : TmComponentBase, IDisposable
     /// <summary>Additional CSS classes for the root element.</summary>
     [Parameter] public string? Class { get; set; }
 
+    /// <summary>
+    /// Disables Accept, Dismiss and the alternative radios without hiding them. The card itself stays
+    /// focusable (no <c>inert</c>). Default <see langword="false"/>.
+    /// </summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>
+    /// Visible hint explaining why the card is disabled. Its id is referenced from Accept through
+    /// <c>aria-describedby</c>. Default <see langword="null"/> renders no hint.
+    /// </summary>
+    [Parameter] public string? DisabledReason { get; set; }
+
+    /// <summary>
+    /// Host-owned error shown in the alert instead of the generic save failure. A change is announced
+    /// once through the card's live region; the suggestion stays pending. Default
+    /// <see langword="null"/> keeps the built-in exception text.
+    /// </summary>
+    [Parameter] public string? ErrorText { get; set; }
+
     /// <summary>Accessible name of the card when <see cref="Title"/> is omitted. Defaults to a
     /// localized "Suggestion".</summary>
     [Parameter] public string? AriaLabel { get; set; }
@@ -126,7 +146,7 @@ public partial class TmSuggestionCard : TmComponentBase, IDisposable
     public bool IsBusy => _busy;
 
     /// <summary>Whether the suggestion is still decidable.</summary>
-    public bool CanDecide => _state == SuggestionState.Pending && !_busy;
+    public bool CanDecide => _state == SuggestionState.Pending && !_busy && !Disabled;
 
     /// <summary>The alternative the user picked, or <c>null</c> when none is selected.</summary>
     public string? CurrentAlternative => _selectedAlternative;
@@ -142,7 +162,11 @@ public partial class TmSuggestionCard : TmComponentBase, IDisposable
 
     private bool HasAlternatives => Alternatives is { Count: > 0 };
 
-    private string? ErrorMessage => _errorMessage;
+    private string? ErrorMessage => !string.IsNullOrWhiteSpace(ErrorText) ? ErrorText : _errorMessage;
+
+    private bool HasDisabledReason => !string.IsNullOrWhiteSpace(DisabledReason);
+
+    private string DisabledReasonId => $"{_id}-disabled-reason";
 
     private string StateName => _state switch
     {
@@ -249,6 +273,15 @@ public partial class TmSuggestionCard : TmComponentBase, IDisposable
         {
             _selectedAlternativeParameter = SelectedAlternative;
             _selectedAlternative = SelectedAlternative;
+        }
+
+        if (!string.Equals(ErrorText, _lastErrorText, StringComparison.Ordinal))
+        {
+            _lastErrorText = ErrorText;
+            if (!string.IsNullOrWhiteSpace(ErrorText))
+            {
+                _announcement = ErrorText;
+            }
         }
 
         EvaluateClockTransitions();

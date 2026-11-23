@@ -1,5 +1,6 @@
 using Bunit;
 using FluentAssertions;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
 using Tempo.Blazor.AI.Models;
@@ -202,6 +203,55 @@ public sealed class TmToolCallGroupTests : LocalizationTestBase
         cut.Find(".tm-tool-call__retry").Click();
 
         retried.Should().BeSameAs(calls[0], "the group tells the host WHICH call to run again");
+    }
+
+    [Fact]
+    public void ErrorTemplate_IsPassedThroughToEachCard()
+    {
+        UseFakeClock();
+        var failed = Call("c1", AiToolCallStatus.Failed, 1.0, "search");
+        failed.Error = "The index is unreachable.";
+        failed.ErrorCode = "index.unreachable";
+        var calls = new[]
+        {
+            failed,
+            Call("c2", AiToolCallStatus.Succeeded, 1.0, "fetch"),
+        };
+
+        var cut = Render<TmToolCallGroup>(parameters => parameters
+            .Add(group => group.ToolCalls, calls)
+            .Add(group => group.DefaultExpanded, true)
+            .Add(group => group.ErrorTemplate, (AiToolCall value) => builder =>
+            {
+                builder.OpenElement(0, "span");
+                builder.AddAttribute(1, "data-testid", "group-host-error");
+                builder.AddContent(2, value.ErrorCode);
+                builder.CloseElement();
+            }));
+
+        cut.Find(".tm-tool-call__toggle").Click();
+
+        cut.Find("[data-testid='group-host-error']").TextContent.Should().Be("index.unreachable");
+        cut.FindAll(".tm-tool-call__error-text").Should().BeEmpty();
+        cut.FindAll("[data-error-code='index.unreachable']").Should().ContainSingle(
+            "only the failed card exposes the code");
+        cut.FindAll(".tm-tool-call")[1].GetAttribute("data-error-code").Should().BeNull();
+    }
+
+    [Fact]
+    public void WithoutErrorTemplate_CardsKeepTheDefaultErrorMarkup()
+    {
+        UseFakeClock();
+        var failed = Call("c1", AiToolCallStatus.Failed, 1.0, "search");
+        failed.Error = "The index is unreachable.";
+        var cut = Render<TmToolCallGroup>(parameters => parameters
+            .Add(group => group.ToolCalls, new[] { failed, Call("c2", AiToolCallStatus.Succeeded, 1.0) })
+            .Add(group => group.DefaultExpanded, true));
+
+        cut.Find(".tm-tool-call__toggle").Click();
+
+        cut.Find(".tm-tool-call__error-text").TextContent.Should().Be("The index is unreachable.");
+        cut.FindAll("[data-testid='group-host-error']").Should().BeEmpty();
     }
 
     [Fact]

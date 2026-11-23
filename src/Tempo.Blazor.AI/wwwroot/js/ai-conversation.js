@@ -151,6 +151,7 @@ export function attach(root, content, dotNetRef) {
         dotNetRef,
         onScroll: null,
         onGesture: null,
+        onFocusIn: null,
         observer: null,
         lastNear: nearBottom(root),
         boxHeight: null,
@@ -190,6 +191,26 @@ export function attach(root, content, dotNetRef) {
     for (const type of INTERRUPT_EVENTS) {
         root.addEventListener(type, entry.onGesture, { passive: true });
     }
+
+    // Suggestion chips live in the empty-state row inside the log. A native
+    // focusin here reveals an overflowing chip on the same turn as the focus.
+    // Wrap is skipped: those chips wrap instead of overflowing the row.
+    entry.onFocusIn = (event) => {
+        const row = typeof root.querySelector === 'function'
+            ? root.querySelector('.tm-ai-conversation__suggestions')
+            : null;
+        const chip = event?.target;
+        if (!row || !chip || (chip !== row && !row.contains?.(chip))) {
+            return;
+        }
+
+        if (!row.matches?.('.tm-ai-conversation__suggestions--scroll-row, .tm-ai-conversation__suggestions--auto')) {
+            return;
+        }
+
+        revealFocusedSuggestion(row, chip === row ? null : chip, root);
+    };
+    root.addEventListener('focusin', entry.onFocusIn);
 
     if (typeof ResizeObserver === 'function') {
         // ONE observer for both surfaces the transcript's geometry lives on: the CONTENT (a streamed
@@ -249,6 +270,10 @@ export function detach(root) {
         for (const type of INTERRUPT_EVENTS) {
             root.removeEventListener(type, entry.onGesture);
         }
+    }
+
+    if (entry.onFocusIn) {
+        root.removeEventListener('focusin', entry.onFocusIn);
     }
 
     endProgrammatic(entry, root, false);
@@ -362,6 +387,59 @@ export function scrollToMessage(root, messageId, smooth) {
     } catch {
         // A browser without scroll options still gets the jump.
         root.scrollTop = top;
+    }
+
+    return true;
+}
+
+/**
+ * Reveals a partially visible focused suggestion chip inside the empty-state row.
+ * Scrolls ONLY the row — never the transcript (`log`) and never the page. Smooth
+ * only when the reader has not asked for reduced motion. A fully visible chip is
+ * a no-op. `chip` may be omitted: the module then uses `document.activeElement`
+ * when it sits inside `row`.
+ *
+ * @param row the suggestions row to scroll
+ * @param chip the focused chip, or null to use document.activeElement
+ * @param log ignored; documents that the transcript is never scrolled
+ */
+export function revealFocusedSuggestion(row, chip, log) {
+    if (!row) {
+        return false;
+    }
+
+    const target = chip
+        || (typeof document !== 'undefined' && row.contains?.(document.activeElement)
+            ? document.activeElement
+            : null);
+    if (!target || typeof target.getBoundingClientRect !== 'function'
+        || typeof row.getBoundingClientRect !== 'function') {
+        return false;
+    }
+
+    const rowBox = row.getBoundingClientRect();
+    const chipBox = target.getBoundingClientRect();
+    if (!rowBox || !chipBox) {
+        return false;
+    }
+
+    let delta = 0;
+    if (chipBox.right > rowBox.right) {
+        delta = chipBox.right - rowBox.right;
+    } else if (chipBox.left < rowBox.left) {
+        delta = chipBox.left - rowBox.left;
+    }
+
+    if (delta === 0) {
+        return false;
+    }
+
+    const left = (row.scrollLeft ?? 0) + delta;
+    const behavior = prefersReducedMotion() ? 'auto' : 'smooth';
+    try {
+        row.scrollTo({ left, behavior });
+    } catch {
+        row.scrollLeft = left;
     }
 
     return true;

@@ -122,6 +122,42 @@
       "description": "Render the follow-up suggestions as chips under the answer. Default true."
     },
     {
+      "name": "FollowUpsCaption",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Visible caption of the follow-up group. When set, the group uses aria-labelledby pointing at the caption and drops aria-label. Null or blank keeps today's aria-label."
+    },
+    {
+      "name": "FollowUpsDisabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Disables every follow-up chip without hiding the group. Default false."
+    },
+    {
+      "name": "ImagePolicy",
+      "type": "AiMarkdownImagePolicy",
+      "isRequired": false,
+      "description": "How images in this turn's markdown are rendered. Flows to TmMarkdownView. Allow (default) keeps today's http/https images; Block drops every img; AltText renders escaped alt instead of fetching."
+    },
+    {
+      "name": "LinkPolicy",
+      "type": "AiMarkdownLinkPolicy",
+      "isRequired": false,
+      "description": "How hyperlinks in this turn's markdown are rendered. Allow (default) keeps today's hardened anchors; TextOnly renders escaped link text with no a. Citation chips are unaffected."
+    },
+    {
+      "name": "ImageUrlFilter",
+      "type": "Func<Uri, bool>?",
+      "isRequired": false,
+      "description": "Extra allowlist on top of the scheme policy. A false result is treated as Block."
+    },
+    {
+      "name": "ToolCallErrorTemplate",
+      "type": "RenderFragment<AiToolCall>?",
+      "isRequired": false,
+      "description": "Replaces the built-in failed-call error body. The card still carries data-error-code only while the call is Failed."
+    },
+    {
       "name": "ShowSources",
       "type": "bool",
       "isRequired": false,

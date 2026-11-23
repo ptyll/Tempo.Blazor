@@ -36,7 +36,7 @@
             <div id="@_bodyId" class="tm-tool-call-group__body">
                 @foreach (var call in Calls)
                 {
-                    <TmToolCallCard ToolCall="call" OnRetry="@CardRetryCallback(call)" />
+                    <TmToolCallCard ToolCall="call" OnRetry="@CardRetryCallback(call)" ErrorTemplate="ErrorTemplate" />
                 }
             </div>
         }
@@ -64,6 +64,12 @@
     /// run.
     /// </summary>
     [Parameter] public EventCallback<AiToolCall> OnRetry { get; set; }
+
+    /// <summary>
+    /// Host error body for each card in the run. Forwarded to <see cref="TmToolCallCard.ErrorTemplate"/>.
+    /// Null keeps the default error text.
+    /// </summary>
+    [Parameter] public RenderFragment<AiToolCall>? ErrorTemplate { get; set; }
 
     /// <summary>Additional CSS class(es) for the root element.</summary>
     [Parameter] public string? Class { get; set; }

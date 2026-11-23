@@ -503,6 +503,114 @@ public sealed class AiConversationE2ETests : WasmTestBase
         AssertNoClientErrors();
     }
 
+    /// <summary>
+    /// Fáze 10 E: at 375 px Auto becomes a nowrap row. Tabbing to the third chip reveals it fully
+    /// inside the row and leaves the transcript's scrollTop where it was.
+    /// </summary>
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task Suggestions_ScrollRowAt375_RevealsTheThirdChipWithoutMovingTheLog()
+    {
+        var page = await OpenPageAsync(width: 375, height: 812);
+
+        var log = page.Locator("[data-testid='ai-conversation-log']");
+        var row = page.Locator(".tm-ai-conversation__suggestions");
+        var chips = page.Locator("[data-testid='ai-conversation-suggestion']");
+        await Microsoft.Playwright.Assertions.Expect(chips).ToHaveCountAsync(3);
+        await Microsoft.Playwright.Assertions.Expect(row).ToHaveAttributeAsync("data-layout", "auto");
+
+        var logTopBefore = await log.EvaluateAsync<double>("el => el.scrollTop");
+
+        await chips.Nth(2).FocusAsync();
+        try
+        {
+            await page.WaitForFunctionAsync("""
+                () => {
+                    const row = document.querySelector('.tm-ai-conversation__suggestions');
+                    const chip = document.querySelectorAll('[data-testid="ai-conversation-suggestion"]')[2];
+                    if (!row || !chip) return false;
+                    const r = row.getBoundingClientRect();
+                    const c = chip.getBoundingClientRect();
+                    return c.left >= r.left - 1 && c.right <= r.right + 1;
+                }
+                """, null, new PageWaitForFunctionOptions { Timeout = 5000 });
+        }
+        catch (TimeoutException)
+        {
+            var diag = await page.EvaluateAsync<string>("""
+                () => {
+                    const row = document.querySelector('.tm-ai-conversation__suggestions');
+                    const chip = document.querySelectorAll('[data-testid="ai-conversation-suggestion"]')[2];
+                    const conv = document.querySelector('.tm-ai-conversation');
+                    if (!row || !chip) return 'missing-row-or-chip';
+                    const cs = getComputedStyle(row);
+                    const r = row.getBoundingClientRect();
+                    const c = chip.getBoundingClientRect();
+                    return JSON.stringify({
+                        layout: row.getAttribute('data-layout'),
+                        wrap: cs.flexWrap,
+                        overflowX: cs.overflowX,
+                        convW: conv && conv.getBoundingClientRect().width,
+                        row: { left: r.left, right: r.right, w: r.width, scrollLeft: row.scrollLeft, scrollWidth: row.scrollWidth, clientWidth: row.clientWidth },
+                        chip: { left: c.left, right: c.right, w: c.width },
+                        active: document.activeElement && document.activeElement.getAttribute('data-testid')
+                    });
+                }
+                """);
+            Assert.Fail("third chip was not revealed inside the row: " + diag);
+        }
+
+        var logTopAfter = await log.EvaluateAsync<double>("el => el.scrollTop");
+        Assert.AreEqual(logTopBefore, logTopAfter, 0.5, "revealing a chip must not scroll the transcript");
+
+        AssertNoClientErrors();
+    }
+
+    /// <summary>
+    /// Fáze 10 G: at 375 px the sticky composer clears a 56 px host bar through
+    /// <c>--tm-ai-composer-bottom-clearance</c>; a larger keyboard inset wins the <c>max()</c>.
+    /// </summary>
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task Composer_At375_ClearsA56PxHostBar_AndKeyboardInsetWins()
+    {
+        var page = await OpenPageAsync(width: 375, height: 812);
+        var composer = page.Locator("[data-testid='ai-composer']");
+        await Microsoft.Playwright.Assertions.Expect(composer).ToBeVisibleAsync();
+        // Sticky bottom only engages once the composer meets the viewport edge;
+        // the demo page is taller than 812 px, so bring it to the fold first.
+        await composer.ScrollIntoViewIfNeededAsync();
+
+        await page.EvaluateAsync("""
+            document.documentElement.style.setProperty('--tm-ai-composer-bottom-clearance', '56px');
+            """);
+
+        var gapAfterBar = await page.EvaluateAsync<double>("""
+            () => {
+                const c = document.querySelector('[data-testid="ai-composer"]');
+                return window.innerHeight - c.getBoundingClientRect().bottom;
+            }
+            """);
+        Assert.IsTrue(gapAfterBar >= 55,
+            $"the sticky composer must clear a 56 px host bar (gap was {gapAfterBar:0.#} px)");
+
+        await page.EvaluateAsync("""
+            document.querySelector('[data-testid="ai-composer"]')
+                .style.setProperty('--tm-ai-composer-keyboard-inset', '120px');
+            """);
+
+        var gapAfterKeyboard = await page.EvaluateAsync<double>("""
+            () => {
+                const c = document.querySelector('[data-testid="ai-composer"]');
+                return window.innerHeight - c.getBoundingClientRect().bottom;
+            }
+            """);
+        Assert.IsTrue(gapAfterKeyboard >= 119,
+            $"a 120 px keyboard inset must win over the 56 px bar (gap was {gapAfterKeyboard:0.#} px)");
+
+        AssertNoClientErrors();
+    }
+
     // ── Accessibility ──────────────────────────────────────────────────────────────────────
 
     [TestMethod]
@@ -746,6 +854,38 @@ public sealed class AiConversationServerSmokeE2ETests : ServerTestBase
     private const string AnswerSelector =
         ".tm-ai-conversation [data-testid='ai-message'][data-role='assistant']";
 
+    private readonly List<string> _clientErrors = [];
+
+    private async Task<IPage> OpenPageAsync(int width, int height)
+    {
+        var context = await CreateContextAsync();
+        await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
+        var page = await context.NewPageAsync();
+        page.PageError += (_, error) => { lock (_clientErrors) _clientErrors.Add("PAGEERROR: " + error); };
+        page.Console += (_, message) =>
+        {
+            if (message.Type == "error" && message.Text.Contains("Unhandled exception", StringComparison.Ordinal))
+            {
+                lock (_clientErrors) _clientErrors.Add("CONSOLE: " + message.Text);
+            }
+        };
+
+        await page.SetViewportSizeAsync(width, height);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/ai-conversation");
+        await page.Locator("[data-testid='ai-conversation']").WaitForAsync(
+            new LocatorWaitForOptions { Timeout = 30000 });
+        return page;
+    }
+
+    private void AssertNoClientErrors()
+    {
+        lock (_clientErrors)
+        {
+            Assert.IsTrue(_clientErrors.Count == 0,
+                "Unhandled client-side errors occurred:\n" + string.Join("\n", _clientErrors));
+        }
+    }
+
     [TestMethod]
     public async Task Streaming_CompletesOnTheServerHost()
     {
@@ -771,5 +911,58 @@ public sealed class AiConversationServerSmokeE2ETests : ServerTestBase
         var liveRegions = await page.EvaluateAsync<int>(
             "() => document.querySelector(\".tm-ai-conversation\").querySelectorAll('[aria-live]').length");
         Assert.AreEqual(1, liveRegions, "the transcript must be the conversation's only aria-live element");
+    }
+
+    [TestMethod]
+    public async Task Suggestions_ScrollRowAt375_RevealsTheThirdChipWithoutMovingTheLog()
+    {
+        var page = await OpenPageAsync(375, 812);
+        await page.Locator("[data-testid='ai-conversation-empty']").WaitForAsync(
+            new LocatorWaitForOptions { Timeout = 30000 });
+
+        var log = page.Locator("[data-testid='ai-conversation-log']");
+        var chips = page.Locator("[data-testid='ai-conversation-suggestion']");
+        await Microsoft.Playwright.Assertions.Expect(chips).ToHaveCountAsync(3);
+        await Microsoft.Playwright.Assertions.Expect(page.Locator(".tm-ai-conversation__suggestions"))
+            .ToHaveAttributeAsync("data-layout", "auto");
+        var logTopBefore = await log.EvaluateAsync<double>("el => el.scrollTop");
+
+        await chips.Nth(2).FocusAsync();
+        await page.WaitForFunctionAsync("""
+            () => {
+                const row = document.querySelector('.tm-ai-conversation__suggestions');
+                const chip = document.querySelectorAll('[data-testid="ai-conversation-suggestion"]')[2];
+                if (!row || !chip) return false;
+                const r = row.getBoundingClientRect();
+                const c = chip.getBoundingClientRect();
+                return c.left >= r.left - 1 && c.right <= r.right + 1;
+            }
+            """, null, new PageWaitForFunctionOptions { Timeout = 5000 });
+
+        var logTopAfter = await log.EvaluateAsync<double>("el => el.scrollTop");
+        Assert.AreEqual(logTopBefore, logTopAfter, 0.5, "revealing a chip must not scroll the transcript");
+        AssertNoClientErrors();
+    }
+
+    [TestMethod]
+    public async Task Composer_At375_ClearsA56PxHostBar()
+    {
+        var page = await OpenPageAsync(375, 812);
+        var composer = page.Locator("[data-testid='ai-composer']");
+        await composer.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+        await composer.ScrollIntoViewIfNeededAsync();
+
+        await page.EvaluateAsync("""
+            document.documentElement.style.setProperty('--tm-ai-composer-bottom-clearance', '56px');
+            """);
+
+        var gap = await page.EvaluateAsync<double>("""
+            () => {
+                const c = document.querySelector('[data-testid="ai-composer"]');
+                return window.innerHeight - c.getBoundingClientRect().bottom;
+            }
+            """);
+        Assert.IsTrue(gap >= 55, $"the sticky composer must clear a 56 px host bar (gap was {gap:0.#} px)");
+        AssertNoClientErrors();
     }
 }

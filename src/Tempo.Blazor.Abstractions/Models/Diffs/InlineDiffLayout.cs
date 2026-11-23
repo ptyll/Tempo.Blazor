@@ -25,4 +25,12 @@ public enum InlineDiffLayout
     /// is hard to read.
     /// </summary>
     Stacked = 1,
+
+    /// <summary>
+    /// Two named boxes — the proposed (new) value first, then the current (old) value — each a real
+    /// <c>&lt;ins&gt;</c> / <c>&lt;del&gt;</c>. Meant for a long or multi-line field value where a
+    /// word-level interleave (or even a stacked hunk) is harder to read than the two complete sides.
+    /// The comparison and every decision surface are unchanged; only the presentation swaps.
+    /// </summary>
+    Whole = 2,
 }

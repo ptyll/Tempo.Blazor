@@ -1,0 +1,24 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "description": "How the empty-state suggestion chips of TmAiConversation sit in the panel. Wrap (the default) keeps today's wrapping, centred row. ScrollRow is a nowrap horizontal scroller that reveals a partially visible focused chip without moving the transcript. Auto is ScrollRow under 640 px via a CSS container query; desktop Auto stays Wrap.",
+  "packageId": "Tempo.Blazor.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/AiSuggestionsLayout.cs",
+  "documentationStatus": "documented",
+  "itemName": "AiSuggestionsLayout",
+  "members": [
+    {
+      "name": "Wrap",
+      "description": "The chips wrap and stay centred (the default). The empty-state DOM is unchanged."
+    },
+    {
+      "name": "ScrollRow",
+      "description": "A single nowrap row that scrolls horizontally. A partially visible focused chip is revealed inside the row (never by scrolling the transcript or the page)."
+    },
+    {
+      "name": "Auto",
+      "description": "ScrollRow when the conversation is narrower than 640 px, Wrap otherwise. The switch is a CSS container query."
+    }
+  ]
+}

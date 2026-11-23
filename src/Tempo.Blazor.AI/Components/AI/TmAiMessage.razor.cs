@@ -38,6 +38,7 @@ public partial class TmAiMessage
     private ElementReference _feedbackInputRef;
 
     private readonly string _feedbackInputId = $"tm-ai-message-feedback-{Guid.NewGuid():n}";
+    private readonly string _followUpsCaptionId = $"tm-ai-message-follow-ups-{Guid.NewGuid():n}";
     private IJSObjectReference? _module;
     private DotNetObjectReference<TmAiMessage>? _self;
     private AiMessage? _lastMessage;
@@ -77,6 +78,37 @@ public partial class TmAiMessage
 
     /// <summary>Render the follow-up suggestions as chips under the answer. Default true.</summary>
     [Parameter] public bool ShowFollowUps { get; set; } = true;
+
+    /// <summary>
+    /// Visible caption of the follow-up group. When set, the group is named through
+    /// <c>aria-labelledby</c> instead of the localized <c>aria-label</c>. Default
+    /// <see langword="null"/> keeps today's unnamed chips.
+    /// </summary>
+    [Parameter] public string? FollowUpsCaption { get; set; }
+
+    /// <summary>
+    /// Disables the follow-up chips without hiding them. Default <see langword="false"/>. A click
+    /// does not raise <see cref="OnFollowUp"/> while the chips are disabled.
+    /// </summary>
+    [Parameter] public bool FollowUpsDisabled { get; set; }
+
+    /// <summary>
+    /// How images in the answer markdown are rendered. Forwarded to
+    /// <see cref="TmMarkdownView.ImagePolicy"/>. Default <see cref="AiMarkdownImagePolicy.Allow"/>.
+    /// </summary>
+    [Parameter] public AiMarkdownImagePolicy ImagePolicy { get; set; } = AiMarkdownImagePolicy.Allow;
+
+    /// <summary>
+    /// How hyperlinks in the answer markdown are rendered. Forwarded to
+    /// <see cref="TmMarkdownView.LinkPolicy"/>. Default <see cref="AiMarkdownLinkPolicy.Allow"/>.
+    /// </summary>
+    [Parameter] public AiMarkdownLinkPolicy LinkPolicy { get; set; } = AiMarkdownLinkPolicy.Allow;
+
+    /// <summary>
+    /// Optional extra allowlist on top of the scheme policy. Forwarded to
+    /// <see cref="TmMarkdownView.ImageUrlFilter"/>.
+    /// </summary>
+    [Parameter] public Func<Uri, bool>? ImageUrlFilter { get; set; }
 
     /// <summary>
     /// Replaces the default role glyph inside the avatar slot. The slot itself stays decorative
@@ -120,6 +152,12 @@ public partial class TmAiMessage
     /// host gets a button that does nothing.
     /// </summary>
     [Parameter] public EventCallback<AiToolCall> OnToolCallRetry { get; set; }
+
+    /// <summary>
+    /// Host error body for a failed tool call. Forwarded to <see cref="TmToolCallCard.ErrorTemplate"/>
+    /// (and through <see cref="TmToolCallGroup"/> for a run). Null keeps the default error text.
+    /// </summary>
+    [Parameter] public RenderFragment<AiToolCall>? ToolCallErrorTemplate { get; set; }
 
     /// <summary>
     /// Raised with the target zero-based version index when the reader steps through the regenerated
@@ -189,6 +227,8 @@ public partial class TmAiMessage
             .Where(text => text.Length > 0));
 
     private IReadOnlyList<string> FollowUps => Message is null ? Array.Empty<string>() : (IReadOnlyList<string>)Message.FollowUps.ToList();
+
+    private bool HasFollowUpsCaption => !string.IsNullOrWhiteSpace(FollowUpsCaption);
 
     private bool IsStreaming => Message?.Status == AiMessageStatus.Streaming;
 
@@ -476,10 +516,12 @@ public partial class TmAiMessage
 
     private async Task FollowUpAsync(string suggestion)
     {
-        if (OnFollowUp.HasDelegate)
+        if (FollowUpsDisabled || !OnFollowUp.HasDelegate)
         {
-            await OnFollowUp.InvokeAsync(suggestion);
+            return;
         }
+
+        await OnFollowUp.InvokeAsync(suggestion);
     }
 
     private async Task ChangeVersionAsync(int delta)

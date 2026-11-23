@@ -2879,7 +2879,7 @@
           "type": "InlineDiffLayout",
           "isRequired": false,
           "default": "InlineDiffLayout.Inline",
-          "description": "How the changes sit in the text. Inline (the default) keeps them flowing with their context; Stacked gives each hunk its own row, so the deletion and the insertion of a change read one below the other — the presentation for a one-hunk proposal of a whole value (an assistant suggesting the complete replacement text of a field). The comparison and every decision surface are unchanged."
+          "description": "How the changes sit in the text. Inline (the default) keeps them flowing with their context; Stacked gives each hunk its own row, so the deletion and the insertion of a change read one below the other — the presentation for a one-hunk proposal of a whole value; Whole is two named boxes (proposed first as ins, then current as del) for a long or multi-line field value. The comparison and every decision surface are unchanged."
         },
         {
           "name": "Mode",
@@ -2889,10 +2889,22 @@
           "description": "How the comparison is presented. Default is Display."
         },
         {
+          "name": "NewCaption",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Visible caption of the Whole layout's proposed (new) box. Null or whitespace falls back to the localized TmInlineDiff_NewCaption."
+        },
+        {
           "name": "NewText",
           "type": "string?",
           "isRequired": false,
           "description": "The proposed text; null is read as empty."
+        },
+        {
+          "name": "OldCaption",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Visible caption of the Whole layout's current (old) box. Null or whitespace falls back to the localized TmInlineDiff_OldCaption."
         },
         {
           "name": "OldText",
@@ -3347,10 +3359,28 @@
           "description": "How sure the machine is, from 0 to 1. Rendered as a localized band (High / Medium / Low confidence) and, with ShowConfidencePercent, as a percentage. null shows no confidence."
         },
         {
+          "name": "Disabled",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Disables Accept, Dismiss and the alternative radios while the card stays focusable (no inert on the pending body). Default false."
+        },
+        {
+          "name": "DisabledReason",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Accessible description of why Accept is disabled; wired as the Accept button's aria-describedby."
+        },
+        {
           "name": "Dismissed",
           "type": "EventCallback",
           "isRequired": false,
           "description": "Raised together with OnDismiss."
+        },
+        {
+          "name": "ErrorText",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Host-owned error announced once through the live region. The card stays Pending."
         },
         {
           "name": "OnAccept",
@@ -37706,6 +37736,10 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor/wwwroot/js/tm-inline-diff.js",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor/wwwroot/js/tm-kanban.js",
       "kind": "JavaScript"
     },
@@ -37867,6 +37901,10 @@
     },
     {
       "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-focus-trap.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-inline-diff.test.mjs",
       "kind": "JavaScript"
     },
     {

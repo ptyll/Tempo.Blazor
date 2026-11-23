@@ -207,6 +207,12 @@
     overflow-wrap: anywhere;
 }
 
+.tm-suggestion-card__disabled-reason {
+    margin: 0;
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+}
+
 /* ── Error and actions ─────────────────────────────────── */
 .tm-suggestion-card__alert {
     margin: 0;

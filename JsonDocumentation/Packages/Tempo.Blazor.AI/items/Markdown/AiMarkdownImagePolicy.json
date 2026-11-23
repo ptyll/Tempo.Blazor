@@ -1,0 +1,24 @@
+{
+  "kind": "Enum",
+  "category": "Markdown",
+  "namespace": "Tempo.Blazor.AI.Markdown",
+  "description": "How AiMarkdownRenderer treats an image in untrusted model markdown. Allow (the default) keeps today's behaviour (http/https images load; everything else degrades to the alt text). Block drops the image entirely. AltText renders the escaped alt instead of an img, so nothing is fetched.",
+  "packageId": "Tempo.Blazor.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Markdown/AiMarkdownImagePolicy.cs",
+  "documentationStatus": "documented",
+  "itemName": "AiMarkdownImagePolicy",
+  "members": [
+    {
+      "name": "Allow",
+      "description": "Load a safe http/https image (the default). An unsafe source still degrades to its alt text."
+    },
+    {
+      "name": "Block",
+      "description": "Drop the image entirely: no img and no alt text."
+    },
+    {
+      "name": "AltText",
+      "description": "Render the escaped alt text instead of an img, so nothing is fetched."
+    }
+  ]
+}

@@ -63,7 +63,9 @@
         border: var(--tm-border-width) solid var(--tm-border-color);
         border-radius: var(--tm-radius-lg);
         background: var(--tm-bg-surface);
-        overflow: hidden;
+        /* Visible on purpose: overflow:hidden would make this host the sticky containing
+           block, so the narrow composer could not pin to the viewport (Fáze 10 G). */
+        overflow: visible;
     }
 
     .ai-demo-status {
@@ -183,6 +185,7 @@
                               Messages="_messages"
                               Generating="_isGenerating"
                               Suggestions="_suggestions"
+                              SuggestionsLayout="AiSuggestionsLayout.Auto"
                               OnSuggestion="SendPromptAsync"
                               OnStop="StopHostDrivenGenerationAsync"
                               Height="34rem">

@@ -22872,10 +22872,24 @@
       "kind": "Enum",
       "category": "Models",
       "namespace": "Tempo.Blazor.Abstractions.Models.Diffs",
-      "description": "How TmInlineDiff places the changes inside the text: Inline flows them with their context (the presentation the component always had), Stacked gives each hunk its own row so the deletion and the insertion of a change read one below the other - the presentation for a one-hunk proposal of a whole value. The layout is about the user interface only - both layouts show exactly the same hunks and the same TextDiffResult.Apply output, and every decision surface keeps working.",
+      "description": "How TmInlineDiff places the changes inside the text: Inline flows them with their context (the presentation the component always had), Stacked gives each hunk its own row so the deletion and the insertion of a change read one below the other - the presentation for a one-hunk proposal of a whole value, and Whole is two named boxes (proposed first, then current) for a long or multi-line field value. The layout is about the user interface only - every layout shows exactly the same hunks and the same TextDiffResult.Apply output, and every decision surface keeps working.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Diffs/InlineDiffLayout.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Inline",
+          "description": "The changes flow inside the surrounding text — the default and the presentation the component always had."
+        },
+        {
+          "name": "Stacked",
+          "description": "Each hunk becomes its own row, so the deletion and the insertion of a change read one below the other."
+        },
+        {
+          "name": "Whole",
+          "description": "Two named boxes — the proposed (new) value first, then the current (old) value — each a real ins / del. Meant for a long or multi-line field value."
+        }
+      ]
     },
     {
       "itemName": "InlineDiffMode",

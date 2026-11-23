@@ -7,6 +7,39 @@
 > [docs/proposals/time-input-mobile.md](docs/proposals/time-input-mobile.md)). Additive public API;
 > `TmTimePicker.Presentation` stays `Segments` (today's DOM).
 
+### Added — AI conversation (EmusCz assistant, Fáze 10)
+
+- **`TmAiConversation.CompletionAnnouncement` / `AnnounceAsync`** — a host formatter for the
+  completion note spoken into the transcript live region, plus a public `AnnounceAsync` that
+  re-speaks identical text through a sequence-keyed node. Default announcement is unchanged.
+- **`TmAiConversation.SuggestionsLayout`** (`AiSuggestionsLayout`: `Wrap` / `ScrollRow` / `Auto`,
+  default `Wrap`) — a nowrap horizontal scroller that reveals a focused chip without moving the
+  transcript; `Auto` is ScrollRow under 640 px via a container query. Token
+  `--tm-ai-conversation-empty-padding-block` (fallback `--tm-space-8`).
+- **`TmAiMessage.FollowUpsCaption` / `FollowUpsDisabled`** — a visible caption switches the group to
+  `aria-labelledby`; disabled chips stay in the tree. Defaults keep today's `aria-label` and enabled
+  chips.
+- **`TmMarkdownView` / `TmAiMessage` image and link policy** — `AiMarkdownImagePolicy`
+  (`Allow` / `Block` / `AltText`) and `AiMarkdownLinkPolicy` (`Allow` / `TextOnly`) plus
+  `ImageUrlFilter`. Defaults `Allow` keep today's render. Citation chips are unaffected.
+- **`AiToolCall.ErrorCode` / `AiToolCallCompletedDelta.ErrorCode`** (copied by `AiMessageStreamApplier`),
+  **`TmToolCallCard.ErrorTemplate`** passed through `TmToolCallGroup` and `TmAiMessage.ToolCallErrorTemplate`
+  — host body for a failed tool call; `data-error-code` still appears only while the call is Failed.
+- **`TmSuggestionCard.Disabled` / `DisabledReason` / `ErrorText`** — disables Accept/Dismiss/alternatives
+  without `inert`; a host error is announced once and the card stays Pending.
+- **`InlineDiffLayout.Whole`** — two named boxes (proposed `<ins>` first, then current `<del>`),
+  captions `NewCaption`/`OldCaption`, overflow keyboard stop via `tm-inline-diff.js`. Tokens
+  `--tm-inline-diff-padding` / `--tm-inline-diff-bg` / `--tm-inline-diff-border-width` /
+  `--tm-inline-diff-whole-new-max-lines` / `--tm-inline-diff-whole-old-max-lines` fall back to today's
+  values.
+- **`TmAiComposer.FocusAsync(bool preventScroll = false)`** — focuses the textarea through its
+  ElementReference (also while generating); silent no-op without interop.
+- **Composer / message host tokens** — `--tm-ai-composer-bottom-clearance` (default `0px`; sticky
+  inset is `max(keyboard-inset, bottom-clearance)`) and `--tm-ai-message-font-size` (fallback
+  `--tm-font-size-base`).
+- **Demos / E2E** — `/ai-conversation` binds `SuggestionsLayout="Auto"`; `/human-in-the-loop` adds the
+  Whole card. Specs: `AiConversationE2ETests` and `HumanInTheLoopE2ETests` (WASM + Server smoke).
+
 ### Added — time-of-day core (`Tempo.Blazor` / `Tempo.Blazor.Abstractions`, Fáze 2: Jádro)
 
 - **`TimeOfDayFormat`** (internal, `Tempo.Blazor.Components.Pickers`) — culture hour cycle from

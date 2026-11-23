@@ -252,6 +252,11 @@ public static class AiMessageStreamApplier
             changed |= SetIfDifferent(call.Error, delta.Error, value => call.Error = value);
         }
 
+        if (delta.ErrorCode is not null)
+        {
+            changed |= SetIfDifferent(call.ErrorCode, delta.ErrorCode, value => call.ErrorCode = value);
+        }
+
         if (call.IsRedacted != delta.IsRedacted)
         {
             call.IsRedacted = delta.IsRedacted;
