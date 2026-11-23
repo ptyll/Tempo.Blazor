@@ -18,7 +18,8 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.3" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Authentication" Version="10.0.3" />
-    <PackageReference Include="Microsoft.AspNetCore.WebUtilities" Version="10.0.3" />
+    <!-- NuGetAudit NU1903: GHSA-x33c-w48q-qrgc (CVE-2026-114149) in 10.0.0–10.0.14; patched 10.0.15. -->
+    <PackageReference Include="Microsoft.AspNetCore.WebUtilities" Version="10.0.15" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.3" />
   </ItemGroup>
 

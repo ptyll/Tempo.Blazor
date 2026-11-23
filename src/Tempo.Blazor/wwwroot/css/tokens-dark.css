@@ -31,6 +31,9 @@
 
   /* Border */
   --tm-border-color:         #334155;
+  /* Re-declared so a nested dark region recomputes the alias with this border
+     (a :root-only alias would inherit the finished light colour). */
+  --tm-tabs-edge-shadow-color: var(--tm-border-color);
   /* Control boundary — see tokens.css. #334155 is 1.41:1 on --tm-bg-surface and 1.00:1 on
      --tm-bg-muted (the same colour), so it cannot mark an unchecked control. The dark scale's
      gray-400 (#94a3b8) is 5.71:1 on the surface and 4.04:1 on the muted panel. */
@@ -483,6 +486,7 @@
   --tm-bg-overlay:                  rgba(0, 0, 0, 0.5);
   --tm-modal-stacked-scrim:         color-mix(in srgb, var(--tm-bg-overlay) 40%, transparent);
   --tm-border-color:                var(--tm-color-gray-200);
+  --tm-tabs-edge-shadow-color:      var(--tm-border-color);
   --tm-border-color-control:        var(--tm-color-gray-500);
   --tm-sort-indicator-idle:         var(--tm-color-gray-500);
   --tm-sort-indicator-active:       var(--tm-text-primary);

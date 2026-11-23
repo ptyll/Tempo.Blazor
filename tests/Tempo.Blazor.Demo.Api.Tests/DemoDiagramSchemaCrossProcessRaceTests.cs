@@ -72,32 +72,14 @@ namespace Tempo.Blazor.Demo.Api.Tests;
 /// DENOMINATOR. Earlier in this workstream the number was said to be four. That four was the UNION OF
 /// THREE REVIEW LENSES — a list of what somebody happened to look at — and a union of lenses says nothing
 /// about the document having been searched. Seven is better than that but it is still not a denominator,
-/// because THE TAG IS SELF-REPORTING: the grep below counts the sites that declared themselves, so it can
-/// only ever go up when somebody writes another tag, never when somebody adds an untagged timing.
-/// Two untagged ones are already visible in this very class — <see cref="HostStartupTimeout"/> (120 s) and
-/// <see cref="AfterReleaseTimeout"/> (60 s) are both wall-clock deadlines against a loaded runner, and
-/// neither carries the tag. THE NEEDLE FOR THE GAP, therefore, is not the count but a reading: every
-/// <c>TimeSpan.From</c> constant in these two files, checked one by one against the tag list —
-/// <c>/usr/bin/grep -nE 'TimeSpan\.From[A-Za-z]+\(' tests/Tempo.Blazor.Demo.Api.Tests/DemoDiagramSchemaCrossProcessRaceTests.cs src/Tempo.Blazor.Demo.Api/Data/DemoDiagramSchema.cs</c>
-/// (6 lines, 2026-08-23 over 319e3c9e; 4 here + 2 there). What the seven ARE is a searched-and-tagged population: each is
-/// tagged at its own site with FIXED or LIVE and counted mechanically, so the floor can be re-measured
-/// rather than believed. It is not a constant either: THE SEVENTH ARRIVED WITH THIS PHASE — with the arm
-/// that measures the seam gate, because an arm that has to wait out a lock has a window it has to choose.
-/// <code>
-/// /usr/bin/grep -cE 'NON-DETERMINISM SOURCE \((LIVE|FIXED)\)' \
-///   tests/Tempo.Blazor.Demo.Api.Tests/DemoDiagramSchemaCrossProcessRaceTests.cs \
-///   src/Tempo.Blazor.Demo.Api/Data/DemoDiagramSchema.cs          # 5 + 2 = 7
-/// /usr/bin/grep -cE 'NON-DETERMINISM SOURCE \(LIVE\)' \
-///   tests/Tempo.Blazor.Demo.Api.Tests/DemoDiagramSchemaCrossProcessRaceTests.cs \
-///   src/Tempo.Blazor.Demo.Api/Data/DemoDiagramSchema.cs          # 3 + 1 = 4
-/// </code>
-/// FIXED are the harness picking ports by check-then-act, one constant serving as both the mutex wait and
-/// the barrier deadline, and the unsynchronised read of the shared output buffer. LIVE are the 100 ms
-/// widening sleep the bypass arm needs, the 500 ms go-lead measured against a 10 ms host poll and a 50 ms
-/// harness poll, the CONTENT of the shared buffer at the moment a reader takes it — locking the read
-/// stopped a crash, it did not make a line that has not arrived yet appear — and the derived hold in
-/// <see cref="ADemoApiHostAskedToSkipTheLock_ContendsTheMutexOutsideDevelopment"/>. The four live ones are
-/// recorded as queue rows; none of them is fixed in this file.
+/// because THE TAG IS SELF-REPORTING: the grep below counts the sites that declared themselves.
+/// HostStartupTimeout (120 s) and AfterReleaseTimeout (60 s) are untagged wall-clock deadlines.
+/// Needle: grep TimeSpan.From in this file and DemoDiagramSchema.cs (6 lines: 4 here + 2 there).
+/// Count LIVE|FIXED tags in both files (5 + 2 = 7) and LIVE-only (3 + 1 = 4).
+/// The seventh arrived with the seam-gate arm. FIXED: port check-then-act, shared mutex/barrier
+/// constant, unsynchronised buffer read. LIVE: 100 ms bypass sleep, 500 ms go-lead vs 10/50 ms
+/// polls, buffer content at read, derived hold in
+/// <see cref="ADemoApiHostAskedToSkipTheLock_ContendsTheMutexOutsideDevelopment"/>.
 /// </para>
 /// </summary>
 public sealed class DemoDiagramSchemaCrossProcessRaceTests

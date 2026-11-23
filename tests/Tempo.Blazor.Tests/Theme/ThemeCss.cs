@@ -79,11 +79,22 @@ internal static class ThemeCss
     private static readonly Regex LightIsland =
         new(@"(?<selector>[^{}]*\[data-theme\s*=\s*""light""\][^{}]*)\{[^{}]*\}", RegexOptions.Compiled, RegexTimeout);
 
-    private static string WithoutLightIslands(string css) =>
-        LightIsland.Replace(css, match =>
+    private static string WithoutLightIslands(string css)
+    {
+        // tokens.css (and every other sheet without an island) must not enter the island regex:
+        // `[^{}]*\[data-theme="light"\]` backtracks across every brace-free run and times the
+        // 5 s budget out on a machine that is merely busy, taking every TokenGraph caller with it.
+        if (!css.Contains("[data-theme=\"light\"]", StringComparison.Ordinal)
+            && !css.Contains("[data-theme = \"light\"]", StringComparison.Ordinal))
+        {
+            return css;
+        }
+
+        return LightIsland.Replace(css, match =>
             SelectorParts(match.Groups["selector"].Value).All(part => part.Contains("[data-theme=\"light\"]", StringComparison.Ordinal))
                 ? " "
                 : match.Value);
+    }
 
     /// <summary>All <c>--tm-*</c> declarations of a file, later declarations winning (light islands excluded).</summary>
     public static Dictionary<string, string> Declarations(string path)

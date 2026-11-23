@@ -19,10 +19,3 @@
   height: var(--tm-input-height-md);
   box-sizing: border-box;
 }
-
-.tm-datetime-picker--readonly .tm-date-picker-trigger {
-  cursor: default;
-}
-.tm-datetime-picker--readonly .tm-date-picker-trigger:hover:not(:disabled) {
-  border-color: var(--tm-border-color);
-}

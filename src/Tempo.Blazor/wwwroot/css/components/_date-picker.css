@@ -11,16 +11,6 @@
   gap: var(--tm-space-1);
 }
 
-/* Reserved × slot so showing/hiding the clear button does not shift the trigger. */
-.tm-picker-clear-slot {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--tm-space-5);
-  height: var(--tm-space-5);
-  flex-shrink: 0;
-}
-
 /* Opt-in typed date (AllowTypedDate): matches the trigger surface, not a bare browser input. */
 .tm-date-picker-typed {
   min-inline-size: 0;
@@ -43,11 +33,6 @@
 }
 
 @media (pointer: coarse) {
-  .tm-picker-clear-slot,
-  .tm-picker-clear {
-    width: var(--tm-touch-target);
-    height: var(--tm-touch-target);
-  }
   .tm-date-picker-typed {
     min-block-size: var(--tm-touch-target);
   }

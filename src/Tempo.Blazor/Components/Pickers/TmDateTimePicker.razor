@@ -3,7 +3,7 @@
 @using Tempo.Blazor.Components.Forms
 @inject IServiceProvider Services
 
-<div class="tm-datetime-picker @(ReadOnly ? "tm-datetime-picker--readonly" : "") @Class @(IsOutOfRange || _typedDateInvalid ? "tm-datetime-picker--invalid" : "")" @attributes="RootAttributes">
+<div class="tm-datetime-picker @(ReadOnly ? "tm-datetime-picker--readonly tm-date-picker--readonly" : "") @Class @(IsOutOfRange || _typedDateInvalid ? "tm-datetime-picker--invalid" : "")" @attributes="RootAttributes">
     @if (LabelTrailing is not null)
     {
         <span class="tm-input-label-row">

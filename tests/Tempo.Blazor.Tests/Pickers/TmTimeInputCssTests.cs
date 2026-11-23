@@ -91,12 +91,14 @@ public sealed class TmTimeInputCssTests
     public void DatePicker_ReservedClearSlot_UsesSpaceToken_AndReadonlyKeepsSurface()
     {
         var css = ThemeCss.Normalise(ThemeCss.ComponentCss("_date-picker.css"));
-        css.Should().Contain(".tm-picker-clear-slot");
-        css.Should().Contain("width: var(--tm-space-5)");
-        css.Should().Contain("height: var(--tm-space-5)");
-        css.Should().NotContain("width: 20px");
         css.Should().Contain(".tm-date-picker--readonly .tm-date-picker-trigger");
         css.Should().Contain("cursor: default");
+
+        var shared = ThemeCss.Normalise(ThemeCss.ComponentCss("_picker-shared.css"));
+        shared.Should().Contain(".tm-picker-clear-slot");
+        shared.Should().Contain("width: var(--tm-space-5)");
+        shared.Should().Contain("height: var(--tm-space-5)");
+        shared.Should().NotContain(".tm-picker-clear-slot { width: 20px");
     }
 
     [Fact]
@@ -117,11 +119,14 @@ public sealed class TmTimeInputCssTests
         var coarse = CoarseBlockOf("_date-picker.css");
         coarse.Should().Contain(".tm-date-picker-typed");
         coarse.Should().Contain("min-block-size: var(--tm-touch-target)");
-        coarse.Should().Contain(".tm-picker-clear-slot");
-        coarse.Should().Contain(".tm-picker-clear");
-        coarse.Should().Contain("width: var(--tm-touch-target)");
-        coarse.Should().Contain("height: var(--tm-touch-target)");
         coarse.Should().NotContain("px", "the 44 px floor is --tm-touch-target, not a literal");
+
+        var sharedCoarse = CoarseBlockOf("_picker-shared.css");
+        sharedCoarse.Should().Contain(".tm-picker-clear-slot");
+        sharedCoarse.Should().Contain(".tm-picker-clear");
+        sharedCoarse.Should().Contain("width: var(--tm-touch-target)");
+        sharedCoarse.Should().Contain("height: var(--tm-touch-target)");
+        sharedCoarse.Should().NotContain("px", "the 44 px floor is --tm-touch-target, not a literal");
     }
 
     [Fact]
@@ -157,7 +162,9 @@ public sealed class TmTimeInputCssTests
     {
         var css = ThemeCss.Normalise(ThemeCss.ComponentCss("_datetime-picker.css"));
         css.Should().Contain("height: var(--tm-input-height-md)");
-        css.Should().Contain(".tm-datetime-picker--readonly");
+        css.Should().Contain(".tm-datetime-picker");
+        css.Should().NotContain(".tm-date-picker-trigger:hover",
+            "readonly hover lives on .tm-date-picker--readonly in _date-picker.css so the datetime picker does not re-own the trigger");
     }
 
     [Fact]

@@ -137,7 +137,7 @@ public partial class TmNotionDbPropertyValue
 
     private static string AvatarColor(string name) => NotionColorTokens.OptionSolid(AvatarName(name));
 
-    /// <summary>A palette name for an avatar, stable across processes (not <see cref="string.GetHashCode"/>).</summary>
+    /// <summary>A palette name for an avatar, stable across processes (not <see cref="string.GetHashCode()"/>).</summary>
     public static string AvatarName(string seed)
     {
         var names = new[] { "blue", "green", "yellow", "red", "purple", "gray", "orange", "brown", "pink" };

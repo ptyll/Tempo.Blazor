@@ -6,6 +6,16 @@
   margin-bottom: var(--tm-space-1);
 }
 
+/* Reserved × slot so showing/hiding the clear button does not shift the trigger. */
+.tm-picker-clear-slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tm-space-5);
+  height: var(--tm-space-5);
+  flex-shrink: 0;
+}
+
 .tm-picker-clear {
   display: inline-flex;
   align-items: center;
@@ -24,6 +34,14 @@
 .tm-picker-clear:focus-visible {
   outline: var(--tm-border-width) solid transparent;
   box-shadow: var(--tm-focus-ring);
+}
+
+@media (pointer: coarse) {
+  .tm-picker-clear-slot,
+  .tm-picker-clear {
+    width: var(--tm-touch-target);
+    height: var(--tm-touch-target);
+  }
 }
 
 .tm-picker-placeholder { color: var(--tm-text-tertiary); }
