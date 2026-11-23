@@ -7,6 +7,10 @@
 > [docs/proposals/time-input-mobile.md](docs/proposals/time-input-mobile.md)). Additive public API;
 > `TmTimePicker.Presentation` stays `Segments` (today's DOM).
 
+### Fixed — wireframe initial Fit on an existing document (`Tempo.Blazor.Wireframe`, Fáze 8b)
+
+- **Opening a saved wireframe with `InitialZoom = Fit` no longer leaves the page far below the fold.** `applyInitialZoom` used to measure the svg once in the same after-render as Blazor inserting the document elements; `getBoundingClientRect` then saw an inflated height (~13 000 units) and `layoutRect` blocked `relayout` via the 0.5 px threshold. The script now waits for two consecutive matching sizes (cap 10 frames / 500 ms) and reports the real scale through `OnZoomChangedEvent`. A user zoom / pan / pinch / wheel / `zoomTo` / `fitToView` / `resetView` / `scrollTo` or `destroy` cancels the pending settle. While it is in flight, `relayout` does not stamp `layoutRect`. `updateCanvasSize` also leaves `layoutRect` unset so a premature measure cannot freeze the view. The .NET API and defaults are unchanged; the internal interop entry point `tmWireframeDesigner.applyInitialZoom` now always returns 0 and the scale arrives through the `OnZoomChanged` callback (`OnZoomChangedEvent` for hosts). Hosts that called `tmWireframeDesigner.fitToView` after load as a workaround can drop that call. Demo: `/wireframe-editor-async-load`.
+
 ### Fixed — wireframe role vocabulary and component catalog (`Tempo.Blazor.Abstractions` / `Tempo.Blazor.Mcp`, Fáze 8a)
 
 - **`segmented-control` is in the baseline once.** `BuiltInUiRoleVocabularySource` had two `R("segmented-control", …)` rows (the newer "single segmented tray" plus the older "mutually exclusive modes"). `UiRoleVocabulary` silently merged them, but a host that seeds `IUiRoleVocabularySource.GetRoles()` into a unique `UiRole.Slug` index (PromptHelper) crashed on a fresh DB. The two rows are now one definition ("single segmented tray") with the union of synonyms: `segment control`, `segmented buttons`, `segments`, `prepinac segmentu`, `segmentovany prepinac`, `TmSegmentedControl`. For hosts: a wrapper that de-duplicated the slug itself can be removed.

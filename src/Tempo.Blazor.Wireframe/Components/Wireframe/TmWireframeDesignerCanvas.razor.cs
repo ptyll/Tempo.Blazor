@@ -293,8 +293,7 @@ public partial class TmWireframeDesignerCanvas : TmComponentBase, IAsyncDisposab
             _jsCanvasH = options.canvasHeight;
             await JS.InvokeVoidAsync("tmWireframeDesigner.init", _svgRef, _dotNetRef, options);
 
-            // Lay the view out the way the host asked (Fit by default) and tell it the REAL scale instead of letting it show 100 %.
-            // While the svg has no size yet (a hidden tab) this reports 0 and the first real size lays the view out by relayout.
+            // Start the initial layout (Fit by default). applyInitialZoom returns 0; the real scale arrives via OnZoomChanged after the svg size settles.
             await ApplyInitialZoomAsync();
         }
         else if (_jsInitialized && _jsReadOnly != ReadOnly)
@@ -343,7 +342,11 @@ public partial class TmWireframeDesignerCanvas : TmComponentBase, IAsyncDisposab
     private static string InitialZoomName(WireframeInitialZoom zoom)
         => zoom == WireframeInitialZoom.ActualSize ? "actual" : "fit";
 
-    /// <summary>Asks the script to lay the view out for the current document / page / mode and reports the real scale to the host.</summary>
+    /// <summary>
+    /// Asks the script to lay the view out for the current document / page / mode. The JS return is 0 (the svg size has not
+    /// settled yet); the real scale is reported later through <see cref="OnZoomChanged"/>. A non-zero return is still forwarded
+    /// so a host or test that supplies a scale keeps working.
+    /// </summary>
     private async Task ApplyInitialZoomAsync()
     {
         // The subject counts as laid out even when the svg has no size yet: the script then marks the view pristine (no user zoom, no remembered

@@ -99,6 +99,7 @@ window.tmWireframeDesigner = {
             // true once the user (or fit-to-elements) moved / zoomed the view; relayout() re-fits a pristine view
             userViewChanged: false,
             layoutRect: null,           // the svg size the viewBox was last laid out for
+            pendingInitialLayout: null, // rAF settle of applyInitialZoom (inflated first measure → real size)
             resizeObserver: null,
 
             // global configuration (merged with options)
@@ -144,6 +145,7 @@ window.tmWireframeDesigner = {
 
         // Detach all DOM event listeners first (cancels a gesture in progress: the live DOM rolls back)
         inst.destroyed = true;
+        this._cancelPendingInitial(inst);
         this._detachEvents(inst);
 
         // Remove JS-injected overlay elements (selection handles, rubber-band rect, context menu)
@@ -212,8 +214,12 @@ window.tmWireframeDesigner = {
         inst.canvasW = w;
         inst.canvasH = h;
         // Blazor re-renders the background rect and resets the svg viewBox to the new page size: the view is fitted again.
+        // Drop a settle in flight and do NOT stamp layoutRect from this measure: a premature getBoundingClientRect here
+        // (Blazor inserting document elements in the same after-render) would freeze an inflated size via the 0.5 px
+        // threshold. ApplyInitialZoomAsync on the new LayoutKey starts a fresh settle that owns the layout.
+        this._cancelPendingInitial(inst);
         inst.userViewChanged = false;
-        inst.layoutRect = this._measure(inst);
+        inst.layoutRect = null;
     },
 
     setGridSize: function (svgElement, size) {
@@ -603,6 +609,7 @@ window.tmWireframeDesigner = {
             onEnd: function (info) {
                 self._pinchApply(inst, info);
                 inst.pinchStart = null;
+                self._cancelPendingInitial(inst);
                 inst.userViewChanged = true;
                 const vb = self._getViewBox(inst);
                 if (self._isCoarse(inst)) self._updateHandles(inst);   // the hit areas follow the zoom
@@ -740,6 +747,7 @@ window.tmWireframeDesigner = {
             this._flushRelayout(inst);
             return;
         }
+        this._cancelPendingInitial(inst);
         inst.userViewChanged = true;
         const vb = this._getViewBox(inst);
         inst.dotNetRef.invokeMethodAsync('OnViewBoxChanged', vb.x, vb.y, vb.w, vb.h);
@@ -1380,6 +1388,7 @@ window.tmWireframeDesigner = {
         if (!body) return;
 
         if (body.kind === 'pan') {
+            this._cancelPendingInitial(inst);
             inst.userViewChanged = true;
             const vb = this._getViewBox(inst);
             inst.dotNetRef.invokeMethodAsync('OnViewBoxChanged', vb.x, vb.y, vb.w, vb.h);
@@ -1643,6 +1652,7 @@ window.tmWireframeDesigner = {
 
         this._setViewBox(inst, newX, newY, newW, newH);
         inst.scale = newScale;
+        this._cancelPendingInitial(inst);
         inst.userViewChanged = true;
         this._refreshHandlesIfCoarse(inst);
         inst.dotNetRef.invokeMethodAsync('OnZoomChanged', newScale);
@@ -2247,6 +2257,7 @@ window.tmWireframeDesigner = {
         const newH = svgRect.height / scale;
         this._setViewBox(inst, cx - newW / 2, cy - newH / 2, newW, newH);
         inst.scale = scale;
+        this._cancelPendingInitial(inst);
         inst.userViewChanged = true;
         this._refreshHandlesIfCoarse(inst);
     },
@@ -2262,6 +2273,7 @@ window.tmWireframeDesigner = {
             const svgRect = inst.svg.getBoundingClientRect();
             this._setViewBox(inst, 0, 0, inst.canvasW, inst.canvasH);
             inst.scale = Math.min(svgRect.width / inst.canvasW, svgRect.height / inst.canvasH);
+            this._cancelPendingInitial(inst);
             inst.userViewChanged = false;   // the whole page fitted: a later container resize re-fits it
             return inst.scale;
         }
@@ -2287,6 +2299,7 @@ window.tmWireframeDesigner = {
         const newH = svgRect.height / fitScale;
         this._setViewBox(inst, minX - padding, minY - padding, newW, newH);
         inst.scale = fitScale;
+        this._cancelPendingInitial(inst);
         inst.userViewChanged = true;
         return fitScale;
     },
@@ -2325,28 +2338,100 @@ window.tmWireframeDesigner = {
 
     /**
      * Applies the initial zoom (first render, a swapped document, a page switch, a changed page size, a changed InitialZoom). The
-     * optional <paramref name="mode"/> ('fit' | 'actual') replaces the remembered one; anything else keeps it, and a canvas that never
-     * had one behaves as 'fit'. Returns the scale the canvas is now drawn at (0 while the svg has no size, e.g. a hidden tab: nothing
-     * is changed and the first real size lays the view out through relayout). A zoom the user chose is NOT protected here: this is
-     * the explicit "start over" for a new subject; the automatic paths (resize) never call it.
+     * optional mode ('fit' | 'actual') replaces the remembered one; anything else keeps it, and a canvas that never had one behaves
+     * as 'fit'. Returns 0 immediately: the real scale is reported later via OnZoomChanged once the svg size has settled (two
+     * consecutive matching getBoundingClientRect readings, cap 10 frames / 500 ms). While the svg has no size (a hidden tab)
+     * nothing is laid out and the first real size lays the view out through relayout. A zoom the user chose is NOT protected
+     * here: this is the explicit "start over" for a new subject; the automatic paths (resize) never call it.
      */
     applyInitialZoom: function (svgElement, mode) {
         const inst = this.instances.get(svgElement ? svgElement.id : null);
         if (!inst || inst.destroyed || !inst.svg) return 0;
         if (mode === 'fit' || mode === 'actual') inst.initialZoom = mode;
+        this._cancelPendingInitial(inst);
+        inst.userViewChanged = false;
+        inst.layoutRect = null;
         const size = this._measure(inst);
         if (!size) {
             // No size yet (a hidden tab): nothing can be laid out, but the NEW subject must not inherit the previous subject's user zoom or its
             // measured baseline - the first real size has to lay it out through relayout (pristine view, no remembered layout rect).
-            inst.userViewChanged = false;
-            inst.layoutRect = null;
             return 0;
         }
+        inst.pendingInitialLayout = { frame: 0, count: 0, startTs: Date.now(), lastSize: size };
+        this._schedulePendingInitial(inst);
+        return 0;
+    },
+
+    /** Drops a settle in flight (user zoom / pan / destroy / a new apply). Safe to call with none pending. */
+    _cancelPendingInitial: function (inst) {
+        if (!inst || !inst.pendingInitialLayout) return;
+        const frame = inst.pendingInitialLayout.frame;
+        if (frame && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(frame);
+        inst.pendingInitialLayout = null;
+    },
+
+    _schedulePendingInitial: function (inst) {
+        if (!inst || inst.destroyed || !inst.pendingInitialLayout) return;
+        const self = this;
+        const pending = inst.pendingInitialLayout;
+        const run = function () {
+            // A sync rAF stub (node pointer tests) may already have settled and cleared pendingInitialLayout.
+            if (inst.pendingInitialLayout !== pending) return;
+            pending.frame = 0;
+            self._tickPendingInitial(inst);
+        };
+        const id = typeof requestAnimationFrame === 'function' ? requestAnimationFrame(run) : 0;
+        if (inst.pendingInitialLayout === pending) pending.frame = id;
+        else if (id && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(id);
+        if (typeof requestAnimationFrame !== 'function') run();
+    },
+
+    /**
+     * One settle tick: wait for two consecutive matching svg sizes, else fall back after 10 frames or 500 ms.
+     * A user zoom / pan / destroy already cancelled pendingInitialLayout; a gesture in flight is skipped until it ends.
+     */
+    _tickPendingInitial: function (inst) {
+        const pending = inst.pendingInitialLayout;
+        if (!pending || inst.destroyed || !inst.svg) return;
+        if (inst.userViewChanged) { this._cancelPendingInitial(inst); return; }
+        if (this._gestureActive(inst)) { this._schedulePendingInitial(inst); return; }
+
+        const size = this._measure(inst);
+        pending.count += 1;
+        const last = pending.lastSize;
+        const same = size && last
+            && Math.abs(size.width - last.width) < 0.5
+            && Math.abs(size.height - last.height) < 0.5;
+        if (size) pending.lastSize = size;
+
+        const elapsed = Date.now() - pending.startTs;
+        // lastSize already holds the applyInitialZoom measure, so a match with this frame is two consecutive readings.
+        const settled = same;
+        const timedOut = pending.count >= 10 || elapsed >= 500;
+        if (!settled && !timedOut) {
+            this._schedulePendingInitial(inst);
+            return;
+        }
+        inst.pendingInitialLayout = null;
+        if (!size) {
+            // Hidden tab / lost measure: same as applyInitialZoom's no-size branch — do not stamp a stale
+            // lastSize into layoutRect (that would freeze the view via the 0.5 px threshold). The first
+            // real size lays the view out through relayout.
+            inst.userViewChanged = false;
+            inst.layoutRect = null;
+            return;
+        }
+        this._commitInitialLayout(inst, size);
+    },
+
+    /** Lays the settled size out and reports the real scale through OnViewBoxChanged + OnZoomChanged. */
+    _commitInitialLayout: function (inst, size) {
+        if (!inst || inst.destroyed || !inst.svg || inst.userViewChanged) return;
         const scale = this._layoutInitial(inst, size, inst.initialZoom || 'fit');
         this._refreshHandlesIfCoarse(inst);
         const vb = this._getViewBox(inst);
         this._invokeQuiet(inst, 'OnViewBoxChanged', vb.x, vb.y, vb.w, vb.h);
-        return scale;
+        this._invokeQuiet(inst, 'OnZoomChanged', scale);
     },
     // ── Pan to canvas origin ──────────────────────────────────────────────────
 
@@ -2356,6 +2441,7 @@ window.tmWireframeDesigner = {
         const svgRect = inst.svg.getBoundingClientRect();
         this._setViewBox(inst, 0, 0, svgRect.width, svgRect.height);
         inst.scale = 1.0;
+        this._cancelPendingInitial(inst);
         inst.userViewChanged = true;
     },
 
@@ -2380,6 +2466,9 @@ window.tmWireframeDesigner = {
         const next = this._measure(inst);
         if (!next) return 0;
         const prev = inst.layoutRect;
+        // While applyInitialZoom is still settling, the loop owns the layout: do not freeze an inflated first
+        // measure via the 0.5 px threshold, and do not stamp layoutRect (that would block the later real size).
+        if (inst.pendingInitialLayout) return 0;
         if (prev && Math.abs(prev.width - next.width) < 0.5 && Math.abs(prev.height - next.height) < 0.5) return 0;
         // A gesture owns the viewBox (and the finger's coordinates) right now - selecting on press opens the tablet inspector sheet, which
         // narrows the canvas under a drag that has just started: leave the baseline alone and re-lay out when the gesture is released.
@@ -2553,6 +2642,7 @@ window.tmWireframeDesigner = {
         const newX = centreX - vb.w / 2;
         const newY = centreY - vb.h / 2;
         this._setViewBox(inst, newX, newY, vb.w, vb.h);
+        this._cancelPendingInitial(inst);
         inst.userViewChanged = true;
     },
 

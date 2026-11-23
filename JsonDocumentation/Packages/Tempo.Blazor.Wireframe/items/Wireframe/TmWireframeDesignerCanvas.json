@@ -57,7 +57,7 @@
       "type": "WireframeInitialZoom",
       "isRequired": false,
       "defaultValue": "WireframeInitialZoom.Fit",
-      "description": "How the view is laid out at the first render, when Document is replaced, when the active page or its size changes and when this value changes. Fit (default) fits the page with a 40 px padding but never enlarges it past 100 %; ActualSize shows it at 100 %. A zoom the user chose is never overwritten automatically; OnZoomChangedEvent reports the real scale.",
+      "description": "How the view is laid out at the first render, when Document is replaced, when the active page or its size changes and when this value changes. Fit (default) fits the page with a 40 px padding but never enlarges it past 100 %; ActualSize shows it at 100 %. The layout waits until the svg size settles (two matching measures); OnZoomChangedEvent reports the real scale. A zoom the user chose is never overwritten automatically.",
       "example": "InitialZoom=\"WireframeInitialZoom.ActualSize\""
     },
     {

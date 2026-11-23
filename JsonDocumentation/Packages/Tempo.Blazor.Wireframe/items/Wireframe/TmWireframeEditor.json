@@ -167,7 +167,7 @@
       "type": "WireframeInitialZoom",
       "isRequired": false,
       "defaultValue": "WireframeInitialZoom.Fit",
-      "description": "How the canvas lays out its view at the first render, when the document is replaced and when the active page changes (decision WIREFRAME-INITIAL-ZOOM). Fit (default) fits the page with a 40 px padding but never enlarges it past 100 % - a page that fits stays at exactly 100 % and is centred; ActualSize shows it at 100 % (the page starts at its top-left corner when it is larger than the canvas). A zoom the user chose (buttons, pinch, Ctrl+wheel) is never overwritten automatically, not even by a container resize, and the toolbar zoom read-out always shows the real scale.",
+      "description": "How the canvas lays out its view at the first render, when the document is replaced and when the active page changes (decision WIREFRAME-INITIAL-ZOOM), including a document supplied after the first render. Fit (default) fits the page with a 40 px padding but never enlarges it past 100 % - a page that fits stays at exactly 100 % and is centred; ActualSize shows it at 100 % (the page starts at its top-left corner when it is larger than the canvas). The layout waits until the svg size settles; a zoom the user chose (buttons, pinch, Ctrl+wheel) is never overwritten automatically, not even by a container resize, and the toolbar zoom read-out always shows the real scale.",
       "example": "InitialZoom=\"WireframeInitialZoom.ActualSize\""
     },
     {

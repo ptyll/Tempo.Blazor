@@ -81,7 +81,7 @@ public class WireframeInitialZoomTests : LocalizationTestBase
         init.Arguments[2].Should().BeEquivalentTo(new { initialZoom = "fit" }, o => o.ExcludingMissingMembers());
         cut.WaitForAssertion(() => JSInterop.Invocations.Count(i => i.Identifier == Apply).Should().Be(1));
         JSInterop.Invocations.Single(i => i.Identifier == Apply).Arguments[1].Should().Be("fit");
-        reported.Should().Equal(0.5);
+        reported.Should().Equal(0.5); // a non-zero JS return (tests / older script) is still forwarded as the scale
     }
 
     [Fact]
@@ -226,5 +226,56 @@ public class WireframeInitialZoomTests : LocalizationTestBase
             JSInterop.Invocations.Count(i => i.Identifier == Apply).Should().Be(2);
             cut.Find(".tm-wd-editor__zoom-label").TextContent.Trim().Should().Be("100%", "a small page stays at 100 %, it is not enlarged");
         });
+    }
+
+    // ── Async document (phase 8b): applyInitialZoom once per LayoutKey; return 0 does not fire OnZoomChangedEvent ─
+
+    [Fact]
+    public void Canvas_DocumentArrivingAfterFirstRender_AppliesInitialZoomOnceForTheNewLayoutKey()
+    {
+        Register();
+        JSInterop.Setup<double>(Apply, _ => true).SetResult(0);
+        var cut = Render<TmWireframeDesignerCanvas>();
+        JSInterop.Invocations.Count(i => i.Identifier == Apply).Should().Be(1, "the empty first render still asks once");
+
+        JSInterop.Setup<double>(Apply, _ => true).SetResult(0);
+        cut.Render(p => p.Add(c => c.Document, TwoPages()));
+
+        cut.WaitForAssertion(() => JSInterop.Invocations.Count(i => i.Identifier == Apply).Should().Be(2));
+        JSInterop.Invocations.Last(i => i.Identifier == Apply).Arguments[1].Should().Be("fit");
+    }
+
+    [Fact]
+    public void Canvas_UnrelatedReRenderAfterAsyncDocument_DoesNotReApply()
+    {
+        Register();
+        JSInterop.Setup<double>(Apply, _ => true).SetResult(0);
+        var doc = TwoPages();
+        var cut = Render<TmWireframeDesignerCanvas>();
+        cut.Render(p => p.Add(c => c.Document, doc));
+        cut.WaitForAssertion(() => JSInterop.Invocations.Count(i => i.Identifier == Apply).Should().Be(2));
+
+        cut.Render(p => p.Add(c => c.ShowGrid, false));
+        cut.Render();
+
+        JSInterop.Invocations.Count(i => i.Identifier == Apply).Should().Be(2, "only a new LayoutKey re-asks; a parent render of the same document does not");
+    }
+
+    [Fact]
+    public void Canvas_ApplyInitialZoomReturningZero_DoesNotFireOnZoomChangedEvent_RealScaleArrivesViaJsInvokable()
+    {
+        Register();
+        JSInterop.Setup<double>(Apply, _ => true).SetResult(0);
+        var reported = new List<double>();
+        var cut = Render<TmWireframeDesignerCanvas>(p =>
+        {
+            p.Add(c => c.Document, TwoPages());
+            p.Add(c => c.OnZoomChangedEvent, Microsoft.AspNetCore.Components.EventCallback.Factory.Create<double>(this, reported.Add));
+        });
+
+        reported.Should().BeEmpty("the JS return is 0 until settle; .NET must not treat it as the scale");
+
+        cut.InvokeAsync(() => cut.Instance.OnZoomChanged(0.46));
+        reported.Should().Equal(0.46);
     }
 }

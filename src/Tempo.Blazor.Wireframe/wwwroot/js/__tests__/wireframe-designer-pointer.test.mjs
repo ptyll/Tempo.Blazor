@@ -1133,11 +1133,12 @@ test('a ResizeObserver triggers one relayout per frame and is disconnected on de
 
 const near = (actual, expected, message) => assert.ok(Math.abs(actual - expected) < 1e-6, `${message ?? ''} expected ${expected}, got ${actual}`);
 
-test('applyInitialZoom fit: a page larger than the canvas is fitted with a 40 px padding and the real scale is returned', async () => {
+test('applyInitialZoom fit: a page larger than the canvas is fitted with a 40 px padding and the real scale is reported via OnZoomChanged', async () => {
     const c = await canvas({ initialZoom: 'fit', canvasWidth: 1440, canvasHeight: 900 });
     resizeSvg(c.svg, 720, 450);
 
-    const scale = engine.applyInitialZoom(c.svg);
+    assert.equal(engine.applyInitialZoom(c.svg), 0, 'the JS return is 0; the real scale arrives via OnZoomChanged after settle');
+    const scale = c.inst().scale;
 
     // limiting axis: min(720 / 1520, 450 / 980) = 0.4592...
     const expected = Math.min(720 / 1520, 450 / 980);
@@ -1147,15 +1148,17 @@ test('applyInitialZoom fit: a page larger than the canvas is fitted with a 40 px
     near(vb.height * scale, 450, 'and its height');
     near(vb.y, -40, 'the limiting axis keeps the padding');
     assert.equal(c.inst().userViewChanged, false, 'the fitted view is pristine: a container resize re-fits it');
-    assert.equal(c.inst().scale, scale);
     assert.equal(c.ref.named('OnViewBoxChanged').length, 1, 'rulers / minimap learn the new view');
+    assert.equal(c.ref.named('OnZoomChanged').length, 1, 'the real scale is reported once');
+    assert.equal(c.ref.named('OnZoomChanged')[0][1], scale);
 });
 
 test('applyInitialZoom fit never enlarges: a small page stays at 100 % and is centred', async () => {
     const c = await canvas({ initialZoom: 'fit', canvasWidth: 390, canvasHeight: 844 });
     resizeSvg(c.svg, 1000, 900);
 
-    const scale = engine.applyInitialZoom(c.svg);
+    assert.equal(engine.applyInitialZoom(c.svg), 0);
+    const scale = c.inst().scale;
 
     assert.equal(scale, 1, 'no zoom beyond 100 %');
     const vb = c.svg.viewBox.baseVal;
@@ -1168,14 +1171,16 @@ test('applyInitialZoom fit never enlarges: a small page stays at 100 % and is ce
 test('applyInitialZoom actual: 100 %, the page origin padded when the page is larger than the canvas, centred when it is smaller', async () => {
     const big = await canvas({ initialZoom: 'actual', canvasWidth: 1440, canvasHeight: 900 });
     resizeSvg(big.svg, 600, 400);
-    assert.equal(engine.applyInitialZoom(big.svg), 1);
+    assert.equal(engine.applyInitialZoom(big.svg), 0);
+    assert.equal(big.inst().scale, 1);
     let vb = big.svg.viewBox.baseVal;
     near(vb.width, 600); near(vb.height, 400);
     near(vb.x, -40, 'the page starts at the padded origin'); near(vb.y, -40);
 
     const small = await canvas({ initialZoom: 'actual', canvasWidth: 300, canvasHeight: 200 });
     resizeSvg(small.svg, 600, 400);
-    assert.equal(engine.applyInitialZoom(small.svg), 1);
+    assert.equal(engine.applyInitialZoom(small.svg), 0);
+    assert.equal(small.inst().scale, 1);
     vb = small.svg.viewBox.baseVal;
     near(vb.x, (300 - 600) / 2); near(vb.y, (200 - 400) / 2);
 });
@@ -1184,11 +1189,14 @@ test('applyInitialZoom takes the mode from its argument and remembers it', async
     const c = await canvas({ canvasWidth: 1440, canvasHeight: 900 });      // no initialZoom option: the legacy meet fit
     resizeSvg(c.svg, 720, 450);
 
-    assert.equal(engine.applyInitialZoom(c.svg, 'actual'), 1);
+    assert.equal(engine.applyInitialZoom(c.svg, 'actual'), 0);
     assert.equal(c.inst().initialZoom, 'actual');
-    near(engine.applyInitialZoom(c.svg, 'fit'), Math.min(720 / 1520, 450 / 980));
+    assert.equal(c.inst().scale, 1);
+    assert.equal(engine.applyInitialZoom(c.svg, 'fit'), 0);
+    near(c.inst().scale, Math.min(720 / 1520, 450 / 980));
     assert.equal(c.inst().initialZoom, 'fit');
-    assert.equal(engine.applyInitialZoom(c.svg, 'nonsense') > 0, true, 'an unknown mode keeps the previous one');
+    assert.equal(engine.applyInitialZoom(c.svg, 'nonsense'), 0);
+    assert.equal(c.inst().scale > 0, true, 'an unknown mode keeps the previous one');
     assert.equal(c.inst().initialZoom, 'fit');
 });
 
@@ -1231,7 +1239,8 @@ test('relayout of a pristine view re-applies the initial mode; a view the user z
     engine.zoomTo(c.svg, 2);                           // the user zooms
     resizeSvg(c.svg, 720, 450);
     assert.equal(engine.relayout(c.svg), 2, 'the user zoom survives a resize');
-    assert.equal(engine.applyInitialZoom(c.svg) <= 1, true, 'only an explicit apply (document / page change) resets it');
+    assert.equal(engine.applyInitialZoom(c.svg), 0, 'only an explicit apply (document / page change) resets it');
+    assert.equal(c.inst().userViewChanged, false, 'the explicit apply starts the subject over');
 });
 
 test('legacy canvas (no initialZoom option) keeps the plain page meet-fit on relayout', async () => {

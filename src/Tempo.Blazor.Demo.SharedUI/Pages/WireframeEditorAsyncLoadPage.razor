@@ -1,0 +1,122 @@
+@page "/wireframe-editor-async-load"
+@using Tempo.Blazor.Components.Wireframe
+@using Tempo.Blazor.Components.Wireframe.Models
+
+<PageTitle>Wireframe Editor (async load) – Tempo.Blazor</PageTitle>
+
+<div class="wd-async-page" data-testid="wf-async-load-page">
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">Wireframe Editor – async load</h1>
+        <p class="text-slate-600 dark:text-slate-400">
+            The host first renders an empty editor, then supplies an existing document after a short delay
+            (the same path as opening a saved wireframe). Default <code class="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">InitialZoom = Fit</code>
+            must show the whole page without a manual Fit click.
+        </p>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-3 mb-3">
+        <span data-testid="wf-async-status"
+              data-ready="@(_ready ? "true" : "false")"
+              class="text-sm text-slate-600 dark:text-slate-400"
+              role="status"
+              aria-live="polite">
+            @(_ready ? "Ready" : "Loading…")
+        </span>
+        <span data-testid="wf-async-page-size"
+              data-size="@(_large ? "large" : "small")"
+              class="text-sm text-slate-600 dark:text-slate-400">
+            Page @((int)_document.Width)×@((int)_document.Height)
+        </span>
+        <button type="button"
+                class="inline-flex items-center min-h-[44px] px-3 py-2 text-sm rounded border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                data-testid="wf-async-size-toggle"
+                disabled="@(!_ready)"
+                @onclick="ToggleSize">
+            @(_large ? "Use small page (400×300)" : "Use large page (1920×1200)")
+        </button>
+    </div>
+
+    <div style="height: 600px;" data-testid="wf-async-editor">
+        <TmWireframeEditor Document="@_document"
+                           DocumentChanged="@(doc => _document = doc)"
+                           ShowGrid="true"
+                           GridSize="8"
+                           Class="h-full" />
+    </div>
+</div>
+
+@code {
+    private WireframeDocument _document = CreateEmpty();
+    private bool _ready;
+    private bool _large = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // After the first render (empty editor, default 1280×800 page) the host "loads" a saved document.
+        await Task.Delay(400);
+        _document = CreateLoaded(_large);
+        _ready = true;
+    }
+
+    private void ToggleSize()
+    {
+        _large = !_large;
+        _document = CreateLoaded(_large);
+    }
+
+    private static WireframeDocument CreateEmpty() => new()
+    {
+        Title = "Loading…",
+        Width = 1280,
+        Height = 800
+    };
+
+    /// <summary>
+    /// An existing document with ≥ 20 elements, including text / table / cards (foreignObject stencil content).
+    /// Large page (1920×1200) is bigger than the canvas; small page (400×300) is smaller.
+    /// </summary>
+    private static WireframeDocument CreateLoaded(bool large)
+    {
+        var doc = new WireframeDocument
+        {
+            Title = large ? "Async dashboard" : "Async card",
+            Width = large ? 1920 : 400,
+            Height = large ? 1200 : 300
+        };
+
+        Add(doc, "TmText", 24, 20, 280, 28, ("text", large ? "Operations dashboard" : "Mini card"));
+        Add(doc, "TmText", 24, 52, 360, 20, ("text", "Loaded after the first render"));
+        Add(doc, "TmButton", 24, 88, 120, 36, ("text", "Primary"));
+        Add(doc, "TmButton", 156, 88, 120, 36, ("text", "Secondary"));
+        Add(doc, "TmTextInput", 24, 140, 220, 36, ("placeholder", "Search"));
+        Add(doc, "TmCard", 24, 196, 280, 180, ("title", "Pipeline"));
+        Add(doc, "TmCard", 320, 196, 280, 180, ("title", "Incidents"));
+        Add(doc, "TmCard", 616, 196, 280, 180, ("title", "Capacity"));
+        Add(doc, "TmStatCard", 24, 396, 160, 100, ("title", "Open"), ("value", "18"));
+        Add(doc, "TmStatCard", 200, 396, 160, 100, ("title", "Done"), ("value", "142"));
+        Add(doc, "TmStatCard", 376, 396, 160, 100, ("title", "SLA"), ("value", "99.2"));
+        Add(doc, "TmDataTable", 24, 516, 600, 280, ("title", "Recent jobs"), ("rows", 5));
+        Add(doc, "TmText", 648, 516, 200, 24, ("text", "Notes"));
+        Add(doc, "TmTextArea", 648, 548, 280, 120, ("placeholder", "Leave a note"));
+        Add(doc, "TmBadge", 648, 688, 80, 24, ("text", "Live"));
+        Add(doc, "TmButton", 744, 680, 120, 36, ("text", "Export"));
+        Add(doc, "TmCard", 912, 516, 280, 180, ("title", "Owners"));
+        Add(doc, "TmText", 912, 716, 240, 24, ("text", "On-call: platform"));
+        Add(doc, "TmButton", 912, 752, 120, 36, ("text", "Page"));
+        Add(doc, "TmTextInput", 1048, 752, 160, 36, ("placeholder", "Filter"));
+        Add(doc, "TmCard", 1212, 196, 280, 180, ("title", "Budget"));
+        Add(doc, "TmStatCard", 552, 396, 160, 100, ("title", "Queue"), ("value", "7"));
+        Add(doc, "TmText", 320, 88, 200, 24, ("text", "Shift handover"));
+        Add(doc, "TmButton", 536, 88, 120, 36, ("text", "Ack"));
+
+        return doc;
+    }
+
+    private static void Add(WireframeDocument doc, string type, double x, double y, double w, double h, params (string Key, object Value)[] props)
+    {
+        var el = WireframeDocumentExtensions.NewElement(type, x, y, w, h);
+        foreach (var (key, value) in props)
+            el.SetProp(key, value);
+        doc.Elements.Add(el);
+    }
+}
