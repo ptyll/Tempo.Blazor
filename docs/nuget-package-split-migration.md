@@ -111,6 +111,8 @@ This is a breaking package layout change for apps that relied on large editors b
 
 Core `Tempo.Blazor` no longer ships PDF viewer, QR/barcode, Diagram, Wireframe, Modeling, Spreadsheet, Gantt XLSX helpers, DocumentEditor, NotionEditor, or Signing workflow implementation/assets. Add the corresponding feature package or use `Tempo.Blazor.All`.
 
+Every packable RCL that keeps node tests under `wwwroot` (`__tests__/` or `*.test.mjs`) must declare the paired `Content Remove` + `None Pack="false" Visible="false"` globs so those files never become static web assets. The repo-wide guard is `PackageJsTestExclusionTests` in `tests/Tempo.Blazor.Tests/Packaging`. Hosts must not link `_content/<package>/…/__tests__/` or `*.test.mjs` URLs.
+
 Known follow-up items:
 
 - `TmSignature` and `TmSignatureCapture` remain in core for now; a later phase can decide whether moving them is worth a separate breaking change.

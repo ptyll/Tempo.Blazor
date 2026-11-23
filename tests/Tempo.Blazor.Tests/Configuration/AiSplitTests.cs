@@ -246,27 +246,19 @@ public sealed class AiSplitTests
     }
 
     /// <summary>
-    /// The package's node suites live under <c>wwwroot/js</c> — <c>npm run test:ai</c> runs them from the
-    /// source tree — so without a pack exclusion the SDK also publishes them to every consumer as
-    /// <c>_content/Tempo.Blazor.AI/js/__tests__/*.test.mjs</c>. Every other package that ships JS declares
-    /// the paired <c>Content Remove</c> + <c>None Pack="false"</c> globs for <c>*.test.mjs</c>,
-    /// <c>__tests__</c> and <c>*.md</c>; this package is not the exception. Asserted on the globs rather
-    /// than on one file name, so a new suite cannot slip in, and on the real source tree so the assertion
-    /// cannot pass vacuously once the suites move.
+    /// The paired <c>Content Remove</c> + <c>None Pack="false"</c> exclusion for node suites under
+    /// <c>wwwroot/js</c> is the repo-wide
+    /// <see cref="Packaging.PackageJsTestExclusionTests.Every_package_with_js_tests_excludes_them_from_static_web_assets"/>
+    /// guard. This package is the only one that also ships <c>*.md</c> next to those suites, so the
+    /// leftover here is just that extra glob — the test-file pair is not asserted twice.
     /// </summary>
     [Fact]
-    public void Ai_package_keeps_its_node_test_suites_out_of_the_nuget_package()
+    public void Ai_package_keeps_js_markdown_out_of_the_nuget_package()
     {
         var root = FindRepositoryRoot();
         var projectRoot = Path.Combine(root, "src", "Tempo.Blazor.AI");
         var document = XDocument.Load(Path.Combine(projectRoot, "Tempo.Blazor.AI.csproj"));
-
-        string[] globs =
-        [
-            "wwwroot\\js\\**\\*.test.mjs",
-            "wwwroot\\js\\**\\__tests__\\**",
-            "wwwroot\\js\\**\\*.md"
-        ];
+        const string markdownGlob = "wwwroot\\js\\**\\*.md";
 
         var removedFromStaticAssets = document.Descendants("Content")
             .Select(element => NormalizeGlob(element.Attribute("Remove")?.Value))
@@ -280,20 +272,10 @@ public sealed class AiSplitTests
             .OfType<string>()
             .ToList();
 
-        removedFromStaticAssets.Should().Contain(globs,
-            "node test sources must not become static web assets of the package — a consumer would "
-            + "serve them from _content/Tempo.Blazor.AI/js/__tests__/");
-        unpacked.Should().Contain(globs,
-            "the paired Pack=\"false\" items are what the packaging provenance sweep reads; a "
-            + "Content Remove without them leaves the packed-file denominator unmodelled");
-
-        var jsRoot = Path.Combine(projectRoot, "wwwroot", "js");
-        Directory.Exists(jsRoot).Should().BeTrue(
-            "the node suites live under wwwroot/js — if they move, these globs must move with them");
-        Directory.EnumerateFiles(jsRoot, "*.test.mjs", SearchOption.AllDirectories)
-            .Should()
-            .NotBeEmpty("the exclusions exist for the real node suites under wwwroot/js — if those "
-                + "move, the globs must move with them instead of silently matching nothing");
+        removedFromStaticAssets.Should().Contain(markdownGlob,
+            "wwwroot/js markdown next to the node suites is not a published asset of Tempo.Blazor.AI");
+        unpacked.Should().Contain(markdownGlob,
+            "the paired Pack=\"false\" item is what the packaging provenance sweep reads");
 
         static string? NormalizeGlob(string? value) => value?.Trim().Replace('/', '\\');
     }

@@ -48,4 +48,15 @@
     </AssemblyAttribute>
   </ItemGroup>
 
+  <!-- Keep the node test suites out of the NuGet package (the pattern every other JS-shipping
+       package declares): without it wwwroot/js/**/*.test.mjs would be packed as static web
+       assets and published to consumers as _content/Tempo.Blazor.Reporting/js/…. The production
+       modules (tm-report-viewer.mjs, .bundle.js) stay packed. -->
+  <ItemGroup>
+    <Content Remove="wwwroot\js\**\*.test.mjs" />
+    <Content Remove="wwwroot\js\**\__tests__\**" />
+    <None Include="wwwroot\js\**\*.test.mjs" Pack="false" Visible="false" />
+    <None Include="wwwroot\js\**\__tests__\**" Pack="false" Visible="false" />
+  </ItemGroup>
+
 </Project>
