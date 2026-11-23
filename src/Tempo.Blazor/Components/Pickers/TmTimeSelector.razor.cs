@@ -141,7 +141,13 @@ public partial class TmTimeSelector
     /// </summary>
     [Parameter] public bool AllowTyping { get; set; } = true;
 
-    /// <summary>Vertical swipe on a spinbutton. Unused until the swipe phase. Defaults to false.</summary>
+    /// <summary>
+    /// Vertical swipe on a spinbutton (opt-in). Default <c>false</c>: the DOM, CSS and behaviour
+    /// stay today's. When true the root carries <c>data-tm-time-swipe="true"</c> and
+    /// <c>tm-time-selector.js</c> attaches the shared <c>pointer-drag.js</c> helper (24 px = 1
+    /// step, swipe up = +, threshold 6 px; cancel / Escape rolls back). +/− remain the WCAG 2.5.7
+    /// alternative. Defaults to false.
+    /// </summary>
     [Parameter] public bool EnableSwipe { get; set; }
 
     /// <summary>Date used with <see cref="TimeZone"/> for DST gap/ambiguity. Both must be set.</summary>
@@ -603,7 +609,15 @@ public partial class TmTimeSelector
     /// <summary>Called by <c>tm-time-selector.js</c> for arrow / PageUp / PageDown / auto-repeat.</summary>
     [JSInvokable]
     public Task OnKeyStepAsync(string segment, int delta, bool announce)
-        => InvokeAsync(() => StepAsync(ParseSegment(segment), delta, announce));
+        => InvokeAsync(() =>
+        {
+            if (!announce)
+            {
+                _suppressUnchangedRender = true;
+            }
+
+            return StepAsync(ParseSegment(segment), delta, announce);
+        });
 
     /// <summary>Called by the module when the software-keyboard heuristic flips.</summary>
     [JSInvokable]
@@ -1087,6 +1101,11 @@ public partial class TmTimeSelector
 
     private async Task UpdateAsync()
     {
+        if (_swipeActive)
+        {
+            return;
+        }
+
         try
         {
             var module = await Module;

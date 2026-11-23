@@ -150,6 +150,21 @@ public sealed class TmTimeSelectorCssTests
     }
 
     [Fact]
+    public void EnableSwipe_TouchActionNone_OnlyOnTheSpinNumber()
+    {
+        var css = ThemeCss.ComponentCss("_time-selector.css");
+        var compact = Regex.Replace(css, @"\s+", string.Empty);
+
+        compact.Should().Contain(
+            ".tm-time-selector[data-tm-time-swipe=\"true\"].tm-time-selector__spin{touch-action:none;}",
+            "touch-action: none belongs only on the spinbutton number while swipe is on (WCAG 2.5.7 +/− stay scrollable)");
+        compact.Should().NotContain(".tm-time-selector__step{touch-action:none;",
+            "+/− must not claim the touch — they are the non-drag alternative");
+        compact.Should().NotContain(".tm-time-selector{touch-action:none;",
+            "the root must keep native scroll so a sheet grabber is not stolen");
+    }
+
+    [Fact]
     public void BundledStylesheet_CarriesTheSelectorRules()
     {
         var bundled = ThemeCss.BundledCss();

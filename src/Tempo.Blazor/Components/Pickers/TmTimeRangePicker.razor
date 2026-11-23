@@ -39,7 +39,8 @@
                               HourCycle="@HourCycle"
                               Culture="@Culture"
                               LayoutMode="@LayoutMode"
-                              AriaLabelledBy="@_fromLabelId" />
+                              AriaLabelledBy="@_fromLabelId"
+                              EnableSwipe="@EnableSwipe" />
             }
             else
             {
@@ -76,7 +77,8 @@
                               HourCycle="@HourCycle"
                               Culture="@Culture"
                               LayoutMode="@LayoutMode"
-                              AriaLabelledBy="@_toLabelId" />
+                              AriaLabelledBy="@_toLabelId"
+                              EnableSwipe="@EnableSwipe" />
             }
             else
             {
@@ -183,6 +185,12 @@
     /// Defaults to 1.
     /// </summary>
     [Parameter] public int MinuteStep { get; set; } = 1;
+
+    /// <summary>
+    /// Forwards <c>TmTimePicker.EnableSwipe</c> to both overlay ends when Presentation is Popup
+    /// or Auto; ignored by Segments. Defaults to false.
+    /// </summary>
+    [Parameter] public bool EnableSwipe { get; set; }
 
     /// <summary>
     /// When true, an off-step bound value is marked invalid and never rewritten. Popup/Auto only;

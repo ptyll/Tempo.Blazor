@@ -5,10 +5,11 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Tempo.Blazor.E2E;
 
 /// <summary>
-/// Plan 1c95309c Fáze 5 — E2E of TmTimeSelector on /time-input: spinbutton readout, hour/minute
-/// grid, host-owned presets, square tap-to-open, TypeTime, proposal viewports (1440 / 1280×800 /
-/// 768×1024 / 390×844 / 844×390 / 667×375 / 399×306 / 399×353 / 374×374), axe, forced-colors,
-/// reduced motion and the four demo cultures. Screenshots land in __screenshots__/time-input/.
+/// Plan 1c95309c Fáze 5 + Fáze 8 — E2E of TmTimeSelector on /time-input: spinbutton readout,
+/// hour/minute grid, host-owned presets, square tap-to-open, TypeTime, opt-in swipe (trusted
+/// pointer drag at 390×844 with HasTouch), proposal viewports (1440 / 1280×800 / 768×1024 / 390×844 / 844×390 / 667×375 /
+/// 399×306 / 399×353 / 374×374), axe, forced-colors, reduced motion and the four demo cultures.
+/// Screenshots land in __screenshots__/time-input/.
 /// </summary>
 [TestClass]
 [TestCategory("WASM")]
@@ -26,7 +27,8 @@ public sealed class TmTimeSelectorE2ETests : WasmTestBase
         int height,
         bool touch = false,
         bool pinCulture = true,
-        Func<IBrowserContext, Task>? extraInit = null)
+        Func<IBrowserContext, Task>? extraInit = null,
+        bool isMobile = true)
     {
         Func<IBrowserContext, Task>? beforeNavigate = null;
         if (pinCulture || extraInit is not null)
@@ -53,7 +55,7 @@ public sealed class TmTimeSelectorE2ETests : WasmTestBase
                 Locale = "en-US",
                 IgnoreHTTPSErrors = true,
                 HasTouch = touch,
-                IsMobile = touch,
+                IsMobile = touch && isMobile,
             },
             beforeNavigate);
 
@@ -606,5 +608,54 @@ public sealed class TmTimeSelectorE2ETests : WasmTestBase
         await Assertions.Expect(card.Locator(".tm-time-picker--invalid")).ToHaveCountAsync(0);
         await Assertions.Expect(card.Locator(".tm-time-seg--hours")).ToHaveValueAsync("23");
         await Assertions.Expect(card.Locator(".tm-time-seg--hours")).Not.ToHaveAttributeAsync("aria-invalid", "true");
+    }
+
+    [TestMethod]
+    public async Task TimeSelector_Default_HasNoSwipeAttribute()
+    {
+        var page = await OpenTimeInputAsync(390, 844, touch: true);
+        var root = page.Locator("[data-testid='time-selector-inline-card'] [data-testid='time-selector']");
+        await Assertions.Expect(root).Not.ToHaveAttributeAsync("data-tm-time-swipe", "true");
+    }
+
+    [TestMethod]
+    public async Task TimeSelector_EnableSwipe_PointerDragUp_StepsHours()
+    {
+        var page = await OpenTimeInputAsync(390, 844, touch: true, isMobile: false);
+        var card = page.Locator("[data-testid='time-selector-swipe-card']");
+        await card.ScrollIntoViewIfNeededAsync();
+        await Assertions.Expect(card.Locator("[data-testid='time-selector']"))
+            .ToHaveAttributeAsync("data-tm-time-swipe", "true");
+        await Assertions.Expect(page.Locator("[data-testid='time-selector-swipe-echo']"))
+            .ToContainTextAsync("14:30");
+
+        var hours = card.Locator("[data-tm-time-segment='hours'][role='spinbutton']");
+        await hours.EvaluateAsync("el => el.scrollIntoView({ block: 'center', inline: 'center' })");
+        await page.WaitForTimeoutAsync(150);
+
+        var module = await page.EvaluateAsync<string>(
+            "async () => await (await fetch('/_content/Tempo.Blazor/js/tm-time-selector.js')).text()");
+        Assert.IsTrue(module.Contains("OnSwipeStartAsync", StringComparison.Ordinal),
+            "the demo must serve the swipe-capable tm-time-selector.js");
+        var touchAction = await hours.EvaluateAsync<string>("el => getComputedStyle(el).touchAction");
+        Assert.AreEqual("none", touchAction, "CSS touch-action:none is owned by the spin under EnableSwipe");
+
+        // HasTouch + 390×844 is the device-emulation stand-in for the cancelled Z Flip 5 pass.
+        // A vertical CDP touch on a scrollable demo page is claimed by document pan, and a
+        // synthetic PointerEvent is cancelled by lostpointercapture (setPointerCapture is a
+        // no-op for untrusted events). Playwright's mouse drag is a trusted pointer pipeline
+        // through the same pointer-drag.js bind. 48 px up = 2 hour steps.
+        var box = await hours.BoundingBoxAsync();
+        Assert.IsNotNull(box, "hours spinbutton must be measurable");
+        Assert.IsTrue(box!.Y > 48, $"hours must sit below y=48 so the swipe-up stays on-screen (y={box.Y})");
+        var x = (int)Math.Round(box.X + box.Width / 2);
+        var startY = (int)Math.Round(box.Y + box.Height / 2);
+        await page.Mouse.MoveAsync(x, startY);
+        await page.Mouse.DownAsync();
+        await page.Mouse.MoveAsync(x, startY - 48, new MouseMoveOptions { Steps = 8 });
+        await page.Mouse.UpAsync();
+
+        await Assertions.Expect(page.Locator("[data-testid='time-selector-swipe-echo']"))
+            .ToContainTextAsync("16:30", new() { Timeout = 20_000 });
     }
 }

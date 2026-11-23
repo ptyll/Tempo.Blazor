@@ -2,7 +2,7 @@
   "itemName": "TmTimeSelector",
   "kind": "Component",
   "category": "Pickers",
-  "description": "Inline APG spinbutton time-of-day selector: hours/minutes/(seconds) with +/−, optional AM/PM, an hour/minute radiogroup grid (2D roving tabindex), host-owned presets / Now / recents, and a JS module for keys, typeahead, auto-repeat and fit. Null Value renders -- in the readout; +/− starts from now rounded to the step. Square fit opens the grid on a segment tap (replacing presets) and collapses ShowGrid to None when seconds would overflow the 260 px sheet. Popup/Auto presentation of TmTimePicker composes this selector into a dialog overlay.",
+  "description": "Inline APG spinbutton time-of-day selector: hours/minutes/(seconds) with +/−, optional AM/PM, an hour/minute radiogroup grid (2D roving tabindex), host-owned presets / Now / recents, and a JS module for keys, typeahead, auto-repeat, fit and opt-in swipe (EnableSwipe, pointer-drag.js). Null Value renders -- in the readout; +/− starts from now rounded to the step. Square fit opens the grid on a segment tap (replacing presets) and collapses ShowGrid to None when seconds would overflow the 260 px sheet. Popup/Auto presentation of TmTimePicker composes this selector into a dialog overlay.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Pickers"
   ],
@@ -131,7 +131,7 @@
       "name": "EnableSwipe",
       "type": "bool",
       "isRequired": false,
-      "description": "Vertical swipe on a spinbutton. Unused until the swipe phase. Defaults to false."
+      "description": "Vertical swipe on a spinbutton (opt-in). Default false: the DOM, CSS and behaviour stay today's. When true the root carries data-tm-time-swipe=true and tm-time-selector.js attaches the shared pointer-drag.js helper (24 px = 1 step, swipe up = +, threshold 6 px; cancel / Escape rolls back). +/− remain the WCAG 2.5.7 alternative. Defaults to false."
     },
     {
       "name": "Disabled",
@@ -223,7 +223,7 @@
       "name": "OnCommitted",
       "type": "EventCallback<TimeOnly?>",
       "isRequired": false,
-      "description": "Fires once on a completed change (tap, typeahead with advance, end of auto-repeat), not on every arrow key."
+      "description": "Fires once on a completed change (tap, typeahead with advance, end of auto-repeat, end of swipe), not on every arrow key or swipe tick."
     },
     {
       "name": "Id",
@@ -282,6 +282,10 @@
     {
       "title": "Presets, Now and recents",
       "code": "<TmTimeSelector @bind-Value=\"time\" ShowNowPreset=\"true\" Presets=\"presets\" RecentTimes=\"recents\" />"
+    },
+    {
+      "title": "Opt-in swipe",
+      "code": "<TmTimeSelector @bind-Value=\"time\" EnableSwipe=\"true\" HourCycle=\"TimeHourCycle.H23\" />"
     }
   ]
 }

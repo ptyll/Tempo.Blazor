@@ -17,7 +17,7 @@ Sdílený základ redesignu (tokeny, rozvržení, bottom sheet, překryvy, edito
 7. [Overlay](#overlay) — TmOverlayPanel
 8. [Navigace](#navigace) — TmTabs, TmTabPanel, TmContextMenu, TmNavigationGuard, TmScrollSpyNav
 9. [Ikony a avatary](#ikony-a-avatary) — TmIcon, TmAvatar, TmAvatarGroup
-10. [Pickery (datum, čas)](#pickery) — TmDatePicker, TmDateRangePicker, TmDateTimePicker, TmDateTimeRangePicker, TmTimePicker, TmTimeInput, TmTimeRangePicker, TmCalendarView
+10. [Pickery (datum, čas)](#pickery) — TmDatePicker, TmDateRangePicker, TmDateTimePicker, TmDateTimeRangePicker, TmTimePicker, TmTimeSelector, TmTimeInput, TmTimeRangePicker, TmCalendarView
 11. [Formuláře a validace](#formuláře-a-validace) — TmFormField, TmValidatedField, TmValidationSummary, TmFormValidationMessage, TmInlineEdit, TmFormSection, TmFormRow, TmDynamicFormRenderer
 12. [DataTable](#datatable) — TmDataTable, TmDataTableColumn, TmPagination, TmColumnPicker, TmViewManager, TmFilterBuilder, TmFilterChip, TmBulkActionBar
 13. [Spreadsheet](#spreadsheet) — TmSpreadsheet
@@ -3190,6 +3190,7 @@ Výběr času s dropdownem.
 | `Label` | `string?` | `null` | Popisek |
 | `TriggerId` | `string?` | `null` | Volitelné explicitní id clock triggeru, aby ho mohla cílit `<label for>` nadřazené komponenty, když Auto na mobilu skryje segmenty |
 | `AriaLabelledBy` | `string?` | `null` | Id, která pojmenují group / overlay / trigger a přebijí `Label` |
+| `EnableSwipe` | `bool` | `false` | Předá `TmTimeSelector.EnableSwipe` v Popup/Auto (opt-in swipe; Segments ignoruje) |
 | `Class` | `string?` | `null` | Další CSS třídy |
 | `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
@@ -3203,6 +3204,34 @@ Výběr času s dropdownem.
     MaxTime="@(new TimeSpan(18, 0, 0))" />
 ```
 
+
+### TmTimeSelector
+
+Inline APG spinbutton výběr času: hodiny/minuty/(sekundy) s +/−, volitelným AM/PM, mřížkou hodin/minut, hostovanými předvolbami a JS modulem (klávesy, typeahead, auto-repeat, fit, opt-in swipe). Smlouva: [docs/time-selector.md](docs/time-selector.md), [ADR-0007](docs/adr/0007-time-selector.md). Demo `/time-input`.
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-time-selector` | Kořenová skupina |
+| `tm-time-selector--disabled` | Zakázaný stav |
+| `tm-time-selector--readonly` | Pouze pro čtení |
+| `tm-time-selector--invalid` | Nevalidní stav |
+| `tm-time-selector__spin` | Spinbutton (při `EnableSwipe` nese `touch-action: none`) |
+| `tm-time-selector__step` | Tlačítko +/− |
+
+#### Parametry (Fáze 8)
+
+| Parametr | Typ | Výchozí | Popis |
+|----------|-----|---------|-------|
+| `EnableSwipe` | `bool` | `false` | Opt-in svislý swipe na spinbuttonu (24 px = 1 krok, swipe nahoru = +). Default `false` nemění DOM/CSS/chování |
+| `AllowTyping` | `bool` | `true` | Typeahead a „Zadat z klávesnice“ na Mobile/Tablet regular; ve fit `square` se nikdy nenabízí |
+
+#### Příklady
+
+```razor
+<TmTimeSelector @bind-Value="_time" HourCycle="TimeHourCycle.H23" EnableSwipe="true" />
+```
 ### TmTimeInput
 
 Nízkoúrovňový vstup pro čas (hodiny:minuty[:sekundy]). Hodnota mimo `MinTime`/`MaxTime` zůstane na obrazovce a je `aria-invalid` — nikdy se tiše nezahodí. `HourCycle=Auto` následuje kulturu (`en-US` 12h s AM/PM, `cs`/`sk`/`fr` 24h). Na `(pointer: coarse)` mají segmenty podlahu `--tm-touch-target` (44 px).
@@ -3287,6 +3316,7 @@ Výběr časového rozsahu.
 | `ShowSeconds` | `bool` | `false` | Zobrazit sekundy |
 | `Label` | `string?` | `null` | Popisek |
 | `Disabled` | `bool` | `false` | Zakázáno |
+| `EnableSwipe` | `bool` | `false` | Předá `TmTimePicker.EnableSwipe` oběma koncům v Popup/Auto; Segments ignoruje |
 | `Class` | `string?` | `null` | Další CSS třídy |
 | `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 

@@ -169,6 +169,12 @@
       "description": "Minute step forwarded to the overlay selector. Defaults to 1."
     },
     {
+      "name": "EnableSwipe",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Forwards TmTimeSelector.EnableSwipe when Presentation is Popup or Auto. Default false keeps today's overlay (no swipe attribute, no pointer-drag on the spinbuttons)."
+    },
+    {
       "name": "EnforceStep",
       "type": "bool",
       "isRequired": false,

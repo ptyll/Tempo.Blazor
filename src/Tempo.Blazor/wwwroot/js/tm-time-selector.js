@@ -10,6 +10,10 @@
 //   OnHomeEndAsync(segment, home)             — Home / End on a spinbutton
 //   OnViewportChanged(width, height)          — measured inline-size + layout height
 //   OnKeyboardChanged(open)                   — software-keyboard heuristic
+//   OnSwipeStartAsync(segment)                — opt-in EnableSwipe: snapshot origin
+//   OnSwipeStepAsync(segment, delta)          — every 24 px of vertical travel (up = +)
+//   OnSwipeEndAsync(segment)                  — announce the result on release
+//   OnSwipeCancelAsync(segment)               — pointercancel / Escape: roll back the origin
 //
 // preventDefault runs only for handled keys; Tab is never swallowed. Auto-repeat starts after
 // 400 ms, then 8/s, and after 1.5 s jumps 5× the step; reduced motion does not affect it (it is
@@ -18,8 +22,14 @@
 // --tm-sheet-viewport; inline uses innerHeight. Keyboard-open is: the focused node is editable
 // AND visualViewport.height < 0.6 × the max height seen since attach.
 //
+// Opt-in swipe (data-tm-time-swipe="true") rides the shared pointer-drag.js helper — never a
+// second pointermove/capture implementation. Threshold 6 px, 24 px = one step, swipe up = +.
+// touch-action is CSS-owned (the number, only while swipe is on). +/− stay the WCAG 2.5.7 path.
+//
 // State is one session per root in a WeakMap. attach() is idempotent (re-attach detaches first).
 // Node tests: __tests__/tm-time-selector.test.mjs.
+
+import { attach as attachPointerDrag } from './pointer-drag.js';
 
 const sessions = new WeakMap();
 
@@ -28,6 +38,8 @@ const REPEAT_START_MS = 400;
 const REPEAT_INTERVAL_MS = 125; // 8/s
 const REPEAT_ACCEL_AFTER_MS = 1500;
 const KEYBOARD_RATIO = 0.6;
+const SWIPE_THRESHOLD = 6;
+const SWIPE_STEP_PX = 24;
 
 function win() {
     return globalThis.window;
@@ -492,9 +504,77 @@ function watchViewport(session) {
     reportKeyboard(session);
 }
 
+function swipeEnabled(root) {
+    return root?.getAttribute?.('data-tm-time-swipe') === 'true';
+}
+
+function unbindSwipe(session) {
+    for (const handle of session.swipeHandles ?? []) {
+        handle?.detach?.();
+    }
+
+    session.swipeHandles = [];
+}
+
+function bindSwipe(session) {
+    // update() re-runs after every Blazor render. Detaching a live handle fires onCancel
+    // (rollback) and drops the pointer session, so a mid-swipe tick would never stick.
+    if ((session.swipeHandles ?? []).some((handle) => handle?.dragging)) {
+        return;
+    }
+
+    unbindSwipe(session);
+    if (!swipeEnabled(session.root)) {
+        return;
+    }
+
+    for (const el of spins(session.root)) {
+        if (el?.getAttribute?.('role') !== 'spinbutton') {
+            continue;
+        }
+
+        const segment = segmentOf(el);
+        if (!segment) {
+            continue;
+        }
+
+        let applied = 0;
+        const handle = attachPointerDrag(el, {
+            threshold: SWIPE_THRESHOLD,
+            touchAction: null,
+            dragClass: null,
+            onStart() {
+                applied = 0;
+                invoke(session.dotNetRef, 'OnSwipeStartAsync', segment);
+            },
+            onMove(info) {
+                // Pointer dy is down-positive; swipe up (negative dy) increases the value.
+                const steps = Math.trunc(-info.dy / SWIPE_STEP_PX);
+                while (applied < steps) {
+                    applied += 1;
+                    invoke(session.dotNetRef, 'OnSwipeStepAsync', segment, 1);
+                }
+
+                while (applied > steps) {
+                    applied -= 1;
+                    invoke(session.dotNetRef, 'OnSwipeStepAsync', segment, -1);
+                }
+            },
+            onEnd() {
+                invoke(session.dotNetRef, 'OnSwipeEndAsync', segment);
+            },
+            onCancel() {
+                invoke(session.dotNetRef, 'OnSwipeCancelAsync', segment);
+            },
+        });
+        session.swipeHandles.push(handle);
+    }
+}
+
 function bind(session) {
     on(session, session.root, 'keydown', (event) => handleKey(session, event));
     bindSteps(session);
+    bindSwipe(session);
 }
 
 /**
@@ -526,6 +606,7 @@ export function attach(root, dotNetRef) {
         lastHeight: undefined,
         lastInner: undefined,
         repeating: false,
+        swipeHandles: [],
         now: () => Date.now(),
     };
     sessions.set(root, session);
@@ -543,6 +624,7 @@ export function detach(root) {
     sessions.delete(root);
     clearTypeahead(session);
     stopRepeat(session);
+    unbindSwipe(session);
     for (const entry of [...session.listeners, ...session.stepListeners]) {
         const [target, type, handler, options] = entry;
         target?.removeEventListener?.(type, handler, options);
@@ -562,4 +644,5 @@ export function update(root) {
 
     session.stepListeners = [];
     bindSteps(session);
+    bindSwipe(session);
 }

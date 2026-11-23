@@ -6,7 +6,7 @@
     <p class="text-slate-600 dark:text-slate-400">
         <code class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">&lt;TmTimeSelector /&gt;</code>
         is the inline APG spinbutton readout: hours/minutes with +/−, optional AM/PM, an hour/minute
-        grid, host-owned presets and a JS module for keys, typeahead, auto-repeat and fit.
+        grid, host-owned presets and a JS module for keys, typeahead, auto-repeat, fit and opt-in swipe.
         <code class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">&lt;TmTimePicker /&gt;</code>
         default <code>Presentation=Segments</code> keeps today's DOM; Popup/Auto compose the selector
         into a dialog overlay (sheet on a mobile viewport).
@@ -115,6 +115,26 @@
                         ReadOnly="true"
                         HourCycle="TimeHourCycle.H23"
                         Id="time-selector-readonly" />
+    </div>
+</section>
+
+<section class="demo-section" data-testid="time-selector-swipe">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Swipe</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-full">EnableSwipe</span>
+    </div>
+
+    <div class="showcase-card" data-testid="time-selector-swipe-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            Opt-in vertical swipe on a spinbutton (24 px = 1 step, swipe up = +). +/− remain the tap alternative.
+        </p>
+        <TmTimeSelector @bind-Value="_swipe"
+                        HourCycle="TimeHourCycle.H23"
+                        EnableSwipe="true"
+                        Id="time-selector-swipe" />
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-3" data-testid="time-selector-swipe-echo">
+            Value: @(_swipe?.ToString("HH:mm") ?? "—")
+        </p>
     </div>
 </section>
 
@@ -251,6 +271,7 @@
     private TimeOnly? _twelve = new TimeOnly(14, 30);
     private TimeOnly? _ranged = new TimeOnly(8, 0);
     private TimeOnly? _form = new TimeOnly(9, 0);
+    private TimeOnly? _swipe = new TimeOnly(14, 30);
     private TimeOnly? _seconds = new TimeOnly(14, 30, 15);
     private TimeOnly? _popup = new TimeOnly(14, 30);
     private TimeOnly? _auto = new TimeOnly(9, 0);

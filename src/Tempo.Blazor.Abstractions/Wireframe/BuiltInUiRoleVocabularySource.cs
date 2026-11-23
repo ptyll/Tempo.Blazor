@@ -44,7 +44,7 @@ public sealed class BuiltInUiRoleVocabularySource : IUiRoleVocabularySource
         R("tag-picker", "Tag picker", "Chooses one or more tags.", "tag selector", "vyber stitku", "TmTagPicker"),
         R("date-picker", "Date picker", "Chooses a calendar date.", "calendar picker", "vyber data", "TmDatePicker"),
         R("datetime-picker", "Date and time picker", "Chooses a date with a time.", "date time picker", "vyber data a casu", "TmDateTimePicker"),
-        R("time-picker", "Time picker", "Chooses a time of day.", "time selector", "vyber casu", "TmTimePicker", "TmTimeInput"),
+        R("time-picker", "Time picker", "Chooses a time of day.", "time selector", "vyber casu", "TmTimePicker", "TmTimeInput", "TmTimeSelector"),
         R("date-range-picker", "Date range picker", "Chooses a date interval.", "date interval", "rozsah dat", "TmDateRangePicker", "TmTimeRangePicker", "TmDateTimeRangePicker"),
         R("calendar-view", "Calendar view", "Displays dates or events in a calendar grid.", "calendar", "kalendar", "TmCalendarView", "TmCalendarGrid"),
         R("recurrence-editor", "Recurrence editor", "Configures repeated schedule rules.", "repeat rules", "opakovani", "TmRecurrenceEditor"),

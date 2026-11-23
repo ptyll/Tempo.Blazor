@@ -57,6 +57,10 @@
   box-shadow: var(--tm-focus-ring);
 }
 
+.tm-time-selector[data-tm-time-swipe="true"] .tm-time-selector__spin {
+  touch-action: none;
+}
+
 .tm-time-selector__step {
   display: inline-flex;
   align-items: center;

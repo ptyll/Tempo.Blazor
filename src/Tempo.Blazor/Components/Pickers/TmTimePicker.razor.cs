@@ -157,6 +157,12 @@ public partial class TmTimePicker
     [Parameter] public int MinuteStep { get; set; } = 1;
 
     /// <summary>
+    /// Forwards <c>TmTimeSelector.EnableSwipe</c> when Presentation is Popup or Auto. Default
+    /// <c>false</c> keeps today's overlay (no swipe attribute, no pointer-drag on the spinbuttons).
+    /// </summary>
+    [Parameter] public bool EnableSwipe { get; set; }
+
+    /// <summary>
     /// When true, an off-step bound value is marked invalid and never rewritten (forwarded to the
     /// overlay selector). Defaults to false.
     /// </summary>

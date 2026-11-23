@@ -88,6 +88,12 @@
       "description": "Minute step forwarded to both ends when Presentation is Popup or Auto; ignored by Segments. Defaults to 1."
     },
     {
+      "name": "EnableSwipe",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Forwards TmTimePicker.EnableSwipe to both overlay ends when Presentation is Popup or Auto; ignored by Segments. Defaults to false."
+    },
+    {
       "name": "EnforceStep",
       "type": "bool",
       "isRequired": false,

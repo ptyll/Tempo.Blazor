@@ -77,6 +77,7 @@ public class TempoPackFormControlsRenderTests
             Add(data, "TmDatePicker", [("label", "Due date"), ("format", "yyyy-mm-dd")], "Due date", "yyyy-mm-dd");
             Add(data, "TmDateTimePicker", [("label", "Start"), ("format", "yyyy-mm-dd HH:mm")], "Start", "yyyy-mm-dd HH:mm");
             Add(data, "TmTimePicker", [("label", "Time")], "Time", "HH:MM");
+            Add(data, "TmTimeSelector", [], "HH", "MM");
             Add(data, "TmDateRangePicker", [("label", "Period")], "Period", "From", "To");
             Add(data, "TmTimeRangePicker", [("label", "Hours")], "Hours", "HH:MM");
             Add(data, "TmDateTimeRangePicker", [("label", "Booking")], "Booking", "From date", "To date");
@@ -93,10 +94,11 @@ public class TempoPackFormControlsRenderTests
     [Fact]
     public void FormControlTypeList_CoversCompleteSchemaCategories()
     {
-        // 46: TmSignature/TmCurrencyInput (main) and TmOtpInput (OTP plan 4ebadc60) in the Inputs
-        // category; bump this guard (and add a render case below) whenever a new form-control schema lands.
-        FormControlTypes.Should().HaveCount(46);
-        FormControlTypes.Should().Contain(["TmButton", "TmTextInput", "TmQueryInput", "TmDecimalInput", "TmDatePicker", "TmTagPicker", "TmDropdownItem", "TmOtpInput"]);
+        // 47: TmSignature/TmCurrencyInput (main) and TmOtpInput (OTP plan 4ebadc60) in the Inputs
+        // category and TmTimeSelector (time-input plan 1c95309c Fáze 8) in the Pickers category;
+        // bump this guard (and add a render case below) whenever a new form-control schema lands.
+        FormControlTypes.Should().HaveCount(47);
+        FormControlTypes.Should().Contain(["TmButton", "TmTextInput", "TmQueryInput", "TmDecimalInput", "TmDatePicker", "TmTagPicker", "TmDropdownItem", "TmOtpInput", "TmTimeSelector"]);
     }
 
     [Fact]

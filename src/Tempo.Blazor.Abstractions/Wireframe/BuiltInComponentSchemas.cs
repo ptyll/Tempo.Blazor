@@ -296,6 +296,7 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmDatePicker"] = ["date-picker"],
             ["TmDateTimePicker"] = ["datetime-picker"],
             ["TmTimePicker"] = ["time-picker"],
+            ["TmTimeSelector"] = ["time-picker"],
             ["TmDateRangePicker"] = ["date-range-picker"],
             ["TmTimeRangePicker"] = ["date-range-picker", "time-picker"],
             ["TmDateTimeRangePicker"] = ["date-range-picker", "datetime-picker"],
@@ -944,6 +945,19 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             Type = "TmTimePicker", Category = "Pickers", DisplayName = "Time Picker",
             DefaultWidth = 160, DefaultHeight = 56,
             Props = [P("label", "Label", PropType.String, "Time", cat: "Content"), ..dateBehavior]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmTimeSelector", Category = "Pickers", DisplayName = "Time Selector",
+            DefaultWidth = 280, DefaultHeight = 120,
+            Props =
+            [
+                P("hourCycle",   "Hour Cycle",   PropType.Enum, "auto", ["auto", "h23", "h12"], cat: "Appearance"),
+                P("showSeconds", "Show Seconds", PropType.Bool, false, cat: "Appearance"),
+                P("enableSwipe", "Enable Swipe", PropType.Bool, false, cat: "Behavior"),
+                P("disabled",    "Disabled",     PropType.Bool, false, cat: "Behavior"),
+            ]
         };
 
         yield return new WireframeComponentSchema

@@ -1,6 +1,7 @@
 // tm-time-selector.js tests with hand-rolled DOM stubs (same approach as tm-otp-input.test.mjs):
 // no jsdom; the stubs implement only what the module touches. Covers keys, typeahead, Tab never
-// preventDefault, auto-repeat, fit measurement and the software-keyboard heuristic.
+// preventDefault, auto-repeat, fit measurement, the software-keyboard heuristic, and opt-in
+// swipe (dy→steps + cancel rollback) over the shared pointer-drag.js helper.
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { attach, detach, update } from '../tm-time-selector.js';
@@ -39,14 +40,18 @@ function makeEl(attrs = {}) {
         },
         getBoundingClientRect() { return { width: this.clientWidth ?? 400, height: 80 }; },
         clientWidth: 400,
+        style: {},
+        setPointerCapture() {},
+        releasePointerCapture() {},
+        contains(node) { return node === this; },
         _listeners: listeners,
     };
 }
 
-function makeRoot({ cycle = 'h23', seconds = false, width = 400 } = {}) {
-    const hours = makeEl({ 'data-tm-time-segment': 'hours' });
-    const minutes = makeEl({ 'data-tm-time-segment': 'minutes' });
-    const secondEl = makeEl({ 'data-tm-time-segment': 'seconds' });
+function makeRoot({ cycle = 'h23', seconds = false, width = 400, swipe = false } = {}) {
+    const hours = makeEl({ 'data-tm-time-segment': 'hours', role: 'spinbutton' });
+    const minutes = makeEl({ 'data-tm-time-segment': 'minutes', role: 'spinbutton' });
+    const secondEl = makeEl({ 'data-tm-time-segment': 'seconds', role: 'spinbutton' });
     const plusHours = makeEl({
         tagName: 'BUTTON',
         'data-tm-time-step': 'hours',
@@ -62,7 +67,10 @@ function makeRoot({ cycle = 'h23', seconds = false, width = 400 } = {}) {
     const listeners = new Map();
     const root = {
         dataset: { tmHourCycle: cycle },
-        attrs: { 'data-tm-hour-cycle': cycle },
+        attrs: {
+            'data-tm-hour-cycle': cycle,
+            ...(swipe ? { 'data-tm-time-swipe': 'true' } : {}),
+        },
         hours,
         minutes,
         seconds: secondEl,
@@ -70,8 +78,10 @@ function makeRoot({ cycle = 'h23', seconds = false, width = 400 } = {}) {
         minusHours,
         clientWidth: width,
         getAttribute(name) { return this.attrs[name] ?? null; },
+        setAttribute(name, value) { this.attrs[name] = String(value); },
         querySelectorAll(sel) {
-            if (sel.includes('data-tm-time-segment')) return spinList;
+            if (sel.includes('role=spinbutton') && sel.includes('data-tm-time-segment')) return spinList;
+            if (sel.includes('data-tm-time-segment') && !sel.includes('role=')) return spinList;
             if (sel.includes('data-tm-time-step')) return stepList;
             return [];
         },
@@ -128,6 +138,7 @@ function installWindow({ innerHeight = 800, vvHeight = 800, sheetViewport = '' }
         activeElement: null,
         addEventListener() {},
         removeEventListener() {},
+        contains() { return true; },
     };
     const previous = {
         window: globalThis.window,
@@ -515,6 +526,164 @@ test('update keeps max visualViewport so an open keyboard stays open', () => {
     host.window.visualViewport.dispatch('resize');
     assert.deepEqual(dotNet.calls.filter((c) => c.method === 'OnKeyboardChanged').at(-1),
         { method: 'OnKeyboardChanged', args: [true] });
+    detach(root);
+    host.restore();
+});
+
+function pointer(el, { y = 0, x = 0, pointerId = 1, pointerType = 'touch', buttons = 1 } = {}) {
+    return {
+        pointerId,
+        pointerType,
+        clientX: x,
+        clientY: y,
+        button: 0,
+        buttons,
+        isPrimary: true,
+        target: el,
+        defaultPrevented: false,
+        preventDefault() { this.defaultPrevented = true; },
+        stopPropagation() {},
+    };
+}
+
+function swipeCalls(dotNet) {
+    return dotNet.calls.filter((c) => c.method === 'OnSwipeStepAsync' || c.method === 'OnKeyStepAsync');
+}
+
+test('without data-tm-time-swipe a vertical drag on hours attaches nothing', () => {
+    const host = installWindow();
+    const root = makeRoot();
+    const dotNet = dotnetStub();
+    attach(root, dotNet);
+    assert.equal(root.hours._listeners.has('pointerdown'), false);
+    root.hours.dispatch('pointerdown', pointer(root.hours, { y: 0 }));
+    root.hours.dispatch('pointermove', pointer(root.hours, { y: -48 }));
+    root.hours.dispatch('pointerup', pointer(root.hours, { y: -48, buttons: 0 }));
+    assert.equal(swipeCalls(dotNet).length, 0);
+    assert.equal(dotNet.calls.filter((c) => c.method.startsWith('OnSwipe')).length, 0);
+    detach(root);
+    host.restore();
+});
+
+test('swipe up 48 px on hours steps +1 twice (24 px = 1 step, up = +)', () => {
+    const host = installWindow();
+    const root = makeRoot({ swipe: true });
+    const dotNet = dotnetStub();
+    attach(root, dotNet);
+    root.hours.dispatch('pointerdown', pointer(root.hours, { y: 100 }));
+    root.hours.dispatch('pointermove', pointer(root.hours, { y: 100 - 48 }));
+    const steps = dotNet.calls.filter((c) => c.method === 'OnSwipeStepAsync');
+    assert.deepEqual(steps, [
+        { method: 'OnSwipeStepAsync', args: ['hours', 1] },
+        { method: 'OnSwipeStepAsync', args: ['hours', 1] },
+    ]);
+    root.hours.dispatch('pointerup', pointer(root.hours, { y: 52, buttons: 0 }));
+    detach(root);
+    host.restore();
+});
+
+test('swipe down 24 px on hours steps -1; movement under 24 px is a no-op after threshold 6', () => {
+    const host = installWindow();
+    const root = makeRoot({ swipe: true });
+    const dotNet = dotnetStub();
+    attach(root, dotNet);
+    root.hours.dispatch('pointerdown', pointer(root.hours, { y: 100 }));
+    root.hours.dispatch('pointermove', pointer(root.hours, { y: 106 }));
+    assert.equal(dotNet.calls.filter((c) => c.method === 'OnSwipeStepAsync').length, 0,
+        'threshold 6 starts the drag but 6 px is under one 24 px step');
+    root.hours.dispatch('pointermove', pointer(root.hours, { y: 124 }));
+    assert.deepEqual(dotNet.calls.filter((c) => c.method === 'OnSwipeStepAsync'), [
+        { method: 'OnSwipeStepAsync', args: ['hours', -1] },
+    ]);
+    root.hours.dispatch('pointerup', pointer(root.hours, { y: 124, buttons: 0 }));
+    detach(root);
+    host.restore();
+});
+
+test('pointercancel rolls the swipe back via OnSwipeCancelAsync', () => {
+    const host = installWindow();
+    const root = makeRoot({ swipe: true });
+    const dotNet = dotnetStub();
+    attach(root, dotNet);
+    root.hours.dispatch('pointerdown', pointer(root.hours, { y: 100 }));
+    root.hours.dispatch('pointermove', pointer(root.hours, { y: 52 }));
+    assert.ok(dotNet.calls.some((c) => c.method === 'OnSwipeStepAsync'));
+    root.hours.dispatch('pointercancel', pointer(root.hours, { y: 52 }));
+    assert.equal(dotNet.calls.filter((c) => c.method === 'OnSwipeCancelAsync').length, 1);
+    assert.deepEqual(dotNet.calls.filter((c) => c.method === 'OnSwipeCancelAsync').at(-1).args[0], 'hours');
+    detach(root);
+    host.restore();
+});
+
+test('detach releases swipe handles and a second attach is idempotent', () => {
+    const host = installWindow();
+    const root = makeRoot({ swipe: true });
+    const first = dotnetStub();
+    const second = dotnetStub();
+    attach(root, first);
+    attach(root, second);
+    root.hours.dispatch('pointerdown', pointer(root.hours, { y: 100 }));
+    root.hours.dispatch('pointermove', pointer(root.hours, { y: 76 }));
+    assert.equal(first.calls.filter((c) => c.method === 'OnSwipeStepAsync').length, 0);
+    assert.ok(second.calls.some((c) => c.method === 'OnSwipeStepAsync'));
+    detach(root);
+    const before = second.calls.length;
+    root.hours.dispatch('pointerdown', pointer(root.hours, { y: 100 }));
+    root.hours.dispatch('pointermove', pointer(root.hours, { y: 52 }));
+    assert.equal(second.calls.length, before);
+    assert.equal(root.hours._listeners.has('pointerdown'), false);
+    host.restore();
+});
+
+test('update binds swipe when the attribute is added and unbinds when it is removed', () => {
+    const host = installWindow();
+    const root = makeRoot();
+    const dotNet = dotnetStub();
+    attach(root, dotNet);
+    assert.equal(root.hours._listeners.has('pointerdown'), false);
+    root.setAttribute('data-tm-time-swipe', 'true');
+    update(root);
+    root.hours.dispatch('pointerdown', pointer(root.hours, { y: 100 }));
+    root.hours.dispatch('pointermove', pointer(root.hours, { y: 76 }));
+    assert.ok(dotNet.calls.some((c) => c.method === 'OnSwipeStepAsync'));
+    root.hours.dispatch('pointerup', pointer(root.hours, { y: 76, buttons: 0 }));
+    root.setAttribute('data-tm-time-swipe', 'false');
+    update(root);
+    const before = dotNet.calls.filter((c) => c.method === 'OnSwipeStepAsync').length;
+    root.hours.dispatch('pointerdown', pointer(root.hours, { y: 100 }));
+    root.hours.dispatch('pointermove', pointer(root.hours, { y: 52 }));
+    assert.equal(dotNet.calls.filter((c) => c.method === 'OnSwipeStepAsync').length, before);
+    detach(root);
+    host.restore();
+});
+
+test('update during an in-progress swipe does not cancel the gesture', () => {
+    const host = installWindow();
+    const root = makeRoot({ swipe: true });
+    const dotNet = dotnetStub();
+    attach(root, dotNet);
+    root.hours.dispatch('pointerdown', pointer(root.hours, { y: 100 }));
+    root.hours.dispatch('pointermove', pointer(root.hours, { y: 76 }));
+    update(root);
+    root.hours.dispatch('pointermove', pointer(root.hours, { y: 52 }));
+    const steps = dotNet.calls.filter((c) => c.method === 'OnSwipeStepAsync');
+    assert.equal(steps.length, 2, 'the second 24 px still lands after update()');
+    assert.equal(dotNet.calls.filter((c) => c.method === 'OnSwipeCancelAsync').length, 0,
+        'rebind must not detach() a live pointer-drag (detach cancels and rolls back)');
+    detach(root);
+    host.restore();
+});
+
+test('swipe never starts on a +/− stepper, only on the spinbutton number', () => {
+    const host = installWindow();
+    const root = makeRoot({ swipe: true });
+    const dotNet = dotnetStub();
+    attach(root, dotNet);
+    assert.equal(root.plusHours._listeners.has('pointerdown'), true, 'auto-repeat still binds the stepper');
+    root.plusHours.dispatch('pointerdown', pointer(root.plusHours, { y: 100 }));
+    root.plusHours.dispatch('pointermove', pointer(root.plusHours, { y: 52 }));
+    root.plusHours.dispatch('pointerup', pointer(root.plusHours, { y: 52, buttons: 0 }));
+    assert.equal(dotNet.calls.filter((c) => c.method === 'OnSwipeStepAsync').length, 0);
     detach(root);
     host.restore();
 });
