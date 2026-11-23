@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Diagram.Commands;
 using Tempo.Blazor.Components.Diagram.Models;
+using Tempo.Blazor.Components.Diagram.Services;
 using Tempo.Blazor.Components.Diagram.Stencils;
 using Tempo.Blazor.Models;
 
@@ -1871,13 +1872,8 @@ public partial class TmDiagramPropertiesPanel : ComponentBase
         var color = e.Value?.ToString() ?? "#ffffff";
         var (row, col) = SelectedTableCells[0];
         var cell = Services.TableLayoutService.GetCells(FirstSelectedNode).FirstOrDefault(c => c.Row == row && c.Column == col);
-        var newStyle = cell?.Style is null ? new DiagramTableCellStyle { BackgroundColor = color } : new DiagramTableCellStyle
-        {
-            BackgroundColor = color,
-            BorderColor = cell.Style.BorderColor,
-            TextAlign = cell.Style.TextAlign,
-            FontWeight = cell.Style.FontWeight
-        };
+        var newStyle = cell?.Style?.Clone() ?? new DiagramTableCellStyle();
+        newStyle.BackgroundColor = color;
         CommandStack.Push(new UpdateTableCellStyleCommand(Document, FirstSelectedNode.Id, row, col, newStyle));
         await DocumentChanged.InvokeAsync(Document);
     }
@@ -1888,15 +1884,32 @@ public partial class TmDiagramPropertiesPanel : ComponentBase
         var color = e.Value?.ToString() ?? "#e5e7eb";
         var (row, col) = SelectedTableCells[0];
         var cell = Services.TableLayoutService.GetCells(FirstSelectedNode).FirstOrDefault(c => c.Row == row && c.Column == col);
-        var newStyle = cell?.Style is null ? new DiagramTableCellStyle { BorderColor = color } : new DiagramTableCellStyle
-        {
-            BackgroundColor = cell.Style.BackgroundColor,
-            BorderColor = color,
-            TextAlign = cell.Style.TextAlign,
-            FontWeight = cell.Style.FontWeight
-        };
+        var newStyle = cell?.Style?.Clone() ?? new DiagramTableCellStyle();
+        newStyle.BorderColor = color;
         CommandStack.Push(new UpdateTableCellStyleCommand(Document, FirstSelectedNode.Id, row, col, newStyle));
         await DocumentChanged.InvokeAsync(Document);
+    }
+
+    /// <summary>
+    /// Native <c>input type="color"</c> only accepts a hex value. A catalogued
+    /// <c>var(--tm-…)</c> cell background therefore resolves through
+    /// <see cref="DiagramSvgPalette.Light"/>.Tokens (the 2.12.0 light hex) so the
+    /// picker stays valid; an unknown <c>var(…)</c> uses <paramref name="fallback"/>.
+    /// </summary>
+    private static string ColorPickerValue(string? color, string fallback)
+    {
+        if (string.IsNullOrWhiteSpace(color))
+        {
+            return fallback;
+        }
+
+        if (color.StartsWith("var(", StringComparison.OrdinalIgnoreCase))
+        {
+            var name = color[4..].TrimEnd(')').Split(',')[0].Trim();
+            return DiagramSvgPalette.Light.Tokens.TryGetValue(name, out var hex) ? hex : fallback;
+        }
+
+        return color;
     }
 
     private static Dictionary<string, object> DeepCopy(Dictionary<string, object> source)

@@ -377,6 +377,23 @@ public sealed class ComponentAccessibilityE2ETests : WasmTestBase
             excludeChrome: ["h2", "p", ".rounded-full"]);
     }
 
+    [TestMethod]
+    public async Task ArchimateDiagramNodes_Axe_HasNoCriticalOrSeriousViolations()
+    {
+        // Fáze 8c: coloured ArchiMate fills used to sit under muted canvas ink (~1.7:1 in dark).
+        // Scope the scan to the diagram nodes themselves, not the modeling chrome.
+        var page = await OpenAsync("/modeling-editor?notation=archimate32&viewpoint=Layered&scenario=archimate32-business-app");
+        await page.Locator("g.tm-diagram-node").First.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+        var legendToggle = page.Locator("[data-testid='modeling-preview-legend'] .tm-modeling-diagram-legend__toggle").First;
+        if (await legendToggle.CountAsync() > 0 && await legendToggle.GetAttributeAsync("aria-expanded") == "true")
+        {
+            await legendToggle.ClickAsync();
+        }
+
+        await SaveScreenshotAsync(page, "archimate-nodes");
+        await AssertAxeCleanBothThemesAsync(page, "g.tm-diagram-node", "archimate-nodes");
+    }
+
     private static async Task SaveScreenshotAsync(IPage page, string fileName)
     {
         var dir = Path.Combine(FindRepoRoot().FullName, "tests", "Tempo.Blazor.E2E", "__screenshots__", "accessibility");

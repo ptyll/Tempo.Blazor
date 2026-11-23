@@ -5007,7 +5007,27 @@
         },
         {
           "name": "--tm-diagram-node-ink",
-          "description": "Label/table ink painted on the canvas paper (edge labels, cardinalities, table cells). Alias of --tm-canvas-paper-ink-muted so it stays legible on the page in both themes."
+          "description": "Label/table ink painted on the canvas paper (edge labels, cardinalities, table cells). Alias of --tm-canvas-paper-ink-muted so it stays legible on the page in both themes. Unchanged in Fáze 8c — coloured fills use --tm-diagram-node-ink-on-fill instead."
+        },
+        {
+          "name": "--tm-diagram-node-ink-on-fill",
+          "description": "Label ink on a coloured stencil fill (ArchiMate / BuiltIn / Extended). Light #4b5563 (gray-600); dark #e5e7eb. Catalogued in tokens.css, re-declared on the dark roots and the light island, re-pinned to the light hex in @media print. The Light SVG export maps this token to #111827 (today's DefaultText) so a 2.12.0 Light snapshot stays pixel-identical."
+        },
+        {
+          "name": "--tm-diagram-stencil-stroke-on-fill",
+          "description": "Outline of a coloured stencil. Light #1f2937; dark #e5e7eb. Dedicated so Light SVG export can keep #1f2937 while --tm-diagram-node-stroke stays #111827."
+        },
+        {
+          "name": "--tm-archimate-application-fill",
+          "description": "ArchiMate 3 Application-layer fill. Light #cfe8ff (2.12.0 hex); dark #1e3a8a. Sibling tokens cover business, technology, motivation, strategy, physical, implementation and cross."
+        },
+        {
+          "name": "--tm-diagram-stencil-yellow-fill",
+          "description": "BuiltIn yellow family fill (sticky-note). Light #fef08a; dark #713f12. Own token — not amber #fefce8. Sibling families: red, blue, orange, green, amber (fill/stroke/ink) plus the Extended extras (slate, cyan, lime, sky, teal, indigo, pink, …)."
+        },
+        {
+          "name": "--tm-diagram-stencil-table-header-fill",
+          "description": "Table header cell fill (table.basic and Insert table). Light #f3f4f6 (the 2.12.0 hex); dark #334155 so --tm-diagram-node-ink-on-fill holds ≥4.5:1. Header cells also set Color to --tm-diagram-node-ink-on-fill; body cells keep the muted --tm-diagram-node-ink."
         },
         {
           "name": "--tm-canvas-paper",

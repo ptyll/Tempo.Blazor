@@ -548,6 +548,8 @@ public partial class TmDiagramStencilShape : ComponentBase, IAsyncDisposable
             sb.Append($" text-align: {style.TextAlign};");
         if (!string.IsNullOrEmpty(style?.FontWeight))
             sb.Append($" font-weight: {style.FontWeight};");
+        if (!string.IsNullOrEmpty(style?.Color))
+            sb.Append($" color: {style.Color};");
         return sb.ToString();
     }
 

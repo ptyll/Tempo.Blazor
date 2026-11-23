@@ -20,6 +20,18 @@
       "description": "Border color (CSS color string)."
     },
     {
+      "name": "Clone",
+      "kind": "Method",
+      "type": "DiagramTableCellStyle",
+      "description": "Shallow copy so table commands keep the header on-fill ink across undo."
+    },
+    {
+      "name": "Color",
+      "kind": "Property",
+      "type": "string?",
+      "description": "Cell ink (CSS color string). Header cells that paint var(--tm-diagram-stencil-table-header-fill) set var(--tm-diagram-node-ink-on-fill) so the label clears 4.5:1 in dark mode. Null keeps the CSS default --tm-diagram-node-ink (muted paper labels)."
+    },
+    {
       "name": "FontWeight",
       "kind": "Property",
       "type": "string?",

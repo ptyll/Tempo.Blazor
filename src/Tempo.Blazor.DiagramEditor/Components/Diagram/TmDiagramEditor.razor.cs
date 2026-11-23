@@ -1239,7 +1239,8 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
             BackgroundColor = backgroundColor,
             BorderColor = borderColor,
             TextAlign = cell?.Style?.TextAlign,
-            FontWeight = cell?.Style?.FontWeight
+            FontWeight = cell?.Style?.FontWeight,
+            Color = cell?.Style?.Color
         };
         ActiveCommandStack.Push(new UpdateTableCellStyleCommand(_document, _contextMenuNodeId, row, col, newStyle));
         await OnDocumentChanged(_document);
@@ -1975,7 +1976,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
                     Row = r,
                     Column = c,
                     Text = r == 0 ? $"Header {c + 1}" : $"Cell {r},{c}",
-                    Style = r == 0 ? new DiagramTableCellStyle { FontWeight = "bold", BackgroundColor = "#f3f4f6" } : null
+                    Style = r == 0 ? new DiagramTableCellStyle { FontWeight = "bold", BackgroundColor = "var(--tm-diagram-stencil-table-header-fill)", Color = "var(--tm-diagram-node-ink-on-fill)" } : null
                 });
             }
         }

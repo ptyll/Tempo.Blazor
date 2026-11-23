@@ -79,7 +79,8 @@ public class DiagramArchimate3Phase7Tests : LocalizationTestBase
         ]);
         business["archimate3.business.actor"].Layout.ShapeSvg.Should().Contain("tm-archimate3-marker-actor");
         business["archimate3.business.service"].Layout.BackgroundShape.Should().Be("rounded");
-        business.Values.All(stencil => stencil.Layout.Fill == "#fff2b8").Should().BeTrue();
+        business.Values.All(stencil => stencil.Layout.Fill == "var(--tm-archimate-business-fill)").Should().BeTrue();
+        DiagramSvgPalette.Light.Tokens["--tm-archimate-business-fill"].Should().Be("#fff2b8");
     }
 
     [Fact]
@@ -99,7 +100,8 @@ public class DiagramArchimate3Phase7Tests : LocalizationTestBase
         ]);
         application["archimate3.application.component"].Layout.ShapeSvg.Should().Contain("tm-archimate3-marker-component");
         application["archimate3.application.interface"].Layout.BackgroundShape.Should().Be("ellipse");
-        application.Values.All(stencil => stencil.Layout.Fill == "#cfe8ff").Should().BeTrue();
+        application.Values.All(stencil => stencil.Layout.Fill == "var(--tm-archimate-application-fill)").Should().BeTrue();
+        DiagramSvgPalette.Light.Tokens["--tm-archimate-application-fill"].Should().Be("#cfe8ff");
     }
 
     [Fact]
@@ -119,7 +121,8 @@ public class DiagramArchimate3Phase7Tests : LocalizationTestBase
         ]);
         technology["archimate3.technology.node"].Layout.ShapeSvg.Should().Contain("tm-archimate3-marker-node");
         technology["archimate3.technology.artifact"].Layout.BackgroundShape.Should().Be("document");
-        technology.Values.All(stencil => stencil.Layout.Fill == "#d9f2d0").Should().BeTrue();
+        technology.Values.All(stencil => stencil.Layout.Fill == "var(--tm-archimate-technology-fill)").Should().BeTrue();
+        DiagramSvgPalette.Light.Tokens["--tm-archimate-technology-fill"].Should().Be("#d9f2d0");
     }
 
     [Fact]
@@ -141,7 +144,8 @@ public class DiagramArchimate3Phase7Tests : LocalizationTestBase
         ]);
         motivation["archimate3.motivation.goal"].Layout.BackgroundShape.Should().Be("rounded");
         motivation["archimate3.motivation.requirement"].Layout.ShapeSvg.Should().Contain("tm-archimate3-marker-requirement");
-        motivation.Values.All(stencil => stencil.Layout.Fill == "#eadcff").Should().BeTrue();
+        motivation.Values.All(stencil => stencil.Layout.Fill == "var(--tm-archimate-motivation-fill)").Should().BeTrue();
+        DiagramSvgPalette.Light.Tokens["--tm-archimate-motivation-fill"].Should().Be("#eadcff");
     }
 
     [Fact]
@@ -158,7 +162,8 @@ public class DiagramArchimate3Phase7Tests : LocalizationTestBase
         ]);
         strategy["archimate3.strategy.resource"].Layout.ShapeSvg.Should().Contain("tm-archimate3-marker-resource");
         strategy["archimate3.strategy.value-stream"].Layout.BackgroundShape.Should().Be("hexagon");
-        strategy.Values.All(stencil => stencil.Layout.Fill == "#ffe1c2").Should().BeTrue();
+        strategy.Values.All(stencil => stencil.Layout.Fill == "var(--tm-archimate-strategy-fill)").Should().BeTrue();
+        DiagramSvgPalette.Light.Tokens["--tm-archimate-strategy-fill"].Should().Be("#ffe1c2");
     }
 
     [Fact]

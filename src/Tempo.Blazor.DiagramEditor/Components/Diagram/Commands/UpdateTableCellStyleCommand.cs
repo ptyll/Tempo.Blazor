@@ -19,22 +19,10 @@ public sealed class UpdateTableCellStyleCommand : IDiagramCommand
         _nodeId = nodeId;
         _row = row;
         _column = column;
-        _newStyle = newStyle is null ? null : new DiagramTableCellStyle
-        {
-            BackgroundColor = newStyle.BackgroundColor,
-            BorderColor = newStyle.BorderColor,
-            TextAlign = newStyle.TextAlign,
-            FontWeight = newStyle.FontWeight
-        };
+        _newStyle = newStyle?.Clone();
         var cells = TableLayoutService.GetCells(doc.Nodes.FirstOrDefault(n => n.Id == nodeId));
         var cell = cells.FirstOrDefault(c => c.Row == row && c.Column == column);
-        _oldStyle = cell?.Style is null ? null : new DiagramTableCellStyle
-        {
-            BackgroundColor = cell.Style.BackgroundColor,
-            BorderColor = cell.Style.BorderColor,
-            TextAlign = cell.Style.TextAlign,
-            FontWeight = cell.Style.FontWeight
-        };
+        _oldStyle = cell?.Style?.Clone();
     }
 
     public string Name => "Update table cell style";
@@ -46,13 +34,7 @@ public sealed class UpdateTableCellStyleCommand : IDiagramCommand
         var cells = TableLayoutService.GetCells(node);
         var cell = cells.FirstOrDefault(c => c.Row == _row && c.Column == _column);
         if (cell is null) return;
-        cell.Style = _newStyle is null ? null : new DiagramTableCellStyle
-        {
-            BackgroundColor = _newStyle.BackgroundColor,
-            BorderColor = _newStyle.BorderColor,
-            TextAlign = _newStyle.TextAlign,
-            FontWeight = _newStyle.FontWeight
-        };
+        cell.Style = _newStyle?.Clone();
         TableLayoutService.SetCells(node, cells);
     }
 
@@ -63,13 +45,7 @@ public sealed class UpdateTableCellStyleCommand : IDiagramCommand
         var cells = TableLayoutService.GetCells(node);
         var cell = cells.FirstOrDefault(c => c.Row == _row && c.Column == _column);
         if (cell is null) return;
-        cell.Style = _oldStyle is null ? null : new DiagramTableCellStyle
-        {
-            BackgroundColor = _oldStyle.BackgroundColor,
-            BorderColor = _oldStyle.BorderColor,
-            TextAlign = _oldStyle.TextAlign,
-            FontWeight = _oldStyle.FontWeight
-        };
+        cell.Style = _oldStyle?.Clone();
         TableLayoutService.SetCells(node, cells);
     }
 }

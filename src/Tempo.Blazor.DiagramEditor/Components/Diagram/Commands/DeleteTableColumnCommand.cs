@@ -57,13 +57,7 @@ public sealed class DeleteTableColumnCommand : IDiagramCommand
                 RowSpan = removed.RowSpan,
                 ColSpan = removed.ColSpan,
                 Text = removed.Text,
-                Style = removed.Style is null ? null : new DiagramTableCellStyle
-                {
-                    BackgroundColor = removed.Style.BackgroundColor,
-                    BorderColor = removed.Style.BorderColor,
-                    TextAlign = removed.Style.TextAlign,
-                    FontWeight = removed.Style.FontWeight
-                }
+                Style = removed.Style?.Clone()
             });
         }
         TableLayoutService.SetCells(node, cells);

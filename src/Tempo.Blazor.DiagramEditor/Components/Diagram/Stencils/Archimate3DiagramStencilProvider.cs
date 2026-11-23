@@ -41,7 +41,7 @@ public sealed class Archimate3DiagramStencilProvider : IDiagramStencilProvider
 
     private static IEnumerable<DiagramStencil> BusinessPalette()
     {
-        const string fill = "#fff2b8";
+        const string fill = "var(--tm-archimate-business-fill)";
         yield return Element("archimate3.business.actor", "Business Actor", "DiagramStencil_Archimate3BusinessActor", "archimate3.business", "DiagramStencilPalette_Archimate3Business", 0, 0, "rectangle", fill, "tm-archimate3-marker-actor", ActorMarker(), "Business Actor");
         yield return Element("archimate3.business.role", "Business Role", "DiagramStencil_Archimate3BusinessRole", "archimate3.business", "DiagramStencilPalette_Archimate3Business", 0, 1, "rectangle", fill, "tm-archimate3-marker-role", BadgeMarker("R"), "Business Role");
         yield return Element("archimate3.business.collaboration", "Business Collaboration", "DiagramStencil_Archimate3BusinessCollaboration", "archimate3.business", "DiagramStencilPalette_Archimate3Business", 0, 2, "rectangle", fill, "tm-archimate3-marker-collaboration", CollaborationMarker(), "Business Collaboration");
@@ -59,7 +59,7 @@ public sealed class Archimate3DiagramStencilProvider : IDiagramStencilProvider
 
     private static IEnumerable<DiagramStencil> ApplicationPalette()
     {
-        const string fill = "#cfe8ff";
+        const string fill = "var(--tm-archimate-application-fill)";
         yield return Element("archimate3.application.component", "Application Component", "DiagramStencil_Archimate3ApplicationComponent", "archimate3.application", "DiagramStencilPalette_Archimate3Application", 1, 0, "rectangle", fill, "tm-archimate3-marker-component", ComponentMarker(), "Application Component");
         yield return Element("archimate3.application.collaboration", "Application Collaboration", "DiagramStencil_Archimate3ApplicationCollaboration", "archimate3.application", "DiagramStencilPalette_Archimate3Application", 1, 1, "rectangle", fill, "tm-archimate3-marker-collaboration", CollaborationMarker(), "Application Collaboration");
         yield return Element("archimate3.application.interface", "Application Interface", "DiagramStencil_Archimate3ApplicationInterface", "archimate3.application", "DiagramStencilPalette_Archimate3Application", 1, 2, "ellipse", fill, "tm-archimate3-marker-interface", InterfaceMarker(), "Application Interface", 118, 82);
@@ -73,7 +73,7 @@ public sealed class Archimate3DiagramStencilProvider : IDiagramStencilProvider
 
     private static IEnumerable<DiagramStencil> TechnologyPalette()
     {
-        const string fill = "#d9f2d0";
+        const string fill = "var(--tm-archimate-technology-fill)";
         yield return Element("archimate3.technology.node", "Node", "DiagramStencil_Archimate3TechnologyNode", "archimate3.technology", "DiagramStencilPalette_Archimate3Technology", 2, 0, "rectangle", fill, "tm-archimate3-marker-node", NodeMarker(), "Node");
         yield return Element("archimate3.technology.device", "Device", "DiagramStencil_Archimate3Device", "archimate3.technology", "DiagramStencilPalette_Archimate3Technology", 2, 1, "rectangle", fill, "tm-archimate3-marker-device", DeviceMarker(), "Device");
         yield return Element("archimate3.technology.system-software", "System Software", "DiagramStencil_Archimate3SystemSoftware", "archimate3.technology", "DiagramStencilPalette_Archimate3Technology", 2, 2, "rectangle", fill, "tm-archimate3-marker-system-software", StackMarker(), "System Software");
@@ -91,7 +91,7 @@ public sealed class Archimate3DiagramStencilProvider : IDiagramStencilProvider
 
     private static IEnumerable<DiagramStencil> MotivationPalette()
     {
-        const string fill = "#eadcff";
+        const string fill = "var(--tm-archimate-motivation-fill)";
         yield return Element("archimate3.motivation.stakeholder", "Stakeholder", "DiagramStencil_Archimate3Stakeholder", "archimate3.motivation", "DiagramStencilPalette_Archimate3Motivation", 3, 0, "rectangle", fill, "tm-archimate3-marker-stakeholder", ActorMarker(), "Stakeholder");
         yield return Element("archimate3.motivation.driver", "Driver", "DiagramStencil_Archimate3Driver", "archimate3.motivation", "DiagramStencilPalette_Archimate3Motivation", 3, 1, "rounded", fill, "tm-archimate3-marker-driver", BadgeMarker("D"), "Driver");
         yield return Element("archimate3.motivation.assessment", "Assessment", "DiagramStencil_Archimate3Assessment", "archimate3.motivation", "DiagramStencilPalette_Archimate3Motivation", 3, 2, "rectangle", fill, "tm-archimate3-marker-assessment", AssessmentMarker(), "Assessment");
@@ -106,7 +106,7 @@ public sealed class Archimate3DiagramStencilProvider : IDiagramStencilProvider
 
     private static IEnumerable<DiagramStencil> StrategyPalette()
     {
-        const string fill = "#ffe1c2";
+        const string fill = "var(--tm-archimate-strategy-fill)";
         yield return Element("archimate3.strategy.resource", "Resource", "DiagramStencil_Archimate3Resource", "archimate3.strategy", "DiagramStencilPalette_Archimate3Strategy", 4, 0, "rectangle", fill, "tm-archimate3-marker-resource", ResourceMarker(), "Resource");
         yield return Element("archimate3.strategy.capability", "Capability", "DiagramStencil_Archimate3Capability", "archimate3.strategy", "DiagramStencilPalette_Archimate3Strategy", 4, 1, "rounded", fill, "tm-archimate3-marker-capability", CapabilityMarker(), "Capability");
         yield return Element("archimate3.strategy.course-of-action", "Course of Action", "DiagramStencil_Archimate3CourseOfAction", "archimate3.strategy", "DiagramStencilPalette_Archimate3Strategy", 4, 2, "rectangle", fill, "tm-archimate3-marker-course-of-action", CourseOfActionMarker(), "Course of Action");
@@ -115,7 +115,7 @@ public sealed class Archimate3DiagramStencilProvider : IDiagramStencilProvider
 
     private static IEnumerable<DiagramStencil> PhysicalPalette()
     {
-        const string fill = "#d9f2d0";
+        const string fill = "var(--tm-archimate-physical-fill)";
         yield return Element("archimate3.physical.equipment", "Equipment", "DiagramStencil_Archimate3Equipment", "archimate3.physical", "DiagramStencilPalette_Archimate3Physical", 5, 0, "rectangle", fill, "tm-archimate3-marker-equipment", DeviceMarker(), "Equipment");
         yield return Element("archimate3.physical.facility", "Facility", "DiagramStencil_Archimate3Facility", "archimate3.physical", "DiagramStencilPalette_Archimate3Physical", 5, 1, "rectangle", fill, "tm-archimate3-marker-facility", FacilityMarker(), "Facility");
         yield return Element("archimate3.physical.distribution-network", "Distribution Network", "DiagramStencil_Archimate3DistributionNetwork", "archimate3.physical", "DiagramStencilPalette_Archimate3Physical", 5, 2, "rounded", fill, "tm-archimate3-marker-distribution-network", NetworkMarker(), "Distribution Network");
@@ -124,7 +124,7 @@ public sealed class Archimate3DiagramStencilProvider : IDiagramStencilProvider
 
     private static IEnumerable<DiagramStencil> ImplementationPalette()
     {
-        const string fill = "#ffd6e7";
+        const string fill = "var(--tm-archimate-implementation-fill)";
         yield return Element("archimate3.implementation.work-package", "Work Package", "DiagramStencil_Archimate3WorkPackage", "archimate3.implementation", "DiagramStencilPalette_Archimate3Implementation", 6, 0, "rectangle", fill, "tm-archimate3-marker-work-package", WorkPackageMarker(), "Work Package");
         yield return Element("archimate3.implementation.deliverable", "Deliverable", "DiagramStencil_Archimate3Deliverable", "archimate3.implementation", "DiagramStencilPalette_Archimate3Implementation", 6, 1, "document", fill, "tm-archimate3-marker-deliverable", DocumentMarker(), "Deliverable");
         yield return Element("archimate3.implementation.event", "Implementation Event", "DiagramStencil_Archimate3ImplementationEvent", "archimate3.implementation", "DiagramStencilPalette_Archimate3Implementation", 6, 2, "hexagon", fill, "tm-archimate3-marker-event", EventMarker(), "Implementation Event", 132, 76);
@@ -134,7 +134,7 @@ public sealed class Archimate3DiagramStencilProvider : IDiagramStencilProvider
 
     private static IEnumerable<DiagramStencil> CrossCuttingPalette()
     {
-        const string fill = "#eef2f7";
+        const string fill = "var(--tm-archimate-cross-fill)";
         yield return Element("archimate3.cross.junction", "Junction", "DiagramStencil_Archimate3Junction", "archimate3.cross", "DiagramStencilPalette_Archimate3CrossCutting", 7, 0, "ellipse", fill, "tm-archimate3-marker-junction", JunctionMarker(), "Junction", 56, 56);
         yield return Element("archimate3.cross.grouping", "Grouping", "DiagramStencil_Archimate3Grouping", "archimate3.cross", "DiagramStencilPalette_Archimate3CrossCutting", 7, 1, "rectangle", fill, "tm-archimate3-marker-grouping", GroupingMarker(), "Grouping", 320, 210);
         yield return Element("archimate3.cross.location", "Location", "DiagramStencil_Archimate3Location", "archimate3.cross", "DiagramStencilPalette_Archimate3CrossCutting", 7, 2, "rounded", fill, "tm-archimate3-marker-location", LocationMarker(), "Location");
@@ -198,7 +198,7 @@ public sealed class Archimate3DiagramStencilProvider : IDiagramStencilProvider
                 BackgroundShape = backgroundShape,
                 ShapeSvg = shapeSvg,
                 Fill = fill,
-                Stroke = "#1f2937",
+                Stroke = "var(--tm-diagram-stencil-stroke-on-fill)",
                 StrokeWidth = 1.5,
                 Sections = [TextSection("label", defaultLabel)]
             },
@@ -258,7 +258,8 @@ public sealed class Archimate3DiagramStencilProvider : IDiagramStencilProvider
             {
                 TextAlign = StencilTextAlign.Center,
                 FontSize = 12,
-                IsBold = false
+                IsBold = false,
+                Color = "var(--tm-diagram-node-ink-on-fill)"
             }
         };
 

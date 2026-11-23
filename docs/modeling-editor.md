@@ -495,9 +495,13 @@ behavior) and the Arrange action is NOT rendered (a keyboard user never tabs ont
 - **BPMN conventions.** A pool/lane renders as a horizontal band with its NAME in the left label
   band (the generator writes the stencil's swimlane cell label), task types show their icon, events
   differ by ring, gateways carry their marker, data objects use the document/cylinder shapes, and
-  every BPMN node shape paints with the `--tm-paper` / `--tm-paper-ink` design tokens
-  (the canvas is a paper surface in both themes, so a host or a high-contrast theme recolours the
-  shapes by overriding the tokens instead of editing the package).
+  every BPMN node shape paints with the `--tm-diagram-paper` / `--tm-diagram-node-stroke` canvas
+  tokens (TG-004: the drawing page is a canvas surface, so dark mode flips the sheet). ArchiMate /
+  BuiltIn / Extended coloured fills ride `--tm-archimate-*-fill` / `--tm-diagram-stencil-*-fill`
+  (Fáze 8c) with `--tm-diagram-node-ink-on-fill` on the label — a host or a high-contrast theme
+  recolours those families by overriding the tokens instead of editing the package. Modeling's
+  `ViewerTokens` list includes every stencil token so `resolveTokens` / `ReplaceTokens` bake the
+  live computed colours into a headless SVG export.
 - **A load never re-snaps** the embedded editors: both pass `SnapDocumentOnLoad="false"`, so the
   persisted geometry renders exactly as saved while the interactive grid (8 px) still snaps a drag,
   a drop and a resize. The dialog's own snap toggle still lets a user turn snapping off entirely

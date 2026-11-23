@@ -39,13 +39,7 @@ public sealed class DeleteTableRowCommand : IDiagramCommand
             RowSpan = c.RowSpan,
             ColSpan = c.ColSpan,
             Text = c.Text,
-            Style = c.Style is null ? null : new DiagramTableCellStyle
-            {
-                BackgroundColor = c.Style.BackgroundColor,
-                BorderColor = c.Style.BorderColor,
-                TextAlign = c.Style.TextAlign,
-                FontWeight = c.Style.FontWeight
-            }
+            Style = c.Style?.Clone()
         }));
 
         TableLayoutService.DeleteRow(node, _index);
@@ -76,13 +70,7 @@ public sealed class DeleteTableRowCommand : IDiagramCommand
                 RowSpan = removed.RowSpan,
                 ColSpan = removed.ColSpan,
                 Text = removed.Text,
-                Style = removed.Style is null ? null : new DiagramTableCellStyle
-                {
-                    BackgroundColor = removed.Style.BackgroundColor,
-                    BorderColor = removed.Style.BorderColor,
-                    TextAlign = removed.Style.TextAlign,
-                    FontWeight = removed.Style.FontWeight
-                }
+                Style = removed.Style?.Clone()
             });
         }
         TableLayoutService.SetCells(node, cells);

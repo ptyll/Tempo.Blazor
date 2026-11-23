@@ -277,23 +277,26 @@ public class TableTests : DiagramTestBase
                 ["columnCount"] = 1,
                 ["cells"] = new List<DiagramTableCellData>
                 {
-                    new() { Row = 0, Column = 0, Text = "A", Style = new DiagramTableCellStyle { BackgroundColor = "#ffffff" } }
+                    new() { Row = 0, Column = 0, Text = "A", Style = new DiagramTableCellStyle { BackgroundColor = "#ffffff", Color = "var(--tm-diagram-node-ink-on-fill)" } }
                 }
             }
         };
         doc.Nodes.Add(node);
 
-        var newStyle = new DiagramTableCellStyle { BackgroundColor = "#ff0000", BorderColor = "#000000" };
+        var newStyle = new DiagramTableCellStyle { BackgroundColor = "#ff0000", BorderColor = "#000000", Color = "var(--tm-diagram-node-ink-on-fill)" };
         var cmd = new UpdateTableCellStyleCommand(doc, node.Id, 0, 0, newStyle);
         cmd.Execute();
 
         var cells = TableLayoutService.GetCells(node);
         cells[0].Style!.BackgroundColor.Should().Be("#ff0000");
         cells[0].Style.BorderColor.Should().Be("#000000");
+        cells[0].Style.Color.Should().Be("var(--tm-diagram-node-ink-on-fill)");
+        cells[0].Style.Should().NotBeSameAs(newStyle);
 
         cmd.Undo();
         cells = TableLayoutService.GetCells(node);
         cells[0].Style!.BackgroundColor.Should().Be("#ffffff");
         cells[0].Style.BorderColor.Should().BeNull();
+        cells[0].Style.Color.Should().Be("var(--tm-diagram-node-ink-on-fill)");
     }
 }

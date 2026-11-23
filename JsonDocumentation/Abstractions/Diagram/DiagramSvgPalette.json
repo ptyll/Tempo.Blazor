@@ -2,7 +2,16 @@
   "kind": "Class",
   "category": "Diagram",
   "namespace": "Tempo.Blazor.Components.Diagram.Services",
-  "description": "Resolved colour palette applied to a diagram SVG render. Only fills in the defaults; explicit stencil/style colours override these per element.",
+  "description": "Resolved colour palette applied to a diagram SVG render. Slot defaults (DefaultNodeFill / DefaultNodeStroke / DefaultText, …) fill in when a node has no paint. Explicit node Style.Fill / Style.Stroke / Style.Color override the stencil layout. Tokens (Fáze 8c) maps catalogued --tm-* names the shipped ArchiMate / BuiltIn / Extended stencils emit to concrete colours so a standalone SVG never carries an unresolved var(). Light maps --tm-diagram-node-ink-on-fill to DefaultText (#111827), not the canvas CSS #4b5563, so a Light export stays pixel-identical to 2.12.0. Light maps --tm-diagram-stencil-stroke-on-fill to #1f2937, not DefaultNodeStroke. A missing Tokens key falls back to Light.Tokens (the 2.12.0 hex) so a host constructing new DiagramSvgPalette() still exports the light fills; an unknown name then falls back to the paint-slot default. StencilTokenNames is the shared catalog (43 names including --tm-diagram-stencil-table-header-fill). Existing colour fields are unchanged from 2.12.0.",
+  "properties": [
+    {
+      "name": "Tokens",
+      "type": "IReadOnlyDictionary<string, string>",
+      "isRequired": false,
+      "default": "empty read-only dictionary",
+      "description": "Token name (including the leading --) to the concrete colour this theme bakes into a standalone SVG. Light and Dark static instances populate the ArchiMate / BuiltIn / Extended family paints (read-only). Additive: a custom palette may omit it (empty read-only dictionary). A missing key falls back to Light.Tokens (2.12.0 hex), then the paint-slot default."
+    }
+  ],
   "packageId": "Tempo.Blazor.Abstractions",
   "sourcePath": "src/Tempo.Blazor.Abstractions/Diagram/Services/IDiagramSvgRenderer.cs",
   "documentationStatus": "generated",

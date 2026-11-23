@@ -161,8 +161,11 @@ public static class DiagramSvgBuilder
     /// The paint of one node boundary: the node's own style first, then the stencil layout, then
     /// the palette. A <c>var(--…)</c> reference (the shipped stencils' token paints) is mapped BY
     /// TOKEN NAME to the palette slot the token names (TG-004 review B3) — a standalone SVG has no
-    /// stylesheet to resolve it, and an unresolved paint renders black. An unknown var() falls back
-    /// to the slot default.
+    /// stylesheet to resolve it, and an unresolved paint renders black. A missing key on
+    /// <c>palette.Tokens</c> falls back to <see cref="DiagramSvgPalette.Light"/>.Tokens (the 2.12.0
+    /// hex) so a host constructing <c>new DiagramSvgPalette()</c> still exports the light fills.
+    /// An unknown var() then falls back to the slot default. Host <c>node.Style.Fill</c> /
+    /// <c>node.Style.Color</c> / heat overlay still win.
     /// </summary>
     private static string ResolveNodePaint(string? nodePaint, string? layoutPaint, DiagramSvgPalette palette, PaintSlot slot)
     {
@@ -178,7 +181,20 @@ public static class DiagramSvgBuilder
             return paint;
         }
 
-        return TokenName(paint) switch
+        var name = TokenName(paint);
+        if (palette.Tokens.TryGetValue(name, out var mapped) && !string.IsNullOrWhiteSpace(mapped))
+        {
+            return mapped;
+        }
+
+        if (!ReferenceEquals(palette.Tokens, DiagramSvgPalette.Light.Tokens)
+            && DiagramSvgPalette.Light.Tokens.TryGetValue(name, out var lightMapped)
+            && !string.IsNullOrWhiteSpace(lightMapped))
+        {
+            return lightMapped;
+        }
+
+        return name switch
         {
             "--stencil-fill" or "--tm-diagram-paper" or "--tm-canvas-paper" => palette.DefaultNodeFill,
             "--stencil-stroke" or "--tm-diagram-node-stroke" or "--tm-canvas-paper-ink" => palette.DefaultNodeStroke,
@@ -249,7 +265,7 @@ public static class DiagramSvgBuilder
                         double lineHeight = fs * 1.25;
                         string anchor = GetTextAnchor(ts?.TextAlign ?? StencilTextAlign.Left);
                         double x = GetTextX(ts?.TextAlign ?? StencilTextAlign.Left, node.W, pad);
-                        string textColor = ResolveNodePaint(ts?.Color ?? node.Style.Color, null, palette, PaintSlot.Text);
+                        string textColor = ResolveNodePaint(node.Style.Color ?? ts?.Color, null, palette, PaintSlot.Text);
                         sb.Append($"""<text x="{F(x)}" y="{F(currentY + lineHeight)}" font-size="{F(fs)}" text-anchor="{anchor}" font-family="{EscapeSvg(ts?.FontFamily ?? "sans-serif")}" fill="{EscapeSvg(textColor)}" font-weight="{(ts?.IsBold == true ? "700" : "400")}" font-style="{(ts?.IsItalic == true ? "italic" : "normal")}">""");
                         for (int i = 0; i < items.Count; i++)
                         {
@@ -272,7 +288,7 @@ public static class DiagramSvgBuilder
             sb.Append($"""<g transform="translate({F(x)},{F(y - fs)})">{svgHtml}</g>""");
             return;
         }
-        string textColor = ResolveNodePaint(ts?.Color ?? node.Style.Color, null, palette, PaintSlot.Text);
+        string textColor = ResolveNodePaint(node.Style.Color ?? ts?.Color, null, palette, PaintSlot.Text);
         sb.Append($"""<text x="{F(x)}" y="{F(y)}" font-size="{F(fs)}" text-anchor="{anchor}" font-family="{EscapeSvg(ts?.FontFamily ?? "sans-serif")}" fill="{EscapeSvg(textColor)}" font-weight="{(ts?.IsBold == true ? "700" : "400")}" font-style="{(ts?.IsItalic == true ? "italic" : "normal")}">{EscapeSvg(text)}</text>""");
     }
 

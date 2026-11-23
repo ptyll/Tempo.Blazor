@@ -236,6 +236,36 @@ public class DiagramStencilTokenTests : LocalizationTestBase
         body.Should().Contain("--stencil-text: var(--tm-paper-ink)");
     }
 
+    [Fact]
+    public void Print_Repoints_TheColouredStencilFills_ToTheLightHexes()
+    {
+        // Fáze 8c (R8): hex belongs in tokens.css (the colour-literal allowlist). The print
+        // re-pin on .tm-diagram-editor restores the 2.12.0 fills so a dark-themed host does
+        // not print the dark family steps on white paper.
+        var block = Regex.Match(TokensCss(), @"@media print\s*\{\s*\.tm-diagram-editor\s*\{(?<body>[^}]*)\}");
+        block.Success.Should().BeTrue("tokens.css must re-pin coloured stencil fills in @media print");
+        var body = ThemeCss.Normalise(block.Groups["body"].Value);
+
+        body.Should().Contain("--tm-diagram-node-ink-on-fill: #4b5563");
+        body.Should().Contain("--tm-diagram-stencil-stroke-on-fill: #1f2937");
+        body.Should().Contain("--tm-archimate-application-fill: #cfe8ff");
+        body.Should().Contain("--tm-diagram-stencil-yellow-fill: #fef08a");
+        body.Should().Contain("--tm-diagram-stencil-slate-fill: #f8fafc");
+        body.Should().Contain("--tm-diagram-stencil-table-header-fill: #f3f4f6");
+    }
+
+    [Fact]
+    public void Table_header_fill_token_is_catalogued_for_light_dark_and_island()
+    {
+        NormalisedTokens().Should().Contain("--tm-diagram-stencil-table-header-fill: #f3f4f6");
+        NormalisedDark().Should().Contain("--tm-diagram-stencil-table-header-fill: #334155");
+
+        var island = Regex.Match(TokensDarkCss(), @"\[data-theme=""light""\]\s*\{(?<body>[^}]*)\}");
+        island.Success.Should().BeTrue();
+        ThemeCss.Normalise(island.Groups["body"].Value)
+            .Should().Contain("--tm-diagram-stencil-table-header-fill: #f3f4f6");
+    }
+
     // ── Task 2: the rendered canvas markup carries var() attributes, never hex literals ──
 
     [Fact]

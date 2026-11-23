@@ -201,7 +201,7 @@ public sealed class BuiltInDiagramStencilProvider : IDiagramStencilProvider
                     Id = "general.sticky-note",
                     Name = "Sticky Note",
                     Category = "General",
-                    IconSvg = "<rect x='6' y='4' width='20' height='20' rx='1' fill='#fef08a' stroke='currentColor' stroke-width='1.5' transform='rotate(6 16 14)'/><path d='M22 22 L26 26' stroke='currentColor' stroke-width='1.5'/>",
+                    IconSvg = "<rect x='6' y='4' width='20' height='20' rx='1' fill='var(--tm-diagram-stencil-yellow-fill)' stroke='currentColor' stroke-width='1.5' transform='rotate(6 16 14)'/><path d='M22 22 L26 26' stroke='currentColor' stroke-width='1.5'/>",
                     DefaultWidth = 120,
                     DefaultHeight = 120,
                     Ports =
@@ -215,8 +215,8 @@ public sealed class BuiltInDiagramStencilProvider : IDiagramStencilProvider
                     {
                         BackgroundShape = "sticky-note",
                         ShapeSvg = "<rect x='7' y='7' width='86' height='86' rx='2' fill='var(--stencil-fill)' stroke='var(--stencil-stroke)' stroke-width='var(--stencil-stroke-width)' vector-effect='non-scaling-stroke' transform='rotate(6 50 50)'/><path d='M70 70 L94 94' stroke='var(--stencil-stroke)' stroke-width='var(--stencil-stroke-width)' vector-effect='non-scaling-stroke' transform='rotate(6 50 50)'/>",
-                        Fill = "#fef08a",
-                        Stroke = "#ca8a04",
+                        Fill = "var(--tm-diagram-stencil-yellow-fill)",
+                        Stroke = "var(--tm-diagram-stencil-yellow-stroke)",
                         Sections =
                         [
                             new()
@@ -225,7 +225,7 @@ public sealed class BuiltInDiagramStencilProvider : IDiagramStencilProvider
                                 DataKey = "label",
                                 DefaultText = "Note",
                                 Padding = 8,
-                                TextStyle = new() { TextAlign = StencilTextAlign.Left, FontSize = 13 }
+                                TextStyle = new() { TextAlign = StencilTextAlign.Left, FontSize = 13, Color = "var(--tm-diagram-node-ink-on-fill)" }
                             }
                         ]
                     },
@@ -2420,8 +2420,8 @@ public sealed class BuiltInDiagramStencilProvider : IDiagramStencilProvider
                         ["columnCount"] = 2,
                         ["cells"] = new List<DiagramTableCellData>
                         {
-                            new() { Row = 0, Column = 0, Text = "Header 1", Style = new() { FontWeight = "bold", BackgroundColor = "#f3f4f6" } },
-                            new() { Row = 0, Column = 1, Text = "Header 2", Style = new() { FontWeight = "bold", BackgroundColor = "#f3f4f6" } },
+                            new() { Row = 0, Column = 0, Text = "Header 1", Style = new() { FontWeight = "bold", BackgroundColor = "var(--tm-diagram-stencil-table-header-fill)", Color = "var(--tm-diagram-node-ink-on-fill)" } },
+                            new() { Row = 0, Column = 1, Text = "Header 2", Style = new() { FontWeight = "bold", BackgroundColor = "var(--tm-diagram-stencil-table-header-fill)", Color = "var(--tm-diagram-node-ink-on-fill)" } },
                             new() { Row = 1, Column = 0, Text = "Row 1 Col 1" },
                             new() { Row = 1, Column = 1, Text = "Row 1 Col 2" },
                             new() { Row = 2, Column = 0, Text = "Row 2 Col 1" },
@@ -3947,8 +3947,8 @@ public sealed class BuiltInDiagramStencilProvider : IDiagramStencilProvider
                     {
                         BackgroundShape = "triangle",
                         ShapeSvg = "<polygon points='50,5 95,90 5,90' fill='var(--stencil-fill)' stroke='var(--stencil-stroke)' stroke-width='var(--stencil-stroke-width)' vector-effect='non-scaling-stroke'/>",
-                        Fill = "#fef2f2",
-                        Stroke = "#dc2626",
+                        Fill = "var(--tm-diagram-stencil-red-fill)",
+                        Stroke = "var(--tm-diagram-stencil-red-stroke)",
                         Sections =
                         [
                             new()
@@ -3957,7 +3957,7 @@ public sealed class BuiltInDiagramStencilProvider : IDiagramStencilProvider
                                 DataKey = "name",
                                 DefaultText = "Risk",
                                 Padding = 8,
-                                TextStyle = new() { TextAlign = StencilTextAlign.Center, FontSize = 12, Color = "#991b1b" }
+                                TextStyle = new() { TextAlign = StencilTextAlign.Center, FontSize = 12, Color = "var(--tm-diagram-stencil-red-ink)" }
                             }
                         ]
                     },
@@ -3982,8 +3982,8 @@ public sealed class BuiltInDiagramStencilProvider : IDiagramStencilProvider
                     {
                         BackgroundShape = "rectangle",
                         ShapeSvg = "<rect x='0' y='0' width='100' height='100' rx='2' fill='var(--stencil-fill)' stroke='var(--stencil-stroke)' stroke-width='var(--stencil-stroke-width)' vector-effect='non-scaling-stroke'/><text x='50' y='55' text-anchor='middle' font-size='14' fill='var(--stencil-stroke)'>!</text>",
-                        Fill = "#fef2f2",
-                        Stroke = "#dc2626",
+                        Fill = "var(--tm-diagram-stencil-red-fill)",
+                        Stroke = "var(--tm-diagram-stencil-red-stroke)",
                         Sections =
                         [
                             new()
@@ -3992,7 +3992,7 @@ public sealed class BuiltInDiagramStencilProvider : IDiagramStencilProvider
                                 DataKey = "name",
                                 DefaultText = "Issue",
                                 Padding = 4,
-                                TextStyle = new() { TextAlign = StencilTextAlign.Center, FontSize = 11, Color = "#991b1b" }
+                                TextStyle = new() { TextAlign = StencilTextAlign.Center, FontSize = 11, Color = "var(--tm-diagram-stencil-red-ink)" }
                             }
                         ]
                     },
@@ -4017,8 +4017,8 @@ public sealed class BuiltInDiagramStencilProvider : IDiagramStencilProvider
                     {
                         BackgroundShape = "ellipse",
                         ShapeSvg = "<rect x='0' y='0' width='100' height='100' rx='2' fill='var(--stencil-fill)' stroke='var(--stencil-stroke)' stroke-width='var(--stencil-stroke-width)' vector-effect='non-scaling-stroke'/><text x='50' y='55' text-anchor='middle' font-size='10' fill='var(--stencil-stroke)'>A</text>",
-                        Fill = "#eff6ff",
-                        Stroke = "#2563eb",
+                        Fill = "var(--tm-diagram-stencil-blue-fill)",
+                        Stroke = "var(--tm-diagram-stencil-blue-stroke)",
                         Sections =
                         [
                             new()
@@ -4027,7 +4027,7 @@ public sealed class BuiltInDiagramStencilProvider : IDiagramStencilProvider
                                 DataKey = "name",
                                 DefaultText = "Assumption",
                                 Padding = 0,
-                                TextStyle = new() { TextAlign = StencilTextAlign.Center, FontSize = 11, Color = "#1e40af" }
+                                TextStyle = new() { TextAlign = StencilTextAlign.Center, FontSize = 11, Color = "var(--tm-diagram-stencil-blue-ink)" }
                             }
                         ]
                     },
@@ -4052,8 +4052,8 @@ public sealed class BuiltInDiagramStencilProvider : IDiagramStencilProvider
                     {
                         BackgroundShape = "rectangle",
                         ShapeSvg = "<rect x='0' y='0' width='100' height='100' rx='2' fill='var(--stencil-fill)' stroke='var(--stencil-stroke)' stroke-width='var(--stencil-stroke-width)' vector-effect='non-scaling-stroke'/><line x1='25' y1='25' x2='75' y2='75' stroke='var(--stencil-stroke)' stroke-width='var(--stencil-stroke-width)' vector-effect='non-scaling-stroke'/><line x1='75' y1='25' x2='25' y2='75' stroke='var(--stencil-stroke)' stroke-width='var(--stencil-stroke-width)' vector-effect='non-scaling-stroke'/>",
-                        Fill = "#fff7ed",
-                        Stroke = "#ea580c",
+                        Fill = "var(--tm-diagram-stencil-orange-fill)",
+                        Stroke = "var(--tm-diagram-stencil-orange-stroke)",
                         Sections =
                         [
                             new()
@@ -4062,7 +4062,7 @@ public sealed class BuiltInDiagramStencilProvider : IDiagramStencilProvider
                                 DataKey = "name",
                                 DefaultText = "Constraint",
                                 Padding = 4,
-                                TextStyle = new() { TextAlign = StencilTextAlign.Center, FontSize = 11, Color = "#9a3412" }
+                                TextStyle = new() { TextAlign = StencilTextAlign.Center, FontSize = 11, Color = "var(--tm-diagram-stencil-orange-ink)" }
                             }
                         ]
                     },
@@ -4120,8 +4120,8 @@ public sealed class BuiltInDiagramStencilProvider : IDiagramStencilProvider
                     {
                         BackgroundShape = "rectangle",
                         ShapeSvg = "<rect x='0' y='0' width='100' height='100' rx='2' fill='var(--stencil-fill)' stroke='var(--stencil-stroke)' stroke-width='var(--stencil-stroke-width)' vector-effect='non-scaling-stroke'/><circle cx='50' cy='50' r='25' fill='none' stroke='var(--stencil-stroke)' stroke-width='var(--stencil-stroke-width)' vector-effect='non-scaling-stroke'/><text x='50' y='55' text-anchor='middle' font-size='12' fill='var(--stencil-stroke)'>$</text>",
-                        Fill = "#f0fdf4",
-                        Stroke = "#16a34a",
+                        Fill = "var(--tm-diagram-stencil-green-fill)",
+                        Stroke = "var(--tm-diagram-stencil-green-stroke)",
                         Sections =
                         [
                             new()
@@ -4130,7 +4130,7 @@ public sealed class BuiltInDiagramStencilProvider : IDiagramStencilProvider
                                 DataKey = "name",
                                 DefaultText = "Budget",
                                 Padding = 4,
-                                TextStyle = new() { TextAlign = StencilTextAlign.Center, FontSize = 11, Color = "#166534" }
+                                TextStyle = new() { TextAlign = StencilTextAlign.Center, FontSize = 11, Color = "var(--tm-diagram-stencil-green-ink)" }
                             }
                         ]
                     },
@@ -4528,8 +4528,8 @@ public sealed class BuiltInDiagramStencilProvider : IDiagramStencilProvider
                     {
                         BackgroundShape = "triangle",
                         ShapeSvg = "<polygon points='50,2 98,98 2,98' fill='var(--stencil-fill)' stroke='var(--stencil-stroke)' stroke-width='var(--stencil-stroke-width)' vector-effect='non-scaling-stroke'/>",
-                        Fill = "#fefce8",
-                        Stroke = "#ca8a04",
+                        Fill = "var(--tm-diagram-stencil-amber-fill)",
+                        Stroke = "var(--tm-diagram-stencil-amber-stroke)",
                         Sections =
                         [
                             new()
@@ -4538,7 +4538,7 @@ public sealed class BuiltInDiagramStencilProvider : IDiagramStencilProvider
                                 DataKey = "name",
                                 DefaultText = "Gap",
                                 Padding = 8,
-                                TextStyle = new() { TextAlign = StencilTextAlign.Center, FontSize = 12, Color = "#854d0e" }
+                                TextStyle = new() { TextAlign = StencilTextAlign.Center, FontSize = 12, Color = "var(--tm-diagram-stencil-amber-ink)" }
                             }
                         ]
                     },
@@ -4724,8 +4724,8 @@ public sealed class BuiltInDiagramStencilProvider : IDiagramStencilProvider
                     {
                         BackgroundShape = "ellipse",
                         ShapeSvg = "<rect x='0' y='0' width='100' height='100' rx='2' fill='var(--stencil-fill)' stroke='var(--stencil-stroke)' stroke-width='var(--stencil-stroke-width)' vector-effect='non-scaling-stroke'/><text x='50' y='55' text-anchor='middle' font-size='12' fill='var(--stencil-stroke)'>A</text>",
-                        Fill = "#eff6ff",
-                        Stroke = "#2563eb",
+                        Fill = "var(--tm-diagram-stencil-blue-fill)",
+                        Stroke = "var(--tm-diagram-stencil-blue-stroke)",
                         Sections =
                         [
                             new()
@@ -4734,7 +4734,7 @@ public sealed class BuiltInDiagramStencilProvider : IDiagramStencilProvider
                                 DataKey = "name",
                                 DefaultText = "Assumption",
                                 Padding = 0,
-                                TextStyle = new() { TextAlign = StencilTextAlign.Center, FontSize = 10, Color = "#1e40af" }
+                                TextStyle = new() { TextAlign = StencilTextAlign.Center, FontSize = 10, Color = "var(--tm-diagram-stencil-blue-ink)" }
                             }
                         ]
                     },
@@ -4837,8 +4837,8 @@ public sealed class BuiltInDiagramStencilProvider : IDiagramStencilProvider
                     {
                         BackgroundShape = "rectangle",
                         ShapeSvg = "<rect x='0' y='0' width='100' height='100' rx='2' fill='var(--stencil-fill)' stroke='var(--stencil-stroke)' stroke-width='var(--stencil-stroke-width)' vector-effect='non-scaling-stroke'/><text x='50' y='55' text-anchor='middle' font-size='12' fill='var(--stencil-stroke)'>Strategy</text>",
-                        Fill = "#f0fdf4",
-                        Stroke = "#16a34a",
+                        Fill = "var(--tm-diagram-stencil-green-fill)",
+                        Stroke = "var(--tm-diagram-stencil-green-stroke)",
                         Sections =
                         [
                             new()
@@ -4847,7 +4847,7 @@ public sealed class BuiltInDiagramStencilProvider : IDiagramStencilProvider
                                 DataKey = "name",
                                 DefaultText = "Strength",
                                 Padding = 8,
-                                TextStyle = new() { TextAlign = StencilTextAlign.Center, FontSize = 12, Color = "#166534" }
+                                TextStyle = new() { TextAlign = StencilTextAlign.Center, FontSize = 12, Color = "var(--tm-diagram-stencil-green-ink)" }
                             }
                         ]
                     },
@@ -4872,8 +4872,8 @@ public sealed class BuiltInDiagramStencilProvider : IDiagramStencilProvider
                     {
                         BackgroundShape = "rectangle",
                         ShapeSvg = "<rect x='0' y='0' width='100' height='100' rx='2' fill='var(--stencil-fill)' stroke='var(--stencil-stroke)' stroke-width='var(--stencil-stroke-width)' vector-effect='non-scaling-stroke'/><text x='50' y='18' text-anchor='middle' font-size='9' fill='var(--stencil-stroke)'>Weakness</text>",
-                        Fill = "#fef2f2",
-                        Stroke = "#dc2626",
+                        Fill = "var(--tm-diagram-stencil-red-fill)",
+                        Stroke = "var(--tm-diagram-stencil-red-stroke)",
                         Sections =
                         [
                             new()
@@ -4882,7 +4882,7 @@ public sealed class BuiltInDiagramStencilProvider : IDiagramStencilProvider
                                 DataKey = "name",
                                 DefaultText = "Weakness",
                                 Padding = 8,
-                                TextStyle = new() { TextAlign = StencilTextAlign.Center, FontSize = 12, Color = "#991b1b" }
+                                TextStyle = new() { TextAlign = StencilTextAlign.Center, FontSize = 12, Color = "var(--tm-diagram-stencil-red-ink)" }
                             }
                         ]
                     },
@@ -4907,8 +4907,8 @@ public sealed class BuiltInDiagramStencilProvider : IDiagramStencilProvider
                     {
                         BackgroundShape = "rectangle",
                         ShapeSvg = "<rect x='0' y='0' width='100' height='100' rx='2' fill='var(--stencil-fill)' stroke='var(--stencil-stroke)' stroke-width='var(--stencil-stroke-width)' vector-effect='non-scaling-stroke'/><text x='50' y='18' text-anchor='middle' font-size='9' fill='var(--stencil-stroke)'>Opportunity</text>",
-                        Fill = "#eff6ff",
-                        Stroke = "#2563eb",
+                        Fill = "var(--tm-diagram-stencil-blue-fill)",
+                        Stroke = "var(--tm-diagram-stencil-blue-stroke)",
                         Sections =
                         [
                             new()
@@ -4917,7 +4917,7 @@ public sealed class BuiltInDiagramStencilProvider : IDiagramStencilProvider
                                 DataKey = "name",
                                 DefaultText = "Opportunity",
                                 Padding = 8,
-                                TextStyle = new() { TextAlign = StencilTextAlign.Center, FontSize = 12, Color = "#1e40af" }
+                                TextStyle = new() { TextAlign = StencilTextAlign.Center, FontSize = 12, Color = "var(--tm-diagram-stencil-blue-ink)" }
                             }
                         ]
                     },
@@ -4942,8 +4942,8 @@ public sealed class BuiltInDiagramStencilProvider : IDiagramStencilProvider
                     {
                         BackgroundShape = "rectangle",
                         ShapeSvg = "<rect x='0' y='0' width='100' height='100' rx='2' fill='var(--stencil-fill)' stroke='var(--stencil-stroke)' stroke-width='var(--stencil-stroke-width)' vector-effect='non-scaling-stroke'/><text x='50' y='18' text-anchor='middle' font-size='9' fill='var(--stencil-stroke)'>Threat</text>",
-                        Fill = "#fff7ed",
-                        Stroke = "#ea580c",
+                        Fill = "var(--tm-diagram-stencil-orange-fill)",
+                        Stroke = "var(--tm-diagram-stencil-orange-stroke)",
                         Sections =
                         [
                             new()
@@ -4952,7 +4952,7 @@ public sealed class BuiltInDiagramStencilProvider : IDiagramStencilProvider
                                 DataKey = "name",
                                 DefaultText = "Threat",
                                 Padding = 8,
-                                TextStyle = new() { TextAlign = StencilTextAlign.Center, FontSize = 12, Color = "#9a3412" }
+                                TextStyle = new() { TextAlign = StencilTextAlign.Center, FontSize = 12, Color = "var(--tm-diagram-stencil-orange-ink)" }
                             }
                         ]
                     },
@@ -5076,8 +5076,8 @@ public sealed class BuiltInDiagramStencilProvider : IDiagramStencilProvider
                     {
                         BackgroundShape = "rectangle",
                         ShapeSvg = "<rect x='0' y='0' width='100' height='100' rx='2' fill='var(--stencil-fill)' stroke='var(--stencil-stroke)' stroke-width='var(--stencil-stroke-width)' vector-effect='non-scaling-stroke'/><text x='50' y='18' text-anchor='middle' font-size='7' fill='var(--stencil-stroke)'>Value Proposition</text>",
-                        Fill = "#fefce8",
-                        Stroke = "#ca8a04",
+                        Fill = "var(--tm-diagram-stencil-amber-fill)",
+                        Stroke = "var(--tm-diagram-stencil-amber-stroke)",
                         Sections =
                         [
                             new()
@@ -5086,7 +5086,7 @@ public sealed class BuiltInDiagramStencilProvider : IDiagramStencilProvider
                                 DataKey = "name",
                                 DefaultText = "Value Proposition",
                                 Padding = 4,
-                                TextStyle = new() { TextAlign = StencilTextAlign.Center, FontSize = 11, IsBold = true, Color = "#854d0e" }
+                                TextStyle = new() { TextAlign = StencilTextAlign.Center, FontSize = 11, IsBold = true, Color = "var(--tm-diagram-stencil-amber-ink)" }
                             }
                         ]
                     },

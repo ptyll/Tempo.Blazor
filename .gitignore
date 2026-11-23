@@ -69,3 +69,6 @@ src/Tempo.Blazor/wwwroot/js/document-editor.dist.js.map
 /scheduler-*.log
 
 .scratch/
+
+# Fáze 8c UX-review screenshots — untracked artefacts, never stage
+tests/Tempo.Blazor.E2E/__screenshots__/fze-8c/

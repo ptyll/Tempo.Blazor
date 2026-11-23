@@ -33,13 +33,7 @@ public sealed class MergeTableCellsCommand : IDiagramCommand
                 RowSpan = c.RowSpan,
                 ColSpan = c.ColSpan,
                 Text = c.Text,
-                Style = c.Style is null ? null : new DiagramTableCellStyle
-                {
-                    BackgroundColor = c.Style.BackgroundColor,
-                    BorderColor = c.Style.BorderColor,
-                    TextAlign = c.Style.TextAlign,
-                    FontWeight = c.Style.FontWeight
-                }
+                Style = c.Style?.Clone()
             }).ToList();
 
         TableLayoutService.MergeCells(node, _selection);
@@ -56,13 +50,7 @@ public sealed class MergeTableCellsCommand : IDiagramCommand
             RowSpan = c.RowSpan,
             ColSpan = c.ColSpan,
             Text = c.Text,
-            Style = c.Style is null ? null : new DiagramTableCellStyle
-            {
-                BackgroundColor = c.Style.BackgroundColor,
-                BorderColor = c.Style.BorderColor,
-                TextAlign = c.Style.TextAlign,
-                FontWeight = c.Style.FontWeight
-            }
+            Style = c.Style?.Clone()
         }).ToList());
     }
 }

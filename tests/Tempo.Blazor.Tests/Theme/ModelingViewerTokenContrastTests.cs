@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Tempo.Blazor.Components.Diagram.Services;
 using Tempo.Blazor.Components.Modeling;
 using Xunit;
 
@@ -124,5 +125,46 @@ public sealed class ModelingViewerTokenContrastTests
             "--tm-color-diff-changed-stroke",
             "--tm-color-diff-layout-stroke"
         ]);
+    }
+
+    [Fact]
+    public void ViewerTokens_include_the_themed_stencil_fills()
+    {
+        // Fáze 8c (R5): JS resolveTokens only sees names listed here. Without them a Modeling
+        // SVG export of an ArchiMate node would leave var(--tm-archimate-…-fill) for the builder
+        // to map — or drop it. The live computed colours must be in the dictionary.
+        ModelingViewerProjection.ViewerTokens.Should().Contain(
+        [
+            "--tm-diagram-node-ink-on-fill",
+            "--tm-diagram-stencil-stroke-on-fill",
+            "--tm-archimate-business-fill",
+            "--tm-archimate-application-fill",
+            "--tm-archimate-technology-fill",
+            "--tm-archimate-motivation-fill",
+            "--tm-archimate-strategy-fill",
+            "--tm-archimate-physical-fill",
+            "--tm-archimate-implementation-fill",
+            "--tm-archimate-cross-fill",
+            "--tm-diagram-stencil-yellow-fill",
+            "--tm-diagram-stencil-yellow-stroke",
+            "--tm-diagram-stencil-red-fill",
+            "--tm-diagram-stencil-red-stroke",
+            "--tm-diagram-stencil-red-ink",
+            "--tm-diagram-stencil-blue-fill",
+            "--tm-diagram-stencil-blue-stroke",
+            "--tm-diagram-stencil-blue-ink",
+            "--tm-diagram-stencil-orange-fill",
+            "--tm-diagram-stencil-orange-stroke",
+            "--tm-diagram-stencil-orange-ink",
+            "--tm-diagram-stencil-green-fill",
+            "--tm-diagram-stencil-green-stroke",
+            "--tm-diagram-stencil-green-ink",
+            "--tm-diagram-stencil-amber-fill",
+            "--tm-diagram-stencil-amber-stroke",
+            "--tm-diagram-stencil-amber-ink",
+            "--tm-diagram-stencil-slate-fill",
+            "--tm-diagram-stencil-table-header-fill"
+        ]);
+        ModelingViewerProjection.ViewerTokens.Should().Contain(DiagramSvgPalette.StencilTokenNames);
     }
 }

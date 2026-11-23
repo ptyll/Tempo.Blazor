@@ -1108,7 +1108,9 @@ rect.tm-diagram-selection-outline {
     font-size: var(--tm-font-size-xs);
     /* Table cells are labels painted on the node's data-driven (paper) fill, so they use the
        node ink — the chrome's --tm-color-text flips with the shell surface and would vanish
-       on the canvas fill in one of the two themes. */
+       on the canvas fill in one of the two themes. Header cells that set
+       --tm-diagram-stencil-table-header-fill override this with --tm-diagram-node-ink-on-fill
+       via the cell Style.Color so dark #334155 still clears 4.5:1. */
     color: var(--tm-diagram-node-ink);
     box-sizing: border-box;
 }
@@ -3277,6 +3279,7 @@ line.tm-diagram-rotate-handle-stem {
         --stencil-fill: var(--tm-paper);
         --stencil-stroke: var(--tm-paper-ink);
         --stencil-text: var(--tm-paper-ink);
+        /* Fáze 8c (R8): coloured fills re-pin in tokens.css @media print. */
     }
 }
 

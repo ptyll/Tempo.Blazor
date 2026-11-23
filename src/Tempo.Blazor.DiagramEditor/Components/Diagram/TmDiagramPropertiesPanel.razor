@@ -429,7 +429,7 @@
                                 <div class="tm-diagram-properties__field">
                                     <label>@Loc["TmDiagramProperties_CellBackground"]</label>
                                     <div class="tm-diagram-properties__color-swatch" style="background-color:@(cell.Style?.BackgroundColor ?? "#ffffff")">
-                                        <input type="color" value="@(cell.Style?.BackgroundColor ?? "#ffffff")" @onchange="OnTableCellBackgroundChanged" aria-label="@Loc["TmDiagramProperties_CellBackground"]" />
+                                        <input type="color" value="@ColorPickerValue(cell.Style?.BackgroundColor, "#ffffff")" @onchange="OnTableCellBackgroundChanged" aria-label="@Loc["TmDiagramProperties_CellBackground"]" />
                                     </div>
                                 </div>
                                 <div class="tm-diagram-properties__field">

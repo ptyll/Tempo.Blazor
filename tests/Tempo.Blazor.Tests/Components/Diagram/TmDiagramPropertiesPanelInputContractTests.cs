@@ -83,6 +83,63 @@ public class TmDiagramPropertiesPanelInputContractTests : LocalizationTestBase
         cut.Find(".tm-diagram-properties__empty").TextContent.Should().Contain("Read-only mode");
     }
 
+    [Fact]
+    public void ColorPicker_ResolvesCataloguedTokenToLightHex_AndUnknownVarToFallback()
+    {
+        RenderTableCellColorPicker("var(--tm-diagram-stencil-table-header-fill)")
+            .Should().Be("#f3f4f6",
+                "a catalogued var() fill must resolve through DiagramSvgPalette.Light so the native picker stays valid");
+
+        RenderTableCellColorPicker("var(--x)")
+            .Should().Be("#ffffff",
+                "an unknown var() must use the ColorPickerValue fallback, not the table-header grey");
+    }
+
+    private string? RenderTableCellColorPicker(string backgroundColor)
+    {
+        var doc = new DiagramDocument();
+        doc.EnsurePages();
+        doc.Nodes.Add(new DiagramNode
+        {
+            Id = "t1",
+            StencilId = "table.basic",
+            X = 10,
+            Y = 10,
+            W = 200,
+            H = 120,
+            Data = new Dictionary<string, object>
+            {
+                ["rowCount"] = 1,
+                ["columnCount"] = 1,
+                ["cells"] = new List<DiagramTableCellData>
+                {
+                    new()
+                    {
+                        Row = 0,
+                        Column = 0,
+                        Text = "A",
+                        Style = new DiagramTableCellStyle { BackgroundColor = backgroundColor }
+                    }
+                }
+            }
+        });
+
+        var cut = Render<TmDiagramPropertiesPanel>(p => p
+            .Add(c => c.Document, doc)
+            .Add(c => c.SelectedIds, new[] { "t1" })
+            .Add(c => c.SelectedTableCells, new List<(int Row, int Column)> { (0, 0) })
+            .Add(c => c.ReadOnly, false));
+
+        var header = cut.FindAll(".tm-section__header, .tm-section-header")
+            .FirstOrDefault(h => h.TextContent.Contains("Table", StringComparison.OrdinalIgnoreCase))
+            ?? cut.FindAll("button").FirstOrDefault(b => b.TextContent.Contains("Table", StringComparison.OrdinalIgnoreCase));
+        header.Should().NotBeNull("the Table section renders a collapsible header");
+        header!.Click();
+        cut.Render();
+
+        return cut.Find("input[type='color'][aria-label='Background']").GetAttribute("value");
+    }
+
     private static string PackageCss()
     {        var root = ThemeCss.RepositoryRoot().FullName;
         return Path.Combine(root, "src", "Tempo.Blazor.DiagramEditor", "wwwroot", "css",

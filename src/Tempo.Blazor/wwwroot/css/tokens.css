@@ -672,6 +672,57 @@
   --stencil-text:              var(--tm-canvas-paper-ink);
   --stencil-stroke-width:      1.5px;
   --stencil-accent:            var(--tm-color-primary);
+  /* ── Diagram stencil family paints (Fáze 8c) ─────────────────
+     ArchiMate / BuiltIn / Extended used to ship literal light hex fills. Light values
+     ARE those hexes (pixel-identical to 2.12.0). tokens-dark.css flips each one to a
+     dark step of the same family so --tm-diagram-node-ink-on-fill (#e5e7eb) holds
+     ≥4.5:1. Re-declared on the dark roots AND the light island. --tm-diagram-node-ink
+     is unchanged (muted labels on paper). CSS on-fill ink is gray-600; the headless
+     Light SVG export maps the same token to #111827 (today's DefaultText) — see
+     DIAGRAM-STENCIL-THEMED-FILLS R3. */
+  --tm-diagram-node-ink-on-fill:           #4b5563;  /* gray-600, ≥5.77:1 on every light fill */
+  --tm-diagram-stencil-stroke-on-fill:     #1f2937;  /* gray-800, today's ArchiMate/Extended stroke */
+  --tm-archimate-business-fill:            #fff2b8;
+  --tm-archimate-application-fill:         #cfe8ff;
+  --tm-archimate-technology-fill:          #d9f2d0;
+  --tm-archimate-motivation-fill:          #eadcff;
+  --tm-archimate-strategy-fill:            #ffe1c2;
+  --tm-archimate-physical-fill:            #d9f2d0;
+  --tm-archimate-implementation-fill:      #ffd6e7;
+  --tm-archimate-cross-fill:               #eef2f7;
+  --tm-diagram-stencil-yellow-fill:        #fef08a;
+  --tm-diagram-stencil-yellow-stroke:      #ca8a04;
+  --tm-diagram-stencil-red-fill:           #fef2f2;
+  --tm-diagram-stencil-red-stroke:         #dc2626;
+  --tm-diagram-stencil-red-ink:            #991b1b;
+  --tm-diagram-stencil-blue-fill:          #eff6ff;
+  --tm-diagram-stencil-blue-stroke:        #2563eb;
+  --tm-diagram-stencil-blue-ink:           #1e40af;
+  --tm-diagram-stencil-orange-fill:        #fff7ed;
+  --tm-diagram-stencil-orange-stroke:      #ea580c;
+  --tm-diagram-stencil-orange-ink:         #9a3412;
+  --tm-diagram-stencil-green-fill:         #f0fdf4;
+  --tm-diagram-stencil-green-stroke:       #16a34a;
+  --tm-diagram-stencil-green-ink:          #166534;
+  --tm-diagram-stencil-amber-fill:         #fefce8;
+  --tm-diagram-stencil-amber-stroke:       #ca8a04;
+  --tm-diagram-stencil-amber-ink:          #854d0e;
+  --tm-diagram-stencil-slate-fill:         #f8fafc;
+  --tm-diagram-stencil-slate-muted-fill:   #f1f5f9;
+  --tm-diagram-stencil-cyan-fill:          #ecfeff;
+  --tm-diagram-stencil-amber-100-fill:     #fef3c7;
+  --tm-diagram-stencil-amber-200-fill:     #fde68a;
+  --tm-diagram-stencil-lime-fill:          #ecfccb;
+  --tm-diagram-stencil-lime-strong-fill:   #d9f99d;
+  --tm-diagram-stencil-sky-fill:           #e0f2fe;
+  --tm-diagram-stencil-blue-100-fill:      #dbeafe;
+  --tm-diagram-stencil-green-100-fill:     #dcfce7;
+  --tm-diagram-stencil-yellow-100-fill:    #fef9c3;
+  --tm-diagram-stencil-teal-fill:          #ccfbf1;
+  --tm-diagram-stencil-indigo-fill:        #e0e7ff;
+  --tm-diagram-stencil-indigo-50-fill:     #eef2ff;
+  --tm-diagram-stencil-pink-fill:          #fce7f3;
+  --tm-diagram-stencil-table-header-fill:  #f3f4f6;  /* gray-100, 2.12.0 table header */
   /* Canvas backdrop — the area OUTSIDE a drawing canvas's page (the DiagramEditor first;
      Modeling/Spreadsheet may follow). Light keeps the paper backdrop gray (today's look); a
      dark theme re-maps the token to the workspace tone (tokens-dark.css) so the page
@@ -835,5 +886,57 @@
      dostane pro tu trvalou rezervu 0 — režimy se na jednu stránku kombinovat nemají. */
   :root:has(.tm-form-action-bar--floating-bottom-md) {
     --tm-form-action-bar-reserve-block-size: 0;
+  }
+}
+
+/* Fáze 8c (R8): coloured stencil fills substitute where they are DECLARED. tokens-dark.css
+   flips them on the dark roots; without a print re-pin a dark-themed host would print those
+   dark fills on white paper. Hex lives here because this file is the colour-literal allowlist
+   (a component stylesheet would grow scripts/css-token-baseline.json). */
+@media print {
+  .tm-diagram-editor {
+    --tm-diagram-node-ink-on-fill: #4b5563;
+    --tm-diagram-stencil-stroke-on-fill: #1f2937;
+    --tm-archimate-business-fill: #fff2b8;
+    --tm-archimate-application-fill: #cfe8ff;
+    --tm-archimate-technology-fill: #d9f2d0;
+    --tm-archimate-motivation-fill: #eadcff;
+    --tm-archimate-strategy-fill: #ffe1c2;
+    --tm-archimate-physical-fill: #d9f2d0;
+    --tm-archimate-implementation-fill: #ffd6e7;
+    --tm-archimate-cross-fill: #eef2f7;
+    --tm-diagram-stencil-yellow-fill: #fef08a;
+    --tm-diagram-stencil-yellow-stroke: #ca8a04;
+    --tm-diagram-stencil-red-fill: #fef2f2;
+    --tm-diagram-stencil-red-stroke: #dc2626;
+    --tm-diagram-stencil-red-ink: #991b1b;
+    --tm-diagram-stencil-blue-fill: #eff6ff;
+    --tm-diagram-stencil-blue-stroke: #2563eb;
+    --tm-diagram-stencil-blue-ink: #1e40af;
+    --tm-diagram-stencil-orange-fill: #fff7ed;
+    --tm-diagram-stencil-orange-stroke: #ea580c;
+    --tm-diagram-stencil-orange-ink: #9a3412;
+    --tm-diagram-stencil-green-fill: #f0fdf4;
+    --tm-diagram-stencil-green-stroke: #16a34a;
+    --tm-diagram-stencil-green-ink: #166534;
+    --tm-diagram-stencil-amber-fill: #fefce8;
+    --tm-diagram-stencil-amber-stroke: #ca8a04;
+    --tm-diagram-stencil-amber-ink: #854d0e;
+    --tm-diagram-stencil-slate-fill: #f8fafc;
+    --tm-diagram-stencil-slate-muted-fill: #f1f5f9;
+    --tm-diagram-stencil-cyan-fill: #ecfeff;
+    --tm-diagram-stencil-amber-100-fill: #fef3c7;
+    --tm-diagram-stencil-amber-200-fill: #fde68a;
+    --tm-diagram-stencil-lime-fill: #ecfccb;
+    --tm-diagram-stencil-lime-strong-fill: #d9f99d;
+    --tm-diagram-stencil-sky-fill: #e0f2fe;
+    --tm-diagram-stencil-blue-100-fill: #dbeafe;
+    --tm-diagram-stencil-green-100-fill: #dcfce7;
+    --tm-diagram-stencil-yellow-100-fill: #fef9c3;
+    --tm-diagram-stencil-teal-fill: #ccfbf1;
+    --tm-diagram-stencil-indigo-fill: #e0e7ff;
+    --tm-diagram-stencil-indigo-50-fill: #eef2ff;
+    --tm-diagram-stencil-pink-fill: #fce7f3;
+    --tm-diagram-stencil-table-header-fill: #f3f4f6;
   }
 }

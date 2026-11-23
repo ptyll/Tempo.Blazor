@@ -343,6 +343,11 @@ the collapse toggle) resolves the canvas-scoped aliases declared on `.tm-diagram
   `--tm-canvas-paper-ink`). A host or a high-contrast theme recolours every BPMN shape by
   overriding the two `--tm-diagram-*` paint tokens.
 - `--tm-diagram-node-ink` — the node/label ink (alias of `--tm-canvas-paper-ink-muted`).
+- `--tm-diagram-node-ink-on-fill` — label ink on a **coloured** stencil fill (Fáze 8c). Light `#4b5563` (gray-600, today's visible ArchiMate/BuiltIn/Extended ink); dark `#e5e7eb`. `--tm-diagram-node-ink` itself is unchanged (muted labels on paper).
+- `--tm-diagram-stencil-stroke-on-fill` — outline of a coloured stencil. Light `#1f2937` (today's ArchiMate/Extended stroke); dark `#e5e7eb`. Dedicated so the Light SVG export can keep `#1f2937` while `--tm-diagram-node-stroke` stays `#111827` (DIAGRAM-STENCIL-THEMED-FILLS R2).
+- `--tm-archimate-{business|application|technology|motivation|strategy|physical|implementation|cross}-fill` — ArchiMate 3 layer fills. Light values ARE the 2.12.0 hexes (`#cfe8ff` application, …); dark is a 900-step of the same family (`#1e3a8a` application, …) so on-fill ink holds ≥4.5:1.
+- `--tm-diagram-stencil-{yellow|red|blue|orange|green|amber}-{fill|stroke|ink}` — BuiltIn family paints (sticky-note, project.risk, …). Yellow `#fef08a` is its own token, not amber `#fefce8`. Light yellow/amber strokes `#ca8a04` stay under 3:1 on their fills (frozen 2.12.0 pixels; R7).
+- `--tm-diagram-stencil-{slate|slate-muted|cyan|amber-100|amber-200|lime|lime-strong|sky|blue-100|green-100|yellow-100|teal|indigo|indigo-50|pink}-fill` — extra Extended fills (flowchart, ERD, C4, cloud, kubernetes).
 
 The five `--stencil-*` tokens (`--stencil-fill`, `--stencil-stroke`, `--stencil-stroke-width`,
 `--stencil-text`, `--stencil-accent`) are catalogued in `tokens.css` / `tokens-dark.css`: the
@@ -354,9 +359,18 @@ which is the one override point for hosts and high-contrast themes. The BPMN ste
 paints as `var(--tm-diagram-paper)` / `var(--tm-diagram-node-stroke)` with NO literal hex
 fallback. Two consequences worth knowing:
 
-- the **server-side export** (`DiagramSvgBuilder`) cannot resolve a `var()`: it emits the palette
-  colour instead, and the node's own `Style.Fill`/`Style.Stroke` wins over the stencil layout —
-  an exported SVG is therefore always self-contained;
+- the **server-side export** (`DiagramSvgBuilder`) cannot resolve a `var()`: it looks the token
+  name up in `DiagramSvgPalette.Tokens` (Fáze 8c) and otherwise maps the known `--stencil-*` /
+  `--tm-diagram-paper` aliases to the palette slots. The node's own `Style.Fill`/`Style.Stroke` /
+  `Style.Color` still wins over the stencil layout — an exported SVG is therefore always
+  self-contained. Light maps `--tm-diagram-node-ink-on-fill` to `#111827` (today's `DefaultText`),
+  not the canvas CSS `#4b5563`, so a Light export of an ArchiMate node stays pixel-identical to
+  2.12.0 (R3);
+- **print** (`@media print` on `.tm-diagram-editor` in `tokens.css`, R8) re-pins the coloured
+  stencil fills, on-fill ink and stroke-on-fill to the light hexes so a dark-themed host does not
+  print the 900-step fills on white paper. Hex lives in `tokens.css` (the colour-literal
+  allowlist); `_diagram-editor.css` print only re-points the `--tm-canvas-*` / `--stencil-*`
+  aliases to `--tm-paper*`.
 - the **client export** (`exportViewportAsSvg`) copies the computed `--tm-diagram-paper`,
   `--tm-diagram-node-stroke`, `--tm-diagram-node-ink` AND the `--stencil-*` values onto the clone
   root, and the computed grid-line strokes onto the matching clone paths, so the serialized tree

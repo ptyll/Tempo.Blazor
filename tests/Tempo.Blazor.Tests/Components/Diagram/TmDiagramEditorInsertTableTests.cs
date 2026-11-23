@@ -74,7 +74,8 @@ public class TmDiagramEditorInsertTableTests : LocalizationTestBase
             var cell = cells.First(x => x.Row == 0 && x.Column == c);
             cell.Style.Should().NotBeNull();
             cell.Style!.FontWeight.Should().Be("bold");
-            cell.Style.BackgroundColor.Should().Be("#f3f4f6");
+            cell.Style.BackgroundColor.Should().Be("var(--tm-diagram-stencil-table-header-fill)");
+            cell.Style.Color.Should().Be("var(--tm-diagram-node-ink-on-fill)");
             cell.Text.Should().Be($"Header {c + 1}");
         }
 
