@@ -10,7 +10,7 @@
     {
       "name": "wireframe_list_components",
       "kind": "McpTool",
-      "description": "Lists available components. Start with compact=true; optionally filter by category, scopeAppId, targetPackIds, skip, and take."
+      "description": "Lists available components. Start with compact=true; optionally filter by category, scopeAppId, targetPackIds, skip, and take. Results are paged (hasMore/nextSkip; default take 200). With scopeAppId or targetPackIds, app-scoped components are listed first."
     },
     {
       "name": "wireframe_get_component_schema",

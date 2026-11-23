@@ -3798,6 +3798,10 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor.Spreadsheet/wwwroot/js/__tests__/spreadsheet-benchmark.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor.Spreadsheet/wwwroot/js/__tests__/spreadsheet-canvas-filter-buttons.test.mjs",
       "kind": "JavaScript"
     },

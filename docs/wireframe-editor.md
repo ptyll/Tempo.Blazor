@@ -343,6 +343,22 @@ The PNG / PDF export posts to `api/wireframe/export/png|pdf`. `ExportHttpClientN
 
 A press that selects on a tablet opens the inspector sheet, and the canvas reserves its room only after the lift (`data-wd-gesture`, so the svg never resizes under a drag that just began). A gesture that starts with the sheet ALREADY open must keep that reservation: the script reads the computed padding BEFORE it sets `data-wd-gesture` and marks `data-wd-reserved`, and the stylesheet drops the reservation only while a gesture runs without that marker. Without it the svg widened under the finger and a resize-handle drag ran in a moved coordinate system (`Touch_ResizeHandle(1024)`: a 360x240 button became 224x328). A handle press also counts as an active gesture from the PRESS (`inst.resize` / `rotate` / `waypoint`), not only from the drag threshold.
 
+## UI role vocabulary uniqueness (plan 1c95309c phase 8a, decision UI-ROLE-SYNONYM-UNIQUE)
+
+`BuiltInUiRoleVocabularySource` is the global baseline. Every `R(...)` slug is unique (OrdinalIgnoreCase). Every synonym maps to exactly one role and never equals another role's slug. `UiRoleVocabulary` still silently merges duplicate slugs from overlay sources (`TryAdd` first-win), but a host that seeds `GetRoles()` into a unique `UiRole.Slug` index (PromptHelper) must receive a de-duplicated baseline. Tests: `BuiltInSource_SlugsAreUnique`, `BuiltInSource_SynonymsMapToExactlyOneRole`.
+
+Synonym ownership that used to collide:
+
+| Phrase | Owner |
+| --- | --- |
+| `agent status` | `agent-badge` (activity state is the badge's primary content). `agent-monitor` uses `run status`. |
+| `bocni panel` | `sidebar`. `side-panel` uses `panel vlastnosti` / `inspektor`. |
+| `segmented-control` | one row: "single segmented tray", synonyms `segment control`, `segmented buttons`, `segments`, `prepinac segmentu`, `segmentovany prepinac`, `TmSegmentedControl`. |
+
+## `wireframe_list_components` paging
+
+The MCP tool `wireframe_list_components` pages the catalog (default `take` 200, clamp 1..1000). The payload always includes `totalCount`, `categories` and `items`, plus additive `returnedCount`, `hasMore` and `nextSkip` (`nextSkip` is omitted/`null` on the last page). When `hasMore` is true, call again with `skip=nextSkip`. With `scopeAppId` or `targetPackIds`, app-scoped schemas are listed first (then built-in; Category/DisplayName inside each group). Without a scope the order is 1:1 with `WireframeSchemaRegistry.GetAll()`.
+
 ## E-mail components as stencils (EMAIL-WIREFRAME-ROLES, plan 643bba06 phase 8)
 
 Four public components of `Tempo.Blazor.EmailTemplates` are placeable on a wireframe page and ship a declarative stencil in the `tempo` pack plus a schema in `BuiltInComponentSchemas` and a role: `TmEmailTemplateEditor` (`email-template-editor`), `TmEmailCanvasBlock` (`email-block`), `TmEmailItemList` (`list-view`) and `TmEmailItemDialog` (`dialog`). Every other public `TmEmail*` component is editor chrome (toolbox, inspector, import / export / validation dialogs, sub-editors): it has no stencil of its own, but its type name is a synonym of a role in the vocabulary (`TmEmailTemplateToolbox` -> `email-template-editor`), so every component still resolves a role. `EmailComponentsStencilTests` derives the component list by reflection, so a new public `TmEmail*` component without a role fails the test. The decision row is in `planning/tm-email-template-editor-2.10.md` (EMAIL-WIREFRAME-ROLES).

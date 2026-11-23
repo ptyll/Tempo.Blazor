@@ -110,7 +110,7 @@ alongside `"success": true`; failures use the [result contract](#result-contract
 
 | Tool | Purpose |
 |------|---------|
-| `wireframe_list_components` | List placeable components (`compact=true` first to keep the response small; filter by `category`, `scopeAppId`, and `targetPackIds`). |
+| `wireframe_list_components` | List placeable components (`compact=true` first to keep the response small; filter by `category`, `scopeAppId`, and `targetPackIds`). Results are paged (`hasMore`/`nextSkip`, default take 200). With `scopeAppId`/`targetPackIds`, app-scoped types are listed first. |
 | `wireframe_get_component_schema` | Full property contract for one type (dimensions + every prop with type/default/allowed values). Suggests a correction when the type or known role synonym is misspelled. |
 | `wireframe_get_authoring_guide` | Compact or full AI guide for canvas conventions, sizing, layouts, roles, and prop vocabulary; filter by `category`, `types`, `roles`, `scopeAppId`, `targetPackIds`, `skip`, and `take`. |
 | `wireframe_list_documents` | List stored wireframes (id, name, folder, last-modified); filter by `folderPath` or `search`. |

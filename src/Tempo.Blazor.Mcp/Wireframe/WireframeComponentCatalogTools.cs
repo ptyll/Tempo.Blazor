@@ -12,15 +12,15 @@ namespace Tempo.Blazor.Mcp.Wireframe;
 public static class WireframeComponentCatalogTools
 {
     [McpServerTool(Name = "wireframe_list_components")]
-    [Description("List the wireframe components available to place on a design. Start with compact=true to keep the response small, then call wireframe_get_component_schema for the full property contract of a chosen type. Optionally filter by category and application scope.")]
+    [Description("List the wireframe components available to place on a design. Start with compact=true to keep the response small, then call wireframe_get_component_schema for the full property contract of a chosen type. Optionally filter by category and application scope. Results are paged: when hasMore is true, call again with skip=nextSkip. With scopeAppId/targetPackIds, app-scoped components are listed first.")]
     public static string ListComponentsScoped(
         WireframeSchemaRegistry registry,
         [Description("When true, return only type/category/displayName. Recommended first call.")] bool compact = true,
         [Description("Optional category filter (e.g. 'Buttons', 'Inputs', 'Layout').")] string? category = null,
         [Description("Pagination offset.")] int skip = 0,
-        [Description("Maximum number of components to return (default 200).")] int take = 200,
-        [Description("Optional app id. When set, return Tempo baseline components plus custom components scoped to this app only.")] string? scopeAppId = null,
-        [Description("Optional target pack ids from the active document. Built-in Tempo components stay visible; app-scoped components require their app:{id} pack.")] IReadOnlyList<string>? targetPackIds = null)
+        [Description("Maximum number of components to return (default 200, clamped 1..1000). Results are paged: when hasMore is true, call again with skip=nextSkip.")] int take = 200,
+        [Description("Optional app id. When set, return Tempo baseline components plus custom components scoped to this app only. App-scoped components are listed first.")] string? scopeAppId = null,
+        [Description("Optional target pack ids from the active document. Built-in Tempo components stay visible; app-scoped components require their app:{id} pack. App-scoped components are listed first.")] IReadOnlyList<string>? targetPackIds = null)
     {
         var scope = WireframeComponentScope.FromAppId(scopeAppId);
         var available = registry.GetAll(scope, targetPackIds).ToList();
@@ -28,13 +28,24 @@ public static class WireframeComponentCatalogTools
             ? available
             : available.Where(s => string.Equals(s.Category, category, StringComparison.OrdinalIgnoreCase)).ToList();
 
-        var ordered = all.ToList();
-        var page = ordered.Skip(Math.Max(0, skip)).Take(Math.Clamp(take, 1, 1000));
+        var scoped = !string.IsNullOrWhiteSpace(scopeAppId) || targetPackIds is { Count: > 0 };
+        var ordered = scoped
+            ? all.OrderBy(s => s.ScopeAppId is null ? 1 : 0).ToList()
+            : all;
+        var effectiveSkip = Math.Max(0, skip);
+        var effectiveTake = Math.Clamp(take, 1, 1000);
+        var page = ordered.Skip(effectiveSkip).Take(effectiveTake);
         var items = page.Select(s => compact ? WireframeCatalog.Compact(s) : WireframeCatalog.Full(s)).ToList();
+        var returnedCount = items.Count;
+        var hasMore = effectiveSkip + returnedCount < ordered.Count;
+        int? nextSkip = hasMore ? effectiveSkip + returnedCount : null;
 
         return McpToolResults.Success(new
         {
             totalCount = ordered.Count,
+            returnedCount,
+            hasMore,
+            nextSkip,
             categories = available
                 .Select(s => s.Category)
                 .Distinct(StringComparer.OrdinalIgnoreCase)

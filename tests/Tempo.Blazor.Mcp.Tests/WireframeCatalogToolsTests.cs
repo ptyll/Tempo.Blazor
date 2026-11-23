@@ -62,6 +62,119 @@ public class WireframeCatalogToolsTests
     }
 
     [Fact]
+    public void ListComponentsScoped_WithScope_ListsAppScopedFirst()
+    {
+        var appId = Guid.NewGuid().ToString("D");
+        var registry = LargeScopedRegistry(appId);
+
+        var root = Parse(WireframeComponentCatalogTools.ListComponentsScoped(
+            registry,
+            compact: true,
+            scopeAppId: appId));
+
+        var types = root.GetProperty("items").EnumerateArray()
+            .Select(i => i.GetProperty("type").GetString())
+            .ToList();
+
+        types.Should().HaveCount(200);
+        types.Should().Contain($"app:{appId}:AppWidget000");
+        types.Should().Contain($"app:{appId}:AppWidget001");
+        types[0].Should().Be($"app:{appId}:AppWidget000");
+        types[1].Should().Be($"app:{appId}:AppWidget001");
+    }
+
+    [Fact]
+    public void ListComponentsScoped_WithTargetPacks_ListsAppScopedFirst()
+    {
+        // Subtask 3 orders app-scoped types first when scopeAppId OR targetPackIds is given.
+        // WireframeSchemaRegistry.GetAll hides app-scoped schemas when scope is null, so a
+        // targetPackIds-only call (scopeAppId: null) never surfaces AppWidget* types. The
+        // targetPackIds half of the catalog condition therefore only filters together with
+        // scopeAppId; this test covers that combined path (tempo + app:{id} packs).
+        var appId = Guid.NewGuid().ToString("D");
+        var registry = LargeScopedRegistry(appId);
+
+        var root = Parse(WireframeComponentCatalogTools.ListComponentsScoped(
+            registry,
+            compact: true,
+            scopeAppId: appId,
+            targetPackIds: ["tempo", $"app:{appId}"]));
+
+        var types = root.GetProperty("items").EnumerateArray()
+            .Select(i => i.GetProperty("type").GetString())
+            .ToList();
+
+        types[0].Should().Be($"app:{appId}:AppWidget000");
+        types[1].Should().Be($"app:{appId}:AppWidget001");
+        root.GetProperty("hasMore").GetBoolean().Should().BeTrue();
+        root.GetProperty("nextSkip").GetInt32().Should().Be(200);
+    }
+
+    [Fact]
+    public void ListComponents_WithoutScope_KeepsRegistryOrder()
+    {
+        var registry = Registry();
+        var expected = registry.GetAll().Take(10).Select(s => s.Type).ToList();
+
+        var root = Parse(WireframeComponentCatalogTools.ListComponents(registry, compact: true, take: 10));
+        var types = root.GetProperty("items").EnumerateArray()
+            .Select(i => i.GetProperty("type").GetString())
+            .ToList();
+
+        types.Should().Equal(expected);
+    }
+
+    [Fact]
+    public void ListComponents_Paging_ReportsHasMoreAndNextSkip()
+    {
+        var appId = Guid.NewGuid().ToString("D");
+        var registry = LargeScopedRegistry(appId);
+
+        var first = Parse(WireframeComponentCatalogTools.ListComponentsScoped(
+            registry,
+            compact: true,
+            scopeAppId: appId));
+        first.GetProperty("totalCount").GetInt32().Should().Be(252);
+        first.GetProperty("returnedCount").GetInt32().Should().Be(200);
+        first.GetProperty("hasMore").GetBoolean().Should().BeTrue();
+        first.GetProperty("nextSkip").GetInt32().Should().Be(200);
+
+        var last = Parse(WireframeComponentCatalogTools.ListComponentsScoped(
+            registry,
+            compact: true,
+            skip: 200,
+            scopeAppId: appId));
+        last.GetProperty("returnedCount").GetInt32().Should().Be(52);
+        last.GetProperty("hasMore").GetBoolean().Should().BeFalse();
+        AssertNextSkipAbsentOrNull(last);
+    }
+
+    [Fact]
+    public void ListComponents_SkipPastEnd_ReturnsEmptyAndNoMore()
+    {
+        var appId = Guid.NewGuid().ToString("D");
+        var registry = LargeScopedRegistry(appId);
+
+        var root = Parse(WireframeComponentCatalogTools.ListComponentsScoped(
+            registry,
+            compact: true,
+            skip: 500,
+            scopeAppId: appId));
+
+        root.GetProperty("totalCount").GetInt32().Should().Be(252);
+        root.GetProperty("returnedCount").GetInt32().Should().Be(0);
+        root.GetProperty("items").GetArrayLength().Should().Be(0);
+        root.GetProperty("hasMore").GetBoolean().Should().BeFalse();
+        AssertNextSkipAbsentOrNull(root);
+    }
+
+    private static void AssertNextSkipAbsentOrNull(JsonElement root)
+    {
+        if (root.TryGetProperty("nextSkip", out var nextSkip))
+            nextSkip.ValueKind.Should().Be(JsonValueKind.Null, "nextSkip should be null or omitted on the last page");
+    }
+
+    [Fact]
     public void GetComponentSchema_KnownType_ReturnsFullContract()
     {
         var registry = Registry();
@@ -203,6 +316,21 @@ public class WireframeCatalogToolsTests
         withApp.GetProperty("items").EnumerateArray()
             .Select(i => i.GetProperty("type").GetString())
             .Should().BeEquivalentTo(["TmButton", $"app:{appA}:InvoiceCard"]);
+    }
+
+    private static WireframeSchemaRegistry LargeScopedRegistry(string appId, int builtInCount = 250, int appCount = 2)
+    {
+        var builtIn = Enumerable.Range(0, builtInCount)
+            .Select(i => Schema($"TmBuiltIn{i:D3}", "ABuiltIn", $"Built In {i:D3}", isBuiltIn: true))
+            .ToArray();
+        var app = Enumerable.Range(0, appCount)
+            .Select(i => Schema($"AppWidget{i:D3}", "ZApp", $"App Widget {i:D3}"))
+            .ToArray();
+        return new WireframeSchemaRegistry(
+        [
+            new TestSchemaSource("BuiltIn", 0, builtIn),
+            new ScopedSchemaSource("App", 10, appId, app)
+        ]);
     }
 
     private static WireframeSchemaRegistry ScopedRegistry(string appA, string appB)

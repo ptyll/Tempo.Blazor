@@ -62908,6 +62908,10 @@
           "kind": "JavaScript"
         },
         {
+          "path": "src/Tempo.Blazor.Spreadsheet/wwwroot/js/__tests__/spreadsheet-benchmark.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor.Spreadsheet/wwwroot/js/__tests__/spreadsheet-canvas-filter-buttons.test.mjs",
           "kind": "JavaScript"
         },
@@ -129360,7 +129364,7 @@
           "kind": "Class",
           "category": "Wireframe",
           "namespace": "Tempo.Blazor.Components.Wireframe",
-          "description": "Built-in Tempo UI role vocabulary used as the global baseline.",
+          "description": "Built-in Tempo UI role vocabulary used as the global baseline. Every slug is unique; every synonym maps to exactly one role and never equals another role's slug (decision UI-ROLE-SYNONYM-UNIQUE).",
           "packageId": "Tempo.Blazor.Abstractions",
           "sourcePath": "src/Tempo.Blazor.Abstractions/Wireframe/BuiltInUiRoleVocabularySource.cs",
           "documentationStatus": "merged",
@@ -129405,7 +129409,7 @@
             {
               "name": "GetRoles",
               "type": "IEnumerable<UiRoleDefinition> GetRoles()",
-              "description": "Returns all UI role definitions supplied by this source."
+              "description": "Returns all UI role definitions supplied by this source. Built-in slugs and synonyms are unique; overlay sources that seed a unique Slug index must not emit duplicates."
             }
           ]
         },
@@ -143605,7 +143609,7 @@
             {
               "name": "wireframe_list_components",
               "kind": "McpTool",
-              "description": "Lists available components. Start with compact=true; optionally filter by category, scopeAppId, targetPackIds, skip, and take."
+              "description": "Lists available components. Start with compact=true; optionally filter by category, scopeAppId, targetPackIds, skip, and take. Results are paged (hasMore/nextSkip; default take 200). With scopeAppId or targetPackIds, app-scoped components are listed first."
             },
             {
               "name": "wireframe_get_component_schema",

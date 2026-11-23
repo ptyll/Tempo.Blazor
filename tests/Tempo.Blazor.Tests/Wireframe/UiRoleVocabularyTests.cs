@@ -99,7 +99,8 @@ public sealed class UiRoleVocabularyTests
         // then 147 for `fan-out-grid` and `parallel-attempts` (plan d67b33af phase 4).
         // then 159 for `app-shell` and `user-menu` (plan 7ba95ed6 phase 8 — the frame and its account menu).
         // then 160 for `pinned-on-top` (plan 4ce1b994 phase 2 — TmPinnedOnTop, decision TOP-LAYER-PIN).
-        vocabulary.GetAll().Should().HaveCountLessThanOrEqualTo(160); // + agent-handoff, fallback-chain (phase 5); autonomy-dial, memory-panel (phase 6); delegate-board, scheduled-runs (phase 7); conflict-radar, agent-presence-overlay (phase 8); modeling-viewer (plan eadbf967 phase 6)
+        // then 159 − duplicate segmented-control row merged (plan 1c95309c phase 8a, decision UI-ROLE-SYNONYM-UNIQUE).
+        vocabulary.GetAll().Should().HaveCountLessThanOrEqualTo(159); // + agent-handoff, fallback-chain (phase 5); autonomy-dial, memory-panel (phase 6); delegate-board, scheduled-runs (phase 7); conflict-radar, agent-presence-overlay (phase 8); modeling-viewer (plan eadbf967 phase 6)
 
 
         vocabulary.Find("search-input")!.Slug.Should().Be("search-input");
@@ -119,6 +120,70 @@ public sealed class UiRoleVocabularyTests
         vocabulary.Find("TmFileUpload")!.Slug.Should().Be("file-drop");
         vocabulary.Find("TmSwitch")!.Slug.Should().Be("toggle");
         vocabulary.Find("TmToolbarFileButton")!.Slug.Should().Be("toolbar-button");
+    }
+
+    [Fact]
+    public void BuiltInSource_SlugsAreUnique()
+    {
+        var duplicates = new BuiltInUiRoleVocabularySource()
+            .GetRoles()
+            .GroupBy(role => role.Slug, StringComparer.OrdinalIgnoreCase)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key)
+            .ToList();
+
+        duplicates.Should().BeEmpty(
+            "duplicate slugs: {0}",
+            string.Join(", ", duplicates));
+    }
+
+    [Fact]
+    public void BuiltInSource_SynonymsMapToExactlyOneRole()
+    {
+        var roles = new BuiltInUiRoleVocabularySource().GetRoles().ToList();
+        var slugs = roles
+            .Select(role => role.Slug.Trim())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var synonymOwners = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var role in roles)
+        {
+            foreach (var raw in role.Synonyms)
+            {
+                var synonym = raw.Trim();
+                if (synonym.Length == 0)
+                    continue;
+
+                if (!synonymOwners.TryGetValue(synonym, out var owners))
+                {
+                    owners = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    synonymOwners[synonym] = owners;
+                }
+
+                owners.Add(role.Slug);
+            }
+        }
+
+        var shared = synonymOwners
+            .Where(pair => pair.Value.Count > 1)
+            .Select(pair => $"{pair.Key} -> {string.Join(", ", pair.Value.OrderBy(s => s, StringComparer.OrdinalIgnoreCase))}")
+            .ToList();
+        shared.Should().BeEmpty("synonyms owned by more than one slug: {0}", string.Join("; ", shared));
+
+        var collidingWithOtherSlug = synonymOwners
+            .Where(pair => slugs.Contains(pair.Key) && !pair.Value.Contains(pair.Key))
+            .Select(pair => $"{pair.Key} (synonym of {string.Join(", ", pair.Value)}) equals another role slug")
+            .ToList();
+        collidingWithOtherSlug.Should().BeEmpty(
+            "synonyms that equal another role slug: {0}",
+            string.Join("; ", collidingWithOtherSlug));
+
+        var vocabulary = new UiRoleVocabulary([new BuiltInUiRoleVocabularySource()]);
+        vocabulary.Find("agent status")!.Slug.Should().Be("agent-badge");
+        vocabulary.Find("run status")!.Slug.Should().Be("agent-monitor");
+        vocabulary.Find("bocni panel")!.Slug.Should().Be("sidebar");
+        vocabulary.Find("inspektor")!.Slug.Should().Be("side-panel");
+        vocabulary.Find("panel vlastnosti")!.Slug.Should().Be("side-panel");
     }
 
     private sealed class TestVocabularySource(

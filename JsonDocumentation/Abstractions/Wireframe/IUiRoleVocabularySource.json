@@ -21,7 +21,7 @@
     {
       "name": "GetRoles",
       "type": "IEnumerable<UiRoleDefinition> GetRoles()",
-      "description": "Returns all UI role definitions supplied by this source."
+      "description": "Returns all UI role definitions supplied by this source. Built-in slugs and synonyms are unique; overlay sources that seed a unique Slug index must not emit duplicates."
     }
   ]
 }

@@ -7,6 +7,18 @@
 > [docs/proposals/time-input-mobile.md](docs/proposals/time-input-mobile.md)). Additive public API;
 > `TmTimePicker.Presentation` stays `Segments` (today's DOM).
 
+### Fixed — wireframe role vocabulary and component catalog (`Tempo.Blazor.Abstractions` / `Tempo.Blazor.Mcp`, Fáze 8a)
+
+- **`segmented-control` is in the baseline once.** `BuiltInUiRoleVocabularySource` had two `R("segmented-control", …)` rows (the newer "single segmented tray" plus the older "mutually exclusive modes"). `UiRoleVocabulary` silently merged them, but a host that seeds `IUiRoleVocabularySource.GetRoles()` into a unique `UiRole.Slug` index (PromptHelper) crashed on a fresh DB. The two rows are now one definition ("single segmented tray") with the union of synonyms: `segment control`, `segmented buttons`, `segments`, `prepinac segmentu`, `segmentovany prepinac`, `TmSegmentedControl`. For hosts: a wrapper that de-duplicated the slug itself can be removed.
+- **Each synonym belongs to exactly one role** (decision `UI-ROLE-SYNONYM-UNIQUE`). Hosts that overlay the baseline no longer see first-win collisions.
+
+  | Old synonym | Left | Now owned by |
+  | --- | --- | --- |
+  | `agent status` | `agent-monitor` (replaced by `run status`) | `agent-badge` |
+  | `bocni panel` | `side-panel` (replaced by `panel vlastnosti`, `inspektor`) | `sidebar` |
+
+- **`wireframe_list_components` no longer hides app-scoped types behind the first page.** With `scopeAppId` or `targetPackIds`, app-scoped schemas are listed first (then built-in; Category/DisplayName inside each group). The payload adds `returnedCount`, `hasMore` and `nextSkip` (`null`/omitted on the last page). Default `take` stays 200 (clamp 1..1000). Without a scope the order is unchanged. For hosts: when `hasMore` is true, call again with `skip=nextSkip`.
+
 ### Fixed — spreadsheet command log and document revision overlay (`Tempo.Blazor.Spreadsheet` / `Tempo.Blazor.DocumentEditor`, Fáze 10b)
 
 - **Spreadsheet command-log flush no longer busy-waits 2 s on a synchronous throw.** `flushCommandLog` used to set `commandLogInFlight` and then call `invokeDotNet`; a sync exception left the flag true and `whenCommandLogAcknowledged` spinning `Promise.race` until `pendingStateWaitLimitMs`. The sync path is now try/catch: the batch is requeued (attempts ≤ 2), `commandLogSyncFailureCount` increments, the flight is a rejected-and-caught promise, and waiters abort if the flight object does not change.

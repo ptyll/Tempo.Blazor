@@ -653,6 +653,8 @@ snapshot with a fresh id remapped through the stack, so later steps keep targeti
 
 **Canvas render gate:** with `LightEditing` the canvas skips a parent render whose snapshot (document identity, page, page size, grid, snapping, read-only, scope, class) and `ContentVersion` are unchanged; the editor bumps `ContentVersion` on every command / undo / page switch. A standalone host must bump it after in-place edits. A new render-affecting `[Parameter]` belongs in `Snapshot()`.
 
+**UI role vocabulary / MCP catalog:** every built-in role slug and synonym is unique (decision `UI-ROLE-SYNONYM-UNIQUE`). `wireframe_list_components` is paged (`hasMore` / `nextSkip`; default take 200) and, with `scopeAppId`/`targetPackIds`, lists app-scoped types first.
+
 ### TmDocumentOpenDialog (core, shared)
 
 `TmDocumentOpenDialog` (`src/Tempo.Blazor/Components/Files/`) is the shared "open a document" dialog of the Wireframe, Diagram and Spreadsheet Notion blocks (`ShowModeToggle=true` keeps the Link / Copy choice) and the demo `/document-open-dialog` page. The public API (`Provider`, `Kind`, `Open`, `OnSelected`, `ShowModeToggle`, `DefaultMode`, …), `DocumentOpenResult` and `ITempoDocumentLibraryProvider` are stable; new parameters are opt-in (`ShowRecent` adds a "Recent" node through `BrowseAsync`, `LayoutMode` pins desktop / tablet / mobile for tests). Library-wide queries (the Recent node, a search) state `DocumentLibraryQuery.Scope = DocumentLibraryScope.Library` (`Folder` default, `Subtree`, `Library`; a provider without support may degrade to `Folder`) instead of relying on `FolderPath = null`.
