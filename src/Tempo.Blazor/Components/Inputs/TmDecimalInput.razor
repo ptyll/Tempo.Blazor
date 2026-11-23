@@ -99,7 +99,7 @@
 
     private readonly string _generatedId = $"tm-decimal-{Guid.NewGuid():N}";
 
-    /// <summary>Text currently shown in the input: formatted while idle, plain while the field has focus.</summary>
+    /// <summary>Formatted text, kept while focused so a select-all replace (fill) is not raced by a focus render.</summary>
     private string _text = string.Empty;
 
     /// <summary>Text the user has typed but not committed yet — arrow keys must step from it, not from the stale value.</summary>
@@ -118,7 +118,7 @@
     /// <summary>Number of fractional digits used for display and for rounding the committed value (default 2, clamped to 0–28).</summary>
     [Parameter] public int DecimalPlaces { get; set; } = 2;
 
-    /// <summary>Show thousands separators while the field is not being edited (default <c>true</c>).</summary>
+    /// <summary>Show thousands separators in the displayed text, including while the field has focus (default <c>true</c>). The parser accepts grouped input.</summary>
     [Parameter] public bool UseGrouping { get; set; } = true;
 
     /// <summary>Culture used for parsing and formatting. Defaults to <see cref="CultureInfo.CurrentCulture"/>.</summary>
@@ -419,9 +419,7 @@
         var stored = ToStored(rounded);
 
         Value = stored;
-        _text = _focused
-            ? ToEditText(rounded)
-            : FormatDecimal(rounded, EffectiveDecimalPlaces, UseGrouping, EffectiveCulture);
+        _text = FormatDecimal(rounded, EffectiveDecimalPlaces, UseGrouping, EffectiveCulture);
         _liveText = _text;
 
         await ValueChanged.InvokeAsync(stored);
@@ -432,12 +430,13 @@
 
     private void HandleFocus()
     {
-        // A read-only/disabled field can still take focus, but its text is never edited —
-        // dropping the group separators there would just look like a rendering glitch.
+        // A read-only/disabled field can still take focus, but its text is never edited.
         if (ReadOnly || Disabled) return;
 
+        // Keep the formatted text. Rewriting it here races Playwright fill() / a native
+        // select-all: the focus render arrives after the selection and either appends or
+        // overwrites the typed replacement (DECIMAL-FOCUS-KEEPS-TEXT).
         _focused = true;
-        _text = ToEditText(DisplayValue);
         _liveText = null;
     }
 
@@ -447,10 +446,6 @@
         _liveText = null;
         _text = FormatDecimal(DisplayValue, EffectiveDecimalPlaces, UseGrouping, EffectiveCulture);
     }
-
-    /// <summary>Plain, group-separator-free rendering used while the field has focus.</summary>
-    private string ToEditText(decimal? display) =>
-        FormatDecimal(display, EffectiveDecimalPlaces, useGrouping: false, EffectiveCulture);
 
     /// <summary>Keeps a displayed value inside <see cref="Min"/>/<see cref="Max"/>; both are on the displayed scale.</summary>
     private decimal? Clamp(decimal? display)

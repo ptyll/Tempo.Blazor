@@ -300,7 +300,7 @@ public class TmDecimalInputTests : LocalizationTestBase
     }
 
     [Fact]
-    public void DecimalInput_Focus_ShowsPlainEditableText()
+    public void DecimalInput_Focus_KeepsTheShownText()
     {
         var cut = Render<TmDecimalInput>(p => p
             .Add(x => x.Culture, Czech)
@@ -309,7 +309,43 @@ public class TmDecimalInputTests : LocalizationTestBase
         cut.Find(".tm-decimal-input__input").Focus();
 
         Normalize(cut.Find(".tm-decimal-input__input").GetAttribute("value"))
-            .Should().Be("1234,50", "editing should not fight with group separators");
+            .Should().Be("1 234,50", "focus must not drop grouping so fill() can replace the shown text");
+    }
+
+    [Fact]
+    public void DecimalInput_ArrowUpWhileFocused_ShowsGroupedText()
+    {
+        decimal? value = 1234.5m;
+        var cut = Render<TmDecimalInput>(p => p
+            .Add(x => x.Culture, Czech)
+            .Add(x => x.Value, value)
+            .Add(x => x.ValueChanged, EventCallback.Factory.Create<decimal?>(this, v => value = v)));
+
+        var input = cut.Find(".tm-decimal-input__input");
+        input.Focus();
+        input.KeyDown(new KeyboardEventArgs { Key = "ArrowUp" });
+
+        value.Should().Be(1235.5m);
+        Normalize(cut.Find(".tm-decimal-input__input").GetAttribute("value"))
+            .Should().Be("1 235,50", "steppers keep grouped text while focused");
+    }
+
+    [Fact]
+    public void DecimalInput_FocusThenChangeGroupedText_CommitsExactValue()
+    {
+        decimal? value = 1234.5m;
+        var cut = Render<TmDecimalInput>(p => p
+            .Add(x => x.Culture, Czech)
+            .Add(x => x.Value, value)
+            .Add(x => x.ValueChanged, EventCallback.Factory.Create<decimal?>(this, v => value = v)));
+
+        var input = cut.Find(".tm-decimal-input__input");
+        input.Focus();
+        input.Change("50 000,00");
+
+        value.Should().Be(50000m);
+        input.Blur();
+        Normalize(cut.Find(".tm-decimal-input__input").GetAttribute("value")).Should().Be("50 000,00");
     }
 
     [Fact]

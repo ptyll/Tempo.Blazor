@@ -7,6 +7,10 @@
 > [docs/proposals/time-input-mobile.md](docs/proposals/time-input-mobile.md)). Additive public API;
 > `TmTimePicker.Presentation` stays `Segments` (today's DOM).
 
+### Fixed — TmDecimalInput fill() and select-all replace (`Tempo.Blazor`, Fáze 8e)
+
+- **`TmDecimalInput` no longer races Playwright `fill()` or a native select-all.** Focus used to rewrite the shown text to an ungrouped edit form after the browser had already selected it, so `fill()` / typing over the selection appended (WASM) or was overwritten (Server). Focus now keeps the formatted grouped value; steppers and arrow keys write grouped text too, and the parser already accepts grouping. Call sites that used the click + Ctrl+A + `pressSequentially` + Tab workaround can switch to `fill()`. No new parameters.
+
 ### Fixed — node tests no longer ship as static web assets (`Tempo.Blazor.Modeling` / `Tempo.Blazor.NotionEditor` / `Tempo.Blazor.Reporting`, Fáze 8d)
 
 - **Modeling, NotionEditor and Reporting no longer publish their node test suites as static web assets.** Those packages kept `*.test.mjs` (and `__tests__/` where it exists) under `wwwroot`, so the SDK packed them and a host served them from `_content/Tempo.Blazor.Modeling/js/__tests__/`, `_content/Tempo.Blazor.NotionEditor/js/__tests__/` and `_content/Tempo.Blazor.Reporting/js/reporting/tm-report-viewer.test.mjs`. Each csproj now has the same `Content Remove` + `None Pack="false"` pair the other JS-shipping packages already declare; `npm run test:modeling` / `test:notion-db-resize` / `test:reporting-modules` still run the suites from the source tree. A repo-wide guard (`PackageJsTestExclusionTests`) fails closed if a new packable RCL adds node tests under `wwwroot` without the pair. No host action is needed; hosts must not link these URLs.

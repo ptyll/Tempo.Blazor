@@ -2,7 +2,7 @@
   "itemName": "TmDecimalInput",
   "kind": "Component",
   "category": "Inputs",
-  "description": "Culture-aware decimal input. Accepts both comma and dot as the decimal separator, cleans pasted text (currency symbols, units, thousands separators), formats the value on blur for the chosen culture, rounds to DecimalPlaces, supports Min/Max/Step with +/- steppers and ArrowUp/ArrowDown keys, offers a percent mode (the model keeps the fraction while the field shows the percentage), and reports DataAnnotations validation messages when used inside an EditForm.",
+  "description": "Culture-aware decimal input. Accepts both comma and dot as the decimal separator, cleans pasted text (currency symbols, units, thousands separators), keeps the culture-formatted (grouped) value while focused so Playwright fill() and a native select-all replace the shown text instead of racing a focus rewrite, formats on blur, rounds to DecimalPlaces, supports Min/Max/Step with +/- steppers and ArrowUp/ArrowDown keys (those writes stay grouped; the parser already accepts grouping), offers a percent mode (the model keeps the fraction while the field shows the percentage), and reports DataAnnotations validation messages when used inside an EditForm.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Inputs"
   ],
@@ -37,7 +37,7 @@
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Show thousands separators while the field is not being edited (default true)."
+      "description": "Show thousands separators in the displayed text, including while the field has focus (default true). The parser accepts grouped input."
     },
     {
       "name": "Culture",
