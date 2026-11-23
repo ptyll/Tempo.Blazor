@@ -42,12 +42,10 @@ public sealed class SmokeLaneE2ETests : WasmTestBase
         var (page, errors) = await OpenPageWithErrorCaptureAsync(
             "/canvas-engine-host?documentId=phase-5-canvas-render&showToolbar=true");
 
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-engine-host"][data-canvas-engine-ready="true"]')
                 && document.querySelectorAll('[data-testid="document-canvas-page"]').length >= 1
-            """,
-            options: new PageWaitForFunctionOptions { Timeout = 45_000 });
+            """, 45_000);
 
         var commandCount = await page.EvaluateAsync<int>(
             """
@@ -89,9 +87,7 @@ public sealed class SmokeLaneE2ETests : WasmTestBase
     {
         var (page, errors) = await OpenPageWithErrorCaptureAsync("/this-route-does-not-exist-smoke-probe");
 
-        await page.WaitForFunctionAsync(
-            "() => (document.body?.textContent || '').trim().length > 0",
-            options: new PageWaitForFunctionOptions { Timeout = 30_000 });
+        await WaitForPredicateAsync(page, "() => (document.body?.textContent || '').trim().length > 0", 30_000);
 
         await AssertPageHealthyAsync(page, errors, "/this-route-does-not-exist-smoke-probe");
     }

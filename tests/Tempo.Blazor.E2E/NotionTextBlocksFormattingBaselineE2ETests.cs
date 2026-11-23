@@ -63,9 +63,7 @@ public class NotionTextBlocksFormattingBaselineE2ETests : NotionE2ETestBase
         await OpenNotionInlineToolbarForBlockAsync(page, FormattingBlockId, ".tm-notion-paragraph");
         await SelectInlineCodeContentsAsync(page);
         var activeToolbarButtons = page.Locator(".tm-notion-inline-toolbar__btn--active");
-        await page.WaitForFunctionAsync(
-            "() => document.querySelectorAll('.tm-notion-inline-toolbar__btn--active').length >= 5",
-            new PageWaitForFunctionOptions { Timeout = 5000 });
+        await WaitForPredicateAsync(page, "() => document.querySelectorAll('.tm-notion-inline-toolbar__btn--active').length >= 5", 5000);
         Assert.IsTrue(await activeToolbarButtons.CountAsync() >= 5, "Combined formatted text should activate bold, italic, underline, strikethrough, and inline code toolbar buttons.");
         foreach (var title in new[] { "Bold", "Italic", "Underline", "Strikethrough", "Inline code" })
         {

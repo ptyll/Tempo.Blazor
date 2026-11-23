@@ -5316,11 +5316,8 @@ public partial class SpreadsheetE2ETests : WasmTestBase
         Assert.IsTrue(typingMs > 0, $"Expected benchmark row to expose typing latency. Current: {typingMs:N1} ms.");
         Assert.AreEqual(0d, typingDotNet, $"Typing should stay JS-only on the first frame. .NET callbacks: {typingDotNet:N0}.");
         Assert.AreEqual(0d, typingBlazorFrames, $"Typing should not trigger a Blazor frame per key. Frames: {typingBlazorFrames:N0}.");
-        Assert.IsTrue(wheelEvents > 0, "Expected benchmark row to expose wheel activity.");
-        // Per-event contract only expresses itself once the wheel produced >=2 events — a single-event
-        // window overlaps the commit render and cannot carry a ratio. A real regression (Blazor frame
-        // per event) still fails as blazorFrames == wheelEvents for N>=2.
-        Assert.IsTrue(wheelEvents <= 1 || wheelBlazorFrames < wheelEvents, $"Wheel scroll should not trigger a Blazor frame per event. Frames: {wheelBlazorFrames:N0}, events: {wheelEvents:N0}.");
+        Assert.IsTrue(wheelEvents >= 8, $"Wheel probe must dispatch a deterministic event count (12), not a duration window that collapses to 1 event. Events: {wheelEvents:N0}.");
+        Assert.IsTrue(wheelBlazorFrames < wheelEvents / 2, $"Wheel scroll should not trigger a Blazor frame per event. Frames: {wheelBlazorFrames:N0}, events: {wheelEvents:N0}.");
         Assert.IsTrue(dragFrames > 0, "Expected benchmark row to expose drag autoscroll frames.");
         // Per-move contract only expresses itself once the drag produced >=2 frames — a single-frame
         // drag overlaps its end-of-drag commit render and cannot carry a ratio. A real regression

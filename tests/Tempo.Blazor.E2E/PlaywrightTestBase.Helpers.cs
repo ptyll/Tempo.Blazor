@@ -100,4 +100,50 @@ public abstract partial class PlaywrightTestBase
         // that to 0 for the caller to assert on.
         return await page.EvaluateAsync<long>("() => performance.memory?.usedJSHeapSize || 0");
     }
+
+    /// <summary>
+    /// Waits until <paramref name="expression"/> is truthy. Polls through <see cref="IPage.EvaluateAsync{T}(string, object?)"/>
+    /// so an <c>async</c> predicate is actually awaited (Playwright's <c>WaitForFunctionAsync</c> treats a Promise
+    /// object as already-truthy). Never pass a <see cref="PageWaitForFunctionOptions"/> as the predicate argument —
+    /// remaining 7f95b6e6, the two-argument overload binds options as <c>arg</c> and then uses the default 30 s.
+    /// </summary>
+    internal static Task WaitForPredicateAsync(IPage page, string expression, int? timeoutMs = null)
+        => WaitForPredicateAsync(page, expression, arg: null, timeoutMs);
+
+    /// <summary>
+    /// <see cref="WaitForPredicateAsync(IPage, string, int?)"/> with a predicate argument that is NOT
+    /// the options object.
+    /// </summary>
+    internal static async Task WaitForPredicateAsync(IPage page, string expression, object? arg, int? timeoutMs = null)
+    {
+        var timeout = timeoutMs ?? 30_000;
+        var deadline = DateTime.UtcNow.AddMilliseconds(timeout);
+        // EvaluateAsync awaits a returned Promise, so the C# side always sees a boolean. WaitForFunctionAsync
+        // would treat the Promise object itself as truthy and return on the first poll.
+        var script = "async arg => !!(await Promise.resolve((" + expression + ")(arg)))";
+        Exception? lastError = null;
+        while (true)
+        {
+            try
+            {
+                if (await page.EvaluateAsync<bool>(script, arg))
+                {
+                    return;
+                }
+
+                lastError = null;
+            }
+            catch (Exception ex) when (!page.IsClosed)
+            {
+                lastError = ex;
+            }
+
+            if (DateTime.UtcNow >= deadline)
+            {
+                throw new TimeoutException($"WaitForPredicateAsync timed out after {timeout} ms.", lastError);
+            }
+
+            await Task.Delay(50);
+        }
+    }
 }

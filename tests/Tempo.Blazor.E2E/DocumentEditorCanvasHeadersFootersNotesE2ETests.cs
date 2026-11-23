@@ -53,13 +53,10 @@ public sealed class DocumentEditorCanvasHeadersFootersNotesE2ETests : WasmTestBa
 
         var firstHeader = await ReadHeaderFooterRegionRectAsync(page, "FirstPage", "Header");
         await page.Mouse.DblClickAsync((float)firstHeader.CenterX, (float)firstHeader.CenterY);
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-engine-root"]')?.getAttribute('data-canvas-header-footer-editing') === 'true'
                 && document.querySelector('[data-testid="document-canvas-engine-root"]')?.getAttribute('data-canvas-header-footer-edit-region') === 'Header'
-            """,
-            null,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 10_000);
         var headerEditResult = await ExecuteCanvasCommandAsync(page, "replacerange", new
         {
             blockId = "canvas-phase16-header-first-block",
@@ -70,25 +67,19 @@ public sealed class DocumentEditorCanvasHeadersFootersNotesE2ETests : WasmTestBa
         Assert.IsTrue(headerEditResult.Handled, headerEditResult.Debug);
         Assert.IsTrue(headerEditResult.Changed, headerEditResult.Debug);
         await WaitForLastCanvasCommandAsync(page, "replacerange");
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => Array.from(document.querySelectorAll('[data-canvas-text-rect]'))
                 .some(rect => (rect.getAttribute('data-canvas-text') || '').includes('edited'))
-            """,
-            null,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 10_000);
         await page.GetByTestId("document-editor-demo").ScreenshotAsync(new LocatorScreenshotOptions
         {
             Path = editingPath,
             Type = ScreenshotType.Png
         });
         await ClickTextRectAsync(page, "canvas-phase16-intro");
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-engine-root"]')?.getAttribute('data-canvas-header-footer-editing') === 'false'
-            """,
-            null,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 10_000);
 
         var toggleFirstOffResult = await ExecuteCanvasCommandAsync(page, "differentFirstPage", new { });
         Assert.IsTrue(toggleFirstOffResult.Handled, toggleFirstOffResult.Debug);
@@ -128,13 +119,10 @@ public sealed class DocumentEditorCanvasHeadersFootersNotesE2ETests : WasmTestBa
         Assert.IsTrue(pageNumberResult.Handled, pageNumberResult.Debug);
         Assert.IsTrue(pageNumberResult.Changed, pageNumberResult.Debug);
         await WaitForLastCanvasCommandAsync(page, "insertPageNumber");
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => Array.from(document.querySelectorAll('[data-canvas-text-rect][data-block-id="canvas-phase16-header-first-block"]'))
                 .some(rect => /^[0-9]+$/.test((rect.getAttribute('data-canvas-text') || '').trim()))
-            """,
-            null,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 10_000);
 
         var noteNumberingResult = await ExecuteCanvasCommandAsync(page, "setPageSettings", new
         {
@@ -236,10 +224,7 @@ public sealed class DocumentEditorCanvasHeadersFootersNotesE2ETests : WasmTestBa
         });
 
         await NavigateWithinBlazorAsync(page, "/canvas-engine-host?documentId=phase-5-canvas-render");
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'",
-            null,
-            new PageWaitForFunctionOptions { Timeout = 20_000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'", 20_000);
         await NavigateWithinBlazorAsync(page, $"/canvas-engine-host?documentId={Phase16DocumentId}&showToolbar=true");
         await WaitForPhase16ReadyAsync(page);
         var reloadedProbe = await ReadPhase16ProbeAcrossDocumentAsync(page);
@@ -342,8 +327,7 @@ public sealed class DocumentEditorCanvasHeadersFootersNotesE2ETests : WasmTestBa
         // Turn OFF through the ribbon: page 1 must fall back to the Primary header (layout snapshot is
         // the contract here — header text is NOT in the canvas a11y mirror).
         await firstPageToggle.ClickAsync();
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             async () => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 const handle = host?.getAttribute('data-canvas-engine-handle') || '';
@@ -352,9 +336,7 @@ public sealed class DocumentEditorCanvasHeadersFootersNotesE2ETests : WasmTestBa
                 const section = (model.sections || [])[0];
                 return section?.properties?.differentFirstPage !== true;
             }
-            """,
-            null,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 10_000);
         await Assertions.Expect(firstPageToggle).ToHaveAttributeAsync("aria-pressed", "false", new() { Timeout = 10_000 });
 
         var disabledTexts = await ReadFirstPageLayoutTextsAsync(page);
@@ -377,10 +359,7 @@ public sealed class DocumentEditorCanvasHeadersFootersNotesE2ETests : WasmTestBa
         await WaitForSaveBoundaryAsync(page);
 
         await NavigateWithinBlazorAsync(page, "/canvas-engine-host?documentId=phase-5-canvas-render");
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'",
-            null,
-            new PageWaitForFunctionOptions { Timeout = 20_000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'", 20_000);
         await NavigateWithinBlazorAsync(page, $"/canvas-engine-host?documentId={Phase16DocumentId}&showToolbar=true");
         await WaitForPhase16ReloadReadyAsync(page);
 
@@ -423,8 +402,7 @@ public sealed class DocumentEditorCanvasHeadersFootersNotesE2ETests : WasmTestBa
 
     /// <summary>Reload readiness without assuming the first-page header scope (the toggle test disables it).</summary>
     private static Task WaitForPhase16ReloadReadyAsync(IPage page)
-        => page.WaitForFunctionAsync(
-            """
+        => WaitForPredicateAsync(page, """
             () => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 const first = document.querySelector('[data-testid="document-canvas-page"][data-canvas-model-document-id="phase-16-canvas-headers-footers-notes"]');
@@ -432,9 +410,7 @@ public sealed class DocumentEditorCanvasHeadersFootersNotesE2ETests : WasmTestBa
                     && first
                     && Number(first.getAttribute('data-canvas-header-footer-count') || '0') >= 1;
             }
-            """,
-            null,
-            new PageWaitForFunctionOptions { Timeout = 90_000 });
+            """, 90_000);
 
     private async Task OpenPhase16DocumentAsync(IPage page)
     {
@@ -443,8 +419,7 @@ public sealed class DocumentEditorCanvasHeadersFootersNotesE2ETests : WasmTestBa
     }
 
     private static Task WaitForPhase16ReadyAsync(IPage page)
-        => page.WaitForFunctionAsync(
-            """
+        => WaitForPredicateAsync(page, """
             () => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 const root = document.querySelector('[data-testid="document-canvas-engine-root"]');
@@ -458,9 +433,7 @@ public sealed class DocumentEditorCanvasHeadersFootersNotesE2ETests : WasmTestBa
                     && Array.from(document.querySelectorAll('[data-canvas-text-rect][data-block-id="canvas-phase16-intro"]'))
                         .some(rect => (rect.getAttribute('data-canvas-text') || '') === 'verifies');
             }
-            """,
-            null,
-            new PageWaitForFunctionOptions { Timeout = 90_000 });
+            """, 90_000);
 
     private static async Task<Phase16Probe> ReadPhase16ProbeAcrossDocumentAsync(IPage page)
     {
@@ -639,8 +612,7 @@ public sealed class DocumentEditorCanvasHeadersFootersNotesE2ETests : WasmTestBa
 
     private static async Task WaitForSaveBoundaryAsync(IPage page)
     {
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => {
                 const saveMessage = document.querySelector('[data-testid="document-save-message"]')?.textContent || '';
                 const lastSaved = document.querySelector('[data-testid="document-last-saved"]')?.textContent || '';
@@ -650,9 +622,7 @@ public sealed class DocumentEditorCanvasHeadersFootersNotesE2ETests : WasmTestBa
                     && pending.trim().length === 0
                     && (/Saved|Autosaved/i.test(saveMessage) || /saved/i.test(lastSaved));
             }
-            """,
-            null,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 10_000);
     }
 
     private static async Task<Phase16CommandProbe> ExecuteCanvasCommandAsync(IPage page, string commandId, object payload)
@@ -678,15 +648,12 @@ public sealed class DocumentEditorCanvasHeadersFootersNotesE2ETests : WasmTestBa
     }
 
     private static Task WaitForLastCanvasCommandAsync(IPage page, string commandId)
-        => page.WaitForFunctionAsync(
-            """
+        => WaitForPredicateAsync(page, """
             commandId => {
                 const last = document.querySelector('[data-testid="document-canvas-engine-root"]')?.getAttribute('data-canvas-command-last') || '';
                 return last.toLowerCase() === commandId.toLowerCase();
             }
-            """,
-            commandId,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, commandId, 10_000);
 
     private static async Task ClickTextRectAsync(IPage page, string blockId)
     {
@@ -716,8 +683,7 @@ public sealed class DocumentEditorCanvasHeadersFootersNotesE2ETests : WasmTestBa
 
     private static async Task<int> WaitForBlockPageIndexAsync(IPage page, string blockId)
     {
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             async blockId => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 const handle = host?.getAttribute('data-canvas-engine-handle') || '';
@@ -727,9 +693,7 @@ public sealed class DocumentEditorCanvasHeadersFootersNotesE2ETests : WasmTestBa
                 const block = blocks.find(candidate => String(candidate?.blockId || candidate?.id || '') === blockId);
                 return block && Number(block.pageIndex || 0) >= 0;
             }
-            """,
-            blockId,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, blockId, 10_000);
 
         return await page.EvaluateAsync<int>(
             """
@@ -747,17 +711,14 @@ public sealed class DocumentEditorCanvasHeadersFootersNotesE2ETests : WasmTestBa
     }
 
     private static Task WaitForFirstPageLandscapeAsync(IPage page)
-        => page.WaitForFunctionAsync(
-            """
+        => WaitForPredicateAsync(page, """
             () => {
                 const first = document.querySelector('[data-testid="document-canvas-page"][data-canvas-model-document-id]');
                 const width = Number(first?.getAttribute('data-canvas-page-logical-width') || '0');
                 const height = Number(first?.getAttribute('data-canvas-page-logical-height') || '0');
                 return width > height && width > 0 && height > 0;
             }
-            """,
-            null,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 10_000);
 
     private static Task NavigateWithinBlazorAsync(IPage page, string url)
         => page.EvaluateAsync(

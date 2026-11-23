@@ -1722,35 +1722,50 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
             s.metrics.commandLogBatchItemCount += batch.length;
         }
 
-        s.commandLogFlight = invokeDotNet(root, "OnCanvasCommandLogBatch", [batch], false)
-            .then(ackRevision => {
-                const nextAck = Number(ackRevision) || Math.max(...batch.map(command => command.id));
-                s.commandLogAckRevision = Math.max(s.commandLogAckRevision || 0, nextAck);
-                if (s.metrics) s.metrics.commandLogAckRevision = s.commandLogAckRevision;
-            })
-            .catch(() => {
-                const retry = [];
-                for (const command of batch) {
-                    command.attempts = (command.attempts || 0) + 1;
-                    if (command.attempts <= 2 && command.id > (s.commandLogAckRevision || 0)) {
-                        retry.push(command);
-                    } else if (s.metrics) {
-                        s.metrics.commandLogObsoleteDropCount += 1;
-                    }
-                }
-                if (retry.length > 0) {
-                    s.commandLog.unshift(...retry);
-                    if (s.metrics) s.metrics.commandLogRetryCount += retry.length;
-                    s.commandLogPending = true;
-                }
-            })
-            .finally(() => {
-                s.commandLogInFlight = false;
-                if (s.commandLogPending || s.commandLog.length > 0) {
-                    s.commandLogPending = false;
-                    scheduleCommandLogFlush(root, 45);
-                }
-            });
+        const finishFlight = () => {
+            s.commandLogInFlight = false;
+            if (s.commandLogPending || s.commandLog.length > 0) {
+                s.commandLogPending = false;
+                scheduleCommandLogFlush(root, 45);
+            }
+        };
+
+        try {
+            s.commandLogFlight = invokeDotNet(root, "OnCanvasCommandLogBatch", [batch], false)
+                .then(ackRevision => {
+                    const nextAck = Number(ackRevision) || Math.max(...batch.map(command => command.id));
+                    s.commandLogAckRevision = Math.max(s.commandLogAckRevision || 0, nextAck);
+                    if (s.metrics) s.metrics.commandLogAckRevision = s.commandLogAckRevision;
+                })
+                .catch(() => requeueFailedCommandBatch(s, batch))
+                .finally(finishFlight);
+        } catch (error) {
+            // A synchronous throw (dead circuit, missing JSInvokable) used to leave commandLogInFlight
+            // true and commandLogFlight on the previous already-settled promise, so
+            // whenCommandLogAcknowledged spun Promise.race for pendingStateWaitLimitMs. Fail fast:
+            // the same retry budget as .catch, then a rejected-and-caught flight so waiters settle.
+            requeueFailedCommandBatch(s, batch);
+            if (s.metrics) s.metrics.commandLogSyncFailureCount += 1;
+            s.commandLogFlight = Promise.reject(error).catch(() => { });
+            finishFlight();
+        }
+    }
+
+    function requeueFailedCommandBatch(s, batch) {
+        const retry = [];
+        for (const command of batch) {
+            command.attempts = (command.attempts || 0) + 1;
+            if (command.attempts <= 2 && command.id > (s.commandLogAckRevision || 0)) {
+                retry.push(command);
+            } else if (s.metrics) {
+                s.metrics.commandLogObsoleteDropCount += 1;
+            }
+        }
+        if (retry.length > 0) {
+            s.commandLog.unshift(...retry);
+            if (s.metrics) s.metrics.commandLogRetryCount += retry.length;
+            s.commandLogPending = true;
+        }
     }
 
     function scheduleForcedViewportSync(root) {
@@ -2759,6 +2774,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
             commandLogAckRevision: 0,
             commandLogRetryCount: 0,
             commandLogObsoleteDropCount: 0,
+            commandLogSyncFailureCount: 0,
             cellChangedCommandCount: 0,
             rangeChangedCommandCount: 0,
             selectionSettledCommandCount: 0,
@@ -3853,6 +3869,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
     // Returns false when the grid was disposed or re-initialized meanwhile.
     async function whenCommandLogAcknowledged(root, s, target) {
         const deadline = performance.now() + pendingStateWaitLimitMs;
+        let lastFlight = undefined;
         for (;;) {
             if (getState(root) !== s || !s.dotNet) return false;
             const ack = s.commandLogAckRevision || 0;
@@ -3865,12 +3882,19 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
             }
             const remaining = deadline - performance.now();
             if (remaining <= 0) return true;
+            const flight = s.commandLogFlight;
+            // A stuck inFlight flag with an already-settled (or missing) flight used to busy-loop
+            // Promise.race until the deadline. If the flight object did not change, there is nothing
+            // new to wait for — fail open so the key/pointer command still dispatches.
+            if (flight === lastFlight) return true;
+            lastFlight = flight;
             let timer = 0;
             await Promise.race([
-                Promise.resolve(s.commandLogFlight).catch(() => { }),
+                Promise.resolve(flight).catch(() => { }),
                 new Promise(resolve => { timer = setTimeout(resolve, remaining); })
             ]);
             clearTimeout(timer);
+            if (s.commandLogFlight === lastFlight && s.commandLogInFlight) return true;
         }
     }
 
@@ -3888,17 +3912,19 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
     }
 
     // A .NET-side command that reads the grid's selection or cell values (copy/cut into the internal
-    // clipboard, Paste Special, Delete, formatting shortcuts, ...) must run against the state the user
-    // saw WHEN the key was pressed. Selection changes only ride a debounced command log (35 ms, longer
-    // while an edit commit is pending) and cell edits a 120 ms commit batch, while key commands used to be
-    // invoked at once — so Shift+Arrow followed quickly by Ctrl+C copied the PREVIOUS selection into the
-    // internal clipboard. Now: queue a still-pending selection and edits, remember the last queued id as a
-    // barrier, deliver exactly the commands up to it, then invoke. Commands queued after the press (say a
-    // further Shift+Arrow during the round-trip) stay behind the barrier until the key command has been
-    // dispatched. Key commands of one grid are chained on DISPATCH, not on completion: each is sent as soon
-    // as its own state is acknowledged and the previous one has been sent, so .NET receives them in
-    // key-press order and a key command whose .NET call never returns cannot block the keys after it.
-    // The returned promise is the .NET call itself.
+    // clipboard, Paste Special, Delete, formatting shortcuts, pointer cell hits, context menu, ...)
+    // must run against the state the user saw WHEN the input arrived. Selection changes only ride a
+    // debounced command log (35 ms, longer while an edit commit is pending) and cell edits a 120 ms
+    // commit batch, while key AND pointer commands used to be invoked at once — so Shift+Arrow followed
+    // quickly by Ctrl+C (or a click / context menu) copied the PREVIOUS selection. Now: queue a
+    // still-pending selection and edits, remember the last queued id as a barrier, deliver exactly the
+    // commands up to it, then invoke. Commands queued after the press (say a further Shift+Arrow during
+    // the round-trip) stay behind the barrier until the command has been dispatched. Commands of one
+    // grid are chained on DISPATCH, not on completion: each is sent as soon as its own state is
+    // acknowledged and the previous one has been sent, so .NET receives them in input order and a
+    // command whose .NET call never returns cannot block the ones after it.
+    // The returned promise is the .NET call itself. Pointer paths keep hotPath=true (the formula-click
+    // 0-.NET-callback benchmark is unchanged: that path never reaches this door).
     function invokeDotNetAfterPendingState(root, method, args, hotPath) {
         const s = getState(root);
         if (!s?.dotNet) return Promise.resolve();
@@ -3937,6 +3963,13 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         const dispatched = (s.pendingStateCommandChain || Promise.resolve()).then(dispatch, dispatch);
         s.pendingStateCommandChain = dispatched.catch(() => { });
         return dispatched.then(result => result.call);
+    }
+
+    // Pointer and keyboard share this door. Until remaining 30f2a201 it was a straight invokeDotNet
+    // (the barrier above only wrapped key commands), so a Shift+Arrow still in the debounce window
+    // lost to a click. The body is the one line the node lane mutates.
+    function invokeCanvasPointerDotNet(root, method, args, hotPath) {
+        return invokeDotNetAfterPendingState(root, method, args, hotPath);
     }
 
     function scheduleSelectionSync(root) {
@@ -5703,7 +5736,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         // `anchor` = the gesture kind (a finger-sized menu offsets itself from the finger) and the viewport
         // height lets the menu flip above the press point when there is no room below it.
         const viewportHeight = Math.max(0, Number(window.innerHeight) || 0);
-        invokeDotNet(root, "OnCanvasContextMenu",
+        invokeCanvasPointerDotNet(root, "OnCanvasContextMenu",
             [point.x, point.y, ev.clientX, ev.clientY, "touch", viewportHeight], true).catch(() => {});
     }
 
@@ -6201,7 +6234,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
                     ev.preventDefault?.();
                     return;
                 }
-                invokeDotNet(rootElement, "OnCanvasCellPointer", [hit.row, hit.col, !!ev.shiftKey, !!ev.ctrlKey], true).catch(() => {});
+                invokeCanvasPointerDotNet(rootElement, "OnCanvasCellPointer", [hit.row, hit.col, !!ev.shiftKey, !!ev.ctrlKey], true).catch(() => {});
                 ev.preventDefault?.();
                 return;
             }
@@ -6211,7 +6244,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
                 updateLocalActiveCell(rootElement, hit.row, hit.col, !!ev.shiftKey, "pointer");
                 flushSelectionSettled(rootElement);
             }
-            invokeDotNet(rootElement, "OnCanvasCellPointer", [hit.row, hit.col, !!ev.shiftKey, !!ev.ctrlKey], true).catch(() => {});
+            invokeCanvasPointerDotNet(rootElement, "OnCanvasCellPointer", [hit.row, hit.col, !!ev.shiftKey, !!ev.ctrlKey], true).catch(() => {});
             return;
         }
 
@@ -6221,7 +6254,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
             return;
         }
 
-        invokeDotNet(rootElement, "OnCanvasPointer", [p.x, p.y, !!ev.shiftKey, !!ev.ctrlKey], true).catch(() => {});
+        invokeCanvasPointerDotNet(rootElement, "OnCanvasPointer", [p.x, p.y, !!ev.shiftKey, !!ev.ctrlKey], true).catch(() => {});
     }
 
     window.tmSpreadsheetCanvas.register = function (root, canvas, headerCanvas, selectionCanvas, dotNet) {
@@ -6871,7 +6904,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
                 return;
             }
 
-            invokeDotNet(root, "OnCanvasDoubleClick", [p.x, p.y], true).catch(() => {});
+            invokeCanvasPointerDotNet(root, "OnCanvasDoubleClick", [p.x, p.y], true).catch(() => {});
         };
         const onContextMenu = ev => {
             ev.preventDefault();
@@ -6925,7 +6958,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
             // The SAME six arguments as the touch path: a JSInvokable call must match the C# signature
             // exactly (a short args array throws and kills every later interop on the page).
             const viewportHeight = Math.max(0, Number(window.innerHeight) || 0);
-            invokeDotNet(root, "OnCanvasContextMenu",
+            invokeCanvasPointerDotNet(root, "OnCanvasContextMenu",
                 [p.x, p.y, ev.clientX, ev.clientY, "pointer", viewportHeight], true).catch(() => {});
         };
         const onCopy = ev => {
@@ -9417,6 +9450,15 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         attachPointerKindListener,
         // The engine getters are node-tested too: a root without a model must answer null/{ -1, -1 }
         // instead of silently measuring a 40/20 grid the canvas never painted.
-        resolveGridGutters
+        resolveGridGutters,
+        // Command-log barrier (remaining 82c413db / 30f2a201): the node lane drives a stub
+        // invokeMethodAsync against a hand-built engine state — no canvas, no register().
+        queueCommand,
+        flushCommandLog,
+        whenCommandLogAcknowledged,
+        invokeDotNetAfterPendingState,
+        invokeCanvasPointerDotNet,
+        queueCellEditCommit,
+        flushCellEditCommitQueue
     };
 })();

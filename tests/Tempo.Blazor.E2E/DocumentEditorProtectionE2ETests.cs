@@ -29,13 +29,11 @@ public sealed class DocumentEditorProtectionE2ETests : WasmTestBase
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1000);
         await GotoAppReadyAsync(page, $"{BaseUrl}/canvas-engine-host?documentId={DocumentId}&showToolbar=true", WaitUntilState.DOMContentLoaded);
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-engine-host"][data-canvas-engine-ready="true"]')
                 && document.querySelectorAll('[data-canvas-text-rect][data-block-id="canvas-history-text"]').length >= 1
                 && document.querySelectorAll('[data-canvas-text-rect][data-block-id="canvas-history-format"]').length >= 1
-            """,
-            new PageWaitForFunctionOptions { Timeout = 30_000 });
+            """, 30_000);
 
         var output = CreateOutputDirectory();
         var protectedPath = Path.Combine(output, "00-protected-with-region.png");
@@ -66,9 +64,7 @@ public sealed class DocumentEditorProtectionE2ETests : WasmTestBase
         await ClickTextBlockAsync(page, "canvas-history-format");
         await page.EvaluateAsync("() => document.querySelector('[data-testid=\"document-canvas-hidden-input\"]')?.focus()");
         await page.Keyboard.TypeAsync("OK");
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"document-canvas-a11y-mirror\"]')?.textContent?.includes('OK') === true",
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-canvas-a11y-mirror\"]')?.textContent?.includes('OK') === true", 10_000);
 
         await page.GetByTestId("document-editor-demo").ScreenshotAsync(new LocatorScreenshotOptions { Path = protectedPath, Type = ScreenshotType.Png });
 
@@ -76,16 +72,12 @@ public sealed class DocumentEditorProtectionE2ETests : WasmTestBase
         await page.GetByTestId("document-save").ClickAsync();
         await Assertions.Expect(page.GetByTestId("document-save-message")).ToContainTextAsync("Saved", new() { Timeout = 10_000 });
         await NavigateWithinBlazorAsync(page, "/canvas-engine-host?documentId=phase-5-canvas-render");
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'",
-            new PageWaitForFunctionOptions { Timeout = 20_000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'", 20_000);
         await NavigateWithinBlazorAsync(page, $"/canvas-engine-host?documentId={DocumentId}&showToolbar=true");
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-engine-host"][data-canvas-engine-ready="true"]')
                 && document.querySelectorAll('[data-canvas-text-rect][data-block-id="canvas-history-text"]').length >= 1
-            """,
-            new PageWaitForFunctionOptions { Timeout = 30_000 });
+            """, 30_000);
         await WaitForProtectionStateAsync(page, isProtected: true, minMarkers: 1);
 
         await ClickTextBlockAsync(page, "canvas-history-text");
@@ -126,7 +118,8 @@ public sealed class DocumentEditorProtectionE2ETests : WasmTestBase
             "() => document.querySelector('[data-testid=\"document-canvas-a11y-mirror\"]')?.textContent || ''");
 
     private static Task WaitForProtectionStateAsync(IPage page, bool isProtected, int minMarkers)
-        => page.WaitForFunctionAsync(
+        => WaitForPredicateAsync(
+            page,
             """
             async ([expectedProtected, expectedMarkers]) => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
@@ -137,7 +130,7 @@ public sealed class DocumentEditorProtectionE2ETests : WasmTestBase
             }
             """,
             new object[] { isProtected, minMarkers },
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            10_000);
 
     private static async Task ClickTextBlockAsync(IPage page, string blockId)
     {
@@ -194,15 +187,12 @@ public sealed class DocumentEditorProtectionE2ETests : WasmTestBase
         await page.Mouse.DownAsync();
         await page.Mouse.MoveAsync((float)points[2], (float)points[3], new MouseMoveOptions { Steps = 8 });
         await page.Mouse.UpAsync();
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             blockId => document.querySelector('[data-testid="document-canvas-engine-root"]')
                 ?.getAttribute('data-canvas-selection-focus-block-id') === blockId
                 && document.querySelector('[data-testid="document-canvas-engine-root"]')
                     ?.getAttribute('data-canvas-selection-collapsed') === 'false'
-            """,
-            blockId,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, blockId, 10_000);
     }
 
     private static Task NavigateWithinBlazorAsync(IPage page, string url)

@@ -62,9 +62,7 @@ public sealed class DocumentEditorCanvasSectionsColumnsE2ETests : WasmTestBase
         await WaitForSaveBoundaryAsync(page);
 
         await NavigateWithinBlazorAsync(page, "/canvas-engine-host?documentId=phase-5-canvas-render");
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'",
-            new PageWaitForFunctionOptions { Timeout = 20_000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'", 20_000);
         await NavigateWithinBlazorAsync(page, $"/canvas-engine-host?documentId={PhaseE3DocumentId}&showToolbar=true&preferLocalDraft=false");
         await WaitForPhaseE3ReadyAsync(page);
 
@@ -113,8 +111,7 @@ public sealed class DocumentEditorCanvasSectionsColumnsE2ETests : WasmTestBase
     }
 
     private static Task WaitForPhaseE3ReadyAsync(IPage page)
-        => page.WaitForFunctionAsync(
-            """
+        => WaitForPredicateAsync(page, """
             () => {
                 const hostReady = document.querySelector('[data-testid="document-canvas-engine-host"]')?.getAttribute('data-canvas-engine-ready') === 'true';
                 const root = document.querySelector('[data-testid="document-canvas-engine-root"]');
@@ -131,8 +128,7 @@ public sealed class DocumentEditorCanvasSectionsColumnsE2ETests : WasmTestBase
                     && Number(root?.getAttribute('data-canvas-line-number-count') || first.getAttribute('data-canvas-line-number-count') || '0') > 0
                     && root?.getAttribute('data-canvas-layout-has-landscape-page') === 'true';
             }
-            """,
-            new PageWaitForFunctionOptions { Timeout = 30_000 });
+            """, 30_000);
 
     private static Task WaitForFirstPageColumnsAsync(IPage page, int expected)
         => page.WaitForFunctionAsync(
@@ -205,8 +201,7 @@ public sealed class DocumentEditorCanvasSectionsColumnsE2ETests : WasmTestBase
 
     private static async Task WaitForSaveBoundaryAsync(IPage page)
     {
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => {
                 const saveMessage = document.querySelector('[data-testid="document-save-message"]')?.textContent || '';
                 const lastSaved = document.querySelector('[data-testid="document-last-saved"]')?.textContent || '';
@@ -216,8 +211,7 @@ public sealed class DocumentEditorCanvasSectionsColumnsE2ETests : WasmTestBase
                     && pending.trim().length === 0
                     && (/Saved|Autosaved/i.test(saveMessage) || /saved/i.test(lastSaved));
             }
-            """,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 10_000);
     }
 
     private static Task NavigateWithinBlazorAsync(IPage page, string url)

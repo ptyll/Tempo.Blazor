@@ -37,12 +37,10 @@ public sealed class DocumentEditorCanvasToolbarSpellcheckE2ETests : WasmTestBase
         Assert.AreEqual("Toolbar", selected.ExpectedText);
         await page.GetByTestId("document-bold").ClickAsync();
         await WaitForSelectionVisibleAsync(page, "canvas-toolbar-selection");
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-engine-root"]')
                 ?.getAttribute('data-canvas-command-bold-state') === 'active'
-            """,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 10_000);
 
         var squiggle = page.GetByTestId("document-canvas-spell-squiggle").First;
         await Assertions.Expect(squiggle).ToBeVisibleAsync(new() { Timeout = 10_000 });
@@ -59,22 +57,18 @@ public sealed class DocumentEditorCanvasToolbarSpellcheckE2ETests : WasmTestBase
         });
 
         await page.GetByTestId("document-context-spell-suggestion").First.ClickAsync();
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => {
                 const mirror = document.querySelector('[data-testid="document-canvas-a11y-mirror"]');
                 return mirror?.textContent?.includes('marks wrong and offers') === true
                     && mirror?.textContent?.includes('wrngg') === false;
             }
-            """,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 10_000);
         await page.GetByTestId("document-undo").ClickAsync();
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-a11y-mirror"]')
                 ?.textContent?.includes('marks wrngg and offers') === true
-            """,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 10_000);
 
         await DocumentEditorCanvasVisualAssert.AssertNoTextOverlapAsync(page);
         await DocumentEditorCanvasVisualAssert.AssertNoUiOverlapAsync(page);
@@ -133,12 +127,10 @@ public sealed class DocumentEditorCanvasToolbarSpellcheckE2ETests : WasmTestBase
         await page.WaitForSelectorAsync(
             "[data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']",
             new PageWaitForSelectorOptions { Timeout = 30_000 });
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelectorAll('[data-canvas-text-rect][data-block-id="canvas-toolbar-selection"]').length >= 1
                 && document.querySelector('[data-testid="document-canvas-spell-squiggle"]')
-            """,
-            new PageWaitForFunctionOptions { Timeout = 30_000 });
+            """, 30_000);
     }
 
     private static async Task<CanvasTextRange> SelectCanvasTextRangeAsync(IPage page, string blockId, int startOffset, int endOffset)

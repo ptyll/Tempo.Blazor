@@ -38,15 +38,11 @@ public abstract class AiAgentVisualizationsE2EBase : AiAgentVisualizationsPageBa
         await PlayAsync(page);
 
         Assert.AreEqual("Running", await TextAsync(page, "ai-viz-state"));
-        await page.WaitForFunctionAsync(
-            "() => Number(document.querySelector(\"[data-testid='ai-viz-sequence']\")?.textContent) >= 3",
-            new PageWaitForFunctionOptions { Timeout = 15000 });
+        await WaitForPredicateAsync(page, "() => Number(document.querySelector(\"[data-testid='ai-viz-sequence']\")?.textContent) >= 3", 15000);
 
         // The run really reaches the surfaces: the lanes grow a block the seeded snapshot did not have.
         await ScrollToAsync(page, LanesSection);
-        await page.WaitForFunctionAsync(
-            "() => document.querySelectorAll(\"[data-testid='ai-viz-lanes'] [data-testid='agent-lanes-block']\").length >= 7",
-            new PageWaitForFunctionOptions { Timeout = 15000 });
+        await WaitForPredicateAsync(page, "() => document.querySelectorAll(\"[data-testid='ai-viz-lanes'] [data-testid='agent-lanes-block']\").length >= 7", 15000);
 
         var before = int.Parse(await TextAsync(page, "ai-viz-events"), System.Globalization.CultureInfo.InvariantCulture);
         await ScrollToAsync(page, SimulatorSection);
@@ -61,16 +57,12 @@ public abstract class AiAgentVisualizationsE2EBase : AiAgentVisualizationsPageBa
 
         // The fastest choice raises the rate; the page's one live region says what changed.
         await page.Locator("[data-testid='ai-viz-speed'] [data-testid='segmented-option']").Last.ClickAsync();
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector(\"[data-testid='ai-viz-rate']\")?.textContent?.trim() === '20'",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector(\"[data-testid='ai-viz-rate']\")?.textContent?.trim() === '20'", 10000);
         StringAssert.Contains(await page.Locator("[data-testid='ai-viz-announcer']").TextContentAsync(), "20");
 
         // A reset clears the counters and stops the generator.
         await page.Locator("[data-testid='ai-viz-reset']").ClickAsync();
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector(\"[data-testid='ai-viz-events']\")?.textContent?.trim() === '0'",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector(\"[data-testid='ai-viz-events']\")?.textContent?.trim() === '0'", 10000);
         Assert.AreEqual("Paused", await TextAsync(page, "ai-viz-state"));
         Assert.AreEqual("0", await TextAsync(page, "ai-viz-sequence"));
 
@@ -89,14 +81,10 @@ public abstract class AiAgentVisualizationsE2EBase : AiAgentVisualizationsPageBa
         await block.FocusAsync();
         await page.Keyboard.PressAsync("Enter");
 
-        await page.WaitForFunctionAsync(
-            "() => !document.querySelector(\"[data-testid='ai-viz-lanes-selected']\")?.textContent?.includes('No block selected')",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => !document.querySelector(\"[data-testid='ai-viz-lanes-selected']\")?.textContent?.includes('No block selected')", 10000);
 
         await page.Locator("[data-testid='ai-viz-lanes'] [data-testid='agent-lanes-view'] button").Last.ClickAsync();
-        await page.WaitForFunctionAsync(
-            "() => document.querySelectorAll(\"[data-testid='ai-viz-lanes'] [data-testid='agent-lanes-table-row']\").length > 0",
-            new PageWaitForFunctionOptions { Timeout = 15000 });
+        await WaitForPredicateAsync(page, "() => document.querySelectorAll(\"[data-testid='ai-viz-lanes'] [data-testid='agent-lanes-table-row']\").length > 0", 15000);
         Assert.AreEqual(0, await page.Locator("[data-testid='ai-viz-lanes'] [data-testid='agent-lanes-block']").CountAsync(),
             "the table replaces the timeline, so nothing is announced twice");
 
@@ -116,9 +104,7 @@ public abstract class AiAgentVisualizationsE2EBase : AiAgentVisualizationsPageBa
         await node.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
         await node.FocusAsync();
         await page.Keyboard.PressAsync("Enter");
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector(\"[data-testid='ai-viz-graph-selected']\")?.textContent?.includes('Planner')",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector(\"[data-testid='ai-viz-graph-selected']\")?.textContent?.includes('Planner')", 10000);
 
         var firstNode = await page.EvaluateAsync<string>(
             "() => document.activeElement?.getAttribute('data-node-id') ?? ''");
@@ -136,9 +122,7 @@ public abstract class AiAgentVisualizationsE2EBase : AiAgentVisualizationsPageBa
         Assert.IsTrue(await page.Locator("[data-testid='ai-viz-graph'] [data-testid='agent-graph-node']").CountAsync() >= 7);
 
         await page.Locator("[data-testid='ai-viz-graph'] [data-testid='agent-graph-view'] button").Last.ClickAsync();
-        await page.WaitForFunctionAsync(
-            "() => document.querySelectorAll(\"[data-testid='ai-viz-graph'] [data-testid='agent-graph-table-row']\").length > 0",
-            new PageWaitForFunctionOptions { Timeout = 15000 });
+        await WaitForPredicateAsync(page, "() => document.querySelectorAll(\"[data-testid='ai-viz-graph'] [data-testid='agent-graph-table-row']\").length > 0", 15000);
         await ShootAsync(page, "ai-viz-graph-table-light-1440");
         await AssertNoSeriousAxeViolationsAsync(page, "ai-viz-graph-section");
     }
@@ -174,20 +158,16 @@ public abstract class AiAgentVisualizationsE2EBase : AiAgentVisualizationsPageBa
         await page.WaitForTimeoutAsync(200);
         await page.Mouse.UpAsync();
 
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector(\"[data-testid='ai-viz-delegate'] [data-column='planner'] "
-            + "[data-task-id='task-summary']\") !== null",
-            new PageWaitForFunctionOptions { Timeout = 15000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector(\"[data-testid='ai-viz-delegate'] [data-column='planner'] "
+            + "[data-task-id='task-summary']\") !== null", 15000);
         StringAssert.Contains(await TextAsync(page, "ai-viz-delegate-log"), "assigned to Planner");
 
         // The same move is reachable without a pointer: the card's Assign menu is the tap and keyboard alternative.
         const string next = "[data-task-id='task-notes']";
         await board.Locator(next).Locator(".tm-context-menu__trigger").First.ClickAsync();
         await board.Locator(".tm-context-menu__item").First.ClickAsync();
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector(\"[data-testid='ai-viz-delegate'] [data-task-id='task-notes']\") "
-            + "?.closest('[data-column]') !== null",
-            new PageWaitForFunctionOptions { Timeout = 15000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector(\"[data-testid='ai-viz-delegate'] [data-task-id='task-notes']\") "
+            + "?.closest('[data-column]') !== null", 15000);
 
         var column = await page.Locator("[data-testid='ai-viz-delegate'] [data-task-id='task-notes']")
             .EvaluateAsync<string?>("card => card.closest('[data-column]')?.getAttribute('data-column')");
@@ -229,9 +209,7 @@ public abstract class AiAgentVisualizationsE2EBase : AiAgentVisualizationsPageBa
         // A second removal whose undo window CLOSES is the one the host really applies (the demo window is 10 s).
         await panel.Locator("[data-testid='memory-item']").First
             .Locator("[data-testid='memory-item-forget']").ClickAsync();
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector(\"[data-testid='ai-viz-memory-log']\")?.textContent?.includes('Forgotten')",
-            new PageWaitForFunctionOptions { Timeout = 20000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector(\"[data-testid='ai-viz-memory-log']\")?.textContent?.includes('Forgotten')", 20000);
         Assert.AreEqual(19, await panel.Locator("[data-testid='memory-item']").CountAsync());
 
         // The table presentation carries all twenty rows, so the panel is never the only way in.
@@ -270,15 +248,11 @@ public abstract class AiAgentVisualizationsE2EBase : AiAgentVisualizationsPageBa
             await first.PressAsync("Space");
         }
 
-        await page.WaitForFunctionAsync(
-            "() => !document.querySelector(\"[data-testid='ai-viz-conflict'] [data-testid='radar-merge']\")?.hasAttribute('disabled')",
-            new PageWaitForFunctionOptions { Timeout = 15000 });
+        await WaitForPredicateAsync(page, "() => !document.querySelector(\"[data-testid='ai-viz-conflict'] [data-testid='radar-merge']\")?.hasAttribute('disabled')", 15000);
         StringAssert.Contains(await TextAsync(page, "ai-viz-conflict-log"), "settled");
 
         await radar.Locator("[data-testid='radar-merge']").ClickAsync();
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector(\"[data-testid='ai-viz-conflict-log']\")?.textContent?.includes('Merge requested')",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector(\"[data-testid='ai-viz-conflict-log']\")?.textContent?.includes('Merge requested')", 10000);
         Assert.AreEqual(4, await radar.Locator("[role='radiogroup'] input[type='radio']:checked").CountAsync());
 
         await ShootAsync(page, "ai-viz-conflict-light-1440");
@@ -313,9 +287,7 @@ public abstract class AiAgentVisualizationsE2EBase : AiAgentVisualizationsPageBa
         await dial.Locator("[data-testid='autonomy-confirm-accept']")
             .WaitForAsync(new LocatorWaitForOptions { Timeout = 10000 });
         await dial.Locator("[data-testid='autonomy-confirm-accept']").ClickAsync();
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector(\"[data-testid='ai-viz-autonomy-log']\")?.textContent?.includes('Act')",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector(\"[data-testid='ai-viz-autonomy-log']\")?.textContent?.includes('Act')", 10000);
 
         await ShootAsync(page, "ai-viz-autonomy-light-1440");
         await AssertNoSeriousAxeViolationsAsync(page, "ai-viz-autonomy-section");

@@ -39,9 +39,7 @@ public sealed class DocumentEditorCanvasImeE2ETests : WasmTestBase
 
         await DispatchCompositionAsync(page, "compositionend", "感じ");
         await WaitForMirrorTextAsync(page, "canvas-typing-body", "Start Hi感じ");
-        await page.WaitForFunctionAsync(
-            "() => !document.querySelector('[data-testid=\"document-canvas-composition-underline\"]')",
-            new PageWaitForFunctionOptions { Timeout = 30_000 });
+        await WaitForPredicateAsync(page, "() => !document.querySelector('[data-testid=\"document-canvas-composition-underline\"]')", 30_000);
 
         var probe = await ReadImeProbeAsync(page);
         Assert.AreEqual("replaceRange", probe.LastInputOperation);
@@ -107,12 +105,10 @@ public sealed class DocumentEditorCanvasImeE2ETests : WasmTestBase
         await page.WaitForSelectorAsync(
             "[data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']",
             new PageWaitForSelectorOptions { Timeout = 30_000 });
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelectorAll('[data-canvas-text-rect][data-block-id="canvas-typing-body"]').length >= 1
                 && document.querySelector('[data-testid="document-canvas-hidden-input"]')
-            """,
-            new PageWaitForFunctionOptions { Timeout = 30_000 });
+            """, 30_000);
     }
 
     private static Task DispatchCompositionAsync(IPage page, string type, string data)

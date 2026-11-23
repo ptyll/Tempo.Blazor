@@ -55,9 +55,7 @@ public sealed class ReportingF8PdfRendererE2ETests
             WaitUntil = WaitUntilState.Load,
             Timeout = 60_000,
         }).ConfigureAwait(false);
-        await page.WaitForFunctionAsync(
-            "() => window.__tempoReportingHarness?.ready === true",
-            new PageWaitForFunctionOptions { Timeout = 30_000 }).ConfigureAwait(false);
+        await PlaywrightTestBase.WaitForPredicateAsync(page, "() => window.__tempoReportingHarness?.ready === true", 30_000).ConfigureAwait(false);
 
         var invoiceResult = await ComparePageAsync(
             page,

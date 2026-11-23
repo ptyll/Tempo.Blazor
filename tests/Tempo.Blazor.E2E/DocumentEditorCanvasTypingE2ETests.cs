@@ -106,12 +106,10 @@ public sealed class DocumentEditorCanvasTypingE2ETests : WasmTestBase
         await page.WaitForSelectorAsync(
             "[data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']",
             new PageWaitForSelectorOptions { Timeout = 30_000 });
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelectorAll('[data-canvas-text-rect][data-block-id="canvas-typing-body"]').length >= 1
                 && document.querySelector('[data-testid="document-canvas-hidden-input"]')
-            """,
-            new PageWaitForFunctionOptions { Timeout = 30_000 });
+            """, 30_000);
     }
 
     private static async Task WaitForMirrorTextAsync(IPage page, string blockId, string expected)

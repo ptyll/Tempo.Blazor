@@ -86,9 +86,7 @@ public sealed class DocumentEditorCanvasContentControlsE2ETests : WasmTestBase
         await WaitForSaveBoundaryAsync(page);
 
         await NavigateWithinBlazorAsync(page, "/canvas-engine-host?documentId=phase-5-canvas-render");
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'",
-            new PageWaitForFunctionOptions { Timeout = 20_000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'", 20_000);
         await NavigateWithinBlazorAsync(page, $"/canvas-engine-host?documentId={PhaseE9DocumentId}&showToolbar=true");
         await WaitForPhaseE9ReadyAsync(page);
         await WaitForControlValueAsync(page, "canvas-form-name", "Ada Lovelace");
@@ -273,9 +271,7 @@ public sealed class DocumentEditorCanvasContentControlsE2ETests : WasmTestBase
         await WaitForSaveBoundaryAsync(page);
 
         await NavigateWithinBlazorAsync(page, "/canvas-engine-host?documentId=phase-5-canvas-render");
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'",
-            new PageWaitForFunctionOptions { Timeout = 20_000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'", 20_000);
         await NavigateWithinBlazorAsync(page, $"/canvas-engine-host?documentId={PhaseE9DocumentId}&showToolbar=true");
         await WaitForPhaseE9ReadyAsync(page);
         await WaitForControlValueAsync(page, "canvas-form-renewal", "2026-12-31");
@@ -342,8 +338,7 @@ public sealed class DocumentEditorCanvasContentControlsE2ETests : WasmTestBase
 
     private static async Task WaitForPhaseE9ReadyAsync(IPage page)
     {
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 const hostReady = host?.getAttribute('data-canvas-engine-ready') === 'true';
@@ -355,8 +350,7 @@ public sealed class DocumentEditorCanvasContentControlsE2ETests : WasmTestBase
                     && Number(first.getAttribute('data-canvas-model-content-control-count') || '0') >= 7
                     && Number(first.getAttribute('data-canvas-content-control-count') || '0') >= 6;
             }
-            """,
-            new PageWaitForFunctionOptions { Timeout = 30_000 });
+            """, 30_000);
 
         await page.EvaluateAsync(
             """
@@ -369,8 +363,7 @@ public sealed class DocumentEditorCanvasContentControlsE2ETests : WasmTestBase
 
     private static async Task WaitForPhaseE9CommandReadyAsync(IPage page)
     {
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 const first = document.querySelector('[data-testid="document-canvas-page"]');
@@ -378,8 +371,7 @@ public sealed class DocumentEditorCanvasContentControlsE2ETests : WasmTestBase
                     && (host?.getAttribute('data-canvas-engine-handle') || '').length > 0
                     && first?.getAttribute('data-canvas-model-document-id') === 'phase-e9-canvas-content-controls';
             }
-            """,
-            new PageWaitForFunctionOptions { Timeout = 30_000 });
+            """, 30_000);
 
         await page.EvaluateAsync(
             """
@@ -391,18 +383,18 @@ public sealed class DocumentEditorCanvasContentControlsE2ETests : WasmTestBase
     }
 
     private static Task WaitForControlValueAsync(IPage page, string controlId, string expectedText)
-        => page.WaitForFunctionAsync(
+        => WaitForPredicateAsync(
+            page,
             """
             ([controlId, expectedText]) => Array.from(document.querySelectorAll('[data-canvas-content-control]'))
                 .some(item => item.getAttribute('data-control-id') === controlId
                     && item.getAttribute('data-control-text') === expectedText)
             """,
             new[] { controlId, expectedText },
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            10_000);
 
     private static Task WaitForRepeatingItemCountAsync(IPage page, int expectedCount)
-        => page.WaitForFunctionAsync(
-            """
+        => WaitForPredicateAsync(page, """
             async expectedCount => {
                 const model = await readCanvasModel();
                 const block = (model?.body?.blocks || []).find(item => item?.content?.contentControl?.control?.controlId === 'canvas-form-addresses');
@@ -416,19 +408,13 @@ public sealed class DocumentEditorCanvasContentControlsE2ETests : WasmTestBase
                     return JSON.parse(module.getModelJson(handle) || '{}');
                 }
             }
-            """,
-            expectedCount,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, expectedCount, 10_000);
 
     private static Task WaitForMirrorTextAsync(IPage page, string expectedText)
-        => page.WaitForFunctionAsync(
-            "expectedText => document.querySelector('[data-testid=\"document-canvas-a11y-mirror\"]')?.textContent?.includes(expectedText) === true",
-            expectedText,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+        => WaitForPredicateAsync(page, "expectedText => document.querySelector('[data-testid=\"document-canvas-a11y-mirror\"]')?.textContent?.includes(expectedText) === true", expectedText, 10_000);
 
     private static Task WaitForFocusedContentControlAsync(IPage page, string expectedControlId)
-        => page.WaitForFunctionAsync(
-            """
+        => WaitForPredicateAsync(page, """
             async expectedControlId => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 const handle = host?.getAttribute('data-canvas-engine-handle') || '';
@@ -499,12 +485,11 @@ public sealed class DocumentEditorCanvasContentControlsE2ETests : WasmTestBase
                     return result;
                 }
             }
-            """,
-            expectedControlId,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, expectedControlId, 10_000);
 
     private static Task WaitForContentControlPopoverAsync(IPage page, string expectedControlId, string expectedKind)
-        => page.WaitForFunctionAsync(
+        => WaitForPredicateAsync(
+            page,
             """
             ([expectedControlId, expectedKind]) => {
                 const popover = document.querySelector('[data-testid="document-canvas-content-control-popover"]');
@@ -513,11 +498,10 @@ public sealed class DocumentEditorCanvasContentControlsE2ETests : WasmTestBase
             }
             """,
             new[] { expectedControlId, expectedKind },
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            10_000);
 
     private static Task WaitForContentControlRenderModeAsync(IPage page, string expectedMode)
-        => page.WaitForFunctionAsync(
-            """
+        => WaitForPredicateAsync(page, """
             expectedMode => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 const controls = Array.from(document.querySelectorAll('[data-canvas-content-control]'));
@@ -525,9 +509,7 @@ public sealed class DocumentEditorCanvasContentControlsE2ETests : WasmTestBase
                     && controls.length > 0
                     && controls.every(item => item.getAttribute('data-control-render-mode') === expectedMode);
             }
-            """,
-            expectedMode,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, expectedMode, 10_000);
 
     private static async Task SetInputValueAndDispatchChangeAsync(IPage page, string testId, string value)
         => await page.GetByTestId(testId).EvaluateAsync(
@@ -630,8 +612,7 @@ public sealed class DocumentEditorCanvasContentControlsE2ETests : WasmTestBase
 
     private static async Task WaitForSaveBoundaryAsync(IPage page)
     {
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => {
                 const saveMessage = document.querySelector('[data-testid="document-save-message"]')?.textContent || '';
                 const lastSaved = document.querySelector('[data-testid="document-last-saved"]')?.textContent || '';
@@ -641,8 +622,7 @@ public sealed class DocumentEditorCanvasContentControlsE2ETests : WasmTestBase
                     && !saveButtonDisabled
                     && (/Saved|Autosaved/i.test(saveMessage) || /saved/i.test(lastSaved));
             }
-            """,
-            new PageWaitForFunctionOptions { Timeout = 20_000 });
+            """, 20_000);
     }
 
     private static string CreateOutputDirectory(string testName)

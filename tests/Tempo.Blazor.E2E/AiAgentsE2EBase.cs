@@ -560,9 +560,7 @@ public abstract partial class AiAgentsE2EBase : PlaywrightTestBase
         await failed.ClickAsync();
         await grid.Locator("[data-testid='fan-out-detail-retry']").ClickAsync();
 
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"ai-agents-fan-out-log\"]')?.textContent?.includes('re-queued')",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"ai-agents-fan-out-log\"]')?.textContent?.includes('re-queued')", 10000);
         Assert.AreEqual(0, await grid.Locator("[data-testid='fan-out-tile'][data-status='failed']").CountAsync(),
             "the page re-queued the failed unit");
 
@@ -596,9 +594,7 @@ public abstract partial class AiAgentsE2EBase : PlaywrightTestBase
             "choosing is not confirming");
 
         await attempts.Locator("[data-testid='parallel-attempts-confirm-yes']").ClickAsync();
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"ai-agents-attempts-log\"]')?.textContent?.includes('accepted')",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"ai-agents-attempts-log\"]')?.textContent?.includes('accepted')", 10000);
         Assert.AreEqual("draft-a",
             await attempts.Locator("[data-testid='parallel-attempt'][data-selected='true']")
                 .GetAttributeAsync("data-attempt-id"));
@@ -682,9 +678,7 @@ public abstract partial class AiAgentsE2EBase : PlaywrightTestBase
 
         // The page owns the direction; the reader's pick really lays the same list across the surface.
         await page.Locator("[data-testid='ai-agents-handoff-orientation'] button").Nth(1).ClickAsync();
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector(\"[data-testid='ai-agents-handoff']\")?.dataset.orientation === 'horizontal'",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector(\"[data-testid='ai-agents-handoff']\")?.dataset.orientation === 'horizontal'", 10000);
         Assert.AreEqual(3, await handoff.Locator("[data-testid='agent-handoff-step']").CountAsync(),
             "the horizontal chain reads the same three steps");
         await ShootAsync(page, "ai-agents-handoff-horizontal-light-1440");
@@ -743,9 +737,7 @@ public abstract partial class AiAgentsE2EBase : PlaywrightTestBase
         await page.Keyboard.PressAsync("ArrowDown");
         await page.WaitForTimeoutAsync(200);
         await page.Keyboard.PressAsync("Enter");
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector(\"[data-testid='ai-agents-fallback-log']\")?.textContent?.includes('Aurora Pro → Atlas Large')",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector(\"[data-testid='ai-agents-fallback-log']\")?.textContent?.includes('Aurora Pro → Atlas Large')", 10000);
 
         await ShootAsync(page, "ai-agents-fallback-editor-light-1440");
         await AssertNoSeriousAxeViolationsAsync(page, "ai-agents-fallback-section");
@@ -867,9 +859,7 @@ public abstract partial class AiAgentsE2EBase : PlaywrightTestBase
         await ShootAsync(page, "ai-agents-autonomy-confirm-light-1440");
         await dial.Locator("[data-testid='autonomy-confirm-accept']").ClickAsync();
 
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector(\"[data-testid='ai-agents-autonomy-log']\")?.textContent?.includes('Act')",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector(\"[data-testid='ai-agents-autonomy-log']\")?.textContent?.includes('Act')", 10000);
         Assert.AreEqual("2", await slider.GetAttributeAsync("aria-valuenow"));
         Assert.AreEqual("Act", await TextAsync(page, "ai-agents-autonomy", "autonomy-current"));
 
@@ -906,9 +896,7 @@ public abstract partial class AiAgentsE2EBase : PlaywrightTestBase
 
         var units = "[data-testid='ai-agents-memory'] [data-testid='memory-item'][data-item-id='mem-units']";
         await page.Locator(units + " [data-testid='memory-item-pause']").ClickAsync();
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector(\"[data-testid='ai-agents-memory'] [data-item-id='mem-units']\")?.dataset.status === 'paused'",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector(\"[data-testid='ai-agents-memory'] [data-item-id='mem-units']\")?.dataset.status === 'paused'", 10000);
         StringAssert.Contains(await TextAsync(page, "ai-agents-memory-log"), "Pause");
 
         // A Blazor-bound textarea is driven by real key events, not by FillAsync.
@@ -919,9 +907,7 @@ public abstract partial class AiAgentsE2EBase : PlaywrightTestBase
         await page.Keyboard.PressAsync("Enter");
         await page.WaitForTimeoutAsync(300);
         await ShootAsync(page, "ai-agents-memory-edit-light-1440");
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector(\"[data-testid='ai-agents-memory'] [data-item-id='mem-units'] [data-testid='memory-item-text']\")?.textContent?.includes('only.')",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector(\"[data-testid='ai-agents-memory'] [data-item-id='mem-units'] [data-testid='memory-item-text']\")?.textContent?.includes('only.')", 10000);
         StringAssert.Contains(await TextAsync(page, "ai-agents-memory-log"), "Prefers metric units only.");
 
         await page.Locator(units + " [data-testid='memory-item-forget']").ClickAsync();
@@ -937,30 +923,22 @@ public abstract partial class AiAgentsE2EBase : PlaywrightTestBase
 
         var tone = "[data-testid='ai-agents-memory'] [data-testid='memory-item'][data-item-id='mem-tone']";
         await page.Locator(tone + " [data-testid='memory-item-approve']").ClickAsync();
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector(\"[data-testid='ai-agents-memory'] [data-item-id='mem-tone']\")?.dataset.status === 'active'",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector(\"[data-testid='ai-agents-memory'] [data-item-id='mem-tone']\")?.dataset.status === 'active'", 10000);
 
         // The master switch turns storage off but keeps what is known readable.
         await panel.Locator("[data-testid='memory-enabled'] .tm-toggle-label").ClickAsync();
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector(\"[data-testid='ai-agents-memory']\")?.dataset.enabled === 'false'",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector(\"[data-testid='ai-agents-memory']\")?.dataset.enabled === 'false'", 10000);
         Assert.AreEqual(0, await page.Locator("[data-testid='ai-agents-memory'] [data-testid='memory-item-pause']")
             .CountAsync(), "no action is offered while memory is off");
         Assert.AreEqual(6, await page.Locator("[data-testid='ai-agents-memory'] [data-testid='memory-item']")
             .CountAsync(), "the undone memory and the approved one stay, and nothing was lost");
         await panel.Locator("[data-testid='memory-enabled'] .tm-toggle-label").ClickAsync();
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector(\"[data-testid='ai-agents-memory']\")?.dataset.enabled === 'true'",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector(\"[data-testid='ai-agents-memory']\")?.dataset.enabled === 'true'", 10000);
 
         // The search is a view: a hit narrows the rows and the empty state says so.
         await page.Locator("[data-testid='ai-agents-memory'] [data-testid='memory-search']").ClickAsync();
         await page.Keyboard.TypeAsync("zzz");
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector(\"[data-testid='ai-agents-memory'] [data-testid='memory-empty']\")?.textContent?.includes('No memory matches')",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector(\"[data-testid='ai-agents-memory'] [data-testid='memory-empty']\")?.textContent?.includes('No memory matches')", 10000);
         await ShootAsync(page, "ai-agents-memory-search-empty-light-1440");
         await page.Locator("[data-testid='ai-agents-memory'] [data-testid='memory-search']").ClickAsync();
         await page.Keyboard.PressAsync("Control+A");

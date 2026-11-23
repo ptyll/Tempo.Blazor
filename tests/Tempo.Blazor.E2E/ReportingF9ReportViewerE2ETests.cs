@@ -49,14 +49,12 @@ public sealed class ReportingF9ReportViewerE2ETests
             Timeout = 60_000,
         }).ConfigureAwait(false);
 
-        await page.WaitForFunctionAsync(
-            """
+        await PlaywrightTestBase.WaitForPredicateAsync(page, """
             () => {
                 const canvas = document.querySelector('[data-testid="tm-report-viewer-canvas"]');
                 return canvas && canvas.width > 300 && canvas.height > 150;
             }
-            """,
-            new PageWaitForFunctionOptions { Timeout = 60_000 }).ConfigureAwait(false);
+            """, 60_000).ConfigureAwait(false);
         await WriteDiagnosticsAsync(page, screenshotDirectory, "diagnostics-before-canvas.txt", diagnostics).ConfigureAwait(false);
         await DocumentEditorCanvasVisualAssert.AssertCanvasNonBlankAsync(page.GetByTestId("tm-report-viewer-canvas")).ConfigureAwait(false);
         await ScreenshotViewerAsync(page, screenshotDirectory, "01-viewer-default.png").ConfigureAwait(false);
@@ -86,19 +84,15 @@ public sealed class ReportingF9ReportViewerE2ETests
             State = WaitForSelectorState.Hidden,
             Timeout = 60_000,
         }).ConfigureAwait(false);
-        await page.WaitForFunctionAsync(
-            """
+        await PlaywrightTestBase.WaitForPredicateAsync(page, """
             () => {
                 const next = document.querySelector('button[aria-label="Next page"]');
                 return next && !next.disabled;
             }
-            """,
-            new PageWaitForFunctionOptions { Timeout = 10_000 }).ConfigureAwait(false);
+            """, 10_000).ConfigureAwait(false);
 
         await page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Next page" }).ClickAsync().ConfigureAwait(false);
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"tm-report-page-input\"]')?.value === '2'",
-            new PageWaitForFunctionOptions { Timeout = 10_000 }).ConfigureAwait(false);
+        await PlaywrightTestBase.WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"tm-report-page-input\"]')?.value === '2'", 10_000).ConfigureAwait(false);
 
         await page.GetByTestId("tm-report-zoom-select").SelectOptionAsync(["FitWidth"]).ConfigureAwait(false);
         await ScreenshotViewerAsync(page, screenshotDirectory, "03-zoom-fit.png").ConfigureAwait(false);

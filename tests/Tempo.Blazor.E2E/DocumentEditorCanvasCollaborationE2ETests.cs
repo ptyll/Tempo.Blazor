@@ -250,14 +250,12 @@ public sealed class DocumentEditorCanvasCollaborationE2ETests : WasmTestBase
             new PageWaitForFunctionOptions { Timeout = 30_000 });
 
     private static Task WaitForRemoteCaretAsync(IPage page)
-        => page.WaitForFunctionAsync(
-            """
+        => WaitForPredicateAsync(page, """
             () => {
                 const caret = document.querySelector('[data-testid="document-canvas-remote-caret"]');
                 return caret && caret.getBoundingClientRect().height > 8 && caret.querySelector('.tm-document-canvas-presence__label')?.textContent?.trim();
             }
-            """,
-            new PageWaitForFunctionOptions { Timeout = 15_000 });
+            """, 15_000);
 
     private static Task<PresenceProbe> ReadPresenceProbeAsync(IPage page)
         => page.EvaluateAsync<PresenceProbe>(

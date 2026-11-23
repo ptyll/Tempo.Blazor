@@ -121,11 +121,9 @@ public sealed class DocumentEditorCanvasClipboardE2ETests : WasmTestBase
         await page.WaitForSelectorAsync(
             "[data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']",
             new PageWaitForSelectorOptions { Timeout = 30_000 });
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelectorAll('[data-canvas-text-rect][data-block-id="canvas-clipboard-source"]').length >= 1
-            """,
-            new PageWaitForFunctionOptions { Timeout = 30_000 });
+            """, 30_000);
     }
 
     private static async Task DragCanvasRangeAsync(IPage page, string startBlockId, int startOffset, string endBlockId, int endOffset)
@@ -136,12 +134,10 @@ public sealed class DocumentEditorCanvasClipboardE2ETests : WasmTestBase
         await page.Mouse.DownAsync();
         await page.Mouse.MoveAsync((float)end.X, (float)end.Y, new MouseMoveOptions { Steps = 8 });
         await page.Mouse.UpAsync();
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-engine-root"]')
                 ?.getAttribute('data-canvas-selection-collapsed') === 'false'
-            """,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 10_000);
     }
 
     private static async Task ClickCanvasBlockAsync(IPage page, string blockId, int offset)

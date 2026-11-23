@@ -88,12 +88,10 @@ public sealed class DocumentEditorCanvasParagraphE2ETests : WasmTestBase
         Assert.IsTrue(afterSaveProbe.CommandRevision >= 8, $"Expected paragraph command revisions after save boundary. Actual: {afterSaveProbe.CommandRevision}.");
 
         await NavigateWithinBlazorAsync(page, "/canvas-engine-host?documentId=phase-5-canvas-render");
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-page"]')
                 ?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'
-            """,
-            new PageWaitForFunctionOptions { Timeout = 20_000 });
+            """, 20_000);
         await NavigateWithinBlazorAsync(page, "/canvas-engine-host?documentId=phase-10-canvas-paragraph&showToolbar=true");
         await OpenParagraphDocumentReadyAsync(page);
         var afterReloadProbe = await ReadParagraphProbeAsync(page);
@@ -164,13 +162,11 @@ public sealed class DocumentEditorCanvasParagraphE2ETests : WasmTestBase
     }
 
     private static Task OpenParagraphDocumentReadyAsync(IPage page)
-        => page.WaitForFunctionAsync(
-            """
+        => WaitForPredicateAsync(page, """
             () => document.querySelectorAll('[data-canvas-text-rect][data-block-id="canvas-paragraph-body"]').length >= 1
                 && document.querySelector('[data-testid="document-block-style"]')
                 && document.querySelector('[data-testid="document-canvas-ruler"]')
-            """,
-            new PageWaitForFunctionOptions { Timeout = 30_000 });
+            """, 30_000);
 
     private static Task NavigateWithinBlazorAsync(IPage page, string url)
         => page.EvaluateAsync(
@@ -271,12 +267,10 @@ public sealed class DocumentEditorCanvasParagraphE2ETests : WasmTestBase
             new PageWaitForFunctionOptions { Timeout = 10_000 });
 
     private static Task WaitForSaveToCompleteAsync(IPage page)
-        => page.WaitForFunctionAsync(
-            """
+        => WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-save"]')?.getAttribute('disabled') === null
                 && document.body.textContent.includes('Saved')
-            """,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 10_000);
 
     private static Task<ParagraphProbe> ReadParagraphProbeAsync(IPage page)
         => page.EvaluateAsync<ParagraphProbe>(

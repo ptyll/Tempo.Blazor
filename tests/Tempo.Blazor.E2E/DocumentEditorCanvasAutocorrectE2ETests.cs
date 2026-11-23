@@ -83,9 +83,7 @@ public sealed class DocumentEditorCanvasAutocorrectE2ETests : WasmTestBase
         await page.GetByTestId("document-save").ClickAsync();
         await WaitForSaveBoundaryAsync(page);
         await NavigateWithinBlazorAsync(page, "/canvas-engine-host?documentId=phase-5-canvas-render");
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'",
-            new PageWaitForFunctionOptions { Timeout = 20_000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'", 20_000);
         await NavigateWithinBlazorAsync(page, $"/canvas-engine-host?documentId={PhaseE10DocumentId}&showToolbar=true");
         await WaitForPhaseE10ReadyAsync(page);
         await WaitForProbeAsync(page, probe => probe.AutocorrectText == "Dash: —"
@@ -136,8 +134,7 @@ public sealed class DocumentEditorCanvasAutocorrectE2ETests : WasmTestBase
     }
 
     private static Task WaitForPhaseE10ReadyAsync(IPage page)
-        => page.WaitForFunctionAsync(
-            """
+        => WaitForPredicateAsync(page, """
             () => {
                 const hostReady = document.querySelector('[data-testid="document-canvas-engine-host"]')?.getAttribute('data-canvas-engine-ready') === 'true';
                 const first = document.querySelector('[data-testid="document-canvas-page"]');
@@ -146,8 +143,7 @@ public sealed class DocumentEditorCanvasAutocorrectE2ETests : WasmTestBase
                     && document.querySelectorAll('[data-canvas-text-rect][data-block-id="canvas-e10-autocorrect-target"]').length >= 1
                     && document.querySelectorAll('[data-canvas-text-rect][data-block-id="canvas-e10-painter-target"]').length >= 1;
             }
-            """,
-            new PageWaitForFunctionOptions { Timeout = 30_000 });
+            """, 30_000);
 
     private static async Task ClickTextEndAsync(IPage page, string blockId)
     {
@@ -258,15 +254,13 @@ public sealed class DocumentEditorCanvasAutocorrectE2ETests : WasmTestBase
     }
 
     private static Task WaitForCanvasCommandBridgeAsync(IPage page)
-        => page.WaitForFunctionAsync(
-            """
+        => WaitForPredicateAsync(page, """
             () => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 return host?.getAttribute('data-canvas-engine-ready') === 'true'
                     && !!host?.getAttribute('data-canvas-engine-handle');
             }
-            """,
-            new PageWaitForFunctionOptions { Timeout = 15_000 });
+            """, 15_000);
 
     private static async Task<PhaseE10CommandProbe> ExecuteCanvasCommandAsync(IPage page, string commandId, object payload)
     {
@@ -350,8 +344,7 @@ public sealed class DocumentEditorCanvasAutocorrectE2ETests : WasmTestBase
 
     private static async Task WaitForSaveBoundaryAsync(IPage page)
     {
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => {
                 const saveMessage = document.querySelector('[data-testid="document-save-message"]')?.textContent || '';
                 const lastSaved = document.querySelector('[data-testid="document-last-saved"]')?.textContent || '';
@@ -361,8 +354,7 @@ public sealed class DocumentEditorCanvasAutocorrectE2ETests : WasmTestBase
                     && !saveButtonDisabled
                     && (/Saved|Autosaved/i.test(saveMessage) || /saved/i.test(lastSaved));
             }
-            """,
-            new PageWaitForFunctionOptions { Timeout = 20_000 });
+            """, 20_000);
     }
 
     private static string CreateOutputDirectory(string testName)

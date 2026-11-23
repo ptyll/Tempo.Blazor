@@ -103,9 +103,7 @@ public sealed class DocumentEditorCanvasMathEquationsE2ETests : WasmTestBase
         await WaitForSaveBoundaryAsync(page);
 
         await NavigateWithinBlazorAsync(page, "/canvas-engine-host?documentId=phase-5-canvas-render");
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'",
-            new PageWaitForFunctionOptions { Timeout = 20_000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'", 20_000);
         await NavigateWithinBlazorAsync(page, $"/canvas-engine-host?documentId={PhaseE8DocumentId}&showToolbar=true&disableCollaboration=true");
         await WaitForPhaseE8ReadyAsync(page, requireVisibleCanvasMath: false);
         await WaitForModelMathAsync(page, "e8-inserted-math");
@@ -750,8 +748,7 @@ public sealed class DocumentEditorCanvasMathEquationsE2ETests : WasmTestBase
     }
 
     private static Task WaitForPhaseE8ModelReadyAsync(IPage page)
-        => page.WaitForFunctionAsync(
-            """
+        => WaitForPredicateAsync(page, """
             () => {
                 const hostReady = document.querySelector('[data-testid="document-canvas-engine-host"]')?.getAttribute('data-canvas-engine-ready') === 'true';
                 const first = document.querySelector('[data-testid="document-canvas-page"]');
@@ -759,24 +756,20 @@ public sealed class DocumentEditorCanvasMathEquationsE2ETests : WasmTestBase
                     && first?.getAttribute('data-canvas-model-document-id') === 'phase-e8-canvas-math-equations'
                     && Number(first.getAttribute('data-canvas-model-math-count') || '0') >= 3;
             }
-            """,
-            new PageWaitForFunctionOptions { Timeout = 30_000 });
+            """, 30_000);
 
     private static Task WaitForPhaseE8ResponsiveReadyAsync(IPage page)
-        => page.WaitForFunctionAsync(
-            """
+        => WaitForPredicateAsync(page, """
             () => {
                 const first = document.querySelector('[data-testid="document-canvas-page"]');
                 return first?.getAttribute('data-canvas-model-document-id') === 'phase-e8-canvas-math-equations'
                     && Number(first.getAttribute('data-canvas-model-math-count') || '0') >= 3;
             }
-            """,
-            new PageWaitForFunctionOptions { Timeout = 30_000 });
+            """, 30_000);
 
     private static async Task WaitForPhaseE8SettledAsync(IPage page)
     {
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 const handle = host?.getAttribute('data-canvas-engine-handle') || '';
@@ -793,8 +786,7 @@ public sealed class DocumentEditorCanvasMathEquationsE2ETests : WasmTestBase
                     && pending.trim().length === 0
                     && dirty.trim().length === 0;
             }
-            """,
-            new PageWaitForFunctionOptions { Timeout = 30_000 });
+            """, 30_000);
         await CanvasInteropBridge.WaitForFramesAsync(page, 5); // paint after the settled state, frame-counted instead of a fixed sleep
     }
 
@@ -1110,8 +1102,7 @@ public sealed class DocumentEditorCanvasMathEquationsE2ETests : WasmTestBase
             new PageWaitForFunctionOptions { Timeout = 10_000 });
 
     private static Task WaitForMathExitLiveRegionAsync(IPage page)
-        => page.WaitForFunctionAsync(
-            """
+        => WaitForPredicateAsync(page, """
             () => {
                 const live = document.querySelector('[data-testid="document-canvas-live-region"]');
                 const text = live?.textContent || '';
@@ -1119,8 +1110,7 @@ public sealed class DocumentEditorCanvasMathEquationsE2ETests : WasmTestBase
                     && live?.getAttribute('data-canvas-live-exit') === 'true'
                     && text.length > 0;
             }
-            """,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 10_000);
 
     private static Task WaitForMathDisplayModeAsync(IPage page, string mathId, int displayMode)
         => CanvasInteropBridge.WaitForFunctionAsync(page,
@@ -1177,12 +1167,10 @@ public sealed class DocumentEditorCanvasMathEquationsE2ETests : WasmTestBase
             new PageWaitForFunctionOptions { Timeout = 10_000 }, KnownUnmet);
 
     private static Task WaitForCanvasMathSelectionAsync(IPage page)
-        => page.WaitForFunctionAsync(
-            """
+        => WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-engine-root"]')?.getAttribute('data-canvas-math-selection-active') === 'true'
                 && document.querySelector('[data-testid="document-canvas-math-selection-rect"]') !== null
-            """,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 10_000);
 
     private static Task WaitForMathStructuralRangeAsync(IPage page, string expectedMathId, int expectedSlotCount)
         => CanvasInteropBridge.WaitForFunctionAsync(page,
@@ -1507,15 +1495,13 @@ public sealed class DocumentEditorCanvasMathEquationsE2ETests : WasmTestBase
     }
 
     private static Task WaitForCanvasCommandBridgeAsync(IPage page)
-        => page.WaitForFunctionAsync(
-            """
+        => WaitForPredicateAsync(page, """
             () => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 return host?.getAttribute('data-canvas-engine-ready') === 'true'
                     && !!host?.getAttribute('data-canvas-engine-handle');
             }
-            """,
-            new PageWaitForFunctionOptions { Timeout = 15_000 });
+            """, 15_000);
 
     private static Task<PhaseE8Probe> ReadProbeAsync(IPage page)
         => CanvasInteropBridge.EvaluateAsync<PhaseE8Probe>(page,
@@ -1601,8 +1587,7 @@ public sealed class DocumentEditorCanvasMathEquationsE2ETests : WasmTestBase
 
     private static async Task WaitForSaveBoundaryAsync(IPage page)
     {
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => {
                 const saveMessage = document.querySelector('[data-testid="document-save-message"]')?.textContent || '';
                 const lastSaved = document.querySelector('[data-testid="document-last-saved"]')?.textContent || '';
@@ -1614,8 +1599,7 @@ public sealed class DocumentEditorCanvasMathEquationsE2ETests : WasmTestBase
                     && dirty.trim().length === 0
                     && (saveMessage.trim().length > 0 || lastSaved.trim().length > 0);
             }
-            """,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 10_000);
     }
 
     private static Task NavigateWithinBlazorAsync(IPage page, string url)

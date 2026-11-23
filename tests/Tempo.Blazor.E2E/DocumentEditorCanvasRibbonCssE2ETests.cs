@@ -137,20 +137,16 @@ public sealed class DocumentEditorCanvasRibbonCssE2ETests : WasmTestBase
         await page.WaitForSelectorAsync(
             "[data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']",
             new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 120_000 });
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelectorAll('[data-canvas-text-rect]').length >= 1
                 && document.querySelector('[data-testid="document-bold"]')
-            """,
-            new PageWaitForFunctionOptions { Timeout = 60_000 });
+            """, 60_000);
     }
 
     private static async Task SelectRibbonTabAsync(IPage page, string tab)
     {
         await page.GetByTestId($"document-ribbon-tab-{tab}").ClickAsync();
-        await page.WaitForFunctionAsync(
-            $"() => (document.querySelector('[data-testid=\"document-ribbon-tab-{tab}\"]')?.getAttribute('aria-selected') || '').toLowerCase() === 'true'",
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+        await WaitForPredicateAsync(page, $"() => (document.querySelector('[data-testid=\"document-ribbon-tab-{tab}\"]')?.getAttribute('aria-selected') || '').toLowerCase() === 'true'", 10_000);
         await page.WaitForTimeoutAsync(150);
     }
 

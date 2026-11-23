@@ -36,9 +36,7 @@ public sealed class NotionReadOnlyE2ETests : NotionE2ETestBase
                 }
             }
             """);
-        await page.WaitForFunctionAsync(
-            "() => Array.from(document.querySelectorAll('.tm-tooltip__content')).every(el => getComputedStyle(el).opacity === '0')",
-            new PageWaitForFunctionOptions { Timeout = 5000 });
+        await WaitForPredicateAsync(page, "() => Array.from(document.querySelectorAll('.tm-tooltip__content')).every(el => getComputedStyle(el).opacity === '0')", 5000);
         var capture = await CaptureBaselineAsync("read-only", "eb18-rich-page", page.Locator(".tm-notion-page").First);
         Assert.IsTrue(File.Exists(capture.FullPagePath), "Read-only full-page UX baseline should be written.");
         Assert.IsTrue(File.Exists(capture.RegionPath), "Read-only page-region UX baseline should be written.");

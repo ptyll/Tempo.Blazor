@@ -118,9 +118,7 @@ public abstract class AiAgentVisualizationsPageBase : PlaywrightTestBase
     {
         await ScrollToAsync(page, SimulatorSection);
         await page.Locator("[data-testid='ai-viz-play']").ClickAsync();
-        await page.WaitForFunctionAsync(
-            "() => Number(document.querySelector(\"[data-testid='ai-viz-events']\")?.textContent) > 0",
-            new PageWaitForFunctionOptions { Timeout = 15000 });
+        await WaitForPredicateAsync(page, "() => Number(document.querySelector(\"[data-testid='ai-viz-events']\")?.textContent) > 0", 15000);
     }
 
     /// <summary>Switches the demo's own theme through the header toggle, so the whole frame repaints.</summary>

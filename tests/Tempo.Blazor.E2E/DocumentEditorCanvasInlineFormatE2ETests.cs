@@ -180,13 +180,11 @@ public sealed class DocumentEditorCanvasInlineFormatE2ETests : WasmTestBase
         await page.WaitForSelectorAsync(
             "[data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']",
             new PageWaitForSelectorOptions { Timeout = 30_000 });
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelectorAll('[data-canvas-text-rect][data-block-id="canvas-format-body"]').length >= 1
                 && document.querySelector('[data-testid="document-bold"]')
                 && document.querySelector('[data-testid="document-font-color-trigger"] .tm-color-picker-trigger')
-            """,
-            new PageWaitForFunctionOptions { Timeout = 30_000 });
+            """, 30_000);
     }
 
     private static async Task<CanvasTextRange> SelectCanvasTextRangeAsync(IPage page, string blockId, int startOffset, int endOffset)
@@ -209,15 +207,13 @@ public sealed class DocumentEditorCanvasInlineFormatE2ETests : WasmTestBase
     }
 
     private static Task WaitForCanvasCommandBridgeAsync(IPage page)
-        => page.WaitForFunctionAsync(
-            """
+        => WaitForPredicateAsync(page, """
             () => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 return host?.getAttribute('data-canvas-engine-ready') === 'true'
                     && !!host?.getAttribute('data-canvas-engine-handle');
             }
-            """,
-            new PageWaitForFunctionOptions { Timeout = 15_000 });
+            """, 15_000);
 
     private static Task<CanvasTextRange> ReadCanvasTextRangeAsync(IPage page, string blockId, int startOffset, int endOffset)
         => page.EvaluateAsync<CanvasTextRange>(

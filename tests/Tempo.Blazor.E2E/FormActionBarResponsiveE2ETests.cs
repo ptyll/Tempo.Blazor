@@ -127,10 +127,8 @@ public class FormActionBarResponsiveE2ETests : WasmTestBase
         // would race the animation.
         await page.EvaluateAsync(
             "() => { const s = document.scrollingElement; s.scrollTop = s.scrollHeight; }");
-        await page.WaitForFunctionAsync(
-            "() => { const s = document.scrollingElement; "
-            + "return s.scrollTop >= s.scrollHeight - window.innerHeight - 1; }",
-            options: new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => { const s = document.scrollingElement; "
+            + "return s.scrollTop >= s.scrollHeight - window.innerHeight - 1; }", 10000);
 
         // Measure both boxes in ONE evaluate: getBoundingClientRect is viewport-relative for
         // both, so no coordinate-space guessing across two calls.

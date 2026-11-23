@@ -38,9 +38,7 @@ public sealed class DocumentEditorToolbarOverflowAndRenderersE2ETests : WasmTest
         var output = CreateOutputDirectory("overflow-controller");
 
         // Úzké okno: Home tab přetéká → controller odkryje More.
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"document-toolbar-more\"]')?.hidden === false",
-            new PageWaitForFunctionOptions { Timeout = 15_000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-toolbar-more\"]')?.hidden === false", 15_000);
         await ViewportScreenshotAsync(page, Path.Combine(output, "00-narrow-more-button-visible.png"));
 
         await page.GetByTestId("document-toolbar-more").ClickAsync();
@@ -64,9 +62,7 @@ public sealed class DocumentEditorToolbarOverflowAndRenderersE2ETests : WasmTest
 
         // Nepřetékající tab (Layout má na 700px 3 příkazy): controller nahlásí false → More zmizí.
         await page.GetByTestId("document-ribbon-tab-layout").ClickAsync();
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"document-toolbar-more\"]')?.hidden === true",
-            new PageWaitForFunctionOptions { Timeout = 15_000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-toolbar-more\"]')?.hidden === true", 15_000);
         Assert.AreEqual(0, await page.GetByTestId("document-toolbar-more-menu").CountAsync(),
             "se schovaným More nesmí zůstat otevřené overflow menu.");
         await ViewportScreenshotAsync(page, Path.Combine(output, "03-layout-tab-more-hidden.png"));
@@ -82,9 +78,7 @@ public sealed class DocumentEditorToolbarOverflowAndRenderersE2ETests : WasmTest
         await OpenDocumentAsync(page);
         var output = CreateOutputDirectory("overflow-tab-switch");
 
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"document-toolbar-more\"]')?.hidden === false",
-            new PageWaitForFunctionOptions { Timeout = 15_000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-toolbar-more\"]')?.hidden === false", 15_000);
 
         await page.GetByTestId("document-toolbar-more").ClickAsync();
         var homeCommands = await ReadOverflowMenuCommandsAsync(page);
@@ -93,22 +87,14 @@ public sealed class DocumentEditorToolbarOverflowAndRenderersE2ETests : WasmTest
         // Layout tab má na 700px jen 3 příkazy a NEpřetéká → MutationObserver musí More schovat
         // (negativní větev: přepnutí tabu nesmí nechat zamrzlý overflow stav Home tabu).
         await page.GetByTestId("document-ribbon-tab-layout").ClickAsync();
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"document-ribbon-panel\"]')?.getAttribute('data-active-ribbon-tab') === 'layout'",
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"document-toolbar-more\"]')?.hidden === true",
-            new PageWaitForFunctionOptions { Timeout = 15_000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-ribbon-panel\"]')?.getAttribute('data-active-ribbon-tab') === 'layout'", 10_000);
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-toolbar-more\"]')?.hidden === true", 15_000);
         await ViewportScreenshotAsync(page, Path.Combine(output, "00-layout-tab-no-overflow.png"));
 
         // Insert tab přetéká → More se zase odkryje a menu obsahuje příkazy NOVÉHO tabu.
         await page.GetByTestId("document-ribbon-tab-insert").ClickAsync();
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"document-ribbon-panel\"]')?.getAttribute('data-active-ribbon-tab') === 'insert'",
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"document-toolbar-more\"]')?.hidden === false",
-            new PageWaitForFunctionOptions { Timeout = 15_000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-ribbon-panel\"]')?.getAttribute('data-active-ribbon-tab') === 'insert'", 10_000);
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-toolbar-more\"]')?.hidden === false", 15_000);
         await page.GetByTestId("document-toolbar-more").ClickAsync();
         var insertCommands = await ReadOverflowMenuCommandsAsync(page);
         await ViewportScreenshotAsync(page, Path.Combine(output, "01-insert-tab-overflow-menu.png"));
@@ -183,12 +169,10 @@ public sealed class DocumentEditorToolbarOverflowAndRenderersE2ETests : WasmTest
         await page.WaitForSelectorAsync(
             "[data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']",
             new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 120_000 });
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelectorAll('[data-canvas-text-rect]').length >= 1
                 && document.querySelector('[data-testid="document-bold"]')
-            """,
-            new PageWaitForFunctionOptions { Timeout = 60_000 });
+            """, 60_000);
     }
 
     private static async Task<string[]> ReadOverflowMenuCommandsAsync(IPage page)

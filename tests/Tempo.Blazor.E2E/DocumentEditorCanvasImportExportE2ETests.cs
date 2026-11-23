@@ -217,13 +217,11 @@ public sealed class DocumentEditorCanvasImportExportE2ETests : WasmTestBase
         await Assertions.Expect(page.GetByTestId("document-import-docx-panel")).ToBeVisibleAsync(new() { Timeout = 5_000 });
         await page.GetByTestId("document-import-docx").SetInputFilesAsync(docxPath);
         await Assertions.Expect(page.GetByTestId("document-format-message")).ToContainTextAsync(new Regex("Imported|Importováno"), new() { Timeout = 15_000 });
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-engine-host"][data-canvas-engine-ready="true"]')
                 && document.querySelectorAll('[data-testid="document-canvas-page"]').length >= 1
                 && document.querySelectorAll('[data-canvas-text-rect]').length >= 1
-            """,
-            options: new PageWaitForFunctionOptions { Timeout = 15_000 });
+            """, 15_000);
     }
 
     private static IReadOnlyList<ExtendedDocxSmokeScenario> CreateExtendedDocxSmokeScenarios()

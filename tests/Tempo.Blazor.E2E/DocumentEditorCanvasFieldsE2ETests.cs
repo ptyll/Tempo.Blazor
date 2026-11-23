@@ -87,9 +87,7 @@ public sealed class DocumentEditorCanvasFieldsE2ETests : WasmTestBase
         await WaitForSaveBoundaryAsync(page);
 
         await NavigateWithinBlazorAsync(page, "/canvas-engine-host?documentId=phase-5-canvas-render");
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'",
-            new PageWaitForFunctionOptions { Timeout = 20_000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'", 20_000);
         await NavigateWithinBlazorAsync(page, $"/canvas-engine-host?documentId={PhaseE5DocumentId}&showToolbar=true");
         await WaitForPhaseE5ReadyAsync(page);
         await WaitForUpdatedFieldsAsync(page);
@@ -142,8 +140,7 @@ public sealed class DocumentEditorCanvasFieldsE2ETests : WasmTestBase
     }
 
     private static Task WaitForPhaseE5ReadyAsync(IPage page)
-        => page.WaitForFunctionAsync(
-            """
+        => WaitForPredicateAsync(page, """
             () => {
                 const hostReady = document.querySelector('[data-testid="document-canvas-engine-host"]')?.getAttribute('data-canvas-engine-ready') === 'true';
                 const first = document.querySelector('[data-testid="document-canvas-page"]');
@@ -151,8 +148,7 @@ public sealed class DocumentEditorCanvasFieldsE2ETests : WasmTestBase
                     && first?.getAttribute('data-canvas-model-document-id') === 'phase-e5-canvas-fields'
                     && Number(first.getAttribute('data-canvas-model-field-count') || '0') >= 7;
             }
-            """,
-            new PageWaitForFunctionOptions { Timeout = 30_000 });
+            """, 30_000);
 
     private static Task WaitForCaptionCountAsync(IPage page, int expected)
         => page.WaitForFunctionAsync(
@@ -171,18 +167,14 @@ public sealed class DocumentEditorCanvasFieldsE2ETests : WasmTestBase
             new PageWaitForFunctionOptions { Timeout = 10_000 });
 
     private static Task WaitForTableOfFiguresAsync(IPage page)
-        => page.WaitForFunctionAsync(
-            """
+        => WaitForPredicateAsync(page, """
             () => (document.querySelector('[data-testid="document-canvas-page"]')?.getAttribute('data-canvas-table-of-figures-text') || '').includes('Figure')
-            """,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 10_000);
 
     private static Task WaitForBibliographyAsync(IPage page)
-        => page.WaitForFunctionAsync(
-            """
+        => WaitForPredicateAsync(page, """
             () => (document.querySelector('[data-testid="document-canvas-page"]')?.getAttribute('data-canvas-bibliography-text') || '').includes('Elena Novak')
-            """,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 10_000);
 
     private static Task WaitForCrossReferenceTextAsync(IPage page, string expected)
         => page.WaitForFunctionAsync(
@@ -217,8 +209,7 @@ public sealed class DocumentEditorCanvasFieldsE2ETests : WasmTestBase
     {
         try
         {
-            await page.WaitForFunctionAsync(
-                """
+            await WaitForPredicateAsync(page, """
                 () => {
                     const first = document.querySelector('[data-testid="document-canvas-page"]');
                     return Number(first?.getAttribute('data-canvas-model-caption-count') || '0') === 1
@@ -226,8 +217,7 @@ public sealed class DocumentEditorCanvasFieldsE2ETests : WasmTestBase
                         && (first?.getAttribute('data-canvas-table-of-figures-text') || '').includes('Figure')
                         && (first?.getAttribute('data-canvas-bibliography-text') || '').includes('Elena Novak');
                 }
-                """,
-                new PageWaitForFunctionOptions { Timeout = 10_000 });
+                """, 10_000);
         }
         catch (TimeoutException ex)
         {
@@ -257,8 +247,7 @@ public sealed class DocumentEditorCanvasFieldsE2ETests : WasmTestBase
     {
         try
         {
-            await page.WaitForFunctionAsync(
-                """
+            await WaitForPredicateAsync(page, """
                 () => {
                     const saveMessage = document.querySelector('[data-testid="document-save-message"]')?.textContent || '';
                     const lastSaved = document.querySelector('[data-testid="document-last-saved"]')?.textContent || '';
@@ -270,8 +259,7 @@ public sealed class DocumentEditorCanvasFieldsE2ETests : WasmTestBase
                         && dirty.trim().length === 0
                         && (saveMessage.trim().length > 0 || lastSaved.trim().length > 0);
                 }
-                """,
-                new PageWaitForFunctionOptions { Timeout = 10_000 });
+                """, 10_000);
         }
         catch (TimeoutException ex)
         {

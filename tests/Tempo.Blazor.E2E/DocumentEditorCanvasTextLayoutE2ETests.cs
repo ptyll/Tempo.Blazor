@@ -106,13 +106,11 @@ public sealed class DocumentEditorCanvasTextLayoutE2ETests : WasmTestBase
             new PageWaitForSelectorOptions { Timeout = 30_000 });
         try
         {
-            await page.WaitForFunctionAsync(
-                """
+            await WaitForPredicateAsync(page, """
                 () => document.querySelectorAll('[data-testid="document-canvas-page"]').length >= 2
                     && Number(document.querySelector('[data-testid="document-canvas-page"]')?.getAttribute('data-canvas-text-run-count') || '0') >= 12
                     && document.querySelectorAll('[data-canvas-text-rect]').length >= 24
-                """,
-                new PageWaitForFunctionOptions { Timeout = 30_000 });
+                """, 30_000);
         }
         catch (TimeoutException)
         {

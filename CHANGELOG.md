@@ -7,6 +7,14 @@
 > [docs/proposals/time-input-mobile.md](docs/proposals/time-input-mobile.md)). Additive public API;
 > `TmTimePicker.Presentation` stays `Segments` (today's DOM).
 
+### Fixed — spreadsheet command log and document revision overlay (`Tempo.Blazor.Spreadsheet` / `Tempo.Blazor.DocumentEditor`, Fáze 10b)
+
+- **Spreadsheet command-log flush no longer busy-waits 2 s on a synchronous throw.** `flushCommandLog` used to set `commandLogInFlight` and then call `invokeDotNet`; a sync exception left the flag true and `whenCommandLogAcknowledged` spinning `Promise.race` until `pendingStateWaitLimitMs`. The sync path is now try/catch: the batch is requeued (attempts ≤ 2), `commandLogSyncFailureCount` increments, the flight is a rejected-and-caught promise, and waiters abort if the flight object does not change.
+- **Spreadsheet pointer input shares the keyboard command-log barrier.** `OnCanvasCellPointer`, `OnCanvasPointer`, `OnCanvasDoubleClick` and `OnCanvasContextMenu` went through a straight `invokeDotNet`, so a click during a pending Shift+Arrow or an in-flight cell edit could beat the command-log batch. They now go through `invokeCanvasPointerDotNet` → `invokeDotNetAfterPendingState` with `hotPath` kept, so a formula-point click still records 0 .NET callbacks before commit.
+- **Document-editor revision markers keep DOM order and element identity across layout.** `buildRevisionMarkers` sorted by recomputed `rect.y`, and `update()` rebuilt the overlay with `replaceChildren`, so a y swap (563 → 1122 → 812) made Accept hit the neighbour. Markers now follow `revisionsOf(model)` order and `update()` keyed-reconciles by `data-revision-id`. The Blazor review pane already sorts by `CreatedAt`, not position.
+- **Spreadsheet wheel probe dispatches 12 deterministic events.** `measureWheelScroll` used a duration rAF loop (`wheelDurationMs`, demo 350 ms) that often produced 1 event, so the E2E `events <= 1 || frames < events` ratio never ran. The probe now takes `wheelEventCount` (default 12) and `classifyInteractionBudget` requires ≥8 events with `frames < events / 2`.
+- **Document-editor autosave runs on `TimeProvider`.** `_autoSaveTimer` / `_collaborationTimer` were `new Timer` (wall clock). They now use `Clock.CreateTimer` with `IServiceProvider.GetService(typeof(TimeProvider))` falling back to `TimeProvider.System`, so a `FakeTimeProvider.Advance` is the deadline. Without a registered `TimeProvider` the behaviour is unchanged (`TimeProvider.System`).
+
 ### Fixed — toast on mobile (`Tempo.Blazor`, Fáze 10a)
 
 - **A toast under 640 px is inset 8 px on both sides.** The mobile block already set `.tm-toast { width: 100% }` inside a full-bleed container with `--tm-space-2` padding, but the desktop cap `max-width: calc(100vw - 2rem)` still won, so at 390 px the card sat 8 px from the left and 24 px from the right. The mobile rule now also sets `max-width: none`. Desktop is unchanged.

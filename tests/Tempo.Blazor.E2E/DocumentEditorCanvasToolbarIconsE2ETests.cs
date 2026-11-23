@@ -42,9 +42,7 @@ public sealed class DocumentEditorCanvasToolbarIconsE2ETests : WasmTestBase
         foreach (var tab in RibbonTabs)
         {
             await page.GetByTestId($"document-ribbon-tab-{tab}").ClickAsync();
-            await page.WaitForFunctionAsync(
-                $"() => (document.querySelector('[data-testid=\"document-ribbon-tab-{tab}\"]')?.getAttribute('aria-selected') || '').toLowerCase() === 'true'",
-                new PageWaitForFunctionOptions { Timeout = 10_000 });
+            await WaitForPredicateAsync(page, $"() => (document.querySelector('[data-testid=\"document-ribbon-tab-{tab}\"]')?.getAttribute('aria-selected') || '').toLowerCase() === 'true'", 10_000);
             await page.WaitForTimeoutAsync(150);
 
             var unknown = await CountUnknownIconsAsync(page);
@@ -117,12 +115,10 @@ public sealed class DocumentEditorCanvasToolbarIconsE2ETests : WasmTestBase
         await page.WaitForSelectorAsync(
             "[data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']",
             new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 120_000 });
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelectorAll('[data-canvas-text-rect]').length >= 1
                 && document.querySelector('[data-testid="document-bold"]')
-            """,
-            new PageWaitForFunctionOptions { Timeout = 60_000 });
+            """, 60_000);
     }
 
     private static Task<int> CountUnknownIconsAsync(IPage page)
@@ -137,12 +133,10 @@ public sealed class DocumentEditorCanvasToolbarIconsE2ETests : WasmTestBase
         await page.Mouse.DownAsync();
         await page.Mouse.MoveAsync((float)end.X, (float)end.Y, new MouseMoveOptions { Steps = 10 });
         await page.Mouse.UpAsync();
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-engine-root"]')
                 ?.getAttribute('data-canvas-selection-collapsed') === 'false'
-            """,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 10_000);
     }
 
     private static Task<CanvasPoint> ReadCanvasPointAsync(IPage page, string blockId, int offset)

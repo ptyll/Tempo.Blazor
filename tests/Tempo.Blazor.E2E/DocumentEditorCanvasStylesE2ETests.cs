@@ -61,9 +61,7 @@ public sealed class DocumentEditorCanvasStylesE2ETests : WasmTestBase
         await WaitForDirtyStateAsync(page, expectedDirty: false);
 
         await NavigateWithinBlazorAsync(page, "/canvas-engine-host?documentId=phase-5-canvas-render");
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'",
-            new PageWaitForFunctionOptions { Timeout = 20_000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'", 20_000);
         await NavigateWithinBlazorAsync(page, $"/canvas-engine-host?documentId={PhaseE4DocumentId}&showToolbar=true");
         await WaitForPhaseE4DocumentAsync(page);
 
@@ -123,8 +121,7 @@ public sealed class DocumentEditorCanvasStylesE2ETests : WasmTestBase
             new PageWaitForFunctionOptions { Timeout = 30_000 });
 
     private static Task WaitForPhaseE4DocumentAsync(IPage page)
-        => page.WaitForFunctionAsync(
-            """
+        => WaitForPredicateAsync(page, """
             () => {
                 const hostReady = document.querySelector('[data-testid="document-canvas-engine-host"]')?.getAttribute('data-canvas-engine-ready') === 'true';
                 const first = document.querySelector('[data-testid="document-canvas-page"]');
@@ -132,8 +129,7 @@ public sealed class DocumentEditorCanvasStylesE2ETests : WasmTestBase
                     && first?.getAttribute('data-canvas-model-document-id') === 'phase-e4-canvas-styles'
                     && Number(first.getAttribute('data-canvas-style-count') || '0') >= 2;
             }
-            """,
-            new PageWaitForFunctionOptions { Timeout = 30_000 });
+            """, 30_000);
 
     private static Task WaitForHeading1FontSizeAsync(IPage page, int expected)
         => page.WaitForFunctionAsync(

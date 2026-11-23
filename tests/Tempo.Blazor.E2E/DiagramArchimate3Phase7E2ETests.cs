@@ -49,9 +49,7 @@ public class DiagramArchimate3Phase7E2ETests : PlaywrightTestBase
         await canvas.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 20000 });
 
         await page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "New document" }).ClickAsync();
-        await page.WaitForFunctionAsync(
-            "() => document.querySelectorAll('.tm-diagram-node[data-stencil-id=\"uml25.class\"]').length === 0",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => document.querySelectorAll('.tm-diagram-node[data-stencil-id=\"uml25.class\"]').length === 0", 10000);
 
         await DropStencilAsync(page, "archimate3.business.actor", 0.10, 0.20);
         await DropStencilAsync(page, "archimate3.application.component", 0.39, 0.20);

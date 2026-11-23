@@ -38,31 +38,23 @@ public sealed class DocumentEditorCanvasToolbarUxBugsE2ETests : WasmTestBase
 
         var select = page.GetByTestId("document-change-case");
         await select.SelectOptionAsync("uppercase");
-        await page.WaitForFunctionAsync(
-            $"""
+        await WaitForPredicateAsync(page, $"""
             () => (document.querySelector('[data-testid="document-canvas-a11y-mirror"] [data-block-id="{AgreementBlockId}"]')
                 ?.textContent || '').startsWith('THE PROVIDER')
-            """,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 10_000);
         await ViewportScreenshotAsync(page, Path.Combine(output, "00-uppercase-applied.png"));
 
         // Kontrakt fixe: select se po výběru resetuje na placeholder (dřív zůstal na "uppercase").
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"document-change-case\"]')?.value === ''",
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-change-case\"]')?.value === ''", 10_000);
 
         // Edge case: TÁŽ volba podruhé — se zamrzlým selectem nešla vybrat (onchange nevystřelí).
         await SelectCanvasTextRangeAsync(page, AgreementBlockId, 0, 12);
         await select.SelectOptionAsync("lowercase");
-        await page.WaitForFunctionAsync(
-            $"""
+        await WaitForPredicateAsync(page, $"""
             () => (document.querySelector('[data-testid="document-canvas-a11y-mirror"] [data-block-id="{AgreementBlockId}"]')
                 ?.textContent || '').startsWith('the provider')
-            """,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"document-change-case\"]')?.value === ''",
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 10_000);
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-change-case\"]')?.value === ''", 10_000);
         await ViewportScreenshotAsync(page, Path.Combine(output, "01-lowercase-applied-select-reset.png"));
     }
 
@@ -107,12 +99,10 @@ public sealed class DocumentEditorCanvasToolbarUxBugsE2ETests : WasmTestBase
         await page.WaitForSelectorAsync(
             "[data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']",
             new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 120_000 });
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelectorAll('[data-canvas-text-rect]').length >= 1
                 && document.querySelector('[data-testid="document-bold"]')
-            """,
-            new PageWaitForFunctionOptions { Timeout = 60_000 });
+            """, 60_000);
     }
 
     private static async Task SelectCanvasTextRangeAsync(IPage page, string blockId, int startOffset, int endOffset)
@@ -123,12 +113,10 @@ public sealed class DocumentEditorCanvasToolbarUxBugsE2ETests : WasmTestBase
         await page.Mouse.DownAsync();
         await page.Mouse.MoveAsync((float)end.X, (float)end.Y, new MouseMoveOptions { Steps = 10 });
         await page.Mouse.UpAsync();
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-engine-root"]')
                 ?.getAttribute('data-canvas-selection-collapsed') === 'false'
-            """,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 10_000);
     }
 
     private static Task<CanvasPoint> ReadCanvasPointAsync(IPage page, string blockId, int offset)

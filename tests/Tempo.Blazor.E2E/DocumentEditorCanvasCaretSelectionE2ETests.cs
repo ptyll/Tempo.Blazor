@@ -120,12 +120,10 @@ public sealed class DocumentEditorCanvasCaretSelectionE2ETests : WasmTestBase
         await page.WaitForSelectorAsync(
             "[data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']",
             new PageWaitForSelectorOptions { Timeout = 30_000 });
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelectorAll('[data-canvas-text-rect][data-block-id="canvas-selection-body"]').length >= 3
                 && document.querySelector('[data-testid="document-canvas-caret"]')
-            """,
-            new PageWaitForFunctionOptions { Timeout = 30_000 });
+            """, 30_000);
     }
 
     private static Task<CanvasPoint> ReadTextPointAsync(IPage page, string blockId, int index)

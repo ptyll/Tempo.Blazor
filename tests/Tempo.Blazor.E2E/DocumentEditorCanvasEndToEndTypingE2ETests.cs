@@ -37,9 +37,7 @@ public sealed class DocumentEditorCanvasEndToEndTypingE2ETests : WasmTestBase
             "[data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']",
             new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 120_000 });
         // Wait for the first rendered text so we have something to click into.
-        await page.WaitForFunctionAsync(
-            "() => document.querySelectorAll('[data-canvas-text-rect]').length > 0",
-            new PageWaitForFunctionOptions { Timeout = 120_000 });
+        await WaitForPredicateAsync(page, "() => document.querySelectorAll('[data-canvas-text-rect]').length > 0", 120_000);
         await page.WaitForTimeoutAsync(500);
 
         // Focus the editor by clicking the first rendered text rectangle (sets the caret).
@@ -132,9 +130,7 @@ public sealed class DocumentEditorCanvasEndToEndTypingE2ETests : WasmTestBase
         await page.WaitForSelectorAsync(
             "[data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']",
             new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 120_000 });
-        await page.WaitForFunctionAsync(
-            "() => document.querySelectorAll('[data-canvas-text-rect]').length > 0",
-            new PageWaitForFunctionOptions { Timeout = 120_000 });
+        await WaitForPredicateAsync(page, "() => document.querySelectorAll('[data-canvas-text-rect]').length > 0", 120_000);
         await page.WaitForTimeoutAsync(500);
 
         // Make the document dirty so the save runs the full path.
@@ -148,8 +144,7 @@ public sealed class DocumentEditorCanvasEndToEndTypingE2ETests : WasmTestBase
 
         var start = await page.EvaluateAsync<double>("() => performance.now()");
         await page.GetByTestId("document-save").ClickAsync();
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => {
                 const saveMessage = document.querySelector('[data-testid="document-save-message"]')?.textContent || '';
                 const lastSaved = document.querySelector('[data-testid="document-last-saved"]')?.textContent || '';
@@ -159,8 +154,7 @@ public sealed class DocumentEditorCanvasEndToEndTypingE2ETests : WasmTestBase
                     && dirty === false
                     && (/Saved|Autosaved|Uloženo|Automaticky uloženo/i.test(saveMessage) || /saved|uloženo/i.test(lastSaved));
             }
-            """,
-            new PageWaitForFunctionOptions { Timeout = 60_000 });
+            """, 60_000);
         var elapsed = await page.EvaluateAsync<double>("() => performance.now()") - start;
 
         TestContext.WriteLine($"SAVE (N8): full manual save of {LargeDocId} took {elapsed:F0} ms");

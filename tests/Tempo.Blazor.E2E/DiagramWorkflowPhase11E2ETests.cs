@@ -139,24 +139,20 @@ public sealed class DiagramWorkflowPhase11E2ETests : PlaywrightTestBase
             Timeout = 20000
         });
 
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => {
                 const canvas = document.querySelector('[data-testid="diagram-canvas"]');
                 if (!canvas || !canvas.id) return false;
                 const editor = window.tmDiagramEditor;
                 return !!(editor && editor.instances && editor.instances.get(canvas.id));
             }
-            """,
-            new PageWaitForFunctionOptions { Timeout = 20000 });
+            """, 20000);
     }
 
     private static async Task ResetDocumentAsync(IPage page)
     {
         await page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "New document" }).ClickAsync();
-        await page.WaitForFunctionAsync(
-            "() => document.querySelectorAll('.tm-diagram-node').length === 0 && document.querySelectorAll('.tm-diagram-edge-group').length === 0",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => document.querySelectorAll('.tm-diagram-node').length === 0 && document.querySelectorAll('.tm-diagram-edge-group').length === 0", 10000);
     }
 
     private static async Task LoadUmlSampleAsync(IPage page)
@@ -164,9 +160,7 @@ public sealed class DiagramWorkflowPhase11E2ETests : PlaywrightTestBase
         await page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Load UML sample" }).ClickAsync();
         await page.Locator(".tm-diagram-node[data-node-id='class1']").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached, Timeout = 10000 });
         await page.Locator(".tm-diagram-node[data-node-id='class2']").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached, Timeout = 10000 });
-        await page.WaitForFunctionAsync(
-            "() => document.querySelectorAll('.tm-diagram-edge-group').length >= 1",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => document.querySelectorAll('.tm-diagram-edge-group').length >= 1", 10000);
     }
 
     private static async Task SearchToolboxAsync(IPage page, string query)

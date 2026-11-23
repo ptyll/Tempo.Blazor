@@ -59,9 +59,7 @@ public sealed class DocumentEditorCanvasAdvancedCharE2ETests : WasmTestBase
         await page.GetByTestId("document-save").ClickAsync();
         await WaitForSaveBoundaryAsync(page);
         await NavigateWithinBlazorAsync(page, "/");
-        await page.WaitForFunctionAsync(
-            "() => window.location.pathname === '/'",
-            new PageWaitForFunctionOptions { Timeout = 20_000 });
+        await WaitForPredicateAsync(page, "() => window.location.pathname === '/'", 20_000);
         await NavigateWithinBlazorAsync(page, $"/canvas-engine-host?documentId={PhaseE6DocumentId}&showToolbar=true");
         await WaitForPhaseE6ReadyAsync(page);
         await WaitForMirrorTextAsync(page, "Phase E6 Command Target");
@@ -109,8 +107,7 @@ public sealed class DocumentEditorCanvasAdvancedCharE2ETests : WasmTestBase
     }
 
     private static Task WaitForPhaseE6ReadyAsync(IPage page)
-        => page.WaitForFunctionAsync(
-            """
+        => WaitForPredicateAsync(page, """
             () => {
                 const hostReady = document.querySelector('[data-testid="document-canvas-engine-host"]')?.getAttribute('data-canvas-engine-ready') === 'true';
                 const first = document.querySelector('[data-testid="document-canvas-page"]');
@@ -119,8 +116,7 @@ public sealed class DocumentEditorCanvasAdvancedCharE2ETests : WasmTestBase
                     && Number(first.getAttribute('data-canvas-model-advanced-char-mark-count') || '0') >= 6
                     && document.querySelectorAll('[data-canvas-text-rect][data-block-id="canvas-e6-command-target"]').length >= 1;
             }
-            """,
-            new PageWaitForFunctionOptions { Timeout = 30_000 });
+            """, 30_000);
 
     private static Task WaitForCommandStateAsync(IPage page, string command, string state)
         => page.WaitForFunctionAsync(
@@ -218,8 +214,7 @@ public sealed class DocumentEditorCanvasAdvancedCharE2ETests : WasmTestBase
     {
         try
         {
-            await page.WaitForFunctionAsync(
-                """
+            await WaitForPredicateAsync(page, """
                 () => {
                     const saveMessage = document.querySelector('[data-testid="document-save-message"]')?.textContent || '';
                     const lastSaved = document.querySelector('[data-testid="document-last-saved"]')?.textContent || '';
@@ -234,8 +229,7 @@ public sealed class DocumentEditorCanvasAdvancedCharE2ETests : WasmTestBase
                         && saveMessage.includes('Saved')
                         && lastSaved.trim().length > 0;
                 }
-                """,
-                new PageWaitForFunctionOptions { Timeout = 10_000 });
+                """, 10_000);
         }
         catch (TimeoutException ex)
         {

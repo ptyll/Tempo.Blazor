@@ -90,13 +90,11 @@ public sealed class DocumentEditorWatermarkPdfE2ETests : WasmTestBase
     private async Task OpenAsync(IPage page, string url)
     {
         await GotoAppReadyAsync(page, $"{BaseUrl}{url}", WaitUntilState.DOMContentLoaded);
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-engine-host"][data-canvas-engine-ready="true"]')
                 && document.querySelectorAll('[data-testid="document-canvas-page"]').length >= 1
                 && document.querySelector('[data-testid="document-ribbon-tab-references"]')
-            """,
-            options: new PageWaitForFunctionOptions { Timeout = 45_000 });
+            """, 45_000);
     }
 
     private static async Task<string> ExportPdfAsync(IPage page)

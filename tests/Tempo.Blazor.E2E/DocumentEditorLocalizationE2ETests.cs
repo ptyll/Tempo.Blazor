@@ -51,12 +51,10 @@ public sealed class DocumentEditorLocalizationE2ETests : WasmTestBase
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 900);
         await GotoAppReadyAsync(page, $"{BaseUrl}/canvas-engine-host?documentId={DocumentId}&showToolbar=true&preferLocalDraft=false", WaitUntilState.DOMContentLoaded);
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-engine-host"][data-canvas-engine-ready="true"]')
                 && document.querySelector('[data-testid="document-ribbon-tab-home"]')
-            """,
-            options: new PageWaitForFunctionOptions { Timeout = 45_000 });
+            """, 45_000);
         return page;
     }
 

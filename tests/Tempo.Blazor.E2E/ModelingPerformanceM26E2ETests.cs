@@ -299,9 +299,10 @@ public sealed class ModelingPerformanceM26E2ETests : WasmTestBase
         await GotoAppReadyAsync(page, $"{BaseUrl}{ModelingEditorUrl}?scenario=issues-500");
         await page.Locator("[data-testid='modeling-editor'][data-state='loaded']")
             .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 20000 });
-        await page.WaitForFunctionAsync(
+        await WaitForPredicateAsync(
+            page,
             "() => Number(document.querySelector(\"[data-testid='modeling-issue-panel']\")?.getAttribute('data-total-issue-count') ?? '0') >= 500",
-            null, new PageWaitForFunctionOptions { Timeout = 20000 });
+            20_000);
         return page;
     }
 
@@ -317,7 +318,8 @@ public sealed class ModelingPerformanceM26E2ETests : WasmTestBase
     }
 
     private static Task WaitForLoadedPerformanceModelAsync(IPage page) =>
-        page.WaitForFunctionAsync(
+        WaitForPredicateAsync(
+            page,
             """
             () => {
                 const editor = document.querySelector('[data-testid="modeling-editor"]');
@@ -331,10 +333,10 @@ public sealed class ModelingPerformanceM26E2ETests : WasmTestBase
             """,
             // This is a setup wait, not a perf assertion (the budgets below are measured with
             // in-page performance.now()). It has to cover cold WASM boot + 200-node diagram
-            // layout under suite load, and polls on a timer: the default rAF polling starves
-            // when the heavy first layout stalls frame production. M8/M9 waits use the same
-            // 30s WASM-boot window.
-            options: new PageWaitForFunctionOptions { Timeout = 30_000, PollingInterval = 250f });
+            // layout under suite load. WaitForPredicateAsync polls on a timer, so a stalled
+            // first layout cannot starve rAF the way WaitForFunctionAsync did. M8/M9 waits
+            // use the same 30s WASM-boot window.
+            30_000);
 
     private static async Task<double> MeasureReloadAsync(IPage page)
     {
@@ -439,14 +441,15 @@ public sealed class ModelingPerformanceM26E2ETests : WasmTestBase
 
     private static async Task ExpectEditorMetricAsync(IPage page, string attributeName, int expected)
     {
-        await page.WaitForFunctionAsync(
+        await WaitForPredicateAsync(
+            page,
             """
             ([attributeName, expected]) => document.querySelector('[data-testid="modeling-editor"]')?.getAttribute(attributeName) === String(expected)
             """,
             new object[] { attributeName, expected },
             // Timer polling, same as WaitForLoadedPerformanceModelAsync — these checks run right
             // after a reload/regenerate, when heavy layout can still starve rAF predicates.
-            new PageWaitForFunctionOptions { Timeout = 10000, PollingInterval = 250f });
+            10_000);
     }
 
     private static void AssertFrameBudget(FrameProbe probe, string label)

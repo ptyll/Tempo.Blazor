@@ -439,9 +439,7 @@ public class NotionFormattingE2ETests : WasmTestBase
         await SeedInlineToolbarPageAsync(page);
 
         await OpenInlineToolbarForSelectorAsync(page, "[data-block-id='eb400000-0000-0000-0000-000000000002'] code");
-        await page.WaitForFunctionAsync(
-            "() => document.querySelectorAll('.tm-notion-inline-toolbar__btn--active').length >= 5",
-            new PageWaitForFunctionOptions { Timeout = 5000 });
+        await WaitForPredicateAsync(page, "() => document.querySelectorAll('.tm-notion-inline-toolbar__btn--active').length >= 5", 5000);
 
         foreach (var title in new[] { "Bold", "Italic", "Underline", "Strikethrough", "Inline code", "Link", "Color", "Turn into", "Align", "Comment", "Inline equation" })
         {
@@ -566,9 +564,7 @@ public class NotionFormattingE2ETests : WasmTestBase
     {
         var target = page.Locator(selector).First;
         await target.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
-        await page.WaitForFunctionAsync(
-            "() => window.tmNotionEditor?.hasSelectionWatcher?.(document.querySelector('.tm-notion-page')) === true",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => window.tmNotionEditor?.hasSelectionWatcher?.(document.querySelector('.tm-notion-page')) === true", 10000);
         await target.EvaluateAsync("(el, block) => el.scrollIntoView({ block, inline: 'nearest', behavior: 'instant' })", scrollBlock);
         await page.WaitForTimeoutAsync(150);
         await target.EvaluateAsync("""

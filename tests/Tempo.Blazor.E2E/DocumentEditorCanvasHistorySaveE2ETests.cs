@@ -61,14 +61,10 @@ public sealed class DocumentEditorCanvasHistorySaveE2ETests : WasmTestBase
         await Assertions.Expect(page.GetByTestId("document-save-message"))
             .ToContainTextAsync("Saved", new() { Timeout = 10_000 });
         await WaitForDirtyStateAsync(page, expectedDirty: false);
-        await page.WaitForFunctionAsync(
-            "() => window.tmDocumentEditor?.getBeforeUnloadGuardState?.().active === false",
-            options: new PageWaitForFunctionOptions { Timeout = 10_000 });
+        await WaitForPredicateAsync(page, "() => window.tmDocumentEditor?.getBeforeUnloadGuardState?.().active === false", 10_000);
 
         await NavigateWithinBlazorAsync(page, "/canvas-engine-host?documentId=phase-5-canvas-render");
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'",
-            options: new PageWaitForFunctionOptions { Timeout = 20_000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'", 20_000);
         await NavigateWithinBlazorAsync(page, $"/canvas-engine-host?documentId={Phase12DocumentId}&showToolbar=true");
         await WaitForPhase12ReadyAsync(page);
         await WaitForA11yTextAsync(page, marker);
@@ -136,9 +132,7 @@ public sealed class DocumentEditorCanvasHistorySaveE2ETests : WasmTestBase
         await WaitForDirtyStateAsync(page, expectedDirty: false);
 
         await NavigateWithinBlazorAsync(page, "/canvas-engine-host?documentId=phase-5-canvas-render");
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'",
-            options: new PageWaitForFunctionOptions { Timeout = 20_000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'", 20_000);
         await NavigateWithinBlazorAsync(page, $"/canvas-engine-host?documentId={Phase12DocumentId}&showToolbar=true&autosaveMs=3000");
         await WaitForPhase12ReadyAsync(page);
         await WaitForA11yTextAsync(page, marker);
@@ -159,9 +153,7 @@ public sealed class DocumentEditorCanvasHistorySaveE2ETests : WasmTestBase
         await FocusHiddenCanvasInputAsync(page);
         await page.Keyboard.TypeAsync($"{marker} ");
         await WaitForA11yTextAsync(page, marker);
-        await page.WaitForFunctionAsync(
-            "() => window.tmDocumentEditor?.getBeforeUnloadGuardState?.().active === true",
-            options: new PageWaitForFunctionOptions { Timeout = 10_000 });
+        await WaitForPredicateAsync(page, "() => window.tmDocumentEditor?.getBeforeUnloadGuardState?.().active === true", 10_000);
 
         await page.GetByTestId("document-save").ClickAsync();
         await Assertions.Expect(page.GetByTestId("document-save-message"))
@@ -176,9 +168,7 @@ public sealed class DocumentEditorCanvasHistorySaveE2ETests : WasmTestBase
         await Assertions.Expect(page.GetByTestId("document-save-message"))
             .ToContainTextAsync("Saved", new() { Timeout = 10_000 });
         await WaitForDirtyStateAsync(page, expectedDirty: false);
-        await page.WaitForFunctionAsync(
-            "() => window.tmDocumentEditor?.getBeforeUnloadGuardState?.().active === false",
-            options: new PageWaitForFunctionOptions { Timeout = 10_000 });
+        await WaitForPredicateAsync(page, "() => window.tmDocumentEditor?.getBeforeUnloadGuardState?.().active === false", 10_000);
     }
 
     private async Task OpenPhase12DocumentAsync(IPage page)
@@ -188,13 +178,11 @@ public sealed class DocumentEditorCanvasHistorySaveE2ETests : WasmTestBase
     }
 
     private static Task WaitForPhase12ReadyAsync(IPage page)
-        => page.WaitForFunctionAsync(
-            """
+        => WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-engine-host"][data-canvas-engine-ready="true"]')
                 && document.querySelector('[data-testid="document-save"]')
                 && document.querySelectorAll('[data-canvas-text-rect][data-block-id="canvas-history-text"]').length >= 1
-            """,
-            options: new PageWaitForFunctionOptions { Timeout = 30_000 });
+            """, 30_000);
 
     private static async Task ClickCanvasBlockAsync(IPage page, string blockId, int offset)
     {

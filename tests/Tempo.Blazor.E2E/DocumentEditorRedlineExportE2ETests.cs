@@ -75,14 +75,12 @@ public sealed class DocumentEditorRedlineExportE2ETests : WasmTestBase
         await page.GetByTestId("document-import-docx-label").ClickAsync();
         await Assertions.Expect(page.GetByTestId("document-import-docx-panel")).ToBeVisibleAsync(new() { Timeout = 5_000 });
         await page.GetByTestId("document-import-docx").SetInputFilesAsync(docxPath!);
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => {
                 const pages = Array.from(document.querySelectorAll('[data-testid="document-canvas-page"]'));
                 return pages.reduce((total, p) => total + Number(p.getAttribute('data-canvas-revision-anchor-count') || '0'), 0) > 0;
             }
-            """,
-            options: new PageWaitForFunctionOptions { Timeout = 30_000 });
+            """, 30_000);
 
         // 6) The revisions side panel lists the imported tracked changes.
         await page.GetByTestId("document-side-panel-tab-revisions").ClickAsync();
@@ -121,13 +119,11 @@ public sealed class DocumentEditorRedlineExportE2ETests : WasmTestBase
     private async Task OpenDocumentAsync(IPage page)
     {
         await GotoAppReadyAsync(page, $"{BaseUrl}/canvas-engine-host?documentId={DocumentId}&showToolbar=true&preferLocalDraft=false", WaitUntilState.DOMContentLoaded);
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-engine-host"][data-canvas-engine-ready="true"]')
                 && document.querySelectorAll('[data-canvas-text-rect][data-block-id="canvas-history-text"]').length >= 1
                 && document.querySelector('[data-testid="document-ribbon-tab-review"]')
-            """,
-            options: new PageWaitForFunctionOptions { Timeout = 45_000 });
+            """, 45_000);
     }
 
     private static async Task TypeMarkerAsync(IPage page, string marker)

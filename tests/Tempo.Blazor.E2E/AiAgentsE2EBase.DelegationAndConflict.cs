@@ -27,10 +27,8 @@ public abstract partial class AiAgentsE2EBase : PlaywrightTestBase
         const string card = "[data-testid='delegate-task'][data-task-id='task-summary']";
         await board.Locator(card).Locator(".tm-context-menu__trigger").ClickAsync();
         await page.Locator("[data-testid='ai-agents-delegate'] .tm-context-menu__item").First.ClickAsync();
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector(\"[data-testid='ai-agents-delegate'] [data-column='planner'] "
-            + "[data-task-id='task-summary']\") !== null",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector(\"[data-testid='ai-agents-delegate'] [data-column='planner'] "
+            + "[data-task-id='task-summary']\") !== null", 10000);
         StringAssert.Contains(await TextAsync(page, "ai-agents-delegate-log"), "assigned to Planner");
 
         // A full column refuses the drop: the visible notice and the one live region say the same sentence.
@@ -41,10 +39,8 @@ public abstract partial class AiAgentsE2EBase : PlaywrightTestBase
         // The automatic pass hands what is left to the free agents.
         // The switch's checkbox is visually carried by its track, so the label is what a reader (and Playwright) clicks.
         await board.Locator("[data-testid='delegate-auto'] .tm-toggle-label").ClickAsync();
-        await page.WaitForFunctionAsync(
-            "() => document.querySelectorAll(\"[data-testid='ai-agents-delegate'] [data-column='backlog'] "
-            + "[data-testid='delegate-task']\").length < 2",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => document.querySelectorAll(\"[data-testid='ai-agents-delegate'] [data-column='backlog'] "
+            + "[data-testid='delegate-task']\").length < 2", 10000);
 
         // ONE polite live region for the whole board: the transfer-only columns contribute none.
         Assert.AreEqual(1, await board.Locator("[aria-live]").CountAsync());
@@ -86,23 +82,17 @@ public abstract partial class AiAgentsE2EBase : PlaywrightTestBase
 
         // The table is the text alternative (WCAG 1.3.1), not a lesser view.
         await runs.Locator("[data-testid='runs-view'] [data-testid='segmented-option'][data-value='Table']").ClickAsync();
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector(\"[data-testid='ai-agents-runs']\")?.dataset.view === 'table'",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector(\"[data-testid='ai-agents-runs']\")?.dataset.view === 'table'", 10000);
         Assert.IsTrue(await runs.Locator("[data-testid='runs-table-row']").CountAsync() >= 4);
         await ShootAsync(page, "ai-agents-runs-table-light-1440");
         await runs.Locator("[data-testid='runs-view'] [data-testid='segmented-option'][data-value='Week']").ClickAsync();
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector(\"[data-testid='ai-agents-runs']\")?.dataset.view === 'week'",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector(\"[data-testid='ai-agents-runs']\")?.dataset.view === 'week'", 10000);
 
         // Moving the long run to the second window is reported to the page and the run stays there.
         await runs.Locator("[data-window-id='win-mon-am'] [data-run-id='run-export'] .tm-context-menu__trigger")
             .First.ClickAsync();
         await page.Locator("[data-testid='ai-agents-runs'] .tm-context-menu__item").Nth(1).ClickAsync();
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector(\"[data-testid='ai-agents-runs-log']\")?.textContent?.includes('moved to')",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector(\"[data-testid='ai-agents-runs-log']\")?.textContent?.includes('moved to')", 10000);
 
         // ONE polite live region: the transfer-only window lists contribute none.
         Assert.AreEqual(1, await runs.Locator("[aria-live]").CountAsync());
@@ -155,9 +145,7 @@ public abstract partial class AiAgentsE2EBase : PlaywrightTestBase
             await first.PressAsync("Space");
         }
 
-        await page.WaitForFunctionAsync(
-            "() => !document.querySelector(\"[data-testid='ai-agents-conflict'] [data-testid='radar-merge']\")?.hasAttribute('disabled')",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => !document.querySelector(\"[data-testid='ai-agents-conflict'] [data-testid='radar-merge']\")?.hasAttribute('disabled')", 10000);
         StringAssert.Contains(
             await page.Locator("[data-testid='ai-agents-conflict-log']").InnerTextAsync(), "settled");
 
@@ -165,9 +153,7 @@ public abstract partial class AiAgentsE2EBase : PlaywrightTestBase
         var filter = radar.Locator("[data-testid='radar-conflicts-only'] .tm-toggle-input");
         await filter.FocusAsync();
         await page.Keyboard.PressAsync("Space");
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector(\"[data-testid='ai-agents-conflict'] [data-testid='radar-row']\")?.dataset.path === 'CHANGELOG.md'",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector(\"[data-testid='ai-agents-conflict'] [data-testid='radar-row']\")?.dataset.path === 'CHANGELOG.md'", 10000);
         await filter.PressAsync("Space");
 
         var toggle = radar.Locator("[data-testid='radar-directory-toggle']").Nth(1);
@@ -178,9 +164,7 @@ public abstract partial class AiAgentsE2EBase : PlaywrightTestBase
         Assert.AreEqual("true", await toggle.GetAttributeAsync("aria-expanded"));
 
         await radar.Locator("[data-testid='radar-merge']").ClickAsync();
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector(\"[data-testid='ai-agents-conflict-log']\")?.textContent?.includes('Merge requested')",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector(\"[data-testid='ai-agents-conflict-log']\")?.textContent?.includes('Merge requested')", 10000);
 
         // ONE polite live region, and the decisions survive the host echoing them back.
         Assert.AreEqual(1, await radar.Locator("[aria-live]").CountAsync());
@@ -206,9 +190,7 @@ public abstract partial class AiAgentsE2EBase : PlaywrightTestBase
         Assert.AreEqual("true", await presence.Locator("[data-testid='presence-layer']").GetAttributeAsync("aria-hidden"));
 
         // The module placed every anchored marker: a real pixel offset, not the default fraction.
-        await page.WaitForFunctionAsync(
-            "() => document.querySelectorAll(\"[data-testid='ai-agents-presence'] [data-presence-marker][data-presence-placed='true']\").length === 3",
-            new PageWaitForFunctionOptions { Timeout = 15000 });
+        await WaitForPredicateAsync(page, "() => document.querySelectorAll(\"[data-testid='ai-agents-presence'] [data-presence-marker][data-presence-placed='true']\").length === 3", 15000);
         var left = await presence.Locator("[data-presence-marker]").First
             .EvaluateAsync<string>("marker => marker.style.getPropertyValue('--tm-presence-x')");
         StringAssert.EndsWith(left, "px");

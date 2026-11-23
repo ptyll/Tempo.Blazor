@@ -348,11 +348,13 @@ public sealed class DemoDiagramSchemaCrossProcessRaceTests
     [Fact]
     public void TwoDemoApiProcesses_ForcedOntoOnePort_NameThePortCollisionNotTheBarrier()
     {
-        var collisionPort = APortToCollideOn();
+        using var collision = APortToCollideOn();
+        var collisionPort = collision.Port;
 
         RunTwoHosts(
             skipLock: false,
             forceBothHostsOntoThisPort: collisionPort,
+            releaseHeldPort: collision,
             onReleased: (hosts, _, output) =>
             {
                 WaitUntil(
@@ -743,17 +745,60 @@ public sealed class DemoDiagramSchemaCrossProcessRaceTests
     /// be told, not a thing to pass over in silence.
     /// </para>
     /// </summary>
-    private static int APortToCollideOn()
+    /// <summary>
+    /// A port for the collision arm. The listener STAYS BOUND until the caller disposes it, so a stranger
+    /// cannot steal the number between "pick" and the hosts' bind (remaining 59b85e4d). RunTwoHosts
+    /// disposes it immediately before <c>Process.Start</c>.
+    /// </summary>
+    private static HeldPort APortToCollideOn()
     {
-        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
-        return ((IPEndPoint)listener.LocalEndpoint).Port;
+        return new HeldPort(listener);
+    }
+
+    /// <summary>
+    /// Off-diagonal of <see cref="APortToCollideOn"/>: while the handle is alive, a stranger bind of the
+    /// same number must fail. Bind-read-close (the old helper) would pass this bind and the collision
+    /// arm would then flake when the stranger kept the port.
+    /// </summary>
+    [Fact]
+    public void APortToCollideOn_HoldsThePortSoAStrangerCannotStealIt()
+    {
+        using var held = APortToCollideOn();
+        using var stranger = new TcpListener(IPAddress.Loopback, held.Port);
+        Action steal = () => stranger.Start();
+        steal.Should().Throw<SocketException>(
+            "APortToCollideOn must keep the listener bound; bind-read-close leaves the number free "
+            + "and a stranger can take it before the hosts start.");
+    }
+
+    private sealed class HeldPort : IDisposable
+    {
+        private readonly TcpListener _listener;
+        private bool _disposed;
+
+        public HeldPort(TcpListener listener)
+        {
+            _listener = listener;
+            Port = ((IPEndPoint)listener.LocalEndpoint).Port;
+        }
+
+        public int Port { get; }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+            _listener.Stop();
+        }
     }
 
     private void RunTwoHosts(
         bool skipLock,
         Action<IReadOnlyList<DemoApiHost>, string, StringBuilder> onReleased,
-        int forceBothHostsOntoThisPort = LetKestrelChooseThePort)
+        int forceBothHostsOntoThisPort = LetKestrelChooseThePort,
+        IDisposable? releaseHeldPort = null)
     {
         var directory = NewThrowawayDirectory();
         var databasePath = Path.Combine(directory, "diagrams.db");
@@ -778,6 +823,9 @@ public sealed class DemoDiagramSchemaCrossProcessRaceTests
                 + "a missing file would mean we never started a host and every assertion below "
                 + "would be about nothing. Looked for: " + executable);
 
+            // Remaining 59b85e4d: keep the collision port bound until this instant so a stranger
+            // cannot steal it between pick and start. Both hosts then race the now-free number.
+            releaseHeldPort?.Dispose();
             hosts.Add(StartHost(
                 executable, databasePath, readyDir, goFile, skipLock, forceBothHostsOntoThisPort, output));
             hosts.Add(StartHost(

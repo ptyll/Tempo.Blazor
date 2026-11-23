@@ -63,14 +63,12 @@ public sealed class ReportingF14ChartsE2ETests
         await Assertions.Expect(page.GetByTestId("viewer-deep-link-params"))
             .ToContainTextAsync("Region: EU", new LocatorAssertionsToContainTextOptions { Timeout = 10_000 })
             .ConfigureAwait(false);
-        await page.WaitForFunctionAsync(
-            """
+        await PlaywrightTestBase.WaitForPredicateAsync(page, """
             () => {
                 const canvas = document.querySelector('[data-testid="tm-report-viewer-canvas"]');
                 return canvas && canvas.width > 700 && canvas.height > 500;
             }
-            """,
-            new PageWaitForFunctionOptions { Timeout = 60_000 }).ConfigureAwait(false);
+            """, 60_000).ConfigureAwait(false);
 
         var canvas = page.GetByTestId("tm-report-viewer-canvas");
         await DocumentEditorCanvasVisualAssert.AssertCanvasNonBlankAsync(canvas).ConfigureAwait(false);

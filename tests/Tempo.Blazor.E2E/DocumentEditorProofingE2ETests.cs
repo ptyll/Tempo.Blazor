@@ -29,12 +29,10 @@ public sealed class DocumentEditorProofingE2ETests : WasmTestBase
         // The async provider pass runs after load; both seeded Czech misspellings get squiggles.
         var squiggle = page.GetByTestId("document-canvas-spell-squiggle").First;
         await Assertions.Expect(squiggle).ToBeVisibleAsync(new() { Timeout = 20_000 });
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => Number(document.querySelector('[data-testid="document-canvas-engine-root"]')
                 ?.getAttribute('data-canvas-proofing-count') || '0') === 2
-            """,
-            options: new PageWaitForFunctionOptions { Timeout = 15_000 });
+            """, 15_000);
         await ScreenshotAsync(page, "01-czech-squiggles.png");
 
         // Right-click the first squiggle (smlouvva) and take the LanguageTool suggestion.
@@ -50,24 +48,20 @@ public sealed class DocumentEditorProofingE2ETests : WasmTestBase
         await ScreenshotAsync(page, "02-context-menu-suggestion.png");
 
         await page.GetByTestId("document-context-spell-suggestion").First.ClickAsync();
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => {
                 const mirror = document.querySelector('[data-testid="document-canvas-a11y-mirror"]');
                 return mirror?.textContent?.includes('Tato smlouva byla') === true
                     && mirror?.textContent?.includes('smlouvva') === false;
             }
-            """,
-            options: new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 10_000);
         await ScreenshotAsync(page, "03-after-fix.png");
 
         // The debounced re-check against the live model leaves only the remaining misspelling.
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => Number(document.querySelector('[data-testid="document-canvas-engine-root"]')
                 ?.getAttribute('data-canvas-proofing-count') || '0') === 1
-            """,
-            options: new PageWaitForFunctionOptions { Timeout = 20_000 });
+            """, 20_000);
 
         var probe = await ReadProofingProbeAsync(page);
         Assert.AreEqual(DocumentId, probe.ModelDocumentId);
@@ -93,12 +87,10 @@ public sealed class DocumentEditorProofingE2ETests : WasmTestBase
         // The editor stays fully usable: type into the document and see the text land.
         await page.GetByTestId("document-canvas-page").First.ClickAsync();
         await page.Keyboard.TypeAsync("Ahoj");
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-a11y-mirror"]')
                 ?.textContent?.includes('Ahoj') === true
-            """,
-            options: new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 10_000);
         await ScreenshotAsync(page, "04-fail-open-editing.png");
     }
 
@@ -108,12 +100,10 @@ public sealed class DocumentEditorProofingE2ETests : WasmTestBase
         await page.WaitForSelectorAsync(
             "[data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']",
             new PageWaitForSelectorOptions { Timeout = 45_000 });
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-a11y-mirror"]')
                 ?.textContent?.includes('Dodavatel') === true
-            """,
-            options: new PageWaitForFunctionOptions { Timeout = 30_000 });
+            """, 30_000);
     }
 
     private static Task<ProofingProbe> ReadProofingProbeAsync(IPage page)

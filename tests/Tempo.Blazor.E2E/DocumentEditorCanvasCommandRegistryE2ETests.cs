@@ -41,12 +41,10 @@ public sealed class DocumentEditorCanvasCommandRegistryE2ETests : WasmTestBase
             await superscript.IsDisabledAsync(),
             "superscript musí být enabled — nově registrovaný v command registry (dřív jen callback fallback).");
         await superscript.ClickAsync();
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-engine-root"]')
                 ?.getAttribute('data-canvas-command-superscript-state') === 'active'
-            """,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 10_000);
         await ViewportScreenshotAsync(page, Path.Combine(output, "00-superscript-applied.png"));
 
         await Assertions.Expect(superscript).ToHaveAttributeAsync("aria-pressed", "true", new() { Timeout = 5_000 });
@@ -81,9 +79,7 @@ public sealed class DocumentEditorCanvasCommandRegistryE2ETests : WasmTestBase
 
         // closeHeaderFooter vrátí caret do body a kontextový tab zmizí.
         await page.GetByTestId("document-close-header-footer").ClickAsync();
-        await page.WaitForFunctionAsync(
-            "() => !document.querySelector('[data-testid=\"document-ribbon-tab-header-footer\"]')",
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+        await WaitForPredicateAsync(page, "() => !document.querySelector('[data-testid=\"document-ribbon-tab-header-footer\"]')", 10_000);
         await ViewportScreenshotAsync(page, Path.Combine(output, "01-after-close.png"));
     }
 
@@ -104,15 +100,11 @@ public sealed class DocumentEditorCanvasCommandRegistryE2ETests : WasmTestBase
 
         var pressedBefore = await toggle.GetAttributeAsync("aria-pressed");
         await toggle.ClickAsync();
-        await page.WaitForFunctionAsync(
-            $"() => document.querySelector(\"[data-command='showRuler']\")?.getAttribute('aria-pressed') !== '{pressedBefore}'",
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+        await WaitForPredicateAsync(page, $"() => document.querySelector(\"[data-command='showRuler']\")?.getAttribute('aria-pressed') !== '{pressedBefore}'", 10_000);
         await ViewportScreenshotAsync(page, Path.Combine(output, "00-ruler-toggled.png"));
 
         await toggle.ClickAsync();
-        await page.WaitForFunctionAsync(
-            $"() => document.querySelector(\"[data-command='showRuler']\")?.getAttribute('aria-pressed') === '{pressedBefore}'",
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+        await WaitForPredicateAsync(page, $"() => document.querySelector(\"[data-command='showRuler']\")?.getAttribute('aria-pressed') === '{pressedBefore}'", 10_000);
         await ViewportScreenshotAsync(page, Path.Combine(output, "01-ruler-restored.png"));
     }
 
@@ -246,12 +238,10 @@ public sealed class DocumentEditorCanvasCommandRegistryE2ETests : WasmTestBase
         await page.WaitForSelectorAsync(
             "[data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']",
             new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 120_000 });
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelectorAll('[data-canvas-text-rect]').length >= 1
                 && document.querySelector('[data-testid="document-bold"]')
-            """,
-            new PageWaitForFunctionOptions { Timeout = 60_000 });
+            """, 60_000);
     }
 
     private static async Task SelectCanvasTextRangeAsync(IPage page, string blockId, int startOffset, int endOffset)
@@ -262,12 +252,10 @@ public sealed class DocumentEditorCanvasCommandRegistryE2ETests : WasmTestBase
         await page.Mouse.DownAsync();
         await page.Mouse.MoveAsync((float)end.X, (float)end.Y, new MouseMoveOptions { Steps = 10 });
         await page.Mouse.UpAsync();
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-engine-root"]')
                 ?.getAttribute('data-canvas-selection-collapsed') === 'false'
-            """,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 10_000);
     }
 
     private static Task<CanvasPoint> ReadCanvasPointAsync(IPage page, string blockId, int offset)

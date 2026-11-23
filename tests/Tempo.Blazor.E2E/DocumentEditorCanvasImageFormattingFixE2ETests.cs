@@ -436,15 +436,13 @@ public sealed class DocumentEditorCanvasImageFormattingFixE2ETests : WasmTestBas
         var exec = await ExecuteCanvasCommandAsync(page, "updateImageLayout", new { objectId, rotation = 30 });
         Assert.IsTrue(exec.Changed, $"rotate command must change the model: {exec.Debug}");
 
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => {
                 const root = document.querySelector('[data-testid="document-canvas-engine-root"][data-page-surface-strategy="canvas-per-visible-page"]')
                     || document.querySelector('[data-testid="document-canvas-engine-root"]');
                 return Math.abs(Number(root?.getAttribute('data-canvas-object-rotation') || '0') - 30) < 0.6;
             }
-            """,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 10_000);
         var overlayRotation = await ReadOverlayRotationAsync(page);
         await ScreenshotAsync(page, Path.Combine(output, "01-rotated.png"));
 

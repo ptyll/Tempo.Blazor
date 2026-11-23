@@ -105,9 +105,7 @@ public sealed class DocumentEditorCanvasTabStopsE2ETests : WasmTestBase
             .ToContainTextAsync("Saved", new() { Timeout = 10_000 });
 
         await NavigateWithinBlazorAsync(page, "/canvas-engine-host?documentId=phase-5-canvas-render");
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'",
-            options: new PageWaitForFunctionOptions { Timeout = 20_000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'", 20_000);
         await NavigateWithinBlazorAsync(page, $"/canvas-engine-host?documentId={PhaseE2DocumentId}&showToolbar=true&preferLocalDraft=false");
         await WaitForPhaseE2ReadyAsync(page);
         var reloadedProbe = await ReadTargetTabStopProbeFromModelAsync(page);
@@ -158,15 +156,13 @@ public sealed class DocumentEditorCanvasTabStopsE2ETests : WasmTestBase
     }
 
     private static Task WaitForPhaseE2ReadyAsync(IPage page)
-        => page.WaitForFunctionAsync(
-            """
+        => WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-engine-host"][data-canvas-engine-ready="true"]')
                 && document.querySelector('[data-testid="document-save"]')
                 && document.querySelector('[data-testid="document-canvas-ruler-tab-picker"]')
                 && Number(document.querySelector('[data-testid="document-canvas-engine-host"]')?.getAttribute('data-canvas-source-block-count') || '0') >= 4
                 && document.querySelectorAll('[data-canvas-text-rect][data-block-id="canvas-e2-tabstops-decimal"]').length >= 1
-            """,
-            options: new PageWaitForFunctionOptions { Timeout = 30_000 });
+            """, 30_000);
 
     private static Task NavigateWithinBlazorAsync(IPage page, string url)
         => page.EvaluateAsync(

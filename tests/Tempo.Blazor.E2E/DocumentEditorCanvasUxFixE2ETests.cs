@@ -512,9 +512,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
 
         // Close header/footer → back to body, tab hidden.
         await CloseHeaderFooterViaInteropAsync(page);
-        await page.WaitForFunctionAsync(
-            "() => !document.querySelector('[data-testid=\"document-ribbon-tab-header-footer\"]')",
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+        await WaitForPredicateAsync(page, "() => !document.querySelector('[data-testid=\"document-ribbon-tab-header-footer\"]')", 10_000);
         var regionAfterClose = await ReadSelectionRegionAsync(page);
 
         await File.WriteAllTextAsync(
@@ -691,22 +689,18 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
         await page.WaitForTimeoutAsync(300);
         try
         {
-            await page.WaitForFunctionAsync(
-                """
+            await WaitForPredicateAsync(page, """
                 () => document.querySelector('[data-testid="document-canvas-engine-root"]')
                     ?.getAttribute('data-canvas-selection-in-table') === 'true'
-                """,
-                new PageWaitForFunctionOptions { Timeout = 15_000 });
+                """, 15_000);
         }
         catch (PlaywrightException)
         {
             await SelectCanvasTextRangeViaInteropAsync(page, cellBlockId, 0, 6);
-            await page.WaitForFunctionAsync(
-                """
+            await WaitForPredicateAsync(page, """
                 () => document.querySelector('[data-testid="document-canvas-engine-root"]')
                     ?.getAttribute('data-canvas-selection-in-table') === 'true'
-                """,
-                new PageWaitForFunctionOptions { Timeout = 15_000 });
+                """, 15_000);
         }
 
         var presence = await SampleMiniToolbarPresenceAsync(page);
@@ -820,9 +814,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
         }
         else
         {
-            await page.WaitForFunctionAsync(
-                "() => document.querySelectorAll('[data-canvas-text-rect]').length >= 1",
-                new PageWaitForFunctionOptions { Timeout = 60_000 });
+            await WaitForPredicateAsync(page, "() => document.querySelectorAll('[data-canvas-text-rect]').length >= 1", 60_000);
         }
     }
 
@@ -1135,12 +1127,10 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
     }
 
     private static Task WaitForCollapsedCaretAsync(IPage page)
-        => page.WaitForFunctionAsync(
-            """
+        => WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-engine-root"]')
                 ?.getAttribute('data-canvas-selection-collapsed') === 'true'
-            """,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 10_000);
 
     private static Task<CanvasPoint> ReadCanvasPointAsync(IPage page, string blockId, int offset)
         => page.EvaluateAsync<CanvasPoint>("""

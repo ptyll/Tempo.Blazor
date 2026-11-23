@@ -511,9 +511,7 @@ public class NotionSlashMenuE2ETests : WasmTestBase
         await page.Keyboard.TypeAsync("[x] ");
         var todo = page.Locator("[data-block-type='TodoItem'] .tm-notion-todo").Last;
         await todo.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
-        await page.WaitForFunctionAsync(
-            "() => Array.from(document.querySelectorAll('[data-block-type=\"TodoItem\"] .tm-notion-todo')).at(-1)?.classList.contains('tm-notion-todo--checked') === true",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => Array.from(document.querySelectorAll('[data-block-type=\"TodoItem\"] .tm-notion-todo')).at(-1)?.classList.contains('tm-notion-todo--checked') === true", 10000);
         await todo.Locator(".tm-notion-todo__text").First.ClickAsync();
         await page.Keyboard.TypeAsync("Checked shortcut baseline");
         await Assertions.Expect(todo.Locator(".tm-notion-todo__text").First).ToContainTextAsync("Checked shortcut baseline");

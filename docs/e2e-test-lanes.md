@@ -404,6 +404,11 @@ configurable:
   - `WaitForAppReadyAsync` and `RegisterContext` are **private** (the `[Obsolete]` migration warnings are gone; CS0618 = 0).
     Specs never call them. The shared Chromium instance (`Browser`) is `private static`; specs go through
     `CreateContextAsync` / `OpenAppPageAsync`.
+  - `WaitForPredicateAsync(page, expression, timeoutMs?)` / `WaitForPredicateAsync(page, expression, arg, timeoutMs?)`
+    polls through `EvaluateAsync`, so an `async` page predicate is actually awaited (Playwright's
+    `WaitForFunctionAsync` treats a Promise object as already-truthy) and a `PageWaitForFunctionOptions`
+    timeout cannot be bound as `arg` (the two-argument overload). Guard: R8 in
+    `ReadinessInfrastructureTests` (async predicate or options-as-arg = 0).
 - **Ratchet.** `ReadinessInfrastructureTests.NoSpecOpensItsOwnContextOrBootsPastTheCentralRecovery_RatchetedByKnownOffenders`
   scans every `*.cs` of the E2E project (comments stripped; the `PlaywrightTestBase.cs` / `PlaywrightTestBase.<Part>.cs` partials and the guard itself excluded) for
   `.NewContextAsync(`, `.GotoAsync(...); await WaitForAppReadyAsync(` (and the `ReloadAsync` twin),

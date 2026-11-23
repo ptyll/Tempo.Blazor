@@ -30,13 +30,10 @@ public sealed class DocumentEditorTokenMenuE2ETests : WasmTestBase
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1000);
         await GotoAppReadyAsync(page, $"{BaseUrl}/canvas-engine-host?documentId={DocumentId}&showToolbar=true", WaitUntilState.DOMContentLoaded);
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-engine-host"][data-canvas-engine-ready="true"]')
                 && document.querySelectorAll('[data-canvas-text-rect][data-block-id="canvas-history-text"]').length >= 1
-            """,
-            null,
-            new PageWaitForFunctionOptions { Timeout = 30_000 });
+            """, 30_000);
 
         var output = CreateOutputDirectory();
         var panelPath = Path.Combine(output, "00-token-panel-open.png");
@@ -67,8 +64,7 @@ public sealed class DocumentEditorTokenMenuE2ETests : WasmTestBase
 
         try
         {
-            await page.WaitForFunctionAsync(
-                """
+            await WaitForPredicateAsync(page, """
                 async () => {
                     const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                     const module = await import('/_content/Tempo.Blazor.DocumentEditor/js/document-editor-canvas/interop.mjs');
@@ -76,9 +72,7 @@ public sealed class DocumentEditorTokenMenuE2ETests : WasmTestBase
                     const block = (model.body?.blocks || []).find(candidate => String(candidate?.id || '') === 'canvas-history-text');
                     return (block?.content?.runs || []).some(run => String(run?.type || '') === 'token' && run?.token?.key === 'client.name');
                 }
-                """,
-                null,
-                new PageWaitForFunctionOptions { Timeout = 15_000 });
+                """, 15_000);
         }
         catch (TimeoutException)
         {
@@ -99,34 +93,21 @@ public sealed class DocumentEditorTokenMenuE2ETests : WasmTestBase
             Assert.Fail($"Token run did not appear in the model. Diagnostic: {diagnostic}");
         }
         await Assertions.Expect(page.GetByTestId("document-token-insert-panel")).Not.ToBeVisibleAsync(new() { Timeout = 10_000 });
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"document-canvas-a11y-mirror\"]')?.textContent?.includes('Client name') === true",
-            null,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-canvas-a11y-mirror\"]')?.textContent?.includes('Client name') === true", 10_000);
         await page.GetByTestId("document-editor-demo").ScreenshotAsync(new LocatorScreenshotOptions { Path = insertedPath, Type = ScreenshotType.Png });
 
         // Edge case: the insert is one undoable transaction.
         await page.GetByTestId("document-undo").ClickAsync();
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"document-canvas-a11y-mirror\"]')?.textContent?.includes('Client name') !== true",
-            null,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-canvas-a11y-mirror\"]')?.textContent?.includes('Client name') !== true", 10_000);
         await page.GetByTestId("document-redo").ClickAsync();
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"document-canvas-a11y-mirror\"]')?.textContent?.includes('Client name') === true",
-            null,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-canvas-a11y-mirror\"]')?.textContent?.includes('Client name') === true", 10_000);
 
         await page.GetByTestId("document-save").ClickAsync();
         await Assertions.Expect(page.GetByTestId("document-save-message")).ToContainTextAsync("Saved", new() { Timeout = 10_000 });
         await NavigateWithinBlazorAsync(page, "/canvas-engine-host?documentId=phase-5-canvas-render");
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'",
-            null,
-            new PageWaitForFunctionOptions { Timeout = 20_000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'", 20_000);
         await NavigateWithinBlazorAsync(page, $"/canvas-engine-host?documentId={DocumentId}&showToolbar=true");
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             async () => {
                 if (!document.querySelector('[data-testid="document-canvas-engine-host"][data-canvas-engine-ready="true"]')) return false;
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
@@ -135,13 +116,8 @@ public sealed class DocumentEditorTokenMenuE2ETests : WasmTestBase
                 const block = (model.body?.blocks || []).find(candidate => String(candidate?.id || '') === 'canvas-history-text');
                 return (block?.content?.runs || []).some(run => String(run?.type || '') === 'token' && run?.token?.key === 'client.name');
             }
-            """,
-            null,
-            new PageWaitForFunctionOptions { Timeout = 30_000 });
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"document-canvas-a11y-mirror\"]')?.textContent?.includes('Client name') === true",
-            null,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 30_000);
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-canvas-a11y-mirror\"]')?.textContent?.includes('Client name') === true", 10_000);
         await page.GetByTestId("document-editor-demo").ScreenshotAsync(new LocatorScreenshotOptions { Path = reloadPath, Type = ScreenshotType.Png });
 
         var manifestPath = Path.Combine(output, "manifest.json");

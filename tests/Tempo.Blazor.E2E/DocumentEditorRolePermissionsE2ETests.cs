@@ -59,22 +59,18 @@ public sealed class DocumentEditorRolePermissionsE2ETests : WasmTestBase
         var page = await OpenAsync("role=suggestonly");
 
         // Track changes is forced on before any interaction.
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-engine-root"]')
                 ?.getAttribute('data-canvas-track-changes-enabled') === 'true'
-            """,
-            options: new PageWaitForFunctionOptions { Timeout = 15_000 });
+            """, 15_000);
 
         var revisionsBefore = await ReadRevisionCountAsync(page);
         await page.GetByTestId("document-canvas-page").First.ClickAsync();
         await page.Keyboard.TypeAsync("Návrh");
-        await page.WaitForFunctionAsync(
-            $$"""
+        await WaitForPredicateAsync(page, $$"""
             () => Number(document.querySelector('[data-testid="document-canvas-a11y-mirror"]')
                 ?.getAttribute('data-canvas-a11y-revision-count') || '0') > {{revisionsBefore}}
-            """,
-            options: new PageWaitForFunctionOptions { Timeout = 15_000 });
+            """, 15_000);
 
         // The Review-tab toggle is locked: it stays pressed after a click.
         await page.GetByTestId("document-ribbon-tab-review").ClickAsync();
@@ -119,12 +115,10 @@ public sealed class DocumentEditorRolePermissionsE2ETests : WasmTestBase
         await page.WaitForSelectorAsync(
             "[data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']",
             new PageWaitForSelectorOptions { Timeout = 45_000 });
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-a11y-mirror"]')
                 ?.textContent?.includes('Smluvní strany') === true
-            """,
-            options: new PageWaitForFunctionOptions { Timeout = 30_000 });
+            """, 30_000);
         return page;
     }
 

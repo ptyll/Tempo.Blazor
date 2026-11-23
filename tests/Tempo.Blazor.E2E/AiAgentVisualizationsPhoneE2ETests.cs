@@ -29,8 +29,8 @@ public sealed class AiAgentVisualizationsPhoneE2ETests : AiAgentVisualizationsPa
     private const string Radar = "[data-testid='ai-viz-conflict']";
     private const string Overlay = "[data-testid='ai-viz-presence']";
 
-    private static async Task WaitForAsync(IPage page, string script, int timeoutMs = 20000)
-        => await page.WaitForFunctionAsync(script, new PageWaitForFunctionOptions { Timeout = timeoutMs });
+    private static Task WaitForAsync(IPage page, string script, int timeoutMs = 20000)
+        => WaitForPredicateAsync(page, script, timeoutMs);
 
     // ── the phone presentation of the conflict grid ──────────────────────────
 

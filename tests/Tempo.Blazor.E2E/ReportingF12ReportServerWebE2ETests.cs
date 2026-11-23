@@ -62,18 +62,14 @@ public sealed class ReportingF12ReportServerWebE2ETests
         await ScreenshotAsync(page, screenshotDirectory, "03-explorer-list.png").ConfigureAwait(false);
 
         await page.GetByTestId("tm-report-open-sales-register").ClickAsync().ConfigureAwait(false);
-        await page.WaitForFunctionAsync(
-            "() => location.pathname === '/reports/finance/sales-register' && location.search.includes('Region=EU')",
-            new PageWaitForFunctionOptions { Timeout = 60_000 }).ConfigureAwait(false);
+        await PlaywrightTestBase.WaitForPredicateAsync(page, "() => location.pathname === '/reports/finance/sales-register' && location.search.includes('Region=EU')", 60_000).ConfigureAwait(false);
         await page.GetByTestId("f12-viewer-page").WaitForAsync(new LocatorWaitForOptions { Timeout = 60_000 }).ConfigureAwait(false);
-        await page.WaitForFunctionAsync(
-            """
+        await PlaywrightTestBase.WaitForPredicateAsync(page, """
             () => {
                 const canvas = document.querySelector('[data-testid="tm-report-viewer-canvas"]');
                 return canvas && canvas.width > 300 && canvas.height > 150;
             }
-            """,
-            new PageWaitForFunctionOptions { Timeout = 60_000 }).ConfigureAwait(false);
+            """, 60_000).ConfigureAwait(false);
         await DocumentEditorCanvasVisualAssert.AssertCanvasNonBlankAsync(page.GetByTestId("tm-report-viewer-canvas")).ConfigureAwait(false);
         await ScreenshotAsync(page, screenshotDirectory, "04-viewer-page.png").ConfigureAwait(false);
 

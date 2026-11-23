@@ -136,9 +136,7 @@ public class DocumentLibraryNotionE2ETests : NotionE2ETestBase
         resp.EnsureSuccessStatusCode();
 
         // The block in this (unreloaded) page should pick up the new preview via SignalR.
-        await page.WaitForFunctionAsync(
-            $"() => document.querySelector('.tm-notion-wireframe-block__svg-container')?.innerHTML.includes('{marker}')",
-            new PageWaitForFunctionOptions { Timeout = 15000 });
+        await WaitForPredicateAsync(page, $"() => document.querySelector('.tm-notion-wireframe-block__svg-container')?.innerHTML.includes('{marker}')", 15000);
 
         await SaveScreenshotAsync(page, "04-live-refreshed-block.png", "phase4");
     }
@@ -189,9 +187,7 @@ public class DocumentLibraryNotionE2ETests : NotionE2ETestBase
 
         // The block (still on the same, un-reloaded page) refreshes its preview live via SignalR.
         var expected = beforeCount + 1;
-        await page.WaitForFunctionAsync(
-            $"() => document.querySelector('.tm-notion-wireframe-block__svg-container')?.innerHTML.includes('data-elements=\"{expected}\"')",
-            new PageWaitForFunctionOptions { Timeout = 15000 });
+        await WaitForPredicateAsync(page, $"() => document.querySelector('.tm-notion-wireframe-block__svg-container')?.innerHTML.includes('data-elements=\"{expected}\"')", 15000);
 
         await SaveScreenshotAsync(page, "06-mcp-after.png", "phase4");
     }

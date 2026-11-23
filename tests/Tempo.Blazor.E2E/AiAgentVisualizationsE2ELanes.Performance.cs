@@ -62,9 +62,7 @@ public sealed class AiAgentVisualizationsServerPerformanceE2ETests : AiAgentVisu
         // The page is still interactive mid-stream: the speed switch answers over the circuit.
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         await page.Locator("[data-testid='ai-viz-speed'] [data-testid='segmented-option']").Last.ClickAsync();
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector(\"[data-testid='ai-viz-rate']\")?.textContent?.trim() === '20'",
-            new PageWaitForFunctionOptions { Timeout = 5000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector(\"[data-testid='ai-viz-rate']\")?.textContent?.trim() === '20'", 5000);
         stopwatch.Stop();
         Assert.IsTrue(stopwatch.ElapsedMilliseconds < 3000,
             $"a speed change reaches the Server run within three seconds mid-stream ({stopwatch.ElapsedMilliseconds} ms)");
@@ -72,9 +70,7 @@ public sealed class AiAgentVisualizationsServerPerformanceE2ETests : AiAgentVisu
         // And the page stops when asked: a pause is not queued behind the stream.
         stopwatch.Restart();
         await page.Locator("[data-testid='ai-viz-play']").ClickAsync();
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector(\"[data-testid='ai-viz-state']\")?.textContent?.trim() === 'Paused'",
-            new PageWaitForFunctionOptions { Timeout = 5000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector(\"[data-testid='ai-viz-state']\")?.textContent?.trim() === 'Paused'", 5000);
         stopwatch.Stop();
         Assert.IsTrue(stopwatch.ElapsedMilliseconds < 3000,
             $"the pause is answered within three seconds on the Server host ({stopwatch.ElapsedMilliseconds} ms)");
@@ -127,9 +123,7 @@ public abstract class AiAgentVisualizationsPerformanceE2EBase : AiAgentVisualiza
         // The UI stays live: the pause button reacts and the read-out stops.
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         await page.Locator("[data-testid='ai-viz-play']").ClickAsync();
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector(\"[data-testid='ai-viz-state']\")?.textContent?.trim() === 'Paused'",
-            new PageWaitForFunctionOptions { Timeout = 5000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector(\"[data-testid='ai-viz-state']\")?.textContent?.trim() === 'Paused'", 5000);
         stopwatch.Stop();
         Assert.IsTrue(stopwatch.ElapsedMilliseconds < 3000,
             $"the page answers a press within three seconds after two minutes of streaming ({stopwatch.ElapsedMilliseconds} ms)");

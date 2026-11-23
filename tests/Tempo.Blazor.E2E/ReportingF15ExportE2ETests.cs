@@ -55,14 +55,12 @@ public sealed class ReportingF15ExportE2ETests
             "url => Blazor.navigateTo(url)",
             "/reports/executive/sales-dashboard?Region=EU&MinimumTotal=0&IncludeClosed=true").ConfigureAwait(false);
         await page.GetByTestId("f12-viewer-page").WaitForAsync(new LocatorWaitForOptions { Timeout = 60_000 }).ConfigureAwait(false);
-        await page.WaitForFunctionAsync(
-            """
+        await PlaywrightTestBase.WaitForPredicateAsync(page, """
             () => {
                 const canvas = document.querySelector('[data-testid="tm-report-viewer-canvas"]');
                 return canvas && canvas.width > 700 && canvas.height > 500;
             }
-            """,
-            new PageWaitForFunctionOptions { Timeout = 60_000 }).ConfigureAwait(false);
+            """, 60_000).ConfigureAwait(false);
 
         var csvDownload = await DownloadFromMenuAsync(page, "tm-report-export-csv").ConfigureAwait(false);
         var csvPath = await csvDownload.PathAsync().ConfigureAwait(false)

@@ -276,54 +276,77 @@ window.tmSpreadsheetBenchmark = (() => {
         };
     };
 
-    const measureWheelScroll = async (grid, durationMs) => {
+    const defaultWheelEventCount = 12;
+    const defaultDragMoveCount = 12;
+
+    const resolveWheelEventCount = settings => {
+        const requested = Number(settings?.wheelEventCount);
+        if (Number.isFinite(requested) && requested > 0) return Math.floor(requested);
+        return defaultWheelEventCount;
+    };
+
+    const resolveDragMoveCount = settings => {
+        const requested = Number(settings?.dragMoveCount);
+        if (Number.isFinite(requested) && requested > 0) return Math.floor(requested);
+        return defaultDragMoveCount;
+    };
+
+    // The E2E per-event contract (remaining 7f95b6e6) is a ratio, not a duration. A 350 ms
+    // rAF loop on a loaded runner often produced 1 wheel event, which the old
+    // `events <= 1 || frames < events` assertion skipped. Classify requires enough
+    // events that a 1:1 Blazor-frame regression cannot hide behind a single overlapping commit.
+    const classifyInteractionBudget = (events, frames) => {
+        const eventCount = Number(events) || 0;
+        const frameCount = Number(frames) || 0;
+        if (eventCount < 8) return { ok: false, reason: "precondition" };
+        if (!(frameCount < eventCount / 2)) return { ok: false, reason: "ratio" };
+        return { ok: true, reason: "ok" };
+    };
+
+    const dispatchSyntheticWheel = grid => {
+        const defaultAllowed = grid.dispatchEvent(new WheelEvent("wheel", {
+            deltaY: 96,
+            deltaX: 24,
+            bubbles: true,
+            cancelable: true
+        }));
+
+        if (defaultAllowed) {
+            const topBefore = grid.scrollTop;
+            const leftBefore = grid.scrollLeft;
+            grid.scrollTop = Math.min(grid.scrollHeight - grid.clientHeight, grid.scrollTop + 96);
+            grid.scrollLeft = Math.min(grid.scrollWidth - grid.clientWidth, grid.scrollLeft + 24);
+            if (grid.scrollTop !== topBefore || grid.scrollLeft !== leftBefore) {
+                grid.dispatchEvent(new Event("scroll", { bubbles: true }));
+            }
+        }
+    };
+
+    const measureWheelScroll = async (grid, options) => {
         if (!grid) {
             return { fps: 0, frames: 0, durationMs: 0, debug: diffDebugMetrics({}, {}) };
         }
 
+        const settings = typeof options === "number" ? { wheelDurationMs: options } : (options || {});
+        const eventCount = resolveWheelEventCount(settings);
         await resetGridViewport(grid);
         const before = debugMetrics(grid);
         const start = performance.now();
-        let frames = 0;
         let maxFrameMs = 0;
         let previous = start;
-        await new Promise(resolve => {
-            const step = now => {
-                frames++;
-                maxFrameMs = Math.max(maxFrameMs, now - previous);
-                previous = now;
-
-                const defaultAllowed = grid.dispatchEvent(new WheelEvent("wheel", {
-                    deltaY: 96,
-                    deltaX: 24,
-                    bubbles: true,
-                    cancelable: true
-                }));
-
-                if (defaultAllowed) {
-                    const topBefore = grid.scrollTop;
-                    const leftBefore = grid.scrollLeft;
-                    grid.scrollTop = Math.min(grid.scrollHeight - grid.clientHeight, grid.scrollTop + 96);
-                    grid.scrollLeft = Math.min(grid.scrollWidth - grid.clientWidth, grid.scrollLeft + 24);
-                    if (grid.scrollTop !== topBefore || grid.scrollLeft !== leftBefore) {
-                        grid.dispatchEvent(new Event("scroll", { bubbles: true }));
-                    }
-                }
-
-                if (now - start < durationMs) {
-                    requestAnimationFrame(step);
-                } else {
-                    resolve();
-                }
-            };
-            requestAnimationFrame(step);
-        });
+        for (let index = 0; index < eventCount; index++) {
+            const now = performance.now();
+            maxFrameMs = Math.max(maxFrameMs, now - previous);
+            previous = now;
+            dispatchSyntheticWheel(grid);
+            await frame();
+        }
 
         await settleInteraction();
         const totalDurationMs = performance.now() - start;
         return {
-            fps: totalDurationMs > 0 ? frames * 1000 / totalDurationMs : 0,
-            frames,
+            fps: totalDurationMs > 0 ? eventCount * 1000 / totalDurationMs : 0,
+            frames: eventCount,
             durationMs: totalDurationMs,
             maxFrameMs,
             scrollTop: grid.scrollTop,
@@ -333,11 +356,13 @@ window.tmSpreadsheetBenchmark = (() => {
         };
     };
 
-    const measureDragAutoscroll = async (grid, durationMs) => {
+    const measureDragAutoscroll = async (grid, options) => {
         if (!grid) {
             return { durationMs: 0, dragAutoscrollFrames: 0, debug: diffDebugMetrics({}, {}) };
         }
 
+        const settings = typeof options === "number" ? {} : (options || {});
+        const moves = resolveDragMoveCount(settings);
         await resetGridViewport(grid);
         const rect = grid.getBoundingClientRect();
         const startX = Math.min(rect.right - 80, rect.left + 140);
@@ -367,7 +392,7 @@ window.tmSpreadsheetBenchmark = (() => {
             cancelable: true
         }));
 
-        while (performance.now() - started < durationMs) {
+        for (let index = 0; index < moves; index++) {
             grid.dispatchEvent(new PointerCtor("pointermove", {
                 pointerId,
                 pointerType: "mouse",
@@ -664,8 +689,8 @@ window.tmSpreadsheetBenchmark = (() => {
             const stableFrameMs = await waitForStableFrame();
             const scroll = await measureScroll(grid, settings.scrollDurationMs || 1200);
             const keyboard = await measureKeyboardScenarios(grid, settings);
-            const wheel = await measureWheelScroll(grid, settings.wheelDurationMs || 900);
-            const drag = await measureDragAutoscroll(grid, settings.dragAutoscrollDurationMs || 700);
+            const wheel = await measureWheelScroll(grid, settings);
+            const drag = await measureDragAutoscroll(grid, settings);
             const columnResize = await measureResizeDrag(grid, "column");
             const rowResize = await measureResizeDrag(grid, "row");
             const paste = await measureCanvasPaste(grid, settings.pasteRows || 100, settings.pasteColumns || 20);
@@ -910,6 +935,13 @@ window.tmSpreadsheetBenchmark = (() => {
                 lastHeaderLayerMs: Number(after.lastHeaderLayerMs || 0),
                 lastSelectionLayerMs: Number(after.lastSelectionLayerMs || 0)
             };
+        },
+        _internals: {
+            resolveWheelEventCount,
+            resolveDragMoveCount,
+            classifyInteractionBudget,
+            measureWheelScroll,
+            measureDragAutoscroll
         }
     };
 })();

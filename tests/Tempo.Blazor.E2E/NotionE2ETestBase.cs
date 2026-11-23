@@ -676,9 +676,7 @@ public abstract class NotionE2ETestBase : WasmTestBase
 
     protected static async Task SelectLocatorContentsAsync(IPage page, ILocator locator)
     {
-        await page.WaitForFunctionAsync(
-            "() => window.tmNotionEditor?.hasSelectionWatcher?.(document.querySelector('.tm-notion-page')) === true",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => window.tmNotionEditor?.hasSelectionWatcher?.(document.querySelector('.tm-notion-page')) === true", 10000);
         await locator.EvaluateAsync("""
             el => {
                 const host = el.closest('[contenteditable="true"]');

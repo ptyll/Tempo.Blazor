@@ -45,21 +45,15 @@ public sealed class DocumentEditorCanvasHyphenationAdvancedTablesE2ETests : Wasm
 
         var sort = await ExecuteCanvasCommandAsync(page, "sortTable", new { cellId = "canvas-e12-table-total-score", columnIndex = 2, direction = "descending" });
         Assert.IsTrue(sort.Handled && sort.Changed, sort.Debug);
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"document-canvas-engine-root\"]')?.getAttribute('data-canvas-command-last') === 'sorttable'",
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-canvas-engine-root\"]')?.getAttribute('data-canvas-command-last') === 'sorttable'", 10_000);
 
         var formula = await ExecuteCanvasCommandAsync(page, "setTableFormula", new { cellId = "canvas-e12-table-total-score", columnIndex = 2, formula = "SUM" });
         Assert.IsTrue(formula.Handled && formula.Changed, formula.Debug);
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"document-canvas-a11y-mirror\"]')?.textContent?.includes('462') === true",
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-canvas-a11y-mirror\"]')?.textContent?.includes('462') === true", 10_000);
 
         var undo = await ExecuteCanvasCommandAsync(page, "undo", new { });
         Assert.IsTrue(undo.Handled && undo.Changed, undo.Debug);
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"document-canvas-engine-root\"]')?.getAttribute('data-canvas-command-last') === 'undo'",
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-canvas-engine-root\"]')?.getAttribute('data-canvas-command-last') === 'undo'", 10_000);
 
         formula = await ExecuteCanvasCommandAsync(page, "setTableFormula", new { cellId = "canvas-e12-table-total-score", columnIndex = 2, formula = "SUM" });
         Assert.IsTrue(formula.Handled && formula.Changed, formula.Debug);
@@ -67,9 +61,7 @@ public sealed class DocumentEditorCanvasHyphenationAdvancedTablesE2ETests : Wasm
         await page.GetByTestId("document-save").ClickAsync();
         await WaitForSaveBoundaryAsync(page);
         await NavigateWithinBlazorAsync(page, "/canvas-engine-host?documentId=phase-5-canvas-render");
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'",
-            new PageWaitForFunctionOptions { Timeout = 20_000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'", 20_000);
         await NavigateWithinBlazorAsync(page, $"/canvas-engine-host?documentId={PhaseE12DocumentId}&showToolbar=true");
         await WaitForPhaseE12ReadyAsync(page);
 
@@ -122,8 +114,7 @@ public sealed class DocumentEditorCanvasHyphenationAdvancedTablesE2ETests : Wasm
     {
         try
         {
-            await page.WaitForFunctionAsync(
-                """
+            await WaitForPredicateAsync(page, """
                 () => {
                     const hostReady = document.querySelector('[data-testid="document-canvas-engine-host"]')?.getAttribute('data-canvas-engine-ready') === 'true';
                     const pages = document.querySelectorAll('[data-testid="document-canvas-page"]');
@@ -133,8 +124,7 @@ public sealed class DocumentEditorCanvasHyphenationAdvancedTablesE2ETests : Wasm
                         && document.querySelector('[data-canvas-table-cell][data-repeated-header="true"]')
                         && document.querySelector('[data-canvas-table-cell][data-banded-row="true"]');
                 }
-                """,
-                new PageWaitForFunctionOptions { Timeout = 30_000 });
+                """, 30_000);
         }
         catch (TimeoutException ex)
         {
@@ -233,8 +223,7 @@ public sealed class DocumentEditorCanvasHyphenationAdvancedTablesE2ETests : Wasm
     {
         try
         {
-            await page.WaitForFunctionAsync(
-                """
+            await WaitForPredicateAsync(page, """
                 () => {
                     const saveMessage = document.querySelector('[data-testid="document-save-message"]')?.textContent || '';
                     const lastSaved = document.querySelector('[data-testid="document-last-saved"]')?.textContent || '';
@@ -244,8 +233,7 @@ public sealed class DocumentEditorCanvasHyphenationAdvancedTablesE2ETests : Wasm
                         && pending.trim().length === 0
                         && (/Saved|Autosaved/i.test(saveMessage) || /saved/i.test(lastSaved));
                 }
-                """,
-                new PageWaitForFunctionOptions { Timeout = 10_000 });
+                """, 10_000);
         }
         catch (TimeoutException ex)
         {

@@ -45,7 +45,7 @@ public sealed class ReportingF6InvoicePaginationE2ETests
             WaitUntil = WaitUntilState.Load,
             Timeout = 60_000,
         });
-        await page.WaitForFunctionAsync("() => window.__tempoReportingHarness?.ready === true", new PageWaitForFunctionOptions { Timeout = 30_000 });
+        await PlaywrightTestBase.WaitForPredicateAsync(page, "() => window.__tempoReportingHarness?.ready === true", 30_000);
 
         var screenshotDirectory = CreateScreenshotDirectory();
         var pageResults = await RenderInvoicePagesAsync(page, snapshot, screenshotDirectory);

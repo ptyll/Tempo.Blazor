@@ -171,11 +171,9 @@ public sealed class DocumentEditorCanvasAccessibilityE2ETests : WasmTestBase
             """
             () => document.querySelector('[data-testid="document-canvas-hidden-input"]')?.focus()
             """);
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-command-palette-dialog"]')?.contains(document.activeElement) === true
-            """,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 10_000);
         Assert.IsTrue(await ActiveElementIsInsideAsync(page, "document-command-palette-dialog"), await ActiveElementDebugAsync(page));
 
         var output = CreateOutputDirectory(nameof(Phase21_CanvasFocusManagementAndDialogTrap_AreKeyboardReady));
@@ -218,9 +216,7 @@ public sealed class DocumentEditorCanvasAccessibilityE2ETests : WasmTestBase
             "documentId => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === documentId",
             documentId,
             new PageWaitForFunctionOptions { Timeout = 30_000 });
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"document-canvas-a11y-mirror\"]')?.children.length > 0",
-            new PageWaitForFunctionOptions { Timeout = 30_000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-canvas-a11y-mirror\"]')?.children.length > 0", 30_000);
     }
 
     private static async Task ExecuteCanvasCommandAsync(IPage page, string commandId, object argument)

@@ -79,9 +79,7 @@ public abstract partial class AiAgentsE2EBase
 
         await FanOutTiles(page).First.FocusAsync();
         await page.Keyboard.PressAsync("Control+End");
-        await page.WaitForFunctionAsync(
-            "() => document.activeElement?.dataset.taskId === 'fixture-200'",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => document.activeElement?.dataset.taskId === 'fixture-200'", 10000);
         Assert.IsTrue(await FanOutTileCountAsync(page) < 200,
             "jumping to the end of a 200-unit fan-out still mounts a window, not the whole list");
 

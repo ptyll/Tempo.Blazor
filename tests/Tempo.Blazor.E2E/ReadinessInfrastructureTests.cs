@@ -282,6 +282,201 @@ public class ReadinessInfrastructureTests
             + string.Join("\n  ", offenders) + "\n  " + string.Join(" | ", ZeroRules.Select(r => $"{r.Id}: {r.Hint}")));
     }
 
+    /// <summary>
+    /// R8 (remaining 7f95b6e6): a direct <c>WaitForFunctionAsync</c> must not take an <c>async</c> predicate
+    /// (a Promise is truthy, so the wait never observes the resolved boolean) and must not pass
+    /// <see cref="Microsoft.Playwright.PageWaitForFunctionOptions"/> as the second argument (Playwright .NET
+    /// binds that object as <c>arg</c> and then uses the default 30 s timeout). Target 0; use
+    /// <c>WaitForPredicateAsync</c>.
+    /// </summary>
+    [TestMethod]
+    public void WaitForFunctionAsync_NeverTakesAnAsyncPredicateOrOptionsAsArg()
+    {
+        var root = FindE2EDirectory();
+        var offenders = new List<string>();
+        foreach (var (relative, text) in EnumerateScannedSources(root))
+        {
+            var asyncHits = 0;
+            var optionsAsArgHits = 0;
+            foreach (var args in EnumerateWaitForFunctionArgs(text))
+            {
+                if (args.Count >= 1 && FirstArgumentLooksLikeAsyncPredicate(args[0]))
+                {
+                    asyncHits++;
+                }
+
+                if (args.Count == 2 && args[1].Contains("new PageWaitForFunctionOptions", StringComparison.Ordinal))
+                {
+                    optionsAsArgHits++;
+                }
+            }
+
+            if (asyncHits > 0)
+            {
+                offenders.Add($"{relative}: R8 async WaitForFunction predicate x{asyncHits}");
+            }
+
+            if (optionsAsArgHits > 0)
+            {
+                offenders.Add($"{relative}: R8 WaitForFunction options bound as arg x{optionsAsArgHits}");
+            }
+        }
+
+        Assert.AreEqual(0, offenders.Count,
+            "R8: WaitForFunctionAsync must not take an async predicate or bind PageWaitForFunctionOptions as arg; convert to WaitForPredicateAsync:\n  "
+            + string.Join("\n  ", offenders));
+    }
+
+    private static IEnumerable<IReadOnlyList<string>> EnumerateWaitForFunctionArgs(string text)
+    {
+        const string needle = "WaitForFunctionAsync(";
+        var i = 0;
+        while ((i = text.IndexOf(needle, i, StringComparison.Ordinal)) >= 0)
+        {
+            var open = i + needle.Length - 1;
+            if (TryReadInvocationArgs(text, open, out var args, out var end))
+            {
+                yield return args;
+                i = end;
+            }
+            else
+            {
+                i += needle.Length;
+            }
+        }
+    }
+
+    private static bool FirstArgumentLooksLikeAsyncPredicate(string argument)
+    {
+        var trimmed = argument.Trim();
+        if (trimmed.Length == 0)
+        {
+            return false;
+        }
+
+        // Strip C# string delimiters so `async` inside the page function is visible.
+        trimmed = trimmed.TrimStart('@', '$');
+        if (trimmed.StartsWith("\"\"\"", StringComparison.Ordinal) && trimmed.EndsWith("\"\"\"", StringComparison.Ordinal) && trimmed.Length >= 6)
+        {
+            trimmed = trimmed[3..^3];
+        }
+        else if (trimmed.StartsWith("\"", StringComparison.Ordinal) && trimmed.EndsWith("\"", StringComparison.Ordinal) && trimmed.Length >= 2)
+        {
+            trimmed = trimmed[1..^1];
+        }
+
+        trimmed = trimmed.TrimStart();
+        return trimmed.StartsWith("async ", StringComparison.Ordinal)
+            || trimmed.StartsWith("async(", StringComparison.Ordinal);
+    }
+
+    private static bool TryReadInvocationArgs(string text, int openParen, out List<string> args, out int end)
+    {
+        args = [];
+        end = openParen;
+        if (openParen < 0 || openParen >= text.Length || text[openParen] != '(')
+        {
+            return false;
+        }
+
+        var paren = 0;
+        var brace = 0;
+        var bracket = 0;
+        var start = openParen + 1;
+        var i = openParen;
+        while (i < text.Length)
+        {
+            var c = text[i];
+            if (c is '"' or '\'')
+            {
+                if (!TrySkipString(text, ref i))
+                {
+                    return false;
+                }
+
+                continue;
+            }
+
+            switch (c)
+            {
+                case '(':
+                    paren++;
+                    break;
+                case ')':
+                    if (paren == 1 && brace == 0 && bracket == 0)
+                    {
+                        args.Add(text[start..i].Trim());
+                        end = i + 1;
+                        args.RemoveAll(static a => a.Length == 0);
+                        return true;
+                    }
+
+                    paren--;
+                    break;
+                case '{':
+                    brace++;
+                    break;
+                case '}':
+                    brace--;
+                    break;
+                case '[':
+                    bracket++;
+                    break;
+                case ']':
+                    bracket--;
+                    break;
+                case ',' when paren == 1 && brace == 0 && bracket == 0:
+                    args.Add(text[start..i].Trim());
+                    start = i + 1;
+                    break;
+            }
+
+            i++;
+        }
+
+        return false;
+    }
+
+    private static bool TrySkipString(string text, ref int i)
+    {
+        if (i + 2 < text.Length && text[i] == '"' && text[i + 1] == '"' && text[i + 2] == '"')
+        {
+            i += 3;
+            while (i + 2 < text.Length)
+            {
+                if (text[i] == '"' && text[i + 1] == '"' && text[i + 2] == '"')
+                {
+                    i += 3;
+                    return true;
+                }
+
+                i++;
+            }
+
+            return false;
+        }
+
+        var quote = text[i++];
+        while (i < text.Length)
+        {
+            if (text[i] == '\\')
+            {
+                i += 2;
+                continue;
+            }
+
+            if (text[i] == quote)
+            {
+                i++;
+                return true;
+            }
+
+            i++;
+        }
+
+        return false;
+    }
+
     [TestMethod]
     public void NoSpecOpensItsOwnContextOrBootsPastTheCentralRecovery_RatchetedByKnownOffenders()
     {

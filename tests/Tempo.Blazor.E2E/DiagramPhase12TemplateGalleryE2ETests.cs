@@ -86,16 +86,14 @@ public sealed class DiagramPhase12TemplateGalleryE2ETests : PlaywrightTestBase
             Timeout = 20000
         });
 
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => {
                 const canvas = document.querySelector('[data-testid="diagram-canvas"]');
                 if (!canvas || !canvas.id) return false;
                 const editor = window.tmDiagramEditor;
                 return !!(editor && editor.instances && editor.instances.get(canvas.id));
             }
-            """,
-            new PageWaitForFunctionOptions { Timeout = 20000 });
+            """, 20000);
     }
 
     private static async Task ExpectTemplateAsync(IPage page, string name)

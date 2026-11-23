@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { canCreateRestrictedSuggestion, canEditRestrictedSelection } from '../restricted-editing.mjs';
-import { applyReviewDecision, applyReviewDecisionAll, buildRevisionMarkers } from '../revision-render.mjs';
+import { applyReviewDecision, applyReviewDecisionAll, buildRevisionMarkers, createCanvasRevisionOverlay } from '../revision-render.mjs';
 import { applyDeletionRevision, applyFormattingRevision } from '../track-changes.mjs';
 
 test('revision render emits insertion deletion and formatting markers with review modes', () => {
@@ -91,6 +91,41 @@ test('restricted editing allows only configured editable regions in protected do
     }).allowed, false);
 });
 
+test('revision overlay keeps DOM order and element identity when y swaps', () => {
+    const document = createFakeDocument();
+    const overlay = createCanvasRevisionOverlay({ document });
+    const model = {
+        revisions: [
+            { id: 'rev-a', type: 'Insertion', action: 'Pending', range: { blockId: 'p1', startOffset: 0, endOffset: 3 } },
+            { id: 'rev-b', type: 'Insertion', action: 'Pending', range: { blockId: 'p1', startOffset: 3, endOffset: 6 } },
+        ],
+    };
+    const renderAt = (aY, bY) => ({
+        displayList: {
+            commands: [
+                { type: 'revisionAnchor', revisionId: 'rev-a', blockId: 'p1', pageIndex: 0, x: 10, y: aY, width: 20, height: 18 },
+                { type: 'revisionAnchor', revisionId: 'rev-b', blockId: 'p1', pageIndex: 0, x: 10, y: bY, width: 20, height: 18 },
+            ],
+        },
+    });
+
+    overlay.update(model, renderAt(563, 1122));
+    const first = [...overlay.root.children];
+    overlay.update(model, renderAt(1122, 812));
+    const second = [...overlay.root.children];
+
+    assert.deepEqual(
+        first.map(el => el.getAttribute('data-revision-id')),
+        ['rev-a', 'rev-b'],
+        'markers must follow revisionsOf(model) order, not rect.y');
+    assert.deepEqual(
+        second.map(el => el.getAttribute('data-revision-id')),
+        ['rev-a', 'rev-b'],
+        'a y swap must not reorder the DOM (Accept would hit the neighbour)');
+    assert.equal(second[0], first[0], 'rev-a element instance must survive the re-render (===)');
+    assert.equal(second[1], first[1], 'rev-b element instance must survive the re-render (===)');
+});
+
 test('restricted editing blocks suggestion provider changes outside editable regions', () => {
     const model = {
         isProtected: true,
@@ -171,4 +206,75 @@ function blockText(model, blockId) {
 
 function hasRevision(run, value) {
     return run.marks.some(mark => mark.type === 'revision' && mark.value === value);
+}
+
+function createFakeDocument() {
+    return {
+        createElement(tagName) {
+            return new FakeElement(String(tagName).toUpperCase());
+        },
+    };
+}
+
+class FakeElement {
+    constructor(tagName) {
+        this.tagName = tagName;
+        this.children = [];
+        this.attributes = new Map();
+        this.style = {};
+        this.parentNode = null;
+        this.className = '';
+        this.type = '';
+    }
+
+    get firstChild() {
+        return this.children[0] || null;
+    }
+
+    get nextSibling() {
+        if (!this.parentNode) return null;
+        const siblings = this.parentNode.children;
+        const index = siblings.indexOf(this);
+        return index >= 0 ? (siblings[index + 1] || null) : null;
+    }
+
+    appendChild(child) {
+        if (child.parentNode) child.parentNode.removeChild(child);
+        child.parentNode = this;
+        this.children.push(child);
+        return child;
+    }
+
+    insertBefore(child, reference) {
+        if (child.parentNode) child.parentNode.removeChild(child);
+        child.parentNode = this;
+        const index = reference ? this.children.indexOf(reference) : -1;
+        if (index >= 0) this.children.splice(index, 0, child);
+        else this.children.push(child);
+        return child;
+    }
+
+    removeChild(child) {
+        const index = this.children.indexOf(child);
+        if (index >= 0) this.children.splice(index, 1);
+        child.parentNode = null;
+        return child;
+    }
+
+    replaceChildren(...children) {
+        for (const child of [...this.children]) {
+            this.removeChild(child);
+        }
+        for (const child of children) {
+            this.appendChild(child);
+        }
+    }
+
+    setAttribute(name, value) {
+        this.attributes.set(String(name), String(value));
+    }
+
+    getAttribute(name) {
+        return this.attributes.get(String(name)) ?? null;
+    }
 }

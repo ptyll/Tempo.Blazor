@@ -40,7 +40,7 @@ public sealed class ReportingF0FidelityE2ETests
             WaitUntil = WaitUntilState.Load,
             Timeout = 60_000
         });
-        await page.WaitForFunctionAsync("() => window.__tempoReportingHarness?.ready === true", new PageWaitForFunctionOptions { Timeout = 30_000 });
+        await PlaywrightTestBase.WaitForPredicateAsync(page, "() => window.__tempoReportingHarness?.ready === true", 30_000);
         var fontFaces = fonts.ToFontFaces(host.BaseUrl);
         var fontFetchProbeJson = await page.EvaluateAsync<string>(
             """

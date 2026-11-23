@@ -39,19 +39,18 @@ public sealed class DocumentEditorCanvasTableE2ETests : WasmTestBase
         await page.Mouse.DownAsync();
         await page.Mouse.MoveAsync((float)rangeTargetCell.CenterX, (float)rangeTargetCell.CenterY, new MouseMoveOptions { Steps = 6 });
         await page.Mouse.UpAsync();
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => Number(document.querySelector('[data-testid="document-canvas-engine-root"]')?.getAttribute('data-canvas-selection-table-cell-range-count') || '0') >= 4
                 && document.querySelectorAll('[data-canvas-table-cell-selection="true"]').length >= 4
-            """,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 10_000);
 
         var widthBeforeResize = firstCell.Width;
         await page.Mouse.MoveAsync((float)(firstCell.X + firstCell.Width), (float)firstCell.CenterY);
         await page.Mouse.DownAsync();
         await page.Mouse.MoveAsync((float)(firstCell.X + firstCell.Width + 36), (float)firstCell.CenterY, new MouseMoveOptions { Steps = 5 });
         await page.Mouse.UpAsync();
-        await page.WaitForFunctionAsync(
+        await WaitForPredicateAsync(
+            page,
             """
             ([cellId, widthBeforeResize]) => {
                 const cell = document.querySelector(`[data-canvas-table-cell][data-cell-id="${cellId}"]`);
@@ -61,7 +60,7 @@ public sealed class DocumentEditorCanvasTableE2ETests : WasmTestBase
             }
             """,
             new object[] { "canvas-table-phase14-c-layout", widthBeforeResize },
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            10_000);
 
         firstCell = await ReadCellRectAsync(page, "canvas-table-phase14-c-layout");
         await page.Mouse.ClickAsync((float)firstCell.CenterX, (float)firstCell.CenterY);
@@ -69,48 +68,38 @@ public sealed class DocumentEditorCanvasTableE2ETests : WasmTestBase
         await WaitForTypedCellAsync(page);
 
         await page.Keyboard.PressAsync("Tab");
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-engine-root"]')?.getAttribute('data-canvas-selection-cell-id') === 'canvas-table-phase14-c-state'
-            """,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 10_000);
 
         var activeCell = await ReadCellRectAsync(page, "canvas-table-phase14-c-state");
         await page.Mouse.ClickAsync((float)activeCell.CenterX, (float)activeCell.CenterY, new MouseClickOptions { Button = MouseButton.Right });
         await Assertions.Expect(page.GetByTestId("document-table-context-menu")).ToBeVisibleAsync(new() { Timeout = 10_000 });
         await page.GetByTestId("document-table-insert-row").ClickAsync();
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => Number(document.querySelector('[data-testid="document-canvas-page"]')?.getAttribute('data-canvas-table-cell-count') || '0') >= 12
-            """,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 10_000);
 
         var rowCell = await ReadCellRectAsync(page, "canvas-table-phase14-c-state");
         await page.Mouse.ClickAsync((float)rowCell.CenterX, (float)rowCell.CenterY, new MouseClickOptions { Button = MouseButton.Right });
         await Assertions.Expect(page.GetByTestId("document-table-context-menu")).ToBeVisibleAsync(new() { Timeout = 10_000 });
         await page.GetByTestId("document-table-insert-column").ClickAsync();
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => Number(document.querySelector('[data-testid="document-canvas-page"]')?.getAttribute('data-canvas-table-cell-count') || '0') >= 16
-            """,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 10_000);
 
         await page.GetByTestId("document-save").ClickAsync();
         await WaitForSaveBoundaryAsync(page);
         await NavigateWithinBlazorAsync(page, "/canvas-engine-host?documentId=phase-5-canvas-render");
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-page"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'
-            """,
-            new PageWaitForFunctionOptions { Timeout = 20_000 });
+            """, 20_000);
         await NavigateWithinBlazorAsync(page, $"/canvas-engine-host?documentId={Phase14DocumentId}&showToolbar=true");
         await WaitForPhase14ReadyAsync(page);
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-a11y-mirror"]')?.textContent?.includes('Canvas grid typed') === true
                 && Number(document.querySelector('[data-testid="document-canvas-page"]')?.getAttribute('data-canvas-table-cell-count') || '0') >= 16
-            """,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 10_000);
 
         await DocumentEditorCanvasVisualAssert.AssertNoTextOverlapAsync(page);
         await DocumentEditorCanvasVisualAssert.AssertNoUiOverlapAsync(page);
@@ -178,13 +167,11 @@ public sealed class DocumentEditorCanvasTableE2ETests : WasmTestBase
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1000);
         await GotoAppReadyAsync(page, $"{BaseUrl}/canvas-engine-host?documentId=phase-12-canvas-history-save&showToolbar=true", WaitUntilState.DOMContentLoaded);
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-engine-host"][data-canvas-engine-ready="true"]')
                 && document.querySelector('[data-testid="document-ribbon-tab-insert"]')
                 && Number(document.querySelector('[data-testid="document-canvas-page"]')?.getAttribute('data-canvas-model-table-block-count') || '0') >= 1
-            """,
-            new PageWaitForFunctionOptions { Timeout = 30_000 });
+            """, 30_000);
 
         var output = CreateOutputDirectory("phase4-insert-table-grid");
         var afterInsertPath = Path.Combine(output, "00-inserted-table-typed.png");
@@ -199,39 +186,28 @@ public sealed class DocumentEditorCanvasTableE2ETests : WasmTestBase
         await page.GetByTestId("document-table-grid-cell-1-2").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
         await page.GetByTestId("document-table-grid-cell-1-2").ClickAsync();
 
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             baseline => Number(document.querySelector('[data-testid="document-canvas-page"]')?.getAttribute('data-canvas-model-table-block-count') || '0') === baseline + 1
-            """,
-            baselineTableBlocks,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, baselineTableBlocks, 10_000);
 
         // The engine renders the new table (canvas cell selectors) and moves the caret into its
         // first cell, so typing lands there without any extra click.
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-canvas-table-cell][data-cell-id="inserted-table-r1c1"]')
                 && document.querySelector('[data-testid="document-canvas-engine-root"]')?.getAttribute('data-canvas-selection-cell-id') === 'inserted-table-r1c1'
-            """,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 10_000);
 
         // Edge case FIRST (before typing adds its own transactions): undo removes the whole inserted
         // table atomically, redo restores it including the caret in the first cell.
         await page.GetByTestId("document-undo").ClickAsync();
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             baseline => Number(document.querySelector('[data-testid="document-canvas-page"]')?.getAttribute('data-canvas-model-table-block-count') || '0') === baseline
-            """,
-            baselineTableBlocks,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, baselineTableBlocks, 10_000);
         await page.GetByTestId("document-redo").ClickAsync();
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             baseline => Number(document.querySelector('[data-testid="document-canvas-page"]')?.getAttribute('data-canvas-model-table-block-count') || '0') === baseline + 1
                 && document.querySelector('[data-canvas-table-cell][data-cell-id="inserted-table-r1c1"]')
-            """,
-            baselineTableBlocks,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, baselineTableBlocks, 10_000);
 
         // Deterministic caret: click the first inserted cell and verify the engine resolved it
         // (post-layout click race — see ClickCanvasBlockAsync learning) before typing.
@@ -256,9 +232,7 @@ public sealed class DocumentEditorCanvasTableE2ETests : WasmTestBase
 
         await page.EvaluateAsync("() => document.querySelector('[data-testid=\"document-canvas-hidden-input\"]')?.focus()");
         await page.Keyboard.TypeAsync("Grid inserted cell");
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"document-canvas-a11y-mirror\"]')?.textContent?.includes('Grid inserted cell') === true",
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-canvas-a11y-mirror\"]')?.textContent?.includes('Grid inserted cell') === true", 10_000);
 
         await DocumentEditorCanvasVisualAssert.AssertNoTextOverlapAsync(page);
         await page.GetByTestId("document-editor-demo").ScreenshotAsync(new LocatorScreenshotOptions { Path = afterInsertPath, Type = ScreenshotType.Png });
@@ -266,27 +240,20 @@ public sealed class DocumentEditorCanvasTableE2ETests : WasmTestBase
         await page.GetByTestId("document-save").ClickAsync();
         await WaitForSaveBoundaryAsync(page);
         await NavigateWithinBlazorAsync(page, "/canvas-engine-host?documentId=phase-5-canvas-render");
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-page"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'
-            """,
-            new PageWaitForFunctionOptions { Timeout = 20_000 });
+            """, 20_000);
         await NavigateWithinBlazorAsync(page, "/canvas-engine-host?documentId=phase-12-canvas-history-save&showToolbar=true");
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             baseline => document.querySelector('[data-testid="document-canvas-engine-host"][data-canvas-engine-ready="true"]')
                 && Number(document.querySelector('[data-testid="document-canvas-page"]')?.getAttribute('data-canvas-model-table-block-count') || '0') === baseline + 1
-            """,
-            baselineTableBlocks,
-            new PageWaitForFunctionOptions { Timeout = 30_000 });
+            """, baselineTableBlocks, 30_000);
 
         // Both the table structure and the typed cell text must survive the save/reload boundary.
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-canvas-table-cell][data-cell-id="inserted-table-r1c1"]')
                 && document.querySelector('[data-testid="document-canvas-a11y-mirror"]')?.textContent?.includes('Grid inserted cell') === true
-            """,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 10_000);
 
         await DocumentEditorCanvasVisualAssert.AssertNoTextOverlapAsync(page);
         await DocumentEditorCanvasVisualAssert.AssertCanvasNonBlankAsync(page.Locator("[data-canvas-layer='content']").First);
@@ -328,12 +295,10 @@ public sealed class DocumentEditorCanvasTableE2ETests : WasmTestBase
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1000);
         await GotoAppReadyAsync(page, $"{BaseUrl}/canvas-engine-host?documentId=phase-12-canvas-history-save&showToolbar=true", WaitUntilState.DOMContentLoaded);
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-engine-host"][data-canvas-engine-ready="true"]')
                 && document.querySelector('[data-testid="document-ribbon-tab-insert"]')
-            """,
-            new PageWaitForFunctionOptions { Timeout = 30_000 });
+            """, 30_000);
 
         var output = CreateOutputDirectory("phase5-delete-header-toggle");
         var headerOnPath = Path.Combine(output, "00-header-row-on.png");
@@ -347,9 +312,7 @@ public sealed class DocumentEditorCanvasTableE2ETests : WasmTestBase
         await page.GetByTestId("document-toolbar-table").ClickAsync();
         await page.GetByTestId("document-table-grid-cell-1-2").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
         await page.GetByTestId("document-table-grid-cell-1-2").ClickAsync();
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-canvas-table-cell][data-cell-id=\"inserted-table-r1c1\"]')",
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-canvas-table-cell][data-cell-id=\"inserted-table-r1c1\"]')", 10_000);
 
         var backgroundBefore = await SampleCellBackgroundAsync(page, "inserted-table-r1c2");
         Assert.IsTrue(backgroundBefore[0] > 245 && backgroundBefore[2] > 245,
@@ -358,8 +321,7 @@ public sealed class DocumentEditorCanvasTableE2ETests : WasmTestBase
         // Context menu → Header row: layout.headerRow flips and row 0 repaints with the header tint.
         await RightClickCellAsync(page, "inserted-table-r1c1");
         await page.GetByTestId("document-table-toggle-header").ClickAsync();
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             async () => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 const handle = host?.getAttribute('data-canvas-engine-handle') || '';
@@ -368,16 +330,13 @@ public sealed class DocumentEditorCanvasTableE2ETests : WasmTestBase
                 const table = (model.body?.blocks || []).find(block => String(block?.id || '') === 'inserted-table');
                 return table?.content?.table?.layout?.headerRow === true;
             }
-            """,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
-        await page.WaitForFunctionAsync(
-            """
+            """, 10_000);
+        await WaitForPredicateAsync(page, """
             () => {
                 const cell = document.querySelector('[data-canvas-table-cell][data-cell-id="inserted-table-r1c2"]');
                 return !!cell;
             }
-            """,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 10_000);
 
         var backgroundAfter = await SampleCellBackgroundAsync(page, "inserted-table-r1c2");
         Assert.IsTrue(backgroundBefore[0] - backgroundAfter[0] > 10,
@@ -387,41 +346,30 @@ public sealed class DocumentEditorCanvasTableE2ETests : WasmTestBase
         // Context menu → Delete table: the whole table disappears; undo brings it back with the flag.
         await RightClickCellAsync(page, "inserted-table-r1c1");
         await page.GetByTestId("document-table-delete-table").ClickAsync();
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             baseline => Number(document.querySelector('[data-testid="document-canvas-page"]')?.getAttribute('data-canvas-model-table-block-count') || '0') === baseline
                 && !document.querySelector('[data-canvas-table-cell][data-cell-id="inserted-table-r1c1"]')
-            """,
-            baselineTableBlocks,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, baselineTableBlocks, 10_000);
 
         await page.GetByTestId("document-undo").ClickAsync();
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             baseline => Number(document.querySelector('[data-testid="document-canvas-page"]')?.getAttribute('data-canvas-model-table-block-count') || '0') === baseline + 1
                 && document.querySelector('[data-canvas-table-cell][data-cell-id="inserted-table-r1c1"]')
-            """,
-            baselineTableBlocks,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, baselineTableBlocks, 10_000);
         await page.GetByTestId("document-editor-demo").ScreenshotAsync(new LocatorScreenshotOptions { Path = afterDeleteUndoPath, Type = ScreenshotType.Png });
 
         await page.GetByTestId("document-save").ClickAsync();
         await WaitForSaveBoundaryAsync(page);
         await NavigateWithinBlazorAsync(page, "/canvas-engine-host?documentId=phase-5-canvas-render");
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-page"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'
-            """,
-            new PageWaitForFunctionOptions { Timeout = 20_000 });
+            """, 20_000);
         await NavigateWithinBlazorAsync(page, "/canvas-engine-host?documentId=phase-12-canvas-history-save&showToolbar=true");
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             baseline => document.querySelector('[data-testid="document-canvas-engine-host"][data-canvas-engine-ready="true"]')
                 && Number(document.querySelector('[data-testid="document-canvas-page"]')?.getAttribute('data-canvas-model-table-block-count') || '0') === baseline + 1
                 && document.querySelector('[data-canvas-table-cell][data-cell-id="inserted-table-r1c2"]')
-            """,
-            baselineTableBlocks,
-            new PageWaitForFunctionOptions { Timeout = 30_000 });
+            """, baselineTableBlocks, 30_000);
 
         // The headerRow flag survives the canvas↔C# round-trip (TableLayoutContent.HeaderRow) and
         // the reloaded row 0 still paints with the header tint.
@@ -468,12 +416,10 @@ public sealed class DocumentEditorCanvasTableE2ETests : WasmTestBase
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1000);
         await GotoAppReadyAsync(page, $"{BaseUrl}/canvas-engine-host?documentId=phase-12-canvas-history-save&showToolbar=true", WaitUntilState.DOMContentLoaded);
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-engine-host"][data-canvas-engine-ready="true"]')
                 && document.querySelector('[data-canvas-table-cell][data-cell-id="canvas-history-table-h-category"]')
-            """,
-            new PageWaitForFunctionOptions { Timeout = 30_000 });
+            """, 30_000);
 
         var output = CreateOutputDirectory("phase7-table-properties");
         var appliedPath = Path.Combine(output, "00-properties-applied.png");
@@ -509,22 +455,18 @@ public sealed class DocumentEditorCanvasTableE2ETests : WasmTestBase
 
         // Alignment Center → Left: the table visibly shifts left.
         await page.GetByTestId("document-table-properties-align-left").ClickAsync();
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             beforeX => {
                 const cell = document.querySelector('[data-canvas-table-cell][data-cell-id="canvas-history-table-h-category"]');
                 return cell && cell.getBoundingClientRect().x < Number(beforeX) - 20;
             }
-            """,
-            cellBefore.X,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, cellBefore.X, 10_000);
 
         // Background: applies to the table layout (seed cells carry explicit colors which win by
         // design — assert the model flag; a plain-cell visual check is covered by the phase-5 test).
         await page.GetByTestId("document-table-properties-background").FillAsync("#ffedd5");
         await page.GetByTestId("document-table-properties-background").DispatchEventAsync("change");
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             async () => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 const module = await import('/_content/Tempo.Blazor.DocumentEditor/js/document-editor-canvas/interop.mjs');
@@ -534,8 +476,7 @@ public sealed class DocumentEditorCanvasTableE2ETests : WasmTestBase
                 return String(layout.alignment || '').toLowerCase() === 'left'
                     && String(layout.backgroundColor || '').toLowerCase() === '#ffedd5';
             }
-            """,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 10_000);
 
         await DocumentEditorCanvasVisualAssert.AssertNoTextOverlapAsync(page);
         await page.GetByTestId("document-editor-demo").ScreenshotAsync(new LocatorScreenshotOptions { Path = appliedPath, Type = ScreenshotType.Png });
@@ -543,24 +484,18 @@ public sealed class DocumentEditorCanvasTableE2ETests : WasmTestBase
         await page.GetByTestId("document-save").ClickAsync();
         await WaitForSaveBoundaryAsync(page);
         await NavigateWithinBlazorAsync(page, "/canvas-engine-host?documentId=phase-5-canvas-render");
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-page"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'
-            """,
-            new PageWaitForFunctionOptions { Timeout = 20_000 });
+            """, 20_000);
         await NavigateWithinBlazorAsync(page, "/canvas-engine-host?documentId=phase-12-canvas-history-save&showToolbar=true");
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             beforeX => document.querySelector('[data-testid="document-canvas-engine-host"][data-canvas-engine-ready="true"]')
                 && (() => {
                     const cell = document.querySelector('[data-canvas-table-cell][data-cell-id="canvas-history-table-h-category"]');
                     return cell && cell.getBoundingClientRect().x < Number(beforeX) - 20;
                 })()
-            """,
-            cellBefore.X,
-            new PageWaitForFunctionOptions { Timeout = 30_000 });
-        await page.WaitForFunctionAsync(
-            """
+            """, cellBefore.X, 30_000);
+        await WaitForPredicateAsync(page, """
             async () => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 const module = await import('/_content/Tempo.Blazor.DocumentEditor/js/document-editor-canvas/interop.mjs');
@@ -569,8 +504,7 @@ public sealed class DocumentEditorCanvasTableE2ETests : WasmTestBase
                 return String(layout.alignment || '').toLowerCase() === 'left'
                     && String(layout.backgroundColor || '').toLowerCase() === '#ffedd5';
             }
-            """,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 10_000);
         await page.GetByTestId("document-editor-demo").ScreenshotAsync(new LocatorScreenshotOptions { Path = reloadPath, Type = ScreenshotType.Png });
 
         TestContext.AddResultFile(appliedPath);
@@ -616,13 +550,11 @@ public sealed class DocumentEditorCanvasTableE2ETests : WasmTestBase
     }
 
     private static Task WaitForPhase14ReadyAsync(IPage page)
-        => page.WaitForFunctionAsync(
-            """
+        => WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-engine-host"]')?.getAttribute('data-canvas-engine-ready') === 'true'
                 && Number(document.querySelector('[data-testid="document-canvas-page"]')?.getAttribute('data-canvas-table-cell-count') || '0') >= 9
                 && document.querySelector('[data-canvas-table-cell][data-cell-id="canvas-table-phase14-c-layout"]')
-            """,
-            new PageWaitForFunctionOptions { Timeout = 30_000 });
+            """, 30_000);
 
     private static Task<CellRect> ReadCellRectAsync(IPage page, string cellId)
         => page.EvaluateAsync<CellRect>(
@@ -650,12 +582,10 @@ public sealed class DocumentEditorCanvasTableE2ETests : WasmTestBase
     {
         try
         {
-            await page.WaitForFunctionAsync(
-                """
+            await WaitForPredicateAsync(page, """
                 () => document.querySelector('[data-testid="document-canvas-a11y-mirror"]')?.textContent?.includes('Canvas grid typed') === true
                     && document.querySelector('[data-testid="document-canvas-engine-root"]')?.getAttribute('data-canvas-selection-in-table') === 'true'
-                """,
-                new PageWaitForFunctionOptions { Timeout = 10_000 });
+                """, 10_000);
         }
         catch (TimeoutException ex)
         {
@@ -686,8 +616,7 @@ public sealed class DocumentEditorCanvasTableE2ETests : WasmTestBase
     {
         try
         {
-            await page.WaitForFunctionAsync(
-                """
+            await WaitForPredicateAsync(page, """
                 () => {
                     const saveMessage = document.querySelector('[data-testid="document-save-message"]')?.textContent || '';
                     const lastSaved = document.querySelector('[data-testid="document-last-saved"]')?.textContent || '';
@@ -697,8 +626,7 @@ public sealed class DocumentEditorCanvasTableE2ETests : WasmTestBase
                         && pending.trim().length === 0
                         && (/Saved|Autosaved/i.test(saveMessage) || /saved/i.test(lastSaved));
                 }
-                """,
-                new PageWaitForFunctionOptions { Timeout = 10_000 });
+                """, 10_000);
         }
         catch (TimeoutException ex)
         {

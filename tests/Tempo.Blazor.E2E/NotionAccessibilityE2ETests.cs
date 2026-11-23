@@ -40,9 +40,7 @@ public class NotionAccessibilityE2ETests : NotionE2ETestBase
         // Phase 3: below desktop the sidebar is a non-modal bottom sheet with no backdrop, so a
         // coordinate click no longer dismisses it — the sheet's own close button does.
         await page.Locator(".tm-editor-shell__sheet-close").First.ClickAsync();
-        await page.WaitForFunctionAsync(
-            "() => !document.querySelector('.tm-notion-sidebar--visible')",
-            new PageWaitForFunctionOptions { Timeout = 5000 });
+        await WaitForPredicateAsync(page, "() => !document.querySelector('.tm-notion-sidebar--visible')", 5000);
 
         await SeedTablePageAsync();
         var tableBlock = page.Locator("[data-block-id='eb700000-0000-0000-0000-000000000010']").First;

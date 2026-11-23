@@ -190,9 +190,7 @@ public sealed class DocumentEditorCanvasCommentsRevisionsE2ETests : WasmTestBase
         await page.GetByTestId("document-save").ClickAsync();
         await WaitForSaveBoundaryAsync(page);
         await NavigateWithinBlazorAsync(page, "/canvas-engine-host?documentId=phase-5-canvas-render");
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'",
-            options: new PageWaitForFunctionOptions { Timeout = 20_000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'", 20_000);
         await NavigateWithinBlazorAsync(page, $"/canvas-engine-host?documentId={Phase17DocumentId}&showToolbar=true");
         await OpenPhase17DocumentReadyAsync(page);
         await WaitForMirrorTextContainsAsync(page, "canvas-phase17-protected", "editable allowed");
@@ -267,14 +265,12 @@ public sealed class DocumentEditorCanvasCommentsRevisionsE2ETests : WasmTestBase
     }
 
     private static Task OpenPhase17DocumentReadyAsync(IPage page)
-        => page.WaitForFunctionAsync(
-            """
+        => WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-comment-overlay"]')
                 && document.querySelector('[data-testid="document-canvas-revision-overlay"]')
                 && document.querySelector('[data-testid="document-canvas-page"]')?.getAttribute('data-canvas-model-document-id') === 'phase-17-canvas-comments-revisions'
                 && document.querySelectorAll('[data-testid="document-canvas-comment-marker"][data-comment-id="canvas-phase17-comment"]').length >= 1
-            """,
-            new PageWaitForFunctionOptions { Timeout = 30_000 });
+            """, 30_000);
 
     private static Task WaitForTrackedRevisionMarkerCountAsync(IPage page, int minimumCount)
         => page.WaitForFunctionAsync(
@@ -456,8 +452,7 @@ public sealed class DocumentEditorCanvasCommentsRevisionsE2ETests : WasmTestBase
     }
 
     private static Task WaitForSaveBoundaryAsync(IPage page)
-        => page.WaitForFunctionAsync(
-            """
+        => WaitForPredicateAsync(page, """
             () => {
                 const saveMessage = document.querySelector('[data-testid="document-save-message"]')?.textContent || '';
                 const lastSaved = document.querySelector('[data-testid="document-last-saved"]')?.textContent || '';
@@ -467,8 +462,7 @@ public sealed class DocumentEditorCanvasCommentsRevisionsE2ETests : WasmTestBase
                     && dirty === false
                     && (/Saved|Autosaved|Uloženo|Automaticky uloženo/i.test(saveMessage) || /saved|uloženo/i.test(lastSaved));
             }
-            """,
-            new PageWaitForFunctionOptions { Timeout = 15_000 });
+            """, 15_000);
 
     private static Task NavigateWithinBlazorAsync(IPage page, string url)
         => page.EvaluateAsync(

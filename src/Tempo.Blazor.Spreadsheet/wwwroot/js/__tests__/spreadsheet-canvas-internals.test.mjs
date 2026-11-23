@@ -609,6 +609,215 @@ test('parseColor_ColorMix_RejectsTranslucentOperandsAndShortWeights', () => {
     assert.ok(implicit, 'an implicit complement weight (50 % + 50 %) is a full 100 % mix');
 });
 
+/**
+ * Isolated engine state for the command-log barrier (remaining 82c413db / 30f2a201).
+ * Real Promise/performance so a sync throw that leaves `commandLogInFlight` stuck is
+ * measurable as a 2 s busy-loop instead of an infinite stub-clock hang.
+ */
+function loadCommandLogCanvas() {
+    class StubElement {
+        constructor(ancestors = []) {
+            this.ancestors = ancestors;
+        }
+        closest(selector) {
+            const wanted = selector.split(',').map(part => part.trim());
+            for (const candidate of ['self', ...this.ancestors]) {
+                if (wanted.includes(candidate)) return { selector: candidate };
+            }
+            return null;
+        }
+    }
+    const sandbox = {
+        Element: StubElement,
+        HTMLInputElement: class HTMLInputElement {},
+        window: {},
+        Promise,
+        Error,
+        Math,
+        Number,
+        JSON,
+        Infinity,
+        NaN,
+        parseInt,
+        String,
+        Boolean,
+        Array,
+        Object,
+        Map,
+        Set,
+        WeakMap,
+        Date,
+        getComputedStyle: element => ({
+            getPropertyValue: name => (element?.__tokens?.[name] ?? '').trim(),
+        }),
+        performance: { now: () => performance.now() },
+        requestAnimationFrame: () => 0,
+        cancelAnimationFrame: () => undefined,
+        setTimeout,
+        clearTimeout,
+        setInterval,
+        clearInterval,
+        console,
+    };
+    vm.createContext(sandbox);
+    vm.runInContext(SOURCE, sandbox, { filename: 'spreadsheet-canvas.js' });
+    const internals = sandbox.window.tmSpreadsheetCanvas?._internals;
+    assert.ok(internals, 'spreadsheet-canvas.js must expose _internals for the command-log seam');
+
+    const calls = [];
+    let throwSync = false;
+    const root = {
+        __tokens: {},
+        __tmSpreadsheetCanvas: {
+            dotNet: {
+                invokeMethodAsync(method, ...args) {
+                    calls.push({ method, args });
+                    if (throwSync) throw new Error('sync command-log failure');
+                    const batch = args[0];
+                    const ack = Array.isArray(batch) && batch.length
+                        ? Math.max(...batch.map(command => command.id))
+                        : 0;
+                    return Promise.resolve(ack);
+                }
+            },
+            commandLog: [],
+            commandLogSeq: 0,
+            commandLogAckRevision: 0,
+            commandLogTimer: 0,
+            commandLogInFlight: false,
+            commandLogPending: false,
+            commandLogBarriers: [],
+            pendingCellEditCommits: [],
+            cellEditCommitTimer: 0,
+            selectionSyncFrame: 0,
+            selectionSyncTimer: 0,
+            lastLocalInteractionAt: 0,
+            lastInteractionSource: '',
+            interactionVersion: 0,
+            model: {
+                ActiveCellRef: 'B1',
+                Selection: { StartRow: 0, StartCol: 0, EndRow: 0, EndCol: 1 }
+            },
+            sheetState: {
+                localRevision: 0,
+                activeCell: { row: 0, col: 1, ref: 'B1' },
+                selection: { startRow: 0, startCol: 0, endRow: 0, endCol: 1 },
+                formulaEditor: { active: false }
+            },
+            metrics: {
+                commandLogQueuedCount: 0,
+                commandLogBatchCallbackCount: 0,
+                commandLogBatchItemCount: 0,
+                commandLogAckRevision: 0,
+                commandLogRetryCount: 0,
+                commandLogObsoleteDropCount: 0,
+                commandLogSyncFailureCount: 0,
+                cellChangedCommandCount: 0,
+                rangeChangedCommandCount: 0,
+                selectionSettledCommandCount: 0,
+                viewportSettledCommandCount: 0,
+                formulaCommittedCommandCount: 0,
+                columnResizeCommandCount: 0,
+                rowResizeCommandCount: 0,
+                cellEditCommitQueuedCount: 0,
+                cellEditCommitBatchCallbackCount: 0,
+                cellEditCommitBatchItemCount: 0,
+                selectionCallbackCount: 0,
+                dotNetCallbackCount: 0,
+                lastDotNetCallbackMethod: '',
+                dotNetCallbacksByMethod: {},
+                hotPathDotNetCallbackCount: 0,
+                hotPathDotNetCallbacksByMethod: {},
+                resizeDotNetCallbackCount: 0,
+                keyboardInteractions: 0,
+                scrollInteractions: 0,
+                pointerInteractions: 0,
+            }
+        }
+    };
+
+    return {
+        internals,
+        root,
+        state: root.__tmSpreadsheetCanvas,
+        calls,
+        setThrowSync: value => { throwSync = value; }
+    };
+}
+
+test('flushCommandLog_SynchronousInvokeFailure_WhenAcknowledgedFinishesFastAndRetryDelivers', async () => {
+    const { internals, root, state, calls, setThrowSync } = loadCommandLogCanvas();
+    internals.queueCommand(root, 'selectionSettled', {
+        selection: { startRow: 0, startCol: 0, endRow: 0, endCol: 0 }
+    }, { flushNow: false });
+    if (state.commandLogTimer) {
+        clearTimeout(state.commandLogTimer);
+        state.commandLogTimer = 0;
+    }
+    const target = state.commandLogSeq;
+    assert.equal(target, 1, 'the queued command must be id 1');
+
+    setThrowSync(true);
+    const started = performance.now();
+    const acknowledged = await internals.whenCommandLogAcknowledged(root, state, target);
+    const elapsed = performance.now() - started;
+    assert.equal(acknowledged, true, 'a sync throw must not wedge the waiter as false/disposed');
+    assert.ok(
+        elapsed < 50,
+        `whenCommandLogAcknowledged must finish within 50 ms after a sync throw, took ${elapsed.toFixed(1)} ms`);
+    assert.ok(
+        (state.metrics.commandLogSyncFailureCount || 0) >= 1,
+        'commandLogSyncFailureCount must record the sync throw');
+
+    setThrowSync(false);
+    internals.flushCommandLog(root);
+    await Promise.resolve();
+    await Promise.resolve();
+    const delivered = calls.filter(call => call.method === 'OnCanvasCommandLogBatch');
+    const deliveredIds = delivered.flatMap(call => (call.args[0] || []).map(command => command.id));
+    assert.ok(
+        deliveredIds.includes(target),
+        `a later flush must deliver command ${target} after the sync throw; saw ids ${JSON.stringify(deliveredIds)}`);
+});
+
+test('pointerAfterPendingSelection_DispatchesCommandLogBatchBeforeOnCanvasCellPointer', async () => {
+    const { internals, root, state, calls } = loadCommandLogCanvas();
+    state.selectionSyncFrame = 1;
+    await internals.invokeCanvasPointerDotNet(root, 'OnCanvasCellPointer', [0, 1, true, false], true);
+    await Promise.resolve();
+    await Promise.resolve();
+    const methods = calls.map(call => call.method);
+    assert.ok(methods.length >= 2, `expected command-log batch then pointer, got ${JSON.stringify(methods)}`);
+    assert.equal(methods[0], 'OnCanvasCommandLogBatch',
+        `Shift+Arrow still in the debounce window must flush the selection batch first, got ${JSON.stringify(methods)}`);
+    assert.equal(methods[1], 'OnCanvasCellPointer',
+        `OnCanvasCellPointer must follow the selection batch, got ${JSON.stringify(methods)}`);
+    const batch = calls[0].args[0] || [];
+    assert.ok(batch.some(command => command.type === 'selectionSettled' || command.event === 'selectionSettled'),
+        'the first batch must carry the pending selectionSettled command');
+});
+
+test('contextMenuAfterPendingEdit_ReceivesCommittedValue', async () => {
+    const { internals, root, state, calls } = loadCommandLogCanvas();
+    internals.queueCellEditCommit(root, 0, 0, 'committed-value');
+    if (state.cellEditCommitTimer) {
+        clearTimeout(state.cellEditCommitTimer);
+        state.cellEditCommitTimer = 0;
+    }
+    await internals.invokeCanvasPointerDotNet(root, 'OnCanvasContextMenu', [1, 2, 10, 20, 'pointer', 800], true);
+    await Promise.resolve();
+    await Promise.resolve();
+    const methods = calls.map(call => call.method);
+    assert.equal(methods[0], 'OnCanvasCommandLogBatch',
+        `a context menu after a fast edit must see the commit batch first, got ${JSON.stringify(methods)}`);
+    const batch = calls[0].args[0] || [];
+    const edit = (batch[0]?.cellEdits || [])[0];
+    assert.equal(edit?.value, 'committed-value',
+        'the menu path must flush the pending cell edit so .NET sees the committed value');
+    assert.ok(methods.includes('OnCanvasContextMenu'),
+        `OnCanvasContextMenu must still dispatch after the commit, got ${JSON.stringify(methods)}`);
+});
+
 test('resolveGridGutters_WithoutAModel_ReturnsNull', () => {
     const { internals } = loadCanvas();
 

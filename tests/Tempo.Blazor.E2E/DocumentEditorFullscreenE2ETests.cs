@@ -125,12 +125,10 @@ public sealed class DocumentEditorFullscreenE2ETests : WasmTestBase
     private async Task OpenDocumentAsync(IPage page)
     {
         await GotoAppReadyAsync(page, $"{BaseUrl}/canvas-engine-host?documentId={DocumentId}&showToolbar=true", WaitUntilState.DOMContentLoaded);
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-engine-host"][data-canvas-engine-ready="true"]')
                 && document.querySelector('[data-testid="document-ribbon-tab-view"]')
-            """,
-            options: new PageWaitForFunctionOptions { Timeout = 30_000 });
+            """, 30_000);
     }
 
     private static Task<bool> ReadFullscreenBodyStateAsync(IPage page)

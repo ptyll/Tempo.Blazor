@@ -104,9 +104,7 @@ public sealed class DocumentEditorCanvasShapesDrawingsE2ETests : WasmTestBase
         await WaitForSaveBoundaryAsync(page);
 
         await NavigateWithinBlazorAsync(page, "/canvas-engine-host?documentId=phase-5-canvas-render");
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'",
-            new PageWaitForFunctionOptions { Timeout = 20_000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'", 20_000);
         await NavigateWithinBlazorAsync(page, $"/canvas-engine-host?documentId={PhaseE7DocumentId}&showToolbar=true&disableCollaboration=true");
         await WaitForPhaseE7ReadyAsync(page);
         await WaitForModelDrawingAsync(page, "e7-inserted-textbox");
@@ -358,9 +356,7 @@ public sealed class DocumentEditorCanvasShapesDrawingsE2ETests : WasmTestBase
         await page.GetByTestId("document-save").ClickAsync();
         await WaitForSaveBoundaryAsync(page);
         await NavigateWithinBlazorAsync(page, "/canvas-engine-host?documentId=phase-5-canvas-render");
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'",
-            new PageWaitForFunctionOptions { Timeout = 20_000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'", 20_000);
         await NavigateWithinBlazorAsync(page, $"/canvas-engine-host?documentId={PhaseE7DocumentId}&showToolbar=true&disableCollaboration=true");
         await WaitForPhaseE7ReadyAsync(page);
         await WaitForTextBoxTextAsync(page, objectId, initialText + inlineText, secondParagraph);
@@ -1009,9 +1005,7 @@ public sealed class DocumentEditorCanvasShapesDrawingsE2ETests : WasmTestBase
         await page.GetByTestId("document-save").ClickAsync();
         await WaitForSaveBoundaryAsync(page);
         await NavigateWithinBlazorAsync(page, "/canvas-engine-host?documentId=phase-5-canvas-render");
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'",
-            new PageWaitForFunctionOptions { Timeout = 20_000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'", 20_000);
         await page.EvaluateAsync("() => window.scrollTo({ top: 0, behavior: 'instant' })");
         await NavigateWithinBlazorAsync(page, $"/canvas-engine-host?documentId={PhaseE7DocumentId}&showToolbar=true&disableCollaboration=true");
         await WaitForPhaseE7ReadyAsync(page);
@@ -1176,19 +1170,16 @@ public sealed class DocumentEditorCanvasShapesDrawingsE2ETests : WasmTestBase
     }
 
     private static Task WaitForPhaseE7ReadyAsync(IPage page)
-        => page.WaitForFunctionAsync(
-            """
+        => WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-engine-host"]')?.getAttribute('data-canvas-engine-ready') === 'true'
                 && document.querySelector('[data-testid="document-canvas-page"]')?.getAttribute('data-canvas-model-document-id') === 'phase-e7-canvas-shapes-drawings'
                 && Number(document.querySelector('[data-testid="document-canvas-page"]')?.getAttribute('data-canvas-drawing-count') || '0') >= 4
                 && document.querySelector('[data-canvas-object][data-object-id="canvas-chart-bar"]')
-            """,
-            new PageWaitForFunctionOptions { Timeout = 30_000 });
+            """, 30_000);
 
     private static async Task WaitForPhaseE7SettledAsync(IPage page)
     {
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 const page = document.querySelector('[data-testid="document-canvas-page"]');
@@ -1203,8 +1194,7 @@ public sealed class DocumentEditorCanvasShapesDrawingsE2ETests : WasmTestBase
                     && dirty.trim().length === 0
                     && objectCount >= 4;
             }
-            """,
-            new PageWaitForFunctionOptions { Timeout = 30_000 });
+            """, 30_000);
         await CanvasInteropBridge.WaitForFramesAsync(page, 5); // paint after the settled state, frame-counted instead of a fixed sleep
     }
 
@@ -2578,8 +2568,7 @@ public sealed class DocumentEditorCanvasShapesDrawingsE2ETests : WasmTestBase
 
     private static async Task WaitForSaveBoundaryAsync(IPage page)
     {
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => {
                 const saveMessage = document.querySelector('[data-testid="document-save-message"]')?.textContent || '';
                 const lastSaved = document.querySelector('[data-testid="document-last-saved"]')?.textContent || '';
@@ -2594,8 +2583,7 @@ public sealed class DocumentEditorCanvasShapesDrawingsE2ETests : WasmTestBase
                     && saveMessage.includes('Saved')
                     && lastSaved.trim().length > 0;
             }
-            """,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 10_000);
     }
 
     private static Task NavigateWithinBlazorAsync(IPage page, string url)

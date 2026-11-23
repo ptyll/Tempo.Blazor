@@ -93,14 +93,12 @@ public sealed class DocumentEditorPdfExportE2ETests : WasmTestBase
         var viewerCanvas = viewerPage.Locator("[data-testid='pdf-basic-usage-card'] .tm-pdf-viewer__canvas").First;
         await Assertions.Expect(viewerCanvas).ToBeVisibleAsync(new() { Timeout = 45_000 });
         // Wait for the canvas to reach the real rendered page size (pre-render default is 300×150).
-        await viewerPage.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(viewerPage, """
             () => {
                 const canvas = document.querySelector('[data-testid="pdf-basic-usage-card"] .tm-pdf-viewer__canvas');
                 return !!canvas && canvas.clientHeight > 400;
             }
-            """,
-            options: new PageWaitForFunctionOptions { Timeout = 45_000 });
+            """, 45_000);
 
         var screenshotDir = Path.Combine(FindRepositoryRootDirectory(), "tests", "Tempo.Blazor.E2E", "__screenshots__", "document-editor-pdf-export");
         Directory.CreateDirectory(screenshotDir);
@@ -119,12 +117,10 @@ public sealed class DocumentEditorPdfExportE2ETests : WasmTestBase
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1000);
         await GotoAppReadyAsync(page, $"{BaseUrl}/canvas-engine-host?documentId=phase-3-canvas-empty&showToolbar=true&preferLocalDraft=false", WaitUntilState.DOMContentLoaded);
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-engine-host"][data-canvas-engine-ready="true"]')
                 && document.querySelector('[data-testid="document-export-pdf"], [data-testid="document-ribbon-tab-references"]')
-            """,
-            options: new PageWaitForFunctionOptions { Timeout = 45_000 });
+            """, 45_000);
 
         await page.GetByTestId("document-ribbon-tab-references").ClickAsync();
         var downloadTask = page.WaitForDownloadAsync(new PageWaitForDownloadOptions { Timeout = 60_000 });
@@ -145,13 +141,11 @@ public sealed class DocumentEditorPdfExportE2ETests : WasmTestBase
     }
 
     private static Task WaitForEditorReadyAsync(IPage page)
-        => page.WaitForFunctionAsync(
-            """
+        => WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-engine-host"][data-canvas-engine-ready="true"]')
                 && document.querySelectorAll('[data-testid="document-canvas-page"]').length >= 1
                 && document.querySelector('[data-testid="document-ribbon-tab-references"]')
-            """,
-            options: new PageWaitForFunctionOptions { Timeout = 45_000 });
+            """, 45_000);
 
     private static string FindRepositoryRootDirectory()
     {

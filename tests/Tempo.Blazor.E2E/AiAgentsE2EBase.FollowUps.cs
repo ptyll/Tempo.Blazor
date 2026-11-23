@@ -114,9 +114,7 @@ public abstract partial class AiAgentsE2EBase : PlaywrightTestBase
         await panel.Locator("[data-testid='memory-undo-row']").First
             .WaitForAsync(new LocatorWaitForOptions { Timeout = 10000 });
         await page.Locator(tone + " [data-testid='memory-item-forget']").ClickAsync();
-        await page.WaitForFunctionAsync(
-            "() => document.querySelectorAll(\"[data-testid='ai-agents-memory'] [data-testid='memory-undo-row']\").length === 2",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => document.querySelectorAll(\"[data-testid='ai-agents-memory'] [data-testid='memory-undo-row']\").length === 2", 10000);
 
         var rows = await panel.Locator("[data-testid='memory-undo-row']")
             .EvaluateAllAsync<string[]>("rows => rows.map(row => row.dataset.itemId)");
@@ -128,10 +126,8 @@ public abstract partial class AiAgentsE2EBase : PlaywrightTestBase
         // The FIRST row, not merely the newest one: the queue exists so any pending removal can be taken back.
         await panel.Locator("[data-testid='memory-undo-row'][data-item-id='mem-units'] [data-testid='memory-undo-action']")
             .ClickAsync();
-        await page.WaitForFunctionAsync(
-            "() => document.querySelectorAll(\"[data-testid='ai-agents-memory'] [data-testid='memory-undo-row']\").length === 1"
-            + " && !!document.querySelector(\"[data-testid='ai-agents-memory'] [data-item-id='mem-units']\")",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => document.querySelectorAll(\"[data-testid='ai-agents-memory'] [data-testid='memory-undo-row']\").length === 1"
+            + " && !!document.querySelector(\"[data-testid='ai-agents-memory'] [data-item-id='mem-units']\")", 10000);
         Assert.IsFalse((await TextAsync(page, "ai-agents-memory-log")).Contains("Forget", StringComparison.Ordinal),
             "an undone removal is never reported to the page");
 
@@ -141,9 +137,7 @@ public abstract partial class AiAgentsE2EBase : PlaywrightTestBase
         await category.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
         await TypeIntoBoundFieldAsync(page, category, "People");
         await page.Keyboard.PressAsync("Enter");
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector(\"[data-testid='ai-agents-memory'] [data-item-id='mem-units']\")?.dataset.category === 'People'",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector(\"[data-testid='ai-agents-memory'] [data-item-id='mem-units']\")?.dataset.category === 'People'", 10000);
         Assert.AreEqual(1, await page.Locator(
                 "[data-testid='ai-agents-memory'] [data-testid='memory-group'][data-category='People'] "
                 + "[data-testid='memory-item'][data-item-id='mem-units']").CountAsync(),
@@ -169,9 +163,7 @@ public abstract partial class AiAgentsE2EBase : PlaywrightTestBase
             "the scrolling tray is not on screen at 375 px");
 
         await select.SelectOptionAsync("paused");
-        await phone.WaitForFunctionAsync(
-            "() => document.querySelectorAll(\"[data-testid='ai-agents-memory'] [data-testid='memory-item']\").length === 1",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(phone, "() => document.querySelectorAll(\"[data-testid='ai-agents-memory'] [data-testid='memory-item']\").length === 1", 10000);
         Assert.AreEqual("mem-zone", await phone.Locator(
                 "[data-testid='ai-agents-memory'] [data-testid='memory-item']").GetAttributeAsync("data-item-id"),
             "the select narrows the same view the tray does");
@@ -214,9 +206,7 @@ public abstract partial class AiAgentsE2EBase : PlaywrightTestBase
         Assert.AreEqual("Nothing received yet.", await TextAsync(page, "ai-agents-delegate-log"));
 
         await DragCardAsync(page, board, "task-summary", planner);
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector(\"[data-testid='ai-agents-delegate'] [data-column='planner']\")?.dataset.dragOver === 'true'",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector(\"[data-testid='ai-agents-delegate'] [data-column='planner']\")?.dataset.dragOver === 'true'", 10000);
 
         var preview = planner.Locator("[data-testid='delegate-agent-preview']");
         Assert.AreEqual("true", await preview.GetAttributeAsync("data-estimate"),
@@ -232,13 +222,9 @@ public abstract partial class AiAgentsE2EBase : PlaywrightTestBase
         await ShootRawAsync(page, "ai-agents-delegate-drag-preview-light-1440");
 
         await page.Mouse.UpAsync();
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector(\"[data-testid='ai-agents-delegate'] [data-column='planner'] "
-            + "[data-task-id='task-summary']\") !== null",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector(\"[data-testid='ai-agents-delegate'] [data-column='planner']\")?.dataset.dragOver === 'false'",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector(\"[data-testid='ai-agents-delegate'] [data-column='planner'] "
+            + "[data-task-id='task-summary']\") !== null", 10000);
+        await WaitForPredicateAsync(page, "() => document.querySelector(\"[data-testid='ai-agents-delegate'] [data-column='planner']\")?.dataset.dragOver === 'false'", 10000);
         StringAssert.Contains(await TextAsync(page, "ai-agents-delegate-log"), "assigned to Planner");
 
         // The theme is switched BEFORE the next gesture: ToggleThemeAsync clicks with the mouse, and a click while the
@@ -250,9 +236,7 @@ public abstract partial class AiAgentsE2EBase : PlaywrightTestBase
         var reviewer = board.Locator("[data-column='reviewer']");
         Assert.AreEqual("true", await reviewer.GetAttributeAsync("data-full"));
         await DragCardAsync(page, board, "task-invoices", reviewer);
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector(\"[data-testid='ai-agents-delegate'] [data-column='reviewer']\")?.dataset.dragOver === 'true'",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector(\"[data-testid='ai-agents-delegate'] [data-column='reviewer']\")?.dataset.dragOver === 'true'", 10000);
         Assert.IsFalse((await reviewer.Locator("[data-testid='delegate-agent-preview']").InnerTextAsync())
                 .Contains("with the card being moved", StringComparison.Ordinal),
             "a full column never promises a time for a card it is going to refuse");
@@ -261,9 +245,7 @@ public abstract partial class AiAgentsE2EBase : PlaywrightTestBase
         await ShootRawAsync(page, "ai-agents-delegate-drag-full-dark-1440");
 
         await page.Mouse.UpAsync();
-        await page.WaitForFunctionAsync(
-            "() => !!document.querySelector(\"[data-testid='ai-agents-delegate'] [data-testid='delegate-notice']\")",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => !!document.querySelector(\"[data-testid='ai-agents-delegate'] [data-testid='delegate-notice']\")", 10000);
         StringAssert.Contains(await TextAsync(page, "delegate-notice"), "not moved",
             "the refusal is painted where a reader who missed the announcement can see it");
         Assert.AreEqual(1, await board.Locator("[data-column='backlog'] [data-task-id='task-invoices']").CountAsync(),
@@ -271,13 +253,9 @@ public abstract partial class AiAgentsE2EBase : PlaywrightTestBase
 
         // Escape cancels the gesture: the preview disappears and nothing moves.
         await DragCardAsync(page, board, "task-notes", planner);
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector(\"[data-testid='ai-agents-delegate'] [data-column='planner']\")?.dataset.dragOver === 'true'",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector(\"[data-testid='ai-agents-delegate'] [data-column='planner']\")?.dataset.dragOver === 'true'", 10000);
         await page.Keyboard.PressAsync("Escape");
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector(\"[data-testid='ai-agents-delegate'] [data-column='planner']\")?.dataset.dragOver === 'false'",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector(\"[data-testid='ai-agents-delegate'] [data-column='planner']\")?.dataset.dragOver === 'false'", 10000);
         await page.Mouse.UpAsync();
         Assert.AreEqual(1, await board.Locator("[data-column='backlog'] [data-task-id='task-notes']").CountAsync(),
             "a cancelled drag changes nothing");
@@ -288,9 +266,7 @@ public abstract partial class AiAgentsE2EBase : PlaywrightTestBase
         await ScrollToSection(tablet, DelegateSection);
         var tabletBoard = tablet.Locator("[data-testid='ai-agents-delegate']");
         await DragCardAsync(tablet, tabletBoard, "task-summary", tabletBoard.Locator("[data-column='planner']"));
-        await tablet.WaitForFunctionAsync(
-            "() => document.querySelector(\"[data-testid='ai-agents-delegate'] [data-column='planner']\")?.dataset.dragOver === 'true'",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(tablet, "() => document.querySelector(\"[data-testid='ai-agents-delegate'] [data-column='planner']\")?.dataset.dragOver === 'true'", 10000);
         StringAssert.Contains(
             await tabletBoard.Locator("[data-column='planner'] [data-testid='delegate-agent-preview']").InnerTextAsync(),
             "with the card being moved");
@@ -365,23 +341,17 @@ public abstract partial class AiAgentsE2EBase : PlaywrightTestBase
         // The FIRST window has nothing before it: the chord is announced, never silently swallowed.
         await FocusRunTriggerAsync(page, runs, "win-mon-am", "run-export");
         await page.Keyboard.PressAsync("Alt+ArrowLeft");
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector(\"[data-testid='ai-agents-runs'] [role='status']\")?.textContent?.includes('first window')",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector(\"[data-testid='ai-agents-runs'] [role='status']\")?.textContent?.includes('first window')", 10000);
         Assert.AreEqual(1, await runs.Locator("[data-window-id='win-mon-am'] [data-testid='runs-run'][data-run-id='run-export']").CountAsync(),
             "a key past the start of the range moves nothing");
 
         await FocusRunTriggerAsync(page, runs, "win-mon-am", "run-export");
         await page.Keyboard.PressAsync("Alt+ArrowRight");
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector(\"[data-testid='ai-agents-runs-log']\")?.textContent?.includes('moved to')",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector(\"[data-testid='ai-agents-runs-log']\")?.textContent?.includes('moved to')", 10000);
         Assert.AreEqual(1, await runs.Locator("[data-window-id='win-mon-pm'] [data-testid='runs-run'][data-run-id='run-export']").CountAsync(),
             "Alt+ArrowRight moves the run to the next window");
 
-        await page.WaitForFunctionAsync(
-            "() => window.__tmMoveKeys.length === 2",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => window.__tmMoveKeys.length === 2", 10000);
         var keys = await page.EvaluateAsync<string[]>(
             "() => window.__tmMoveKeys.map(entry => entry.key + (entry.alt ? ':alt' : '') + (entry.prevented ? ':prevented' : ':default'))");
         CollectionAssert.AreEqual(
@@ -395,23 +365,17 @@ public abstract partial class AiAgentsE2EBase : PlaywrightTestBase
         // Back again, then the NEXT DAY, then a FULL window (the demo's overloaded win-tue-pm has no room at all).
         await FocusRunTriggerAsync(page, runs, "win-mon-pm", "run-export");
         await page.Keyboard.PressAsync("Alt+ArrowLeft");
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector(\"[data-testid='ai-agents-runs'] [data-window-id='win-mon-am'] "
-            + "[data-testid='runs-run'][data-run-id='run-export']\") !== null",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector(\"[data-testid='ai-agents-runs'] [data-window-id='win-mon-am'] "
+            + "[data-testid='runs-run'][data-run-id='run-export']\") !== null", 10000);
 
         await FocusRunTriggerAsync(page, runs, "win-mon-am", "run-export");
         await page.Keyboard.PressAsync("Alt+ArrowDown");
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector(\"[data-testid='ai-agents-runs'] [data-window-id='win-tue-am'] "
-            + "[data-testid='runs-run'][data-run-id='run-export']\") !== null",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector(\"[data-testid='ai-agents-runs'] [data-window-id='win-tue-am'] "
+            + "[data-testid='runs-run'][data-run-id='run-export']\") !== null", 10000);
 
         await FocusRunTriggerAsync(page, runs, "win-tue-am", "run-export");
         await page.Keyboard.PressAsync("Alt+ArrowRight");
-        await page.WaitForFunctionAsync(
-            "() => !!document.querySelector(\"[data-testid='ai-agents-runs'] [data-testid='runs-notice']\")",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => !!document.querySelector(\"[data-testid='ai-agents-runs'] [data-testid='runs-notice']\")", 10000);
         StringAssert.Contains(await TextAsync(page, "runs-notice"), "has no free room",
             "a window with no room refuses the keyboard move exactly like a drop and says why");
         Assert.AreEqual(1, await runs.Locator("[data-window-id='win-tue-am'] [data-testid='runs-run'][data-run-id='run-export']").CountAsync(),
@@ -426,10 +390,8 @@ public abstract partial class AiAgentsE2EBase : PlaywrightTestBase
         await ScrollToSection(page, RunsSection);
         await FocusRunTriggerAsync(page, runs, "win-tue-am", "run-export");
         await page.Keyboard.PressAsync("Alt+ArrowUp");
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector(\"[data-testid='ai-agents-runs'] [data-window-id='win-mon-am'] "
-            + "[data-testid='runs-run'][data-run-id='run-export']\") !== null",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector(\"[data-testid='ai-agents-runs'] [data-window-id='win-mon-am'] "
+            + "[data-testid='runs-run'][data-run-id='run-export']\") !== null", 10000);
         await ShootAsync(page, "ai-agents-runs-move-chord-dark-1440");
 
         var phone = await OpenAsync(375, 812, coarsePointer: true);
@@ -437,10 +399,8 @@ public abstract partial class AiAgentsE2EBase : PlaywrightTestBase
         var phoneRuns = phone.Locator("[data-testid='ai-agents-runs']");
         await FocusRunTriggerAsync(phone, phoneRuns, "win-mon-am", "run-export");
         await phone.Keyboard.PressAsync("Alt+ArrowRight");
-        await phone.WaitForFunctionAsync(
-            "() => document.querySelector(\"[data-testid='ai-agents-runs'] [data-window-id='win-mon-pm'] "
-            + "[data-testid='runs-run'][data-run-id='run-export']\") !== null",
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await WaitForPredicateAsync(phone, "() => document.querySelector(\"[data-testid='ai-agents-runs'] [data-window-id='win-mon-pm'] "
+            + "[data-testid='runs-run'][data-run-id='run-export']\") !== null", 10000);
         await ScrollToSection(phone, RunsSection);
         await ShootAsync(phone, "ai-agents-runs-move-chord-phone-375");
     }
@@ -472,9 +432,7 @@ public abstract partial class AiAgentsE2EBase : PlaywrightTestBase
         await trigger.FocusAsync();
         // The chord is resolved from the event TARGET, so the focus has to be the row's trigger before the key is sent —
         // a key that reaches the page or another control would prove nothing.
-        await page.WaitForFunctionAsync(
-            "() => document.activeElement?.classList?.contains('tm-context-menu__trigger') === true"
-            + " && document.activeElement?.closest('[data-tm-run-move-keys]') !== null",
-            new PageWaitForFunctionOptions { Timeout = 5000 });
+        await WaitForPredicateAsync(page, "() => document.activeElement?.classList?.contains('tm-context-menu__trigger') === true"
+            + " && document.activeElement?.closest('[data-tm-run-move-keys]') !== null", 5000);
     }
 }

@@ -88,16 +88,12 @@ public sealed class DocumentEditorCanvasViewModesPrintE2ETests : WasmTestBase
 
         await page.Locator("[data-testid='document-canvas-engine-root']").EvaluateAsync(
             "el => el.dispatchEvent(new WheelEvent('wheel', { deltaY: -120, ctrlKey: true, bubbles: true, cancelable: true }))");
-        await page.WaitForFunctionAsync(
-            "() => Number(document.querySelector('[data-testid=\"document-canvas-engine-root\"]')?.getAttribute('data-canvas-zoom-percent') || '0') > 75",
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+        await WaitForPredicateAsync(page, "() => Number(document.querySelector('[data-testid=\"document-canvas-engine-root\"]')?.getAttribute('data-canvas-zoom-percent') || '0') > 75", 10_000);
 
         await page.GetByTestId("document-ribbon-tab-view").ClickAsync();
         await Assertions.Expect(page.GetByTestId("document-open-print-preview")).ToBeEnabledAsync(new() { Timeout = 10_000 });
         await page.GetByTestId("document-open-print-preview").ClickAsync();
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"document-canvas-engine-root\"]')?.getAttribute('data-canvas-print-preview-active') === 'true'",
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-canvas-engine-root\"]')?.getAttribute('data-canvas-print-preview-active') === 'true'", 10_000);
         await Assertions.Expect(page.GetByTestId("document-print-preview-actions")).ToBeVisibleAsync(new() { Timeout = 10_000 });
 
         var printPreview = await ReadPrintPreviewAsync(page);
@@ -109,7 +105,7 @@ public sealed class DocumentEditorCanvasViewModesPrintE2ETests : WasmTestBase
         Assert.IsFalse(printPreview.IsBlank, printPreview.Debug);
 
         await page.GetByTestId("document-print-preview-browser-print").ClickAsync();
-        await page.WaitForFunctionAsync("() => window.__tempoPrintInvoked === true", new PageWaitForFunctionOptions { Timeout = 10_000 });
+        await WaitForPredicateAsync(page, "() => window.__tempoPrintInvoked === true", 10_000);
 
         await Assertions.Expect(page.GetByTestId("document-print-preview-export-pdf")).ToBeEnabledAsync(new() { Timeout = 10_000 });
         var pdfDownload = await page.RunAndWaitForDownloadAsync(
@@ -187,8 +183,7 @@ public sealed class DocumentEditorCanvasViewModesPrintE2ETests : WasmTestBase
     }
 
     private static Task WaitForPhaseE11ReadyAsync(IPage page)
-        => page.WaitForFunctionAsync(
-            """
+        => WaitForPredicateAsync(page, """
             () => {
                 const hostReady = document.querySelector('[data-testid="document-canvas-engine-host"]')?.getAttribute('data-canvas-engine-ready') === 'true';
                 const first = document.querySelector('[data-testid="document-canvas-page"]');
@@ -196,42 +191,28 @@ public sealed class DocumentEditorCanvasViewModesPrintE2ETests : WasmTestBase
                     && first?.getAttribute('data-canvas-model-document-id') === 'phase-e11-canvas-viewmodes-print'
                     && document.querySelectorAll('[data-canvas-text-rect][data-block-id="canvas-e11-zoom-target"]').length >= 1;
             }
-            """,
-            new PageWaitForFunctionOptions { Timeout = 30_000 });
+            """, 30_000);
 
     private static Task WaitForViewModeAsync(IPage page, string viewMode)
-        => page.WaitForFunctionAsync(
-            "viewMode => document.querySelector('[data-testid=\"document-canvas-engine-root\"]')?.getAttribute('data-canvas-view-mode') === viewMode",
-            viewMode,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+        => WaitForPredicateAsync(page, "viewMode => document.querySelector('[data-testid=\"document-canvas-engine-root\"]')?.getAttribute('data-canvas-view-mode') === viewMode", viewMode, 10_000);
 
     private static Task WaitForToolbarVisibilityAsync(IPage page, bool visible)
-        => page.WaitForFunctionAsync(
-            """
+        => WaitForPredicateAsync(page, """
             visible => {
                 const toolbar = document.querySelector('[data-testid="document-toolbar"]');
                 const isVisible = !!toolbar && toolbar.getBoundingClientRect().height > 0;
                 return isVisible === visible;
             }
-            """,
-            visible,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, visible, 10_000);
 
     private static Task WaitForZoomPresetAsync(IPage page, string preset)
-        => page.WaitForFunctionAsync(
-            "preset => document.querySelector('[data-testid=\"document-canvas-engine-root\"]')?.getAttribute('data-canvas-zoom-preset') === preset",
-            preset,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+        => WaitForPredicateAsync(page, "preset => document.querySelector('[data-testid=\"document-canvas-engine-root\"]')?.getAttribute('data-canvas-zoom-preset') === preset", preset, 10_000);
 
     private static Task WaitForZoomPercentAsync(IPage page, int percent)
-        => page.WaitForFunctionAsync(
-            "percent => Number(document.querySelector('[data-testid=\"document-canvas-engine-root\"]')?.getAttribute('data-canvas-zoom-percent') || '0') === percent",
-            percent,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+        => WaitForPredicateAsync(page, "percent => Number(document.querySelector('[data-testid=\"document-canvas-engine-root\"]')?.getAttribute('data-canvas-zoom-percent') || '0') === percent", percent, 10_000);
 
     private static Task WaitForFitWidthRenderAsync(IPage page)
-        => page.WaitForFunctionAsync(
-            """
+        => WaitForPredicateAsync(page, """
             () => {
                 // The engine's fit-width preset is computed from the clipping scroll viewport
                 // (the host's clientWidth), not the content-sized mount: the mount grows with
@@ -248,8 +229,7 @@ public sealed class DocumentEditorCanvasViewModesPrintE2ETests : WasmTestBase
                 const expected = Math.max(1, Math.round(viewportWidth - 48));
                 return Math.abs(cssPageWidth - expected) <= 24;
             }
-            """,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
+            """, 10_000);
 
     private static async Task<PhaseE11CommandProbe> ExecuteCanvasCommandAsync(IPage page, string commandId, object payload)
     {

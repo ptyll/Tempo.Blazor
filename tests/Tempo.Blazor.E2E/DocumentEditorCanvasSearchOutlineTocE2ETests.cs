@@ -127,9 +127,7 @@ public sealed class DocumentEditorCanvasSearchOutlineTocE2ETests : WasmTestBase
         Assert.IsTrue((await saved).Ok, "the save request succeeded");
         await WaitForSaveBoundaryAsync(page);
         await NavigateWithinBlazorAsync(page, "/canvas-engine-host?documentId=phase-5-canvas-render");
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'",
-            new PageWaitForFunctionOptions { Timeout = 20_000 });
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'", 20_000);
         await NavigateWithinBlazorAsync(page, $"/canvas-engine-host?documentId={Phase18DocumentId}&showToolbar=true&autosaveMs=30000");
         await WaitForPhase18ReadyAsync(page);
         await WaitForTocModelEntryCountAtLeastAsync(page, 4);
@@ -194,15 +192,13 @@ public sealed class DocumentEditorCanvasSearchOutlineTocE2ETests : WasmTestBase
     }
 
     private static Task WaitForPhase18ReadyAsync(IPage page)
-        => page.WaitForFunctionAsync(
-            """
+        => WaitForPredicateAsync(page, """
             () => {
                 const hostReady = document.querySelector('[data-testid="document-canvas-engine-host"]')?.getAttribute('data-canvas-engine-ready') === 'true';
                 const first = document.querySelector('[data-testid="document-canvas-page"]');
                 return hostReady && first?.getAttribute('data-canvas-model-document-id') === 'phase-18-canvas-search-outline-toc';
             }
-            """,
-            new PageWaitForFunctionOptions { Timeout = 30_000 });
+            """, 30_000);
 
     private static Task WaitForSearchMatchesAsync(IPage page, int minimum)
         => page.WaitForFunctionAsync(
@@ -511,8 +507,7 @@ public sealed class DocumentEditorCanvasSearchOutlineTocE2ETests : WasmTestBase
     {
         try
         {
-            await page.WaitForFunctionAsync(
-                """
+            await WaitForPredicateAsync(page, """
                 () => {
                     const saveMessage = document.querySelector('[data-testid="document-save-message"]')?.textContent || '';
                     const lastSaved = document.querySelector('[data-testid="document-last-saved"]')?.textContent || '';
@@ -524,8 +519,7 @@ public sealed class DocumentEditorCanvasSearchOutlineTocE2ETests : WasmTestBase
                         && dirty.trim().length === 0
                         && (saveMessage.trim().length > 0 || lastSaved.trim().length > 0);
                 }
-                """,
-                new PageWaitForFunctionOptions { Timeout = 10_000 });
+                """, 10_000);
         }
         catch (TimeoutException ex)
         {

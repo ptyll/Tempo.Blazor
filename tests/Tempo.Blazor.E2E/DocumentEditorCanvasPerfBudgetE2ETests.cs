@@ -38,9 +38,7 @@ public sealed class DocumentEditorCanvasPerfBudgetE2ETests : WasmTestBase
         });
         // N11: the mount render is budgeted; wait for the idle continuations to finish the layout
         // before asserting document-final counts (data-canvas-layout-complete is the contract).
-        await page.WaitForFunctionAsync(
-            @"() => document.querySelector('[data-testid=""document-canvas-engine-root""]')?.getAttribute('data-canvas-layout-complete') === 'true'",
-            new PageWaitForFunctionOptions { Timeout = 60_000 });
+        await WaitForPredicateAsync(page, @"() => document.querySelector('[data-testid=""document-canvas-engine-root""]')?.getAttribute('data-canvas-layout-complete') === 'true'", 60_000);
         await page.WaitForTimeoutAsync(300);
 
         var initial = await ReadMetricsAsync(page);
@@ -110,9 +108,7 @@ public sealed class DocumentEditorCanvasPerfBudgetE2ETests : WasmTestBase
         }
 
         TestContext.WriteLine($"PROGRESSIVE SCROLL: layout-complete at scroll start='{completeAtScrollStart}'");
-        await page.WaitForFunctionAsync(
-            @"() => document.querySelector('[data-testid=""document-canvas-engine-root""]')?.getAttribute('data-canvas-layout-complete') === 'true'",
-            new PageWaitForFunctionOptions { Timeout = 60_000 });
+        await WaitForPredicateAsync(page, @"() => document.querySelector('[data-testid=""document-canvas-engine-root""]')?.getAttribute('data-canvas-layout-complete') === 'true'", 60_000);
         await page.WaitForTimeoutAsync(400);
 
         var metrics = await ReadMetricsAsync(page);

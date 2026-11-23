@@ -59,7 +59,7 @@ export function createCanvasRevisionOverlay(options = {}) {
         selectedRevisionId = String(options.selectedRevisionId || selectedRevisionId || '');
         markers = buildRevisionMarkers(model, render, { reviewMode, selectedRevisionId })
             .map(marker => withPagePlacement(marker, canvasStack));
-        root.replaceChildren(...markers.map(marker => createRevisionElement(doc, marker)));
+        reconcileRevisionElements(doc, root, markers);
         root.setAttribute('data-canvas-revision-marker-count', String(markers.length));
         root.setAttribute('data-canvas-review-display-mode', reviewMode);
         root.setAttribute('data-canvas-revision-selected-id', selectedRevisionId);
@@ -187,10 +187,9 @@ export function buildRevisionMarkers(model, render, options = {}) {
         }));
     }
 
+    const order = new Map(revisions.map((revision, index) => [revision.id, index]));
     return markers.sort((left, right) =>
-        left.pageIndex - right.pageIndex
-        || left.rect.y - right.rect.y
-        || left.rect.x - right.rect.x
+        (order.get(left.revisionId) ?? 0) - (order.get(right.revisionId) ?? 0)
         || left.revisionId.localeCompare(right.revisionId));
 }
 
@@ -239,9 +238,55 @@ export function applyReviewDecisionAll(model, action, filter = {}) {
     return { changed, model: working, revisionIds: targetIds };
 }
 
+function reconcileRevisionElements(doc, root, markers) {
+    const existing = new Map();
+    for (const child of Array.from(root.children || [])) {
+        const id = child.getAttribute?.('data-revision-id');
+        if (id) existing.set(id, child);
+    }
+
+    const next = [];
+    const seen = new Set();
+    for (const marker of markers) {
+        if (seen.has(marker.revisionId)) continue;
+        seen.add(marker.revisionId);
+        let element = existing.get(marker.revisionId);
+        if (!element) {
+            element = createRevisionElement(doc, marker);
+        } else {
+            applyRevisionElement(element, marker);
+        }
+        next.push(element);
+    }
+
+    for (const [id, element] of existing) {
+        if (!seen.has(id) && element.parentNode === root) {
+            root.removeChild(element);
+        }
+    }
+
+    let reference = root.firstChild || null;
+    for (const element of next) {
+        if (element === reference) {
+            reference = element.nextSibling || null;
+            continue;
+        }
+        if (typeof root.insertBefore === 'function') {
+            root.insertBefore(element, reference);
+        } else if (element.parentNode !== root) {
+            root.appendChild(element);
+        }
+    }
+}
+
 function createRevisionElement(doc, marker) {
     const element = doc.createElement('button');
     element.type = 'button';
+    applyRevisionElement(element, marker);
+    return element;
+}
+
+function applyRevisionElement(element, marker) {
     element.className = classNameForRevision(marker.type, marker.selected, marker.simple);
     element.setAttribute('data-testid', 'document-canvas-revision-marker');
     element.setAttribute('data-revision-id', marker.revisionId);
@@ -257,7 +302,6 @@ function createRevisionElement(doc, marker) {
         height: `${marker.rect.height * marker.scale}px`,
         pointerEvents: 'auto',
     });
-    return element;
 }
 
 function withPagePlacement(marker, canvasStack) {

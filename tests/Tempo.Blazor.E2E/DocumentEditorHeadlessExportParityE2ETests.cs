@@ -107,13 +107,11 @@ public sealed class DocumentEditorHeadlessExportParityE2ETests : WasmTestBase
     }
 
     private static Task WaitForEditorReadyAsync(IPage page)
-        => page.WaitForFunctionAsync(
-            """
+        => WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-engine-host"][data-canvas-engine-ready="true"]')
                 && document.querySelectorAll('[data-testid="document-canvas-page"]').length >= 1
                 && document.querySelector('[data-testid="document-ribbon-tab-references"]')
-            """,
-            options: new PageWaitForFunctionOptions { Timeout = 45_000 });
+            """, 45_000);
 
     private static Task<string> FetchAsBase64Async(IPage page, string url)
         => page.EvaluateAsync<string>(
@@ -160,14 +158,12 @@ public sealed class DocumentEditorHeadlessExportParityE2ETests : WasmTestBase
             $"{BaseUrl}/pdf-viewer?url={Uri.EscapeDataString(pdfUrl)}", WaitUntilState.DOMContentLoaded);
         var viewerCanvas = viewerPage.Locator("[data-testid='pdf-basic-usage-card'] .tm-pdf-viewer__canvas").First;
         await Assertions.Expect(viewerCanvas).ToBeVisibleAsync(new() { Timeout = 45_000 });
-        await viewerPage.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(viewerPage, """
             () => {
                 const canvas = document.querySelector('[data-testid="pdf-basic-usage-card"] .tm-pdf-viewer__canvas');
                 return !!canvas && canvas.clientHeight > 400;
             }
-            """,
-            options: new PageWaitForFunctionOptions { Timeout = 45_000 });
+            """, 45_000);
         await viewerPage.Locator("[data-testid='pdf-basic-usage-card']").ScreenshotAsync(new LocatorScreenshotOptions { Path = screenshotPath });
         await viewerPage.CloseAsync();
     }

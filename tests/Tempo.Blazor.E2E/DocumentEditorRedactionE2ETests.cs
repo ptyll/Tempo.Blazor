@@ -64,9 +64,7 @@ public sealed class DocumentEditorRedactionE2ETests : WasmTestBase
         await page.WaitForSelectorAsync(
             "[data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']",
             new PageWaitForSelectorOptions { Timeout = 45_000 });
-        await page.WaitForFunctionAsync(
-            $"() => document.querySelector('[data-testid=\"document-canvas-a11y-mirror\"]')?.textContent?.includes('{readyText}') === true",
-            options: new PageWaitForFunctionOptions { Timeout = 30_000 });
+        await WaitForPredicateAsync(page, $"() => document.querySelector('[data-testid=\"document-canvas-a11y-mirror\"]')?.textContent?.includes('{readyText}') === true", 30_000);
         return page;
     }
 

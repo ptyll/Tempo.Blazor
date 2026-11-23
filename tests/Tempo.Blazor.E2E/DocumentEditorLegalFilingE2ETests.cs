@@ -22,12 +22,10 @@ public sealed class DocumentEditorLegalFilingE2ETests : WasmTestBase
         var page = await OpenAsync(DocumentId, "Okresnímu soudu");
 
         // Line numbering paints as lineNumber display-list commands; the page exposes the count.
-        await page.WaitForFunctionAsync(
-            """
+        await WaitForPredicateAsync(page, """
             () => Number(document.querySelector('[data-testid="document-canvas-page"]')
                 ?.getAttribute('data-canvas-line-number-count') || '0') >= 8
-            """,
-            options: new PageWaitForFunctionOptions { Timeout = 20_000 });
+            """, 20_000);
 
         // The č.l. margin note renders from the header part — assert it via the print layout
         // snapshot (the a11y mirror reflects only body blocks).
@@ -82,9 +80,7 @@ public sealed class DocumentEditorLegalFilingE2ETests : WasmTestBase
         await page.WaitForSelectorAsync(
             "[data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']",
             new PageWaitForSelectorOptions { Timeout = 45_000 });
-        await page.WaitForFunctionAsync(
-            $"() => document.querySelector('[data-testid=\"document-canvas-a11y-mirror\"]')?.textContent?.includes('{readyText}') === true",
-            options: new PageWaitForFunctionOptions { Timeout = 30_000 });
+        await WaitForPredicateAsync(page, $"() => document.querySelector('[data-testid=\"document-canvas-a11y-mirror\"]')?.textContent?.includes('{readyText}') === true", 30_000);
         return page;
     }
 

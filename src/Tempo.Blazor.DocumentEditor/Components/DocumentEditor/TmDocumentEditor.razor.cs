@@ -29,7 +29,7 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
     private readonly DocumentAutosaveStateMachine _autosave = new();
     private readonly DocumentEditorFeatureRegistry _featureRegistry = DocumentEditorBuiltInFeatures.CreateDefaultRegistry();
     private const long MaxDocumentFormatImportSize = 20 * 1024 * 1024;
-    private Timer? _autoSaveTimer;
+    private ITimer? _autoSaveTimer;
     private int _canvasToolbarSyncSeq;
     // B6: set when the engine model actually changes (the change-notify path), so the debounced toolbar sync —
     // which also fires on pure selection moves — runs the light annotation pull ONLY after a real edit settles.
@@ -45,7 +45,7 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
     // Toolbar/formatting readback is cheap + gated, so it can fire shortly after a pause; it must NOT run on
     // every keystroke (the re-render it drives is not cheap). Per-keystroke painting is pure canvas (~5 ms).
     private static readonly TimeSpan CanvasToolbarSyncDebounce = TimeSpan.FromMilliseconds(200);
-    private Timer? _collaborationTimer;
+    private ITimer? _collaborationTimer;
     private TimeSpan? _configuredAutoSaveInterval;
     private TimeSpan? _configuredCollaborationInterval;
 
@@ -241,6 +241,16 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
 
     /// <summary>Service provider used to resolve optional infrastructure (logging) without hard DI requirements.</summary>
     [Inject] private IServiceProvider ServiceProvider { get; set; } = default!;
+
+    /// <summary>
+    /// Clock driving autosave and collaboration timers. Resolved through <see cref="IServiceProvider"/> so a
+    /// consumer that never registers a <see cref="TimeProvider"/> still gets
+    /// <see cref="TimeProvider.System"/> — a bare <c>[Inject] TimeProvider</c> would throw for
+    /// exactly those consumers. Tests register a FakeTimeProvider.
+    /// </summary>
+    private TimeProvider Clock
+        => _clock ??= ServiceProvider.GetService(typeof(TimeProvider)) as TimeProvider ?? TimeProvider.System;
+    private TimeProvider? _clock;
 
     private Microsoft.Extensions.Logging.ILogger? _logger;
 
@@ -9906,7 +9916,7 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
             return;
         }
 
-        _autoSaveTimer = new Timer(
+        _autoSaveTimer = Clock.CreateTimer(
             _ => _ = InvokeAsync(RunDebouncedAutoSaveAsync),
             null,
             interval,
@@ -10379,7 +10389,7 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
             return;
         }
 
-        _collaborationTimer = new Timer(
+        _collaborationTimer = Clock.CreateTimer(
             _ => _ = InvokeAsync(RefreshCollaborationAsync),
             null,
             CollaborationSyncInterval,

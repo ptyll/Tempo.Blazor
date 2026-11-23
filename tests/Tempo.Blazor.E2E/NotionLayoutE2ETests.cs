@@ -318,9 +318,7 @@ public class NotionLayoutRecoveryE2ETests : NotionE2ETestBase
         await page.Locator(".tm-toc__item").Nth(3).ClickAsync();
         // State-based, not a fixed delay: scroll-spy marks the active item after the scroll
         // settles — under load a fixed 600ms reads the list before the class lands.
-        await page.WaitForFunctionAsync(
-            "() => document.querySelectorAll(\".tm-toc__item--active, .tm-toc__item[aria-current='true']\").length > 0",
-            new PageWaitForFunctionOptions { Timeout = 15000 });
+        await WaitForPredicateAsync(page, "() => document.querySelectorAll(\".tm-toc__item--active, .tm-toc__item[aria-current='true']\").length > 0", 15000);
         var activeItems = await page.Locator(".tm-toc__item--active, .tm-toc__item[aria-current='true']").CountAsync();
         Assert.IsTrue(activeItems > 0, "EB8 TOC scroll-spy should expose an active state after navigating to a heading.");
         await CaptureBaselineAsync("layout", "toc-many-headings-scroll-spy", toc);

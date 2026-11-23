@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 using System.Text.Json;
 using Tempo.Blazor.Components.DocumentEditor;
 using Tempo.Blazor.Components.Inputs;
@@ -114,23 +115,31 @@ public class TmDocumentEditorTests : LocalizationTestBase
     [Fact]
     public async Task AutoSaveFailure_AnnouncesThroughLiveRegion()
     {
+        var clock = new FakeTimeProvider();
+        Services.AddSingleton<TimeProvider>(clock);
         var provider = new FailingAutosaveProvider();
         var seeded = provider.SeedContractDocument("doc-1");
         var (paragraph, inline) = GetFirstParagraphTextRun(seeded);
+        var interval = TimeSpan.FromMinutes(1);
 
         var cut = RenderDocumentEditor(parameters =>
             parameters.Add(p => p.DocumentId, "doc-1")
                       .Add(p => p.Provider, provider)
-                      .Add(p => p.AutoSaveInterval, TimeSpan.FromMilliseconds(20)));
+                      .Add(p => p.AutoSaveInterval, interval));
 
         await MarkCanvasReadyAsync(cut);
         await NotifyCanvasChangedAsync(cut);
 
-        // No per-call timeout: the wait runs on the suite's budget (TestAssemblyInit,
-        // TEMPO_BUNIT_WAIT_SECONDS — 10 s in CI). A fixed 3 s here overrode that budget and was the CI
-        // red of run 35851300788 (WaitForFailedException, check count 1). Reproduced by holding the
-        // renderer's dispatcher for 3.5 s after the canvas change: red with the fixed 3 s, green on
-        // the 10 s budget.
+        var live = cut.Find("[data-testid='document-editor-live-region']").TextContent;
+        live.Should().NotContain("autosave-boom");
+
+        // Remaining 22e45d35: autosave is Clock.CreateTimer. Advance on the TEST thread (not inside
+        // InvokeAsync — that deadlocks the timer callback's hop onto the renderer) and drain the
+        // dispatcher so RunDebouncedAutoSaveAsync is observable. A 1-minute wall-clock `new Timer`
+        // would miss the WaitForAssertion budget — that is the mutation.
+        clock.Advance(interval + TimeSpan.FromMilliseconds(1));
+        await cut.InvokeAsync(() => { });
+
         cut.WaitForAssertion(() =>
             cut.Find("[data-testid='document-editor-live-region']").TextContent.Should().Contain("autosave-boom"));
     }

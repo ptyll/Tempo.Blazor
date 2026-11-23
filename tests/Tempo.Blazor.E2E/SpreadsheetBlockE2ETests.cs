@@ -214,9 +214,7 @@ public class SpreadsheetBlockE2ETests : WasmTestBase
         // A new spreadsheet block should appear — state-based count, not a fixed delay: the
         // insert round-trips through Blazor before the block renders, and under a shared-host
         // load a fixed 1s can observe the page before the re-render lands (got 1 of 2).
-        await page.WaitForFunctionAsync(
-            "() => document.querySelectorAll('.tm-notion-spreadsheet-block').length >= 2",
-            new PageWaitForFunctionOptions { Timeout = 15000 });
+        await WaitForPredicateAsync(page, "() => document.querySelectorAll('.tm-notion-spreadsheet-block').length >= 2", 15000);
         var count = await page.Locator(".tm-notion-spreadsheet-block").CountAsync();
         Assert.IsTrue(count >= 2, $"At least 2 spreadsheet blocks expected (pre-seeded + newly inserted), got {count}");
 
