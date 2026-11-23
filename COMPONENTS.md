@@ -1226,7 +1226,7 @@ Skupina přepínacích tlačítek (radio buttons).
 | `Error` | `string?` | `null` | Chybová zpráva |
 | `Value` | `T?` | `null` | Aktuálně vybraná hodnota |
 | `ValueChanged` | `EventCallback<T?>` | — | Událost změny |
-| `Options` | `List<RadioOption<T>>` | `[]` | Seznam možností |
+| `Options` | `List<RadioOption<T>>` | `[]` | Seznam možností (`RadioOption.Lang` = BCP 47 na textu volby) |
 | `Disabled` | `bool` | `false` | Zakáže celou skupinu |
 | `Layout` | `RadioLayout` | `Vertical` | Rozložení: `Vertical`, `Horizontal` |
 | `Class` | `string?` | `null` | Další CSS třídy |
@@ -1295,6 +1295,7 @@ Jednotlivý radio button (interní, používá se v TmRadioGroup).
 | `Value` | `object?` | `null` | Hodnota |
 | `Name` | `string` | — | Sdílené jméno skupiny |
 | `Label` | `string?` | `null` | Text |
+| `Lang` | `string?` | `null` | BCP 47 na `.tm-radio-text` jen když je neprázdné |
 | `IsChecked` | `bool` | `false` | Zaškrtnutý stav |
 | `Disabled` | `bool` | `false` | Zakázáno |
 | `OnSelect` | `EventCallback<object?>` | — | Událost výběru |
@@ -2583,6 +2584,8 @@ Záložky s obsahem.
 | `--tm-tabs-sticky-top` | `0` | Offset sticky hlavičky (`StickyHeader`), např. `56px` pro podjetí fixní app baru; deklarován na `:root`, takže host přebije override na `:root` nebo na wrapperu |
 | `--tm-tabs-scroll-cover` | `var(--tm-bg-surface)` | Barva krycích přechodů okrajových stínů scrollovacího režimu (a pozadí sticky pruhu); Pill ji přepisuje na `var(--tm-bg-muted)`, host s pruhem na jiném pozadí ji přepíše na to pozadí |
 | `--tm-tabs-edge-shadow-size` | `var(--tm-space-4)` | Šířka pásu okrajové stíny (gradient i `background-size`) |
+| `--tm-tabs-sticky-z-index` | `5` | z-index sticky pruhu; deklarován na `:root`, stylesheet čte bez fallbacku |
+| `--tm-tabs-edge-shadow-color` | `var(--tm-border-color)` | Barva okrajového stínu; deklarována na `:root`, stylesheet čte bez fallbacku. Krycí vrstvy malují plný `--tm-tabs-scroll-cover` pás `--tm-tabs-edge-shadow-size` a teprve pak fade |
 
 #### Parametry TmTabs
 
@@ -2971,6 +2974,8 @@ Výběr data s kalendářem.
 | `tm-picker-placeholder` | Placeholder text |
 | `tm-date-picker-icon` | Ikona kalendáře |
 | `tm-picker-clear` | Tlačítko pro vymazání |
+| `tm-picker-clear-slot` | Rezervovaný slot pro × (na `(pointer: coarse)` 44 px) |
+| `tm-date-picker-typed` | Opt-in psané datum (`AllowTypedDate`) |
 | `tm-date-picker-popup` | Vyskakovací kalendář |
 | `tm-date-picker-footer` | Patička kalendáře |
 | `tm-date-today-btn` | Tlačítko „Dnes" |
@@ -2988,6 +2993,10 @@ Výběr data s kalendářem.
 | `Disabled` | `bool` | `false` | Zakázáno |
 | `Required` | `bool` | `false` | Povinné |
 | `Label` | `string?` | `null` | Popisek |
+| `LabelTrailing` | `RenderFragment?` | `null` | Slot na konci řádku popisku |
+| `ReadOnly` | `bool` | `false` | Fokusovatelný trigger, neotevře se, bez clear, `aria-readonly`, bez disabled barev |
+| `AriaDescribedBy` | `string?` | `null` | Extra id spojená s kaskádou TmFormField |
+| `AllowTypedDate` | `bool` | `false` | Psané datum v CurrentCulture; chybný vstup = neplatný stav, Value se nemění |
 | `Class` | `string?` | `null` | Další CSS třídy |
 | `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
@@ -3080,11 +3089,14 @@ Výběr data a času.
 |-------|-------|
 | `tm-datetime-picker` | Kořenový kontejner |
 | `tm-datetime-picker--invalid` | Nevalidní stav |
+| `tm-datetime-picker--readonly` | Pouze pro čtení (bez disabled barev) |
 | `tm-picker-label` | Popisek |
 | `tm-datetime-picker-body` | Tělo komponenty |
 | `tm-datetime-date-section` | Sekce s datem |
 | `tm-date-picker-input-row` | Řádek s inputem data |
 | `tm-date-picker-trigger` | Trigger tlačítko |
+| `tm-date-picker-typed` | Opt-in psané datum (`AllowTypedDate`) |
+| `tm-picker-clear-slot` | Rezervovaný slot pro × (na `(pointer: coarse)` 44 px) |
 | `tm-date-picker-popup` | Vyskakovací kalendář |
 | `tm-datetime-time-section` | Sekce s časem |
 
@@ -3102,6 +3114,11 @@ Výběr data a času.
 | `Disabled` | `bool` | `false` | Zakázáno |
 | `Required` | `bool` | `false` | Povinné |
 | `HideClear` | `bool` | `false` | Skrýt vymazání |
+| `ReadOnly` | `bool` | `false` | Fokusovatelný trigger, neotevře se, bez clear, `aria-readonly`, bez disabled barev |
+| `AriaDescribedBy` | `string?` | `null` | Extra id spojená s kaskádou TmFormField |
+| `LabelTrailing` | `RenderFragment?` | `null` | Slot na konci řádku popisku |
+| `AllowTypedDate` | `bool` | `false` | Psané datum v CurrentCulture; chybný vstup = neplatný stav, Value se nemění |
+| `DefaultTime` | `DateTimePickerDefaultTime` | `Midnight` | Čas při prvním výběru dne na prázdném pickeru (`Now` z `TimeProvider`) |
 | `Label` | `string?` | `null` | Popisek |
 | `TimeLabel` | `string?` | `null` | Volitelný popisek nad časovým (HH:mm) sub-polem; `null` = bez popisku |
 | `TriggerId` | `string?` | `null` | Volitelné explicitní id triggeru data, aby ho mohla cílit `<label for>` nadřazené komponenty |
@@ -3245,6 +3262,7 @@ Nízkoúrovňový vstup pro čas (hodiny:minuty[:sekundy]). Hodnota mimo `MinTim
 | `tm-time-input--disabled` | Zakázaný stav |
 | `tm-time-input--invalid` | Nevalidní stav (mimo rozsah / host `Invalid`) |
 | `tm-time-input--readonly` | Pouze pro čtení |
+| `tm-time-input--empty` | Prázdný placeholder (`EmptyAsPlaceholder`) |
 | `tm-time-input__error` | Chybová zpráva pod segmenty |
 | `tm-time-input__period` | AM/PM přepínač (12h) |
 | `tm-time-seg` | Segment času |
@@ -3263,6 +3281,7 @@ Nízkoúrovňový vstup pro čas (hodiny:minuty[:sekundy]). Hodnota mimo `MinTim
 | `ShowSeconds` | `bool` | `false` | Zobrazit sekundy |
 | `Disabled` | `bool` | `false` | Zakázáno |
 | `ReadOnly` | `bool` | `false` | Pouze pro čtení (nikdy se nepřiřazuje uvnitř komponenty) |
+| `EmptyAsPlaceholder` | `bool` | `false` | Prázdné segmenty místo 00:00; TmDateTimePicker zapíná |
 | `MinTime` | `TimeOnly?` | `null` | Inclusive minimum — mimo rozsah se nezahodí |
 | `MaxTime` | `TimeOnly?` | `null` | Inclusive maximum — mimo rozsah se nezahodí |
 | `InputId` | `string?` | `null` | Volitelné id aplikované na segment hodin, aby ho mohla cílit nadřazená `<label for>` |
@@ -3548,6 +3567,12 @@ Souhrn všech validačních chyb formuláře.
 | `Class` | `string?` | `null` | Další CSS třídy |
 | `ManualMode` | `bool` | `false` | Ruční řízení viditelnosti |
 | `Show` | `bool` | `false` | Viditelnost (jen v ManualMode) |
+| `GroupBy` | `Func<string, string>?` | `null` | Seskupení podle textu zprávy (2.12) |
+| `OnMessageClick` | `EventCallback<string>` | — | Klik na zprávu (2.12) |
+| `ItemTemplate` | `RenderFragment<string>?` | `null` | Šablona zprávy (2.12) |
+| `GroupItemsBy` | `Func<ValidationSummaryItem, string>?` | `null` | Seskupení podle pole (2.13); mix s GroupBy → ArgumentException |
+| `OnItemClick` | `EventCallback<ValidationSummaryItem>` | — | Klik s identitou pole (2.13); mix s OnMessageClick → ArgumentException |
+| `ItemTemplateWithField` | `RenderFragment<ValidationSummaryItem>?` | `null` | Šablona s polem (2.13); mix s ItemTemplate → ArgumentException |
 | `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady

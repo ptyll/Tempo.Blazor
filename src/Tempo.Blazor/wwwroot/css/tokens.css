@@ -418,6 +418,10 @@
      so a host override on :root or any wrapper ancestor reaches the sticky strip; a
      declaration on the component's own class would beat every inherited value. */
   --tm-tabs-sticky-top: 0;
+  /* Sticky strip stacking and the scroll-edge shadow colour. Hosts re-declare these on :root
+     or a wrapper; component rules read them with no fallback so the inherited value wins. */
+  --tm-tabs-sticky-z-index: 5;
+  --tm-tabs-edge-shadow-color: var(--tm-border-color);
 
   /* TmInlineDiff host knobs (2.13.0 Whole layout). Declared on :root — NOT on
      .tm-inline-diff / .tm-inline-diff--whole — so a host override on documentElement

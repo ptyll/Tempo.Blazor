@@ -66,7 +66,10 @@
 </div>
 
 @code {
-    /// <summary>The bound time of day. Null renders midnight in the segments until the user types.</summary>
+    /// <summary>
+    /// The bound time of day. Null renders midnight in the segments until the user types, unless
+    /// <see cref="EmptyAsPlaceholder"/> is true.
+    /// </summary>
     [Parameter] public TimeOnly? Value { get; set; }
 
     /// <summary>Fires when the user commits a time, including a value outside <see cref="MinTime"/>/<see cref="MaxTime"/>.</summary>
@@ -78,6 +81,14 @@
     /// (the same contract as <c>TmDecimalInput</c>).
     /// </summary>
     [Parameter] public Expression<Func<TimeOnly?>>? ValueExpression { get; set; }
+
+    /// <summary>
+    /// When true and <see cref="Value"/> is null with no in-progress draft, the segments stay empty
+    /// (placeholder colour) instead of showing midnight. Defaults to false so a standalone
+    /// <c>TmTimeInput</c> still shows 00:00 until the user types. <c>TmDateTimePicker</c> turns this
+    /// on so an empty picker does not look like 00:00.
+    /// </summary>
+    [Parameter] public bool EmptyAsPlaceholder { get; set; }
 
     /// <summary>When true, a seconds segment is rendered after minutes. Defaults to false.</summary>
     [Parameter] public bool ShowSeconds { get; set; }
@@ -211,6 +222,8 @@
         new() { Label = Loc["TmTimeSelector_Pm"], Value = true },
     ];
 
+    private bool IsEmptyPlaceholder => EmptyAsPlaceholder && !_hasDraft && !Value.HasValue;
+
     private TimeOnly DisplayedTime => _hasDraft ? _draft : Value ?? TimeOnly.MinValue;
 
     private bool IsOutOfRange
@@ -266,6 +279,11 @@
             if (IsInvalid)
             {
                 classes += " tm-time-input--invalid";
+            }
+
+            if (IsEmptyPlaceholder)
+            {
+                classes += " tm-time-input--empty";
             }
 
             return classes;
@@ -343,6 +361,15 @@
 
     private void SyncDisplayFrom(TimeOnly? value)
     {
+        if (EmptyAsPlaceholder && !_hasDraft && !value.HasValue)
+        {
+            _hours = string.Empty;
+            _minutes = string.Empty;
+            _seconds = string.Empty;
+            _isPm = false;
+            return;
+        }
+
         var t = value ?? TimeOnly.MinValue;
         if (Uses12HourClock)
         {

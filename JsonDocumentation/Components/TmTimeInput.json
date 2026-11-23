@@ -44,6 +44,12 @@
       "description": "Renders every segment readonly: the time stays visible and focusable but cannot be edited. Never assigned inside the component. Defaults to false."
     },
     {
+      "name": "EmptyAsPlaceholder",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true and Value is null, the segments stay empty (tm-time-input--empty) instead of painting 00:00. Default false keeps today's midnight display. TmDateTimePicker turns this on so an empty picker does not show 00:00."
+    },
+    {
       "name": "MinTime",
       "type": "TimeOnly?",
       "isRequired": false,
@@ -111,6 +117,7 @@
     "tm-time-input--disabled",
     "tm-time-input--invalid",
     "tm-time-input--readonly",
+    "tm-time-input--empty",
     "tm-time-input__error",
     "tm-time-input__period",
     "tm-time-seg",

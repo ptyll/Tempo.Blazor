@@ -2,6 +2,7 @@ using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
+using Tempo.Blazor.Helpers;
 
 namespace Tempo.Blazor.Components.Inputs;
 
@@ -95,6 +96,12 @@ public partial class TmSegmentedControl<TValue> : TmComponentBase, IAsyncDisposa
     /// <see cref="AriaLabel"/> on top of it. A whitespace-only label counts as no label.
     /// </summary>
     [Parameter] public string? Label { get; set; }
+
+    /// <summary>
+    /// Content rendered at the END of the label row. Rendered only with the slot set; without it
+    /// the label markup is unchanged.
+    /// </summary>
+    [Parameter] public RenderFragment? LabelTrailing { get; set; }
 
     /// <summary>
     /// The accessible name used when no <see cref="Label"/> is rendered. Null means the localized default
@@ -195,7 +202,7 @@ public partial class TmSegmentedControl<TValue> : TmComponentBase, IAsyncDisposa
     }
 
     private string OptionValueAttribute(SegmentedOption<TValue> option)
-        => Convert.ToString(option.Value, CultureInfo.InvariantCulture) ?? string.Empty;
+        => OptionValueFormatter.FormatSegmented(option.Value);
 
     /// <summary>
     /// The single tab stop of the roving tabindex: the selected segment when it exists and is enabled,

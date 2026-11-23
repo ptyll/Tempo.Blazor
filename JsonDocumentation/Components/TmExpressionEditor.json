@@ -39,6 +39,12 @@
       "description": "Label above the editor."
     },
     {
+      "name": "LabelTrailing",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Content rendered at the END of the label row. Rendered only while set; without it the label markup is unchanged."
+    },
+    {
       "name": "Disabled",
       "type": "bool",
       "isRequired": false,

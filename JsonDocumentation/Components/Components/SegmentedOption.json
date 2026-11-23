@@ -15,6 +15,12 @@
       "description": "The visible label of the segment, rendered as text (never as markup) and used verbatim as the option's accessible name."
     },
     {
+      "name": "Lang",
+      "kind": "Property",
+      "type": "string?",
+      "description": "BCP 47 language of Label when it differs from the surrounding page. Rendered as lang on .tm-segmented__option-label; omitted while null or empty."
+    },
+    {
       "name": "Value",
       "kind": "Property",
       "type": "TValue",

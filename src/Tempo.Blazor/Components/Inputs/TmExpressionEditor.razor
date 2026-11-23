@@ -1,7 +1,17 @@
 @namespace Tempo.Blazor.Components.Inputs
 
 <div class="tm-expression-editor @(Error is not null ? "tm-expression-editor--error" : "") @Class" @attributes="AdditionalAttributes">
-    @if (Label is not null)
+    @if (LabelTrailing is not null)
+    {
+        <span class="tm-input-label-row">
+            @if (Label is not null)
+            {
+                <label class="tm-expression-editor__label">@Label</label>
+            }
+            <span class="tm-input-label-trailing">@LabelTrailing</span>
+        </span>
+    }
+    else if (Label is not null)
     {
         <label class="tm-expression-editor__label">@Label</label>
     }
@@ -57,6 +67,12 @@
 
     /// <summary>Label above the editor.</summary>
     [Parameter] public string? Label { get; set; }
+
+    /// <summary>
+    /// Content rendered at the END of the label row. Rendered only with the slot set; without it
+    /// the label markup is unchanged.
+    /// </summary>
+    [Parameter] public RenderFragment? LabelTrailing { get; set; }
 
     /// <summary>Disable the editor.</summary>
     [Parameter] public bool Disabled { get; set; }

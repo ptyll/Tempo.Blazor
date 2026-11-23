@@ -7,7 +7,17 @@
 @inherits Tempo.Blazor.Components.TmComponentBase
 
 <div class="tm-input-wrapper @Class" @attributes="AdditionalAttributes">
-    @if (!HideLabel && !string.IsNullOrEmpty(Label))
+    @if (LabelTrailing is not null)
+    {
+        <span class="tm-input-label-row">
+            @if (!HideLabel && !string.IsNullOrEmpty(Label))
+            {
+                <label for="@Id" class="tm-input-label @(Required ? "tm-input-label-required" : "")">@Label</label>
+            }
+            <span class="tm-input-label-trailing">@LabelTrailing</span>
+        </span>
+    }
+    else if (!HideLabel && !string.IsNullOrEmpty(Label))
     {
         <label for="@Id" class="tm-input-label @(Required ? "tm-input-label-required" : "")">@Label</label>
     }

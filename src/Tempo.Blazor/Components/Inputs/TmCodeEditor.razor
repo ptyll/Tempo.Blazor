@@ -7,7 +7,17 @@
      data-testid="@RootTestId("code-editor")"
      @attributes="AdditionalAttributes">
 
-    @if (!string.IsNullOrEmpty(Label))
+    @if (LabelTrailing is not null)
+    {
+        <span class="tm-input-label-row">
+            @if (!string.IsNullOrEmpty(Label))
+            {
+                <label for="@Id" class="tm-input-label @(Required ? "tm-input-label-required" : "")">@Label</label>
+            }
+            <span class="tm-input-label-trailing">@LabelTrailing</span>
+        </span>
+    }
+    else if (!string.IsNullOrEmpty(Label))
     {
         <label for="@Id" class="tm-input-label @(Required ? "tm-input-label-required" : "")">@Label</label>
     }
@@ -74,6 +84,12 @@
 
     /// <summary>Label shown above the editor.</summary>
     [Parameter] public string? Label { get; set; }
+
+    /// <summary>
+    /// Content rendered at the END of the label row. Rendered only with the slot set; without it
+    /// the label markup is unchanged.
+    /// </summary>
+    [Parameter] public RenderFragment? LabelTrailing { get; set; }
 
     /// <summary>Placeholder text shown while empty.</summary>
     [Parameter] public string? Placeholder { get; set; }

@@ -91,6 +91,12 @@ public partial class TmTimePicker
     /// <summary>Visible label. Also names the overlay dialog when <see cref="SheetTitle"/> is unset.</summary>
     [Parameter] public string? Label { get; set; }
 
+    /// <summary>
+    /// Content rendered at the END of the label row. Rendered only with the slot set; without it
+    /// the label markup is unchanged.
+    /// </summary>
+    [Parameter] public RenderFragment? LabelTrailing { get; set; }
+
     /// <summary>Additional CSS class(es) for the root element.</summary>
     [Parameter] public string? Class { get; set; }
 

@@ -1,5 +1,8 @@
 using Bunit;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
+using Tempo.Blazor.Components.Forms;
 using Tempo.Blazor.Components.Pickers;
 using Tempo.Blazor.Models;
 using Tempo.Blazor.Tests.Localization;
@@ -143,5 +146,131 @@ public class TmDateTimePickerTests : LocalizationTestBase
         root.GetAttribute("aria-modal").Should().Be("true");
         root.GetAttribute("aria-labelledby").Should().Be(cut.Find(".tm-picker-label").Id);
         root.QuerySelector(".tm-calendar").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void DateTimePicker_Empty_ShowsTimePlaceholder_NotMidnight()
+    {
+        var cut = Render<TmDateTimePicker>();
+
+        cut.Find(".tm-time-input").ClassList.Should().Contain("tm-time-input--empty");
+        cut.Find(".tm-time-seg--hours").GetAttribute("value").Should().BeNullOrEmpty();
+        cut.Find(".tm-time-seg--minutes").GetAttribute("value").Should().BeNullOrEmpty();
+        cut.FindAll(".tm-date-picker-typed").Should().BeEmpty();
+        cut.FindAll(".tm-picker-clear-slot").Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void DateTimePicker_ReadOnly_KeepsTriggerFocusable_DoesNotOpen()
+    {
+        var cut = Render<TmDateTimePicker>(p => p
+            .Add(c => c.Value, new DateTime(2026, 3, 15, 10, 30, 0))
+            .Add(c => c.ReadOnly, true));
+
+        var trigger = cut.Find(".tm-date-picker-trigger");
+        trigger.HasAttribute("disabled").Should().BeFalse();
+        trigger.GetAttribute("aria-readonly").Should().Be("true");
+        cut.Find(".tm-datetime-picker").ClassList.Should().Contain("tm-datetime-picker--readonly");
+        cut.FindAll(".tm-picker-clear").Should().BeEmpty();
+        cut.Find(".tm-time-input").ClassList.Should().Contain("tm-time-input--readonly");
+
+        trigger.Click();
+        cut.FindAll(".tm-calendar").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void DateTimePicker_LabelTrailing_AndAriaDescribedBy()
+    {
+        var cut = Render<TmFormField>(p => p
+            .Add(c => c.Label, "Occurred")
+            .Add(c => c.Id, "occurred-field")
+            .Add(c => c.HelpText, "When it happened.")
+            .AddChildContent<TmDateTimePicker>(child => child
+                .Add(x => x.Label, "Occurred")
+                .Add(x => x.AriaDescribedBy, "extra-hint")
+                .Add(x => x.LabelTrailing, "<span id='dt-hint'>ISO</span>")));
+
+        cut.Find(".tm-date-picker-trigger").GetAttribute("aria-describedby")
+            .Should().Be("occurred-field-field-help extra-hint");
+        cut.Find("#dt-hint").TextContent.Should().Be("ISO");
+    }
+
+    [Fact]
+    public void DateTimePicker_FirstDate_AppliesMidnightByDefault()
+    {
+        DateTime? captured = null;
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var cut = Render<TmDateTimePicker>(p => p
+            .Add(c => c.ValueChanged, (DateTime? v) => captured = v));
+
+        cut.Find(".tm-date-picker-trigger").Click();
+        cut.Find($".tm-cal-day[data-date='{today:yyyy-MM-dd}']").Click();
+
+        captured.Should().Be(today.ToDateTime(TimeOnly.MinValue));
+    }
+
+    [Fact]
+    public void DateTimePicker_DefaultTimeNow_UsesInjectedTimeProvider()
+    {
+        var clock = new FakeTimeProvider(new DateTimeOffset(2031, 7, 4, 9, 17, 42, TimeSpan.Zero));
+        Services.AddSingleton<TimeProvider>(clock);
+
+        DateTime? captured = null;
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var cut = Render<TmDateTimePicker>(p => p
+            .Add(c => c.DefaultTime, DateTimePickerDefaultTime.Now)
+            .Add(c => c.ValueChanged, (DateTime? v) => captured = v));
+
+        cut.Find(".tm-date-picker-trigger").Click();
+        cut.Find($".tm-cal-day[data-date='{today:yyyy-MM-dd}']").Click();
+
+        captured.Should().NotBeNull();
+        TimeOnly.FromDateTime(captured!.Value).Should().Be(new TimeOnly(9, 17, 42));
+    }
+
+    [Fact]
+    public void DateTimePicker_AllowTypedDate_FailedParseKeepsValue()
+    {
+        DateTime? captured = new DateTime(2026, 1, 1, 8, 0, 0);
+        var cut = Render<TmDateTimePicker>(p => p
+            .Add(c => c.Value, captured)
+            .Add(c => c.AllowTypedDate, true)
+            .Add(c => c.ValueChanged, (DateTime? v) => captured = v));
+
+        cut.Find(".tm-date-picker-typed").Change("not-a-date");
+
+        captured.Should().Be(new DateTime(2026, 1, 1, 8, 0, 0));
+        cut.Find(".tm-date-picker-typed").GetAttribute("aria-invalid").Should().Be("true");
+        cut.Find(".tm-datetime-picker").ClassList.Should().Contain("tm-datetime-picker--invalid");
+    }
+
+    [Fact]
+    public void DateTimePicker_AllowTypedDate_WithLabel_UsesLabelledBy_NotAriaLabel()
+    {
+        var cut = Render<TmDateTimePicker>(p => p
+            .Add(c => c.Label, "Occurred")
+            .Add(c => c.AllowTypedDate, true));
+
+        var typed = cut.Find(".tm-date-picker-typed");
+        var labelId = cut.Find("label.tm-picker-label").GetAttribute("id");
+        typed.GetAttribute("aria-labelledby").Should().Be(labelId);
+        typed.HasAttribute("aria-label").Should().BeFalse(
+            "aria-label is only the fallback when there is no visible Label");
+    }
+
+    [Fact]
+    public void DateTimePicker_AllowTypedDate_JoinsFormFieldDescribedBy()
+    {
+        var cut = Render<TmFormField>(p => p
+            .Add(c => c.Label, "Occurred")
+            .Add(c => c.Id, "occurred-field")
+            .Add(c => c.HelpText, "When it happened.")
+            .AddChildContent<TmDateTimePicker>(child => child
+                .Add(x => x.Label, "Occurred")
+                .Add(x => x.AllowTypedDate, true)
+                .Add(x => x.AriaDescribedBy, "extra-hint")));
+
+        cut.Find(".tm-date-picker-typed").GetAttribute("aria-describedby")
+            .Should().Be("occurred-field-field-help extra-hint");
     }
 }

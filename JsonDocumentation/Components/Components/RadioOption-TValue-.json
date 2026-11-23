@@ -18,6 +18,12 @@
       "kind": "Property",
       "type": "bool",
       "description": "Disables this specific option."
+    },
+    {
+      "name": "Lang",
+      "kind": "Property",
+      "type": "string?",
+      "description": "BCP 47 language of Label when it differs from the surrounding page. Rendered as lang on the option text; omitted while null or empty."
     }
   ],
   "itemName": "RadioOption<TValue>"

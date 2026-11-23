@@ -21,6 +21,12 @@
       "description": "Group label shown above the options."
     },
     {
+      "name": "LabelTrailing",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Content rendered at the END of the label row. Rendered only while set; without it the label markup is unchanged."
+    },
+    {
       "name": "HelpText",
       "type": "string?",
       "isRequired": false,
@@ -55,7 +61,7 @@
       "type": "List<RadioOption<T>>",
       "isRequired": false,
       "default": "[]",
-      "description": "List of options to render."
+      "description": "List of options to render. Each RadioOption may carry Lang (BCP 47) which is forwarded onto the option text, not the input."
     },
     {
       "name": "Disabled",
@@ -115,6 +121,7 @@
   ],
   "notes": [
     "The error span renders with a stable id (tm-radio-error-{guid}); the radiogroup container references it through aria-describedby and sets aria-invalid=\"true\" while an Error shows.",
-    "Inside a TmFormField with a rendered error, the group additionally describes the field-level error message (cascaded as TmFormFieldErrorId) when it has no own Error."
+    "Inside a TmFormField with a rendered error, the group additionally describes the field-level error message (cascaded as TmFormFieldErrorId) when it has no own Error.",
+    "Each option's native radio value is the invariant OptionValueFormatter wire, so DateOnly 2026-03-15 and bool true/false round-trip independently of culture. TmSegmentedControl data-value is a separate DOM contract: bool stays True/False; only DateOnly/TimeOnly/DateTime/DateTimeOffset use the invariant ISO forms."
   ]
 }

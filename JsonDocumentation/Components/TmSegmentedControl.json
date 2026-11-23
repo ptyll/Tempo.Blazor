@@ -67,6 +67,12 @@
       "description": "An optional VISIBLE label above the tray, which also names the group through aria-labelledby — the name a screen reader reads is the name a reader sees. Do not add an AriaLabel on top of it (WCAG 2.5.3). A whitespace-only label counts as no label."
     },
     {
+      "name": "LabelTrailing",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Content rendered at the END of the label row. Rendered only while set; without it the label markup is unchanged."
+    },
+    {
       "name": "AriaLabel",
       "type": "string?",
       "isRequired": false,
@@ -122,5 +128,5 @@
       "code": "<TmSegmentedControl TValue=\"string\" Role=\"SegmentedControlRole.Tabs\"\n                    Label=\"Preview mode\" @bind-Value=\"mode\"\n                    Options=\"tabs\" />\n\n@if (mode == \"preview\")\n{\n    <div role=\"tabpanel\" id=\"preview-panel\" aria-labelledby=\"preview-tab\">…</div>\n}"
     }
   ],
-  "notes": "The control renders no live region: the selection is announced by the option's own aria-checked / aria-selected state, and a second announcement per change would be noise. The tray is the horizontal scroller, so a long segment set scrolls instead of clipping the last segment; the segment the keyboard moved to is focused, which scrolls it into view."
+  "notes": "The control renders no live region: the selection is announced by the option's own aria-checked / aria-selected state, and a second announcement per change would be noise. The tray is the horizontal scroller, so a long segment set scrolls instead of clipping the last segment; the segment the keyboard moved to is focused, which scrolls it into view. Each option's data-value keeps ToString() for existing types (bool True/False); DateOnly, TimeOnly, DateTime and DateTimeOffset use the invariant ISO wire so a culture cannot break selection of those types."
 }

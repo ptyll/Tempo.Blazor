@@ -32,6 +32,12 @@ public partial class TmRangeSlider : ComponentBase
     /// <summary>Label shown above the slider.</summary>
     [Parameter] public string? Label { get; set; }
 
+    /// <summary>
+    /// Content rendered at the END of the label row. Rendered only with the slot set; without it
+    /// the label markup is unchanged.
+    /// </summary>
+    [Parameter] public RenderFragment? LabelTrailing { get; set; }
+
     /// <summary>Whether the slider is disabled.</summary>
     [Parameter] public bool Disabled { get; set; }
 

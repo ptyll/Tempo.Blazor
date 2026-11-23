@@ -124,6 +124,10 @@
   border-color: var(--tm-color-danger);
 }
 
+.tm-time-selector--with-seconds .tm-time-selector__readout {
+  flex-wrap: wrap;
+}
+
 .tm-time-selector--invalid .tm-time-selector__spin:focus {
   box-shadow: var(--tm-focus-ring-danger);
 }
@@ -167,6 +171,10 @@
   background: var(--tm-color-primary-subtle);
   border-color: var(--tm-color-primary);
   color: var(--tm-color-primary);
+}
+
+.tm-time-selector__preset--recent {
+  font-variant-numeric: tabular-nums;
 }
 
 .tm-time-selector__preset:focus-visible,

@@ -106,6 +106,14 @@ with the `Highlight`/`HighlightText` pair, because a background painted from tok
   its accessible name ("Inbox 12"); the count uses tabular figures and the badge is a small pill. They are
   never the only carrier of information and never a colour-only cue.
 - `SegmentedOption.Icon` — a decorative `aria-hidden` icon before the label.
+- `SegmentedOption.Lang` — BCP 47 language of the label when it differs from the surrounding page.
+  Rendered as `lang` on `.tm-segmented__option-label` only while non-empty. The same property exists
+  on `RadioOption` (`lang` on `.tm-radio-text`) and on `TmRadio.Lang`. Native radio `value` is the
+  invariant `OptionValueFormatter` wire (`DateOnly` `yyyy-MM-dd`, `bool` `true`/`false`, `DateTime`
+  round-trip `O`). Segmented `data-value` keeps `ToString()` for existing types so a `bool` stays
+  `True`/`False` (hosts and TimeInput E2E already select `[data-value='True']`); only
+  `DateOnly` / `TimeOnly` / `DateTime` / `DateTimeOffset` use the invariant ISO forms, so a culture
+  cannot break selection of those new types.
 
 ## Accessible name
 

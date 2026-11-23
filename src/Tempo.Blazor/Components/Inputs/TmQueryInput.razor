@@ -6,7 +6,17 @@
 
 <div class="@RootCssClass" @attributes="AdditionalAttributes">
 
-    @if (!string.IsNullOrEmpty(Label))
+    @if (LabelTrailing is not null)
+    {
+        <span class="tm-input-label-row">
+            @if (!string.IsNullOrEmpty(Label))
+            {
+                <label class="tm-query-input__label" for="@_inputId">@Label</label>
+            }
+            <span class="tm-input-label-trailing">@LabelTrailing</span>
+        </span>
+    }
+    else if (!string.IsNullOrEmpty(Label))
     {
         <label class="tm-query-input__label" for="@_inputId">@Label</label>
     }
@@ -135,6 +145,12 @@
 
     /// <summary>Optional label rendered above the input.</summary>
     [Parameter] public string? Label { get; set; }
+
+    /// <summary>
+    /// Content rendered at the END of the label row. Rendered only with the slot set; without it
+    /// the label markup is unchanged.
+    /// </summary>
+    [Parameter] public RenderFragment? LabelTrailing { get; set; }
 
     /// <summary>Disables the input and suppresses suggestions.</summary>
     [Parameter] public bool Disabled { get; set; }

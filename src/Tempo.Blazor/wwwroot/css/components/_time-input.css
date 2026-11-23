@@ -34,6 +34,11 @@
   background: var(--tm-bg-surface-secondary);
 }
 
+.tm-time-input--empty .tm-time-seg,
+.tm-time-input--empty .tm-time-sep {
+  color: var(--tm-text-tertiary);
+}
+
 .tm-time-seg {
   width: 2.5rem;
   text-align: center;

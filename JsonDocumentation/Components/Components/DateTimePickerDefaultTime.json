@@ -1,0 +1,20 @@
+{
+  "kind": "Enum",
+  "category": "Pickers",
+  "namespace": "Tempo.Blazor.Components.Pickers",
+  "description": "Time applied when the user first picks a date on an empty TmDateTimePicker. Midnight (default) keeps today's 00:00:00; Now uses the injected TimeProvider (fallback TimeProvider.System).",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/Pickers/DateTimePickerDefaultTime.cs",
+  "documentationStatus": "documented",
+  "itemName": "DateTimePickerDefaultTime",
+  "values": [
+    {
+      "name": "Midnight",
+      "description": "00:00:00 — today's behaviour when the user first picks a date on an empty picker."
+    },
+    {
+      "name": "Now",
+      "description": "The current local time of the injected TimeProvider (fallback TimeProvider.System)."
+    }
+  ]
+}

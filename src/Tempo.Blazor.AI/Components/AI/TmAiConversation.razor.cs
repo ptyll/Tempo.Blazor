@@ -848,11 +848,12 @@ public partial class TmAiConversation
 
     /// <summary>
     /// Handler of the built-in "New messages" pill. The pill stops being rendered by this very activation,
-    /// so the focus is handed to the transcript instead of being dropped onto <c>&lt;body&gt;</c>.
+    /// so the focus is handed to the transcript instead of being dropped onto <c>&lt;body&gt;</c>. Focus
+    /// moves first (with <c>preventScroll</c>) so Chromium cannot abort the following smooth jump.
     /// </summary>
     private async Task OnNewMessagesClickAsync()
     {
-        _focusLogWhenIdle = true;
+        await FocusLogAsync();
         await JumpToLatestCoreAsync();
     }
 
@@ -1025,7 +1026,7 @@ public partial class TmAiConversation
     {
         try
         {
-            await _logRef.FocusAsync();
+            await _logRef.FocusAsync(preventScroll: true);
         }
         catch (Exception exception) when (IsInteropFailure(exception))
         {

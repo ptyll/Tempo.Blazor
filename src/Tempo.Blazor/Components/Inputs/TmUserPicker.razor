@@ -8,7 +8,20 @@
 @inject IJSRuntime JS
 
 <div class="tm-user-picker @(Disabled ? "tm-user-picker--disabled" : "")" data-testid="@TestId("tm-user-picker")" @attributes="AdditionalAttributes">
-    @if (!string.IsNullOrEmpty(Label))
+    @if (LabelTrailing is not null)
+    {
+        <span class="tm-input-label-row">
+            @if (!string.IsNullOrEmpty(Label))
+            {
+                @* `for` only when the search box is on screen: once a user is picked the input is gone and a
+                   dangling `for` would point at nothing. The id is emitted unconditionally, because the chip
+                   that REPLACES the input borrows the very same label through `aria-labelledby`. *@
+                <label id="@LabelId" for="@(ShowsSearchInput ? Id : null)" class="tm-input-label @(Required ? "tm-input-label-required" : "")">@Label</label>
+            }
+            <span class="tm-input-label-trailing">@LabelTrailing</span>
+        </span>
+    }
+    else if (!string.IsNullOrEmpty(Label))
     {
         @* `for` only when the search box is on screen: once a user is picked the input is gone and a
            dangling `for` would point at nothing. The id is emitted unconditionally, because the chip
@@ -217,6 +230,12 @@
 
     /// <summary>Field label.</summary>
     [Parameter] public string? Label { get; set; }
+
+    /// <summary>
+    /// Content rendered at the END of the label row. Rendered only with the slot set; without it
+    /// the label markup is unchanged.
+    /// </summary>
+    [Parameter] public RenderFragment? LabelTrailing { get; set; }
 
     /// <summary>
     /// Id of the search input, so the rendered <see cref="Label"/> can point at it with <c>for</c>.

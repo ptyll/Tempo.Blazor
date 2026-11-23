@@ -1,8 +1,12 @@
 @namespace Tempo.Blazor.Components.Inputs
 @inherits Tempo.Blazor.Components.TmComponentBase
 @using System.Globalization
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Tempo.Blazor.Helpers
 @using Tempo.Blazor.Models
 @typeparam TValue
+@inject IServiceProvider Services
 
 <div class="tm-select-wrapper @Class" @attributes="AdditionalAttributes">
     @if (LabelTrailing is not null)
@@ -298,7 +302,7 @@
         {
             if (!IsDefaultSelection)
             {
-                return FormatOptionValue(Value);
+                return MatchingOptionWireValue() ?? FormatOptionValue(Value);
             }
 
             // A NON-nullable value type at its default (int 0 / an enum's 0 member / a struct) is a
@@ -307,7 +311,7 @@
             // dialog switch back to Ascending / Any / Stop / General / column 0.
             if (typeof(TValue).IsValueType && !IsNullableValueType)
             {
-                return FormatOptionValue(Value);
+                return MatchingOptionWireValue() ?? FormatOptionValue(Value);
             }
 
             return (IsNullableValueType && HasEmptyOptionValue)
@@ -326,13 +330,116 @@
     /// rendered value never depends on the ambient thread culture (e.g. "1.5", never "1,5"); this must stay symmetric
     /// with the invariant parsing in <see cref="HandleChangeAsync"/>.
     /// </summary>
-    private static string FormatOptionValue(TValue? value) =>
-        value switch
+    private string? MatchingOptionWireValue()
+    {
+        if (Options is null)
         {
-            null => string.Empty,
-            IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
-            _ => value.ToString() ?? string.Empty,
-        };
+            return null;
+        }
+
+        foreach (var opt in Options)
+        {
+            if (IsSelected(opt.Value))
+            {
+                return FormatOptionValue(opt.Value);
+            }
+        }
+
+        return null;
+    }
+
+    internal static string FormatOptionValue(TValue? value) => OptionValueFormatter.Format(value);
+
+    private static bool TryParseExtended(string raw, Type targetType, out TValue? value)
+    {
+        value = default;
+        object? boxed = null;
+        var ok = false;
+
+        if (targetType == typeof(bool) && bool.TryParse(raw, out var flag))
+        {
+            boxed = flag;
+            ok = true;
+        }
+        else if (targetType == typeof(DateOnly)
+                 && DateOnly.TryParse(raw, CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+        {
+            boxed = date;
+            ok = true;
+        }
+        else if (targetType == typeof(TimeOnly)
+                 && TimeOnly.TryParse(raw, CultureInfo.InvariantCulture, DateTimeStyles.None, out var time))
+        {
+            boxed = time;
+            ok = true;
+        }
+        else if (targetType == typeof(DateTime)
+                 && DateTime.TryParse(raw, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var dateTime))
+        {
+            boxed = dateTime;
+            ok = true;
+        }
+        else if (targetType == typeof(DateTimeOffset)
+                 && DateTimeOffset.TryParse(raw, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var offset))
+        {
+            boxed = offset;
+            ok = true;
+        }
+        else if (targetType == typeof(char) && char.TryParse(raw, out var ch))
+        {
+            boxed = ch;
+            ok = true;
+        }
+        else if (targetType == typeof(nint) && nint.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ni))
+        {
+            boxed = ni;
+            ok = true;
+        }
+        else if (targetType == typeof(nuint) && nuint.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var nu))
+        {
+            boxed = nu;
+            ok = true;
+        }
+        else if (targetType == typeof(Half) && Half.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out var half))
+        {
+            boxed = half;
+            ok = true;
+        }
+        else if (targetType == typeof(Int128) && Int128.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var i128))
+        {
+            boxed = i128;
+            ok = true;
+        }
+        else if (targetType == typeof(UInt128) && UInt128.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var u128))
+        {
+            boxed = u128;
+            ok = true;
+        }
+        else
+        {
+            try
+            {
+                if (BindConverter.TryConvertTo<TValue>(raw, CultureInfo.InvariantCulture, out var parsed)
+                    && parsed is not null)
+                {
+                    value = parsed;
+                    return true;
+                }
+            }
+            catch (Exception exception) when (exception is InvalidCastException or InvalidOperationException or NotSupportedException or FormatException)
+            {
+                return false;
+            }
+        }
+
+        if (!ok || boxed is null)
+        {
+            return false;
+        }
+
+        value = (TValue)boxed;
+        return true;
+    }
 
     private string SelectCssClass
     {
@@ -421,7 +528,8 @@
         // An empty selection (the placeholder or a null-valued <option value="">) maps to
         // default(TValue) — null for nullable types (decimal?, int?, Guid?, enum?, string?).
         TValue? value = default;
-        if (!string.IsNullOrEmpty(raw))
+        var converted = string.IsNullOrEmpty(raw);
+        if (!converted)
         {
             var targetType = Nullable.GetUnderlyingType(typeof(TValue)) ?? typeof(TValue);
 
@@ -429,34 +537,92 @@
             const NumberStyles FloatStyle = NumberStyles.Float;
 
             if (targetType == typeof(string))
+            {
                 value = (TValue?)(object?)raw;
+                converted = true;
+            }
             else if (targetType == typeof(int) && int.TryParse(raw, IntegerStyle, CultureInfo.InvariantCulture, out var i))
+            {
                 value = (TValue?)(object?)i;
+                converted = true;
+            }
             else if (targetType == typeof(short) && short.TryParse(raw, IntegerStyle, CultureInfo.InvariantCulture, out var sh))
+            {
                 value = (TValue?)(object?)sh;
+                converted = true;
+            }
             else if (targetType == typeof(ushort) && ushort.TryParse(raw, IntegerStyle, CultureInfo.InvariantCulture, out var ush))
+            {
                 value = (TValue?)(object?)ush;
+                converted = true;
+            }
             else if (targetType == typeof(long) && long.TryParse(raw, IntegerStyle, CultureInfo.InvariantCulture, out var l))
+            {
                 value = (TValue?)(object?)l;
+                converted = true;
+            }
             else if (targetType == typeof(ulong) && ulong.TryParse(raw, IntegerStyle, CultureInfo.InvariantCulture, out var ul))
+            {
                 value = (TValue?)(object?)ul;
+                converted = true;
+            }
             else if (targetType == typeof(uint) && uint.TryParse(raw, IntegerStyle, CultureInfo.InvariantCulture, out var ui))
+            {
                 value = (TValue?)(object?)ui;
+                converted = true;
+            }
             else if (targetType == typeof(byte) && byte.TryParse(raw, IntegerStyle, CultureInfo.InvariantCulture, out var by))
+            {
                 value = (TValue?)(object?)by;
+                converted = true;
+            }
             else if (targetType == typeof(sbyte) && sbyte.TryParse(raw, IntegerStyle, CultureInfo.InvariantCulture, out var sb))
+            {
                 value = (TValue?)(object?)sb;
+                converted = true;
+            }
             else if (targetType == typeof(decimal) && decimal.TryParse(raw, FloatStyle, CultureInfo.InvariantCulture, out var dec))
+            {
                 value = (TValue?)(object?)dec;
+                converted = true;
+            }
             else if (targetType == typeof(double) && double.TryParse(raw, FloatStyle, CultureInfo.InvariantCulture, out var dbl))
+            {
                 value = (TValue?)(object?)dbl;
+                converted = true;
+            }
             else if (targetType == typeof(float) && float.TryParse(raw, FloatStyle, CultureInfo.InvariantCulture, out var fl))
+            {
                 value = (TValue?)(object?)fl;
+                converted = true;
+            }
             else if (targetType == typeof(Guid) && Guid.TryParse(raw, out var g))
+            {
                 value = (TValue?)(object?)g;
+                converted = true;
+            }
             else if (targetType.IsEnum && Enum.TryParse(targetType, raw, out var en))
+            {
                 value = (TValue?)en;
+                converted = true;
+            }
+            else if (TryParseExtended(raw, targetType, out var parsed))
+            {
+                value = parsed;
+                converted = true;
+            }
         }
+
+        if (!converted)
+        {
+#if DEBUG
+            (Services.GetService(typeof(ILoggerFactory)) as ILoggerFactory)
+                ?.CreateLogger($"TmSelect<{typeof(TValue).Name}>")
+                .LogDebug("TmSelect<{Type}> could not convert '{Raw}' to {Type}.", typeof(TValue).Name, raw, typeof(TValue).Name);
+#endif
+            return;
+        }
+
         await ValueChanged.InvokeAsync(value);
     }
 }

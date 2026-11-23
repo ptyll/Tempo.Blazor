@@ -72,6 +72,37 @@
       "isRequired": false
     },
     {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Focusable date trigger that does not open, hides clear, sets aria-readonly and tm-datetime-picker--readonly, and forwards ReadOnly to the nested TmTimeInput. Distinct from Disabled."
+    },
+    {
+      "name": "AriaDescribedBy",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Extra ids joined onto the date trigger aria-describedby together with the surrounding TmFormField cascade."
+    },
+    {
+      "name": "LabelTrailing",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Content rendered at the end of the label row. Rendered only while set."
+    },
+    {
+      "name": "AllowTypedDate",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true (default false) renders a CurrentCulture short-date text field (`.tm-date-picker-typed`). A failed parse marks the picker invalid and keeps Value. The field shares the trigger aria-describedby; aria-labelledby names it from Label, with aria-label only as the no-label fallback."
+    },
+    {
+      "name": "DefaultTime",
+      "type": "DateTimePickerDefaultTime",
+      "isRequired": false,
+      "default": "Midnight",
+      "description": "Time applied when the user first picks a date on an empty picker. Midnight (default) is 00:00:00; Now uses the injected TimeProvider (fallback TimeProvider.System)."
+    },
+    {
       "name": "Label",
       "type": "string?",
       "isRequired": false
@@ -96,8 +127,11 @@
     "tm-datetime-picker",
     "tm-datetime-picker-body",
     "tm-datetime-picker--invalid",
+    "tm-datetime-picker--readonly",
     "tm-datetime-date-section",
-    "tm-datetime-time-section"
+    "tm-datetime-time-section",
+    "tm-date-picker-typed",
+    "tm-picker-clear-slot"
   ],
   "examples": [
     {

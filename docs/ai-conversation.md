@@ -236,8 +236,10 @@ detaches the follow. The default is `null`: no window, every turn rendered.
 - **Focus is never dropped.** Every control the reader's own activation REMOVES hands the focus to the
   transcript instead of `<body>` (WCAG 2.4.3): "Load older messages" when the whole history is now
   rendered, the "New messages" pill when it dismisses itself, and the "Stop generating" pill when the
-  generation ends. A control that is still rendered keeps the focus the reader put on it, and a host
-  that stops a stream programmatically moves no focus — nothing disappeared under the reader.
+  generation ends. The transcript is focused with `preventScroll: true` so Chromium cannot abort a
+  running smooth jump (the "New messages" pill focuses the log *before* `scrollToBottom`). A control
+  that is still rendered keeps the focus the reader put on it, and a host that stops a stream
+  programmatically moves no focus — nothing disappeared under the reader.
 - **Touch** — every pill, chip and the "Load older messages" button reaches the 44 px
   `--tm-touch-target` floor on a coarse pointer.
 - **Forced colors** — the surfaces opt out of the automatic adjustment and ask for `Canvas` /

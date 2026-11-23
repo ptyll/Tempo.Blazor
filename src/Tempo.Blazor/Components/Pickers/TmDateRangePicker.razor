@@ -6,7 +6,17 @@
      data-comparison-start="@ComparisonStartAttribute"
      data-comparison-end="@ComparisonEndAttribute"
      @attributes="RootAttributes">
-    @if (!string.IsNullOrEmpty(Label))
+    @if (LabelTrailing is not null)
+    {
+        <span class="tm-input-label-row">
+            @if (!string.IsNullOrEmpty(Label))
+            {
+                <label id="@_labelId" class="tm-picker-label" for="@_triggerId">@Label</label>
+            }
+            <span class="tm-input-label-trailing">@LabelTrailing</span>
+        </span>
+    }
+    else if (!string.IsNullOrEmpty(Label))
     {
         <label id="@_labelId" class="tm-picker-label" for="@_triggerId">@Label</label>
     }
@@ -197,6 +207,12 @@
 
     /// <summary>Visible label naming the trigger, and the picker's own accessible name.</summary>
     [Parameter] public string?                    Label        { get; set; }
+
+    /// <summary>
+    /// Content rendered at the END of the label row. Rendered only with the slot set; without it
+    /// the label markup is unchanged.
+    /// </summary>
+    [Parameter] public RenderFragment? LabelTrailing { get; set; }
 
     /// <summary>Additional CSS classes on the component root.</summary>
     [Parameter] public string?                    Class        { get; set; }

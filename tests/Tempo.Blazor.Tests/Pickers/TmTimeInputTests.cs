@@ -528,4 +528,26 @@ public class TmTimeInputTests : LocalizationTestBase
             builder.CloseComponent();
         });
     }
+
+    [Fact]
+    public void EmptyAsPlaceholder_LeavesSegmentsEmpty_UntilTheUserTypes()
+    {
+        var cut = Render<TmTimeInput>(p => p
+            .Add(c => c.EmptyAsPlaceholder, true)
+            .Add(c => c.HourCycle, TimeHourCycle.H23));
+
+        cut.Find(".tm-time-input").ClassList.Should().Contain("tm-time-input--empty");
+        cut.Find(".tm-time-seg--hours").GetAttribute("value").Should().BeNullOrEmpty();
+        cut.Find(".tm-time-seg--minutes").GetAttribute("value").Should().BeNullOrEmpty();
+    }
+
+    [Fact]
+    public void EmptyAsPlaceholder_DefaultFalse_StillShowsMidnight()
+    {
+        var cut = Render<TmTimeInput>(p => p.Add(c => c.HourCycle, TimeHourCycle.H23));
+
+        cut.Find(".tm-time-input").ClassList.Should().NotContain("tm-time-input--empty");
+        cut.Find(".tm-time-seg--hours").GetAttribute("value").Should().Be("00");
+        cut.Find(".tm-time-seg--minutes").GetAttribute("value").Should().Be("00");
+    }
 }

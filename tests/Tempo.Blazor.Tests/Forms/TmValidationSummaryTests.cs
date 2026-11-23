@@ -478,6 +478,93 @@ public class TmValidationSummaryTests : LocalizationTestBase
         cut.Find(".my-message-item").TextContent.Should().Contain("[Name is required.]");
     }
 
+    [Fact]
+    public void ValidationSummary_MixingGroupByAndGroupItemsBy_Throws()
+    {
+        var model = new TestModel();
+        Action act = () => RenderInEditForm(model, p =>
+        {
+            p["GroupBy"] = (Func<string, string>)(_ => "A");
+            p["GroupItemsBy"] = (Func<ValidationSummaryItem, string>)(_ => "B");
+        });
+
+        act.Should().Throw<ArgumentException>().WithMessage("*GroupBy*GroupItemsBy*");
+    }
+
+    [Fact]
+    public void ValidationSummary_MixingOnMessageClickAndOnItemClick_Throws()
+    {
+        var model = new TestModel();
+        Action act = () => RenderInEditForm(model, p =>
+        {
+            p["OnMessageClick"] = EventCallback.Factory.Create<string>(this, _ => { });
+            p["OnItemClick"] = EventCallback.Factory.Create<ValidationSummaryItem>(this, _ => { });
+        });
+
+        act.Should().Throw<ArgumentException>().WithMessage("*OnMessageClick*OnItemClick*");
+    }
+
+    [Fact]
+    public void ValidationSummary_MixingItemTemplateAndItemTemplateWithField_Throws()
+    {
+        var model = new TestModel();
+        Action act = () => RenderInEditForm(model, p =>
+        {
+            p["ItemTemplate"] = (RenderFragment<string>)(_ => builder => { });
+            p["ItemTemplateWithField"] = (RenderFragment<ValidationSummaryItem>)(_ => builder => { });
+        });
+
+        act.Should().Throw<ArgumentException>().WithMessage("*ItemTemplate*ItemTemplateWithField*");
+    }
+
+    [Fact]
+    public void ValidationSummary_FieldIdentity_ListsSameMessageOnTwoFieldsTwice()
+    {
+        var model = new TestModel();
+        ValidationSummaryItem? clicked = null;
+        var cut = RenderInEditForm(model, p =>
+        {
+            p["OnItemClick"] = EventCallback.Factory.Create<ValidationSummaryItem>(this, item => clicked = item);
+        });
+
+        var editForm = cut.FindComponent<EditForm>();
+        var editContext = editForm.Instance.EditContext!;
+        var messageStore = new ValidationMessageStore(editContext);
+        messageStore.Add(editContext.Field(nameof(TestModel.Name)), "Fill in at least one contact.");
+        messageStore.Add(editContext.Field(nameof(TestModel.Email)), "Fill in at least one contact.");
+        editContext.NotifyValidationStateChanged();
+
+        var buttons = cut.FindAll(".tm-validation-summary-item");
+        buttons.Count.Should().Be(2, "field identity keeps one row per (Field, Message)");
+        buttons[0].Click();
+        clicked.Should().NotBeNull();
+        clicked!.Field.FieldName.Should().Be(nameof(TestModel.Name));
+        clicked.Message.Should().Be("Fill in at least one contact.");
+    }
+
+    [Fact]
+    public void ValidationSummary_GroupItemsBy_RendersGroupTitlesFromFields()
+    {
+        var model = new TestModel();
+        var cut = RenderInEditForm(model, p =>
+        {
+            p["GroupItemsBy"] = (Func<ValidationSummaryItem, string>)(item =>
+                item.Field.FieldName == nameof(TestModel.Name) ? "Identity" : "Contact");
+        });
+
+        var editForm = cut.FindComponent<EditForm>();
+        var editContext = editForm.Instance.EditContext!;
+        var messageStore = new ValidationMessageStore(editContext);
+        messageStore.Add(editContext.Field(nameof(TestModel.Name)), "Name is required.");
+        messageStore.Add(editContext.Field(nameof(TestModel.Email)), "Email is invalid.");
+        editContext.NotifyValidationStateChanged();
+
+        var groups = cut.FindAll(".tm-validation-summary-group");
+        groups.Count.Should().Be(2);
+        groups[0].QuerySelector(".tm-validation-summary-group-title")!.TextContent.Should().Be("Identity");
+        groups[1].QuerySelector(".tm-validation-summary-group-title")!.TextContent.Should().Be("Contact");
+    }
+
     private class TestModel
     {
         public string Name { get; set; } = string.Empty;

@@ -57,6 +57,12 @@ public partial class TmMultiSelect<TItem, TValue> : TmComponentBase
     [Parameter] public string? Label { get; set; }
 
     /// <summary>
+    /// Content rendered at the END of the label row. Rendered only with the slot set; without it
+    /// the label markup is unchanged.
+    /// </summary>
+    [Parameter] public RenderFragment? LabelTrailing { get; set; }
+
+    /// <summary>
     /// When true, <see cref="Label"/> is not rendered as a visible <c>&lt;label&gt;</c>. It stays the
     /// accessible name of the trigger and of the popup, unless <see cref="AriaLabel"/> overrides it.
     /// Default false, so an existing multi-select still shows its label.

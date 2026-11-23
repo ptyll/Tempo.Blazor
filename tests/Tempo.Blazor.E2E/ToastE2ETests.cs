@@ -20,6 +20,9 @@ public class ToastE2ETests : WasmTestBase
     private static readonly string ShotDir = Path.Combine(
         TestContextHelper.RepositoryRoot, "tests", "Tempo.Blazor.E2E", "__screenshots__", "toasts");
 
+    private static readonly string Phase10aShotDir = Path.Combine(
+        TestContextHelper.RepositoryRoot, "tests", "Tempo.Blazor.E2E", "__screenshots__", "fze-10a");
+
     private async Task ShotAsync(IPage page, string name)
     {
         Directory.CreateDirectory(ShotDir);
@@ -392,6 +395,100 @@ public class ToastE2ETests : WasmTestBase
 
         await ShotAsync(page, "toasts-tablet-1024-touch-light");
         await AssertNoBlazorErrorUiAsync(page);
+    }
+
+    [TestMethod]
+    [Description("E2E-TOAST.13 (fze-10a): at 390 px TopCenter and BottomCenter sit 8 px from both edges")]
+    public async Task Toast_Mobile390_CenterPositions_EqualEightPxInsets()
+    {
+        foreach (var (testid, name, dark) in new[]
+                 {
+                     ("toast-position-topcenter", "toast-390-topcenter-light", false),
+                     ("toast-position-bottomcenter", "toast-390-bottomcenter-light", false),
+                     ("toast-position-topcenter", "toast-390-topcenter-dark", true),
+                     ("toast-position-bottomcenter", "toast-390-bottomcenter-dark", true),
+                 })
+        {
+            var page = await OpenPageAsync(width: 390, height: 844, dark: dark);
+            await page.Locator($"[data-testid='{testid}']").ClickAsync();
+            var card = page.Locator(".tm-toast-container .tm-toast").First;
+            await card.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = LongTimeout });
+            await WaitAnimationsAsync(card);
+
+            var box = await card.BoundingBoxAsync();
+            Assert.IsNotNull(box);
+            Assert.AreEqual(8, box.X, 0.5, $"{name}: left inset must be 8 px, got {box.X}");
+            Assert.AreEqual(8, 390 - (box.X + box.Width), 0.5,
+                $"{name}: right inset must be 8 px, got {390 - (box.X + box.Width)}");
+
+            Directory.CreateDirectory(Phase10aShotDir);
+            var path = Path.Combine(Phase10aShotDir, name + ".png");
+            await page.ScreenshotAsync(new PageScreenshotOptions
+            {
+                Path = path,
+                Type = ScreenshotType.Png,
+                FullPage = false,
+                Timeout = 60_000
+            });
+            Assert.IsTrue(new FileInfo(path).Length > 2 * 1024, $"screenshot {name}.png must be a real capture");
+            await AssertNoBlazorErrorUiAsync(page);
+        }
+    }
+
+    [TestMethod]
+    [Description("E2E-TOAST.14 (fze-10a, edge): at 320 px a centered toast is still 8 px from both edges")]
+    public async Task Toast_Narrow320_Center_EqualEightPxInsets()
+    {
+        var page = await OpenPageAsync(width: 320, height: 700);
+        await page.Locator("[data-testid='toast-position-topcenter']").ClickAsync();
+        var card = page.Locator(".tm-toast-container .tm-toast").First;
+        await card.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = LongTimeout });
+        await WaitAnimationsAsync(card);
+
+        var box = await card.BoundingBoxAsync();
+        Assert.IsNotNull(box);
+        Assert.AreEqual(8, box.X, 0.5, $"320 TopCenter left inset must be 8 px, got {box.X}");
+        Assert.AreEqual(8, 320 - (box.X + box.Width), 0.5,
+            $"320 TopCenter right inset must be 8 px, got {320 - (box.X + box.Width)}");
+
+        Directory.CreateDirectory(Phase10aShotDir);
+        var path = Path.Combine(Phase10aShotDir, "toast-320-topcenter-light.png");
+        await page.ScreenshotAsync(new PageScreenshotOptions
+        {
+            Path = path,
+            Type = ScreenshotType.Png,
+            FullPage = false,
+            Timeout = 60_000
+        });
+        Assert.IsTrue(new FileInfo(path).Length > 2 * 1024);
+        await AssertNoBlazorErrorUiAsync(page);
+    }
+
+    [TestMethod]
+    [Description("E2E-TOAST.15 (fze-10a): other 390 px positions stay inside the 8 px gutter")]
+    public async Task Toast_Mobile390_CornerPositions_StayInsideGutter()
+    {
+        foreach (var testid in new[]
+                 {
+                     "toast-position-topright",
+                     "toast-position-topleft",
+                     "toast-position-bottomright",
+                     "toast-position-bottomleft",
+                 })
+        {
+            var page = await OpenPageAsync(width: 390, height: 844);
+            await page.Locator($"[data-testid='{testid}']").ClickAsync();
+            var card = page.Locator(".tm-toast-container .tm-toast").First;
+            await card.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = LongTimeout });
+            await WaitAnimationsAsync(card);
+
+            var box = await card.BoundingBoxAsync();
+            Assert.IsNotNull(box, testid);
+            Assert.IsTrue(box.X >= 7.5, $"{testid}: left edge {box.X} must stay inside the 8 px gutter");
+            Assert.IsTrue(box.X + box.Width <= 390 - 7.5,
+                $"{testid}: right edge {box.X + box.Width} must stay inside the 8 px gutter");
+            await AssertNoBlazorErrorUiAsync(page);
+        }
     }
 
     [TestMethod]

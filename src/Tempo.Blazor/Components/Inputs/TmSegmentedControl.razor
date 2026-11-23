@@ -15,7 +15,17 @@
 @if (Options.Count > 0)
 {
     <div class="@RootClass" data-testid="@RootTestId("segmented-control")">
-        @if (HasLabel)
+        @if (LabelTrailing is not null)
+        {
+            <span class="tm-input-label-row">
+                @if (HasLabel)
+                {
+                    <span class="tm-segmented__label" id="@LabelId">@Label</span>
+                }
+                <span class="tm-input-label-trailing">@LabelTrailing</span>
+            </span>
+        }
+        else if (HasLabel)
         {
             <span class="tm-segmented__label" id="@LabelId">@Label</span>
         }
@@ -50,7 +60,7 @@
                     {
                         <TmIcon Name="@option.Icon" Size="IconSize.Sm" Class="tm-segmented__icon" />
                     }
-                    <span class="tm-segmented__option-label">@option.Label</span>
+                    <span class="tm-segmented__option-label" lang="@(string.IsNullOrEmpty(option.Lang) ? null : option.Lang)">@option.Label</span>
                     @if (option.Count is int count)
                     {
                         <span class="tm-segmented__count">@count.ToString(CultureInfo.CurrentCulture)</span>

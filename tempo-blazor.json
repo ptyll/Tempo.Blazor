@@ -7301,6 +7301,26 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "DateTimePickerDefaultTime",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Pickers",
+      "description": "Time applied when the user first picks a date on an empty TmDateTimePicker. Midnight (default) keeps today's 00:00:00; Now uses the injected TimeProvider (fallback TimeProvider.System).",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Pickers/DateTimePickerDefaultTime.cs",
+      "documentationStatus": "merged",
+      "values": [
+        {
+          "name": "Midnight",
+          "description": "00:00:00 — today's behaviour when the user first picks a date on an empty picker."
+        },
+        {
+          "name": "Now",
+          "description": "The current local time of the injected TimeProvider (fallback TimeProvider.System)."
+        }
+      ]
+    },
+    {
       "itemName": "DialogLayout",
       "kind": "Enum",
       "category": "Components",
@@ -9007,6 +9027,12 @@
           "type": "string"
         },
         {
+          "name": "Lang",
+          "kind": "Property",
+          "type": "string?",
+          "description": "BCP 47 language of Label when it differs from the surrounding page. Rendered as lang on the option text; omitted while null or empty."
+        },
+        {
           "name": "Value",
           "kind": "Property",
           "type": "TValue"
@@ -9202,6 +9228,12 @@
           "kind": "Property",
           "type": "string",
           "description": "The visible label of the segment, rendered as text (never as markup) and used verbatim as the option's accessible name."
+        },
+        {
+          "name": "Lang",
+          "kind": "Property",
+          "type": "string?",
+          "description": "BCP 47 language of Label when it differs from the surrounding page. Rendered as lang on .tm-segmented__option-label; omitted while null or empty."
         },
         {
           "name": "PanelId",
@@ -10138,7 +10170,27 @@
       "description": "Observable state for a single tracked upload (progress, lifecycle, cancel/resume context) rendered by TmFileUploadProgress.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Files/TmUploadItem.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "BeginAttempt",
+          "kind": "Method",
+          "type": "CancellationToken",
+          "description": "Starts a new upload attempt: the previous CTS is cancelled, then disposed when the fresh source replaces it; owns a fresh one and resets the cancel-raised flag. Hosts call this instead of assigning item.Cts. Returns the token of the new attempt. Dismiss still assigns item.Cts = null."
+        },
+        {
+          "name": "ResumeAction",
+          "kind": "Property",
+          "type": "Func<TmUploadItem, Task>?",
+          "description": "Host (or owning component) action that actually restarts a cancelled or failed upload. Invoked by ResumeAsync before OnResume."
+        },
+        {
+          "name": "Dispose",
+          "kind": "Method",
+          "type": "void",
+          "description": "Cancels an in-flight attempt (so token holders see cancellation, not ObjectDisposedException), then releases the owned CTS so CancellationToken falls back to None."
+        }
+      ]
     },
     {
       "itemName": "TmUploadState",
@@ -10593,6 +10645,30 @@
         }
       ],
       "usageExample": "@code {\n    private readonly UsageCategory[] categories =\n    [\n        new() { Key = \"llm\", Label = \"LLM\", Used = 5500 },\n        new() { Key = \"tools\", Label = \"Tools\", Used = 2000, Color = \"var(--tm-color-info)\" }\n    ];\n}\n\n<TmUsageMeter Title=\"Monthly credits\" Used=\"7500\" Limit=\"10000\" Unit=\"credits\" Categories=\"categories\" />"
+    },
+    {
+      "itemName": "ValidationSummaryItem",
+      "kind": "Record",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Forms",
+      "description": "One validation message together with the field it was attached to. Used by TmValidationSummary when the host opts into field-identity grouping, click handling or templating (GroupItemsBy / OnItemClick / ItemTemplateWithField).",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Forms/ValidationSummaryItem.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Field",
+          "kind": "Property",
+          "type": "FieldIdentifier",
+          "description": "The model field the message was stored against."
+        },
+        {
+          "name": "Message",
+          "kind": "Property",
+          "type": "string",
+          "description": "The validation message text."
+        }
+      ]
     },
     {
       "itemName": "ViewColumnInfo",
@@ -19051,6 +19127,13 @@
           "default": "null"
         },
         {
+          "name": "GroupItemsBy",
+          "type": "Func<ValidationSummaryItem, string>?",
+          "isRequired": false,
+          "description": "Opt-in (2.13.0): groups ValidationSummaryItem rows under a shared title. Combined with OnItemClick or ItemTemplateWithField this switches the summary onto the field-identity path (one row per Field+Message). Mixing with GroupBy throws ArgumentException in OnParametersSet.",
+          "default": "null"
+        },
+        {
           "name": "ItemTemplate",
           "type": "RenderFragment<string>?",
           "isRequired": false,
@@ -19058,10 +19141,23 @@
           "default": "null"
         },
         {
+          "name": "ItemTemplateWithField",
+          "type": "RenderFragment<ValidationSummaryItem>?",
+          "isRequired": false,
+          "description": "Opt-in (2.13.0): replaces the plain text of each row with a template that receives the ValidationSummaryItem. Mixing with ItemTemplate throws ArgumentException in OnParametersSet.",
+          "default": "null"
+        },
+        {
           "name": "ManualMode",
           "type": "bool",
           "isRequired": false,
           "description": "When true, visibility is controlled by the Show parameter instead of automatic error detection."
+        },
+        {
+          "name": "OnItemClick",
+          "type": "EventCallback<ValidationSummaryItem>",
+          "isRequired": false,
+          "description": "Opt-in (2.13.0): when registered, every row renders as a button and raises the ValidationSummaryItem (Field + Message) on activation. Mixing with OnMessageClick throws ArgumentException in OnParametersSet."
         },
         {
           "name": "OnMessageClick",
@@ -20243,6 +20339,12 @@
           "description": "Label shown above the editor."
         },
         {
+          "name": "LabelTrailing",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Content rendered at the END of the label row. Rendered only while set; without it the label markup is unchanged."
+        },
+        {
           "name": "Language",
           "type": "string?",
           "isRequired": false,
@@ -20869,6 +20971,12 @@
           "description": "Field label."
         },
         {
+          "name": "LabelTrailing",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Content rendered at the END of the label row. Rendered only while set; without it the label markup is unchanged."
+        },
+        {
           "name": "Max",
           "type": "decimal?",
           "isRequired": false,
@@ -21084,6 +21192,12 @@
           "description": "Field label."
         },
         {
+          "name": "LabelTrailing",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Content rendered at the END of the label row. Rendered only while set; without it the label markup is unchanged."
+        },
+        {
           "name": "MinSearchLength",
           "type": "int",
           "isRequired": false,
@@ -21213,6 +21327,12 @@
           "type": "string?",
           "isRequired": false,
           "description": "Label above the editor."
+        },
+        {
+          "name": "LabelTrailing",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Content rendered at the END of the label row. Rendered only while set; without it the label markup is unchanged."
         },
         {
           "name": "Placeholder",
@@ -21409,6 +21529,12 @@
           "type": "string?",
           "isRequired": false,
           "description": "Label shown above the input."
+        },
+        {
+          "name": "LabelTrailing",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Content rendered at the END of the label row. Rendered only while set; without it the label markup is unchanged."
         },
         {
           "name": "Mask",
@@ -21811,6 +21937,12 @@
           "type": "string?",
           "isRequired": false,
           "description": "Label shown above the component. Also the accessible name of the trigger and of the popup, unless AriaLabel overrides it."
+        },
+        {
+          "name": "LabelTrailing",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Content rendered at the END of the label row. Rendered only while set; without it the label markup is unchanged."
         },
         {
           "name": "LayoutMode",
@@ -22446,6 +22578,12 @@
           "description": "Optional label rendered above the input."
         },
         {
+          "name": "LabelTrailing",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Content rendered at the END of the label row. Rendered only while set; without it the label markup is unchanged."
+        },
+        {
           "name": "Monospace",
           "type": "bool",
           "isRequired": false,
@@ -22547,6 +22685,12 @@
           "description": "Label text."
         },
         {
+          "name": "Lang",
+          "type": "string?",
+          "isRequired": false,
+          "description": "BCP 47 language of Label when it differs from the surrounding page. Rendered as lang on .tm-radio-text only while non-empty; omitted otherwise. The native radio input never receives lang."
+        },
+        {
           "name": "Name",
           "type": "string",
           "isRequired": false,
@@ -22579,6 +22723,9 @@
           "title": "Standalone radio",
           "code": "<TmRadio Name=\"color\" Value=\"@(\"red\")\" Label=\"Red\" IsChecked=\"@(selectedColor == \"red\")\" OnSelect=\"@(() => selectedColor = \"red\")\" />"
         }
+      ],
+      "notes": [
+        "The native radio input value is the invariant OptionValueFormatter wire (DateOnly yyyy-MM-dd, bool true/false, DateTime O). Redundant aria-checked is not rendered on the native input."
       ]
     },
     {
@@ -22645,6 +22792,12 @@
           "description": "Group label shown above the options."
         },
         {
+          "name": "LabelTrailing",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Content rendered at the END of the label row. Rendered only while set; without it the label markup is unchanged."
+        },
+        {
           "name": "Layout",
           "type": "RadioLayout",
           "isRequired": false,
@@ -22663,7 +22816,7 @@
           "type": "List<RadioOption<T>>",
           "isRequired": false,
           "default": "[]",
-          "description": "List of options to render."
+          "description": "List of options to render. Each RadioOption may carry Lang (BCP 47) which is forwarded onto the option text, not the input."
         },
         {
           "name": "Required",
@@ -22709,7 +22862,8 @@
       ],
       "notes": [
         "The error span renders with a stable id (tm-radio-error-{guid}); the radiogroup container references it through aria-describedby and sets aria-invalid=\"true\" while an Error shows.",
-        "Inside a TmFormField with a rendered error, the group additionally describes the field-level error message (cascaded as TmFormFieldErrorId) when it has no own Error."
+        "Inside a TmFormField with a rendered error, the group additionally describes the field-level error message (cascaded as TmFormFieldErrorId) when it has no own Error.",
+        "Each option's native radio value is the invariant OptionValueFormatter wire, so DateOnly 2026-03-15 and bool true/false round-trip independently of culture. TmSegmentedControl data-value is a separate DOM contract: bool stays True/False; only DateOnly/TimeOnly/DateTime/DateTimeOffset use the invariant ISO forms."
       ]
     },
     {
@@ -22754,6 +22908,12 @@
           "type": "string?",
           "isRequired": false,
           "description": "Label shown above the slider."
+        },
+        {
+          "name": "LabelTrailing",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Content rendered at the END of the label row. Rendered only while set; without it the label markup is unchanged."
         },
         {
           "name": "Max",
@@ -23035,6 +23195,12 @@
           "description": "An optional VISIBLE label above the tray, which also names the group through aria-labelledby — the name a screen reader reads is the name a reader sees. Do not add an AriaLabel on top of it (WCAG 2.5.3). A whitespace-only label counts as no label."
         },
         {
+          "name": "LabelTrailing",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Content rendered at the END of the label row. Rendered only while set; without it the label markup is unchanged."
+        },
+        {
           "name": "Options",
           "type": "IReadOnlyList<SegmentedOption<TValue>>",
           "isRequired": false,
@@ -23111,14 +23277,14 @@
           "code": "<TmSegmentedControl TValue=\"string\" Role=\"SegmentedControlRole.Tabs\"\n                    Label=\"Preview mode\" @bind-Value=\"mode\"\n                    Options=\"tabs\" />\n\n@if (mode == \"preview\")\n{\n    <div role=\"tabpanel\" id=\"preview-panel\" aria-labelledby=\"preview-tab\">…</div>\n}"
         }
       ],
-      "notes": "The control renders no live region: the selection is announced by the option's own aria-checked / aria-selected state, and a second announcement per change would be noise. The tray is the horizontal scroller, so a long segment set scrolls instead of clipping the last segment; the segment the keyboard moved to is focused, which scrolls it into view."
+      "notes": "The control renders no live region: the selection is announced by the option's own aria-checked / aria-selected state, and a second announcement per change would be noise. The tray is the horizontal scroller, so a long segment set scrolls instead of clipping the last segment; the segment the keyboard moved to is focused, which scrolls it into view. Each option's data-value keeps ToString() for existing types (bool True/False); DateOnly, TimeOnly, DateTime and DateTimeOffset use the invariant ISO wire so a culture cannot break selection of those types."
     },
     {
       "itemName": "TmSelect",
       "kind": "Component",
       "category": "Inputs",
       "namespace": "Tempo.Blazor.Components.Inputs",
-      "description": "Generic dropdown select component supporting typed options (string, Guid, enum, and the following numeric types — int, short, ushort, long, ulong, uint, byte, sbyte, decimal, double, float, including their nullable forms; other TValue such as bool, DateOnly, TimeOnly, DateTime, char, nint/nuint are not supported and silently fall back to default), label, placeholder, error/help text, disabled state, and manual option rendering via ChildContent. Uses native HTML <select> element with automatic value conversion. Nullable TValue (decimal?, int?, Guid?, enum?, string) fully supports a null-valued SelectOption: it renders as a real <option value=\"\"> that is marked selected when the bound Value is null, the <select> pins the preselection with value=\"\", and selecting it fires ValueChanged(null) — so \"no selection\" is a visible, pickable choice instead of a fall back to the first option. The value=\"\" pin appears for nullable value types (decimal?, int?, Guid?, enum?) and for string when Options contains a null-valued option; a null-valued and an \"\"-valued string option share the single empty wire value and must not be mixed in the same list. For a non-nullable TValue the placeholder (and a selectable placeholder) maps to default(TValue) — 0, Guid.Empty, … — and can collide with a real option, so use a nullable TValue when the user must be able to clear to empty. A nullable select whose bound Value may be null must include a null option or a Placeholder, otherwise the browser shows the first option. When TValue options come from the Options parameter, the round-trip is culture-invariant: both the rendered <option>/<select> value attribute and the change-event parser always use CultureInfo.InvariantCulture (e.g. decimal/double values render and parse as \"1.5\", never a culture-specific \"1,5\"), so the ambient thread culture cannot break selection. This invariance does NOT extend to ChildContent — see the ChildContent parameter for what a hand-written <option value> must contain. The bound Value is preselected regardless of whether options come from the Options parameter or from ChildContent (raw <option> children) — the component sets the <select> value attribute so the browser reflects the current selection on load. Since TG-007 (2.11.0) the select follows the interface density contract: inside a data-tm-density=\"compact\" ancestor the box height reads the compact --tm-input-height-md (32 px instead of 38 px); comfortable (no attribute) is unchanged.",
+      "description": "Generic dropdown select component supporting typed options (string, Guid, enum, and the following numeric types — int, short, ushort, long, ulong, uint, byte, sbyte, decimal, double, float, including their nullable forms; bool, DateOnly, TimeOnly, DateTime and DateTimeOffset round-trip through the shared OptionValueFormatter (DateOnly yyyy-MM-dd, TimeOnly HH:mm:ss.FFFFFFF, DateTime/DateTimeOffset round-trip O, bool true/false); an unconvertible wire value does not fire ValueChanged. nint/nuint/UIntPtr are not supported by BindConverter), label, placeholder, error/help text, disabled state, and manual option rendering via ChildContent. Uses native HTML <select> element with automatic value conversion. Nullable TValue (decimal?, int?, Guid?, enum?, string) fully supports a null-valued SelectOption: it renders as a real <option value=\"\"> that is marked selected when the bound Value is null, the <select> pins the preselection with value=\"\", and selecting it fires ValueChanged(null) — so \"no selection\" is a visible, pickable choice instead of a fall back to the first option. The value=\"\" pin appears for nullable value types (decimal?, int?, Guid?, enum?) and for string when Options contains a null-valued option; a null-valued and an \"\"-valued string option share the single empty wire value and must not be mixed in the same list. For a non-nullable TValue the placeholder (and a selectable placeholder) maps to default(TValue) — 0, Guid.Empty, … — and can collide with a real option, so use a nullable TValue when the user must be able to clear to empty. A nullable select whose bound Value may be null must include a null option or a Placeholder, otherwise the browser shows the first option. When TValue options come from the Options parameter, the round-trip is culture-invariant: both the rendered <option>/<select> value attribute and the change-event parser always use CultureInfo.InvariantCulture (e.g. decimal/double values render and parse as \"1.5\", never a culture-specific \"1,5\"), so the ambient thread culture cannot break selection. This invariance does NOT extend to ChildContent — see the ChildContent parameter for what a hand-written <option value> must contain. The bound Value is preselected regardless of whether options come from the Options parameter or from ChildContent (raw <option> children) — the component sets the <select> value attribute so the browser reflects the current selection on load. Since TG-007 (2.11.0) the select follows the interface density contract: inside a data-tm-density=\"compact\" ancestor the box height reads the compact --tm-input-height-md (32 px instead of 38 px); comfortable (no attribute) is unchanged.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Inputs/TmSelect.razor",
       "documentationStatus": "merged",
@@ -23617,6 +23783,12 @@
           "type": "string?",
           "isRequired": false,
           "description": "Label shown above the slider."
+        },
+        {
+          "name": "LabelTrailing",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Content rendered at the END of the label row. Rendered only while set; without it the label markup is unchanged."
         },
         {
           "name": "Max",
@@ -24217,6 +24389,12 @@
           "description": "Label shown above the radio buttons."
         },
         {
+          "name": "LabelTrailing",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Content rendered at the END of the label row. Rendered only while set; without it the label markup is unchanged."
+        },
+        {
           "name": "ReadOnly",
           "type": "bool",
           "isRequired": false,
@@ -24365,6 +24543,12 @@
           "type": "string?",
           "isRequired": false,
           "description": "Field label."
+        },
+        {
+          "name": "LabelTrailing",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Content rendered at the END of the label row. Rendered only while set; without it the label markup is unchanged."
         },
         {
           "name": "LoadingText",
@@ -27814,6 +27998,14 @@
         {
           "name": "--tm-tabs-edge-shadow-size",
           "description": "Width of each scroll-mode edge-shadow band (gradient fade and background-size). Defaults to var(--tm-space-4) = 16px."
+        },
+        {
+          "name": "--tm-tabs-sticky-z-index",
+          "description": "z-index of a sticky tab strip. Declared on :root as 5; the stylesheet reads it without a fallback."
+        },
+        {
+          "name": "--tm-tabs-edge-shadow-color",
+          "description": "Colour of the scroll-mode edge fade. Declared on :root as var(--tm-border-color); the stylesheet reads it without a fallback. Cover layers paint a full --tm-tabs-scroll-cover band of --tm-tabs-edge-shadow-size then fade, so an overflowing strip has no leftover shadow over the first/last tab."
         }
       ],
       "examples": [
@@ -28527,6 +28719,18 @@
       ],
       "parameters": [
         {
+          "name": "AllowTypedDate",
+          "type": "bool",
+          "isRequired": false,
+          "description": "When true (default false) renders a CurrentCulture short-date text field (`.tm-date-picker-typed`). A failed parse marks the picker invalid and keeps Value. The field shares the trigger aria-describedby; aria-labelledby names it from Label, with aria-label only as the no-label fallback."
+        },
+        {
+          "name": "AriaDescribedBy",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Extra ids joined onto the trigger aria-describedby together with the surrounding TmFormField cascade."
+        },
+        {
           "name": "Class",
           "type": "string?",
           "isRequired": false
@@ -28548,6 +28752,12 @@
           "isRequired": false
         },
         {
+          "name": "LabelTrailing",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Content rendered at the end of the label row (a hint chip). Rendered only while set; without it the label markup is unchanged."
+        },
+        {
           "name": "MaxDate",
           "type": "DateOnly?",
           "isRequired": false
@@ -28561,6 +28771,12 @@
           "name": "Placeholder",
           "type": "string?",
           "isRequired": false
+        },
+        {
+          "name": "ReadOnly",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Focusable trigger that does not open on click/Enter/Alt+Down, hides the clear button, sets aria-readonly and tm-date-picker--readonly. Distinct from Disabled — no disabled colours."
         },
         {
           "name": "Required",
@@ -28588,7 +28804,10 @@
         "tm-date-today-btn",
         "tm-picker-label",
         "tm-picker-clear",
-        "tm-picker-placeholder"
+        "tm-picker-clear-slot",
+        "tm-picker-placeholder",
+        "tm-date-picker--readonly",
+        "tm-date-picker-typed"
       ],
       "examples": [
         {
@@ -28657,6 +28876,12 @@
           "type": "string?",
           "isRequired": false,
           "description": "Visible label naming the trigger, and the picker's own accessible name."
+        },
+        {
+          "name": "LabelTrailing",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Content rendered at the END of the label row. Rendered only while set; without it the label markup is unchanged."
         },
         {
           "name": "MaxDate",
@@ -28752,6 +28977,18 @@
       ],
       "parameters": [
         {
+          "name": "AllowTypedDate",
+          "type": "bool",
+          "isRequired": false,
+          "description": "When true (default false) renders a CurrentCulture short-date text field (`.tm-date-picker-typed`). A failed parse marks the picker invalid and keeps Value. The field shares the trigger aria-describedby; aria-labelledby names it from Label, with aria-label only as the no-label fallback."
+        },
+        {
+          "name": "AriaDescribedBy",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Extra ids joined onto the date trigger aria-describedby together with the surrounding TmFormField cascade."
+        },
+        {
           "name": "Class",
           "type": "string?",
           "isRequired": false
@@ -28767,6 +29004,13 @@
           "type": "string",
           "isRequired": false,
           "default": "\"dd.MM.yyyy\""
+        },
+        {
+          "name": "DefaultTime",
+          "type": "DateTimePickerDefaultTime",
+          "isRequired": false,
+          "default": "DateTimePickerDefaultTime.Midnight",
+          "description": "Time applied when the user first picks a date on an empty picker. Midnight (default) is 00:00:00; Now uses the injected TimeProvider (fallback TimeProvider.System)."
         },
         {
           "name": "Disabled",
@@ -28791,6 +29035,12 @@
           "isRequired": false
         },
         {
+          "name": "LabelTrailing",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Content rendered at the end of the label row. Rendered only while set."
+        },
+        {
           "name": "MaxValue",
           "type": "DateTime?",
           "isRequired": false
@@ -28804,6 +29054,12 @@
           "name": "Placeholder",
           "type": "string?",
           "isRequired": false
+        },
+        {
+          "name": "ReadOnly",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Focusable date trigger that does not open, hides clear, sets aria-readonly and tm-datetime-picker--readonly, and forwards ReadOnly to the nested TmTimeInput. Distinct from Disabled."
         },
         {
           "name": "Required",
@@ -28842,8 +29098,11 @@
         "tm-datetime-picker",
         "tm-datetime-picker-body",
         "tm-datetime-picker--invalid",
+        "tm-datetime-picker--readonly",
         "tm-datetime-date-section",
-        "tm-datetime-time-section"
+        "tm-datetime-time-section",
+        "tm-date-picker-typed",
+        "tm-picker-clear-slot"
       ],
       "examples": [
         {
@@ -28897,6 +29156,12 @@
           "name": "Label",
           "type": "string?",
           "isRequired": false
+        },
+        {
+          "name": "LabelTrailing",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Content rendered at the END of the label row. Rendered only while set; without it the label markup is unchanged."
         },
         {
           "name": "MaxValue",
@@ -29017,6 +29282,12 @@
       "requiredImports": [
         "@using Tempo.Blazor.Components.Pickers"
       ],
+      "typeParameters": [
+        {
+          "name": "/c",
+          "description": "Generic type parameter /c."
+        }
+      ],
       "parameters": [
         {
           "name": "AllowOvernightRange",
@@ -29041,6 +29312,12 @@
           "type": "bool",
           "isRequired": false,
           "description": "Disables every segment and the period switch. Distinct from ReadOnly."
+        },
+        {
+          "name": "EmptyAsPlaceholder",
+          "type": "bool",
+          "isRequired": false,
+          "description": "When true and Value is null, the segments stay empty (tm-time-input--empty) instead of painting 00:00. Default false keeps today's midnight display. TmDateTimePicker turns this on so an empty picker does not show 00:00."
         },
         {
           "name": "ErrorText",
@@ -29122,6 +29399,7 @@
         "tm-time-input--disabled",
         "tm-time-input--invalid",
         "tm-time-input--readonly",
+        "tm-time-input--empty",
         "tm-time-input__error",
         "tm-time-input__period",
         "tm-time-seg",
@@ -29256,6 +29534,12 @@
           "type": "string?",
           "isRequired": false,
           "description": "Visible label. Also names the overlay dialog when SheetTitle is unset."
+        },
+        {
+          "name": "LabelTrailing",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Content rendered at the END of the label row. Rendered only while set; without it the label markup is unchanged."
         },
         {
           "name": "LayoutMode",
@@ -29465,6 +29749,12 @@
           "type": "string?",
           "isRequired": false,
           "description": "Visible label that names the composite group."
+        },
+        {
+          "name": "LabelTrailing",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Content rendered at the END of the label row. Rendered only while set; without it the label markup is unchanged."
         },
         {
           "name": "LayoutMode",
@@ -37977,11 +38267,11 @@
     }
   ],
   "summary": {
-    "itemCount": 468,
-    "manualItemCount": 468,
-    "generatedItemCount": 460,
+    "itemCount": 470,
+    "manualItemCount": 470,
+    "generatedItemCount": 462,
     "generatedOnlyItemCount": 0,
     "componentCount": 239,
-    "publicApiTypeCount": 221
+    "publicApiTypeCount": 223
   }
 }

@@ -138,7 +138,10 @@ Success polite — overridable per toast through `ToastOptions.Politeness`.
 
 `Position` supports all six corners/centres (`TopRight` default, `TopLeft`, `TopCenter`,
 `BottomRight`, `BottomLeft`, `BottomCenter` — full-width without the centering offset under
-640 px). `Stacked="true"` renders the collapsed deck: the newest three cards stay fully visible,
+640 px). Below 640 px the container stretches `left: 0; right: 0` with `--tm-space-2` padding
+(8 px) and each card is `width: 100%; max-width: none`, so the desktop cap
+`max-width: calc(100vw - 2rem)` cannot leave an extra 16 px gap on one side. Hosts must not
+override this in app CSS. `Stacked="true"` renders the collapsed deck: the newest three cards stay fully visible,
 every older card collapses to a thin strip (a pure-CSS depth hint); hovering the container or
 moving focus inside it expands the deck. Every toast stays in the DOM.
 

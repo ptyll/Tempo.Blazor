@@ -1,0 +1,24 @@
+{
+  "kind": "Record",
+  "category": "Forms",
+  "namespace": "Tempo.Blazor.Components.Forms",
+  "description": "One validation message together with the field it was attached to. Used by TmValidationSummary when the host opts into field-identity grouping, click handling or templating (GroupItemsBy / OnItemClick / ItemTemplateWithField).",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/Forms/ValidationSummaryItem.cs",
+  "documentationStatus": "documented",
+  "itemName": "ValidationSummaryItem",
+  "members": [
+    {
+      "name": "Field",
+      "kind": "Property",
+      "type": "FieldIdentifier",
+      "description": "The model field the message was stored against."
+    },
+    {
+      "name": "Message",
+      "kind": "Property",
+      "type": "string",
+      "description": "The validation message text."
+    }
+  ]
+}

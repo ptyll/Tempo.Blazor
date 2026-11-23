@@ -3,7 +3,17 @@
 @using Tempo.Blazor.Models
 
 <div class="tm-datetime-range-picker @Class @(IsInvalid ? "tm-datetime-range--invalid" : "")" @attributes="RootAttributes">
-    @if (!string.IsNullOrEmpty(Label))
+    @if (LabelTrailing is not null)
+    {
+        <span class="tm-input-label-row">
+            @if (!string.IsNullOrEmpty(Label))
+            {
+                <label id="@_labelId" class="tm-picker-label" for="@_startTriggerId">@Label</label>
+            }
+            <span class="tm-input-label-trailing">@LabelTrailing</span>
+        </span>
+    }
+    else if (!string.IsNullOrEmpty(Label))
     {
         <label id="@_labelId" class="tm-picker-label" for="@_startTriggerId">@Label</label>
     }
@@ -86,6 +96,11 @@
     /// </summary>
     [Parameter] public CultureInfo? Culture { get; set; }
     [Parameter] public string? Label        { get; set; }
+    /// <summary>
+    /// Content rendered at the END of the label row. Rendered only with the slot set; without it
+    /// the label markup is unchanged.
+    /// </summary>
+    [Parameter] public RenderFragment? LabelTrailing { get; set; }
     [Parameter] public string? Class        { get; set; }
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 

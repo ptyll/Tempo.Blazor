@@ -1,4 +1,5 @@
 @namespace Tempo.Blazor.Components.Inputs
+@using Tempo.Blazor.Helpers
 @typeparam T
 
 <div class="tm-radio-group @LayoutCssClass @AppearanceCssClass @Class" role="radiogroup"
@@ -7,7 +8,17 @@
      aria-labelledby="@(!string.IsNullOrEmpty(Label) ? LabelId : null)"
      aria-describedby="@DescribedBy"
      @attributes="AdditionalAttributes">
-    @if (!string.IsNullOrEmpty(Label))
+    @if (LabelTrailing is not null)
+    {
+        <span class="tm-input-label-row">
+            @if (!string.IsNullOrEmpty(Label))
+            {
+                <label id="@LabelId" class="tm-radio-group-label @(Required ? "tm-input-label-required" : "")">@Label</label>
+            }
+            <span class="tm-input-label-trailing">@LabelTrailing</span>
+        </span>
+    }
+    else if (!string.IsNullOrEmpty(Label))
     {
         <label id="@LabelId" class="tm-radio-group-label @(Required ? "tm-input-label-required" : "")">@Label</label>
     }
@@ -32,11 +43,12 @@
                            @ref="_segmentRefs[index]"
                            class="tm-sr-only"
                            name="@Name"
+                           value="@FormatOptionValue(option.Value)"
                            checked="@selected"
                            disabled="@disabled"
                            @onchange="() => SelectOptionAsync(option.Value)"
                            @onkeydown="OnSegmentedKeyDown" />
-                    <span>@option.Label</span>
+                    <span lang="@LangAttribute(option.Lang)">@option.Label</span>
                 </label>
             }
         }
@@ -47,6 +59,7 @@
                 <TmRadio Value="@((object?)option.Value)"
                          Name="@Name"
                          Label="@option.Label"
+                         Lang="@option.Lang"
                          IsChecked="@IsSelected(option.Value)"
                          Disabled="@(Disabled || option.IsDisabled)"
                          OnSelect="@(() => SelectOptionAsync(option.Value))" />
@@ -65,6 +78,12 @@
 
     /// <summary>Group label shown above the options.</summary>
     [Parameter] public string? Label { get; set; }
+
+    /// <summary>
+    /// Content rendered at the END of the label row. Rendered only with the slot set; without it
+    /// the label markup is unchanged.
+    /// </summary>
+    [Parameter] public RenderFragment? LabelTrailing { get; set; }
 
     /// <summary>Help text shown below the label.</summary>
     [Parameter] public string? HelpText { get; set; }
@@ -181,6 +200,10 @@
             _segmentRefs.Add(default);
         }
     }
+
+    private static string FormatOptionValue(T value) => OptionValueFormatter.Format(value);
+
+    private static string? LangAttribute(string? lang) => string.IsNullOrEmpty(lang) ? null : lang;
 
     /// <summary>
     /// Home/End are the only keys this handles. Arrow keys, Space and Enter belong to the native

@@ -6,7 +6,19 @@
      id="@Id"
      @attributes="RootAttributes">
 
-    @if (!string.IsNullOrEmpty(Label))
+    @if (LabelTrailing is not null)
+    {
+        <span class="tm-input-label-row">
+            @if (!string.IsNullOrEmpty(Label))
+            {
+                <label id="@_labelId"
+                       class="tm-picker-label @(Required ? "tm-input-label-required" : "")"
+                       for="@LabelFor">@Label</label>
+            }
+            <span class="tm-input-label-trailing">@LabelTrailing</span>
+        </span>
+    }
+    else if (!string.IsNullOrEmpty(Label))
     {
         <label id="@_labelId"
                class="tm-picker-label @(Required ? "tm-input-label-required" : "")"

@@ -27,6 +27,12 @@
       "description": "Label text."
     },
     {
+      "name": "Lang",
+      "type": "string?",
+      "isRequired": false,
+      "description": "BCP 47 language of Label when it differs from the surrounding page. Rendered as lang on .tm-radio-text only while non-empty; omitted otherwise. The native radio input never receives lang."
+    },
+    {
       "name": "IsChecked",
       "type": "bool",
       "isRequired": false,
@@ -64,5 +70,8 @@
       "title": "Standalone radio",
       "code": "<TmRadio Name=\"color\" Value=\"@(\"red\")\" Label=\"Red\" IsChecked=\"@(selectedColor == \"red\")\" OnSelect=\"@(() => selectedColor = \"red\")\" />"
     }
+  ],
+  "notes": [
+    "The native radio input value is the invariant OptionValueFormatter wire (DateOnly yyyy-MM-dd, bool true/false, DateTime O). Redundant aria-checked is not rendered on the native input."
   ]
 }

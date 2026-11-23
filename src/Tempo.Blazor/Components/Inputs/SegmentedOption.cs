@@ -17,6 +17,12 @@ public sealed record SegmentedOption<TValue>
     public string Label { get; init; } = string.Empty;
 
     /// <summary>
+    /// BCP 47 language of <see cref="Label"/> when it differs from the surrounding page.
+    /// Rendered as <c>lang</c> on the option label; omitted while null or empty.
+    /// </summary>
+    public string? Lang { get; init; }
+
+    /// <summary>
     /// The value this segment reports through <see cref="TmSegmentedControl{TValue}.Value"/>. Compared
     /// with <see cref="System.Collections.Generic.EqualityComparer{T}.Default"/>, so a record or an enum
     /// works as naturally as a string.

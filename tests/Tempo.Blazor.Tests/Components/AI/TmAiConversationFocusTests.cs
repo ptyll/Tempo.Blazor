@@ -162,6 +162,47 @@ public sealed class TmAiConversationFocusTests : LocalizationTestBase
         ShouldHaveFocusedTheTranscriptLast(cut, transcript);
     }
 
+    /// <summary>
+    /// Remaining c4a9f778: Chromium cancels a running smooth <c>scrollToBottom</c> when the log is
+    /// focused without <c>preventScroll</c>. The pill must move focus onto the log (preventScroll)
+    /// BEFORE the jump, so the animation is not aborted and the focus never falls onto
+    /// <c>&lt;body&gt;</c> as the pill unmounts.
+    /// </summary>
+    [Fact]
+    public void NewMessagesPill_FocusesTheLogWithPreventScroll_BeforeScrollingToBottom()
+    {
+        var module = JSInterop.SetupModule(TmAiConversationTests.InteropModulePath);
+        module.SetupVoid("attach", _ => true).SetVoidResult();
+        module.SetupVoid("detach", _ => true).SetVoidResult();
+        module.Setup<bool>("isNearBottom", _ => true).SetResult(false);
+        module.SetupVoid("scrollToBottom", _ => true).SetVoidResult();
+
+        var messages = Conversation(2);
+        var cut = Render<TmAiConversation>(parameters => parameters.Add(component => component.Messages, messages));
+        var transcript = TranscriptReferenceId(cut);
+
+        messages.Add(TmAiConversationTests.Message("m-2"));
+        cut.Render(parameters => parameters.Add(component => component.Messages, messages));
+
+        var focusBefore = JSInterop.Invocations.Count(invocation => invocation.Identifier == FocusInvocation);
+        var scrollBefore = module.Invocations.Count(invocation => invocation.Identifier == "scrollToBottom");
+        cut.Find("[data-testid='ai-conversation-new-messages']").Click();
+
+        var focusCalls = JSInterop.Invocations
+            .Where(invocation => invocation.Identifier == FocusInvocation)
+            .Skip(focusBefore)
+            .ToList();
+        focusCalls.Should().NotBeEmpty("the pill must hand the focus to the log before it unmounts");
+        focusCalls[0].Arguments[0].Should().BeOfType<ElementReference>().Subject.Id.Should().Be(transcript);
+        focusCalls[0].Arguments[1].Should().Be(true, "preventScroll keeps Chromium from aborting the smooth jump");
+
+        var scrollCalls = module.Invocations
+            .Where(invocation => invocation.Identifier == "scrollToBottom")
+            .Skip(scrollBefore)
+            .ToList();
+        scrollCalls.Should().NotBeEmpty("the jump must still run after the preventScroll focus");
+    }
+
     // ── The transcript itself ──────────────────────────────────────────────────────────────────
 
     /// <summary>

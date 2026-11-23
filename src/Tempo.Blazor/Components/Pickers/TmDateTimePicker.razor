@@ -1,8 +1,22 @@
 @namespace Tempo.Blazor.Components.Pickers
 @using System.Globalization
+@using Tempo.Blazor.Components.Forms
+@inject IServiceProvider Services
 
-<div class="tm-datetime-picker @Class @(IsOutOfRange ? "tm-datetime-picker--invalid" : "")" @attributes="RootAttributes">
-    @if (!string.IsNullOrEmpty(Label))
+<div class="tm-datetime-picker @(ReadOnly ? "tm-datetime-picker--readonly" : "") @Class @(IsOutOfRange || _typedDateInvalid ? "tm-datetime-picker--invalid" : "")" @attributes="RootAttributes">
+    @if (LabelTrailing is not null)
+    {
+        <span class="tm-input-label-row">
+            @if (!string.IsNullOrEmpty(Label))
+            {
+                <label id="@_labelId"
+                       class="tm-picker-label @(Required ? "tm-input-label-required" : "")"
+                       for="@EffectiveTriggerId">@Label</label>
+            }
+            <span class="tm-input-label-trailing">@LabelTrailing</span>
+        </span>
+    }
+    else if (!string.IsNullOrEmpty(Label))
     {
         <label id="@_labelId"
                class="tm-picker-label @(Required ? "tm-input-label-required" : "")"
@@ -23,7 +37,10 @@
                         disabled="@Disabled"
                         aria-haspopup="true"
                         aria-expanded="@_isOpen"
+                        aria-readonly="@(ReadOnly ? "true" : null)"
                         aria-labelledby="@TriggerLabelledBy"
+                        aria-describedby="@DescribedBy"
+                        aria-invalid="@((IsOutOfRange || _typedDateInvalid) ? "true" : null)"
                         @attributes="AriaAttributes"
                         @onclick="ToggleCalendar">
                     <span id="@_valueId">
@@ -38,16 +55,29 @@
                     </span>
                     <span class="tm-date-picker-icon" aria-hidden="true"></span>
                 </button>
-
-                @if (Value.HasValue && !Disabled && !HideClear)
+                @if (AllowTypedDate && !Disabled && !ReadOnly)
                 {
-                    <button type="button"
-                            class="tm-picker-clear"
-                            aria-label="@Loc["TmDateTimePicker_Clear"]"
-                            @onclick="ClearValue">
-                        &#x2715;
-                    </button>
+                    <input type="text"
+                           class="tm-date-picker-typed"
+                           value="@TypedDateText"
+                           aria-invalid="@(_typedDateInvalid ? "true" : null)"
+                           aria-describedby="@DescribedBy"
+                           aria-labelledby="@(string.IsNullOrEmpty(Label) ? null : _labelId)"
+                           aria-label="@(string.IsNullOrEmpty(Label) ? (Placeholder ?? Loc["TmDateTimePicker_Placeholder"]) : null)"
+                           @onchange="OnTypedDateChanged" />
                 }
+
+                <span class="tm-picker-clear-slot">
+                    @if (Value.HasValue && !Disabled && !ReadOnly && !HideClear)
+                    {
+                        <button type="button"
+                                class="tm-picker-clear"
+                                aria-label="@Loc["TmDateTimePicker_Clear"]"
+                                @onclick="ClearValue">
+                            &#x2715;
+                        </button>
+                    }
+                </span>
             </div>
 
             @* The calendar popup is a TmOverlayPanel: popover="manual" puts it in the browser top
@@ -90,6 +120,8 @@
                          InputId="@_timeInputId"
                          ShowSeconds="@ShowSeconds"
                          Disabled="@Disabled"
+                         ReadOnly="@ReadOnly"
+                         EmptyAsPlaceholder="true"
                          MinTime="@_minTime"
                          MaxTime="@_maxTime"
                          HourCycle="@HourCycle"
@@ -107,6 +139,33 @@
     [Parameter] public bool       ShowSeconds  { get; set; }
     [Parameter] public string?    Placeholder  { get; set; }
     [Parameter] public bool       Disabled     { get; set; }
+    /// <summary>
+    /// Keeps the date trigger focusable but closed and the time field read-only. Distinct from
+    /// <see cref="Disabled"/> — surface colours stay. Defaults to false.
+    /// </summary>
+    [Parameter] public bool       ReadOnly     { get; set; }
+    /// <summary>
+    /// Extra ids referenced from the date trigger's <c>aria-describedby</c>. Joined with the
+    /// surrounding <c>TmFormField</c> cascade (help and error).
+    /// </summary>
+    [Parameter] public string?    AriaDescribedBy { get; set; }
+    /// <summary>
+    /// Content rendered at the END of the label row. Rendered only with the slot set; without it
+    /// the label markup is unchanged.
+    /// </summary>
+    [Parameter] public RenderFragment? LabelTrailing { get; set; }
+    /// <summary>
+    /// When true, a typed date is parsed with <see cref="CultureInfo.CurrentCulture"/> short date
+    /// format. A failed parse marks the field invalid instead of silently resetting. Defaults to false.
+    /// </summary>
+    [Parameter] public bool       AllowTypedDate { get; set; }
+    /// <summary>
+    /// Time applied when the user first picks a date on an empty picker.
+    /// <see cref="DateTimePickerDefaultTime.Midnight"/> (default) keeps today's 00:00;
+    /// <see cref="DateTimePickerDefaultTime.Now"/> uses the injected <see cref="TimeProvider"/>
+    /// (fallback <see cref="TimeProvider.System"/>).
+    /// </summary>
+    [Parameter] public DateTimePickerDefaultTime DefaultTime { get; set; } = DateTimePickerDefaultTime.Midnight;
     /// <summary>
     /// 12-hour versus 24-hour clock forwarded to the nested <c>TmTimeInput</c>. Default
     /// <see cref="TimeHourCycle.Auto"/> follows <see cref="Culture"/>.
@@ -127,6 +186,12 @@
     [Parameter] public string?    Class        { get; set; }
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
+    [CascadingParameter(Name = TmFormField.ErrorIdCascadingName)]
+    private string? FormFieldErrorId { get; set; }
+
+    [CascadingParameter(Name = TmFormField.DescribedByIdsCascadingName)]
+    private string? FormFieldDescribedByIds { get; set; }
+
     private readonly string _labelId      = $"tm-datetime-label-{Guid.NewGuid():N}";
     private readonly string _triggerId    = $"tm-datetime-trigger-{Guid.NewGuid():N}";
     private readonly string _valueId      = $"tm-datetime-value-{Guid.NewGuid():N}";
@@ -143,6 +208,20 @@
     /// </summary>
     private string TriggerLabelledBy =>
         string.IsNullOrEmpty(Label) ? _valueId : $"{_labelId} {_valueId}";
+
+    private string? DescribedBy => TmDescribedBy.Join(
+        FormFieldErrorId,
+        FormFieldDescribedByIds,
+        AriaDescribedBy);
+
+    private TimeProvider Clock
+        => _clock ??= Services.GetService(typeof(TimeProvider)) as TimeProvider ?? TimeProvider.System;
+
+    private TimeProvider? _clock;
+    private bool _typedDateInvalid;
+
+    private string TypedDateText =>
+        _date?.ToString(CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern, CultureInfo.CurrentCulture) ?? string.Empty;
 
     /// <summary>Consumer <c>aria-*</c> attributes target the date trigger; everything else the root.</summary>
     private IReadOnlyDictionary<string, object>? AriaAttributes =>
@@ -204,18 +283,30 @@
 
     private void ToggleCalendar()
     {
-        if (!Disabled) _isOpen = !_isOpen;
+        if (!Disabled && !ReadOnly) _isOpen = !_isOpen;
     }
 
     private void SetOpen(bool open)
     {
+        if (ReadOnly || Disabled)
+        {
+            _isOpen = false;
+            return;
+        }
+
         _isOpen = open;
     }
 
     private async Task OnDateSelected(DateOnly d)
     {
+        if (ReadOnly) return;
         _isOpen = false;
         _date   = d;
+        _typedDateInvalid = false;
+        if (!_time.HasValue)
+        {
+            _time = ResolveDefaultTime();
+        }
         await Emit();
     }
 
@@ -227,16 +318,55 @@
 
     private async Task OnTimeChanged(TimeOnly? t)
     {
+        if (ReadOnly) return;
         _time = t;
         await Emit();
     }
 
     private async Task ClearValue()
     {
+        if (ReadOnly) return;
         _date   = null;
         _time   = null;
+        _typedDateInvalid = false;
         _isOpen = false;
         await ValueChanged.InvokeAsync(null);
+    }
+
+    private async Task OnTypedDateChanged(ChangeEventArgs e)
+    {
+        if (ReadOnly || Disabled) return;
+        var raw = e.Value?.ToString();
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            _typedDateInvalid = false;
+            _date = null;
+            _time = null;
+            await ValueChanged.InvokeAsync(null);
+            return;
+        }
+
+        if (DateOnly.TryParse(raw, CultureInfo.CurrentCulture, DateTimeStyles.None, out var parsed))
+        {
+            _typedDateInvalid = false;
+            _date = parsed;
+            _time ??= ResolveDefaultTime();
+            await Emit();
+            return;
+        }
+
+        _typedDateInvalid = true;
+    }
+
+    private TimeOnly ResolveDefaultTime()
+    {
+        if (DefaultTime == DateTimePickerDefaultTime.Now)
+        {
+            var now = Clock.GetLocalNow();
+            return TimeOnly.FromTimeSpan(now.TimeOfDay);
+        }
+
+        return TimeOnly.MinValue;
     }
 
     private async Task Emit()

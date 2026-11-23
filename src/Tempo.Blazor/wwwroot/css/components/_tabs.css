@@ -129,10 +129,10 @@
    re-declares the token to that background. Colors come from tokens only. */
 .tm-tabs:not(.tm-tabs--wrap) .tm-tabs__header {
     background-image:
-        linear-gradient(to right, var(--tm-tabs-scroll-cover), transparent var(--tm-tabs-edge-shadow-size)),
-        linear-gradient(to left, var(--tm-tabs-scroll-cover), transparent var(--tm-tabs-edge-shadow-size)),
-        linear-gradient(to right, var(--tm-border-color), transparent),
-        linear-gradient(to left, var(--tm-border-color), transparent);
+        linear-gradient(to right, var(--tm-tabs-scroll-cover) var(--tm-tabs-edge-shadow-size), transparent var(--tm-tabs-edge-shadow-size)),
+        linear-gradient(to left, var(--tm-tabs-scroll-cover) var(--tm-tabs-edge-shadow-size), transparent var(--tm-tabs-edge-shadow-size)),
+        linear-gradient(to right, var(--tm-tabs-edge-shadow-color), transparent),
+        linear-gradient(to left, var(--tm-tabs-edge-shadow-color), transparent);
     background-position: left center, right center, left center, right center;
     background-size:
         var(--tm-tabs-edge-shadow-size) 100%, var(--tm-tabs-edge-shadow-size) 100%,
@@ -158,7 +158,7 @@
 .tm-tabs--sticky .tm-tabs__header-row {
     position: sticky;
     top: var(--tm-tabs-sticky-top, 0);
-    z-index: 5;
+    z-index: var(--tm-tabs-sticky-z-index);
     background-color: var(--tm-tabs-scroll-cover);
 }
 

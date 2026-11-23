@@ -54,6 +54,30 @@
       "isRequired": false
     },
     {
+      "name": "LabelTrailing",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Content rendered at the end of the label row (a hint chip). Rendered only while set; without it the label markup is unchanged."
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Focusable trigger that does not open on click/Enter/Alt+Down, hides the clear button, sets aria-readonly and tm-date-picker--readonly. Distinct from Disabled — no disabled colours."
+    },
+    {
+      "name": "AriaDescribedBy",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Extra ids joined onto the trigger aria-describedby together with the surrounding TmFormField cascade."
+    },
+    {
+      "name": "AllowTypedDate",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true (default false) renders a CurrentCulture short-date text field (`.tm-date-picker-typed`). A failed parse marks the picker invalid and keeps Value. The field shares the trigger aria-describedby; aria-labelledby names it from Label, with aria-label only as the no-label fallback."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false
@@ -69,7 +93,10 @@
     "tm-date-today-btn",
     "tm-picker-label",
     "tm-picker-clear",
-    "tm-picker-placeholder"
+    "tm-picker-clear-slot",
+    "tm-picker-placeholder",
+    "tm-date-picker--readonly",
+    "tm-date-picker-typed"
   ],
   "examples": [
     {

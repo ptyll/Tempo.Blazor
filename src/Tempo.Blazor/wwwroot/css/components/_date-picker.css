@@ -11,6 +11,48 @@
   gap: var(--tm-space-1);
 }
 
+/* Reserved × slot so showing/hiding the clear button does not shift the trigger. */
+.tm-picker-clear-slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tm-space-5);
+  height: var(--tm-space-5);
+  flex-shrink: 0;
+}
+
+/* Opt-in typed date (AllowTypedDate): matches the trigger surface, not a bare browser input. */
+.tm-date-picker-typed {
+  min-inline-size: 0;
+  block-size: var(--tm-input-height-md);
+  padding: var(--tm-space-2) var(--tm-space-3);
+  border: var(--tm-border-width) solid var(--tm-border-color);
+  border-radius: var(--tm-radius-md);
+  background: var(--tm-bg-surface);
+  color: var(--tm-text-primary);
+  font: inherit;
+  font-size: var(--tm-font-size-sm);
+}
+.tm-date-picker-typed:focus-visible {
+  outline: var(--tm-border-width) solid transparent;
+  border-color: var(--tm-color-primary);
+  box-shadow: var(--tm-focus-ring);
+}
+.tm-date-picker-typed[aria-invalid="true"] {
+  border-color: var(--tm-color-danger);
+}
+
+@media (pointer: coarse) {
+  .tm-picker-clear-slot,
+  .tm-picker-clear {
+    width: var(--tm-touch-target);
+    height: var(--tm-touch-target);
+  }
+  .tm-date-picker-typed {
+    min-block-size: var(--tm-touch-target);
+  }
+}
+
 .tm-date-picker-trigger {
   display: inline-flex;
   align-items: center;
@@ -29,6 +71,14 @@
 .tm-date-picker-trigger:hover:not(:disabled) { border-color: var(--tm-color-primary); }
 .tm-date-picker-trigger:focus { outline: 2px solid transparent; border-color: var(--tm-color-primary); box-shadow: var(--tm-focus-ring); }
 .tm-date-picker-trigger[disabled] { opacity: 0.5; cursor: not-allowed; }
+
+/* ReadOnly keeps surface colours (unlike Disabled) and still accepts focus. */
+.tm-date-picker--readonly .tm-date-picker-trigger {
+  cursor: default;
+}
+.tm-date-picker--readonly .tm-date-picker-trigger:hover:not(:disabled) {
+  border-color: var(--tm-border-color);
+}
 
 .tm-date-picker-icon { margin-left: auto; color: var(--tm-text-tertiary); }
 

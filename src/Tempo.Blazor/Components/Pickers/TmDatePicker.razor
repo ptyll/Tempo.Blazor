@@ -1,4 +1,6 @@
 @namespace Tempo.Blazor.Components.Pickers
+@using System.Globalization
+@using Tempo.Blazor.Components.Forms
 @using Tempo.Blazor.Components.Icons
 
 @* The label belongs to the TRIGGER, not to the wrapper: a bare <label> with neither `for` nor a
@@ -7,8 +9,20 @@
    at BOTH the label and the displayed value, so the announced name is "{label}, {value-or-placeholder}".
    `aria-*` keys in AdditionalAttributes are splatted onto the trigger (the element assistive tech
    names and operates); `data-*` and everything else stays on the root, where test ids live. *@
-<div class="tm-date-picker @Class" @attributes="RootAttributes" @onkeydown="OnKeyDown" @onkeydown:stopPropagation="_isOpen">
-    @if (!string.IsNullOrEmpty(Label))
+<div class="tm-date-picker @(ReadOnly ? "tm-date-picker--readonly" : "") @Class" @attributes="RootAttributes" @onkeydown="OnKeyDown" @onkeydown:stopPropagation="_isOpen">
+    @if (LabelTrailing is not null)
+    {
+        <span class="tm-input-label-row">
+            @if (!string.IsNullOrEmpty(Label))
+            {
+                <label id="@_labelId"
+                       class="tm-picker-label @(Required ? "tm-input-label-required" : "")"
+                       for="@_triggerId">@Label</label>
+            }
+            <span class="tm-input-label-trailing">@LabelTrailing</span>
+        </span>
+    }
+    else if (!string.IsNullOrEmpty(Label))
     {
         <label id="@_labelId"
                class="tm-picker-label @(Required ? "tm-input-label-required" : "")"
@@ -26,7 +40,9 @@
                 disabled="@Disabled"
                 aria-haspopup="true"
                 aria-expanded="@_isOpen"
+                aria-readonly="@(ReadOnly ? "true" : null)"
                 aria-labelledby="@TriggerLabelledBy"
+                aria-describedby="@DescribedBy"
                 @attributes="AriaAttributes"
                 @onclick="ToggleCalendar">
             <span id="@_valueId">
@@ -43,16 +59,29 @@
                 <TmIcon Name="@IconNames.Calendar" Size="IconSize.Sm" />
             </span>
         </button>
-
-        @if (Value.HasValue && !Disabled)
+        @if (AllowTypedDate && !Disabled && !ReadOnly)
         {
-            <button type="button"
-                    class="tm-picker-clear"
-                    aria-label="@Loc["TmDatePicker_Clear"]"
-                    @onclick="ClearValue">
-                &#x2715;
-            </button>
+            <input type="text"
+                   class="tm-date-picker-typed"
+                   value="@TypedDateText"
+                   aria-invalid="@(_typedDateInvalid ? "true" : null)"
+                   aria-describedby="@DescribedBy"
+                   aria-labelledby="@(string.IsNullOrEmpty(Label) ? null : _labelId)"
+                   aria-label="@(string.IsNullOrEmpty(Label) ? (Placeholder ?? Loc["TmDatePicker_Placeholder"]) : null)"
+                   @onchange="OnTypedDateChanged" />
         }
+
+        <span class="tm-picker-clear-slot">
+            @if (Value.HasValue && !Disabled && !ReadOnly)
+            {
+                <button type="button"
+                        class="tm-picker-clear"
+                        aria-label="@Loc["TmDatePicker_Clear"]"
+                        @onclick="ClearValue">
+                    &#x2715;
+                </button>
+            }
+        </span>
     </div>
 
     @* The calendar popup is a TmOverlayPanel: popover="manual" puts it in the browser top layer,
@@ -102,15 +131,47 @@
     [Parameter] public string     DateFormat   { get; set; } = "dd.MM.yyyy";
     [Parameter] public string?    Placeholder  { get; set; }
     [Parameter] public bool       Disabled     { get; set; }
+    /// <summary>
+    /// Keeps the trigger focusable but closed: click, Enter and Alt+Down do not open the calendar,
+    /// the clear button is hidden, and <c>aria-readonly</c> is set. Distinct from
+    /// <see cref="Disabled"/> — surface colours stay, the control is not greyed out. Defaults to false.
+    /// </summary>
+    [Parameter] public bool       ReadOnly     { get; set; }
     [Parameter] public bool       Required     { get; set; }
     [Parameter] public string?    Label        { get; set; }
+    /// <summary>
+    /// Content rendered at the END of the label row (a status chip, a host counter). Rendered only
+    /// with the slot set; without it the label markup is unchanged.
+    /// </summary>
+    [Parameter] public RenderFragment? LabelTrailing { get; set; }
+    /// <summary>
+    /// Extra ids referenced from the trigger's <c>aria-describedby</c>. Joined with the surrounding
+    /// <c>TmFormField</c> cascade (help and error).
+    /// </summary>
+    [Parameter] public string?    AriaDescribedBy { get; set; }
+    /// <summary>
+    /// When true, the trigger also accepts a typed date parsed with <see cref="CultureInfo.CurrentCulture"/>
+    /// short date format. A failed parse marks the field invalid instead of silently resetting.
+    /// Defaults to false so today's button-only trigger is unchanged.
+    /// </summary>
+    [Parameter] public bool       AllowTypedDate { get; set; }
     [Parameter] public string?    Class        { get; set; }
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
+    [CascadingParameter(Name = TmFormField.ErrorIdCascadingName)]
+    private string? FormFieldErrorId { get; set; }
+
+    [CascadingParameter(Name = TmFormField.DescribedByIdsCascadingName)]
+    private string? FormFieldDescribedByIds { get; set; }
+
     private bool _isOpen;
+    private bool _typedDateInvalid;
     private ElementReference _triggerRef;
     private int  _displayYear  = DateTime.Today.Year;
     private int  _displayMonth = DateTime.Today.Month;
+
+    private string TypedDateText =>
+        Value?.ToString(CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern, CultureInfo.CurrentCulture) ?? string.Empty;
 
     private readonly string _labelId   = $"tm-date-picker-label-{Guid.NewGuid():N}";
     private readonly string _triggerId = $"tm-date-picker-trigger-{Guid.NewGuid():N}";
@@ -126,6 +187,11 @@
     /// </summary>
     private string TriggerLabelledBy =>
         string.IsNullOrEmpty(Label) ? _valueId : $"{_labelId} {_valueId}";
+
+    private string? DescribedBy => TmDescribedBy.Join(
+        FormFieldErrorId,
+        FormFieldDescribedByIds,
+        AriaDescribedBy);
 
     /// <summary>Consumer <c>aria-*</c> attributes target the trigger; everything else the root.</summary>
     private IReadOnlyDictionary<string, object>? AriaAttributes =>
@@ -165,16 +231,23 @@
 
     private void ToggleCalendar()
     {
-        if (!Disabled) _isOpen = !_isOpen;
+        if (!Disabled && !ReadOnly) _isOpen = !_isOpen;
     }
 
     private void SetOpen(bool open)
     {
+        if (ReadOnly || Disabled)
+        {
+            _isOpen = false;
+            return;
+        }
+
         _isOpen = open;
     }
 
     private async Task OnDateSelected(DateOnly d)
     {
+        if (ReadOnly) return;
         _isOpen = false;
         await ValueChanged.InvokeAsync(d);
     }
@@ -187,15 +260,39 @@
 
     private async Task ClearValue()
     {
+        if (ReadOnly) return;
         _isOpen = false;
         await ValueChanged.InvokeAsync(null);
     }
 
     private async Task SelectToday()
     {
+        if (ReadOnly) return;
         var today = DateOnly.FromDateTime(DateTime.Today);
         _isOpen = false;
+        _typedDateInvalid = false;
         await ValueChanged.InvokeAsync(today);
+    }
+
+    private async Task OnTypedDateChanged(ChangeEventArgs e)
+    {
+        if (ReadOnly || Disabled) return;
+        var raw = e.Value?.ToString();
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            _typedDateInvalid = false;
+            await ValueChanged.InvokeAsync(null);
+            return;
+        }
+
+        if (DateOnly.TryParse(raw, CultureInfo.CurrentCulture, DateTimeStyles.None, out var parsed))
+        {
+            _typedDateInvalid = false;
+            await ValueChanged.InvokeAsync(parsed);
+            return;
+        }
+
+        _typedDateInvalid = true;
     }
 
     // overlay.js consumes Escape in the window capture phase when it is loaded and routes it

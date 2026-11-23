@@ -21,6 +21,10 @@
   transition: color var(--tm-transition-fast), background var(--tm-transition-fast);
 }
 .tm-picker-clear:hover { color: var(--tm-color-danger); background: var(--tm-color-danger-subtle); }
+.tm-picker-clear:focus-visible {
+  outline: var(--tm-border-width) solid transparent;
+  box-shadow: var(--tm-focus-ring);
+}
 
 .tm-picker-placeholder { color: var(--tm-text-tertiary); }
 

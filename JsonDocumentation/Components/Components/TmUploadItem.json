@@ -5,6 +5,26 @@
   "description": "Observable state for a single tracked upload (progress, lifecycle, cancel/resume context) rendered by TmFileUploadProgress.",
   "packageId": "Tempo.Blazor",
   "sourcePath": "src/Tempo.Blazor/Components/Files/TmUploadItem.cs",
-  "documentationStatus": "generated",
-  "itemName": "TmUploadItem"
+  "documentationStatus": "documented",
+  "itemName": "TmUploadItem",
+  "members": [
+    {
+      "name": "BeginAttempt",
+      "kind": "Method",
+      "type": "CancellationToken",
+      "description": "Starts a new upload attempt: the previous CTS is cancelled, then disposed when the fresh source replaces it; owns a fresh one and resets the cancel-raised flag. Hosts call this instead of assigning item.Cts. Returns the token of the new attempt. Dismiss still assigns item.Cts = null."
+    },
+    {
+      "name": "ResumeAction",
+      "kind": "Property",
+      "type": "Func<TmUploadItem, Task>?",
+      "description": "Host (or owning component) action that actually restarts a cancelled or failed upload. Invoked by ResumeAsync before OnResume."
+    },
+    {
+      "name": "Dispose",
+      "kind": "Method",
+      "type": "void",
+      "description": "Cancels an in-flight attempt (so token holders see cancellation, not ObjectDisposedException), then releases the owned CTS so CancellationToken falls back to None."
+    }
+  ]
 }

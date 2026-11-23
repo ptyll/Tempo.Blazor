@@ -7,7 +7,17 @@
 @implements IDisposable
 
 <div class="tm-input-wrapper tm-decimal-input @(HasError ? "tm-decimal-input--error" : "") @Class">
-    @if (!string.IsNullOrEmpty(Label))
+    @if (LabelTrailing is not null)
+    {
+        <span class="tm-input-label-row">
+            @if (!string.IsNullOrEmpty(Label))
+            {
+                <label class="tm-input-label @(Required ? "tm-input-label-required" : "")" for="@EffectiveId">@Label</label>
+            }
+            <span class="tm-input-label-trailing">@LabelTrailing</span>
+        </span>
+    }
+    else if (!string.IsNullOrEmpty(Label))
     {
         <label class="tm-input-label @(Required ? "tm-input-label-required" : "")" for="@EffectiveId">@Label</label>
     }
@@ -148,6 +158,12 @@
 
     /// <summary>Field label.</summary>
     [Parameter] public string? Label { get; set; }
+
+    /// <summary>
+    /// Content rendered at the END of the label row. Rendered only with the slot set; without it
+    /// the label markup is unchanged.
+    /// </summary>
+    [Parameter] public RenderFragment? LabelTrailing { get; set; }
 
     /// <summary>Placeholder text shown while the input is empty.</summary>
     [Parameter] public string? Placeholder { get; set; }

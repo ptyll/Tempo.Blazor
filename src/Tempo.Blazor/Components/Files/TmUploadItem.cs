@@ -29,7 +29,7 @@ public enum TmUploadState
 /// Observable state for a single file upload: progress, lifecycle, and the context needed to
 /// cancel or resume it. Held by the file components and rendered by <see cref="TmFileUploadProgress"/>.
 /// </summary>
-public sealed class TmUploadItem
+public sealed class TmUploadItem : IDisposable
 {
     /// <summary>Stable id for this upload (used as the render key).</summary>
     public string Id { get; init; } = Guid.NewGuid().ToString("N");
@@ -65,6 +65,31 @@ public sealed class TmUploadItem
     // A host that tracks uploads itself cancels and resumes through the item — one cancellation
     // token, one OnCancel/OnResume callback per item — instead of keeping a parallel CTS or a
     // tracker dictionary of its own.
+
+    /// <summary>
+    /// Starts a new upload attempt: the previous CTS is cancelled, then disposed when the
+    /// fresh source replaces it, a fresh one is owned by this item, and the cancel-raised
+    /// flag is reset. Hosts call this instead of assigning a CTS of their own.
+    /// <see cref="Cts"/> and <see cref="Source"/> stay internal.
+    /// </summary>
+    /// <returns>The cancellation token of the new attempt.</returns>
+    public CancellationToken BeginAttempt()
+    {
+        if (_cts is not null)
+        {
+            try
+            {
+                _cts.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+                // The previous attempt was already released.
+            }
+        }
+
+        Cts = new CancellationTokenSource();
+        return CancellationToken;
+    }
 
     /// <summary>
     /// Cancellation token of the in-flight upload. Cancelled by <see cref="CancelAsync"/>;
@@ -140,7 +165,28 @@ public sealed class TmUploadItem
     internal int NextChunkIndex { get; set; }
     internal string? SessionId { get; set; }
     internal IBrowserFile? Source { get; set; }
-    internal Func<TmUploadItem, Task>? ResumeAction { get; set; }
+
+    /// <summary>
+    /// Host (or owning component) action that actually restarts a cancelled or failed upload.
+    /// Invoked by <see cref="ResumeAsync"/> before <see cref="OnResume"/>.
+    /// </summary>
+    public Func<TmUploadItem, Task>? ResumeAction { get; set; }
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        try
+        {
+            _cts?.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // The attempt was already released.
+        }
+
+        _cts?.Dispose();
+        _cts = null;
+    }
 
     internal void Apply(TmUploadProgress progress)
     {

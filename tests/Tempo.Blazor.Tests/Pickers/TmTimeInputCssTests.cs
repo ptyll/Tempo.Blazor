@@ -80,6 +80,87 @@ public sealed class TmTimeInputCssTests
     }
 
     [Fact]
+    public void EmptyPlaceholder_UsesTertiaryToken()
+    {
+        var css = ThemeCss.Normalise(ThemeCss.ComponentCss("_time-input.css"));
+        css.Should().Contain(".tm-time-input--empty .tm-time-seg");
+        css.Should().Contain("color: var(--tm-text-tertiary)");
+    }
+
+    [Fact]
+    public void DatePicker_ReservedClearSlot_UsesSpaceToken_AndReadonlyKeepsSurface()
+    {
+        var css = ThemeCss.Normalise(ThemeCss.ComponentCss("_date-picker.css"));
+        css.Should().Contain(".tm-picker-clear-slot");
+        css.Should().Contain("width: var(--tm-space-5)");
+        css.Should().Contain("height: var(--tm-space-5)");
+        css.Should().NotContain("width: 20px");
+        css.Should().Contain(".tm-date-picker--readonly .tm-date-picker-trigger");
+        css.Should().Contain("cursor: default");
+    }
+
+    [Fact]
+    public void DatePicker_TypedField_UsesTokens_FocusInvalidAndCoarseTouch()
+    {
+        var css = ThemeCss.Normalise(ThemeCss.ComponentCss("_date-picker.css"));
+        css.Should().Contain(".tm-date-picker-typed");
+        css.Should().Contain("block-size: var(--tm-input-height-md)");
+        css.Should().Contain("background: var(--tm-bg-surface)");
+        css.Should().Contain("color: var(--tm-text-primary)");
+        css.Should().Contain("border: var(--tm-border-width) solid var(--tm-border-color)");
+        css.Should().Contain(".tm-date-picker-typed:focus-visible");
+        css.Should().Contain("box-shadow: var(--tm-focus-ring)");
+        css.Should().Contain(".tm-date-picker-typed[aria-invalid=\"true\"]");
+        css.Should().Contain("border-color: var(--tm-color-danger)");
+        css.Should().NotContain("#", "component CSS uses tokens, never a hex colour");
+
+        var coarse = CoarseBlockOf("_date-picker.css");
+        coarse.Should().Contain(".tm-date-picker-typed");
+        coarse.Should().Contain("min-block-size: var(--tm-touch-target)");
+        coarse.Should().Contain(".tm-picker-clear-slot");
+        coarse.Should().Contain(".tm-picker-clear");
+        coarse.Should().Contain("width: var(--tm-touch-target)");
+        coarse.Should().Contain("height: var(--tm-touch-target)");
+        coarse.Should().NotContain("px", "the 44 px floor is --tm-touch-target, not a literal");
+    }
+
+    [Fact]
+    public void PickerClear_HasFocusVisibleRing_OnFinePointersUnchanged()
+    {
+        var css = ThemeCss.Normalise(ThemeCss.ComponentCss("_picker-shared.css"));
+        css.Should().Contain(".tm-picker-clear:focus-visible");
+        css.Should().Contain("outline: var(--tm-border-width) solid transparent");
+        css.Should().Contain("box-shadow: var(--tm-focus-ring)");
+        css.Should().Contain("width: 20px", "fine pointers keep the compact 20 px clear");
+    }
+
+    [Fact]
+    public void BundledStylesheet_CarriesTypedDateAndClearTouchRules()
+    {
+        var bundled = ThemeCss.BundledCss();
+        bundled.Should().Contain(".tm-date-picker-typed",
+            "the committed bundle must carry the typed-date field — a partial CSS edit without BundleCssFiles ships nothing");
+        bundled.Should().Contain(".tm-picker-clear:focus-visible",
+            "the committed bundle must carry the clear-button focus ring");
+        var blocks = CoarseBlock.Matches(bundled).Select(match => match.Groups["body"].Value).ToList();
+        blocks.Should().Contain(body => body.Contains(".tm-date-picker-typed", StringComparison.Ordinal)
+            && body.Contains("--tm-touch-target", StringComparison.Ordinal),
+            "the committed bundle must carry the typed-date coarse rule");
+        blocks.Should().Contain(body => body.Contains(".tm-picker-clear-slot", StringComparison.Ordinal)
+            && body.Contains(".tm-picker-clear", StringComparison.Ordinal)
+            && body.Contains("--tm-touch-target", StringComparison.Ordinal),
+            "the committed bundle must carry the 44 px clear slot on coarse pointers");
+    }
+
+    [Fact]
+    public void DateTimePicker_SharesInputHeightToken()
+    {
+        var css = ThemeCss.Normalise(ThemeCss.ComponentCss("_datetime-picker.css"));
+        css.Should().Contain("height: var(--tm-input-height-md)");
+        css.Should().Contain(".tm-datetime-picker--readonly");
+    }
+
+    [Fact]
     public void BundledStylesheet_CarriesTheOvernightAndWrapRules()
     {
         var bundled = ThemeCss.BundledCss();

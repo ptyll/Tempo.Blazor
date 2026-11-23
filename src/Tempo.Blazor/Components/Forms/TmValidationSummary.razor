@@ -12,10 +12,26 @@
             </span>
             <h3 class="tm-validation-summary-title">@DisplayTitle</h3>
         </div>
-        @if (ShowErrorsList && Errors.Any())
+        @if (ShowErrorsList && HasItems)
         {
             <div class="tm-validation-summary-body">
-                @if (GroupBy is not null)
+                @if (UsesFieldIdentity && GroupItemsBy is not null)
+                {
+                    @foreach (var group in Items.GroupBy(GroupItemsBy).Select((g, index) => (g, index)))
+                    {
+                        var groupId = $"{_idPrefix}-g{group.index}";
+                        <div class="tm-validation-summary-group" role="group" aria-labelledby="@groupId">
+                            <div id="@groupId" class="tm-validation-summary-group-title">@group.g.Key</div>
+                            <ul class="tm-validation-summary-list">
+                                @foreach (var item in group.g)
+                                {
+                                    <li>@RenderItem(item)</li>
+                                }
+                            </ul>
+                        </div>
+                    }
+                }
+                else if (!UsesFieldIdentity && GroupBy is not null)
                 {
                     @* Fáze 7: grouped presentation — messages under their group title (order of the
                        first occurrence is preserved, exactly like the flat list). *@
@@ -32,6 +48,15 @@
                             </ul>
                         </div>
                     }
+                }
+                else if (UsesFieldIdentity)
+                {
+                    <ul class="tm-validation-summary-list">
+                        @foreach (var item in Items)
+                        {
+                            <li>@RenderItem(item)</li>
+                        }
+                    </ul>
                 }
                 else
                 {
@@ -69,30 +94,57 @@
     /// <summary>
     /// Opt-in (Fáze 7): groups the messages under a shared title. The function maps a message to its
     /// group title; null (the default) keeps the historical flat list. The order of the groups and of
-    /// the messages follows the first occurrence.
+    /// the messages follows the first occurrence. Mutually exclusive with <see cref="GroupItemsBy"/>.
     /// </summary>
     [Parameter] public Func<string, string>? GroupBy { get; set; }
 
     /// <summary>
     /// Opt-in (Fáze 7): when registered, every message renders as a real button and raises the
     /// message text on activation (a host typically focuses the offending field). Without the
-    /// callback the messages stay plain list items.
+    /// callback the messages stay plain list items. Mutually exclusive with <see cref="OnItemClick"/>.
     /// </summary>
     [Parameter] public EventCallback<string> OnMessageClick { get; set; }
 
     /// <summary>
     /// Opt-in (Fáze 7): replaces the plain text of each message; the template receives the message.
-    /// Applies to the flat and the grouped list alike.
+    /// Applies to the flat and the grouped list alike. Mutually exclusive with
+    /// <see cref="ItemTemplateWithField"/>.
     /// </summary>
     [Parameter] public RenderFragment<string>? ItemTemplate { get; set; }
 
+    /// <summary>
+    /// Opt-in (2.13): groups messages by field identity. Maps a <see cref="ValidationSummaryItem"/>
+    /// to its group title. Mutually exclusive with <see cref="GroupBy"/>.
+    /// </summary>
+    [Parameter] public Func<ValidationSummaryItem, string>? GroupItemsBy { get; set; }
+
+    /// <summary>
+    /// Opt-in (2.13): when registered, every message renders as a real button and raises the
+    /// field-aware item on activation. Mutually exclusive with <see cref="OnMessageClick"/>.
+    /// </summary>
+    [Parameter] public EventCallback<ValidationSummaryItem> OnItemClick { get; set; }
+
+    /// <summary>
+    /// Opt-in (2.13): replaces the plain text of each message; the template receives the
+    /// field-aware item. Mutually exclusive with <see cref="ItemTemplate"/>.
+    /// </summary>
+    [Parameter] public RenderFragment<ValidationSummaryItem>? ItemTemplateWithField { get; set; }
+
+    private bool UsesFieldIdentity =>
+        GroupItemsBy is not null || OnItemClick.HasDelegate || ItemTemplateWithField is not null;
+
     private bool MessageIsClickable => OnMessageClick.HasDelegate;
+
+    private bool ItemIsClickable => OnItemClick.HasDelegate;
 
     // Stable per-instance prefix so each group title/list pair can be wired with aria-labelledby.
     private readonly string _idPrefix = Guid.NewGuid().ToString("N");
 
     private RenderFragment MessageContent(string message)
         => ItemTemplate?.Invoke(message) ?? (b => b.AddContent(0, message));
+
+    private RenderFragment ItemContent(ValidationSummaryItem item)
+        => ItemTemplateWithField?.Invoke(item) ?? (b => b.AddContent(0, item.Message));
 
     private RenderFragment RenderMessage(string message) => builder =>
     {
@@ -111,13 +163,32 @@
         }
     };
 
+    private RenderFragment RenderItem(ValidationSummaryItem item) => builder =>
+    {
+        if (ItemIsClickable)
+        {
+            builder.OpenElement(0, "button");
+            builder.AddAttribute(1, "type", "button");
+            builder.AddAttribute(2, "class", "tm-validation-summary-item");
+            builder.AddAttribute(3, "onclick", EventCallback.Factory.Create(this, () => OnItemClick.InvokeAsync(item)));
+            builder.AddContent(4, ItemContent(item));
+            builder.CloseElement();
+        }
+        else
+        {
+            builder.AddContent(0, ItemContent(item));
+        }
+    };
+
     private string DisplayTitle => !string.IsNullOrEmpty(Title)
         ? Title
         : Loc["TmValidationSummary_Title"];
 
+    private bool HasItems => UsesFieldIdentity ? Items.Any() : Errors.Any();
+
     private bool ShouldShow => ManualMode
-        ? Show && Errors.Any()
-        : Errors.Any();
+        ? Show && HasItems
+        : HasItems;
 
     // De-duplicated on purpose. GetValidationMessages() walks the store PER FIELD, so one sentence
     // attached to several fields — a cross-field rule, or a server response merged into the live
@@ -128,6 +199,57 @@
     private IEnumerable<string> Errors =>
         EditContext?.GetValidationMessages().Distinct(StringComparer.Ordinal) ?? Enumerable.Empty<string>();
 
+    // Field-identity path: one row per (Field, Message). Same sentence on two fields stays two
+    // rows so a host can focus the right control.
+    private IEnumerable<ValidationSummaryItem> Items
+    {
+        get
+        {
+            if (EditContext is null)
+            {
+                return [];
+            }
+
+            var seen = new HashSet<(object? Model, string FieldName, string Message)>();
+            var list = new List<ValidationSummaryItem>();
+            foreach (var identifier in EditContextFieldEnumerator.Fields(EditContext))
+            {
+                foreach (var message in EditContext.GetValidationMessages(identifier))
+                {
+                    if (seen.Add((identifier.Model, identifier.FieldName, message)))
+                    {
+                        list.Add(new ValidationSummaryItem(identifier, message));
+                    }
+                }
+            }
+
+            return list;
+        }
+    }
+
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        if (GroupBy is not null && GroupItemsBy is not null)
+        {
+            throw new ArgumentException(
+                "TmValidationSummary cannot combine GroupBy with GroupItemsBy. Choose the string path or the field-identity path.");
+        }
+
+        if (OnMessageClick.HasDelegate && OnItemClick.HasDelegate)
+        {
+            throw new ArgumentException(
+                "TmValidationSummary cannot combine OnMessageClick with OnItemClick. Choose the string path or the field-identity path.");
+        }
+
+        if (ItemTemplate is not null && ItemTemplateWithField is not null)
+        {
+            throw new ArgumentException(
+                "TmValidationSummary cannot combine ItemTemplate with ItemTemplateWithField. Choose the string path or the field-identity path.");
+        }
+    }
+
+    /// <inheritdoc />
     protected override void OnInitialized()
     {
         if (EditContext is not null)
@@ -141,6 +263,7 @@
         InvokeAsync(StateHasChanged);
     }
 
+    /// <inheritdoc />
     public void Dispose()
     {
         if (EditContext is not null)

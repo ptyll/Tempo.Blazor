@@ -40,6 +40,12 @@ public partial class TmMaskedTextBox : ComponentBase
     /// <summary>Label shown above the input.</summary>
     [Parameter] public string? Label { get; set; }
 
+    /// <summary>
+    /// Content rendered at the END of the label row. Rendered only with the slot set; without it
+    /// the label markup is unchanged.
+    /// </summary>
+    [Parameter] public RenderFragment? LabelTrailing { get; set; }
+
     /// <summary>Placeholder text shown when the input is empty.</summary>
     [Parameter] public string? Placeholder { get; set; }
 

@@ -99,6 +99,12 @@
       "description": "Visible label. Also names the overlay dialog when SheetTitle is unset."
     },
     {
+      "name": "LabelTrailing",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Content rendered at the END of the label row. Rendered only while set; without it the label markup is unchanged."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

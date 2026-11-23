@@ -549,8 +549,7 @@ public partial class TmFileManager
 
         item.State = TmUploadState.Uploading;
         item.Message = null;
-        item.Cts = new CancellationTokenSource();
-        var token = item.Cts.Token;
+        var token = item.BeginAttempt();
         StateHasChanged();
 
         var progress = new Progress<TmUploadProgress>(p =>

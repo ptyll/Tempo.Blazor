@@ -81,6 +81,12 @@
       "description": "Label shown above the component. Also the accessible name of the trigger and of the popup, unless AriaLabel overrides it."
     },
     {
+      "name": "LabelTrailing",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Content rendered at the END of the label row. Rendered only while set; without it the label markup is unchanged."
+    },
+    {
       "name": "HideLabel",
       "type": "bool",
       "isRequired": false,

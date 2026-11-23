@@ -34,6 +34,13 @@
 }
 .tm-time-picker__trigger:disabled { opacity: var(--tm-opacity-disabled); cursor: not-allowed; }
 
+.tm-time-picker__value {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  text-align: start;
+  font-variant-numeric: tabular-nums;
+}
+
 .tm-time-picker__icon { margin-inline-start: auto; color: var(--tm-text-tertiary); }
 
 .tm-time-picker__popup {

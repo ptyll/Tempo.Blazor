@@ -151,4 +151,65 @@ public class TmUploadItemControllerTests
         act.Should().NotThrow();
         item.CancellationToken.IsCancellationRequested.Should().BeFalse();
     }
+
+    [Fact]
+    public void BeginAttempt_CancelsPreviousCts_AndReturnsFreshToken()
+    {
+        var item = new TmUploadItem();
+        var first = item.BeginAttempt();
+        first.IsCancellationRequested.Should().BeFalse();
+
+        var second = item.BeginAttempt();
+
+        first.IsCancellationRequested.Should().BeTrue(
+            "BeginAttempt must cancel the previous attempt before replacing the CTS");
+        second.IsCancellationRequested.Should().BeFalse();
+        second.Should().NotBe(first);
+    }
+
+    [Fact]
+    public async Task ResumeAction_RunsBeforeOnResume()
+    {
+        var item = new TmUploadItem { State = TmUploadState.Cancelled };
+        var order = new List<string>();
+        item.ResumeAction = _ =>
+        {
+            order.Add("action");
+            item.State = TmUploadState.Uploading;
+            return Task.CompletedTask;
+        };
+        item.OnResume = _ =>
+        {
+            order.Add("onresume");
+            return Task.CompletedTask;
+        };
+
+        await item.ResumeAsync();
+
+        order.Should().Equal("action", "onresume");
+        item.State.Should().Be(TmUploadState.Uploading);
+    }
+
+    [Fact]
+    public void Dispose_ReleasesCts_SoCancellationTokenFallsBackToNone()
+    {
+        var item = new TmUploadItem();
+        item.BeginAttempt();
+
+        item.Dispose();
+
+        item.CancellationToken.Should().Be(CancellationToken.None);
+    }
+
+    [Fact]
+    public void Dispose_CancelsInFlightAttempt_SoHoldersSeeCancellationNotObjectDisposed()
+    {
+        var item = new TmUploadItem();
+        var token = item.BeginAttempt();
+
+        item.Dispose();
+
+        token.IsCancellationRequested.Should().BeTrue(
+            "Dispose must Cancel before Dispose so a token holder sees cancellation, not ObjectDisposedException");
+    }
 }

@@ -1,5 +1,7 @@
 using Bunit;
 using FluentAssertions;
+using Microsoft.AspNetCore.Components.Web;
+using Tempo.Blazor.Components.Forms;
 using Tempo.Blazor.Components.Overlay;
 using Tempo.Blazor.Components.Pickers;
 using Tempo.Blazor.Tests.Localization;
@@ -237,5 +239,126 @@ public class TmDatePickerTests : LocalizationTestBase
         root.GetAttribute("aria-labelledby").Should().Be(cut.Find(".tm-picker-label").Id);
         // The calendar still renders inside the popup.
         root.QuerySelector(".tm-calendar").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void DatePicker_ReadOnly_KeepsTriggerFocusable_DoesNotOpen()
+    {
+        var cut = Render<TmDatePicker>(p => p
+            .Add(c => c.Value, new DateOnly(2026, 3, 15))
+            .Add(c => c.ReadOnly, true));
+
+        var trigger = cut.Find(".tm-date-picker-trigger");
+        trigger.HasAttribute("disabled").Should().BeFalse();
+        trigger.GetAttribute("aria-readonly").Should().Be("true");
+        cut.Find(".tm-date-picker").ClassList.Should().Contain("tm-date-picker--readonly");
+        cut.FindAll(".tm-picker-clear").Should().BeEmpty();
+
+        trigger.Click();
+        cut.FindAll(".tm-calendar").Should().BeEmpty();
+
+        trigger.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        cut.FindAll(".tm-calendar").Should().BeEmpty();
+
+        trigger.KeyDown(new KeyboardEventArgs { Key = "ArrowDown", AltKey = true });
+        cut.FindAll(".tm-calendar").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void DatePicker_LabelTrailing_RendersAtTheEndOfTheLabelRow()
+    {
+        var cut = Render<TmDatePicker>(p => p
+            .Add(c => c.Label, "Occurred")
+            .Add(c => c.LabelTrailing, "<span id='date-hint'>ISO</span>"));
+
+        var row = cut.Find(".tm-input-label-row");
+        row.QuerySelector("label")!.TextContent.Trim().Should().Be("Occurred");
+        row.QuerySelector("#date-hint")!.TextContent.Should().Be("ISO");
+    }
+
+    [Fact]
+    public void DatePicker_AriaDescribedBy_JoinsFormFieldCascade()
+    {
+        var cut = Render<TmFormField>(p => p
+            .Add(c => c.Label, "Occurred")
+            .Add(c => c.Id, "occurred-field")
+            .Add(c => c.HelpText, "When it happened.")
+            .AddChildContent<TmDatePicker>(child => child
+                .Add(x => x.AriaDescribedBy, "extra-hint")));
+
+        cut.Find(".tm-date-picker-trigger").GetAttribute("aria-describedby")
+            .Should().Be("occurred-field-field-help extra-hint");
+    }
+
+    [Fact]
+    public void DatePicker_AllowTypedDate_DefaultFalse_AndFailedParseKeepsValue()
+    {
+        DateOnly? captured = new DateOnly(2026, 1, 1);
+        var closed = Render<TmDatePicker>(p => p.Add(c => c.Value, captured));
+        closed.FindAll(".tm-date-picker-typed").Should().BeEmpty();
+
+        var cut = Render<TmDatePicker>(p => p
+            .Add(c => c.Value, captured)
+            .Add(c => c.AllowTypedDate, true)
+            .Add(c => c.ValueChanged, (DateOnly? v) => captured = v));
+
+        var typed = cut.Find(".tm-date-picker-typed");
+        typed.Change("not-a-date");
+
+        captured.Should().Be(new DateOnly(2026, 1, 1), "a failed parse must not reset Value");
+        typed.GetAttribute("aria-invalid").Should().Be("true");
+    }
+
+    [Fact]
+    public void DatePicker_AllowTypedDate_WithLabel_UsesLabelledBy_NotAriaLabel()
+    {
+        var cut = Render<TmDatePicker>(p => p
+            .Add(c => c.Label, "Occurred")
+            .Add(c => c.AllowTypedDate, true));
+
+        var typed = cut.Find(".tm-date-picker-typed");
+        var labelId = cut.Find("label.tm-picker-label").GetAttribute("id");
+        typed.GetAttribute("aria-labelledby").Should().Be(labelId);
+        typed.HasAttribute("aria-label").Should().BeFalse(
+            "aria-label is only the fallback when there is no visible Label");
+    }
+
+    [Fact]
+    public void DatePicker_AllowTypedDate_WithoutLabel_FallsBackToAriaLabel()
+    {
+        var cut = Render<TmDatePicker>(p => p
+            .Add(c => c.Placeholder, "Pick a day")
+            .Add(c => c.AllowTypedDate, true));
+
+        var typed = cut.Find(".tm-date-picker-typed");
+        typed.HasAttribute("aria-labelledby").Should().BeFalse();
+        typed.GetAttribute("aria-label").Should().Be("Pick a day");
+    }
+
+    [Fact]
+    public void DatePicker_AllowTypedDate_JoinsFormFieldDescribedBy()
+    {
+        var cut = Render<TmFormField>(p => p
+            .Add(c => c.Label, "Occurred")
+            .Add(c => c.Id, "occurred-field")
+            .Add(c => c.HelpText, "When it happened.")
+            .AddChildContent<TmDatePicker>(child => child
+                .Add(x => x.AllowTypedDate, true)
+                .Add(x => x.AriaDescribedBy, "extra-hint")));
+
+        cut.Find(".tm-date-picker-typed").GetAttribute("aria-describedby")
+            .Should().Be("occurred-field-field-help extra-hint");
+    }
+
+    [Fact]
+    public void DatePicker_ReservedClearSlot_IsAlwaysPresent()
+    {
+        var empty = Render<TmDatePicker>();
+        empty.FindAll(".tm-picker-clear-slot").Should().HaveCount(1);
+        empty.FindAll(".tm-picker-clear").Should().BeEmpty();
+
+        var filled = Render<TmDatePicker>(p => p.Add(c => c.Value, new DateOnly(2026, 3, 15)));
+        filled.FindAll(".tm-picker-clear-slot").Should().HaveCount(1);
+        filled.FindAll(".tm-picker-clear").Should().HaveCount(1);
     }
 }

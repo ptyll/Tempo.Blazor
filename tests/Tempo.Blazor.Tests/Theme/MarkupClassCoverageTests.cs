@@ -519,7 +519,11 @@ public sealed class MarkupClassCoverageTests
             // Plan 92e96b25 phase 12 (TmCommandPalette): its @code moved to a .razor.cs, so the two
             // per-instance id prefixes ("tm-palette-group-{Guid…}", "tm-palette-list-{Guid…}") joined
             // the scanned population (already emitted, only invisible in the .razor) — 70 → 72.
-            ExpectedUnmeasurableStems: 72),
+            // Plan 1c95309c (time-of-day overlay + range captions): TmTimePicker's per-instance
+            // overlay ids ("tm-time-picker-input|overlay|trigger|value-{Guid…}") and
+            // TmTimeRangePicker's from/to caption ids ("tm-time-range-from-label-{…}",
+            // "tm-time-range-to-label-{…}") joined the scanned population — 72 → 78.
+            ExpectedUnmeasurableStems: 78),
         new Scope("Signing", "Tempo.Blazor.Signing", UnstyledSigningMarkupClasses,
             MinRazorFiles: 28, MinMarkupClasses: 400, InheritsCoreCss: true,
             // Signing redesign phase 2 (B25): the runner's single step panel id

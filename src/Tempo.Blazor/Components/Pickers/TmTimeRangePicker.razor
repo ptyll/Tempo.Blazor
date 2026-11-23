@@ -5,7 +5,17 @@
 <div class="tm-time-range-picker @Class @(IsInvalid ? "tm-time-range--invalid" : "")"
      data-tm-overnight="@(IsOvernight ? "true" : null)"
      @attributes="RootAttributes">
-    @if (!string.IsNullOrEmpty(Label))
+    @if (LabelTrailing is not null)
+    {
+        <span class="tm-input-label-row">
+            @if (!string.IsNullOrEmpty(Label))
+            {
+                <label id="@_labelId" class="tm-picker-label" for="@(UsesOverlay ? null : _startInputId)">@Label</label>
+            }
+            <span class="tm-input-label-trailing">@LabelTrailing</span>
+        </span>
+    }
+    else if (!string.IsNullOrEmpty(Label))
     {
         <label id="@_labelId" class="tm-picker-label" for="@(UsesOverlay ? null : _startInputId)">@Label</label>
     }
@@ -140,6 +150,12 @@
 
     /// <summary>Visible label that names the composite group.</summary>
     [Parameter] public string? Label { get; set; }
+
+    /// <summary>
+    /// Content rendered at the END of the label row. Rendered only with the slot set; without it
+    /// the label markup is unchanged.
+    /// </summary>
+    [Parameter] public RenderFragment? LabelTrailing { get; set; }
 
     /// <summary>Disables both ends and the swap button. Distinct from <see cref="ReadOnly"/>.</summary>
     [Parameter] public bool Disabled { get; set; }

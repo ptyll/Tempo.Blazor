@@ -1,7 +1,17 @@
 @namespace Tempo.Blazor.Components.Inputs
 
 <div class="tm-slider tm-slider--@Orientation.ToString().ToLowerInvariant() @AdditionalCssClass">
-    @if (!string.IsNullOrEmpty(Label))
+    @if (LabelTrailing is not null)
+    {
+        <span class="tm-input-label-row">
+            @if (!string.IsNullOrEmpty(Label))
+            {
+                <label class="tm-slider__label">@Label</label>
+            }
+            <span class="tm-input-label-trailing">@LabelTrailing</span>
+        </span>
+    }
+    else if (!string.IsNullOrEmpty(Label))
     {
         <label class="tm-slider__label">@Label</label>
     }

@@ -1,17 +1,18 @@
 @namespace Tempo.Blazor.Components.Inputs
+@using Tempo.Blazor.Helpers
 
 <label class="tm-radio-option @(IsChecked ? "tm-radio-checked" : "") @(Disabled ? "tm-radio-disabled" : "") @Class" @attributes="AdditionalAttributes">
     <input type="radio"
            name="@Name"
+           value="@WireValue"
            checked="@IsChecked"
            disabled="@Disabled"
            class="tm-radio-input"
-           aria-checked="@(IsChecked ? "true" : "false")"
            @onchange="HandleChangeAsync" />
     <span class="tm-radio-custom"></span>
     @if (!string.IsNullOrEmpty(Label))
     {
-        <span class="tm-radio-text">@Label</span>
+        <span class="tm-radio-text" lang="@LangAttribute">@Label</span>
     }
 </label>
 
@@ -39,6 +40,16 @@
 
     /// <summary>Fires when this radio is selected.</summary>
     [Parameter] public EventCallback OnSelect { get; set; }
+
+    /// <summary>
+    /// BCP 47 language of <see cref="Label"/> when it differs from the surrounding page.
+    /// Rendered as <c>lang</c> on <c>.tm-radio-text</c>; omitted while null or empty.
+    /// </summary>
+    [Parameter] public string? Lang { get; set; }
+
+    private string WireValue => OptionValueFormatter.Format(Value);
+
+    private string? LangAttribute => string.IsNullOrEmpty(Lang) ? null : Lang;
 
     private async Task HandleChangeAsync(ChangeEventArgs _)
     {

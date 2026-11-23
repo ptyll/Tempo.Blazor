@@ -531,6 +531,36 @@ public class TmSegmentedControlTests : LocalizationTestBase
         Options(cut)[0].GetAttribute("data-value").Should().Be("1");
     }
 
+    [Fact]
+    public void BoolDataValue_KeepsHistoricalTrueFalse_NotTheInvariantFormatter()
+    {
+        var cut = Render<TmSegmentedControl<bool>>(p => p
+            .Add(c => c.Options, new List<SegmentedOption<bool>>
+            {
+                new() { Label = "PM", Value = true },
+                new() { Label = "AM", Value = false },
+            })
+            .Add(c => c.Value, true));
+
+        cut.Find("[data-testid='segmented-option'][data-value='True']").Should().NotBeNull(
+            "segmented data-value is a documented DOM contract; bool stays True/False so TimeInput/E2E selectors keep matching");
+        cut.Find("[data-testid='segmented-option'][data-value='False']").Should().NotBeNull();
+        cut.FindAll("[data-testid='segmented-option'][data-value='true']").Should().BeEmpty();
+        cut.FindAll("[data-testid='segmented-option'][data-value='false']").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void DateOnlyDataValue_UsesInvariantIso()
+    {
+        var cut = Render<TmSegmentedControl<DateOnly>>(p => p
+            .Add(c => c.Options, new List<SegmentedOption<DateOnly>>
+            {
+                new() { Label = "Today", Value = new DateOnly(2026, 3, 15) },
+            }));
+
+        cut.Find("[data-testid='segmented-option']").GetAttribute("data-value").Should().Be("2026-03-15");
+    }
+
     // ---------- stylesheet contract ----------
 
     [Fact]

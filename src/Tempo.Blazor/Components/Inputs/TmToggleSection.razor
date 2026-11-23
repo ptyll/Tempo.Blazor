@@ -2,7 +2,17 @@
 
 <div class="tm-toggle-section @Class" @attributes="AdditionalAttributes">
     <div class="tm-toggle-section__header">
-        @if (!string.IsNullOrEmpty(Label))
+        @if (LabelTrailing is not null)
+        {
+            <span class="tm-input-label-row">
+                @if (!string.IsNullOrEmpty(Label))
+                {
+                    <span class="tm-toggle-section__label">@Label</span>
+                }
+                <span class="tm-input-label-trailing">@LabelTrailing</span>
+            </span>
+        }
+        else if (!string.IsNullOrEmpty(Label))
         {
             <span class="tm-toggle-section__label">@Label</span>
         }
@@ -45,6 +55,12 @@
 
     /// <summary>Label shown above the radio buttons.</summary>
     [Parameter] public string? Label { get; set; }
+
+    /// <summary>
+    /// Content rendered at the END of the label row. Rendered only with the slot set; without it
+    /// the label markup is unchanged.
+    /// </summary>
+    [Parameter] public RenderFragment? LabelTrailing { get; set; }
 
     /// <summary>Override label for the True (Yes) option.</summary>
     [Parameter] public string? TrueLabel { get; set; }

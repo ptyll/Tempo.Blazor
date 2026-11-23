@@ -118,6 +118,14 @@
     {
       "name": "--tm-tabs-edge-shadow-size",
       "description": "Width of each scroll-mode edge-shadow band (gradient fade and background-size). Defaults to var(--tm-space-4) = 16px."
+    },
+    {
+      "name": "--tm-tabs-sticky-z-index",
+      "description": "z-index of a sticky tab strip. Declared on :root as 5; the stylesheet reads it without a fallback."
+    },
+    {
+      "name": "--tm-tabs-edge-shadow-color",
+      "description": "Colour of the scroll-mode edge fade. Declared on :root as var(--tm-border-color); the stylesheet reads it without a fallback. Cover layers paint a full --tm-tabs-scroll-cover band of --tm-tabs-edge-shadow-size then fade, so an overflowing strip has no leftover shadow over the first/last tab."
     }
   ],
   "examples": [

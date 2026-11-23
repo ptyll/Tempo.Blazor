@@ -817,6 +817,61 @@ public sealed class AiConversationE2ETests : WasmTestBase
             }
             """);
 
+    [TestMethod]
+    [TestCategory("WASM")]
+    [Description("E2E-AI.10a: the New messages pill lands at the end of the log with focus on the transcript")]
+    public async Task NewMessagesPill_ScrollsToTheEnd_AndFocusesTheLog()
+    {
+        var page = await OpenPageAsync();
+        await AssertNewMessagesPillLandsAtEndAsync(page);
+        AssertNoClientErrors();
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    [Description("E2E-AI.10a reduced-motion: the same jump lands with behavior:auto")]
+    public async Task NewMessagesPill_WithReducedMotion_ScrollsToTheEnd_AndFocusesTheLog()
+    {
+        var page = await OpenPageAsync();
+        await page.EmulateMediaAsync(new PageEmulateMediaOptions { ReducedMotion = ReducedMotion.Reduce });
+        await AssertNewMessagesPillLandsAtEndAsync(page);
+        AssertNoClientErrors();
+    }
+
+    private static async Task AssertNewMessagesPillLandsAtEndAsync(IPage page)
+    {
+        await StartAnswerAsync(page);
+        await page.Locator(AnswerSelector).WaitForAsync(
+            new LocatorWaitForOptions { Timeout = 30000 });
+
+        await page.WaitForFunctionAsync(
+            """
+            () => {
+                const log = document.querySelector('.tm-ai-conversation__log');
+                return !!log && log.scrollHeight > log.clientHeight + 40;
+            }
+            """,
+            null,
+            new PageWaitForFunctionOptions { Timeout = 30000 });
+
+        await ScrollTranscriptToTopAsync(page);
+        var pill = page.Locator("[data-testid='ai-conversation-new-messages']");
+        await pill.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
+        await pill.ClickAsync();
+
+        await page.WaitForFunctionAsync(
+            """
+            () => {
+                const log = document.querySelector('.tm-ai-conversation__log');
+                if (!log) return false;
+                const atEnd = log.scrollTop + log.clientHeight >= log.scrollHeight - 1;
+                return atEnd && document.activeElement === log;
+            }
+            """,
+            null,
+            new PageWaitForFunctionOptions { Timeout = 15000 });
+    }
+
     private void AssertNoClientErrors()
     {
         lock (_clientErrors)

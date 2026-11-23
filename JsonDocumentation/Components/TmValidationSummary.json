@@ -57,6 +57,26 @@
       "isRequired": false,
       "default": "null",
       "description": "Opt-in (2.12.0): replaces the plain text of each message; the template receives the message. Applies to the flat and the grouped list alike."
+    },
+    {
+      "name": "GroupItemsBy",
+      "type": "Func<ValidationSummaryItem, string>?",
+      "isRequired": false,
+      "default": "null",
+      "description": "Opt-in (2.13.0): groups ValidationSummaryItem rows under a shared title. Combined with OnItemClick or ItemTemplateWithField this switches the summary onto the field-identity path (one row per Field+Message). Mixing with GroupBy throws ArgumentException in OnParametersSet."
+    },
+    {
+      "name": "OnItemClick",
+      "type": "EventCallback<ValidationSummaryItem>",
+      "isRequired": false,
+      "description": "Opt-in (2.13.0): when registered, every row renders as a button and raises the ValidationSummaryItem (Field + Message) on activation. Mixing with OnMessageClick throws ArgumentException in OnParametersSet."
+    },
+    {
+      "name": "ItemTemplateWithField",
+      "type": "RenderFragment<ValidationSummaryItem>?",
+      "isRequired": false,
+      "default": "null",
+      "description": "Opt-in (2.13.0): replaces the plain text of each row with a template that receives the ValidationSummaryItem. Mixing with ItemTemplate throws ArgumentException in OnParametersSet."
     }
   ],
   "cssClasses": [
