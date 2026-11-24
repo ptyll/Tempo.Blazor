@@ -67,15 +67,23 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
             return runtime.analyzeSession(text, selectionStart, selectionEnd, root);
         }
 
+        // The formula runtime is a sibling script. Until it loads (or when a node/E2E host
+        // never injects it) the canvas still has to paint reference highlights from the
+        // local tokenizer — an empty fallback zeros getFormulaReferenceCells and the
+        // highlight overlay disappears on the next scroll.
+        const value = String(text || "");
+        const start = Number(selectionStart) || 0;
+        const end = Number(selectionEnd) || 0;
+        const isFormula = value.startsWith("=");
         return {
-            text: String(text || ""),
-            selectionStart: Number(selectionStart) || 0,
-            selectionEnd: Number(selectionEnd) || 0,
-            isFormula: String(text || "").startsWith("="),
-            isReferencePickingMode: String(text || "").startsWith("="),
+            text: value,
+            selectionStart: start,
+            selectionEnd: end,
+            isFormula,
+            isReferencePickingMode: isFormula,
             activeReferenceToken: null,
             activeReferenceTokenIndex: -1,
-            referenceTokens: [],
+            referenceTokens: isFormula ? parseFormulaReferences(value) : [],
             functionPrefix: null,
             functionPrefixStart: -1,
             functionPrefixEnd: -1,
@@ -3955,6 +3963,11 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         const dispatch = async () => {
             try {
                 if (!await whenCommandLogAcknowledged(root, s, barrier.target)) return { call: undefined };
+                // A Playwright/browser dblclick is click then dblclick. The click queues
+                // OnCanvasCellPointer behind this barrier; the dblclick opens the JS editor
+                // before the pointer arrives. Dispatching it would ActiveCellChanged → parent
+                // re-render and drop the JS-appended editor.
+                if (shouldSuppressPendingCellPointer(root, method, args)) return { call: undefined };
                 return { call: invokeDotNet(root, method, args, hotPath) };
             } finally {
                 releaseCommandLogBarrier(root, s, barrier);
@@ -3970,6 +3983,21 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
     // lost to a click. The body is the one line the node lane mutates.
     function invokeCanvasPointerDotNet(root, method, args, hotPath) {
         return invokeDotNetAfterPendingState(root, method, args, hotPath);
+    }
+
+    function isInlineEditorOpen(root) {
+        const editor = getState(root)?.editor;
+        return !!(editor?.input);
+    }
+
+    function shouldSuppressPendingCellPointer(root, method, args) {
+        if (method !== "OnCanvasCellPointer") return false;
+        if (!isInlineEditorOpen(root)) return false;
+        const editor = getState(root)?.editor;
+        const row = Number(args?.[0]);
+        const col = Number(args?.[1]);
+        if (!Number.isFinite(row) || !Number.isFinite(col)) return false;
+        return editor.row === row && editor.col === col;
     }
 
     function scheduleSelectionSync(root) {
@@ -5733,6 +5761,21 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         s.touchMenuHold = true;
         armTouchReleaseClickGuard(root);
         const point = toContentPoint(root, { clientX: ev.clientX, clientY: ev.clientY });
+        // The Phase7 probe (and the cell menu) read JS model.ActiveCellRef, not the delayed
+        // OnCanvasContextMenu behind the command-log barrier. Excel: a long press INSIDE the
+        // current range keeps that range (same insideSelection rule as TmSpreadsheetCanvasGrid).
+        const hit = hitCell(root, point);
+        if (hit) {
+            const selection = read(s.model, "Selection", {});
+            const startRow = Math.min(read(selection, "StartRow", hit.row), read(selection, "EndRow", hit.row));
+            const startCol = Math.min(read(selection, "StartCol", hit.col), read(selection, "EndCol", hit.col));
+            const endRow = Math.max(read(selection, "StartRow", hit.row), read(selection, "EndRow", hit.row));
+            const endCol = Math.max(read(selection, "StartCol", hit.col), read(selection, "EndCol", hit.col));
+            const insideSelection = hit.row >= startRow && hit.row <= endRow
+                && hit.col >= startCol && hit.col <= endCol;
+            if (!insideSelection)
+                updateLocalActiveCell(root, hit.row, hit.col, false, "pointer");
+        }
         // `anchor` = the gesture kind (a finger-sized menu offsets itself from the finger) and the viewport
         // height lets the menu flip above the press point when there is no room below it.
         const viewportHeight = Math.max(0, Number(window.innerHeight) || 0);
@@ -9367,6 +9410,11 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         let active = null;
         try { active = document.activeElement; } catch (e) { return false; }
         // Nothing focused, or the grid already owns it (or one of its own controls) → take it.
+        // The JS inline editor is a child of the grid root. Focusing the root would blur it
+        // and closeLocalEditor would remove it — that is the delayed-click / OnAfterRender
+        // race of a dblclick (SetActiveCell(render:true) arms _shouldFocusAfterRender).
+        const editorInput = getState(root)?.editor?.input;
+        if (editorInput && (active === editorInput || editorInput.contains?.(active))) return false;
         const insideGrid = !active || active === document.body || active === document.documentElement
             || active === root || root.contains?.(active) === true;
         if (!insideGrid) return false;
@@ -9459,6 +9507,8 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         invokeDotNetAfterPendingState,
         invokeCanvasPointerDotNet,
         queueCellEditCommit,
-        flushCellEditCommitQueue
+        flushCellEditCommitQueue,
+        analyzeFormulaSession,
+        openTouchContextMenu
     };
 })();

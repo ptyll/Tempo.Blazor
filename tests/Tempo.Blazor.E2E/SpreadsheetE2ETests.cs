@@ -2488,13 +2488,13 @@ public partial class SpreadsheetE2ETests : WasmTestBase
                     cancelable: true
                 }));
                 const input = el.querySelector('.tm-spreadsheet-canvas-grid__editor');
+                const beforePaint = window.tmSpreadsheetCanvas.getDebugMetrics(el).selectionLayerPaintCount || 0;
                 input.value = '=B20';
                 input.setSelectionRange(input.value.length, input.value.length);
                 input.dispatchEvent(new Event('input', { bubbles: true }));
                 el.scrollTop = 340;
                 el.dispatchEvent(new Event('scroll', { bubbles: true }));
-                requestAnimationFrame(() => requestAnimationFrame(() => {
-                    const after = window.tmSpreadsheetCanvas.getDebugMetrics(el);
+                const finish = after => {
                     const canvas = el.querySelector('.tm-spreadsheet-canvas-grid__canvas--selection');
                     const dpr = window.devicePixelRatio || 1;
                     const ctx = canvas.getContext('2d');
@@ -2513,7 +2513,16 @@ public partial class SpreadsheetE2ETests : WasmTestBase
                         bluePixels,
                         logicalScrollTop: after.logicalScrollTop
                     });
-                }));
+                };
+                const tick = () => {
+                    const after = window.tmSpreadsheetCanvas.getDebugMetrics(el);
+                    if ((after.selectionLayerPaintCount || 0) > beforePaint) {
+                        finish(after);
+                        return;
+                    }
+                    requestAnimationFrame(tick);
+                };
+                requestAnimationFrame(tick);
             })");
 
         Assert.AreEqual("=B20", result.EditorValue);

@@ -650,6 +650,30 @@ function loadCommandLogCanvas() {
         getComputedStyle: element => ({
             getPropertyValue: name => (element?.__tokens?.[name] ?? '').trim(),
         }),
+        document: {
+            activeElement: null,
+            body: { id: 'body' },
+            documentElement: { id: 'html' },
+            createElement() {
+                return {
+                    className: '',
+                    style: {},
+                    dataset: {},
+                    hidden: false,
+                    isConnected: true,
+                    textContent: '',
+                    title: '',
+                    setAttribute() {},
+                    addEventListener() {},
+                    querySelector() { return null; },
+                    querySelectorAll() { return []; },
+                    appendChild() {},
+                };
+            },
+            getElementById() { return null; },
+            addEventListener() {},
+            removeEventListener() {},
+        },
         performance: { now: () => performance.now() },
         requestAnimationFrame: () => 0,
         cancelAnimationFrame: () => undefined,
@@ -831,4 +855,148 @@ test('resolveGridGutters_WithoutAModel_ReturnsNull', () => {
     assert.equal(gutters.rowHeaderWidth, 56);
     assert.equal(gutters.columnHeaderHeight, 28);
     assert.equal(gutters.density, 'Comfortable');
+});
+
+function attachTouchGridGeometry(root, state) {
+    root.getBoundingClientRect = () => ({ left: 0, top: 0, right: 400, bottom: 300, width: 400, height: 300 });
+    root.scrollLeft = 0;
+    root.scrollTop = 0;
+    root.clientWidth = 400;
+    root.clientHeight = 300;
+    root.appendChild = () => {};
+    root.querySelector = () => null;
+    root.querySelectorAll = () => [];
+    root.focus = () => {};
+    root.contains = () => true;
+    state.model.RowHeaderWidth = 40;
+    state.model.ColumnHeaderHeight = 20;
+    state.model.Rows = Array.from({ length: 20 }, (_, index) => ({
+        Index: index, Top: index * 20, Height: 20,
+    }));
+    state.model.Columns = Array.from({ length: 10 }, (_, index) => ({
+        Index: index, Left: index * 64, Width: 64, Label: String.fromCharCode(65 + index),
+    }));
+    state.model.Cells = [];
+}
+
+test('analyzeFormulaSession_WithoutRuntime_ParsesEqualsB20Reference', () => {
+    const { internals } = loadCanvas();
+    assert.equal(typeof internals.analyzeFormulaSession, 'function',
+        'the node lane must drive the canvas fallback that paints formula-reference highlights when tmSpreadsheetFormulaRuntime is not loaded yet');
+
+    const analysis = internals.analyzeFormulaSession({}, '=B20', 4, 4);
+    assert.equal(analysis.isFormula, true, 'a leading = is a formula');
+    assert.equal(analysis.referenceTokens.length, 1,
+        `the local parser must surface B20 instead of an empty fallback; got ${JSON.stringify(analysis.referenceTokens)}`);
+    assert.equal(analysis.referenceTokens[0].startRow, 19);
+    assert.equal(analysis.referenceTokens[0].startCol, 1);
+    assert.equal(analysis.referenceTokens[0].endRow, 19);
+    assert.equal(analysis.referenceTokens[0].endCol, 1);
+});
+
+test('focusGridUnlessFocusMovedAway_DoesNotStealFocusFromInlineEditor', () => {
+    const editor = {
+        className: 'tm-spreadsheet-canvas-grid__editor',
+        classList: { contains: name => name === 'tm-spreadsheet-canvas-grid__editor' },
+    };
+    const root = {
+        contains(node) { return node === editor || node === this; },
+        focus() { this.didFocus = true; },
+        didFocus: false,
+        __tmSpreadsheetCanvas: {
+            editor: { input: editor, row: 0, col: 0 },
+        },
+    };
+    const sandbox = {
+        Element: class {},
+        window: {},
+        document: {
+            activeElement: editor,
+            body: { id: 'body' },
+            documentElement: { id: 'html' },
+        },
+        getComputedStyle: () => ({ getPropertyValue: () => '' }),
+        performance: { now: () => 0 },
+        requestAnimationFrame: () => 0,
+        cancelAnimationFrame: () => undefined,
+        setTimeout: () => 0,
+        clearTimeout: () => undefined,
+        setInterval: () => 0,
+        clearInterval: () => undefined,
+        console,
+    };
+    vm.createContext(sandbox);
+    vm.runInContext(SOURCE, sandbox, { filename: 'spreadsheet-canvas.js' });
+    const api = sandbox.window.tmSpreadsheetCanvas;
+    assert.ok(api?.focusGridUnlessFocusMovedAway, 'the focus guard must stay public for OnAfterRenderAsync');
+
+    const stole = api.focusGridUnlessFocusMovedAway(root);
+    assert.equal(stole, false,
+        'the delayed click of a dblclick arms _shouldFocusAfterRender; focusing the grid root would blur the JS editor and close it');
+    assert.equal(root.didFocus, false, 'the grid root must not take focus while the inline editor owns it');
+});
+
+test('invokeCanvasPointerDotNet_DoesNotDispatchCellPointerAfterInlineEditorOpens', async () => {
+    const { internals, root, state, calls } = loadCommandLogCanvas();
+    const pending = internals.invokeCanvasPointerDotNet(root, 'OnCanvasCellPointer', [0, 0, false, false], true);
+    state.editor = { input: { value: '=SUM(' }, row: 0, col: 0 };
+    await pending;
+    await Promise.resolve();
+    await Promise.resolve();
+    const methods = calls.map(call => call.method);
+    assert.equal(methods.includes('OnCanvasCellPointer'), false,
+        `dblclick opens the JS editor while the click's OnCanvasCellPointer is still behind the command-log barrier; dispatching it would re-render and drop the editor. got ${JSON.stringify(methods)}`);
+});
+
+test('openTouchContextMenu_UpdatesLocalActiveCellBeforeContextMenuInterop', async () => {
+    const { internals, root, state, calls } = loadCommandLogCanvas();
+    assert.equal(typeof internals.openTouchContextMenu, 'function',
+        'the node lane must drive the long-press path that E2E probes via model.ActiveCellRef');
+    attachTouchGridGeometry(root, state);
+
+    state.model.ActiveCellRef = 'A1';
+    state.model.Selection = { StartRow: 0, StartCol: 0, EndRow: 0, EndCol: 0 };
+    state.sheetState.activeCell = { row: 0, col: 0, ref: 'A1' };
+    state.sheetState.selection = { startRow: 0, startCol: 0, endRow: 0, endCol: 0 };
+
+    // Content point (200, 150) is column D (index 3) row 8 after the 40/20 gutters
+    // are subtracted by toContentPoint (client 240, 170).
+    internals.openTouchContextMenu(root, { event: { clientX: 240, clientY: 170 } });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const active = state.model.ActiveCellRef || state.model.activeCellRef;
+    assert.notEqual(String(active || '').toUpperCase(), 'A1',
+        `a long-press must make the cell under the finger active immediately (the Phase7 probe reads JS model.ActiveCellRef, not .NET). got ${active}`);
+    assert.ok(calls.some(call => call.method === 'OnCanvasContextMenu'),
+        `OnCanvasContextMenu must still dispatch after the local selection, got ${JSON.stringify(calls.map(call => call.method))}`);
+});
+
+test('openTouchContextMenu_InsideSelection_KeepsRange', async () => {
+    const { internals, root, state, calls } = loadCommandLogCanvas();
+    attachTouchGridGeometry(root, state);
+
+    // B2:D4 (rows 1-3, cols 1-3); C3 is inside that range.
+    state.model.ActiveCellRef = 'B2';
+    state.model.Selection = { StartRow: 1, StartCol: 1, EndRow: 3, EndCol: 3 };
+    state.sheetState.activeCell = { row: 1, col: 1, ref: 'B2' };
+    state.sheetState.selection = { startRow: 1, startCol: 1, endRow: 3, endCol: 3 };
+
+    // C3 centre: content (160, 50) → client (200, 70) after the 40/20 gutters.
+    internals.openTouchContextMenu(root, { event: { clientX: 200, clientY: 70 } });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    assert.equal(String(state.model.ActiveCellRef || '').toUpperCase(), 'B2',
+        `a long-press inside the current range must keep the active cell (Excel). got ${state.model.ActiveCellRef}`);
+    assert.equal(state.model.Selection.StartRow, 1);
+    assert.equal(state.model.Selection.StartCol, 1);
+    assert.equal(state.model.Selection.EndRow, 3);
+    assert.equal(state.model.Selection.EndCol, 3);
+    assert.equal(state.sheetState.selection.startRow, 1);
+    assert.equal(state.sheetState.selection.startCol, 1);
+    assert.equal(state.sheetState.selection.endRow, 3);
+    assert.equal(state.sheetState.selection.endCol, 3);
+    assert.ok(calls.some(call => call.method === 'OnCanvasContextMenu'),
+        `OnCanvasContextMenu must still dispatch, got ${JSON.stringify(calls.map(call => call.method))}`);
 });

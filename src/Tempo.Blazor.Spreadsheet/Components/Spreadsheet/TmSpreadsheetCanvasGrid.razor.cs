@@ -1552,9 +1552,13 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
             _selection.SetActiveCell(cellRef);
 
         Sheet.ActiveCellRef = cellRef;
-        _shouldFocusAfterRender = true;
+        // A pointer path uses render:false because the JS canvas already painted the
+        // selection. Arming focus here still ran on the NEXT parent re-render and stole
+        // the caret out of the JS inline editor (focusGridUnlessFocusMovedAway treated
+        // the editor as "inside the grid").
         if (render)
         {
+            _shouldFocusAfterRender = true;
             _ = ActiveCellChanged.InvokeAsync(Sheet.ActiveCellRef);
             _needsRender = true;
             StateHasChanged();
