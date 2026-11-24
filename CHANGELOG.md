@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.13.0 - unreleased
+## 2.13.0 - 2026-11-24
 
 > Plan "Tempo: zadávání času na telefonu a vnějším displeji Z Flip 5" (1c95309c; decision
 > `TIME-SELECTOR`, [ADR-0007](docs/adr/0007-time-selector.md), proposal
