@@ -674,6 +674,21 @@ test('update during an in-progress swipe does not cancel the gesture', () => {
     host.restore();
 });
 
+test('update during a press that has not crossed the swipe threshold does not cancel the gesture', () => {
+    const host = installWindow();
+    const root = makeRoot({ swipe: true });
+    const dotNet = dotnetStub();
+    attach(root, dotNet);
+    root.hours.dispatch('pointerdown', pointer(root.hours, { y: 100 }));
+    update(root);
+    root.hours.dispatch('pointermove', pointer(root.hours, { y: 52 }));
+    assert.equal(dotNet.calls.filter((c) => c.method === 'OnSwipeStepAsync').length, 2,
+        'the 48 px swipe still lands after a Blazor re-render between press and threshold');
+    assert.equal(dotNet.calls.filter((c) => c.method === 'OnSwipeCancelAsync').length, 0);
+    detach(root);
+    host.restore();
+});
+
 test('swipe never starts on a +/− stepper, only on the spinbutton number', () => {
     const host = installWindow();
     const root = makeRoot({ swipe: true });

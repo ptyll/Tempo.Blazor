@@ -435,7 +435,10 @@ public sealed class DocumentEditorCanvasContentControlsE2ETests : WasmTestBase
                         const runs = Array.isArray(block?.content?.runs) ? block.content.runs : [];
                         let cursor = 0;
                         for (const run of runs) {
-                            const text = String(run?.text ?? '');
+                            // Content-control runs store the visible glyphs on the control (placeholder,
+                            // checkbox mark, selected item), not on run.text. Measuring run.text makes
+                            // every control look zero-length, so the first one matches every caret.
+                            const text = canvasRunText(run);
                             const start = cursor;
                             const end = cursor + text.length;
                             const control = run?.contentControl?.control || run?.contentControl || null;
@@ -448,6 +451,39 @@ public sealed class DocumentEditorCanvasContentControlsE2ETests : WasmTestBase
                     }
 
                     return '';
+                }
+
+                function canvasRunText(run) {
+                    const type = String(run?.type || 'text');
+                    if (type === 'contentControl') {
+                        const control = run?.contentControl?.control || run?.contentControl || run;
+                        const kind = String(control?.kind || control?.Kind || '');
+                        const value = control?.value || control?.Value || {};
+                        const placeholder = String(control?.placeholderText || control?.PlaceholderText || '');
+                        if (kind === 'checkbox') {
+                            return value.checked === true || value.Checked === true ? '☑' : '☐';
+                        }
+
+                        if (kind === 'dropDown' || kind === 'comboBox') {
+                            const selected = String(value.selectedValue || value.SelectedValue || value.text || value.Text || '');
+                            if (!selected) return placeholder;
+                            const items = Array.isArray(control.items) ? control.items : Array.isArray(control.Items) ? control.Items : [];
+                            const item = items.find(candidate => String(candidate?.value || candidate?.Value || '') === selected);
+                            return String(item?.displayText || item?.DisplayText || selected);
+                        }
+
+                        if (kind === 'date') {
+                            return String(value.dateIso || value.DateIso || value.text || value.Text || placeholder);
+                        }
+
+                        if (kind === 'picture') {
+                            return String(value.assetId || value.AssetId || placeholder);
+                        }
+
+                        return String(value.text || value.Text || placeholder);
+                    }
+
+                    return String(run?.text || '');
                 }
 
                 function allBlocks(documentModel) {

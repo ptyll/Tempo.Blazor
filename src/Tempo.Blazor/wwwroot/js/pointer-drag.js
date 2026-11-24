@@ -100,6 +100,7 @@ const INERT = Object.freeze({
     detach() {},
     cancel() {},
     get dragging() { return false; },
+    get pressing() { return false; },
 });
 
 function toNumber(value, fallback) {
@@ -131,7 +132,7 @@ function toNumber(value, fallback) {
  * @param {boolean} [options.suppressClick=true] swallow the click that follows a real drag
  * @param {string|null} [options.dragClass='tm-pointer-dragging'] class on the target while dragging
  * @param {string|null} [options.touchAction] explicit touch-action for the element; null = do not touch
- * @returns {{ detach: () => void, cancel: (reason?: string) => void, readonly dragging: boolean }}
+ * @returns {{ detach: () => void, cancel: (reason?: string) => void, readonly dragging: boolean, readonly pressing: boolean }}
  */
 export function attach(element, options = {}) {
     if (!element || typeof element.addEventListener !== 'function') return INERT;
@@ -425,6 +426,7 @@ export function attach(element, options = {}) {
 
     return {
         get dragging() { return session?.started === true; },
+        get pressing() { return session != null; },
         cancel(reason = 'cancelled') { cancelGesture(reason); },
         detach() {
             if (detached) return;

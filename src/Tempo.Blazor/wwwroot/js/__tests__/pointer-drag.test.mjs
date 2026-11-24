@@ -565,6 +565,27 @@ test('handle.cancel() cancels programmatically and is a no-op when idle', () => 
 
     assert.equal(r.last('cancel').reason, 'route-change');
     assert.equal(handle.dragging, false);
+    assert.equal(handle.pressing, false);
+});
+
+test('pressing is true from pointerdown until release, even before the drag threshold', () => {
+    const el = fakeElement();
+    const handle = attach(el, { threshold: 10 });
+
+    assert.equal(handle.pressing, false);
+    assert.equal(handle.dragging, false);
+    el.dispatch('pointerdown', ptr());
+    assert.equal(handle.pressing, true, 'a live pointerdown owns the capture before any movement');
+    assert.equal(handle.dragging, false, 'threshold 10 has not been crossed');
+    el.dispatch('pointermove', ptr({ clientX: 4 }));
+    assert.equal(handle.pressing, true);
+    assert.equal(handle.dragging, false);
+    el.dispatch('pointermove', ptr({ clientX: 12 }));
+    assert.equal(handle.pressing, true);
+    assert.equal(handle.dragging, true);
+    el.dispatch('pointerup', ptr({ clientX: 12, buttons: 0 }));
+    assert.equal(handle.pressing, false);
+    assert.equal(handle.dragging, false);
 });
 
 // ── vetoes ──────────────────────────────────────────────────────────────────────────────────

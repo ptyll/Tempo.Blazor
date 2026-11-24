@@ -519,7 +519,10 @@ function unbindSwipe(session) {
 function bindSwipe(session) {
     // update() re-runs after every Blazor render. Detaching a live handle fires onCancel
     // (rollback) and drops the pointer session, so a mid-swipe tick would never stick.
-    if ((session.swipeHandles ?? []).some((handle) => handle?.dragging)) {
+    // `dragging` is true only after the movement threshold. A live pointerdown that has
+    // not yet crossed it still owns the capture; detaching it fires onCancel and drops
+    // the gesture, so a mid-press Blazor re-render would never step.
+    if ((session.swipeHandles ?? []).some((handle) => handle?.dragging || handle?.pressing)) {
         return;
     }
 

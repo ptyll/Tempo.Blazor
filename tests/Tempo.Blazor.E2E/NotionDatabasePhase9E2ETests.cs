@@ -244,23 +244,32 @@ public sealed class NotionDatabasePhase9E2ETests : WasmTestBase
 
     private static async Task SwitchAsync(IPage page, ILocator db, string viewName)
     {
+        // A viewport remount swaps desktop tabs for the mobile dropdown (and back). Prefer a
+        // visible tab when it exists so a leftover mobile trigger from the previous band is
+        // not clicked, which then waits forever on a Board menuitem that the tabs already own.
+        var tab = db.Locator(".tm-db__view-tab").Filter(new LocatorFilterOptions { HasText = viewName });
+        var more = db.GetByTestId("notion-db-more-views");
         var viewSwitch = db.GetByTestId("notion-db-view-switch");
-        if (await viewSwitch.CountAsync() > 0 && await viewSwitch.IsVisibleAsync())
+        await Assertions.Expect(db.Locator(".tm-db__view-tab, [data-testid='notion-db-view-switch'], [data-testid='notion-db-more-views']").First)
+            .ToBeVisibleAsync();
+
+        if (await tab.CountAsync() > 0 && await tab.First.IsVisibleAsync())
         {
-            await viewSwitch.Locator(".tm-dropdown-trigger").ClickAsync();
+            await tab.First.ClickAsync();
+            await page.WaitForTimeoutAsync(600);
+            return;
+        }
+
+        if (await more.CountAsync() > 0 && await more.IsVisibleAsync())
+        {
+            await more.Locator(".tm-dropdown-trigger").ClickAsync();
             await page.Locator("[role='menuitem']").Filter(new LocatorFilterOptions { HasText = viewName }).First.ClickAsync();
             await page.WaitForTimeoutAsync(600);
             return;
         }
 
-        var tab = db.Locator(".tm-db__view-tab").Filter(new LocatorFilterOptions { HasText = viewName });
-        if (await tab.CountAsync() > 0 && await tab.First.IsVisibleAsync())
-            await tab.First.ClickAsync();
-        else
-        {
-            await db.GetByTestId("notion-db-more-views").Locator(".tm-dropdown-trigger").ClickAsync();
-            await page.Locator("[role='menuitem']").Filter(new LocatorFilterOptions { HasText = viewName }).First.ClickAsync();
-        }
+        await viewSwitch.Locator(".tm-dropdown-trigger").ClickAsync();
+        await page.Locator("[role='menuitem']").Filter(new LocatorFilterOptions { HasText = viewName }).First.ClickAsync();
         await page.WaitForTimeoutAsync(600);
     }
 

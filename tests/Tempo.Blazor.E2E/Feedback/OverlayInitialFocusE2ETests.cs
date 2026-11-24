@@ -149,11 +149,13 @@ public sealed class OverlayInitialFocusE2ETests : WasmTestBase
         var openerClicked = false;
         // Since 2.12.0 the demo hosts load the public pin module (tm-pin-on-top.js, which keeps
         // #blazor-error-ui on top) as a boot-time <script type="module">, and it imports
-        // tm-top-layer.js. The promote module would then be cached before the click, the
+        // tm-top-layer.js. Since 2.13 the demo also loads notion-editor.js on every page (classic
+        // <script> in index.html); that file prewarms overlay.js, which statically imports
+        // tm-top-layer.js. Either boot import caches the promote module before the click, the
         // click-time request this test delays would never happen, and the run would be vacuous.
-        // That is a test-setup change, not a product one: this scenario needs no pinned error
-        // bar, so the boot-time pin module is replaced with an empty one, and the promote module
-        // is again first requested by the click.
+        // That is a test-setup change, not a product one: overlay routes need neither a pinned
+        // error bar nor the Notion editor, so both boot scripts are replaced with empty ones and
+        // the promote module is again first requested by the click.
         var page = await OpenAppPageAsync($"{BaseUrl}{parts[1]}", ContextOptions(1440, 900, touch: false), async context =>
         {
             await PinCultureAsync(context);
@@ -162,6 +164,12 @@ public sealed class OverlayInitialFocusE2ETests : WasmTestBase
                 Status = 200,
                 ContentType = "text/javascript",
                 Body = "// stubbed by OverlayInitialFocusE2ETests: no boot-time import of tm-top-layer.js",
+            }));
+            await context.RouteAsync("**/notion-editor*.js*", r => r.FulfillAsync(new RouteFulfillOptions
+            {
+                Status = 200,
+                ContentType = "text/javascript",
+                Body = "// stubbed by OverlayInitialFocusE2ETests: no boot-time overlay.js prewarm",
             }));
             await context.RouteAsync("**/tm-top-layer*.js*", async r =>
             {

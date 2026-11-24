@@ -350,7 +350,7 @@ public class NotionMentionMenuE2ETests : WasmTestBase
             "seedMentionTokenPage",
             new PageWaitForFunctionOptions { Timeout = 60000 });
         await page.EvaluateAsync("async methodName => await window.tmNotionDemo[methodName]()", "seedMentionTokenPage");
-        await ReloadAppReadyAsync(page, WaitUntilState.NetworkIdle);
+        await ReloadAppReadyAsync(page, WaitUntilState.Load);
         await page.WaitForSelectorAsync("[data-block-id='eb500000-0000-0000-0000-000000000003'] .tm-notion-token[data-key='unknown.invoice_deadline']", new PageWaitForSelectorOptions
         {
             State = WaitForSelectorState.Visible,

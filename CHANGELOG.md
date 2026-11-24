@@ -7,6 +7,10 @@
 > [docs/proposals/time-input-mobile.md](docs/proposals/time-input-mobile.md)). Additive public API;
 > `TmTimePicker.Presentation` stays `Segments` (today's DOM).
 
+### Fixed — TmTimeSelector swipe survives a re-render before the drag threshold (`Tempo.Blazor`)
+
+- `EnableSwipe`: a Blazor render between pointerdown and the 6 px threshold no longer detaches the live pointer session (which cancelled the gesture); `bindSwipe` now skips rebinding while a handle is `pressing`. `pointer-drag.js` handles expose the additive read-only `pressing` (true from pointerdown until release/cancel).
+
 ### Fixed — TmDecimalInput fill() and select-all replace (`Tempo.Blazor`, Fáze 8e)
 
 - **`TmDecimalInput` no longer races Playwright `fill()` or a native select-all.** Focus used to rewrite the shown text to an ungrouped edit form after the browser had already selected it, so `fill()` / typing over the selection appended (WASM) or was overwritten (Server). Focus now keeps the formatted grouped value; steppers and arrow keys write grouped text too, and the parser already accepts grouping. Call sites that used the click + Ctrl+A + `pressSequentially` + Tab workaround can switch to `fill()`. No new parameters.

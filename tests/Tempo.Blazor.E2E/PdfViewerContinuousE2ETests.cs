@@ -919,21 +919,24 @@ async () => {
 
     /// <summary>
     /// Clicks the zoom-out command. With the demo's <c>ToolbarLabels=Auto</c> the compact zoom
-    /// buttons may not fit the row and live in the "More" menu instead — the same command is
-    /// offered there, so this falls back to the menu entry.
+    /// buttons drop the <c>tm-pdf-viewer__btn</c> class, so the visible path keys off
+    /// <c>aria-label</c> inside this viewer (same as <see cref="ClickAllFeaturesCommandAsync"/>).
+    /// When the command overflows, the same label is offered in the "More" menu.
     /// </summary>
     private async Task ClickZoomOutAsync(IPage page)
+        => await ClickCommandAsync(page, SectionSelector, "Zoom out");
+
+    private static async Task ClickCommandAsync(IPage page, string sectionSelector, string label)
     {
-        var zoomOut = page.Locator($"{SectionSelector} .tm-pdf-viewer__btn[aria-label='Zoom out']").First;
-        if (await zoomOut.IsVisibleAsync())
+        var button = page.Locator($"{sectionSelector} .tm-pdf-viewer [aria-label='{label}']").First;
+        if (await button.IsVisibleAsync() && !await button.IsDisabledAsync())
         {
-            await zoomOut.ClickAsync();
+            await button.ClickAsync();
             return;
         }
 
-        var more = page.Locator($"{SectionSelector} button.tm-toolbar-more").First;
-        await more.ClickAsync();
-        await page.Locator($"{SectionSelector} [role='menuitem']:has-text('Zoom out')").First.ClickAsync();
+        await page.Locator($"{sectionSelector} button.tm-toolbar-more").First.ClickAsync();
+        await page.Locator($"{sectionSelector} .tm-toolbar-more__item:has-text('{label}')").First.ClickAsync();
     }
 
     private static string FindRepoRoot()
