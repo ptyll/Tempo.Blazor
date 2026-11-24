@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Microsoft.Playwright;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -118,7 +119,7 @@ public sealed class NotionDatabasePhase8E2ETests : WasmTestBase
         if (await tab.CountAsync() > 0 && await tab.First.IsVisibleAsync())
         {
             await tab.First.ClickAsync();
-            await page.WaitForTimeoutAsync(600);
+            await WaitForViewAsync(db, viewName);
             return;
         }
 
@@ -126,13 +127,31 @@ public sealed class NotionDatabasePhase8E2ETests : WasmTestBase
         {
             await more.Locator(".tm-dropdown-trigger").ClickAsync();
             await page.Locator("[role='menuitem']").Filter(new LocatorFilterOptions { HasText = viewName }).First.ClickAsync();
-            await page.WaitForTimeoutAsync(600);
+            await WaitForViewAsync(db, viewName);
             return;
         }
 
         await viewSwitch.Locator(".tm-dropdown-trigger").ClickAsync();
         await page.Locator("[role='menuitem']").Filter(new LocatorFilterOptions { HasText = viewName }).First.ClickAsync();
-        await page.WaitForTimeoutAsync(600);
+        await WaitForViewAsync(db, viewName);
+    }
+
+    private static string ViewSurfaceSelector(string viewName) => viewName switch
+    {
+        "List" => ".tm-dblv",
+        "Gallery" => ".tm-dbg",
+        "Board" => ".tm-dbb",
+        "Calendar" => ".tm-dbcal",
+        "Timeline" => ".tm-dbtl",
+        _ => ".tm-dbt",
+    };
+
+    private static async Task WaitForViewAsync(ILocator db, string viewName)
+    {
+        await Assertions.Expect(db.Locator(ViewSurfaceSelector(viewName)).First).ToBeVisibleAsync();
+        var selected = db.Locator(".tm-db__view-tab").Filter(new LocatorFilterOptions { HasText = viewName });
+        if (await selected.CountAsync() > 0 && await selected.First.IsVisibleAsync())
+            await Assertions.Expect(selected.First).ToHaveClassAsync(new Regex("tm-db__view-tab--active"));
     }
 
     private async Task<IPage> OpenAsync(int width, int height, bool touch)

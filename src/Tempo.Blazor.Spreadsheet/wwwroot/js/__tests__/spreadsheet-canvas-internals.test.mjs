@@ -632,6 +632,7 @@ function loadCommandLogCanvas() {
         HTMLInputElement: class HTMLInputElement {},
         window: {},
         Promise,
+        queueMicrotask,
         Error,
         Math,
         Number,
@@ -726,7 +727,17 @@ function loadCommandLogCanvas() {
                 localRevision: 0,
                 activeCell: { row: 0, col: 1, ref: 'B1' },
                 selection: { startRow: 0, startCol: 0, endRow: 0, endCol: 1 },
-                formulaEditor: { active: false }
+                formulaEditor: { active: false },
+                externalFormulaPicker: {
+                    active: false,
+                    pointerId: 0,
+                    anchor: null,
+                    current: null,
+                    startClientX: 0,
+                    startClientY: 0,
+                    moved: false,
+                    lastRefText: ""
+                }
             },
             metrics: {
                 commandLogQueuedCount: 0,
@@ -768,6 +779,39 @@ function loadCommandLogCanvas() {
         setThrowSync: value => { throwSync = value; }
     };
 }
+
+test('externalFormulaReferenceDrag_DoesNotInvokeDotNetOnThePointerStack', async () => {
+    const { internals, root, calls } = loadCommandLogCanvas();
+    assert.equal(typeof internals.beginExternalFormulaReferenceDrag, 'function',
+        'the node lane must drive formula-bar range picking so a Playwright Evaluate drag cannot re-enter Blazor on the pointer stack');
+    assert.equal(typeof internals.updateExternalFormulaReferenceDrag, 'function');
+    assert.equal(typeof internals.endExternalFormulaReferenceDrag, 'function');
+
+    const started = internals.beginExternalFormulaReferenceDrag(root, { row: 7, col: 9 }, {
+        pointerId: 147,
+        clientX: 10,
+        clientY: 10
+    });
+    assert.equal(started, true, 'J8 must open an external formula picker');
+
+    internals.updateExternalFormulaReferenceDrag(root, { row: 9, col: 11 }, {
+        pointerId: 147,
+        clientX: 80,
+        clientY: 80
+    });
+    internals.endExternalFormulaReferenceDrag(root, { row: 9, col: 11 });
+
+    const syncMethods = calls.map(call => call.method);
+    assert.equal(syncMethods.includes('OnCanvasFormulaReferenceUpdated'), false,
+        `formula-bar range picking must not call .NET inside the synchronous pointer stack (Playwright Evaluate + invokeMethodAsync deadlocks testhost). got ${JSON.stringify(syncMethods)}`);
+
+    await Promise.resolve();
+    const methods = calls.map(call => call.method);
+    assert.ok(methods.includes('OnCanvasFormulaReferenceUpdated'),
+        `the deferred update must still reach .NET after the pointer stack, got ${JSON.stringify(methods)}`);
+    const update = calls.find(call => call.method === 'OnCanvasFormulaReferenceUpdated');
+    assert.deepEqual(update.args, ['J8:L10']);
+});
 
 test('flushCommandLog_SynchronousInvokeFailure_WhenAcknowledgedFinishesFastAndRetryDelivers', async () => {
     const { internals, root, state, calls, setThrowSync } = loadCommandLogCanvas();

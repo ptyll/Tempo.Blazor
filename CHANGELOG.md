@@ -7,6 +7,10 @@
 > [docs/proposals/time-input-mobile.md](docs/proposals/time-input-mobile.md)). Additive public API;
 > `TmTimePicker.Presentation` stays `Segments` (today's DOM).
 
+### Fixed — formula-bar range picking no longer re-enters Blazor on the pointer stack (`Tempo.Blazor.Spreadsheet`)
+
+- **Canvas formula-bar drag no longer calls .NET inside the synchronous pointer handler.** Range picking used to `invokeMethodAsync` from `pointermove`/`pointerup`; a Playwright `Evaluate` that dispatches those events then stalled testhost (the CDP session was still inside Evaluate while Blazor interop was in flight). The picker still updates immediately; the formula-bar replacement is scheduled on a microtask after the pointer stack unwinds. No public API change.
+
 ### Fixed — TmTimeSelector swipe survives a re-render before the drag threshold (`Tempo.Blazor`)
 
 - `EnableSwipe`: a Blazor render between pointerdown and the 6 px threshold no longer detaches the live pointer session (which cancelled the gesture); `bindSwipe` now skips rebinding while a handle is `pressing`. `pointer-drag.js` handles expose the additive read-only `pressing` (true from pointerdown until release/cancel).

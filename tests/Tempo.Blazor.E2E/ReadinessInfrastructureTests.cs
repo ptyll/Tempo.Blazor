@@ -148,6 +148,19 @@ public class ReadinessInfrastructureTests
         RegexOptions.Compiled | RegexOptions.Singleline);
 
     [TestMethod]
+    public void NotionDatabasePhase8And9_SwitchAsync_DoesNotSleepAfterViewChange()
+    {
+        var root = FindE2EDirectory();
+        foreach (var name in new[] { "NotionDatabasePhase8E2ETests.cs", "NotionDatabasePhase9E2ETests.cs" })
+        {
+            var text = File.ReadAllText(Path.Combine(root, name));
+            Assert.IsFalse(
+                text.Contains("WaitForTimeoutAsync(600)", StringComparison.Ordinal),
+                $"{name} SwitchAsync must wait for the switched view surface, not sleep 600 ms.");
+        }
+    }
+
+    [TestMethod]
     public void NoSpecKeepsALocalColdBootRecoveryCopy()
     {
         var root = FindE2EDirectory();

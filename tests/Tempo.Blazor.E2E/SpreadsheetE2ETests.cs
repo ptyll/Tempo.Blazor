@@ -1328,6 +1328,9 @@ public partial class SpreadsheetE2ETests : WasmTestBase
         await SetFormulaBarSelectionAsync(input, caret, caret);
 
         await DragCanvasBetweenCellsAsync(grid, "J8", "L10", pointerId: 147);
+        await page.WaitForFunctionAsync(
+            "el => (el.value || '') === '=SUM(A1:B5)+J8:L10'",
+            await input.ElementHandleAsync());
 
         Assert.AreEqual("=SUM(A1:B5)+J8:L10", await input.InputValueAsync(), "Expected drag range reference-picking to replace only the caret-targeted single reference inside a mixed formula.");
     }

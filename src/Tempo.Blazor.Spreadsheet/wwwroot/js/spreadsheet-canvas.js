@@ -5008,7 +5008,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         const refText = buildFormulaRangeRef(picker.anchor, picker.current);
         if (!refText || refText === picker.lastRefText) return false;
         picker.lastRefText = refText;
-        invokeDotNet(root, "OnCanvasFormulaReferenceUpdated", [refText], true).catch(() => {});
+        scheduleExternalFormulaReferenceUpdate(root, refText);
         return true;
     }
 
@@ -5022,12 +5022,23 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
             const refText = buildFormulaRangeRef(picker.anchor, target);
             if (refText && refText !== picker.lastRefText) {
                 picker.lastRefText = refText;
-                invokeDotNet(root, "OnCanvasFormulaReferenceUpdated", [refText], true).catch(() => {});
+                scheduleExternalFormulaReferenceUpdate(root, refText);
             }
         }
 
         clearExternalFormulaPicker(root);
         return true;
+    }
+
+    // Playwright Evaluate dispatches pointerdown/move/up synchronously. invokeMethodAsync from
+    // that stack re-enters Blazor while the browser CDP session is still inside Evaluate and
+    // can stall testhost. The picker state updates immediately; .NET hears about the range
+    // after the pointer stack unwinds.
+    function scheduleExternalFormulaReferenceUpdate(root, refText) {
+        if (!refText) return;
+        queueMicrotask(() => {
+            invokeDotNet(root, "OnCanvasFormulaReferenceUpdated", [refText], true).catch(() => {});
+        });
     }
 
     function captureExternalFormulaOrigin(root) {
@@ -9509,6 +9520,9 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         queueCellEditCommit,
         flushCellEditCommitQueue,
         analyzeFormulaSession,
-        openTouchContextMenu
+        openTouchContextMenu,
+        beginExternalFormulaReferenceDrag,
+        updateExternalFormulaReferenceDrag,
+        endExternalFormulaReferenceDrag
     };
 })();
