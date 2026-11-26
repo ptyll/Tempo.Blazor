@@ -178,6 +178,95 @@ public sealed class TmAiMessageCssTests
         return css[(opened + 1)..];
     }
 
+    /// <summary>
+    /// Plan b75365fb fáze 3 (EmusCz 2.13.0): a follow-up chip under <c>FollowUpsDisabled</c> kept the full
+    /// colour, the pointer cursor and the hover fill, so it LOOKED clickable while the click was refused.
+    /// The disabled chip dims through the shared <c>--tm-opacity-disabled</c> token and shows the
+    /// <c>not-allowed</c> cursor — the same vocabulary every disabled control of the design system speaks.
+    /// Mutant guard: dropping the rule (or swapping the token for a literal) turns this red.
+    /// </summary>
+    [Fact]
+    public void FollowUpChip_DisabledState_DimsTheChipAndRefusesThePointer()
+    {
+        var disabled = ThemeCss.Normalise(ForRule(".tm-ai-message__follow-up:disabled"));
+
+        disabled.Should().Contain("opacity: var(--tm-opacity-disabled)",
+            "the disabled chip dims through the shared token, never a literal alpha");
+        disabled.Should().Contain("cursor: not-allowed",
+            "a refused click must say so under the pointer, not keep the clickable hand");
+    }
+
+    /// <summary>
+    /// The hover fill is an affordance of the ENABLED chip only: a disabled chip must keep its resting
+    /// surface under the pointer, so every <c>:hover</c> rule of the follow-up excludes <c>:disabled</c>
+    /// (the version buttons already carry the same <c>:hover:not(:disabled)</c> shape).
+    /// </summary>
+    [Fact]
+    public void FollowUpChip_HoverFill_AppliesOnlyWhileEnabled()
+    {
+        var hoverRules = Regex.Matches(
+                Stylesheet(),
+                @"([^{}]*\.tm-ai-message__follow-up:hover[^{}]*)\{([^}]*)\}")
+            .SelectMany(match => ThemeCss.SelectorParts(match.Groups[1].Value))
+            .Where(selector => selector.Contains(".tm-ai-message__follow-up:hover", StringComparison.Ordinal))
+            .ToList();
+
+        hoverRules.Should().NotBeEmpty("the enabled chip keeps its hover fill");
+        hoverRules.Should().OnlyContain(selector => selector.Contains(":not(:disabled)", StringComparison.Ordinal),
+            "a disabled chip under the pointer must keep its resting surface — the hover fill is the " +
+            "enabled chip's affordance. Offending: {0}", string.Join(", ", hoverRules));
+    }
+
+    /// <summary>
+    /// Forced colors: the chip opts out of the automatic adjustment (its surface asks for
+    /// <c>Canvas</c>/<c>CanvasText</c>), so the disabled state needs its own system colour — <c>GrayText</c>,
+    /// the system colour of disabled text — or a disabled chip in Windows high contrast reads exactly like
+    /// an enabled one (the same rule <c>_ai-tool-call.css</c> carries for its disabled Retry). And because
+    /// the surface keeps author colours, the resting dim must be dropped: opacity over a system colour
+    /// lowers the contrast the system itself guarantees, so the rule pins <c>opacity: 1</c> and lets
+    /// GrayText alone carry the state (the same rule <c>_ai-agent-graph.css</c> carries for its dimmed
+    /// nodes). Mutant guard: dropping <c>opacity: 1</c> from the forced-colors rule turns this red.
+    /// </summary>
+    [Fact]
+    public void ForcedColors_TheDisabledFollowUpChip_UsesGrayText()
+    {
+        var disabledBodies = Regex.Matches(ForcedColorsBlock(), @"([^{}]+)\{([^}]*)\}")
+            .Where(match => ThemeCss.SelectorParts(match.Groups[1].Value)
+                .Any(selector => selector.Contains(".tm-ai-message__follow-up:disabled", StringComparison.Ordinal)))
+            .Select(match => ThemeCss.Normalise(match.Groups[2].Value))
+            .ToList();
+
+        disabledBodies.Should().Contain(body => body.Contains("GrayText", StringComparison.Ordinal),
+            "inside the opt-out the disabled chip must ask for the system GrayText, or high contrast " +
+            "cannot tell it from an enabled chip");
+        disabledBodies.Should().Contain(body => body.Contains("opacity: 1", StringComparison.Ordinal),
+            "opacity over a system colour lowers its guaranteed contrast — the disabled state is GrayText " +
+            "alone, so the resting dim must be dropped in forced colors");
+    }
+
+    /// <summary>
+    /// The hover fill is the ENABLED chip's affordance, but its theme token is not remapped inside the
+    /// opted-out surface: in forced colors the hover state must ask for the system colours itself —
+    /// a Highlight border and ink over the system Canvas — or the enabled chip flashes a non-system grey
+    /// over its system-coloured border.
+    /// </summary>
+    [Fact]
+    public void ForcedColors_TheEnabledFollowUpChip_KeepsTheSystemHoverColours()
+    {
+        var hoverBodies = string.Join(" ", Regex.Matches(ForcedColorsBlock(), @"([^{}]+)\{([^}]*)\}")
+            .Where(match => ThemeCss.SelectorParts(match.Groups[1].Value)
+                .Any(selector => selector.Contains(".tm-ai-message__follow-up:hover:not(:disabled)", StringComparison.Ordinal)))
+            .Select(match => ThemeCss.Normalise(match.Groups[2].Value)));
+
+        hoverBodies.Should().Contain("border: var(--tm-border-width) solid Highlight",
+            "the enabled chip's hover marks itself with the system Highlight border");
+        hoverBodies.Should().Contain("color: Highlight",
+            "the enabled chip's hover ink is the system Highlight colour");
+        hoverBodies.Should().Contain("background-color: Canvas",
+            "the hover fill is a theme token the opt-out never remaps — the hover surface must be the " +
+            "system Canvas");
+    }
+
     [Fact]
     public void TheStylesheetDeclaresNoAnimationOfItsOwn()
     {

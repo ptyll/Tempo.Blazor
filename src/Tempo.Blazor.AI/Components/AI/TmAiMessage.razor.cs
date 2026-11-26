@@ -88,7 +88,10 @@ public partial class TmAiMessage
 
     /// <summary>
     /// Disables the follow-up chips without hiding them. Default <see langword="false"/>. A click
-    /// does not raise <see cref="OnFollowUp"/> while the chips are disabled.
+    /// does not raise <see cref="OnFollowUp"/> while the chips are disabled. The disabled chips dim
+    /// through <c>--tm-opacity-disabled</c>, show a not-allowed cursor and skip the hover fill;
+    /// forced colors paint them GrayText (at full opacity — the state is the system colour, never a
+    /// dim).
     /// </summary>
     [Parameter] public bool FollowUpsDisabled { get; set; }
 

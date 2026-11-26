@@ -239,8 +239,17 @@
     cursor: pointer;
 }
 
-.tm-ai-message__follow-up:hover {
+/* The hover fill is the ENABLED chip's affordance only: under FollowUpsDisabled the chip keeps its
+   resting surface under the pointer (the same :hover:not(:disabled) shape the version buttons carry). */
+.tm-ai-message__follow-up:hover:not(:disabled) {
     background-color: var(--tm-bg-muted);
+}
+
+/* A disabled follow-up chip still renders (the suggestions stay readable), but it must not look
+   clickable: the shared dimming token plus the refused-pointer cursor. */
+.tm-ai-message__follow-up:disabled {
+    opacity: var(--tm-opacity-disabled);
+    cursor: not-allowed;
 }
 
 .tm-ai-message__follow-up:focus-visible {
@@ -540,6 +549,20 @@
         border-color: LinkText;
     }
 
+    /* The chip's surface above opts out of the automatic adjustment, so the disabled state needs the
+       system disabled-text colour explicitly — without it a disabled chip in Windows high contrast
+       reads exactly like an enabled one (the same rule _ai-tool-call.css carries for its disabled
+       Retry). With forced-color-adjust: none the button keeps these author colours, and GrayText is
+       the system colour of disabled text in every high-contrast theme. */
+    .tm-ai-message__follow-up:disabled {
+        border-color: GrayText;
+        color: GrayText;
+        /* Opacity over a system colour lowers the contrast the system itself guarantees, so the
+           resting dim (--tm-opacity-disabled) is dropped here — the disabled STATE is carried by
+           GrayText alone, the same rule _ai-agent-graph.css carries for its dimmed nodes. */
+        opacity: 1;
+    }
+
     /* forced-color-adjust: none opts the FOCUS RING out of the system palette too, and the property is
        inherited — so the version buttons (inside __versions), Retry (inside __error), the follow-up chip
        (itself opted out) and the source card's link (inside __source) would keep painting the theme token
@@ -553,8 +576,16 @@
     }
 
     .tm-ai-message__action[aria-pressed="true"],
-    .tm-ai-message__version-button:hover:not(:disabled) {
+    .tm-ai-message__version-button:hover:not(:disabled),
+    .tm-ai-message__follow-up:hover:not(:disabled) {
         border: var(--tm-border-width) solid Highlight;
         color: Highlight;
+    }
+
+    /* The enabled chip's hover fill is a theme token and the surface is opted out of the automatic
+       remap, so the hover state itself must ask for the system Canvas — otherwise the enabled chip
+       would flash a non-system grey over its Highlight border in Windows high contrast. */
+    .tm-ai-message__follow-up:hover:not(:disabled) {
+        background-color: Canvas;
     }
 }

@@ -159,6 +159,46 @@ public class AiConversationDemoPageTests : DemoPageLocalizationTestBase
         cut.Find("[data-testid='ai-demo-version-count']").TextContent.Trim().Should().Be("1");
     }
 
+    /// <summary>
+    /// Plan b75365fb fáze 3: the standalone follow-up card renders a finished answer with its chips, and
+    /// its toggle flips <c>FollowUpsDisabled</c> — the chips stay visible and carry the disabled attribute,
+    /// never disappear. The card is the E2E surface that proves the disabled chip's computed look.
+    /// </summary>
+    [Fact]
+    public void FollowUpsDemo_Toggle_FlipsTheChips_Disabled()
+    {
+        var cut = Render<AiConversationPage>();
+
+        // The sample is localized demo data, so the expected chips come from the SAME source the page
+        // builds them from — never a count or text typed into the assertion.
+        var expectedFollowUps = AiConversationPageSamples.FollowUps(
+            new DemoTableEnglishLocalizer(BuildEnglishLocalizer()));
+
+        var card = cut.Find("[data-testid='ai-follow-ups-demo']");
+        var chips = card.QuerySelectorAll(".tm-ai-message__follow-up");
+        chips.Length.Should().Be(expectedFollowUps.Count,
+            "the static sample carries exactly the page's localized follow-up questions");
+        chips.Select(chip => chip.TextContent.Trim()).Should().Equal(expectedFollowUps,
+            "the chips render the localized labels of the sample, not literals typed into the page");
+        chips.Should().OnlyContain(chip => !chip.HasAttribute("disabled"),
+            "the chips start enabled, so the E2E can read the enabled look first");
+
+        cut.Find("[data-testid='ai-demo-follow-ups-toggle']").Click();
+
+        cut.Find("[data-testid='ai-demo-follow-ups-toggle']").GetAttribute("aria-pressed").Should().Be("true");
+        cut.Find("[data-testid='ai-follow-ups-demo']")
+            .QuerySelectorAll(".tm-ai-message__follow-up")
+            .Should().HaveCount(expectedFollowUps.Count, "disabling the chips never hides the group")
+            .And.OnlyContain(chip => chip.HasAttribute("disabled"),
+                "FollowUpsDisabled renders every chip disabled without hiding the group");
+
+        cut.Find("[data-testid='ai-demo-follow-ups-toggle']").Click();
+        cut.Find("[data-testid='ai-follow-ups-demo']")
+            .QuerySelectorAll(".tm-ai-message__follow-up")
+            .Should().OnlyContain(chip => !chip.HasAttribute("disabled"),
+                "the toggle is a real two-way switch");
+    }
+
     [Fact]
     public async Task FailedToolCall_IsRetriedAndTurnsSucceeded()
     {

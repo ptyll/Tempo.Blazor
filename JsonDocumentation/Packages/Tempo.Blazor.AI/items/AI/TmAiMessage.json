@@ -131,7 +131,7 @@
       "name": "FollowUpsDisabled",
       "type": "bool",
       "isRequired": false,
-      "description": "Disables every follow-up chip without hiding the group. Default false."
+      "description": "Disables every follow-up chip without hiding the group. Default false. The disabled chips dim through --tm-opacity-disabled, show a not-allowed cursor and skip the hover fill; forced colors paint them GrayText."
     },
     {
       "name": "ImagePolicy",

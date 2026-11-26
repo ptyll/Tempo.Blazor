@@ -86,6 +86,29 @@ internal static class AiConversationPageSamples
         loc["TmDemo_AiConversation_FollowUp2"],
     ];
 
+    /// <summary>
+    /// The static completed turn of the follow-up chips card (never streams). Its answer text and its
+    /// two chips resolve through the localizer like every other interface label on the page, so a
+    /// non-English host sees the same language in the sample and in its chips.
+    /// </summary>
+    /// <param name="loc">Localizer used for the answer text and the chip labels.</param>
+    internal static AiMessage FollowUpsSample(Tempo.Blazor.Localization.ITmLocalizer loc)
+    {
+        var message = new AiMessage
+        {
+            Id = "follow-ups-sample",
+            Role = AiMessageRole.Assistant,
+            Status = AiMessageStatus.Completed,
+        };
+        message.Parts.Add(new AiTextPart(loc["TmDemo_AiConversation_FollowUpsSampleAnswer"]));
+        foreach (var followUp in FollowUps(loc))
+        {
+            message.FollowUps.Add(followUp);
+        }
+
+        return message;
+    }
+
     /// <summary>The two cited sources of a simulated answer.</summary>
     internal static IReadOnlyList<AiSource> Sources { get; } =
     [

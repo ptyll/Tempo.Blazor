@@ -955,6 +955,189 @@ public sealed class AiConversationE2ETests : WasmTestBase
         AssertNoClientErrors();
     }
 
+    // ── Follow-up chips: the disabled look (plan b75365fb fáze 3) ────────────────────────────
+
+    /// <summary>
+    /// Plan b75365fb fáze 3 (EmusCz 2.13.0): under <c>FollowUpsDisabled</c> the chips kept the full
+    /// colour, the pointer cursor and the hover fill, so they looked clickable while the click was
+    /// refused. The demo card's toggle flips the parameter on a static sample, so ONE chip is read
+    /// enabled and then disabled: opacity 1 → the shared <c>--tm-opacity-disabled</c> (0.5), cursor
+    /// pointer → not-allowed, and the hover fill belongs to the enabled chip only (a disabled chip
+    /// under the pointer keeps its resting surface). The screenshots record the enabled/disabled pair
+    /// in light and dark for the UX review. Mutant guard: dropping the
+    /// <c>.tm-ai-message__follow-up:disabled</c> rule (or its <c>:not(:disabled)</c> hover guard)
+    /// turns the computed-style assertions red.
+    /// </summary>
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task FollowUps_DisabledChips_ReadDisabledInComputedStyles()
+    {
+        var page = await OpenPageAsync(1440, 1000);
+        var directory = Path.Combine(FindRepoRoot().FullName, "tests", "Tempo.Blazor.E2E", "__screenshots__", "ai-conversation");
+        Directory.CreateDirectory(directory);
+
+        var card = page.Locator("[data-testid='ai-follow-ups-demo']");
+        var chip = card.Locator(".tm-ai-message__follow-up").First;
+        await chip.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+        await Microsoft.Playwright.Assertions.Expect(chip).ToBeEnabledAsync();
+        await WaitForLayoutToSettleAsync(page, "[data-testid='ai-follow-ups-demo']");
+
+        // Enabled: full opacity, the pointer cursor, and the hover fill the disabled chip must lose.
+        var enabled = await ReadChipPaintAsync(page);
+        Assert.AreEqual("1", enabled.Opacity, "the enabled chip paints at full opacity");
+        Assert.AreEqual("pointer", enabled.Cursor, "the enabled chip invites the click");
+
+        await chip.HoverAsync();
+        var enabledHovered = await ReadChipPaintAsync(page);
+        Assert.AreNotEqual(enabled.Background, enabledHovered.Background,
+            "the enabled chip fills on hover — the affordance the disabled chip must not fake");
+        await MovePointerAwayAsync(page);
+
+        await card.ScreenshotAsync(new LocatorScreenshotOptions
+        {
+            Path = Path.Combine(directory, "ai-conversation-follow-ups-enabled-light-1440.png"),
+        });
+
+        // Disabled: the shared dimming token, the refused-pointer cursor, the resting surface even
+        // under the pointer.
+        await page.Locator("[data-testid='ai-demo-follow-ups-toggle']").ClickAsync();
+        await Microsoft.Playwright.Assertions.Expect(chip).ToBeDisabledAsync();
+        await WaitForLayoutToSettleAsync(page, "[data-testid='ai-follow-ups-demo']");
+
+        var disabled = await ReadChipPaintAsync(page);
+        Assert.AreEqual("0.5", disabled.Opacity,
+            "the disabled chip dims through --tm-opacity-disabled (0.5), never a literal alpha");
+        Assert.AreEqual("not-allowed", disabled.Cursor,
+            "a refused click says so under the pointer, not with the clickable hand");
+        Assert.AreEqual(enabled.Background, disabled.Background,
+            "disabling dims the chip, it does not repaint the surface");
+
+        await chip.HoverAsync();
+        var disabledHovered = await ReadChipPaintAsync(page);
+        Assert.AreEqual(disabled.Background, disabledHovered.Background,
+            "a disabled chip under the pointer keeps its resting surface — no hover fill");
+        await MovePointerAwayAsync(page);
+
+        await card.ScreenshotAsync(new LocatorScreenshotOptions
+        {
+            Path = Path.Combine(directory, "ai-conversation-follow-ups-disabled-light-1440.png"),
+        });
+
+        // The dark pair of the same two states.
+        await ToggleDarkModeAsync(page);
+        await WaitForLayoutToSettleAsync(page, "[data-testid='ai-follow-ups-demo']");
+        await card.ScreenshotAsync(new LocatorScreenshotOptions
+        {
+            Path = Path.Combine(directory, "ai-conversation-follow-ups-disabled-dark-1440.png"),
+        });
+
+        await page.Locator("[data-testid='ai-demo-follow-ups-toggle']").ClickAsync();
+        await Microsoft.Playwright.Assertions.Expect(chip).ToBeEnabledAsync();
+        await WaitForLayoutToSettleAsync(page, "[data-testid='ai-follow-ups-demo']");
+        // The toggle click parked the pointer over the toggle; move it away so the enabled-dark shot
+        // shows the card at rest (the hover rule of the demo button would otherwise be in the frame).
+        await MovePointerAwayAsync(page);
+        await card.ScreenshotAsync(new LocatorScreenshotOptions
+        {
+            Path = Path.Combine(directory, "ai-conversation-follow-ups-enabled-dark-1440.png"),
+        });
+
+        AssertNoClientErrors();
+    }
+
+    /// <summary>
+    /// The forced-colors half of the contract: the chip's surface opts out of the automatic
+    /// adjustment (<c>forced-color-adjust: none</c> + Canvas/CanvasText), so the disabled state asks
+    /// for the system <c>GrayText</c> explicitly — without it a disabled chip in Windows high
+    /// contrast reads exactly like an enabled one. The probe span carries <c>color: GrayText</c>
+    /// inline, so the assertion compares the chip against the system colour itself, not a guessed
+    /// palette value. The same pass pins the FULL opacity the forced-colors rule keeps (a dim over a
+    /// system colour would only lower its guaranteed contrast) and records the card as
+    /// <c>ai-conversation-follow-ups-disabled-forced-colors-1440.png</c>. Mutant guard: dropping the
+    /// forced-colors <c>.tm-ai-message__follow-up:disabled</c> rule turns this red (the chip keeps
+    /// CanvasText), and so does dropping its <c>opacity: 1</c>.
+    /// </summary>
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task FollowUps_DisabledChip_InForcedColors_UsesTheSystemDisabledColor()
+    {
+        var page = await OpenPageAsync(1440, 1000);
+        await page.EmulateMediaAsync(new PageEmulateMediaOptions { ForcedColors = ForcedColors.Active });
+
+        var card = page.Locator("[data-testid='ai-follow-ups-demo']");
+        var chip = card.Locator(".tm-ai-message__follow-up").First;
+        await chip.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+
+        var enabledColor = await chip.EvaluateAsync<string>("el => getComputedStyle(el).color");
+
+        await page.Locator("[data-testid='ai-demo-follow-ups-toggle']").ClickAsync();
+        await Microsoft.Playwright.Assertions.Expect(chip).ToBeDisabledAsync();
+
+        var disabledColor = await chip.EvaluateAsync<string>(
+            """
+            el => {
+                const probe = document.createElement('span');
+                probe.style.color = 'GrayText';
+                el.parentElement.appendChild(probe);
+                const system = getComputedStyle(probe).color;
+                probe.remove();
+                return JSON.stringify({ chip: getComputedStyle(el).color, system });
+            }
+            """);
+        using var document = JsonDocument.Parse(disabledColor);
+        var chipColor = document.RootElement.GetProperty("chip").GetString() ?? "";
+        var systemColor = document.RootElement.GetProperty("system").GetString() ?? "";
+
+        Assert.AreEqual(systemColor, chipColor,
+            "the disabled chip paints the system GrayText inside its forced-color-adjust:none surface");
+        Assert.AreNotEqual(enabledColor, chipColor,
+            "high contrast must tell the disabled chip from an enabled one");
+
+        // The disabled chip also keeps FULL opacity: a dim over a system colour would lower the
+        // contrast the system itself guarantees (the state is GrayText alone).
+        var disabledOpacity = await chip.EvaluateAsync<string>("el => getComputedStyle(el).opacity");
+        Assert.AreEqual("1", disabledOpacity,
+            "forced colors drop the resting dim — opacity over GrayText would only lower its contrast");
+
+        var directory = Path.Combine(FindRepoRoot().FullName, "tests", "Tempo.Blazor.E2E", "__screenshots__", "ai-conversation");
+        Directory.CreateDirectory(directory);
+        await MovePointerAwayAsync(page);
+        await card.ScreenshotAsync(new LocatorScreenshotOptions
+        {
+            Path = Path.Combine(directory, "ai-conversation-follow-ups-disabled-forced-colors-1440.png"),
+        });
+
+        AssertNoClientErrors();
+    }
+
+    /// <summary>The computed paint of the first follow-up chip of the demo card.</summary>
+    private static async Task<ChipPaint> ReadChipPaintAsync(IPage page)
+    {
+        var json = await page.EvaluateAsync<string>(
+            """
+            () => {
+                const chip = document.querySelector(
+                    "[data-testid='ai-follow-ups-demo'] .tm-ai-message__follow-up");
+                const style = getComputedStyle(chip);
+                return JSON.stringify({
+                    opacity: style.opacity,
+                    cursor: style.cursor,
+                    background: style.backgroundColor,
+                });
+            }
+            """);
+        using var document = JsonDocument.Parse(json);
+        return new ChipPaint(
+            document.RootElement.GetProperty("opacity").GetString() ?? "",
+            document.RootElement.GetProperty("cursor").GetString() ?? "",
+            document.RootElement.GetProperty("background").GetString() ?? "");
+    }
+
+    private static Task MovePointerAwayAsync(IPage page)
+        => page.Mouse.MoveAsync(0, 0);
+
+    private sealed record ChipPaint(string Opacity, string Cursor, string Background);
+
     // ── Helpers ───────────────────────────────────────────────────────────────────────────
 
     private static async Task AssertAxeCleanAsync(IPage page, string hostSelector)

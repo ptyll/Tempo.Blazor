@@ -33,7 +33,7 @@ references them without Blazor or Markdig.
 | `ShowSources` | `bool` | `true` | Render the cited sources as cards, in part order. |
 | `ShowFollowUps` | `bool` | `true` | Render `Message.FollowUps` as chips. |
 | `FollowUpsCaption` | `string?` | `null` | **2.13.0** Visible caption of the follow-up group. When set, the group uses `aria-labelledby` pointing at the caption and drops `aria-label`. Null/blank keeps today's `aria-label`. |
-| `FollowUpsDisabled` | `bool` | `false` | **2.13.0** Disables every follow-up chip without hiding the group. |
+| `FollowUpsDisabled` | `bool` | `false` | **2.13.0** Disables every follow-up chip without hiding the group. The disabled chip dims through `--tm-opacity-disabled`, shows a not-allowed cursor and skips the hover fill; forced colors paint it `GrayText`. |
 | `ImagePolicy` | `AiMarkdownImagePolicy` | `Allow` | **2.13.0** How images in this turn's markdown are rendered. Flows to `TmMarkdownView`. `Block` drops every `<img>`; `AltText` renders escaped alt instead of fetching. |
 | `LinkPolicy` | `AiMarkdownLinkPolicy` | `Allow` | **2.13.0** How hyperlinks in this turn's markdown are rendered. `TextOnly` renders escaped link text with no `<a>`. Citation chips are unaffected. |
 | `ImageUrlFilter` | `Func<Uri, bool>?` | `null` | **2.13.0** Extra allowlist on top of the scheme policy. A `false` result is treated as `Block`. |
@@ -196,9 +196,18 @@ surviving link gets `target="_blank"` with `rel="noopener noreferrer nofollow"`.
 - **Forced colors** — the avatar, the source card, the error block, the version switcher and the follow-up
   chip opt out of the automatic adjustment and ask for `Canvas`/`CanvasText`, and every control inside one
   of those surfaces restores the system `Highlight` focus ring (the opt-out is inherited, so without the
-  rule the theme token ring would paint on a Canvas surface). The **user bubble is deliberately not opted
+  rule the theme token ring would paint on a Canvas surface). A **disabled follow-up chip** asks for the
+  system `GrayText` explicitly — inside the opt-out nothing remaps it, and `CanvasText` would read exactly
+  like an enabled chip — and paints at full opacity, because a dim over a system colour would only lower
+  the contrast the mode itself guarantees. The **enabled chip's hover** asks for the system `Highlight`
+  border and ink over a `Canvas` fill, the same treatment the version buttons carry. The **user bubble is
+  deliberately not opted
   out**: the property inherits, so opting the bubble out would strip the system palette from the markdown it
   carries — and the bubble needs nothing, because its author background is remapped to `Canvas` anyway.
+- **Disabled follow-ups** — under `FollowUpsDisabled` every chip keeps rendering (the suggestions stay
+  readable) but dims through the shared `--tm-opacity-disabled` token, shows `cursor: not-allowed` and
+  skips the hover fill (`:hover:not(:disabled)`), so the group no longer looks clickable while the click
+  is refused.
 - **Reduced motion** — this component adds no animation of its own; the streaming caret
   (`.tm-ai-streaming`) and the thinking pair (`.tm-ai-shimmer`, the spinner) are package-level primitives
   that carry their own `prefers-reduced-motion` blocks.

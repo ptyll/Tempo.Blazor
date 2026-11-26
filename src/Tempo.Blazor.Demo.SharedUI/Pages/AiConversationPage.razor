@@ -36,6 +36,16 @@
         color: var(--tm-color-primary);
     }
 
+    /* The pressed state must be visible, but its pair is contrast-gated: --tm-color-primary ink over
+       --tm-color-primary-subtle is 4.75:1 in light, only 4.40:1 in dark (the subtle tint is a 15%
+       wash), so the tint stays out. The pressed read is the 2px primary border plus the primary ink
+       over the untouched surface — 5.17:1 light and 5.75:1 dark. */
+    .ai-demo-button[aria-pressed="true"] {
+        border: 2px solid var(--tm-color-primary);
+        background: var(--tm-bg-surface);
+        color: var(--tm-color-primary);
+    }
+
     .ai-demo-button:focus-visible {
         /* The box shadow is the visible ring, the transparent outline is its fallback: Windows High Contrast
            strips box shadows, so without an outline the reset button has no focus indicator there at all
@@ -106,6 +116,13 @@
     @@media (forced-colors: active) {
         .ai-demo-button:focus-visible {
             outline-color: Highlight;
+        }
+
+        /* The pressed read is the system Highlight colour (Chrome's forced colors keep a 2px author
+           border width, so the border stays the stronger of the two signals). */
+        .ai-demo-button[aria-pressed="true"] {
+            border-color: Highlight;
+            color: Highlight;
         }
     }
 </style>
@@ -322,6 +339,27 @@
                     DataTestId="ai-message-pending-sample" />
     </div>
 
+    <div class="showcase-card mt-4" data-testid="ai-follow-ups-demo">
+        <h3 class="ai-demo-subheading">@Loc["TmDemo_AiConversation_FollowUpsHeading"]</h3>
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-3">
+            @Loc["TmDemo_AiConversation_FollowUpsIntro"]
+        </p>
+        <div class="ai-demo-actions mb-3">
+            <button type="button"
+                    class="ai-demo-button"
+                    data-testid="ai-demo-follow-ups-toggle"
+                    aria-pressed="@(_followUpsDisabled ? "true" : "false")"
+                    @onclick="() => _followUpsDisabled = !_followUpsDisabled">
+                @Loc["TmDemo_AiConversation_FollowUpsToggle"]
+            </button>
+        </div>
+        @* Its own test id, like the pending sample: the transcript selectors must not see this standalone
+           sample as a conversation turn. *@
+        <TmAiMessage Message="_followUpsSample"
+                     FollowUpsDisabled="_followUpsDisabled"
+                     DataTestId="ai-message-follow-ups-sample" />
+    </div>
+
     <div class="showcase-card mt-4" data-testid="ai-reasoning-demo">
         <h3 class="ai-demo-subheading">@Loc["TmDemo_AiConversation_ReasoningHeading"]</h3>
         <p class="text-sm text-slate-600 dark:text-slate-400 mb-3">
@@ -392,6 +430,13 @@
         Status = AiMessageStatus.Pending,
     };
 
+    /// <summary>The static completed turn of the follow-up chips card (never streams). Built in
+    /// <see cref="OnInitialized"/> because its text and chips resolve through the localizer.</summary>
+    private AiMessage _followUpsSample = null!;
+
+    /// <summary>Whether the follow-up chips card renders its chips disabled (the card's own toggle).</summary>
+    private bool _followUpsDisabled;
+
     private DemoSlashCommands _commands = null!;
     private IReadOnlyList<string> _suggestions = [];
 
@@ -424,6 +469,10 @@
         ];
 
         _commands = new DemoSlashCommands(Loc);
+
+        // The follow-up card's static sample localizes its answer text and its chips, so it is built
+        // here with the rest of the localized demo data — not at field initialization.
+        _followUpsSample = AiConversationPageSamples.FollowUpsSample(Loc);
     }
 
     private int VersionCount => _messages.LastOrDefault(message => message.Role == AiMessageRole.Assistant)?.VersionCount ?? 0;
