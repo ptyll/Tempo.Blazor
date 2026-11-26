@@ -285,7 +285,7 @@ public sealed class TmAiMessageCssTests
             "a refused click must say so under the pointer, not keep the default arrow");
         disabled.Should().NotContain("cursor: default",
             "cursor: default is the pre-4b idiom — the refused click shows not-allowed");
-        disabled.Should().NotMatch(@"(?<![-\w])opacity:\s*[\d.]",
+        disabled.Should().NotMatchRegex(@"(?<![-\w])opacity:\s*[\d.]",
             "a literal opacity pins one value the token cannot rescale");
     }
 

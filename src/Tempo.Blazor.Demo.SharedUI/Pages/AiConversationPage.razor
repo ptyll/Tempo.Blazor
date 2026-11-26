@@ -397,6 +397,13 @@
                     @onclick="ResetRetrySample">
                 @Loc["TmDemo_AiConversation_DisabledStatesRetryReset"]
             </button>
+            @* The count the E2E reads: a double activation during the in-flight window must leave it at
+               one — the card's refusal guard is the single re-entry fuse. The label is ONE format key
+               (translators own the word order); the number sits in its own span so a test can assert the
+               exact value without parsing the sentence around it. *@
+            <span class="ai-demo-note" data-testid="ai-demo-slow-retry-count">
+                @RetryCountLabelPrefix<span data-testid="ai-demo-slow-retry-count-value">@_slowRetryCount</span>@RetryCountLabelSuffix
+            </span>
         </div>
         @* The retry of this failed call stays in flight for a few seconds (the page's slow handler), so the
            disabled retry can be seen — and screenshotted — before the re-run turns the call succeeded. *@
@@ -443,8 +450,11 @@
     private const int HostDrivenBusyMs = 2500;
 
     /// <summary>How long the disabled-states card keeps its retry in flight, so the disabled look can be
-    /// seen (and screenshotted) before the re-run completes.</summary>
-    private const int SlowRetryMs = 3000;
+    /// seen (and screenshotted) before the re-run completes. Five seconds, not three: the fáze-4d focus
+    /// spec reads the computed paint, re-activates the button three times and reads the focus back inside
+    /// the SAME window, and a window that expires mid-sequence removes the button (focus falls to body)
+    /// for reasons that have nothing to do with the component.</summary>
+    private const int SlowRetryMs = 5000;
 
     /// <summary>
     /// Sample CONTENT of the simulated host-driven prompt — English on purpose, like every other sample
@@ -492,6 +502,29 @@
     /// Built in <see cref="OnInitialized"/> because its timestamps come from the injected
     /// <see cref="TimeProvider"/> (property-injected after the constructor).</summary>
     private AiToolCall _retrySampleCall = null!;
+
+    /// <summary>How many times the disabled-states card's slow retry actually fired. The E2E activates
+    /// the in-flight retry a second time and asserts the count stays at one (the refusal guard).</summary>
+    private int _slowRetryCount;
+
+    /// <summary>The retry-count label is ONE localized format string with a <c>{0}</c> placeholder, so a
+    /// translator owns the word order; the page splits it around the placeholder and renders the number
+    /// into its own span (a test asserts the exact value, not the sentence).</summary>
+    private (string Prefix, string Suffix) RetryCountLabel
+    {
+        get
+        {
+            var format = Loc["TmDemo_AiConversation_DisabledStatesRetryCount"];
+            var placeholder = format.IndexOf("{0}", StringComparison.Ordinal);
+            return placeholder < 0
+                ? (format, string.Empty)
+                : (format[..placeholder], format[(placeholder + 3)..]);
+        }
+    }
+
+    private string RetryCountLabelPrefix => RetryCountLabel.Prefix;
+
+    private string RetryCountLabelSuffix => RetryCountLabel.Suffix;
 
     /// <summary>The static two-version turn of the disabled-states card (version 1 of 2 on screen). Built in
     /// <see cref="OnInitialized"/> because its texts resolve through the localizer.</summary>
@@ -856,6 +889,9 @@
         // Captured: a reset during the wait swaps the sample, and the in-flight re-run belongs to the
         // call that was clicked, not to its replacement.
         var call = _retrySampleCall;
+        // Counted at the START of the handler: the E2E activates the retry twice during the in-flight
+        // window and reads the count afterwards — a second fire would move it to two.
+        _slowRetryCount++;
         // The re-run measures ITSELF on the injected clock: the start is the click, the end is the fake
         // clock running the delay out — a wall-clock timestamp would read as noise next to a fake clock.
         var started = Clock.GetUtcNow();
@@ -872,6 +908,7 @@
     private Task ResetRetrySample()
     {
         _retrySampleCall = AiConversationPageSamples.RetryInFlightSample(Clock);
+        _slowRetryCount = 0;
         return InvokeAsync(StateHasChanged);
     }
 

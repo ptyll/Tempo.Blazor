@@ -124,7 +124,7 @@ public sealed class TmUsageMeterDocsTests
 
         css.Should().NotContain("[data-theme", "the dark theme re-points the tokens, it is not a component block");
         css.Should().NotContain(".tm-dark");
-        css.Should().NotMatch(@"#[0-9a-fA-F]{3,8}\b");
+        css.Should().NotMatchRegex(@"#[0-9a-fA-F]{3,8}\b");
         css.Should().NotContain("rgba(");
         css.Should().NotContain("rgb(");
     }

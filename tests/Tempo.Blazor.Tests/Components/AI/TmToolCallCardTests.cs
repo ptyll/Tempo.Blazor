@@ -316,12 +316,21 @@ public sealed class TmToolCallCardTests : LocalizationTestBase
     }
 
     /// <summary>
-    /// A host re-running a call is asynchronous: a second click lands while the first retry is still in
-    /// flight and would fire <c>OnRetry</c> twice. The button therefore disables itself (and the handler
-    /// refuses re-entry) until the host's task completes.
+    /// A host re-running a call is asynchronous: a second activation lands while the first retry is still
+    /// in flight and would fire <c>OnRetry</c> twice. The button therefore marks itself
+    /// <c>aria-disabled="true"</c> (and the handler refuses re-entry) until the host's task completes.
+    /// It deliberately does NOT use the native <c>disabled</c> attribute: a natively disabled button
+    /// leaves the tab order and the browser moves focus to <c>body</c>, so a reader who activated the
+    /// retry from the keyboard would lose their place the moment the re-run starts (WCAG 2.4.3 — the
+    /// same choice the autonomy dial's step buttons and the scheduled-runs day step make, decision
+    /// <c>AI-PACKAGE-DISABLED-IDIOM</c>). The attribute is omitted again (not left as <c>"false"</c>)
+    /// once the host finishes, matching the card's other state attributes (<c>data-copied</c>): an
+    /// absent attribute carries no state for CSS or AT to trip over. The start of the re-run is
+    /// announced through the card's single live region; a "retrying" note the host never replaced with
+    /// a status announcement is cleared when the task ends, so it cannot linger as a stale claim.
     /// </summary>
     [Fact]
-    public async Task Retry_IsDisabledWhileTheHostIsStillRunningIt()
+    public async Task Retry_InFlight_StaysFocusableWithAriaDisabled_AndRefusesReentry()
     {
         UseFakeClock();
         var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -331,21 +340,184 @@ public sealed class TmToolCallCardTests : LocalizationTestBase
             .Add(card => card.ToolCall, Call(AiToolCallStatus.Failed))
             .Add(card => card.OnRetry, () => { calls++; return release.Task; }));
 
+        cut.Find(".tm-tool-call__retry").HasAttribute("aria-disabled").Should().BeFalse(
+            "an idle retry carries no disabled state");
         cut.Find(".tm-tool-call__retry").HasAttribute("disabled").Should().BeFalse(
             "a failed call with a handler offers an enabled Retry");
 
         cut.Find(".tm-tool-call__retry").Click();
-        cut.Find(".tm-tool-call__retry").HasAttribute("disabled").Should().BeTrue(
-            "the host has not answered yet, so a second click would fire OnRetry again");
+
+        var inFlight = cut.Find(".tm-tool-call__retry");
+        inFlight.GetAttribute("aria-disabled").Should().Be("true",
+            "the in-flight retry announces itself disabled while the host's task runs");
+        inFlight.HasAttribute("disabled").Should().BeFalse(
+            "native disabled would drop the focus the reader just placed on the button (WCAG 2.4.3)");
+        LiveRegion(cut).Should().Be("Retrying Search…",
+            "the start of the re-run is announced through the card's single live region");
 
         cut.Find(".tm-tool-call__retry").Click();
-        calls.Should().Be(1, "one reader action means one retry");
+        calls.Should().Be(1, "one reader action means one retry — the handler refuses re-entry");
 
         release.SetResult();
         await cut.InvokeAsync(() => { });
 
-        cut.Find(".tm-tool-call__retry").HasAttribute("disabled").Should().BeFalse(
-            "the host finished; the control is usable again");
+        var settled = cut.Find(".tm-tool-call__retry");
+        settled.HasAttribute("aria-disabled").Should().BeFalse(
+            "the host finished; the state attribute is omitted again rather than left as a stale \"false\"");
+        settled.HasAttribute("disabled").Should().BeFalse();
+        LiveRegion(cut).Should().BeEmpty(
+            "the host never replaced the retrying note with a status announcement, so the card clears " +
+            "it when the task ends — a stale \"Retrying…\" must not linger in the region");
+    }
+
+    /// <summary>
+    /// A retry the reader activated from the keyboard is FOCUSED when the re-run starts. While the host's
+    /// task runs the button stays in the tab order (aria-disabled, fáze 4d), but a successful re-run turns
+    /// the call succeeded and the Retry renders only for a failed call — the focused button leaves the DOM
+    /// and the browser would drop the focus to <c>body</c>. The card hands it to the disclosure toggle
+    /// instead (WCAG 2.4.3): the failed call auto-expanded its details, so the toggle is the control the
+    /// reader most plausibly wants next. Mutant guard: removing the focus hand-off from
+    /// <c>OnAfterRenderAsync</c> leaves no <c>domWrapper.focus</c> invocation and turns this red.
+    /// </summary>
+    [Fact]
+    public async Task Retry_Completion_HandsTheFocusToTheDisclosure_WhenTheButtonDisappears()
+    {
+        UseFakeClock();
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var call = Call(AiToolCallStatus.Failed, arguments: """{"a":1}""");
+
+        var cut = Render<TmToolCallCard>(parameters => parameters
+            .Add(card => card.ToolCall, call)
+            .Add(card => card.OnRetry, () => release.Task));
+
+        var toggleId = cut.Find(".tm-tool-call__toggle").GetAttribute("blazor:elementReference");
+        toggleId.Should().NotBeNullOrEmpty("the disclosure toggle is the focus-hand-off target");
+
+        cut.Find(".tm-tool-call__retry").Focus();
+        cut.Find(".tm-tool-call__retry").Click();
+        LiveRegion(cut).Should().Be("Retrying Search…", "the start of the re-run is announced");
+
+        // The host's re-run succeeds on the SAME call instance: the Retry disappears with the failure.
+        call.Status = AiToolCallStatus.Succeeded;
+        call.Error = null;
+        call.ResultJson = """{"ok":true}""";
+        release.SetResult();
+        await cut.InvokeAsync(() => { });
+        cut.Render(parameters => parameters.Add(card => card.ToolCall, call));
+
+        cut.FindAll(".tm-tool-call__retry").Should().BeEmpty("a succeeded call offers no retry");
+        LiveRegion(cut).Should().Be("Search: Done",
+            "the status transition takes the live region over from the retrying note");
+        var focus = JSInterop.Invocations.Last(invocation => invocation.Identifier == "Blazor._internal.domWrapper.focus");
+        ((ElementReference)focus.Arguments[0]).Id.Should().Be(toggleId,
+            "the focused Retry disappeared with the failure — the card hands the focus to the disclosure toggle");
+    }
+
+    /// <summary>
+    /// The focus hand-off after a completed retry walks the card's controls in order — disclosure toggle,
+    /// Copy button, and finally the CARD ITSELF. A failed call with no payloads and no error text offers
+    /// neither the disclosure nor Copy, so the root (which carries <c>tabindex="-1"</c> exactly for this:
+    /// programmatically focusable, never a tab stop) takes the focus instead of <c>body</c>.
+    /// </summary>
+    [Fact]
+    public async Task Retry_Completion_WithoutAnyOtherControl_HandsTheFocusToTheCard()
+    {
+        UseFakeClock();
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var call = Call(AiToolCallStatus.Failed);
+
+        var cut = Render<TmToolCallCard>(parameters => parameters
+            .Add(card => card.ToolCall, call)
+            .Add(card => card.OnRetry, () => release.Task));
+
+        var rootId = cut.Find(".tm-tool-call").GetAttribute("blazor:elementReference");
+        rootId.Should().NotBeNullOrEmpty("the card root is the focus fallback (tabindex=-1)");
+
+        cut.Find(".tm-tool-call__retry").Focus();
+        cut.Find(".tm-tool-call__retry").Click();
+
+        call.Status = AiToolCallStatus.Succeeded;
+        release.SetResult();
+        await cut.InvokeAsync(() => { });
+        cut.Render(parameters => parameters.Add(card => card.ToolCall, call));
+
+        cut.FindAll(".tm-tool-call__toggle").Should().BeEmpty("no payloads and no error — nothing to expand");
+        cut.FindAll(".tm-tool-call__copy").Should().BeEmpty("nothing to copy either");
+        var root = cut.Find(".tm-tool-call");
+        root.GetAttribute("tabindex").Should().Be("-1",
+            "the root is the programmatic focus fallback — never a tab stop");
+        var focus = JSInterop.Invocations.Last(invocation => invocation.Identifier == "Blazor._internal.domWrapper.focus");
+        ((ElementReference)focus.Arguments[0]).Id.Should().Be(rootId,
+            "no toggle and no copy — the card itself takes the focus instead of body");
+    }
+
+    /// <summary>
+    /// A reader who TABS AWAY from the in-flight retry keeps their new place: the focus hand-off fires
+    /// only while the focus is still on the Retry when it disappears, never as a focus steal from the
+    /// control the reader moved to.
+    /// </summary>
+    [Fact]
+    public async Task Retry_Completion_DoesNotStealAFocusTheReaderMovedAway()
+    {
+        UseFakeClock();
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var call = Call(AiToolCallStatus.Failed, arguments: """{"a":1}""");
+
+        var cut = Render<TmToolCallCard>(parameters => parameters
+            .Add(card => card.ToolCall, call)
+            .Add(card => card.OnRetry, () => release.Task));
+
+        cut.Find(".tm-tool-call__retry").Focus();
+        cut.Find(".tm-tool-call__retry").Click();
+        cut.Find(".tm-tool-call__retry").Blur();
+
+        call.Status = AiToolCallStatus.Succeeded;
+        release.SetResult();
+        await cut.InvokeAsync(() => { });
+        cut.Render(parameters => parameters.Add(card => card.ToolCall, call));
+
+        JSInterop.Invocations.Should().NotContain(
+            invocation => invocation.Identifier == "Blazor._internal.domWrapper.focus",
+            "the reader moved the focus away before the re-run completed — the card must not grab it back");
+    }
+
+    /// <summary>
+    /// Chrome fires a blur when the focused button is REMOVED by the successful re-run — and that blur
+    /// arrives after the status already flipped (<see cref="TmToolCallCard"/> can retry no more). It is
+    /// the browser's reaction to the removal, not the reader moving on, so it must NOT cancel the focus
+    /// hand-off (found by the fáze-4d WASM E2E: the removal-blur reset the tracking and the focus fell
+    /// to body). A blur while the retry is still rendered (the reader tabs away mid flight) DOES cancel
+    /// it — see <see cref="Retry_Completion_DoesNotStealAFocusTheReaderMovedAway"/>.
+    /// </summary>
+    [Fact]
+    public async Task Retry_Completion_TheRemovalBlur_DoesNotCancelTheHandOff()
+    {
+        UseFakeClock();
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var call = Call(AiToolCallStatus.Failed, arguments: """{"a":1}""");
+
+        var cut = Render<TmToolCallCard>(parameters => parameters
+            .Add(card => card.ToolCall, call)
+            .Add(card => card.OnRetry, () => release.Task));
+
+        var toggleId = cut.Find(".tm-tool-call__toggle").GetAttribute("blazor:elementReference");
+        cut.Find(".tm-tool-call__retry").Focus();
+        cut.Find(".tm-tool-call__retry").Click();
+
+        // The host's re-run flips the status FIRST; the removal-blur arrives while the retry is no
+        // longer retryable — exactly the browser's order when the button leaves the DOM.
+        call.Status = AiToolCallStatus.Succeeded;
+        call.Error = null;
+        call.ResultJson = """{"ok":true}""";
+        cut.Find(".tm-tool-call__retry").Blur();
+
+        release.SetResult();
+        await cut.InvokeAsync(() => { });
+        cut.Render(parameters => parameters.Add(card => card.ToolCall, call));
+
+        var focus = JSInterop.Invocations.Last(invocation => invocation.Identifier == "Blazor._internal.domWrapper.focus");
+        ((ElementReference)focus.Arguments[0]).Id.Should().Be(toggleId,
+            "the removal-blur is not the reader leaving — the hand-off to the disclosure toggle still fires");
     }
 
     /// <summary>

@@ -3,7 +3,7 @@
   "kind": "Component",
   "category": "AI",
   "namespace": "Tempo.Blazor.Components.AI",
-  "description": "One tool/function call of an AI turn: the state glyph, the tool name, the localized status and the elapsed time on one row, with Copy, Retry (a failed call only) and a details disclosure as separate native buttons. The disclosure pretty-prints the JSON arguments and result with two-space indentation and shows a payload that does not parse as its raw text instead of dropping it. A redacted call shows a localized notice instead of the payloads and offers no Copy. The elapsed time counts up live while the call runs on the injected TimeProvider, stops at the recorded duration when it finishes, and the card owns exactly one role=status live region for a status transition and the copy confirmation.",
+  "description": "One tool/function call of an AI turn: the state glyph, the tool name, the localized status and the elapsed time on one row, with Copy, Retry (a failed call only) and a details disclosure as separate native buttons. The disclosure pretty-prints the JSON arguments and result with two-space indentation and shows a payload that does not parse as its raw text instead of dropping it. A redacted call shows a localized notice instead of the payloads and offers no Copy. The elapsed time counts up live while the call runs on the injected TimeProvider, stops at the recorded duration when it finishes, and the card owns exactly one role=status live region for the retry start, a status transition and the copy confirmation. When a successful retry removes the focused Retry button, the card hands the focus to its disclosure toggle (or Copy, or itself) instead of letting it fall to body.",
   "packageId": "Tempo.Blazor.AI",
   "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmToolCallCard.razor",
   "documentationStatus": "generated",
@@ -37,7 +37,7 @@
       "name": "OnRetry",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when the reader asks to run a failed call again. The Retry button renders only for a call in AiToolCallStatus.Failed with a bound handler — never a button that does nothing. While the handler's task runs the button disables itself and reads disabled: dimmed through --tm-opacity-disabled, a not-allowed cursor and no hover fill; forced colors paint it GrayText (at full opacity — the state is the system colour, never a dim)."
+      "description": "Raised when the reader asks to run a failed call again. The Retry button renders only for a call in AiToolCallStatus.Failed with a bound handler — never a button that does nothing. While the handler's task runs the button marks itself aria-disabled=\"true\" and reads disabled: dimmed through --tm-opacity-disabled, a not-allowed cursor and no hover fill; forced colors paint it GrayText (at full opacity — the state is the system colour, never a dim). The attribute is aria-disabled rather than the native disabled on purpose: the button stays focusable, so a reader who activated it from the keyboard keeps their place while the re-run is in flight (WCAG 2.4.3). The start of the re-run is announced through the card's live region (TmToolCallCard_Retrying), and when the re-run succeeds and Retry disappears, the focus the reader left on it moves to the card's disclosure toggle (or the Copy button, or the card itself) instead of falling to body."
     },
     {
       "name": "ErrorTemplate",

@@ -103,7 +103,7 @@
 
 .tm-tool-call__copy:hover,
 .tm-tool-call__toggle:hover,
-.tm-tool-call__retry:hover:not(:disabled) {
+.tm-tool-call__retry:hover:not([aria-disabled="true"]) {
     border-color: var(--tm-border-color);
     background-color: var(--tm-color-surface-hover);
     color: var(--tm-color-text);
@@ -119,11 +119,20 @@
 
 /* A retry in flight is not a disabled control the reader has to guess about: it dims through the shared
    --tm-opacity-disabled token and shows the refused-pointer cursor, the same idiom the follow-up chip and
-   the version buttons speak, until the host's task completes. The hover fill above excludes :disabled, so
-   the in-flight retry keeps its resting surface under the pointer. */
-.tm-tool-call__retry:disabled {
-    opacity: var(--tm-opacity-disabled);
+   the version buttons speak, until the host's task completes. The state hangs on aria-disabled, not the
+   native disabled attribute, so the button keeps its tab stop and a keyboard reader who activated it does
+   not lose focus mid re-run (WCAG 2.4.3). The hover fill above excludes the aria-disabled state, so the
+   in-flight retry keeps its resting surface under the pointer. */
+.tm-tool-call__retry[aria-disabled="true"] {
     cursor: not-allowed;
+}
+
+/* The dim sits on the CONTENT, never on the button box: opacity on the box would take the focus outline
+   down with it, and the in-flight retry is exactly the control that keeps the keyboard focus — its focus
+   indicator must keep the full-contrast token (WCAG 1.4.11). The box itself is transparent (no fill, no
+   resting border), so dimming the icon and the label paints the identical disabled look. */
+.tm-tool-call__retry[aria-disabled="true"] > * {
+    opacity: var(--tm-opacity-disabled);
 }
 
 /* The disclosure state is a transform, never a transition: a rotating chevron would be one more
@@ -342,10 +351,15 @@
        see: with forced-color-adjust: none the button keeps CanvasText and reads as enabled. GrayText is the
        system's own disabled ink, so the in-flight state survives the mode as well. The resting dim is
        dropped for the same reason — opacity over a system colour lowers the contrast the system itself
-       guarantees (the same rule _ai-message.css carries for its disabled chip). */
-    .tm-tool-call__retry:disabled {
+       guarantees (the same rule _ai-message.css carries for its disabled chip). The state hangs on
+       aria-disabled (the button stays focusable, WCAG 2.4.3), so the selector does too, and the dropped
+       dim targets the same content children the resting rule dims. */
+    .tm-tool-call__retry[aria-disabled="true"] {
         border-color: GrayText;
         color: GrayText;
+    }
+
+    .tm-tool-call__retry[aria-disabled="true"] > * {
         opacity: 1;
     }
 }

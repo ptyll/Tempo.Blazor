@@ -60,8 +60,10 @@ the status glyph and the localized status text sit on the row with the live elap
 are behind a disclosure that parses them (`JsonDocument` + an indented `Utf8JsonWriter`) — a payload that
 does not parse is shown verbatim instead of being dropped. A call whose `AiToolCall.IsRedacted` flag is set
 renders a localized notice (with the lock glyph) in place of the data and offers no Copy, so a redacted
-payload has no path out of the page. Retry renders only for a failed call WITH a bound handler, and it
-disables itself while that host task is in flight — one click means one retry.
+payload has no path out of the page. Retry renders only for a failed call WITH a bound handler; while
+that host task is in flight it carries `aria-disabled="true"` (stays focusable, WCAG 2.4.3) and refuses
+re-entry — one activation means one retry. When the re-run succeeds and Retry disappears, focus moves to
+the card's disclosure/copy control.
 
 Every action in the row names the tool it belongs to (`TmToolCallCard_CopyFor` "Copy details of {0}" and
 friends), so a group's repeated buttons are distinguishable in a screen reader's list of buttons; the
@@ -74,8 +76,9 @@ while the call is queued/running and disarmed the moment it finishes — a finis
 duration (`CompletedAt - StartedAt`), because a duration that keeps growing is an estimate, not a fact.
 A failing call opens its own details, so the error is visible without a second interaction.
 
-One live region per card (`role="status"`) announces the status transition ("Search: Done") and the copy
-confirmation; the reasoning panel has its own single region for the finished reasoning. A copy
+One live region per card (`role="status"`) announces the retry start ("Retrying Search…"), the status
+transition ("Search: Done") and the copy confirmation; the reasoning panel has its own single region for
+the finished reasoning. A copy
 confirmation is announced through that region rather than by renaming the button, so the control keeps its
 name.
 

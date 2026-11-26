@@ -19,6 +19,8 @@
          data-status="@StatusModifier"
          data-error-code="@(IsFailed ? call.ErrorCode : null)"
          data-tool-call-id="@call.Id"
+         tabindex="-1"
+         @ref="_root"
          @attributes="AdditionalAttributes">
         <div class="tm-tool-call__header">
             <span class="tm-tool-call__status-icon" aria-hidden="true">
@@ -40,16 +42,26 @@
                             class="tm-tool-call__copy"
                             data-copied="@(_copied ? "true" : null)"
                             aria-label="@Loc["TmToolCallCard_CopyFor", DisplayName]"
+                            @ref="_copyButton"
                             @onclick="CopyAsync">
                         <TmIcon Name="@(_copied ? IconNames.Check : IconNames.Copy)" Size="IconSize.Sm" />
                     </button>
                 }
                 @if (CanRetry)
                 {
+                    @* aria-disabled, never the native disabled attribute: a natively disabled button
+                       leaves the tab order and the browser moves focus to body, so a reader who just
+                       activated Retry from the keyboard would lose their place mid re-run (WCAG 2.4.3).
+                       The button stays focusable; the RetryAsync guard is the one re-entry fuse. The
+                       focus/blur pair tracks whether the reader's focus is ON the button, so the moment
+                       a successful re-run removes it the card can hand the focus to its next control
+                       instead of letting the browser drop it to body. *@
                     <button type="button"
                             class="tm-tool-call__retry"
                             aria-label="@Loc["TmToolCallCard_RetryFor", DisplayName]"
-                            disabled="@_retrying"
+                            aria-disabled="@(_retrying ? "true" : null)"
+                            @onfocus="OnRetryFocus"
+                            @onblur="OnRetryBlur"
                             @onclick="RetryAsync">
                         <TmIcon Name="@IconNames.Refresh" Size="IconSize.Sm" />
                         <span>@Loc["TmToolCallCard_Retry"]</span>
@@ -64,6 +76,7 @@
                             aria-expanded="@(_expanded ? "true" : "false")"
                             aria-controls="@(_expanded ? _detailsId : null)"
                             aria-label="@Loc["TmToolCallCard_DetailsFor", DisplayName]"
+                            @ref="_toggleButton"
                             @onclick="Toggle">
                         <TmIcon Name="@IconNames.ChevronDown" Size="IconSize.Sm" />
                     </button>
@@ -143,7 +156,11 @@
     private bool _expanded;
     private bool _copied;
     private bool _retrying;
+    private bool _retryFocused;
     private bool _disposed;
+    private ElementReference _root;
+    private ElementReference _copyButton;
+    private ElementReference _toggleButton;
     private CancellationTokenSource? _copiedReset;
 
     /// <summary>
@@ -162,9 +179,15 @@
     /// <summary>
     /// Raised when the reader asks to run a failed call again. The Retry button renders only for a call in
     /// <see cref="AiToolCallStatus.Failed"/> with a bound handler — never a button that does nothing. While
-    /// the handler's task runs the button disables itself and reads disabled: dimmed through
-    /// <c>--tm-opacity-disabled</c>, a not-allowed cursor and no hover fill; forced colors paint it
-    /// GrayText (at full opacity — the state is the system colour, never a dim).
+    /// the handler's task runs the button marks itself <c>aria-disabled="true"</c> and reads disabled:
+    /// dimmed through <c>--tm-opacity-disabled</c>, a not-allowed cursor and no hover fill; forced colors
+    /// paint it GrayText (at full opacity — the state is the system colour, never a dim). The attribute is
+    /// aria-disabled rather than the native <c>disabled</c> on purpose: the button stays focusable, so a
+    /// reader who activated it from the keyboard keeps their place while the re-run is in flight
+    /// (WCAG 2.4.3). The start of the re-run is announced through the card's live region
+    /// (<c>TmToolCallCard_Retrying</c>), and when the re-run succeeds and the Retry disappears, the focus
+    /// the reader left on it moves to the card's disclosure toggle (or the Copy button, or the card
+    /// itself) instead of falling to <c>body</c>.
     /// </summary>
     [Parameter] public EventCallback OnRetry { get; set; }
 
@@ -332,7 +355,7 @@
     }
 
     /// <inheritdoc />
-    protected override void OnAfterRender(bool firstRender)
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (IsLive && Elapsed is not null)
         {
@@ -341,6 +364,28 @@
         else
         {
             _ticker?.Stop();
+        }
+
+        // The Retry the reader activated is gone — a successful re-run turned the call succeeded and the
+        // button renders only for a failed call. A removed focused element drops the focus to body, so the
+        // card hands it to its next control instead (WCAG 2.4.3): the disclosure toggle first (the failed
+        // call auto-expanded, so the details are what the reader most likely wants next), the Copy button
+        // when there is nothing to expand, the card itself as the last resort.
+        if (_retryFocused && !CanRetry)
+        {
+            _retryFocused = false;
+            if (ToolCall is not null)
+            {
+                try
+                {
+                    await (CanExpand ? _toggleButton : CanCopy ? _copyButton : _root).FocusAsync();
+                }
+                catch (Exception exception) when (IsInteropFailure(exception))
+                {
+                    // The card left the page between the render and the focus hop; the browser owns the
+                    // focus from here.
+                }
+            }
         }
     }
 
@@ -382,9 +427,14 @@
     private void Toggle() => _expanded = !_expanded;
 
     /// <summary>
-    /// Runs the host's retry. The button disables itself and the handler refuses re-entry while the host's
-    /// task is pending: a reader who clicks twice on a slow re-run would otherwise fire
-    /// <see cref="OnRetry"/> twice for one intent.
+    /// Runs the host's retry. While the host's task is pending the button carries
+    /// <c>aria-disabled="true"</c> and this handler refuses re-entry: a reader who activates twice on a
+    /// slow re-run would otherwise fire <see cref="OnRetry"/> twice for one intent. The guard is the only
+    /// re-entry fuse — aria-disabled announces the state but does not block activation. The start of the
+    /// re-run goes through the card's live region (<c>TmToolCallCard_Retrying</c>), so a screen reader
+    /// hears the action land before the status transitions take over the same region; a "retrying" note
+    /// the host never replaced with a status announcement is cleared again when the task ends, so it
+    /// cannot linger as a stale claim.
     /// </summary>
     private async Task RetryAsync()
     {
@@ -394,6 +444,7 @@
         }
 
         _retrying = true;
+        _liveAnnouncement = Loc["TmToolCallCard_Retrying", DisplayName];
         try
         {
             await OnRetry.InvokeAsync();
@@ -401,6 +452,24 @@
         finally
         {
             _retrying = false;
+            if (string.Equals(_liveAnnouncement, Loc["TmToolCallCard_Retrying", DisplayName], StringComparison.Ordinal))
+            {
+                _liveAnnouncement = string.Empty;
+            }
+        }
+    }
+
+    private void OnRetryFocus() => _retryFocused = true;
+
+    private void OnRetryBlur()
+    {
+        // A blur while the retry is still rendered is the reader moving on — forget the focus, the
+        // hand-off must not steal it back. A blur arriving once the re-run already flipped the status
+        // is the browser reacting to the button's REMOVAL (Chrome fires blur when the focused element
+        // leaves the DOM); that one must not cancel the hand-off OnAfterRenderAsync is about to make.
+        if (CanRetry)
+        {
+            _retryFocused = false;
         }
     }
 

@@ -38,7 +38,7 @@ public class AiConversationDemoPageTests : DemoPageLocalizationTestBase
     private static readonly TimeSpan HostDrivenBusy = TimeSpan.FromMilliseconds(2_500);
 
     /// <summary>Mirrors the page's <c>SlowRetryMs</c> — how long the disabled-states retry stays in flight.</summary>
-    private static readonly TimeSpan SlowRetry = TimeSpan.FromMilliseconds(3_000);
+    private static readonly TimeSpan SlowRetry = TimeSpan.FromMilliseconds(5_000);
 
     private readonly FakeTimeProvider _clock = new();
 
@@ -221,11 +221,13 @@ public class AiConversationDemoPageTests : DemoPageLocalizationTestBase
     }
 
     /// <summary>
-    /// Plan b75365fb fáze 4b: the disabled-states card is the E2E surface of the unified disabled idiom —
-    /// a failed tool call whose retry stays in flight (on the injected <see cref="TimeProvider"/>, so the
-    /// test drives it with the fake clock) until the host's re-run completes. While it is in flight the
-    /// retry carries the disabled attribute; the card's reset button is disabled while there is nothing
-    /// to reset and restores the failed sample afterwards.
+    /// Plan b75365fb fáze 4b/4d: the disabled-states card is the E2E surface of the unified disabled
+    /// idiom — a failed tool call whose retry stays in flight (on the injected <see cref="TimeProvider"/>,
+    /// so the test drives it with the fake clock) until the host's re-run completes. While it is in flight
+    /// the retry carries <c>aria-disabled="true"</c> and NOT the native disabled attribute (the button
+    /// keeps its tab stop, WCAG 2.4.3); the card's reset button is disabled while there is nothing to
+    /// reset and restores the failed sample afterwards. The slow-retry counter the E2E reads stays at
+    /// one even when the in-flight retry is activated a second time (the refusal guard).
     /// </summary>
     [Fact]
     public async Task DisabledStatesDemo_RetryInFlight_DisablesTheRetryUntilTheClockRunsOut()
@@ -233,20 +235,30 @@ public class AiConversationDemoPageTests : DemoPageLocalizationTestBase
         var cut = Render<AiConversationPage>();
 
         var retry = cut.Find("[data-testid='ai-disabled-states-demo'] .tm-tool-call--failed .tm-tool-call__retry");
-        retry.HasAttribute("disabled").Should().BeFalse(
+        retry.HasAttribute("aria-disabled").Should().BeFalse(
             "the retry starts enabled, so the E2E can read the enabled look first");
         cut.Find("[data-testid='ai-demo-retry-reset']").HasAttribute("disabled").Should().BeTrue(
             "there is nothing to reset while the sample is still failed");
+        cut.Find("[data-testid='ai-demo-slow-retry-count-value']").TextContent.Should().Be("0",
+            "the count label is ONE localized format key; the number sits in its own span for an exact read");
 
         // The click handler awaits the slow re-run on the fake clock: do not await the click yet.
         var inFlight = cut.InvokeAsync(() =>
             cut.Find("[data-testid='ai-disabled-states-demo'] .tm-tool-call__retry").Click());
 
-        cut.Find("[data-testid='ai-disabled-states-demo'] .tm-tool-call__retry")
-            .HasAttribute("disabled").Should().BeTrue(
-                "a retry in flight renders disabled — the state the E2E reads the computed look of");
+        var inFlightRetry = cut.Find("[data-testid='ai-disabled-states-demo'] .tm-tool-call__retry");
+        inFlightRetry.GetAttribute("aria-disabled").Should().Be("true",
+            "a retry in flight announces itself disabled — the state the E2E reads the computed look of");
+        inFlightRetry.HasAttribute("disabled").Should().BeFalse(
+            "aria-disabled, never native disabled: the button keeps its tab stop mid re-run (WCAG 2.4.3)");
         cut.Find("[data-testid='ai-demo-retry-reset']").HasAttribute("disabled").Should().BeTrue(
             "the in-flight call is still failed — there is nothing to reset until the re-run completes");
+
+        // A second activation during the in-flight window must not fire the handler again — the demo
+        // counter is the observable the E2E double-click reads.
+        cut.Find("[data-testid='ai-disabled-states-demo'] .tm-tool-call__retry").Click();
+        cut.Find("[data-testid='ai-demo-slow-retry-count-value']").TextContent.Should().Be("1",
+            "one reader action means one retry — the refusal guard swallowed the second activation");
 
         await cut.InvokeAsync(() => _clock.Advance(SlowRetry));
         await inFlight;
@@ -271,6 +283,8 @@ public class AiConversationDemoPageTests : DemoPageLocalizationTestBase
         cut.Find("[data-testid='ai-demo-retry-reset']").Click();
         cut.Find("[data-testid='ai-disabled-states-demo'] .tm-tool-call--failed .tm-tool-call__retry")
             .Should().NotBeNull("the reset restores the failed sample so the in-flight retry can be replayed");
+        cut.Find("[data-testid='ai-demo-slow-retry-count-value']").TextContent.Should().Be("0",
+            "the reset replays the sample from zero, so the next in-flight window starts from a clean count");
     }
 
     /// <summary>

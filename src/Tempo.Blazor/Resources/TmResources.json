@@ -6653,6 +6653,7 @@
   "TmToolCallCard_Result": "Result",
   "TmToolCallCard_Retry": "Retry",
   "TmToolCallCard_RetryFor": "Retry {0}",
+  "TmToolCallCard_Retrying": "Retrying {0}…",
   "TmToolCallCard_Status_Cancelled": "Cancelled",
   "TmToolCallCard_Status_Failed": "Failed",
   "TmToolCallCard_Status_Queued": "Queued",

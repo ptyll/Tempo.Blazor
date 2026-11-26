@@ -177,7 +177,7 @@ public sealed class TmAiConversationCssTests
         css.Should().Contain("@media (forced-colors: active)");
         css.Should().Contain("outline-color: Highlight",
             "forced-color-adjust: none opts the focus ring out of the system palette, so the ring must ride Highlight");
-        css.Should().NotMatch(@"(?<![-\w])color:\s*Highlight\s*[;}]",
+        css.Should().NotMatchRegex(@"(?<![-\w])color:\s*Highlight\s*[;}]",
             "a Highlight-coloured label over Canvas has no contrast guarantee; a Highlight BACKGROUND takes HighlightText");
         css.Should().Contain("color: HighlightText",
             "the Stop pill keeps a Highlight background under forced colors, so its ink must be the HighlightText half of the pair");

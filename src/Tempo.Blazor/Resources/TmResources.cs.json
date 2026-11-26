@@ -6777,6 +6777,7 @@
   "TmToolCallCard_Result": "Výsledek",
   "TmToolCallCard_Retry": "Zkusit znovu",
   "TmToolCallCard_RetryFor": "Zkusit znovu {0}",
+  "TmToolCallCard_Retrying": "Opakuji {0}…",
   "TmToolCallCard_Status_Cancelled": "Zrušeno",
   "TmToolCallCard_Status_Failed": "Selhalo",
   "TmToolCallCard_Status_Queued": "Ve frontě",

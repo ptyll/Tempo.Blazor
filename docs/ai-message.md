@@ -93,10 +93,22 @@ Both components are also usable standalone (a tool-call timeline, an "agent is w
 ### Tool calls and reasoning
 
 - **Retry is a real action, once.** A card renders Retry only for a call in `Failed` with a bound
-  `OnRetry`; the control disables itself (and the handler refuses re-entry) until the host's task
-  completes, so a double click on a slow re-run cannot fire `OnRetry` twice. The in-flight button reads
-  disabled with the package's unified idiom: dimmed through `--tm-opacity-disabled`, a `not-allowed`
-  cursor and no hover fill (`:hover:not(:disabled)`); forced colors paint it `GrayText` at full opacity.
+  `OnRetry`; while the host's task runs the control carries `aria-disabled="true"` — never the native
+  `disabled` attribute, so the button keeps its tab stop and a keyboard reader who activated it does not
+  lose focus to `body` mid re-run (WCAG 2.4.3) — and the handler refuses re-entry, so a double click (or a
+  second Enter/Space) on a slow re-run cannot fire `OnRetry` twice. The start of the re-run is announced
+  through the card's single live region (`TmToolCallCard_Retrying` "Retrying {0}…"), then the status
+  transitions take the same region over ("Search: Done"); a "retrying" note the host never replaced with
+  a status announcement is cleared when the task ends, so it cannot linger. The in-flight button reads
+  disabled with the package's unified idiom: its CONTENT dimmed through `--tm-opacity-disabled`, a
+  `not-allowed` cursor and no hover fill (`:hover:not([aria-disabled="true"])`); forced colors paint it
+  `GrayText` at full opacity. The dim sits on the content (`> *`), never on the button box — an opacity
+  on the box would dim the focus outline with it, and the in-flight retry is exactly the control that
+  keeps the keyboard focus, so its focus indicator keeps the full-contrast token (WCAG 1.4.11). Once the
+  host's task completes the attribute is omitted again (not left as `"false"`), and if the re-run
+  succeeded, the focused Retry disappears with the failure: the card hands the focus to its disclosure
+  toggle (or the Copy button, or the card itself via `tabindex="-1"`) instead of letting the browser drop
+  it to `body` (WCAG 2.4.3).
   Inside a group the retry
   callback is bound to the specific call, so a host receives the call it has to run again.
 - **Redaction beats disclosure.** `AiToolCall.IsRedacted` renders a localized notice with the lock glyph
@@ -214,16 +226,19 @@ surviving link gets `target="_blank"` with `rel="noopener noreferrer nofollow"`.
   is refused. The **version buttons** at the edges of the switcher speak the same idiom (the shared dim,
   the refused-pointer cursor, no hover fill, `GrayText` at full opacity in forced colors), and so does a
   tool call's **in-flight Retry** — one disabled vocabulary across the whole package (decision
-  `AI-PACKAGE-DISABLED-IDIOM`): a button or chip on its own surface dims through the shared opacity token,
-  while a text input, a trigger or an aria-disabled control steps back through the disabled ink token
-  instead, and a literal `opacity` value or a `cursor: default` is banned in every disabled rule — the
+  `AI-PACKAGE-DISABLED-IDIOM`): the KIND of element picks the look, not the attribute that carries the
+  state — a button or chip on its own surface dims through the shared opacity token, while a text input,
+  a trigger or an inline step control steps back through the disabled ink token instead; an in-flight
+  action button the reader just activated carries `aria-disabled="true"`, never the native `disabled`
+  (the handler's guard is the only re-entry fuse); a focusable element dims its CONTENT (`> *`), never
+  its box, so its focus ring keeps full contrast (WCAG 1.4.11); and a literal `opacity` value or a `cursor: default` is banned in every disabled rule — the
   package-wide ratchet (`PackageCss_DisabledRules_SpeakTheSharedDisabledIdiom`) sweeps the `:disabled`,
   `[disabled]` and `[aria-disabled="true"]` selectors for exactly those two drift shapes.
 - **Reduced motion** — this component adds no animation of its own; the streaming caret
   (`.tm-ai-streaming`) and the thinking pair (`.tm-ai-shimmer`, the spinner) are package-level primitives
   that carry their own `prefers-reduced-motion` blocks.
 - **Live regions** — each part owns exactly one, and they announce different things: the card's status
-  transition and copy confirmation, the panel's finished reasoning, the pill's phase. A part never
+  transition, retry start ("Retrying {0}…") and copy confirmation, the panel's finished reasoning, the pill's phase. A part never
   renames a control to announce something.
 
 ## Interactive state does not leak

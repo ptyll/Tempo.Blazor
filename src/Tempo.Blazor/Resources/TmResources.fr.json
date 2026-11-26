@@ -6715,6 +6715,7 @@
   "TmToolCallCard_Result": "Résultat",
   "TmToolCallCard_Retry": "Réessayer",
   "TmToolCallCard_RetryFor": "Réessayer {0}",
+  "TmToolCallCard_Retrying": "Nouvelle tentative : {0}…",
   "TmToolCallCard_Status_Cancelled": "Annulé",
   "TmToolCallCard_Status_Failed": "Échec",
   "TmToolCallCard_Status_Queued": "En attente",

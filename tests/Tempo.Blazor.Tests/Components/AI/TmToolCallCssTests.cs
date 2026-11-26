@@ -175,7 +175,7 @@ public sealed class TmToolCallCssTests
             var css = Stylesheet(file);
             css.Should().Contain("outline-color: Highlight",
                 $"{file} pins focus rings to a theme token inside its forced-colors block otherwise");
-            css.Should().NotMatch(@"(?<![-\w])color:\s*Highlight",
+            css.Should().NotMatchRegex(@"(?<![-\w])color:\s*Highlight",
                 $"{file} must not paint a Highlight-coloured label over Canvas — highlight CANVAS is the fill");
         }
     }
@@ -193,7 +193,7 @@ public sealed class TmToolCallCssTests
 
         spinner.Should().NotBeNullOrWhiteSpace("the stylesheet declares the spinner");
         spinner.Should().Contain("var(--tm-space-4)").And.Contain("var(--tm-border-width)");
-        spinner.Should().NotMatch(@"(?<![-\w])\d+(?:\.\d+)?(?:rem|px|em)\b",
+        spinner.Should().NotMatchRegex(@"(?<![-\w])\d+(?:\.\d+)?(?:rem|px|em)\b",
             "a hardcoded spinner size ignores the spacing scale");
     }
 
@@ -202,29 +202,45 @@ public sealed class TmToolCallCssTests
     /// <c>opacity: 0.6</c> and <c>cursor: default</c>, so it read differently from every other disabled
     /// control of the package. The disabled retry speaks the shared idiom the follow-up chip already
     /// carries: the <c>--tm-opacity-disabled</c> token (never a literal alpha) and the
-    /// <c>not-allowed</c> cursor. Mutant guard: restoring the literal or the default cursor turns this
-    /// red.
+    /// <c>not-allowed</c> cursor. Fáze 4d moved the state from the native <c>:disabled</c> to
+    /// <c>[aria-disabled="true"]</c> — the button stays focusable while the host's task runs (WCAG
+    /// 2.4.3) — so the same idiom must hang on the attribute selector. The review of fáze 4d then split
+    /// the rule in two (WCAG 1.4.11): the BUTTON box carries only the cursor, because an opacity on the
+    /// box would dim the focus outline with it — and the in-flight retry is exactly the control that
+    /// keeps the keyboard focus; the DIM moved to the content (<c>&gt; *</c>), where it paints the
+    /// identical look over the transparent box. The <c>&gt; *</c> selector still carries the
+    /// <c>[aria-disabled="true"]</c> marker, so the package ratchet
+    /// (<c>PackageCss_DisabledRules_SpeakTheSharedDisabledIdiom</c>) sweeps it for literal alphas.
+    /// Mutant guards: restoring the literal or the default cursor turns this red, and so does an
+    /// opacity back on the button block (the focus ring would dim again).
     /// </summary>
     [Fact]
     public void DisabledRetry_DimsThroughTheSharedToken_AndRefusesThePointer()
     {
-        var disabled = ThemeCss.Normalise(Block(Stylesheet("_ai-tool-call.css"), ".tm-tool-call__retry:disabled"));
+        var button = ThemeCss.Normalise(Block(Stylesheet("_ai-tool-call.css"), ".tm-tool-call__retry[aria-disabled=\"true\"]"));
 
-        disabled.Should().Contain("opacity: var(--tm-opacity-disabled)",
-            "the disabled retry dims through the shared token, never a literal alpha");
-        disabled.Should().Contain("cursor: not-allowed",
+        button.Should().Contain("cursor: not-allowed",
             "a refused click must say so under the pointer, not keep the default arrow");
-        disabled.Should().NotContain("cursor: default",
+        button.Should().NotContain("cursor: default",
             "cursor: default is the pre-4b idiom — the refused click shows not-allowed");
-        disabled.Should().NotMatch(@"(?<![-\w])opacity:\s*[\d.]",
+        button.Should().NotMatchRegex(@"(?<![-\w])opacity\s*:",
+            "an opacity on the button box dims the focus outline with it — the in-flight retry keeps " +
+            "the keyboard focus, so its focus indicator must keep full contrast (WCAG 1.4.11); the dim " +
+            "belongs on the content");
+
+        var content = ThemeCss.Normalise(Block(Stylesheet("_ai-tool-call.css"), ".tm-tool-call__retry[aria-disabled=\"true\"] > *"));
+
+        content.Should().Contain("opacity: var(--tm-opacity-disabled)",
+            "the disabled retry dims its content through the shared token, never a literal alpha");
+        content.Should().NotMatchRegex(@"(?<![-\w])opacity:\s*[\d.]",
             "a literal opacity pins one value the token cannot rescale");
     }
 
     /// <summary>
     /// The hover fill is an affordance of the ENABLED retry only: a retry in flight under the pointer
-    /// keeps its resting surface, so every <c>:hover</c> rule that reaches the retry excludes
-    /// <c>:disabled</c> (the follow-up chip and the version buttons carry the same
-    /// <c>:hover:not(:disabled)</c> shape).
+    /// keeps its resting surface, so every <c>:hover</c> rule that reaches the retry excludes the
+    /// aria-disabled state (<c>:hover:not([aria-disabled="true"])</c> — the scheduled-runs day step
+    /// carries the same attribute-form guard).
     /// </summary>
     [Fact]
     public void Retry_HoverFill_AppliesOnlyWhileEnabled()
@@ -237,35 +253,60 @@ public sealed class TmToolCallCssTests
             .ToList();
 
         hoverRules.Should().NotBeEmpty("the enabled retry keeps its hover fill");
-        hoverRules.Should().OnlyContain(selector => selector.Contains(":not(:disabled)", StringComparison.Ordinal),
-            "a disabled retry under the pointer must keep its resting surface — the hover fill is the " +
+        hoverRules.Should().OnlyContain(selector => selector.Contains(":not([aria-disabled=\"true\"])", StringComparison.Ordinal),
+            "an in-flight retry under the pointer must keep its resting surface — the hover fill is the " +
             "enabled control's affordance. Offending: {0}", string.Join(", ", hoverRules));
     }
 
     /// <summary>
-    /// The Retry control renders <c>disabled</c> while the host's first retry is still in flight. Inside the
-    /// forced-colors block it paints system <c>CanvasText</c> like every other button, and the resting
-    /// <c>opacity: 0.6</c> is a filter rather than an ink the high-contrast user chose — over <c>Canvas</c> a
-    /// disabled Retry can read as present as an enabled one. The system <c>GrayText</c> keyword is the
-    /// disabled ink Windows itself uses, so the state survives the mode. And because the surface keeps
-    /// author colours, the resting dim must be dropped: opacity over a system colour lowers the contrast
-    /// the system itself guarantees, so the rule pins <c>opacity: 1</c> and lets GrayText alone carry the
-    /// state (the same rule <c>_ai-message.css</c> carries for its disabled follow-up chip).
+    /// The Retry control renders <c>aria-disabled="true"</c> while the host's first retry is still in
+    /// flight. Inside the forced-colors block it paints system <c>CanvasText</c> like every other button,
+    /// and the resting content dim is a filter rather than an ink the high-contrast user chose — over
+    /// <c>Canvas</c> a disabled Retry can read as present as an enabled one. The system <c>GrayText</c>
+    /// keyword is the disabled ink Windows itself uses, so the state survives the mode. And because the
+    /// surface keeps author colours, the resting dim must be dropped: opacity over a system colour
+    /// lowers the contrast the system itself guarantees, so the content rule pins <c>opacity: 1</c> and
+    /// lets GrayText alone carry the state (the same rule <c>_ai-message.css</c> carries for its
+    /// disabled follow-up chip). Since the fáze-4d review the dim lives on the content
+    /// (<c>&gt; *</c>), so the forced-colors override targets the same children.
     /// </summary>
     [Fact]
     public void ForcedColorsPaintTheDisabledRetryWithTheSystemGrayText()
     {
         var block = Block(Stylesheet("_ai-tool-call.css"), "@media (forced-colors: active)");
 
-        var rule = Regex.Match(block, @"\.tm-tool-call__retry:disabled\s*\{([^}]*)\}");
+        var rule = Regex.Match(block, @"\.tm-tool-call__retry\[aria-disabled=""true""\]\s*\{([^}]*)\}");
 
         rule.Success.Should().BeTrue(
             "forced colors paint the disabled Retry with CanvasText unless it gets a disabled-specific rule");
         rule.Groups[1].Value.Should().Contain("color: GrayText");
         rule.Groups[1].Value.Should().Contain("border-color: GrayText");
-        rule.Groups[1].Value.Should().Contain("opacity: 1",
+
+        var content = Regex.Match(block, @"\.tm-tool-call__retry\[aria-disabled=""true""\] > \*\s*\{([^}]*)\}");
+
+        content.Success.Should().BeTrue(
+            "the resting dim lives on the content children, so the forced-colors override must reach " +
+            "the same children — a dim left in place would lower the contrast GrayText guarantees");
+        content.Groups[1].Value.Should().Contain("opacity: 1",
             "opacity over a system colour lowers its guaranteed contrast — the disabled state is GrayText " +
             "alone, so the resting dim must be dropped in forced colors");
+    }
+
+    /// <summary>
+    /// The card root carries <c>tabindex="-1"</c> as the programmatic focus fallback of the
+    /// retry-completion hand-off (WCAG 2.4.3): focusable from script, never a tab stop. The fallback
+    /// adds no tab stop and no component-specific focus style — the card CSS has no root focus rule (the
+    /// global <c>:focus-visible</c> ring from base.css may still show after a keyboard hand-off, which is
+    /// fine); only the action buttons and the payload boxes own a component <c>:focus-visible</c> rule.
+    /// </summary>
+    [Fact]
+    public void TheCardRoot_IsAProgrammaticFocusFallback_WithoutAFocusRingOfItsOwn()
+    {
+        var css = Stylesheet("_ai-tool-call.css");
+
+        css.Should().NotMatchRegex(@"\.tm-tool-call:focus",
+            "the card root never paints its own focus ring — the retry-completion fallback focus must " +
+            "stay invisible; only the buttons and the payload boxes own :focus-visible rules");
     }
 
     /// <summary>
