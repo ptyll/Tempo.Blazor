@@ -60,7 +60,17 @@ public partial class TmTimePicker
 
     /// <summary>
     /// Renders the nested <c>TmTimeInput</c> read-only and blocks the overlay from opening.
-    /// Never assigned inside the picker. Defaults to false.
+    /// Where the segments render (every layout except Auto on a phone) the overlay trigger is
+    /// not rendered at all — the read-only segments already carry the value and the lock
+    /// (<c>readonly</c> + <c>aria-readonly</c>), so a button that opens nothing would be a dead
+    /// tab stop. On a phone (Auto) the trigger STAYS as the value's carrier: it announces the
+    /// lock as <c>aria-disabled="true"</c> with <c>aria-haspopup="false"</c>, no
+    /// <c>aria-expanded</c>/<c>aria-controls</c> and no opening icon, keeps its tab stop and
+    /// <see cref="AriaDescribedBy"/> reaches it, so a host can describe WHY the field is locked
+    /// (<c>aria-readonly</c> is not a supported attribute on <c>role=button</c>). The root
+    /// carries the <c>tm-time-picker--readonly</c> class so the locked trigger surface tints
+    /// like the other read-only inputs (<c>--tm-bg-surface-secondary</c>, never the disabled
+    /// colours). Never assigned inside the picker. Defaults to false.
     /// </summary>
     [Parameter] public bool ReadOnly { get; set; }
 
@@ -148,7 +158,9 @@ public partial class TmTimePicker
 
     /// <summary>
     /// Extra ids referenced from every segment / spinbutton <c>aria-describedby</c>. Forwarded to
-    /// the nested input and selector.
+    /// the nested input and selector, and rendered on the overlay trigger as well — so the
+    /// description reaches the locked phone trigger too (the desktop locked trigger is not
+    /// rendered; the segments carry the description there).
     /// </summary>
     [Parameter] public string? AriaDescribedBy { get; set; }
 

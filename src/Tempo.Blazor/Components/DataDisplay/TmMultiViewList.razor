@@ -154,14 +154,14 @@
     {
         <div class="tm-mvl-cards-toolbar">
             <button type="button" @ref="_cardsSortTrigger" class="tm-btn tm-btn-outline tm-btn-sm tm-mvl-cards-toolbar__sort"
-                    aria-haspopup="dialog" aria-expanded="@_cardsSortOpen"
+                    aria-haspopup="dialog" aria-expanded="@(_cardsSortOpen ? "true" : "false")"
                     @onclick="ToggleCardsSortAsync">
                 @Loc["TmDataTable_Sort"]
             </button>
             @if (ShouldRenderExternalFilterBuilder())
             {
                 <button type="button" @ref="_cardsFilterTrigger" class="tm-btn tm-btn-outline tm-btn-sm tm-mvl-cards-toolbar__filter"
-                        aria-haspopup="dialog" aria-expanded="@_cardsFilterOpen"
+                        aria-haspopup="dialog" aria-expanded="@(_cardsFilterOpen ? "true" : "false")"
                         @onclick="ToggleCardsFilterAsync">
                     @Loc["TmDataTable_Filter"]
                 </button>

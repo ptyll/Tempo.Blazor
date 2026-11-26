@@ -28,7 +28,7 @@
                 class="tm-date-range-trigger"
                 disabled="@Disabled"
                 aria-haspopup="true"
-                aria-expanded="@_isOpen"
+                aria-expanded="@(_isOpen ? "true" : "false")"
                 aria-labelledby="@TriggerLabelledBy"
                 @attributes="AriaAttributes"
                 @onclick="TogglePopup">

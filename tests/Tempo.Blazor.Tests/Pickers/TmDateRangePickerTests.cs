@@ -215,4 +215,38 @@ public class TmDateRangePickerTests : LocalizationTestBase
         // Both calendars render inside the trapped popup.
         root.QuerySelectorAll(".tm-calendar").Should().HaveCount(2);
     }
+
+    // ── Fáze 4c (plan b75365fb): aria-expanded is a STRING state — a bool value renders the
+    //    invalid empty attribute when open and drops the attribute entirely when closed. ──────
+
+    [Fact]
+    public void DateRangePicker_TriggerAriaExpanded_IsAlwaysAString()
+    {
+        var cut = Render<TmDateRangePicker>();
+
+        var trigger = cut.Find(".tm-date-range-trigger");
+        trigger.GetAttribute("aria-expanded").Should().Be("false",
+            "a closed trigger announces collapsed with the string \"false\", never an omitted attribute");
+
+        trigger.Click();
+        cut.Find(".tm-date-range-trigger").GetAttribute("aria-expanded").Should().Be("true",
+            "an open trigger announces expanded with the string \"true\", never the invalid empty value");
+    }
+
+    [Fact]
+    public void DateRangePicker_ConsumerAriaAttributes_TakePrecedence()
+    {
+        // The consumer aria-* splat sits AFTER the explicit attributes, so a consumer value wins
+        // even over the live open/close state.
+        var cut = Render<TmDateRangePicker>(p => p
+            .AddUnmatched("aria-expanded", "false")
+            .AddUnmatched("aria-haspopup", "dialog"));
+
+        var trigger = cut.Find(".tm-date-range-trigger");
+        trigger.GetAttribute("aria-haspopup").Should().Be("dialog");
+
+        trigger.Click();
+        cut.Find(".tm-date-range-trigger").GetAttribute("aria-expanded").Should().Be("false",
+            "a consumer attribute wins over the component state");
+    }
 }

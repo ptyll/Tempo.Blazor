@@ -150,18 +150,39 @@ public class TmTimePickerCommitTests : LocalizationTestBase
     public void ReadOnly_DoesNotOpen()
     {
         SetupOverlayAndSelectorModules();
-        var cut = Render<TmTimePicker>(p => p
+        // Fáze 4c review round: on a desktop the locked picker renders no trigger at all (the
+        // read-only segments carry the value and the lock); on a phone the trigger stays as the
+        // value's carrier but opens nothing — it no longer carries the popup contract
+        // (aria-expanded/aria-controls gone, the lock named by aria-disabled).
+        var desktop = Render<TmTimePicker>(p => p
             .Add(c => c.Presentation, TimePickerPresentation.Popup)
             .Add(c => c.Value, new TimeOnly(14, 30))
             .Add(c => c.ReadOnly, true)
             .Add(c => c.HourCycle, TimeHourCycle.H23)
             .Add(c => c.Label, "Meeting"));
 
-        cut.Find(".tm-time-picker-body").GetAttribute("aria-readonly").Should().Be("true");
-        cut.Find(".tm-time-picker__trigger").Click();
+        desktop.FindAll(".tm-time-picker__trigger").Should().BeEmpty();
+        desktop.Find(".tm-time-picker-body").HasAttribute("aria-readonly").Should().BeFalse();
+        desktop.FindComponents<TmOverlayPanel>().Should().BeEmpty();
+
+        var cut = Render<TmTimePicker>(p => p
+            .Add(c => c.Presentation, TimePickerPresentation.Auto)
+            .Add(c => c.LayoutMode, TmLayoutMode.Mobile)
+            .Add(c => c.Value, new TimeOnly(14, 30))
+            .Add(c => c.ReadOnly, true)
+            .Add(c => c.HourCycle, TimeHourCycle.H23)
+            .Add(c => c.Label, "Meeting"));
+
+        cut.Find(".tm-time-picker-body").HasAttribute("aria-readonly").Should().BeFalse();
+        var trigger = cut.Find(".tm-time-picker__trigger");
+        trigger.HasAttribute("aria-expanded").Should().BeFalse();
+        trigger.GetAttribute("aria-haspopup").Should().Be("false");
+        trigger.GetAttribute("aria-disabled").Should().Be("true");
+
+        trigger.Click();
 
         cut.FindComponents<TmOverlayPanel>().Should().BeEmpty();
-        cut.Find(".tm-time-picker__trigger").GetAttribute("aria-expanded").Should().Be("false");
+        cut.FindAll(".tm-drawer").Should().BeEmpty();
     }
 
     private static bool ConfirmingFlag(TmTimePicker instance)

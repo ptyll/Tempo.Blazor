@@ -2,7 +2,7 @@
 @using Tempo.Blazor.Abstractions.Layout
 @using Tempo.Blazor.Components.Icons
 
-<div class="tm-time-picker @Class @(IsOutOfRange ? "tm-time-picker--invalid" : "") @(IsMobileAuto ? "tm-time-picker--trigger-only" : null)"
+<div class="tm-time-picker @Class @(IsOutOfRange ? "tm-time-picker--invalid" : "") @(IsMobileAuto ? "tm-time-picker--trigger-only" : null) @(ReadOnly ? "tm-time-picker--readonly" : null)"
      id="@Id"
      @attributes="RootAttributes">
 
@@ -27,14 +27,16 @@
 
     @* Composite control (hours/minutes/seconds + clear / clock trigger): the label's `for`
        targets the first segment (or the trigger in Auto-mobile), and the body is a named group
-       so assistive tech announces "{label}, group".
-       N148: no aria-disabled for out-of-range values — the segments stay editable, so "disabled"
-       was the wrong signal; the invalid state is announced via aria-invalid on the segments
+       so assistive tech announces "{label}, group". No aria-readonly here: ARIA 1.2 does not
+       support it on role=group (axe aria-allowed-attr), and the lock is already announced on
+       the readonly segments — and, with Popup/Auto on a phone (the only locked layout that
+       still renders a trigger), by aria-disabled on the trigger. N148: no aria-disabled for
+       out-of-range values either — the segments stay editable, so "disabled" was the wrong
+       signal; the invalid state is announced via aria-invalid on the segments
        (Invalid=@IsOutOfRange below) and painted by the --invalid class on the wrapper. *@
     <div class="tm-time-picker-body"
          role="group"
          aria-labelledby="@GroupLabelledBy"
-         aria-readonly="@(ReadOnly ? "true" : null)"
          @attributes="AriaAttributes">
         @if (ShowSegments)
         {
@@ -64,16 +66,28 @@
             }
         }
 
-        @if (UsesOverlay)
+        @if (UsesOverlay && !(ReadOnly && ShowSegments))
         {
+            @* ReadOnly on a layout WITH segments renders no trigger at all — the read-only
+               segments already carry the value and the lock (readonly + aria-readonly), so a
+               button that opens nothing would be a dead tab stop. On a phone (Auto) the segments
+               are hidden, so the trigger STAYS as the value's carrier: it announces the lock as
+               aria-disabled="true" with aria-haspopup="false", no aria-expanded/aria-controls
+               (aria-readonly is not a supported attribute on role=button) and no opening icon —
+               nothing on it advertises a popup that can never open. It keeps its natural tab stop
+               and ToggleOverlayAsync refuses every activation. AriaDescribedBy reaches the locked
+               trigger too, so a host can describe WHY the field is locked. The editable trigger
+               is unchanged. *@
             <button type="button"
                     @ref="_triggerRef"
                     id="@EffectiveTriggerId"
                     class="tm-time-picker__trigger"
                     disabled="@Disabled"
-                    aria-haspopup="dialog"
-                    aria-expanded="@(_isOpen ? "true" : "false")"
-                    aria-controls="@_overlayId"
+                    aria-haspopup="@(ReadOnly ? "false" : "dialog")"
+                    aria-expanded="@(ReadOnly ? null : _isOpen ? "true" : "false")"
+                    aria-controls="@(ReadOnly ? null : _overlayId)"
+                    aria-disabled="@(ReadOnly ? "true" : null)"
+                    aria-describedby="@AriaDescribedBy"
                     aria-label="@TriggerAriaLabel"
                     aria-labelledby="@TriggerLabelledBy"
                     @onclick="ToggleOverlayAsync">
@@ -81,9 +95,12 @@
                 {
                     <span id="@_valueId" class="tm-time-picker__value">@DisplayedValue</span>
                 }
-                <span class="tm-time-picker__icon" aria-hidden="true">
-                    <TmIcon Name="@IconNames.Clock" Size="IconSize.Sm" />
-                </span>
+                @if (!ReadOnly)
+                {
+                    <span class="tm-time-picker__icon" aria-hidden="true">
+                        <TmIcon Name="@IconNames.Clock" Size="IconSize.Sm" />
+                    </span>
+                }
             </button>
         }
     </div>

@@ -34,6 +34,17 @@
 }
 .tm-time-picker__trigger:disabled { opacity: var(--tm-opacity-disabled); cursor: not-allowed; }
 
+/* ReadOnly keeps surface colours (unlike Disabled) and still accepts focus. The surface matches
+   .tm-time-input--readonly / .tm-date-picker--readonly .tm-date-picker-trigger: a locked value
+   reads through the secondary-surface token, never the disabled ink or an opacity fade. */
+.tm-time-picker--readonly .tm-time-picker__trigger {
+  cursor: default;
+  background: var(--tm-bg-surface-secondary);
+}
+.tm-time-picker--readonly .tm-time-picker__trigger:hover:not(:disabled) {
+  border-color: var(--tm-border-color);
+}
+
 .tm-time-picker__value {
   flex: 1 1 auto;
   min-inline-size: 0;

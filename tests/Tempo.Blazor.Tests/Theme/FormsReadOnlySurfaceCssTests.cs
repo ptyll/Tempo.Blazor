@@ -16,6 +16,7 @@ public sealed class FormsReadOnlySurfaceCssTests
     private const string InputStylesheet = "_input.css";
     private const string DropdownStylesheet = "_filterable-dropdown.css";
     private const string DatePickerStylesheet = "_date-picker.css";
+    private const string TimePickerStylesheet = "_time-picker.css";
 
     private static string Rule(string stylesheet, string selector)
         => ThemeCss.RuleDeclarations(ThemeCss.ComponentCss(stylesheet), selector);
@@ -96,6 +97,32 @@ public sealed class FormsReadOnlySurfaceCssTests
 
         var hover = Rule(DatePickerStylesheet,
             ".tm-date-picker--readonly .tm-date-picker-trigger:hover:not(:disabled)");
+        hover.Should().Contain("border-color: var(--tm-border-color)",
+            "a locked trigger never advertises the primary hover border");
+    }
+
+    /// <summary>
+    /// Review round (plan b75365fb, Fáze 4c): the locked time picker overlay trigger speaks the
+    /// same read-only surface idiom as the date picker trigger — the secondary-surface tint, the
+    /// default cursor, never the disabled ink and never an opacity fade.
+    /// </summary>
+    [Fact]
+    public void TheTimePickerReadonlyTriggerMatchesTheOtherLockedSurfaces()
+    {
+        var body = Rule(TimePickerStylesheet, ".tm-time-picker--readonly .tm-time-picker__trigger");
+
+        body.Should().NotBeEmpty("the read-only time picker trigger surface must exist");
+        body.Should().Contain("--tm-bg-surface-secondary",
+            "the locked trigger takes the same surface tint as .tm-time-input--readonly and .tm-input-readonly");
+        body.Should().Contain("cursor: default",
+            "a locked trigger does not borrow the pointer cursor of an opener");
+        body.Should().NotContain("--tm-text-disabled",
+            "a locked value keeps the primary ink — the disabled token is the other, gray state");
+        body.Should().NotContain("opacity",
+            "readability is the point of ReadOnly — no fade, unlike Disabled");
+
+        var hover = Rule(TimePickerStylesheet,
+            ".tm-time-picker--readonly .tm-time-picker__trigger:hover:not(:disabled)");
         hover.Should().Contain("border-color: var(--tm-border-color)",
             "a locked trigger never advertises the primary hover border");
     }

@@ -563,7 +563,7 @@ Kaskády: čte `TmFormField.ErrorIdCascadingName` a `DescribedByIdsCascadingName
 | `CommitMode` | `TimeCommitMode` | `Auto` | `Live` (každý krok → `ValueChanged`) / `OnConfirm` (draft, Hotovo commituje) / `Auto` = sheet `OnConfirm`, popover `Live`. |
 | `SheetTitle` | `string?` | `null` | Fallback `Label` → `TmTimePicker_SheetTitle`. |
 | `ValueExpression` | `Expression<Func<TimeOnly?>>?` | `null` | Napojení na `EditContext` + `NotifyFieldChanged` při commitu. |
-| `ReadOnly` | `bool` | `false` | Hodnota viditelná, nelze upravit, trigger neotevírá (`aria-readonly` na skupině; segmenty `readonly`). |
+| `ReadOnly` | `bool` | `false` | Hodnota viditelná, nelze upravit, trigger neotevírá (`aria-readonly` na skupině; segmenty `readonly`). _Překonáno fází 4c (plan b75365fb) / decision `READONLY-BUTTON-TRIGGER-ARIA-DISABLED`: `aria-readonly` na `role=group` ARIA 1.2 nepodporuje — zámek nesou segmenty (`readonly` + `aria-readonly`), na desktopu se trigger vůbec nerenderuje a na telefonu hlásí zámek `aria-disabled="true"` bez otvírací ikony._ |
 | `AriaDescribedBy` | `string?` | `null` | Explicitní popis; spojí se s kaskádou `TmFormField`. |
 | `Id` / `InputId` | `string?` | `null` | Stabilní id (dnes jen generované). |
 | `OnCommitted` | `EventCallback<TimeOnly?>` | — | Předává z `TmTimeSelector` (a z blur segmentů). |

@@ -450,6 +450,36 @@
     </div>
 </section>
 
+<!-- Responsive cards toolbar: in Card/List view the sort/filter triggers announce their sheets
+     with a string aria-expanded (plan b75365fb, fáze 4c). -->
+<section class="demo-section" data-testid="mvl-cards-toolbar">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Multi-View List — cards toolbar</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full">Responsive</span>
+    </div>
+    <div class="showcase-card" data-testid="mvl-cards-toolbar-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            In the Card view the Sort and Filter triggers open bottom sheets and announce their
+            state with a string <code>aria-expanded</code> — <code>"false"</code> closed,
+            <code>"true"</code> open, never an omitted or empty attribute.
+        </p>
+        @* StatusLabelField null: the card demos the toolbar triggers, not the status badge — the
+           shared demo items carry a mid-luminance filled-badge contrast debt (#ef4444, caller's
+           responsibility per the component contract) that an axe scan of this card must not trip. *@
+        <TmMultiViewList TItem="DemoMvlItem"
+                         Items="@_mvlItems"
+                         ViewContext="demo-mvl-cards-toolbar"
+                         ViewMode="ListViewMode.Card"
+                         Responsive="true"
+                         ShowViewSwitcher="false"
+                         TitleField="@(x => x.Title)"
+                         SubTitleField="@(x => x.SubTitle)"
+                         StatusLabelField="@(_ => (string?)null)"
+                         ViewProvider="_mvlViews"
+                         ExternalFilterDefinitions="@_mvlFilterDefs" />
+    </div>
+</section>
+
 <!-- Stretched-link cards: the title is the only tab stop; one key press raises OnItemClick once. -->
 <section class="demo-section" data-testid="mvl-stretched-link">
     <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Stretched-link cards</h2>
@@ -1037,4 +1067,27 @@
             FieldAccessor = x => x.StatusLabel ?? ""
         }
     };
+
+    private readonly InMemoryViewProvider _mvlViews = new([]);
+    private readonly List<FilterDefinition> _mvlFilterDefs =
+    [
+        new FilterDefinition
+        {
+            FieldName = "Title",
+            FieldLabel = "Name",
+            FieldType = FilterFieldType.Text
+        },
+        new FilterDefinition
+        {
+            FieldName = "StatusLabel",
+            FieldLabel = "Status",
+            FieldType = FilterFieldType.Select,
+            Options =
+            [
+                new SelectOption<string>("Active", "Active"),
+                new SelectOption<string>("On leave", "On leave"),
+                new SelectOption<string>("Inactive", "Inactive")
+            ]
+        }
+    ];
 }

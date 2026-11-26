@@ -29584,7 +29584,7 @@
           "name": "ReadOnly",
           "type": "bool",
           "isRequired": false,
-          "description": "Renders the nested TmTimeInput read-only and blocks the overlay from opening. Never assigned inside the picker. Defaults to false."
+          "description": "Renders the nested TmTimeInput read-only and blocks the overlay from opening (click/Enter/Space open nothing). Where the segments render (every layout except Auto on a phone) the overlay trigger is not rendered at all — the read-only segments carry the value and the lock (readonly + aria-readonly). On a phone (Auto) the trigger stays as the value's carrier: aria-disabled=\"true\" with aria-haspopup=\"false\", no aria-expanded/aria-controls and no opening icon (aria-readonly is not a supported attribute on role=button); it keeps its tab stop and AriaDescribedBy reaches it, so a host can describe WHY the field is locked. Root carries tm-time-picker--readonly so the locked trigger surface reads like the other read-only inputs (--tm-bg-surface-secondary, no disabled colours, no fade). Never assigned inside the picker. Defaults to false."
         },
         {
           "name": "ReferenceDate",
@@ -29646,6 +29646,7 @@
         "tm-time-picker-body",
         "tm-time-picker--invalid",
         "tm-time-picker--trigger-only",
+        "tm-time-picker--readonly",
         "tm-time-picker__trigger",
         "tm-time-picker__value",
         "tm-time-picker__icon",

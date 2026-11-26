@@ -3187,6 +3187,7 @@ Výběr času s dropdownem.
 |-------|-------|
 | `tm-time-picker` | Kořenový kontejner |
 | `tm-time-picker--invalid` | Nevalidní stav |
+| `tm-time-picker--readonly` | Read-only stav — zamčený trigger (jen telefon; na desktopu se trigger nerenderuje) nese read-only plochu (`--tm-bg-surface-secondary`) a `cursor: default` |
 | `tm-picker-label` | Popisek |
 | `tm-time-picker-body` | Tělo komponenty |
 | `tm-picker-clear` | Tlačítko pro vymazání |
@@ -3203,6 +3204,7 @@ Výběr času s dropdownem.
 | `ShowSeconds` | `bool` | `false` | Zobrazit sekundy |
 | `Placeholder` | `string?` | `null` | Placeholder |
 | `Disabled` | `bool` | `false` | Zakázáno |
+| `ReadOnly` | `bool` | `false` | Segmenty jsou `readonly` a nesou hodnotu i zámek (`aria-readonly`); tam, kde se segmenty renderují, se trigger vůbec nerenderuje (žádné mrtvé tlačítko). Na telefonu (Auto) trigger zůstává jako nosič hodnoty — bez otvírací ikony, fokusovatelný, neotevře se, zámek hlásí `aria-disabled="true"` + `aria-haspopup="false"` (bez `aria-expanded`/`aria-controls`; `aria-readonly` na buttonu ARIA nepodporuje), `AriaDescribedBy` na něj dosáhne, read-only plocha jako ostatní vstupy (`--tm-bg-surface-secondary`), bez disabled barev |
 | `Required` | `bool` | `false` | Povinné |
 | `Label` | `string?` | `null` | Popisek |
 | `TriggerId` | `string?` | `null` | Volitelné explicitní id clock triggeru, aby ho mohla cílit `<label for>` nadřazené komponenty, když Auto na mobilu skryje segmenty |

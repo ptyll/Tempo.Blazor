@@ -1,5 +1,6 @@
 using Bunit;
 using FluentAssertions;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components.Pickers;
 using Tempo.Blazor.Models;
 using Tempo.Blazor.Tests.Localization;
@@ -245,5 +246,153 @@ public class TmTimePickerTests : LocalizationTestBase
 
         cut.FindAll(".tm-time-picker--invalid").Should().BeEmpty(
             "IsOutOfRange must use IsInRange so 23:30 stays valid in 22:00–06:00");
+    }
+
+    // ── Fáze 4c (plan b75365fb): a locked overlay trigger is a BUTTON that cannot open anything,
+    //    so it must not advertise a popup — the same contract the date pickers got in fáze 4
+    //    (decision READONLY-BUTTON-TRIGGER-ARIA-DISABLED). Review round: where the segments
+    //    render, the locked trigger is not rendered at all (the segments carry the value and the
+    //    lock); on a phone it stays as the value's carrier, without the opening icon. ──────────
+
+    [Fact]
+    public void TimePicker_Popup_ReadOnly_RendersNoTrigger_SegmentsCarryTheLock()
+    {
+        var cut = Render<TmTimePicker>(p => p
+            .Add(c => c.Value, new TimeOnly(14, 30))
+            .Add(c => c.Presentation, TimePickerPresentation.Popup)
+            .Add(c => c.ReadOnly, true)
+            .Add(c => c.AriaDescribedBy, "lock-reason"));
+
+        cut.FindAll(".tm-time-picker__trigger").Should().BeEmpty(
+            "where the segments render, a button that opens nothing would be a dead tab stop — " +
+            "the read-only segments carry the value and the lock");
+
+        var hours = cut.Find(".tm-time-seg--hours");
+        hours.HasAttribute("readonly").Should().BeTrue("the segments are the read-only surface");
+        hours.GetAttribute("aria-readonly").Should().Be("true");
+        hours.GetAttribute("aria-describedby").Should().Contain("lock-reason",
+            "AriaDescribedBy reaches the segments, so a host can describe WHY the field is locked");
+    }
+
+    [Fact]
+    public void TimePicker_Auto_ReadOnly_Desktop_RendersNoTrigger()
+    {
+        // On a desktop viewport Auto resolves to the popup presentation — segments render, so
+        // the locked trigger is gone there too.
+        var cut = Render<TmTimePicker>(p => p
+            .Add(c => c.Value, new TimeOnly(14, 30))
+            .Add(c => c.Presentation, TimePickerPresentation.Auto)
+            .Add(c => c.ReadOnly, true));
+
+        cut.FindAll(".tm-time-picker__trigger").Should().BeEmpty();
+        cut.FindAll(".tm-time-seg").Should().NotBeEmpty(
+            "the read-only segments carry the value and the lock");
+    }
+
+    [Fact]
+    public void TimePicker_Auto_Mobile_ReadOnly_TriggerCarriesTheValue_AnnouncesTheLock_NotAPopup()
+    {
+        // On a phone Auto hides the segments, so the locked trigger STAYS as the value's
+        // carrier — without the opening icon, with the lock announced and the description linked.
+        var cut = Render<TmTimePicker>(p => p
+            .Add(c => c.Value, new TimeOnly(14, 30))
+            .Add(c => c.Presentation, TimePickerPresentation.Auto)
+            .Add(c => c.LayoutMode, TmLayoutMode.Mobile)
+            .Add(c => c.ReadOnly, true)
+            .Add(c => c.HourCycle, TimeHourCycle.H23)
+            .Add(c => c.AriaDescribedBy, "lock-reason"));
+
+        cut.FindAll(".tm-time-seg").Should().BeEmpty("Auto on a phone hides the segments");
+
+        var trigger = cut.Find(".tm-time-picker__trigger");
+        trigger.GetAttribute("aria-haspopup").Should().Be("false",
+            "a locked trigger has no popup to advertise");
+        trigger.HasAttribute("aria-expanded").Should().BeFalse(
+            "aria-expanded on a button that opens nothing announces a collapsed expandable control");
+        trigger.HasAttribute("aria-controls").Should().BeFalse(
+            "there is no overlay to control while the picker is locked");
+        trigger.GetAttribute("aria-disabled").Should().Be("true",
+            "the lock is announced as disabled — aria-readonly is not valid on role=button");
+        trigger.HasAttribute("aria-readonly").Should().BeFalse(
+            "aria-readonly is not a supported attribute on a native <button>");
+        trigger.HasAttribute("disabled").Should().BeFalse(
+            "aria-disabled names the state; the trigger stays focusable and readable");
+        trigger.HasAttribute("tabindex").Should().BeFalse("the locked trigger keeps the natural tab stop");
+        trigger.QuerySelector(".tm-time-picker__icon").Should().BeNull(
+            "no opening icon on the locked trigger — nothing advertises a popup that can never open");
+        trigger.QuerySelector(".tm-time-picker__value")!.TextContent.Should().Contain("14:30",
+            "the phone trigger carries the value");
+        trigger.GetAttribute("aria-describedby").Should().Contain("lock-reason",
+            "AriaDescribedBy reaches the locked trigger");
+
+        // Enter/Space on a native <button> produce a click in the browser — the guarded click is
+        // the whole activation path (real Enter/Space coverage lives in the WASM E2E).
+        trigger.Click();
+        cut.FindAll(".tm-time-picker__popup").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void TimePicker_Popup_AriaDescribedBy_ReachesTheTrigger()
+    {
+        var cut = Render<TmTimePicker>(p => p
+            .Add(c => c.Presentation, TimePickerPresentation.Popup)
+            .Add(c => c.AriaDescribedBy, "hint"));
+
+        cut.Find(".tm-time-picker__trigger").GetAttribute("aria-describedby").Should().Be("hint");
+    }
+
+    [Fact]
+    public void TimePicker_ReadOnly_MarksTheRootSoTheLockedTriggerPaintsTheReadOnlySurface()
+    {
+        var cut = Render<TmTimePicker>(p => p
+            .Add(c => c.Presentation, TimePickerPresentation.Popup)
+            .Add(c => c.ReadOnly, true));
+
+        cut.Find(".tm-time-picker").ClassList.Should().Contain("tm-time-picker--readonly");
+    }
+
+    [Fact]
+    public void TimePicker_Popup_Editable_TriggerKeepsThePopupContract()
+    {
+        var cut = Render<TmTimePicker>(p => p
+            .Add(c => c.Value, new TimeOnly(14, 30))
+            .Add(c => c.Presentation, TimePickerPresentation.Popup));
+
+        var trigger = cut.Find(".tm-time-picker__trigger");
+        trigger.GetAttribute("aria-haspopup").Should().Be("dialog");
+        trigger.GetAttribute("aria-expanded").Should().Be("false");
+        trigger.GetAttribute("aria-controls").Should().NotBeNullOrEmpty();
+        trigger.HasAttribute("aria-disabled").Should().BeFalse();
+        trigger.HasAttribute("aria-readonly").Should().BeFalse();
+
+        trigger.Click();
+        cut.Find(".tm-time-picker__trigger").GetAttribute("aria-expanded").Should().Be("true");
+        cut.FindAll(".tm-time-picker__popup").Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void TimePicker_ReadOnly_GroupCarriesNoAriaReadonly()
+    {
+        // ARIA 1.2 supports aria-readonly on combobox/grid/gridcell/listbox/radiogroup/slider/
+        // spinbutton/textbox — NOT on role=group (axe aria-allowed-attr flags it critical). The
+        // lock is announced by the readonly segments and by aria-disabled on the overlay trigger.
+        var cut = Render<TmTimePicker>(p => p
+            .Add(c => c.ReadOnly, true)
+            .Add(c => c.Presentation, TimePickerPresentation.Popup));
+
+        cut.Find(".tm-time-picker-body").HasAttribute("aria-readonly").Should().BeFalse();
+    }
+
+    [Fact]
+    public void TimePicker_ConsumerAriaAttributes_WinOnTheGroup()
+    {
+        // Consumer aria-* attributes target the input group (the documented routing) and are
+        // splatted AFTER the explicit attributes, so they keep winning over the defaults.
+        var cut = Render<TmTimePicker>(p => p
+            .Add(c => c.Label, "Meeting")
+            .AddUnmatched("aria-labelledby", "host-label"));
+
+        cut.Find(".tm-time-picker-body").GetAttribute("aria-labelledby").Should().Be("host-label",
+            "a consumer attribute wins over the component default");
     }
 }

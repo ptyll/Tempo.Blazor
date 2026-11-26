@@ -191,6 +191,27 @@
             Value: @(_auto?.ToString("HH:mm") ?? "—")
         </p>
     </div>
+
+    <div class="showcase-card mt-4" data-testid="time-picker-readonly-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            <code>ReadOnly="true"</code> — on a desktop the read-only segments carry the value and
+            the lock, so no dead trigger is rendered; on a phone the trigger stays as the value's
+            carrier — it announces the lock (<code class="whitespace-nowrap">aria-disabled</code>),
+            shows no opening icon and keeps its tab stop. The lock reason is linked through
+            <code>AriaDescribedBy</code>.
+        </p>
+        <TmTimePicker Value="@_autoReadOnly"
+                      ValueChanged="@(_ => {})"
+                      Label="Shift start"
+                      Presentation="TimePickerPresentation.Auto"
+                      ReadOnly="true"
+                      HourCycle="TimeHourCycle.H23"
+                      AriaDescribedBy="time-picker-readonly-reason"
+                      Id="time-picker-readonly" />
+        <p id="time-picker-readonly-reason" class="text-xs text-slate-500 dark:text-slate-400 mt-3">
+            Locked after the shift plan was published.
+        </p>
+    </div>
 </section>
 
 <section class="demo-section" data-testid="time-range-overnight">
@@ -275,6 +296,7 @@
     private TimeOnly? _seconds = new TimeOnly(14, 30, 15);
     private TimeOnly? _popup = new TimeOnly(14, 30);
     private TimeOnly? _auto = new TimeOnly(9, 0);
+    private TimeOnly? _autoReadOnly = new TimeOnly(9, 15);
     private (TimeOnly? Start, TimeOnly? End) _overnightRange = (new TimeOnly(22, 0), new TimeOnly(6, 0));
     private TimeOnly? _overnightPicker = new TimeOnly(23, 30);
     private TimeOnly? _dstGap = new TimeOnly(2, 30);

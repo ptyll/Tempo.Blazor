@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Tempo.Blazor.Components.DataDisplay;
 using Tempo.Blazor.Components.Overlay;
+using Tempo.Blazor.Interfaces;
 using Tempo.Blazor.Models;
 using Tempo.Blazor.Tests.Localization;
 using Tempo.Blazor.Tests.Theme;
@@ -66,6 +67,49 @@ public class TmMultiViewListMobileModeTests : LocalizationTestBase
         cut.Find("[data-card-sort=\"title\"]").Click();
         cut.FindAll(".tm-mvl-card-title").Select(card => card.TextContent.Trim())
             .Should().ContainInOrder("Bea", "Ada");
+    }
+
+    [Fact]
+    public void Cards_SortTriggerAriaExpanded_IsAlwaysAString()
+    {
+        // Fáze 4c (plan b75365fb): a bool aria-expanded renders the invalid empty attribute when
+        // open and drops the attribute entirely when closed — the state must be a string.
+        var cut = Render<TmMultiViewList<MvlPerson>>(p => p
+            .Add(c => c.Items, new List<MvlPerson> { new("Ada", "Engineer"), new("Bea", "Designer") })
+            .Add(c => c.Responsive, true)
+            .Add(c => c.TitleField, (Func<MvlPerson, string>)(person => person.Name))
+            .Add(c => c.SubTitleField, (Func<MvlPerson, string?>)(person => person.Role))
+            .Add(c => c.ViewMode, ListViewMode.Card));
+
+        var sort = cut.Find(".tm-mvl-cards-toolbar__sort");
+        sort.GetAttribute("aria-expanded").Should().Be("false",
+            "a closed sort sheet announces collapsed with the string \"false\"");
+
+        sort.Click();
+        cut.Find(".tm-mvl-cards-toolbar__sort").GetAttribute("aria-expanded").Should().Be("true",
+            "an open sort sheet announces expanded with the string \"true\", never the invalid empty value");
+    }
+
+    [Fact]
+    public void Cards_FilterTriggerAriaExpanded_IsAlwaysAString()
+    {
+        var cut = Render<TmMultiViewList<MvlPerson>>(p => p
+            .Add(c => c.Items, new List<MvlPerson> { new("Ada", "Engineer"), new("Bea", "Designer") })
+            .Add(c => c.Responsive, true)
+            .Add(c => c.TitleField, (Func<MvlPerson, string>)(person => person.Name))
+            .Add(c => c.SubTitleField, (Func<MvlPerson, string?>)(person => person.Role))
+            .Add(c => c.ViewMode, ListViewMode.Card)
+            .Add(c => c.ViewProvider, NSubstitute.Substitute.For<IDataTableViewProvider>())
+            .Add(c => c.ExternalFilterDefinitions, new List<FilterDefinition>
+            {
+                new() { FieldName = "Name", FieldLabel = "Name", FieldType = FilterFieldType.Text },
+            }));
+
+        var filter = cut.Find(".tm-mvl-cards-toolbar__filter");
+        filter.GetAttribute("aria-expanded").Should().Be("false");
+
+        filter.Click();
+        cut.Find(".tm-mvl-cards-toolbar__filter").GetAttribute("aria-expanded").Should().Be("true");
     }
 
     [Fact]
