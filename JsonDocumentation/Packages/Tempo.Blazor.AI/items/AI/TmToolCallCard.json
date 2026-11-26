@@ -37,7 +37,7 @@
       "name": "OnRetry",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when the reader asks to run a failed call again. The Retry button renders only for a call in AiToolCallStatus.Failed with a bound handler — never a button that does nothing."
+      "description": "Raised when the reader asks to run a failed call again. The Retry button renders only for a call in AiToolCallStatus.Failed with a bound handler — never a button that does nothing. While the handler's task runs the button disables itself and reads disabled: dimmed through --tm-opacity-disabled, a not-allowed cursor and no hover fill; forced colors paint it GrayText (at full opacity — the state is the system colour, never a dim)."
     },
     {
       "name": "ErrorTemplate",

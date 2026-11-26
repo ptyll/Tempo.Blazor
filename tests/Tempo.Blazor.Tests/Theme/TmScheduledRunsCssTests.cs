@@ -169,6 +169,17 @@ public sealed class TmScheduledRunsCssTests
 
         css.Should().Contain(".tm-ai-runs__day-step[aria-disabled='true']",
             "the button stays focusable (never the native disabled attribute) and still reads as unavailable");
+
+        var rule = ThemeCss.RuleDeclarations(css, ".tm-ai-runs__day-step[aria-disabled='true']");
+        rule.Should().Contain("cursor: not-allowed",
+            "the refused-pointer cursor is the shared disabled idiom (decision AI-PACKAGE-DISABLED-IDIOM) — "
+            + "cursor: default is exactly the drift fáze 4b removed");
+        rule.Should().Contain("color: var(--tm-text-disabled)",
+            "the unavailable day keeps its place in the row and only its ink steps back");
+
+        css.Should().Contain(".tm-ai-runs__day-step:hover:not([aria-disabled='true'])",
+            "the hover fill is the AVAILABLE button's affordance — a disabled day keeps its resting "
+            + "surface under the pointer");
     }
 
     [Fact]

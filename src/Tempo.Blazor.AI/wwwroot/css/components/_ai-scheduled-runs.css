@@ -93,7 +93,9 @@
     cursor: pointer;
 }
 
-.tm-ai-runs__day-step:hover {
+/* The hover fill is the AVAILABLE button's affordance only: an unavailable day keeps its resting surface
+   under the pointer (the same :hover:not(…) guard the follow-up chip and the version buttons carry). */
+.tm-ai-runs__day-step:hover:not([aria-disabled='true']) {
     background-color: var(--tm-bg-surface-secondary);
 }
 
@@ -102,9 +104,14 @@
     outline-offset: var(--tm-space-1);
 }
 
+/* An unavailable day is marked with aria-disabled instead of the disabled attribute: a natively disabled
+   button that the reader just pressed loses the focus to the body, while an aria-disabled one stays
+   focusable and simply does nothing (WCAG 2.4.3 keeps the reader's place — the same choice the autonomy
+   dial's step buttons make). The state speaks the shared disabled idiom: the disabled ink token plus the
+   refused-pointer cursor. */
 .tm-ai-runs__day-step[aria-disabled='true'] {
     color: var(--tm-text-disabled);
-    cursor: default;
+    cursor: not-allowed;
 }
 
 .tm-ai-runs__current-day {

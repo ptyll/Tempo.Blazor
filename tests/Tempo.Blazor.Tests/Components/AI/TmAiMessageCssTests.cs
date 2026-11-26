@@ -267,6 +267,75 @@ public sealed class TmAiMessageCssTests
             "system Canvas");
     }
 
+    /// <summary>
+    /// Plan b75365fb fáze 4b (EmusCz 2.13.0, remaining 463b8c0b): a version button at the edge of the
+    /// switcher kept <c>cursor: default</c> and no dimming of its own, so it read differently from the
+    /// follow-up chip next to it. The disabled version button speaks the shared idiom: the
+    /// <c>--tm-opacity-disabled</c> token (never a literal alpha) and the <c>not-allowed</c> cursor.
+    /// Mutant guard: restoring the default cursor or dropping the token turns this red.
+    /// </summary>
+    [Fact]
+    public void VersionButton_DisabledState_DimsThroughTheSharedToken_AndRefusesThePointer()
+    {
+        var disabled = ThemeCss.Normalise(ForRule(".tm-ai-message__version-button:disabled"));
+
+        disabled.Should().Contain("opacity: var(--tm-opacity-disabled)",
+            "the disabled version button dims through the shared token, never a literal alpha");
+        disabled.Should().Contain("cursor: not-allowed",
+            "a refused click must say so under the pointer, not keep the default arrow");
+        disabled.Should().NotContain("cursor: default",
+            "cursor: default is the pre-4b idiom — the refused click shows not-allowed");
+        disabled.Should().NotMatch(@"(?<![-\w])opacity:\s*[\d.]",
+            "a literal opacity pins one value the token cannot rescale");
+    }
+
+    /// <summary>
+    /// The hover fill is an affordance of the ENABLED version button only: a disabled one under the
+    /// pointer keeps its resting surface, so every <c>:hover</c> rule of the version button excludes
+    /// <c>:disabled</c> (the same shape the follow-up chip carries).
+    /// </summary>
+    [Fact]
+    public void VersionButton_HoverFill_AppliesOnlyWhileEnabled()
+    {
+        var hoverRules = Regex.Matches(
+                Stylesheet(),
+                @"([^{}]*\.tm-ai-message__version-button:hover[^{}]*)\{([^}]*)\}")
+            .SelectMany(match => ThemeCss.SelectorParts(match.Groups[1].Value))
+            .Where(selector => selector.Contains(".tm-ai-message__version-button:hover", StringComparison.Ordinal))
+            .ToList();
+
+        hoverRules.Should().NotBeEmpty("the enabled version button keeps its hover fill");
+        hoverRules.Should().OnlyContain(selector => selector.Contains(":not(:disabled)", StringComparison.Ordinal),
+            "a disabled version button under the pointer must keep its resting surface — the hover fill is " +
+            "the enabled control's affordance. Offending: {0}", string.Join(", ", hoverRules));
+    }
+
+    /// <summary>
+    /// Forced colors: the version buttons sit inside the opted-out <c>__versions</c> surface
+    /// (<c>forced-color-adjust: none</c> inherits), so the disabled state needs the system
+    /// <c>GrayText</c> explicitly — without it a disabled button in Windows high contrast reads exactly
+    /// like an enabled one (the same rule the follow-up chip carries). And because the surface keeps
+    /// author colours, the resting dim must be dropped: opacity over a system colour lowers the contrast
+    /// the system itself guarantees, so the rule pins <c>opacity: 1</c> and lets GrayText alone carry
+    /// the state. Mutant guard: dropping the forced-colors rule (or its <c>opacity: 1</c>) turns this red.
+    /// </summary>
+    [Fact]
+    public void ForcedColors_TheDisabledVersionButton_UsesGrayText()
+    {
+        var disabledBodies = Regex.Matches(ForcedColorsBlock(), @"([^{}]+)\{([^}]*)\}")
+            .Where(match => ThemeCss.SelectorParts(match.Groups[1].Value)
+                .Any(selector => selector.Contains(".tm-ai-message__version-button:disabled", StringComparison.Ordinal)))
+            .Select(match => ThemeCss.Normalise(match.Groups[2].Value))
+            .ToList();
+
+        disabledBodies.Should().Contain(body => body.Contains("GrayText", StringComparison.Ordinal),
+            "inside the opt-out the disabled version button must ask for the system GrayText, or high " +
+            "contrast cannot tell it from an enabled one");
+        disabledBodies.Should().Contain(body => body.Contains("opacity: 1", StringComparison.Ordinal),
+            "opacity over a system colour lowers its guaranteed contrast — the disabled state is GrayText " +
+            "alone, so the resting dim must be dropped in forced colors");
+    }
+
     [Fact]
     public void TheStylesheetDeclaresNoAnimationOfItsOwn()
     {

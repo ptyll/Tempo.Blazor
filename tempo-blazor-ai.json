@@ -1742,7 +1742,7 @@
       "kind": "Component",
       "category": "AI",
       "namespace": "Tempo.Blazor.Components.AI",
-      "description": "One turn of an AI conversation (a user prompt or the model's answer): the ordered parts rendered through the safe markdown view, the citation chips with a source preview, the source cards, the follow-up chips and the action toolbar (copy as plain text, regenerate with a version switcher, thumbs up/down with an optional reason, read aloud). A reasoning part renders through TmReasoningPanel (collapsed summary, live counter, steps and inspected sources) and consecutive tool-call parts collapse into one TmToolCallGroup (a single call renders as its own TmToolCallCard). The user turn paints its own bubble token (--tm-ai-user-bubble-bg, a primary tint with a dark counterpart) instead of the neutral secondary surface, and the lifecycle states read differently: streaming streams with the package caret and marks the body busy, a queued turn with no part yet can carry an opt-in PendingText placeholder (aria-busy), stopped shows a localized label, failed shows the error with Retry.",
+      "description": "One turn of an AI conversation (a user prompt or the model's answer): the ordered parts rendered through the safe markdown view, the citation chips with a source preview, the source cards, the follow-up chips and the action toolbar (copy as plain text, regenerate with a version switcher, thumbs up/down with an optional reason, read aloud). A reasoning part renders through TmReasoningPanel (collapsed summary, live counter, steps and inspected sources) and consecutive tool-call parts collapse into one TmToolCallGroup (a single call renders as its own TmToolCallCard). The user turn paints its own bubble token (--tm-ai-user-bubble-bg, a primary tint with a dark counterpart) instead of the neutral secondary surface, and the lifecycle states read differently: streaming streams with the package caret and marks the body busy, a queued turn with no part yet can carry an opt-in PendingText placeholder (aria-busy), stopped shows a localized label, failed shows the error with Retry. A version button at the edge of the switcher reads disabled with the same idiom as the follow-up chips: dimmed through --tm-opacity-disabled, a not-allowed cursor and no hover fill; forced colors paint it GrayText at full opacity.",
       "packageId": "Tempo.Blazor.AI",
       "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmAiMessage.razor",
       "documentationStatus": "merged",
@@ -1784,7 +1784,7 @@
           "name": "FollowUpsDisabled",
           "type": "bool",
           "isRequired": false,
-          "description": "Disables every follow-up chip without hiding the group. Default false. The disabled chips dim through --tm-opacity-disabled, show a not-allowed cursor and skip the hover fill; forced colors paint them GrayText."
+          "description": "Disables every follow-up chip without hiding the group. Default false. The disabled chips dim through --tm-opacity-disabled, show a not-allowed cursor and skip the hover fill; forced colors paint them GrayText at full opacity."
         },
         {
           "name": "ImagePolicy",
@@ -4164,7 +4164,7 @@
           "name": "OnRetry",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when the reader asks to run a failed call again. The Retry button renders only for a call in AiToolCallStatus.Failed with a bound handler — never a button that does nothing."
+          "description": "Raised when the reader asks to run a failed call again. The Retry button renders only for a call in AiToolCallStatus.Failed with a bound handler — never a button that does nothing. While the handler's task runs the button disables itself and reads disabled: dimmed through --tm-opacity-disabled, a not-allowed cursor and no hover fill; forced colors paint it GrayText (at full opacity — the state is the system colour, never a dim)."
         },
         {
           "name": "ToolCall",

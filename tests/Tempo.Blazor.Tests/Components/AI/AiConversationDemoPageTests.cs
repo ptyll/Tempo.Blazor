@@ -37,6 +37,9 @@ public class AiConversationDemoPageTests : DemoPageLocalizationTestBase
     /// <summary>Mirrors the page's <c>HostDrivenBusyMs</c> — how long the simulated window stays open.</summary>
     private static readonly TimeSpan HostDrivenBusy = TimeSpan.FromMilliseconds(2_500);
 
+    /// <summary>Mirrors the page's <c>SlowRetryMs</c> — how long the disabled-states retry stays in flight.</summary>
+    private static readonly TimeSpan SlowRetry = TimeSpan.FromMilliseconds(3_000);
+
     private readonly FakeTimeProvider _clock = new();
 
     public AiConversationDemoPageTests()
@@ -215,6 +218,80 @@ public class AiConversationDemoPageTests : DemoPageLocalizationTestBase
         AssistantAnswer(cut).QuerySelector(".tm-tool-call--succeeded").Should().NotBeNull();
         cut.Find("[data-testid='ai-demo-tool-retries']").TextContent.Trim().Should().Be("1");
         cut.Find("[data-testid='ai-demo-last-retry']").TextContent.Should().Contain("fetch_usage");
+    }
+
+    /// <summary>
+    /// Plan b75365fb fáze 4b: the disabled-states card is the E2E surface of the unified disabled idiom —
+    /// a failed tool call whose retry stays in flight (on the injected <see cref="TimeProvider"/>, so the
+    /// test drives it with the fake clock) until the host's re-run completes. While it is in flight the
+    /// retry carries the disabled attribute; the card's reset button is disabled while there is nothing
+    /// to reset and restores the failed sample afterwards.
+    /// </summary>
+    [Fact]
+    public async Task DisabledStatesDemo_RetryInFlight_DisablesTheRetryUntilTheClockRunsOut()
+    {
+        var cut = Render<AiConversationPage>();
+
+        var retry = cut.Find("[data-testid='ai-disabled-states-demo'] .tm-tool-call--failed .tm-tool-call__retry");
+        retry.HasAttribute("disabled").Should().BeFalse(
+            "the retry starts enabled, so the E2E can read the enabled look first");
+        cut.Find("[data-testid='ai-demo-retry-reset']").HasAttribute("disabled").Should().BeTrue(
+            "there is nothing to reset while the sample is still failed");
+
+        // The click handler awaits the slow re-run on the fake clock: do not await the click yet.
+        var inFlight = cut.InvokeAsync(() =>
+            cut.Find("[data-testid='ai-disabled-states-demo'] .tm-tool-call__retry").Click());
+
+        cut.Find("[data-testid='ai-disabled-states-demo'] .tm-tool-call__retry")
+            .HasAttribute("disabled").Should().BeTrue(
+                "a retry in flight renders disabled — the state the E2E reads the computed look of");
+        cut.Find("[data-testid='ai-demo-retry-reset']").HasAttribute("disabled").Should().BeTrue(
+            "the in-flight call is still failed — there is nothing to reset until the re-run completes");
+
+        await cut.InvokeAsync(() => _clock.Advance(SlowRetry));
+        await inFlight;
+
+        // The re-run measures ITSELF on the injected clock: it started when the click parked the handler
+        // and completed when the fake clock ran the delay out, so the elapsed time is exactly the advance —
+        // a wall-clock timestamp (DateTimeOffset.UtcNow) would read as noise next to the fake clock.
+        var retried = cut.FindComponents<TmToolCallCard>()
+            .Single(card => card.Instance.ToolCall?.Id == "retry-in-flight")
+            .Instance.ToolCall!;
+        (retried.CompletedAt - retried.StartedAt).Should().Be(SlowRetry,
+            "the slow retry timestamps the re-run from the injected TimeProvider, never from the wall clock");
+
+        var card = cut.Find("[data-testid='ai-disabled-states-demo']");
+        card.QuerySelector(".tm-tool-call--succeeded").Should().NotBeNull(
+            "the host's re-run turns the sample call succeeded");
+        card.QuerySelector(".tm-tool-call__retry").Should().BeNull(
+            "a succeeded call offers no retry");
+        cut.Find("[data-testid='ai-demo-retry-reset']").HasAttribute("disabled").Should().BeFalse(
+            "a succeeded sample is exactly what there is to reset");
+
+        cut.Find("[data-testid='ai-demo-retry-reset']").Click();
+        cut.Find("[data-testid='ai-disabled-states-demo'] .tm-tool-call--failed .tm-tool-call__retry")
+            .Should().NotBeNull("the reset restores the failed sample so the in-flight retry can be replayed");
+    }
+
+    /// <summary>
+    /// Plan b75365fb fáze 4b: the versions sample of the disabled-states card shows version 1 of 2, so
+    /// its Previous button is the static disabled version button the E2E reads the computed look of
+    /// (Next stays enabled, proving the disabled state is the edge, not the whole switcher).
+    /// </summary>
+    [Fact]
+    public void DisabledStatesDemo_VersionsSample_ShowsTheFirstOfTwoVersions_WithPreviousDisabled()
+    {
+        var cut = Render<AiConversationPage>();
+
+        var sample = cut.Find("[data-testid='ai-message-versions-sample']");
+        var previous = sample.QuerySelector("[data-tm-ai-action='version-prev']");
+        var next = sample.QuerySelector("[data-tm-ai-action='version-next']");
+
+        previous.Should().NotBeNull("two versions render the switcher");
+        previous!.HasAttribute("disabled").Should().BeTrue("version 1 of 2 has no previous version");
+        next.Should().NotBeNull();
+        next!.HasAttribute("disabled").Should().BeFalse("version 1 of 2 can step forward");
+        sample.QuerySelector(".tm-ai-message__version-label")!.TextContent.Trim().Should().Be("1/2");
     }
 
     [Fact]

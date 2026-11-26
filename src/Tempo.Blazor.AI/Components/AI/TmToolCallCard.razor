@@ -161,7 +161,10 @@
 
     /// <summary>
     /// Raised when the reader asks to run a failed call again. The Retry button renders only for a call in
-    /// <see cref="AiToolCallStatus.Failed"/> with a bound handler — never a button that does nothing.
+    /// <see cref="AiToolCallStatus.Failed"/> with a bound handler — never a button that does nothing. While
+    /// the handler's task runs the button disables itself and reads disabled: dimmed through
+    /// <c>--tm-opacity-disabled</c>, a not-allowed cursor and no hover fill; forced colors paint it
+    /// GrayText (at full opacity — the state is the system colour, never a dim).
     /// </summary>
     [Parameter] public EventCallback OnRetry { get; set; }
 

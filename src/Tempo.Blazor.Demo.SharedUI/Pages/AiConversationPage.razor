@@ -124,6 +124,15 @@
             border-color: Highlight;
             color: Highlight;
         }
+
+        /* A disabled demo button asks for the system disabled ink explicitly: GrayText on both the ink
+           and the border, at full opacity — a dim over a system colour would only lower the contrast the
+           mode itself guarantees (the same rule the AI package carries for its own disabled controls). */
+        .ai-demo-button:disabled {
+            color: GrayText;
+            border-color: GrayText;
+            opacity: 1;
+        }
     }
 </style>
 
@@ -373,6 +382,31 @@
                      DataTestId="ai-message-follow-ups-sample" />
     </div>
 
+    <div class="showcase-card mt-4" data-testid="ai-disabled-states-demo">
+        <h3 class="ai-demo-subheading">@Loc["TmDemo_AiConversation_DisabledStatesHeading"]</h3>
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-3">
+            @Loc["TmDemo_AiConversation_DisabledStatesIntro"]
+        </p>
+        <div class="ai-demo-actions mb-3">
+            @* Nothing to reset while the sample is still failed (an in-flight retry included — the status
+               flips only when the re-run completes) — the disabled state is honest. *@
+            <button type="button"
+                    class="ai-demo-button"
+                    data-testid="ai-demo-retry-reset"
+                    disabled="@(_retrySampleCall.Status == AiToolCallStatus.Failed)"
+                    @onclick="ResetRetrySample">
+                @Loc["TmDemo_AiConversation_DisabledStatesRetryReset"]
+            </button>
+        </div>
+        @* The retry of this failed call stays in flight for a few seconds (the page's slow handler), so the
+           disabled retry can be seen — and screenshotted — before the re-run turns the call succeeded. *@
+        <TmToolCallCard ToolCall="_retrySampleCall" OnRetry="SlowRetrySampleCallAsync" />
+        @* Its own test id, like the other standalone samples: the transcript selectors must not see this
+           two-version turn as a conversation turn. Version 1 of 2 is on screen, so Previous is disabled. *@
+        <TmAiMessage Message="_versionsSample"
+                     DataTestId="ai-message-versions-sample" />
+    </div>
+
     <div class="showcase-card mt-4" data-testid="ai-reasoning-demo">
         <h3 class="ai-demo-subheading">@Loc["TmDemo_AiConversation_ReasoningHeading"]</h3>
         <p class="text-sm text-slate-600 dark:text-slate-400 mb-3">
@@ -407,6 +441,10 @@
     /// <summary>How long the host-driven simulation keeps the Generating window open. Long enough for a
     /// browser lane to catch the wait line after the click's first WASM render.</summary>
     private const int HostDrivenBusyMs = 2500;
+
+    /// <summary>How long the disabled-states card keeps its retry in flight, so the disabled look can be
+    /// seen (and screenshotted) before the re-run completes.</summary>
+    private const int SlowRetryMs = 3000;
 
     /// <summary>
     /// Sample CONTENT of the simulated host-driven prompt — English on purpose, like every other sample
@@ -449,6 +487,15 @@
 
     /// <summary>Whether the follow-up chips card renders its chips disabled (the card's own toggle).</summary>
     private bool _followUpsDisabled;
+
+    /// <summary>The failed call of the disabled-states card; its reset button recreates it from the samples.
+    /// Built in <see cref="OnInitialized"/> because its timestamps come from the injected
+    /// <see cref="TimeProvider"/> (property-injected after the constructor).</summary>
+    private AiToolCall _retrySampleCall = null!;
+
+    /// <summary>The static two-version turn of the disabled-states card (version 1 of 2 on screen). Built in
+    /// <see cref="OnInitialized"/> because its texts resolve through the localizer.</summary>
+    private AiMessage _versionsSample = null!;
 
     private DemoSlashCommands _commands = null!;
     private IReadOnlyList<string> _suggestions = [];
@@ -495,6 +542,13 @@
         // The follow-up card's static sample localizes its answer text and its chips, so it is built
         // here with the rest of the localized demo data — not at field initialization.
         _followUpsSample = AiConversationPageSamples.FollowUpsSample(Loc);
+
+        // The disabled-states card's two-version sample localizes its version texts the same way.
+        _versionsSample = AiConversationPageSamples.VersionsSample(Loc);
+
+        // The retry sample's timestamps come from the injected clock — the same one the slow handler
+        // measures the re-run with — so a fake clock reads an honest elapsed time.
+        _retrySampleCall = AiConversationPageSamples.RetryInFlightSample(Clock);
     }
 
     private int VersionCount => _messages.LastOrDefault(message => message.Role == AiMessageRole.Assistant)?.VersionCount ?? 0;
@@ -789,6 +843,35 @@
         call.ResultJson = """{"retried":true}""";
         call.CompletedAt ??= DateTimeOffset.UtcNow;
         _lastRetry = call.Name;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// The disabled-states card's slow retry: the re-run takes a few seconds on the INJECTED
+    /// <see cref="TimeProvider"/> (so tests drive it with a fake clock), which is exactly the window the
+    /// card's Retry button spends disabled — the unified disabled look the card demonstrates.
+    /// </summary>
+    private async Task SlowRetrySampleCallAsync()
+    {
+        // Captured: a reset during the wait swaps the sample, and the in-flight re-run belongs to the
+        // call that was clicked, not to its replacement.
+        var call = _retrySampleCall;
+        // The re-run measures ITSELF on the injected clock: the start is the click, the end is the fake
+        // clock running the delay out — a wall-clock timestamp would read as noise next to a fake clock.
+        var started = Clock.GetUtcNow();
+        await Task.Delay(TimeSpan.FromMilliseconds(SlowRetryMs), Clock);
+        call.Status = AiToolCallStatus.Succeeded;
+        call.Error = null;
+        call.ResultJson = """{"retried":true}""";
+        call.StartedAt = started;
+        call.CompletedAt = Clock.GetUtcNow();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>Restores the disabled-states card's failed sample, so the in-flight retry can be replayed.</summary>
+    private Task ResetRetrySample()
+    {
+        _retrySampleCall = AiConversationPageSamples.RetryInFlightSample(Clock);
         return InvokeAsync(StateHasChanged);
     }
 

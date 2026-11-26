@@ -294,9 +294,11 @@
     color: var(--tm-color-text);
 }
 
+/* A version button at the edge of the switcher speaks the same disabled idiom as the follow-up chip: the
+   shared dimming token and the refused-pointer cursor (the hover fill above already excludes :disabled). */
 .tm-ai-message__version-button:disabled {
-    color: var(--tm-color-text-disabled);
-    cursor: default;
+    opacity: var(--tm-opacity-disabled);
+    cursor: not-allowed;
 }
 
 .tm-ai-message__version-button:focus-visible {
@@ -560,6 +562,14 @@
         /* Opacity over a system colour lowers the contrast the system itself guarantees, so the
            resting dim (--tm-opacity-disabled) is dropped here — the disabled STATE is carried by
            GrayText alone, the same rule _ai-agent-graph.css carries for its dimmed nodes. */
+        opacity: 1;
+    }
+
+    /* The version buttons inherit the opt-out from the __versions surface, so a disabled one needs the
+       same explicit system disabled ink — without it the edge button reads exactly like an enabled one
+       in Windows high contrast. The resting dim is dropped for the same reason as the chip's. */
+    .tm-ai-message__version-button:disabled {
+        color: GrayText;
         opacity: 1;
     }
 

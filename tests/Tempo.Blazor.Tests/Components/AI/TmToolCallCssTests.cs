@@ -198,11 +198,59 @@ public sealed class TmToolCallCssTests
     }
 
     /// <summary>
+    /// Plan b75365fb fáze 4b (EmusCz 2.13.0, remaining 463b8c0b): the retry in flight kept a literal
+    /// <c>opacity: 0.6</c> and <c>cursor: default</c>, so it read differently from every other disabled
+    /// control of the package. The disabled retry speaks the shared idiom the follow-up chip already
+    /// carries: the <c>--tm-opacity-disabled</c> token (never a literal alpha) and the
+    /// <c>not-allowed</c> cursor. Mutant guard: restoring the literal or the default cursor turns this
+    /// red.
+    /// </summary>
+    [Fact]
+    public void DisabledRetry_DimsThroughTheSharedToken_AndRefusesThePointer()
+    {
+        var disabled = ThemeCss.Normalise(Block(Stylesheet("_ai-tool-call.css"), ".tm-tool-call__retry:disabled"));
+
+        disabled.Should().Contain("opacity: var(--tm-opacity-disabled)",
+            "the disabled retry dims through the shared token, never a literal alpha");
+        disabled.Should().Contain("cursor: not-allowed",
+            "a refused click must say so under the pointer, not keep the default arrow");
+        disabled.Should().NotContain("cursor: default",
+            "cursor: default is the pre-4b idiom — the refused click shows not-allowed");
+        disabled.Should().NotMatch(@"(?<![-\w])opacity:\s*[\d.]",
+            "a literal opacity pins one value the token cannot rescale");
+    }
+
+    /// <summary>
+    /// The hover fill is an affordance of the ENABLED retry only: a retry in flight under the pointer
+    /// keeps its resting surface, so every <c>:hover</c> rule that reaches the retry excludes
+    /// <c>:disabled</c> (the follow-up chip and the version buttons carry the same
+    /// <c>:hover:not(:disabled)</c> shape).
+    /// </summary>
+    [Fact]
+    public void Retry_HoverFill_AppliesOnlyWhileEnabled()
+    {
+        var hoverRules = Regex.Matches(
+                Stylesheet("_ai-tool-call.css"),
+                @"([^{}]*\.tm-tool-call__retry:hover[^{}]*)\{([^}]*)\}")
+            .SelectMany(match => ThemeCss.SelectorParts(match.Groups[1].Value))
+            .Where(selector => selector.Contains(".tm-tool-call__retry:hover", StringComparison.Ordinal))
+            .ToList();
+
+        hoverRules.Should().NotBeEmpty("the enabled retry keeps its hover fill");
+        hoverRules.Should().OnlyContain(selector => selector.Contains(":not(:disabled)", StringComparison.Ordinal),
+            "a disabled retry under the pointer must keep its resting surface — the hover fill is the " +
+            "enabled control's affordance. Offending: {0}", string.Join(", ", hoverRules));
+    }
+
+    /// <summary>
     /// The Retry control renders <c>disabled</c> while the host's first retry is still in flight. Inside the
     /// forced-colors block it paints system <c>CanvasText</c> like every other button, and the resting
     /// <c>opacity: 0.6</c> is a filter rather than an ink the high-contrast user chose — over <c>Canvas</c> a
     /// disabled Retry can read as present as an enabled one. The system <c>GrayText</c> keyword is the
-    /// disabled ink Windows itself uses, so the state survives the mode.
+    /// disabled ink Windows itself uses, so the state survives the mode. And because the surface keeps
+    /// author colours, the resting dim must be dropped: opacity over a system colour lowers the contrast
+    /// the system itself guarantees, so the rule pins <c>opacity: 1</c> and lets GrayText alone carry the
+    /// state (the same rule <c>_ai-message.css</c> carries for its disabled follow-up chip).
     /// </summary>
     [Fact]
     public void ForcedColorsPaintTheDisabledRetryWithTheSystemGrayText()
@@ -215,6 +263,9 @@ public sealed class TmToolCallCssTests
             "forced colors paint the disabled Retry with CanvasText unless it gets a disabled-specific rule");
         rule.Groups[1].Value.Should().Contain("color: GrayText");
         rule.Groups[1].Value.Should().Contain("border-color: GrayText");
+        rule.Groups[1].Value.Should().Contain("opacity: 1",
+            "opacity over a system colour lowers its guaranteed contrast — the disabled state is GrayText " +
+            "alone, so the resting dim must be dropped in forced colors");
     }
 
     /// <summary>

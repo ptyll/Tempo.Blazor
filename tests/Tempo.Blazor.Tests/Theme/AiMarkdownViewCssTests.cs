@@ -46,6 +46,13 @@ public sealed class AiMarkdownViewCssTests
     private static readonly Regex HtmlClassAttribute = new(@"class\s*=\s*[""']([^""']*)[""']", RegexOptions.Compiled, RegexTimeout);
 
     /// <summary>
+    /// A <c>:not(…)</c> guard. A selector carrying one is an ENABLED-state rule — the guard is exactly how a
+    /// hover keeps its disabled twin on the resting surface — so the disabled-idiom ratchet strips every guard
+    /// before it looks for the <c>:disabled</c> / <c>[disabled]</c> / <c>[aria-disabled="true"]</c> markers.
+    /// </summary>
+    private static readonly Regex NotGuard = new(@":not\([^)]*\)", RegexOptions.Compiled, RegexTimeout);
+
+    /// <summary>
     /// Core-owned utility classes the renderer reuses instead of re-declaring. <c>tm-sr-only</c> is the
     /// package's only one: the visually-hidden helper is styled once by the core stylesheet (which every Tempo
     /// host loads), so a package copy would be a second, drifting definition.
@@ -312,6 +319,91 @@ public sealed class AiMarkdownViewCssTests
     }
 
     private static string Strip(string css) => Comment.Replace(css, " ");
+
+    /// <summary>
+    /// Plan b75365fb fáze 4b ratchet (decision <c>AI-PACKAGE-DISABLED-IDIOM</c>): every rule of the package
+    /// that targets a disabled control — <c>:disabled</c>, <c>[disabled]</c> or <c>[aria-disabled="true"]</c>
+    /// (quotes normalised first, so the single-quoted attribute form cannot slip past) — speaks ONE idiom:
+    /// the <c>--tm-opacity-disabled</c> token (or a disabled-ink token) and <c>cursor: not-allowed</c>. A rule
+    /// that dims with a literal alpha or keeps <c>cursor: default</c> is exactly how the retry button, the
+    /// version button and the scheduled-runs day step drifted from the follow-up chip; the forced-colors
+    /// blocks are exempt on purpose, because there the system <c>GrayText</c> carries the state and
+    /// <c>opacity: 1</c> protects its contrast. <c>:not(…)</c> guards are stripped before the markers are
+    /// looked for, so a <c>:hover:not(:disabled)</c> (or <c>:hover:not([disabled])</c>,
+    /// <c>:hover:not([aria-disabled="true"])</c>) selector is an ENABLED-state rule and never trips the
+    /// ratchet.
+    /// </summary>
+    [Fact]
+    public void PackageCss_DisabledRules_SpeakTheSharedDisabledIdiom()
+    {
+        var offences = new List<string>();
+        foreach (var (file, css) in PackageCss())
+        {
+            foreach (Match rule in Regex.Matches(
+                         WithoutForcedColorsBlocks(Strip(css)), @"([^{}]+)\{([^}]*)\}", RegexOptions.None, RegexTimeout))
+            {
+                var disabledSelectors = ThemeCss.SelectorParts(rule.Groups[1].Value)
+                    .Select(selector => NotGuard.Replace(selector.Replace('\'', '"'), string.Empty))
+                    .Where(selector => selector.Contains(":disabled", StringComparison.Ordinal)
+                        || selector.Contains("[disabled]", StringComparison.Ordinal)
+                        || selector.Contains("[aria-disabled=\"true\"]", StringComparison.Ordinal))
+                    .ToList();
+                if (disabledSelectors.Count == 0)
+                {
+                    continue;
+                }
+
+                var body = ThemeCss.Normalise(rule.Groups[2].Value);
+                if (body.Contains("cursor: default", StringComparison.Ordinal))
+                {
+                    offences.Add($"{file}: {string.Join(", ", disabledSelectors)} keeps cursor: default");
+                }
+
+                if (Regex.IsMatch(body, @"(?<![-\w])opacity:\s*[\d.]", RegexOptions.None, RegexTimeout))
+                {
+                    offences.Add($"{file}: {string.Join(", ", disabledSelectors)} dims with a literal opacity");
+                }
+            }
+        }
+
+        offences.Should().BeEmpty(
+            "every :disabled / [disabled] / [aria-disabled=\"true\"] rule of the AI package speaks the "
+            + "shared idiom (decision AI-PACKAGE-DISABLED-IDIOM) — --tm-opacity-disabled (or a disabled-ink "
+            + "token) and cursor: not-allowed; a literal alpha or cursor: default is the drift fáze 4b "
+            + "removed. Offences:\n" + string.Join("\n", offences));
+    }
+
+    /// <summary>
+    /// The stylesheet with every <c>@media (forced-colors: active)</c> block removed (matched by brace
+    /// depth, so nested rules go with it): the forced-colors idiom (<c>GrayText</c> + <c>opacity: 1</c>)
+    /// is legitimate there and must not trip the disabled-idiom ratchet.
+    /// </summary>
+    private static string WithoutForcedColorsBlocks(string css)
+    {
+        const string marker = "@media (forced-colors: active)";
+        var result = css;
+        var start = result.IndexOf(marker, StringComparison.Ordinal);
+        while (start >= 0)
+        {
+            var opened = result.IndexOf('{', start);
+            var end = result.Length - 1;
+            var depth = 0;
+            for (var index = opened; index < result.Length; index++)
+            {
+                depth += result[index] switch { '{' => 1, '}' => -1, _ => 0 };
+                if (depth == 0)
+                {
+                    end = index;
+                    break;
+                }
+            }
+
+            result = result[..start] + " " + result[(end + 1)..];
+            start = result.IndexOf(marker, StringComparison.Ordinal);
+        }
+
+        return result;
+    }
 
     /// <summary>Every stylesheet of the package, keyed by repo-relative path.</summary>
     private static IReadOnlyList<(string File, string Css)> PackageCss()

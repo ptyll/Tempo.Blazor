@@ -94,7 +94,10 @@ Both components are also usable standalone (a tool-call timeline, an "agent is w
 
 - **Retry is a real action, once.** A card renders Retry only for a call in `Failed` with a bound
   `OnRetry`; the control disables itself (and the handler refuses re-entry) until the host's task
-  completes, so a double click on a slow re-run cannot fire `OnRetry` twice. Inside a group the retry
+  completes, so a double click on a slow re-run cannot fire `OnRetry` twice. The in-flight button reads
+  disabled with the package's unified idiom: dimmed through `--tm-opacity-disabled`, a `not-allowed`
+  cursor and no hover fill (`:hover:not(:disabled)`); forced colors paint it `GrayText` at full opacity.
+  Inside a group the retry
   callback is bound to the specific call, so a host receives the call it has to run again.
 - **Redaction beats disclosure.** `AiToolCall.IsRedacted` renders a localized notice with the lock glyph
   and nothing else: no details, no Copy, no payload in the DOM — a redacted call has no path out of the page.
@@ -199,7 +202,8 @@ surviving link gets `target="_blank"` with `rel="noopener noreferrer nofollow"`.
   rule the theme token ring would paint on a Canvas surface). A **disabled follow-up chip** asks for the
   system `GrayText` explicitly — inside the opt-out nothing remaps it, and `CanvasText` would read exactly
   like an enabled chip — and paints at full opacity, because a dim over a system colour would only lower
-  the contrast the mode itself guarantees. The **enabled chip's hover** asks for the system `Highlight`
+  the contrast the mode itself guarantees. A **disabled version button** does the same inside the opted-out
+  switcher surface. The **enabled chip's hover** asks for the system `Highlight`
   border and ink over a `Canvas` fill, the same treatment the version buttons carry. The **user bubble is
   deliberately not opted
   out**: the property inherits, so opting the bubble out would strip the system palette from the markdown it
@@ -207,7 +211,14 @@ surviving link gets `target="_blank"` with `rel="noopener noreferrer nofollow"`.
 - **Disabled follow-ups** — under `FollowUpsDisabled` every chip keeps rendering (the suggestions stay
   readable) but dims through the shared `--tm-opacity-disabled` token, shows `cursor: not-allowed` and
   skips the hover fill (`:hover:not(:disabled)`), so the group no longer looks clickable while the click
-  is refused.
+  is refused. The **version buttons** at the edges of the switcher speak the same idiom (the shared dim,
+  the refused-pointer cursor, no hover fill, `GrayText` at full opacity in forced colors), and so does a
+  tool call's **in-flight Retry** — one disabled vocabulary across the whole package (decision
+  `AI-PACKAGE-DISABLED-IDIOM`): a button or chip on its own surface dims through the shared opacity token,
+  while a text input, a trigger or an aria-disabled control steps back through the disabled ink token
+  instead, and a literal `opacity` value or a `cursor: default` is banned in every disabled rule — the
+  package-wide ratchet (`PackageCss_DisabledRules_SpeakTheSharedDisabledIdiom`) sweeps the `:disabled`,
+  `[disabled]` and `[aria-disabled="true"]` selectors for exactly those two drift shapes.
 - **Reduced motion** — this component adds no animation of its own; the streaming caret
   (`.tm-ai-streaming`) and the thinking pair (`.tm-ai-shimmer`, the spinner) are package-level primitives
   that carry their own `prefers-reduced-motion` blocks.

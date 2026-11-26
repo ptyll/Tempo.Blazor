@@ -136,6 +136,50 @@ internal static class AiConversationPageSamples
     /// <summary>A run of three consecutive calls, rendered as one group.</summary>
     internal static IReadOnlyList<AiToolCall> ToolCallRun { get; } = BuildToolCallRun();
 
+    /// <summary>
+    /// The failed call of the disabled-states card. The page retries it through a SLOW handler (on the
+    /// injected <c>TimeProvider</c>), so the retry renders disabled long enough for the reader — and the
+    /// E2E — to see the in-flight look; the card's reset button recreates the sample with this factory.
+    /// The timestamps come from the SAME injected clock the slow handler measures itself with, so a test
+    /// driving a fake clock reads an honest elapsed time instead of a wall-clock mix.
+    /// </summary>
+    internal static AiToolCall RetryInFlightSample(TimeProvider clock)
+    {
+        var now = clock.GetUtcNow();
+        return new AiToolCall
+        {
+            Id = "retry-in-flight",
+            Name = "fetch_usage",
+            DisplayName = "Fetch usage",
+            Status = AiToolCallStatus.Failed,
+            StartedAt = now.AddSeconds(-2),
+            CompletedAt = now,
+            ArgumentsJson = """{"url":"https://usage.example.com"}""",
+            Error = "HTTP 503 from usage.example.com",
+        };
+    }
+
+    /// <summary>
+    /// The static two-version turn of the disabled-states card (never streams). Version 1 of 2 is on
+    /// screen, so the Previous button is the disabled version button of the unified idiom while Next
+    /// stays enabled. The version texts resolve through the localizer like every other interface label.
+    /// </summary>
+    /// <param name="loc">Localizer used for the two version texts.</param>
+    internal static AiMessage VersionsSample(Tempo.Blazor.Localization.ITmLocalizer loc)
+    {
+        var message = new AiMessage
+        {
+            Id = "versions-sample",
+            Role = AiMessageRole.Assistant,
+            Status = AiMessageStatus.Completed,
+            ActiveVersionIndex = 0,
+        };
+        message.Versions.Add(new AiMessageVersion(
+            [new AiTextPart(loc["TmDemo_AiConversation_DisabledStatesVersionOne"])]));
+        message.Parts.Add(new AiTextPart(loc["TmDemo_AiConversation_DisabledStatesVersionTwo"]));
+        return message;
+    }
+
     /// <summary>A finished reasoning part with the sources the model inspected.</summary>
     internal static AiReasoningPart Reasoning { get; } = new(
         StandaloneReasoningSteps,

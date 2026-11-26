@@ -103,7 +103,7 @@
 
 .tm-tool-call__copy:hover,
 .tm-tool-call__toggle:hover,
-.tm-tool-call__retry:hover {
+.tm-tool-call__retry:hover:not(:disabled) {
     border-color: var(--tm-border-color);
     background-color: var(--tm-color-surface-hover);
     color: var(--tm-color-text);
@@ -117,11 +117,13 @@
     color: var(--tm-color-danger-text);
 }
 
-/* A retry in flight is not a disabled control the reader has to guess about: it renders exactly like the
-   resting state, just visibly inert, until the host's task completes. */
+/* A retry in flight is not a disabled control the reader has to guess about: it dims through the shared
+   --tm-opacity-disabled token and shows the refused-pointer cursor, the same idiom the follow-up chip and
+   the version buttons speak, until the host's task completes. The hover fill above excludes :disabled, so
+   the in-flight retry keeps its resting surface under the pointer. */
 .tm-tool-call__retry:disabled {
-    cursor: default;
-    opacity: 0.6;
+    opacity: var(--tm-opacity-disabled);
+    cursor: not-allowed;
 }
 
 /* The disclosure state is a transform, never a transition: a rotating chevron would be one more
@@ -336,11 +338,14 @@
         color: CanvasText;
     }
 
-    /* A retry in flight is disabled, and the resting opacity is not a state a high-contrast reader can see:
-       with forced-color-adjust: none the button keeps CanvasText and reads as enabled. GrayText is the
-       system's own disabled ink, so the in-flight state survives the mode as well. */
+    /* A retry in flight is disabled, and the resting opacity dim is not a state a high-contrast reader can
+       see: with forced-color-adjust: none the button keeps CanvasText and reads as enabled. GrayText is the
+       system's own disabled ink, so the in-flight state survives the mode as well. The resting dim is
+       dropped for the same reason — opacity over a system colour lowers the contrast the system itself
+       guarantees (the same rule _ai-message.css carries for its disabled chip). */
     .tm-tool-call__retry:disabled {
         border-color: GrayText;
         color: GrayText;
+        opacity: 1;
     }
 }
