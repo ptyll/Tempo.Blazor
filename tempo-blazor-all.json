@@ -42249,7 +42249,7 @@
               "name": "CompletionAnnouncement",
               "type": "Func<AiMessage, string?>?",
               "isRequired": false,
-              "description": "Optional host formatter for the completion note spoken into the transcript live region. Invoked on the true→false generating edge and at the end of StreamAsync, only for the last Completed turn. A null return (or a null parameter) keeps the localized TmAiConversation_Completed. Stopped and Failed turns never call it."
+              "description": "Optional host formatter for the completion note spoken into the transcript live region. Invoked on the true→false generating edge and at the end of StreamAsync, only for the last Completed turn. A null return (or a null parameter) keeps the localized TmAiConversation_Completed. Stopped and Failed turns never call it. The transcript holds at most ONE completion note: a new completion replaces the previous one (a new keyed node, so a repeated wording is still announced), and opening the next generation window clears the stale note — the same guarantee for a consumer that drives the stream itself and for one that streams through StreamAsync. The note disappears once the announced answer stops being the last turn (the host cleared the conversation or appended the next user turn). Host announcements through AnnounceAsync are separate nodes and are never touched by the replacement."
             },
             {
               "name": "Generating",
@@ -42357,7 +42357,7 @@
             {
               "name": "AnnounceAsync",
               "signature": "Task AnnounceAsync(string text)",
-              "description": "Speaks text into the transcript live region. Each call is a new keyed node (even when the text repeats), so a screen reader hears it again. Null or whitespace is a no-op."
+              "description": "Speaks text into the transcript live region. Each call is a new keyed node (even when the text repeats), so a screen reader hears it again. Null or whitespace is a no-op. The announcements accumulate: only the next StreamAsync start clears them (the stream re-owns the live region) — opening a host-driven Generating window does not clear them, and the completion note is a separate single replaceable slot that never touches these nodes."
             }
           ]
         },

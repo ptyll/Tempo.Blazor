@@ -90,14 +90,25 @@
                 }
 
                 @* The completion note is an ADDITION to the transcript, which is what makes it the only
-                   thing a screen reader hears when a generation finishes: it is keyed by the announcement
-                   sequence so a second completion replaces the node instead of silently changing the text
-                   of the existing one (a live region ignores an unchanged text node). *@
+                   thing a screen reader hears when a generation finishes. The transcript holds at most ONE
+                   note: a new completion REPLACES the previous one — the slot is keyed by the announcement
+                   sequence, so a repeated wording arrives as a new node and is announced again (a live
+                   region ignores an unchanged text node). Host announcements (AnnounceAsync) are separate
+                   nodes (data-kind="host") and are never touched by the replacement; the completion note
+                   (data-kind="completion") always renders as the LAST announcement node, after them. *@
                 @foreach (var announcement in _announcements)
                 {
                     <p class="tm-sr-only"
+                       data-kind="host"
                        data-testid="@TestId("ai-conversation-announcement")"
                        @key="announcement.Sequence">@announcement.Text</p>
+                }
+                @if (_completionNote is { } completionNote)
+                {
+                    <p class="tm-sr-only"
+                       data-kind="completion"
+                       data-testid="@TestId("ai-conversation-announcement")"
+                       @key="completionNote.Sequence">@completionNote.Text</p>
                 }
             </div>
         </div>

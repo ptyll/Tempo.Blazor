@@ -340,6 +340,79 @@ public sealed class AiConversationE2ETests : WasmTestBase
     }
 
     /// <summary>
+    /// Three host-driven windows in a row — the shape of a consumer that drives the stream itself (EmusCz
+    /// before this fix): the transcript holds EXACTLY ONE completion note after each finished answer, and
+    /// the note reads the latest completion only. A build that appends one note per turn leaves N identical
+    /// <c>p.tm-sr-only</c> nodes here (a screen reader browsing the transcript would read "Answer complete"
+    /// N times), so the count assertion is the decisive mutant killer.
+    ///
+    /// The click→assert race the first version of this spec had: it clicked the simulate control and
+    /// immediately waited for <c>data-generating="false"</c> — but the attribute is STILL false from the
+    /// previous turn for the whole round-trip (click → WASM event → window opens), so the "window finished"
+    /// wait could be satisfied by the stale false and the note count then raced the announce render. The
+    /// spec therefore FIRST waits for the window to OPEN (<c>data-generating="true"</c>, or the pending
+    /// wait line) and asserts there that no completion note exists while the answer is being produced;
+    /// only then it waits for the close and asserts the completion count and the single note. The note
+    /// itself is keyed per completion, so the previous turn's note node must be DETACHED after the next
+    /// turn — the stored element handle proves the replacement is a new node, not a mutation.
+    /// </summary>
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task HostDrivenCompletion_ThreeTurns_KeepOneTranscriptNote()
+    {
+        var page = await OpenPageAsync();
+        var note = page.Locator("[data-testid='ai-conversation-announcement'][data-kind='completion']");
+        var pendingLine = page.Locator(".tm-ai-conversation .tm-ai-message__pending");
+        var completedAnswers = page.Locator($"{AnswerSelector}[data-status='completed']");
+        var simulate = page.Locator("[data-testid='ai-demo-simulate-busy']");
+        var baseline = await completedAnswers.CountAsync();
+
+        IElementHandle? previousNote = null;
+        for (var turn = 1; turn <= 3; turn++)
+        {
+            await simulate.ClickAsync();
+
+            // The window must be OBSERVED open before anything else is asserted: while the new answer is
+            // being produced there is no completed answer to announce, so the transcript carries no note.
+            await Microsoft.Playwright.Assertions.Expect(
+                    page.Locator("[data-testid='ai-conversation']"))
+                .ToHaveAttributeAsync("data-generating", "true",
+                    new LocatorAssertionsToHaveAttributeOptions { Timeout = 15000 });
+            await pendingLine.WaitForAsync(new LocatorWaitForOptions
+            {
+                State = WaitForSelectorState.Visible,
+                Timeout = 15000,
+            });
+            await Microsoft.Playwright.Assertions.Expect(note)
+                .ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 10000 });
+
+            if (previousNote is not null)
+            {
+                Assert.IsFalse(await previousNote.EvaluateAsync<bool>("el => el.isConnected"),
+                    $"turn {turn}: the previous turn's note is a detached node — the replacement is a new " +
+                    "keyed node, never a mutation of the old one");
+            }
+
+            // The window closes when the host's answer lands: the answer count grows by one per turn and
+            // exactly one completion note reads the latest completion.
+            await Microsoft.Playwright.Assertions.Expect(
+                    page.Locator("[data-testid='ai-conversation']"))
+                .ToHaveAttributeAsync("data-generating", "false",
+                    new LocatorAssertionsToHaveAttributeOptions { Timeout = 15000 });
+            await Microsoft.Playwright.Assertions.Expect(completedAnswers)
+                .ToHaveCountAsync(baseline + turn, new LocatorAssertionsToHaveCountOptions { Timeout = 10000 });
+            await Microsoft.Playwright.Assertions.Expect(note)
+                .ToHaveCountAsync(1, new LocatorAssertionsToHaveCountOptions { Timeout = 10000 });
+            await Microsoft.Playwright.Assertions.Expect(note)
+                .ToHaveTextAsync("Answer complete", new LocatorAssertionsToHaveTextOptions { Timeout = 10000 });
+
+            previousNote = await note.ElementHandleAsync();
+        }
+
+        AssertNoClientErrors();
+    }
+
+    /// <summary>
     /// Stop during a HOST-DRIVEN window (the demo's simulate control, no stream): the built-in pill asks
     /// the page through <c>OnStop</c>, the page cancels its own window, and the busy state closes while
     /// the queued answer is marked <c>stopped</c> — <c>data-generating=false</c> and the pill gone, once

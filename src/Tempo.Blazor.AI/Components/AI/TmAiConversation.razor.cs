@@ -43,6 +43,19 @@ public partial class TmAiConversation
 
     private CancellationTokenSource? _streamCts;
     private readonly List<(int Sequence, string Text)> _announcements = [];
+
+    /// <summary>
+    /// The ONE completion note of the transcript (the "Answer complete" text of the latest finished
+    /// answer). It is a single replaceable slot — NOT part of <see cref="_announcements"/> — so a host
+    /// that drives its own generation windows never accumulates one identical note per turn (a screen
+    /// reader browsing the transcript would otherwise read the completion once per past turn). A new
+    /// completion replaces the slot with a new keyed node, so a repeated wording is still announced.
+    /// The slot also remembers the <see cref="AiMessage.Id"/> of the announced turn: the note is a claim
+    /// about the LAST turn, so it is dropped as soon as the announced answer stops being the newest turn
+    /// (the host cleared or appended to the conversation) — a stale note would claim a completion the
+    /// transcript no longer ends with.
+    /// </summary>
+    private (int Sequence, string Text, string? MessageId)? _completionNote;
     private int _announcementSequence;
     private int _windowStart = -1;
     private bool _windowExpanded;
@@ -118,6 +131,12 @@ public partial class TmAiConversation
     /// whose <see cref="AiMessage.Status"/> is <see cref="AiMessageStatus.Completed"/>. A
     /// <see langword="null"/> return (or a null parameter) keeps the localized default
     /// <c>TmAiConversation_Completed</c>. Stopped and Failed turns never call the formatter.
+    /// The note itself is a single replaceable slot: the transcript holds at most ONE completion note, a
+    /// new completion replaces it with a new keyed node (so a repeated wording is still announced),
+    /// opening the next <see cref="Generating"/> window clears the stale note of the previous turn, and
+    /// the note disappears once the announced answer stops being the last turn (the host cleared or
+    /// appended to the conversation). Host notes spoken through <see cref="AnnounceAsync"/> are separate
+    /// nodes and are never touched by the replacement.
     /// </summary>
     [Parameter] public Func<AiMessage, string?>? CompletionAnnouncement { get; set; }
 
@@ -245,6 +264,17 @@ public partial class TmAiConversation
         SyncRenderWindow(messages, contentChanged);
         SyncGeneratingWindow(messages);
 
+        if (_completionNote is { } note
+            && (messages.Count == 0
+                || !string.Equals(messages[^1].Id, note.MessageId, StringComparison.Ordinal)))
+        {
+            // The completion note is a claim about the LAST turn ("this answer is complete"). The host
+            // owns the list, so it may clear the conversation or append a fresh user turn without
+            // opening a new window — in both cases the announced answer stopped being the newest turn
+            // and the stale note must go (the same bookkeeping a new window or a stream start does).
+            _completionNote = null;
+        }
+
         if (contentChanged)
         {
             _contentDirty = true;
@@ -257,15 +287,22 @@ public partial class TmAiConversation
 
     /// <summary>
     /// The bookkeeping of a host-driven generation window. Opening one resets the two once-per-window
-    /// flags; closing one announces the completed answer — the same note <see cref="StreamAsync"/> speaks,
-    /// so a screen reader hears "Answer complete" no matter which half of the package drove the generation.
-    /// A window whose answer already arrived through <see cref="StreamAsync"/> stays silent: the stream
+    /// flags and clears the stale completion note of the previous turn; closing one announces the
+    /// completed answer — the same note <see cref="StreamAsync"/> speaks, written into the transcript's
+    /// single replaceable completion-note slot, so a screen reader hears "Answer complete" exactly once
+    /// per answer and never per past turn, no matter which half of the package drove the generation. A
+    /// window whose answer already arrived through <see cref="StreamAsync"/> stays silent: the stream
     /// announced the completion, and <see cref="_completionAnnounced"/> is how the edge knows.
     /// </summary>
     private void SyncGeneratingWindow(IReadOnlyList<AiMessage> messages)
     {
         if (Generating && !_generating)
         {
+            // A new window means the previous turn's completion note is stale: while the new answer is
+            // still being produced there is no completed answer to announce, so the transcript carries
+            // none — the same bookkeeping StreamAsync does at stream start. The host's OWN announcements
+            // (AnnounceAsync) are not touched.
+            _completionNote = null;
             _completionAnnounced = false;
             _hostStopRaised = false;
         }
@@ -274,7 +311,7 @@ public partial class TmAiConversation
             && messages.Count > 0
             && messages[^1].Status == AiMessageStatus.Completed)
         {
-            Announce(ResolveCompletionText(messages[^1]));
+            AnnounceCompletion(ResolveCompletionText(messages[^1]), messages[^1].Id);
         }
 
         _generating = Generating;
@@ -587,6 +624,7 @@ public partial class TmAiConversation
         var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _streamCts = cts;
         _announcements.Clear();
+        _completionNote = null;
         _completionAnnounced = false;
         _hostStopRaised = false;
         _contentDirty = true;
@@ -666,7 +704,7 @@ public partial class TmAiConversation
 
         if (failure is null && !stopped && message.Status == AiMessageStatus.Completed)
         {
-            Announce(ResolveCompletionText(message));
+            AnnounceCompletion(ResolveCompletionText(message), message.Id);
             _completionAnnounced = true;
         }
 
@@ -736,6 +774,11 @@ public partial class TmAiConversation
     /// Speaks <paramref name="text"/> into the transcript live region. Each call is a new keyed node
     /// (even when the text repeats), so a screen reader hears it again. Dispatched through
     /// <see cref="ComponentBase.InvokeAsync(Action)"/> so a host can call it from outside the renderer.
+    /// The announcements ACCUMULATE in the transcript: only the next <see cref="StreamAsync"/> start
+    /// clears them (the stream re-owns the live region). Opening a host-driven generation window
+    /// (<see cref="Generating"/>) does NOT clear them — a window does not own the host's channel — and
+    /// the completion note is a separate, single, replaceable slot that never touches these nodes. Clearing
+    /// <see cref="Messages"/> or announcing again does not remove earlier host announcements.
     /// </summary>
     /// <param name="text">The announcement. Null or whitespace is a no-op.</param>
     public Task AnnounceAsync(string text) => InvokeAsync(() =>
@@ -753,6 +796,27 @@ public partial class TmAiConversation
 
         _announcementSequence++;
         _announcements.Add((_announcementSequence, text));
+    }
+
+    /// <summary>
+    /// Writes the completion note: a single replaceable slot, so the transcript holds at most one note
+    /// no matter how many turns completed. The slot gets a new sequence (and therefore a new keyed node)
+    /// on every completion — a live region ignores an unchanged text node, so re-using the node would
+    /// silently swallow a repeated completion. The announced turn's id is stored with the note, so
+    /// <see cref="OnParametersSet"/> can drop the note once the announced answer stops being the last
+    /// turn (the host cleared or appended to the conversation).
+    /// </summary>
+    /// <param name="text">The announcement. Null or whitespace is a no-op.</param>
+    /// <param name="messageId">The <see cref="AiMessage.Id"/> of the announced turn.</param>
+    private void AnnounceCompletion(string text, string? messageId)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return;
+        }
+
+        _announcementSequence++;
+        _completionNote = (_announcementSequence, text, messageId);
     }
 
     /// <summary>
