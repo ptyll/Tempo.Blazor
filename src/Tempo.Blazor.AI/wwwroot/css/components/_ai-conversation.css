@@ -38,8 +38,13 @@
 
 /* The scroll container. It is focusable (tabindex=0) so a keyboard reader can scroll back through the
    transcript, which is why it carries its own focus-visible ring. min-block-size: 0 is what lets the flex
-   child actually shrink and scroll instead of growing with its content. */
+   child actually shrink and scroll instead of growing with its content. position: relative makes the log
+   the containing block of the absolutely positioned completion announcements (p.tm-sr-only) it renders:
+   without a positioned ancestor inside the scroller the notes anchor to the outer container (the page)
+   and in a host layout stretch document.scrollingElement; the log as containing block keeps them inside
+   the scrollport. */
 .tm-ai-conversation__log {
+    position: relative;
     flex: 1 1 auto;
     min-block-size: 0;
     overflow-y: auto;

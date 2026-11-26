@@ -165,6 +165,16 @@ rounding does not read as "scrolled up"). A reader who scrolled back gets the "N
 instead of a moving viewport, and is scrolled only when they press it. The pill floats over the
 scroller, so an appearing control never reflows the text being read.
 
+The log element is also the **containing block** of the screen-reader-only completion announcements
+(`p.tm-sr-only`, absolutely positioned by the library's base styles) it renders: `position: relative`
+on the log pins them inside the scrollport, so a long transcript never stretches the page around it.
+Without a positioned ancestor inside the scroller the notes anchor to the outer container (the page)
+and in a host layout stretch `document.scrollingElement`. Hosts must not remove that rule; the E2E
+`LongTranscript_ScreenReaderAnnouncements_DoNotStretchTheDocument` guards it in a real browser.
+Absolutely positioned elements rendered by a host's `MessageTemplate` position against the log too —
+they scroll with the transcript, so overlays meant to hover above the scroller belong outside the
+template.
+
 The host can drive the same scrolling from its own state: the public `ScrollToBottomAsync()` performs
 the same jump the built-in pill performs — it dismisses the "New messages" pill and re-arms the follow,
 so the next appended turn is followed again — and `ScrollToMessageAsync(messageId)` brings the turn with

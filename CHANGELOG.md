@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed — TmAiConversation transcript no longer stretches the page (`Tempo.Blazor.AI`)
+
+- **The conversation log is now `position: relative`, so its screen-reader-only completion announcements stay inside the scrollport.** The transcript renders its completion announcements as absolutely positioned `p.tm-sr-only`; without a positioned ancestor inside the scroller the notes anchored to the outer container (the page) and in a host layout stretched `document.scrollingElement` with every turn (EmusCz measured +1349 px under the form after ~12 turns). The log as containing block keeps them inside the scrollport. Hosts that applied the `::deep .tm-ai-conversation__log { position: relative }` workaround can drop it. One behavioural note: absolutely positioned elements rendered by a host's `MessageTemplate` now position against the log and scroll with the transcript — overlays meant to hover above the scroller belong outside the template. No breaking change.
+
 ## 2.13.0 - 2026-11-24
 
 > Plan "Tempo: zadávání času na telefonu a vnějším displeji Z Flip 5" (1c95309c; decision

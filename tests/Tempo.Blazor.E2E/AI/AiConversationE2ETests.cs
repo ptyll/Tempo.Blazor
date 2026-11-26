@@ -450,6 +450,123 @@ public sealed class AiConversationE2ETests : WasmTestBase
     }
 
     /// <summary>
+    /// Plan b75365fb phase 1 (EmusCz 2.13.0): the completion announcements the transcript renders are
+    /// <c>p.tm-sr-only</c> — absolutely positioned by the library's base styles. Without a positioned
+    /// ancestor inside the scroll container the notes anchor to the outer container (the page) and in
+    /// the host layout stretch <c>document.scrollingElement</c> (EmusCz measured +1349 px under the form
+    /// after ~12 turns). The log is the containing block, so the announcement text of twenty turns must
+    /// leave the document height untouched — at the bottom-riding position and with the transcript
+    /// scrolled to its top. Driving the demo's 2 s stream twenty times would cost a minute for no extra
+    /// signal, so the twenty nodes are appended as the exact markup the component emits. The page content
+    /// below the demo card is hidden for the measurement: on the full demo page the standalone-components
+    /// gallery reaches further down than the notes land, which would mask the very growth this test
+    /// exists to catch. Two assertions pin the contract: the scrollHeight pair guards the user-visible
+    /// symptom (EmusCz's layout, where the page ends at the conversation), and the offsetParent check is
+    /// the positioning contract itself — current Chromium computes the unpositioned notes' static
+    /// position inside the page on THIS demo, so the scrollHeight pair alone stays green on the mutant
+    /// here while the offsetParent check turns red. Mutant guard: removing <c>position: relative</c> from
+    /// <c>.tm-ai-conversation__log</c> turns this test red.
+    /// </summary>
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task LongTranscript_ScreenReaderAnnouncements_DoNotStretchTheDocument()
+    {
+        var page = await OpenPageAsync();
+        await StartAnswerAsync(page);
+        await WaitForCompletedAnswerAsync(page);
+
+        // EmusCz measured the growth with the conversation at the END of the page. The demo page renders
+        // a tall standalone-components gallery below the demo card, which would swallow the overflow, so
+        // the measurement isolates the document at the demo card first.
+        var hiddenSiblings = await page.EvaluateAsync<int>(
+            """
+            () => {
+                const demo = document.querySelector("[data-testid='ai-conversation-demo']");
+                let hidden = 0;
+                let node = demo;
+                while (node && node !== document.body) {
+                    let sibling = node.nextElementSibling;
+                    while (sibling) {
+                        sibling.style.display = 'none';
+                        hidden++;
+                        sibling = sibling.nextElementSibling;
+                    }
+                    node = node.parentElement;
+                }
+                return hidden;
+            }
+            """);
+        Assert.IsTrue(hiddenSiblings > 0, "the demo page must render content below the conversation card");
+
+        var documentHeightBefore = await page.EvaluateAsync<double>(
+            "() => document.scrollingElement.scrollHeight");
+
+        // Insert only once the component reports the turn is done: a re-render while generating rebuilds
+        // the transcript from Blazor's render tree and would silently discard the probe. The probe wrapper
+        // is deliberately NOT positioned — a positioned probe would become the notes' containing block and
+        // mask the very contract this test pins; a plain div leaves the notes resolving against the log
+        // (or, on the mutant, the page).
+        await Microsoft.Playwright.Assertions.Expect(
+                page.Locator("[data-testid='ai-conversation']"))
+            .ToHaveAttributeAsync("data-generating", "false",
+                new LocatorAssertionsToHaveAttributeOptions { Timeout = 10000 });
+
+        const string AppendTwentyAnnouncements = """
+            () => {
+                const content = document.querySelector('.tm-ai-conversation__content');
+                if (!content) {
+                    return;
+                }
+                const probe = document.createElement('div');
+                probe.setAttribute('data-test-probe', '');
+                for (let i = 0; i < 20; i++) {
+                    const note = document.createElement('p');
+                    note.className = 'tm-sr-only';
+                    note.setAttribute('data-testid', 'ai-conversation-announcement');
+                    note.textContent = 'Answer complete';
+                    probe.appendChild(note);
+                }
+                content.appendChild(probe);
+            }
+            """;
+
+        const string WaitTwoFrames = "() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))";
+
+        // Bottom-riding reader (the follow kept the transcript at its end after the answer).
+        await page.EvaluateAsync(AppendTwentyAnnouncements);
+        await page.EvaluateAsync(WaitTwoFrames);
+        var documentHeightAtBottom = await page.EvaluateAsync<double>(
+            "() => document.scrollingElement.scrollHeight");
+        Assert.AreEqual(documentHeightBefore, documentHeightAtBottom, 1.0,
+            "twenty screen-reader announcements appended inside the transcript must not stretch the " +
+            $"document — before {documentHeightBefore}, after {documentHeightAtBottom}");
+
+        // The reader scrolled back up: the document height must stay untouched in this position too —
+        // the unpositioned variant grew the page below the form no matter where the reader sat.
+        await ScrollTranscriptToTopAsync(page);
+        await page.EvaluateAsync(WaitTwoFrames);
+        var documentHeightScrolledUp = await page.EvaluateAsync<double>(
+            "() => document.scrollingElement.scrollHeight");
+        Assert.AreEqual(documentHeightBefore, documentHeightScrolledUp, 1.0,
+            "scrolling the transcript back up must not change the document height either — " +
+            $"before {documentHeightBefore}, after {documentHeightScrolledUp}");
+
+        // The contract behind both numbers: every announcement positions against the LOG, not the page.
+        var allPinnedToTheLog = await page.EvaluateAsync<bool>(
+            """
+            () => {
+                const log = document.querySelector('.tm-ai-conversation__log');
+                const notes = document.querySelectorAll('.tm-ai-conversation__content p.tm-sr-only');
+                return notes.length > 0 && Array.from(notes).every(note => note.offsetParent === log);
+            }
+            """);
+        Assert.IsTrue(allPinnedToTheLog,
+            "every sr-only announcement inside the transcript must have the log as its offsetParent");
+
+        AssertNoClientErrors();
+    }
+
+    /// <summary>
     /// The user turn paints its OWN token (`--tm-ai-user-bubble-bg`) with the 1 px subtle border — never
     /// again the neutral secondary surface, which IS the page colour in the dark theme. The resolved
     /// computed style is read in BOTH themes straight from the running page.

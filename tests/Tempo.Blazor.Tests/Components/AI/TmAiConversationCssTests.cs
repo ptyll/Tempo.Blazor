@@ -130,6 +130,23 @@ public sealed class TmAiConversationCssTests
             "the transcript is keyboard focusable (WCAG 2.1), so it needs a visible focus indicator");
     }
 
+    /// <summary>
+    /// The transcript renders its completion announcements as <c>p.tm-sr-only</c> — absolutely positioned
+    /// by <c>base.css</c>. Without a positioned ancestor inside the scroll container the notes anchor to
+    /// the outer container (the page) and in a host layout stretch <c>document.scrollingElement</c>
+    /// (EmusCz measured +1349 px under the form after ~12 turns, plan b75365fb). The log itself is
+    /// therefore the containing block of its screen-reader text, which keeps the notes inside the
+    /// scrollport; the E2E <c>LongTranscript_ScreenReaderAnnouncements_DoNotStretchTheDocument</c> proves
+    /// the browser behaviour.
+    /// </summary>
+    [Fact]
+    public void TheScrollContainer_IsThePositioningContextOfItsScreenReaderText()
+    {
+        PropertyOf(Stylesheet(), ".tm-ai-conversation__log", "position")
+            .Should().Be("relative",
+                "an sr-only announcement inside the log positions against the scroll container, not the page");
+    }
+
     [Fact]
     public void TheActionablePills_ReachTheTouchFloorOnACoarsePointer()
     {
