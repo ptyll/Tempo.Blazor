@@ -2994,7 +2994,7 @@ Výběr data s kalendářem.
 | `Required` | `bool` | `false` | Povinné |
 | `Label` | `string?` | `null` | Popisek |
 | `LabelTrailing` | `RenderFragment?` | `null` | Slot na konci řádku popisku |
-| `ReadOnly` | `bool` | `false` | Fokusovatelný trigger, neotevře se, bez clear, `aria-readonly`, bez disabled barev |
+| `ReadOnly` | `bool` | `false` | Fokusovatelný trigger, neotevře se, bez clear a bez ikony kalendáře, zámek hlásí `aria-disabled="true"` + `aria-haspopup="false"` (bez `aria-expanded`; `aria-readonly` na buttonu ARIA nepodporuje), read-only plocha jako ostatní vstupy (`--tm-bg-surface-secondary`), bez disabled barev |
 | `AriaDescribedBy` | `string?` | `null` | Extra id spojená s kaskádou TmFormField |
 | `AllowTypedDate` | `bool` | `false` | Psané datum v CurrentCulture; chybný vstup = neplatný stav, Value se nemění |
 | `Class` | `string?` | `null` | Další CSS třídy |
@@ -3114,7 +3114,7 @@ Výběr data a času.
 | `Disabled` | `bool` | `false` | Zakázáno |
 | `Required` | `bool` | `false` | Povinné |
 | `HideClear` | `bool` | `false` | Skrýt vymazání |
-| `ReadOnly` | `bool` | `false` | Fokusovatelný trigger, neotevře se, bez clear, `aria-readonly`, bez disabled barev |
+| `ReadOnly` | `bool` | `false` | Fokusovatelný trigger, neotevře se, bez clear a bez ikony kalendáře, zámek hlásí `aria-disabled="true"` + `aria-haspopup="false"` (bez `aria-expanded`; `aria-readonly` na buttonu ARIA nepodporuje), read-only plocha jako ostatní vstupy (`--tm-bg-surface-secondary`), bez disabled barev |
 | `AriaDescribedBy` | `string?` | `null` | Extra id spojená s kaskádou TmFormField |
 | `LabelTrailing` | `RenderFragment?` | `null` | Slot na konci řádku popisku |
 | `AllowTypedDate` | `bool` | `false` | Psané datum v CurrentCulture; chybný vstup = neplatný stav, Value se nemění |

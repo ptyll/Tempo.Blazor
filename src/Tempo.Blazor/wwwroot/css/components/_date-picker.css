@@ -57,9 +57,13 @@
 .tm-date-picker-trigger:focus { outline: 2px solid transparent; border-color: var(--tm-color-primary); box-shadow: var(--tm-focus-ring); }
 .tm-date-picker-trigger[disabled] { opacity: 0.5; cursor: not-allowed; }
 
-/* ReadOnly keeps surface colours (unlike Disabled) and still accepts focus. */
+/* ReadOnly keeps surface colours (unlike Disabled) and still accepts focus. The surface matches
+   .tm-time-input--readonly / .tm-input-readonly: a locked value reads through the
+   secondary-surface token, never the disabled ink or an opacity fade, and the calendar icon is
+   not rendered at all, so nothing advertises a popup the trigger can never open. */
 .tm-date-picker--readonly .tm-date-picker-trigger {
   cursor: default;
+  background: var(--tm-bg-surface-secondary);
 }
 .tm-date-picker--readonly .tm-date-picker-trigger:hover:not(:disabled) {
   border-color: var(--tm-border-color);

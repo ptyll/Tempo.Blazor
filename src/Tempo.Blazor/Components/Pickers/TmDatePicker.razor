@@ -38,9 +38,9 @@
                 id="@_triggerId"
                 class="tm-date-picker-trigger"
                 disabled="@Disabled"
-                aria-haspopup="true"
-                aria-expanded="@_isOpen"
-                aria-readonly="@(ReadOnly ? "true" : null)"
+                aria-haspopup="@(ReadOnly ? "false" : "true")"
+                aria-expanded="@(ReadOnly ? null : _isOpen ? "true" : "false")"
+                aria-disabled="@(ReadOnly ? "true" : null)"
                 aria-labelledby="@TriggerLabelledBy"
                 aria-describedby="@DescribedBy"
                 @attributes="AriaAttributes"
@@ -55,9 +55,14 @@
                     <span class="tm-picker-placeholder">@(Placeholder ?? Loc["TmDatePicker_Placeholder"])</span>
                 }
             </span>
-            <span class="tm-date-picker-icon" aria-hidden="true">
-                <TmIcon Name="@IconNames.Calendar" Size="IconSize.Sm" />
-            </span>
+            @* The calendar icon advertises the popup; a locked trigger has none to offer, so it
+               is not rendered at all (the surface tint names the lock, never an icon). *@
+            @if (!ReadOnly)
+            {
+                <span class="tm-date-picker-icon" aria-hidden="true">
+                    <TmIcon Name="@IconNames.Calendar" Size="IconSize.Sm" />
+                </span>
+            }
         </button>
         @if (AllowTypedDate && !Disabled && !ReadOnly)
         {
@@ -133,8 +138,13 @@
     [Parameter] public bool       Disabled     { get; set; }
     /// <summary>
     /// Keeps the trigger focusable but closed: click, Enter and Alt+Down do not open the calendar,
-    /// the clear button is hidden, and <c>aria-readonly</c> is set. Distinct from
-    /// <see cref="Disabled"/> — surface colours stay, the control is not greyed out. Defaults to false.
+    /// the clear button and the calendar icon are not rendered, and the trigger surface tints like
+    /// the other read-only inputs (<c>--tm-bg-surface-secondary</c>, never the disabled colours).
+    /// The trigger announces the lock as <c>aria-disabled="true"</c> with
+    /// <c>aria-haspopup="false"</c> and no <c>aria-expanded</c> — it is a button that opens
+    /// nothing, and <c>aria-readonly</c> is not a supported attribute on <c>role=button</c>.
+    /// Distinct from <see cref="Disabled"/> — the control is not greyed out and it keeps its tab
+    /// stop. Defaults to false.
     /// </summary>
     [Parameter] public bool       ReadOnly     { get; set; }
     [Parameter] public bool       Required     { get; set; }

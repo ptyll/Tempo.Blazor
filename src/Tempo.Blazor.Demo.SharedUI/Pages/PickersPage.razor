@@ -205,6 +205,18 @@
                           ValueChanged="@(_ => {})"
                           Disabled="true" />
         </div>
+
+        <div class="showcase-card" data-testid="date-picker-readonly-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Read-only State</h3>
+            <TmDatePicker Label="Agreed date"
+                          Value="@(new DateOnly(2026, 3, 15))"
+                          ValueChanged="@(_ => {})"
+                          ReadOnly="true"
+                          AriaDescribedBy="date-readonly-reason"
+                          data-testid="date-picker-readonly" />
+            <p class="text-sm text-slate-500 dark:text-slate-400 mt-3">Focusable, announces the lock (<code class="whitespace-nowrap">aria-disabled</code>), no popup advertised.</p>
+            <p id="date-readonly-reason" class="text-xs text-slate-500 dark:text-slate-400 mt-1">Locked after the contract was signed.</p>
+        </div>
     </div>
 </section>
 
@@ -279,6 +291,19 @@
                               ValueChanged="@(_ => {})"
                               Disabled="true"
                               HourCycle="TimeHourCycle.H23" />
+        </div>
+
+        <div class="showcase-card" data-testid="datetime-picker-readonly-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Read-only State</h3>
+            <TmDateTimePicker Label="Recorded at"
+                              Value="@(new DateTime(2026, 3, 15, 10, 30, 0))"
+                              ValueChanged="@(_ => {})"
+                              ReadOnly="true"
+                              AriaDescribedBy="datetime-readonly-reason"
+                              HourCycle="TimeHourCycle.H23"
+                              data-testid="datetime-picker-readonly" />
+            <p class="text-sm text-slate-500 dark:text-slate-400 mt-3">The whole value is locked; the trigger still takes focus and names the lock (<code class="whitespace-nowrap">aria-disabled</code>).</p>
+            <p id="datetime-readonly-reason" class="text-xs text-slate-500 dark:text-slate-400 mt-1">Locked after the contract was signed.</p>
         </div>
     </div>
 </section>

@@ -75,7 +75,7 @@
       "name": "ReadOnly",
       "type": "bool",
       "isRequired": false,
-      "description": "Focusable date trigger that does not open, hides clear, sets aria-readonly and tm-datetime-picker--readonly, and forwards ReadOnly to the nested TmTimeInput. Distinct from Disabled."
+      "description": "Focusable date trigger that does not open, hides clear, does not render the calendar icon, announces the lock as aria-disabled=\"true\" with aria-haspopup=\"false\" and no aria-expanded (aria-readonly is not a supported attribute on role=button), root carries tm-datetime-picker--readonly, the trigger surface reads like the other read-only inputs (--tm-bg-surface-secondary, no disabled colours, no fade), and ReadOnly is forwarded to the nested TmTimeInput. Distinct from Disabled. Consumer aria-* attributes passed through AdditionalAttributes still win."
     },
     {
       "name": "AriaDescribedBy",

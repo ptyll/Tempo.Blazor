@@ -250,7 +250,7 @@ public class TmDatePickerTests : LocalizationTestBase
 
         var trigger = cut.Find(".tm-date-picker-trigger");
         trigger.HasAttribute("disabled").Should().BeFalse();
-        trigger.GetAttribute("aria-readonly").Should().Be("true");
+        trigger.HasAttribute("tabindex").Should().BeFalse("the locked trigger keeps the natural tab stop");
         cut.Find(".tm-date-picker").ClassList.Should().Contain("tm-date-picker--readonly");
         cut.FindAll(".tm-picker-clear").Should().BeEmpty();
 
@@ -260,8 +260,80 @@ public class TmDatePickerTests : LocalizationTestBase
         trigger.KeyDown(new KeyboardEventArgs { Key = "Enter" });
         cut.FindAll(".tm-calendar").Should().BeEmpty();
 
+        trigger.KeyDown(new KeyboardEventArgs { Key = " " });
+        cut.FindAll(".tm-calendar").Should().BeEmpty();
+
         trigger.KeyDown(new KeyboardEventArgs { Key = "ArrowDown", AltKey = true });
         cut.FindAll(".tm-calendar").Should().BeEmpty();
+    }
+
+    // ── Fáze 4 (plan b75365fb): a locked trigger is a BUTTON that cannot open anything, so it must
+    //    not advertise a popup. aria-readonly is not a supported attribute on role=button (ARIA 1.2),
+    //    so the lock is named by aria-disabled while the trigger stays focusable and readable. ─────
+
+    [Fact]
+    public void DatePicker_ReadOnly_TriggerAnnouncesLockedState_NotAPopup()
+    {
+        var cut = Render<TmDatePicker>(p => p
+            .Add(c => c.Value, new DateOnly(2026, 3, 15))
+            .Add(c => c.ReadOnly, true));
+
+        var trigger = cut.Find(".tm-date-picker-trigger");
+        trigger.GetAttribute("aria-haspopup").Should().Be("false",
+            "a locked trigger has no popup to advertise");
+        trigger.HasAttribute("aria-expanded").Should().BeFalse(
+            "aria-expanded on a non-popup button announces a collapsed expandable control");
+        trigger.GetAttribute("aria-disabled").Should().Be("true",
+            "the lock is announced as disabled — aria-readonly is not valid on role=button");
+        trigger.HasAttribute("aria-readonly").Should().BeFalse(
+            "aria-readonly is not a supported attribute on a native <button>");
+        trigger.HasAttribute("disabled").Should().BeFalse(
+            "aria-disabled names the state; the trigger stays focusable and readable");
+    }
+
+    [Fact]
+    public void DatePicker_Editable_TriggerKeepsThePopupContract()
+    {
+        var cut = Render<TmDatePicker>(p => p.Add(c => c.Value, new DateOnly(2026, 3, 15)));
+
+        var trigger = cut.Find(".tm-date-picker-trigger");
+        trigger.GetAttribute("aria-haspopup").Should().Be("true");
+        trigger.GetAttribute("aria-expanded").Should().Be("false");
+        trigger.HasAttribute("aria-disabled").Should().BeFalse();
+        trigger.HasAttribute("aria-readonly").Should().BeFalse();
+
+        trigger.Click();
+        cut.Find(".tm-date-picker-trigger").GetAttribute("aria-expanded").Should().Be("true");
+    }
+
+    [Fact]
+    public void DatePicker_ReadOnly_ConsumerAriaAttributes_TakePrecedence()
+    {
+        // EmusCz worked around the missing lock announcement by passing the attributes from the
+        // consumer side; that escape hatch must keep winning over the component defaults.
+        var cut = Render<TmDatePicker>(p => p
+            .Add(c => c.Value, new DateOnly(2026, 3, 15))
+            .Add(c => c.ReadOnly, true)
+            .AddUnmatched("aria-haspopup", "false")
+            .AddUnmatched("aria-disabled", "false")
+            .AddUnmatched("aria-expanded", "false"));
+
+        var trigger = cut.Find(".tm-date-picker-trigger");
+        trigger.GetAttribute("aria-haspopup").Should().Be("false");
+        trigger.GetAttribute("aria-disabled").Should().Be("false",
+            "a consumer attribute wins over the component default");
+        trigger.GetAttribute("aria-expanded").Should().Be("false");
+    }
+
+    [Fact]
+    public void DatePicker_ReadOnly_AriaDescribedBy_StillReachesTheTrigger()
+    {
+        var cut = Render<TmDatePicker>(p => p
+            .Add(c => c.ReadOnly, true)
+            .Add(c => c.AriaDescribedBy, "lock-reason"));
+
+        cut.Find(".tm-date-picker-trigger").GetAttribute("aria-describedby")
+            .Should().Be("lock-reason", "the host can describe WHY the field is locked");
     }
 
     [Fact]

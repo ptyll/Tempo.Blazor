@@ -28,4 +28,17 @@ public class TmDatePickerIconTests : LocalizationTestBase
 
         cut.Find(".tm-date-picker-icon").GetAttribute("aria-hidden").Should().Be("true");
     }
+
+    // Plan b75365fb Fáze 4 (review): a locked trigger has no popup to advertise, so the calendar
+    // affordance is not rendered at all — the secondary-surface tint names the lock, not an icon.
+    [Fact]
+    public void DatePicker_ReadOnly_DoesNotRenderTheCalendarIcon()
+    {
+        var cut = Render<TmDatePicker>(p => p
+            .Add(c => c.Value, new DateOnly(2026, 3, 15))
+            .Add(c => c.ReadOnly, true));
+
+        cut.FindAll(".tm-date-picker-icon").Should().BeEmpty(
+            "a locked trigger has no popup to advertise — the surface tint names the lock, not an icon");
+    }
 }

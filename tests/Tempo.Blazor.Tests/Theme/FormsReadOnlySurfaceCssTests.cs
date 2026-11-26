@@ -15,6 +15,7 @@ public sealed class FormsReadOnlySurfaceCssTests
 {
     private const string InputStylesheet = "_input.css";
     private const string DropdownStylesheet = "_filterable-dropdown.css";
+    private const string DatePickerStylesheet = "_date-picker.css";
 
     private static string Rule(string stylesheet, string selector)
         => ThemeCss.RuleDeclarations(ThemeCss.ComponentCss(stylesheet), selector);
@@ -69,6 +70,34 @@ public sealed class FormsReadOnlySurfaceCssTests
         var hover = Rule(DropdownStylesheet, ".tm-filterable-dropdown-disabled .tm-filterable-dropdown-trigger:hover");
         hover.Should().Contain("border-color: var(--tm-border-color)",
             "a disabled trigger never advertises the primary hover border");
+    }
+
+    /// <summary>
+    /// Review round (plan b75365fb, Fáze 4): the locked date picker trigger must read like every
+    /// other read-only input. It takes the same secondary-surface tint as
+    /// <c>.tm-time-input--readonly</c> / <c>.tm-input-readonly</c> — never the disabled ink and
+    /// never an opacity fade — and it paints the tint itself, because the calendar icon is no
+    /// longer rendered to advertise a popup the trigger can never open.
+    /// </summary>
+    [Fact]
+    public void TheDatePickerReadonlyTriggerMatchesTheOtherLockedSurfaces()
+    {
+        var body = Rule(DatePickerStylesheet, ".tm-date-picker--readonly .tm-date-picker-trigger");
+
+        body.Should().NotBeEmpty("the read-only date picker trigger surface must exist");
+        body.Should().Contain("--tm-bg-surface-secondary",
+            "the locked trigger takes the same surface tint as .tm-time-input--readonly and .tm-input-readonly");
+        body.Should().Contain("cursor: default",
+            "a locked trigger does not borrow the pointer cursor of an opener");
+        body.Should().NotContain("--tm-text-disabled",
+            "a locked value keeps the primary ink — the disabled token is the other, gray state");
+        body.Should().NotContain("opacity",
+            "readability is the point of ReadOnly — no fade, unlike Disabled");
+
+        var hover = Rule(DatePickerStylesheet,
+            ".tm-date-picker--readonly .tm-date-picker-trigger:hover:not(:disabled)");
+        hover.Should().Contain("border-color: var(--tm-border-color)",
+            "a locked trigger never advertises the primary hover border");
     }
 
     /// <summary>Both disabled-state tokens resolve in the light AND the dark token graph.</summary>

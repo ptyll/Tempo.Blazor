@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+### Fixed — a locked date picker trigger announces the lock, not a popup (`Tempo.Blazor`)
+
+- **The `ReadOnly` trigger of `TmDatePicker` and `TmDateTimePicker` no longer advertises a popup it can never open.** It used to stay `<button aria-haspopup="true" …>` with `aria-readonly="true"` — an attribute ARIA does not support on `role=button`, so a screen reader announced an expandable button and never mentioned the lock (measured in the EmusCz 2.13.0 upgrade). With `ReadOnly` the trigger now renders `aria-haspopup="false"`, no `aria-expanded` and `aria-disabled="true"`, and stays focusable with its natural tab stop. Click, Enter, Space and Alt+Down still open nothing and the clear button stays hidden. Consumer `aria-*` attributes passed through `AdditionalAttributes` keep winning over the component defaults, so the EmusCz workaround (`aria-haspopup="false"` + `aria-disabled="true"` from the consumer side) produces the identical DOM and can be dropped at the next upgrade. The editable trigger is unchanged apart from one correctness fix: a closed picker now renders `aria-expanded="false"` instead of omitting the attribute, and an open one `aria-expanded="true"` instead of the invalid empty value. `AriaDescribedBy` (and the `TmFormField` help/error cascade) still reach the locked trigger, so a host can describe WHY the field is locked. Contract pinned in bUnit (attributes in both states, activation guards, consumer precedence) and in WASM E2E `TmDatePickerReadOnlyE2ETests` with a scoped axe scan (aria-allowed-attr) in both themes; demo cards on `/pickers` (`date-picker-readonly-card`, `datetime-picker-readonly-card`).
+- **The locked trigger also LOOKS locked, without the disabled styling.** The trigger used to keep the plain editable surface, so a locked value was visually indistinguishable from an editable one (and the calendar icon still advertised the popup). The `tm-date-picker--readonly` / `tm-datetime-picker--readonly` trigger now paints the same secondary-surface tint as the other read-only inputs (`--tm-bg-surface-secondary`, matching `.tm-time-input--readonly` / `.tm-input-readonly`) with the `default` cursor, and the calendar icon is not rendered at all while `ReadOnly` — nothing on the trigger advertises a popup that can never open. No opacity fade and no disabled ink: the value stays readable, exactly like every other read-only input. The surface equality is pinned in bUnit (CSS gate) and in E2E (computed `backgroundColor` of the locked trigger equals the read-only time input's, light and dark).
+
+### Breaking / Migration
+
+- **`ReadOnly` date picker triggers changed their DOM attributes.** Before: `aria-haspopup="true"`, `aria-readonly="true"`, `aria-expanded` omitted (closed). After: `aria-haspopup="false"`, `aria-disabled="true"`, no `aria-readonly`, no `aria-expanded`. A host that selected the locked trigger through `[aria-readonly="true"]` or styled/queried `aria-haspopup="true"` unconditionally must switch to the `tm-date-picker--readonly` / `tm-datetime-picker--readonly` root class or `[aria-disabled="true"]`:
+
+  ```css
+  /* before */ .tm-date-picker-trigger[aria-readonly="true"] { … }
+  /* after  */ .tm-date-picker--readonly .tm-date-picker-trigger { … }
+  ```
+
+  Hosts that passed `aria-haspopup="false"` / `aria-disabled="true"` themselves as a workaround need no change — consumer attributes still take precedence, so their markup is byte-identical.
+- **The editable trigger's `aria-expanded` is now always a string.** Before: a closed picker omitted `aria-expanded` and an open one rendered the invalid empty `aria-expanded=""`. After: closed renders `aria-expanded="false"`, open renders `aria-expanded="true"`. A host or test that detected the closed state by the ABSENCE of the attribute must switch to the explicit values:
+
+  ```css
+  /* before */ .tm-date-picker-trigger:not([aria-expanded]) { … }   /* closed */
+  /* after  */ .tm-date-picker-trigger[aria-expanded="false"] { … } /* closed */
+  /* after  */ .tm-date-picker-trigger[aria-expanded="true"] { … }  /* open   */
+  ```
+
 ### Fixed — disabled follow-up chips of `TmAiMessage` no longer look clickable (`Tempo.Blazor.AI`)
 
 - **A follow-up chip under `FollowUpsDisabled` now reads as disabled.** The chip used to keep the full colour, the pointer cursor and the hover fill, so it looked clickable while the click was refused (reported from the EmusCz 2.13.0 upgrade). The disabled chip now dims through the shared `--tm-opacity-disabled` token, shows the `not-allowed` cursor, and the hover fill applies only while the chip is enabled (`:hover:not(:disabled)` — the same shape the version buttons already carry). Under Windows high contrast the chip paints the system `GrayText` (`forced-color-adjust: none` would otherwise keep it `CanvasText`, indistinguishable from an enabled chip). The demo card on `/ai-conversation` offers the toggle; the before/after computed styles are pinned in bUnit + E2E. No breaking change.

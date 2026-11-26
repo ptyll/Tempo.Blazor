@@ -2749,7 +2749,7 @@ to{transform:translateY(0);opacity:1;}
 .tm-date-picker-trigger:hover:not(:disabled){border-color:var(--tm-color-primary);}
 .tm-date-picker-trigger:focus{outline:2px solid transparent;border-color:var(--tm-color-primary);box-shadow:var(--tm-focus-ring);}
 .tm-date-picker-trigger[disabled]{opacity:0.5;cursor:not-allowed;}
-.tm-date-picker--readonly .tm-date-picker-trigger{cursor:default;}
+.tm-date-picker--readonly .tm-date-picker-trigger{cursor:default;background:var(--tm-bg-surface-secondary);}
 .tm-date-picker--readonly .tm-date-picker-trigger:hover:not(:disabled){border-color:var(--tm-border-color);}
 .tm-date-picker-icon{margin-left:auto;color:var(--tm-text-tertiary);}
 .tm-date-picker-popup{background:var(--tm-bg-surface);border:1px solid var(--tm-border-color);border-radius:var(--tm-radius-lg);box-shadow:var(--tm-shadow-lg);padding:var(--tm-space-2);min-width:max-content;}
