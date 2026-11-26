@@ -9,6 +9,39 @@
 
 ### Breaking / Migration
 
+- **`Tempo.Blazor.AI` — `TmAiConversation` host announcements no longer survive the opening of a `Generating` window.** Before: nodes spoken through `AnnounceAsync` accumulated in the transcript DOM until the next `StreamAsync` start — opening a host-driven generation window (`Generating`) never touched them. After: opening the window clears them, exactly like a stream start does — a note spoken INSIDE the open window survives until the next edge, so a host that drives its own windows no longer accumulates stale notes a screen reader would re-read while browsing the transcript. A host that relied on the accumulation (e.g. rendering an announcement history from the transcript DOM) must keep its own history:
+
+  ```csharp
+  // before: read the accumulated notes back out of the transcript DOM
+  // after: keep your own list — the transcript is a live region, not a log of the host channel
+  private readonly List<string> announcementHistory = [];
+
+  private async Task SpeakAsync(string text)
+  {
+      announcementHistory.Add(text);            // the host owns the history
+      await conversation.AnnounceAsync(text);   // the transcript hears only the current window's notes
+  }
+  ```
+
+  **Ordering pitfall:** a note spoken just BEFORE the window opens in the SAME render batch is wiped by the edge in that very batch — the `false`→`true` transition clears the channel, including the note announced microseconds earlier. Speak the note only after the `Generating` = `true` render has landed — and note that `StateHasChanged()` alone does NOT land it: it only queues the render, and `AnnounceAsync` reaches the conversation synchronously through `InvokeAsync`, so in an event handler the note is still added before the edge and wiped in the same batch. Let the queued render land first — `await Task.Yield()` between `StateHasChanged()` and `AnnounceAsync` (the render batch is processed when the handler yields), or speak from `OnAfterRenderAsync` after setting the flag. A `StreamAsync` started inside the open window is an edge too — it clears the host channel at stream start the same way:
+
+  ```csharp
+  // before — the note never reaches a reader (the edge clears it in the same batch)
+  await conv.AnnounceAsync("Sending…");
+  _generating = true;
+
+  // wrong fix — StateHasChanged only QUEUES the render; the note is added before the edge
+  _generating = true;
+  StateHasChanged();
+  await conv.AnnounceAsync("Sending…");
+
+  // after — the yield lets the Generating = true render land, the note survives until the next edge
+  _generating = true;
+  StateHasChanged();
+  await Task.Yield(); // let the Generating = true render land
+  await conv.AnnounceAsync("Sending…");
+  ```
+
 - **`ReadOnly` date picker triggers changed their DOM attributes.** Before: `aria-haspopup="true"`, `aria-readonly="true"`, `aria-expanded` omitted (closed). After: `aria-haspopup="false"`, `aria-disabled="true"`, no `aria-readonly`, no `aria-expanded`. A host that selected the locked trigger through `[aria-readonly="true"]` or styled/queried `aria-haspopup="true"` unconditionally must switch to the `tm-date-picker--readonly` / `tm-datetime-picker--readonly` root class or `[aria-disabled="true"]`:
 
   ```css
@@ -29,9 +62,13 @@
 
 - **A follow-up chip under `FollowUpsDisabled` now reads as disabled.** The chip used to keep the full colour, the pointer cursor and the hover fill, so it looked clickable while the click was refused (reported from the EmusCz 2.13.0 upgrade). The disabled chip now dims through the shared `--tm-opacity-disabled` token, shows the `not-allowed` cursor, and the hover fill applies only while the chip is enabled (`:hover:not(:disabled)` — the same shape the version buttons already carry). Under Windows high contrast the chip paints the system `GrayText` (`forced-color-adjust: none` would otherwise keep it `CanvasText`, indistinguishable from an enabled chip). The demo card on `/ai-conversation` offers the toggle; the before/after computed styles are pinned in bUnit + E2E. No breaking change.
 
+### Fixed — TmAiConversation host announcements no longer accumulate in host-driven windows (`Tempo.Blazor.AI`)
+
+- **Opening a `Generating` window now clears the host announcements, exactly like a stream start.** `AnnounceAsync` notes used to accumulate in the transcript DOM until the next `StreamAsync` start; a consumer that drives its own generation windows (EmusCz's panel) kept every stale note of every past turn in the DOM, and a screen reader browsing the transcript re-read them (remaining task of the phase-2 review). The window edge is now the same bookkeeping the stream does: the false→true edge clears the host channel, a note spoken INSIDE the open window survives until the next edge, and a repeated wording across windows arrives as a new keyed node, so a live region never swallows it. The completion note stays a separate single replaceable slot that never touches the host nodes. Pinned in bUnit (`TmAiConversationHostAnnouncementTests` — count assertions, the new-keyed-node repeat and the edge ordering) and in WASM E2E on the `/ai-conversation` host-driven card. See Breaking / Migration: a host that relied on the accumulation keeps its own history.
+
 ### Fixed — TmAiConversation completion note no longer accumulates (`Tempo.Blazor.AI`)
 
-- **The transcript now holds at most ONE screen-reader-only completion note, no matter which half of the package drove the generation.** Until now only `StreamAsync` cleared the previous "Answer complete" note (at stream start); a consumer that drives its own generation windows (`Generating`) accumulated one identical `p.tm-sr-only` note per turn, and a screen reader browsing the transcript after N turns read "Answer complete" N times. The note is now a single replaceable slot: a new completion replaces the previous note with a new keyed node (so a repeated wording is still announced), and opening the next generation window clears the stale note of the previous turn — the same bookkeeping a stream start already did. The slot also remembers the announced turn's id, so the note disappears once the announced answer stops being the last turn (the host cleared the conversation or appended the next user turn without opening a new window). The `CompletionAnnouncement` formatter contract is unchanged (invoked once per completed turn, null keeps the localized default). Host announcements through `AnnounceAsync` are separate nodes and are never touched by the replacement: the completion note always renders as the LAST announcement node, after them. Every announcement node now carries an additive `data-kind` attribute (`"completion"` for the completion note, `"host"` for `AnnounceAsync` nodes) alongside the existing `data-testid`, so hosts and tests can key off the channel. `AnnounceAsync` announcements still accumulate until the next `StreamAsync` start — opening a `Generating` window never clears them. No breaking change.
+- **The transcript now holds at most ONE screen-reader-only completion note, no matter which half of the package drove the generation.** Until now only `StreamAsync` cleared the previous "Answer complete" note (at stream start); a consumer that drives its own generation windows (`Generating`) accumulated one identical `p.tm-sr-only` note per turn, and a screen reader browsing the transcript after N turns read "Answer complete" N times. The note is now a single replaceable slot: a new completion replaces the previous note with a new keyed node (so a repeated wording is still announced), and opening the next generation window clears the stale note of the previous turn — the same bookkeeping a stream start already did. The slot also remembers the announced turn's id, so the note disappears once the announced answer stops being the last turn (the host cleared the conversation or appended the next user turn without opening a new window). The `CompletionAnnouncement` formatter contract is unchanged (invoked once per completed turn, null keeps the localized default). Host announcements through `AnnounceAsync` are separate nodes and are never touched by the replacement: the completion note always renders as the LAST announcement node, after them. Every announcement node now carries an additive `data-kind` attribute (`"completion"` for the completion note, `"host"` for `AnnounceAsync` nodes) alongside the existing `data-testid`, so hosts and tests can key off the channel. `AnnounceAsync` announcements live until the next generation re-owns the live region — the next `StreamAsync` start or the opening of the next `Generating` window clears them (see the next Fixed entry).
 
 ### Fixed — TmAiConversation transcript no longer stretches the page (`Tempo.Blazor.AI`)
 

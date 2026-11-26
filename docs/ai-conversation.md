@@ -41,7 +41,7 @@ model records and `AiMessageStreamApplier` live in `Tempo.Blazor.Abstractions` (
 | `Messages` | `IReadOnlyList<AiMessage>?` | `null` | The turns, oldest first. The host owns the list: append a turn and the component renders it. Reassigning the property to a **new list instance** counts as loading another conversation (the window snaps to the newest turns); appending to the same instance keeps the window where the reader left it. |
 | `MessageTemplate` | `RenderFragment<AiMessage>?` | `null` | Replaces the built-in `TmAiMessage` of every turn, so a host attaches its own per-turn actions without the conversation re-declaring them. |
 | `MessagePendingText` | `string?` | `null` | **2.12.0** Text of the placeholder a turn with no content yet renders while it waits for its first part (`Pending`). Flows to the built-in `TmAiMessage` as its `PendingText`; a host with its own `MessageTemplate` passes `PendingText` itself. `null` renders no placeholder (the pre-2.12 behaviour; a localized default is planned for 3.0). |
-| `Generating` | `bool` | `false` | **2.12.0** Whether the host's OWN generation — one that does not travel through `StreamAsync` — is running. The component treats the window exactly like a stream: `IsGenerating` follows (the root's `data-generating`, the log's `aria-busy`, the built-in Stop pill), the true→false edge announces the completed answer when the last turn is `Completed`, and `StopAsync` raises `OnStop` so the host can cancel its own work. A host that streams through `StreamAsync` binds nothing — the component drives the state itself and the edge stays silent, so a completion is never announced twice. |
+| `Generating` | `bool` | `false` | **2.12.0** Whether the host's OWN generation — one that does not travel through `StreamAsync` — is running. The component treats the window exactly like a stream: `IsGenerating` follows (the root's `data-generating`, the log's `aria-busy`, the built-in Stop pill), opening the window clears the previous turn's completion note AND the host announcements (`AnnounceAsync`) — the window re-owns the live region the way a stream start does — the true→false edge announces the completed answer when the last turn is `Completed`, and `StopAsync` raises `OnStop` so the host can cancel its own work. A host that streams through `StreamAsync` binds nothing — the component drives the state itself and the edge stays silent, so a completion is never announced twice. |
 | `CompletionAnnouncement` | `Func<AiMessage, string?>?` | `null` | **2.13.0** Host formatter for the completion note spoken into the transcript live region. Invoked on the true→false generating edge and at the end of `StreamAsync`, only for the last `Completed` turn. A null return (or a null parameter) keeps `TmAiConversation_Completed`. Stopped and Failed turns never call it. The note is a **single replaceable slot** (see below) — a consumer that drives the stream itself gets the same "at most one note" guarantee as a streamed one. |
 | `Suggestions` | `IReadOnlyList<string>?` | `null` | Prompts offered by the empty state. They render only while the conversation has no turn **and** `OnSuggestion` is bound. |
 | `SuggestionsLayout` | `AiSuggestionsLayout` | `Wrap` | **2.13.0** How the empty-state chips sit. `Wrap` is today's wrapping, centred row. `ScrollRow` is a nowrap horizontal scroller that reveals a partially visible focused chip without moving the transcript (inner focus ring, `outline-offset: -4px`). `Auto` is ScrollRow under 640 px via a container query on `.tm-ai-conversation`; desktop Auto stays Wrap. |
@@ -61,10 +61,12 @@ styling and for E2E.
 
 Public members: `IsGenerating`, `StreamAsync(AiMessage, IAsyncEnumerable<AiStreamDelta>,
 CancellationToken)`, `StopAsync()`, `AnnounceAsync(string text)` (**2.13.0** — speaks into the
-transcript live region as a new keyed node so an identical wording is re-announced). The announcements
-**accumulate**: only the next `StreamAsync` start clears them (the stream re-owns the live region) —
-opening a host-driven `Generating` window does NOT clear them, and the completion note is a separate
-single replaceable slot that never touches them (see below). `ScrollToBottomAsync()`,
+transcript live region as a new keyed node so an identical wording is re-announced). The host
+announcements live until the next generation window re-owns the live region: the next `StreamAsync`
+start clears them, and so does opening a host-driven `Generating` window — a host that drives its own
+windows never accumulates stale notes, and a note spoken INSIDE the open window survives until the
+next edge. The completion note is a separate single replaceable slot that never touches them (see
+below). `ScrollToBottomAsync()`,
 `ScrollToMessageAsync(string messageId)`
 (which answers whether the named turn actually moved), `ExpandRenderWindowToAsync(string messageId)`
 (which grows a render window so the named turn is in the DOM, without scrolling), plus the two
@@ -94,15 +96,46 @@ completion note). While the window is open the component behaves exactly as if i
   the announced turn's id, so the note also disappears once the announced answer stops being the last
   turn — the host cleared the conversation or appended a fresh user turn without opening a new window.
   The host's own `AnnounceAsync` announcements are separate nodes and are never touched by the
-  replacement. Before this guarantee a consumer that drove its own windows accumulated one identical
-  note per turn, and a screen reader browsing the transcript read "Answer complete" once per past turn.
+  replacement — but opening the window IS an edge for them too: the new window re-owns the live region
+  (the same bookkeeping a stream start does), so the previous window's host notes are cleared and a
+  note spoken inside the open window survives until the next edge. A consumer that drives its own
+  windows therefore never accumulates stale host notes in the transcript DOM. Before this guarantee a
+  consumer that drove its own windows accumulated one identical completion note per turn, and a screen
+  reader browsing the transcript read "Answer complete" once per past turn.
 - The DOM distinguishes the two channels additively: every announcement node carries `data-kind`
   (`"host"` for `AnnounceAsync` nodes, `"completion"` for the completion note), and the completion
   note always renders as the **last** announcement node, after the host's ones. Hosts and tests can
   key off `data-kind` instead of counting nodes.
 
 A `StreamAsync` call inside an open window is allowed: the busy state stays on through both halves and
-the stream owns the announcement.
+the stream owns the announcement. The stream start is an edge of its own — it clears the host notes the
+same way the window edge does, so a stream started inside a window clears the window's notes.
+
+> **Ordering pitfall.** A note spoken just BEFORE the window opens in the SAME render batch is wiped
+> by the edge in that very batch — the `false`→`true` transition clears the channel, including the note
+> announced microseconds earlier. Speak the note only after the `Generating` = `true` render has
+> landed — and note that `StateHasChanged()` alone does NOT land it: it only queues the render, and
+> `AnnounceAsync` reaches the conversation synchronously through `InvokeAsync`, so in an event handler
+> the note is still added before the edge and wiped in the same batch. Let the queued render land
+> first — `await Task.Yield()` between `StateHasChanged()` and `AnnounceAsync` (the render batch is
+> processed when the handler yields), or speak from `OnAfterRenderAsync` after setting the flag:
+>
+> ```csharp
+> // before — the note never reaches a reader (the edge clears it in the same batch)
+> await conv.AnnounceAsync("Sending…");
+> _generating = true;
+>
+> // wrong fix — StateHasChanged only QUEUES the render; the note is added before the edge
+> _generating = true;
+> StateHasChanged();
+> await conv.AnnounceAsync("Sending…");
+>
+> // after — the yield lets the Generating = true render land, the note survives until the next edge
+> _generating = true;
+> StateHasChanged();
+> await Task.Yield(); // let the Generating = true render land
+> await conv.AnnounceAsync("Sending…");
+> ```
 
 One flag drives both halves of the package — the composer's send/stop surface and the conversation's
 busy window are two views of the same request:
@@ -260,10 +293,16 @@ detaches the follow. The default is `null`: no window, every turn rendered.
   as the announced answer stops being the last turn, so a cleared or continued conversation never
   claims a completion it no longer ends with. Host announcements through `AnnounceAsync` are separate
   nodes (additively `data-kind="host"`, the completion note is `data-kind="completion"`, always the
-  last announcement node) and survive the replacement untouched — they accumulate until the next
-  `StreamAsync` start and a host-driven window never clears them.
+  last announcement node) and survive the completion replacement untouched — they live until the next
+  generation re-owns the live region: the next `StreamAsync` start OR the opening of the next
+  `Generating` window clears them (a note spoken inside the open window survives until the next edge),
+  so a host driving its own windows never accumulates stale host notes either.
 - **`aria-busy`** is set on the transcript while a generation runs — a stream or a `Generating` window —
-  so assistive technology waits for the answer instead of narrating the intermediate renders.
+  so assistive technology waits for the answer instead of narrating the intermediate renders. A host
+  note spoken INSIDE the open window sits in this busy live region, so a screen reader typically reads
+  it only after the window closes — phrase it as a self-contained fact (the draft was saved, the note
+  was posted), never as progress ("preparing the answer…"); progress belongs to the pending
+  placeholder (`MessagePendingText`).
 - **Keyboard.** The transcript is `tabindex="0"` with its own `:focus-visible` ring — a scroll
   container a keyboard-only reader cannot reach locks them out of every earlier turn (WCAG 2.1.1).
   Every control is a native `<button>` (no emulated key activation, one activation per key press).
@@ -301,7 +340,10 @@ template's `TmAiMessage.PendingText` names the wait line of a turn that has not 
 `MessageTemplate`, so the pending text rides the template — the conversation-level `MessagePendingText`
 pass-through is the path for hosts without one). The host-driven controls live on the conversation's own
 card, above the transcript: a "Simulate a busy answer" button runs a full window with NO stream (busy
-flag, wait line, one completion announcement), the built-in Stop pill raises the page's `OnStop`, which
+flag, wait line, one completion announcement), an "Announce a host note" button speaks a note through
+`AnnounceAsync` — outside a window (an idle note that survives until the next generation) or inside the
+simulated one (the note the window edge clears when the next window opens), the built-in Stop pill
+raises the page's `OnStop`, which
 cancels the window's delay (it runs on the injected `TimeProvider`), marks the answer `Stopped` and
 closes the flag, and a "scroll to the first turn" button exercises `ScrollToMessageAsync`. Below the
 conversation

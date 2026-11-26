@@ -278,27 +278,35 @@ public sealed class TmAiConversationCompletionNoteTests : LocalizationTestBase
 
     // ── The host's own announcements are not collateral ─────────────────────────────────────────
 
+    /// <summary>
+    /// The completion-note replacement never touches the host channel: a note spoken INSIDE the open
+    /// window is still there after the completed edge, rendered before the completion note. Opening the
+    /// NEXT window is a different edge — that one clears the previous window's host note (the window
+    /// re-owns the host channel, the same bookkeeping <see cref="TmAiConversation.StreamAsync"/> does at
+    /// stream start; the full host-channel contract lives in
+    /// <see cref="TmAiConversationHostAnnouncementTests"/>).
+    /// </summary>
     [Fact]
     public async Task HostAnnouncements_SurviveTheCompletionNoteReplacement()
     {
         var messages = TmAiConversationTests.Conversation(1);
         var cut = Render<TmAiConversation>(parameters => parameters.Add(component => component.Messages, messages));
 
-        await cut.InvokeAsync(() => cut.Instance.AnnounceAsync("Host note"));
-
         cut.Render(parameters => parameters.Add(component => component.Generating, true));
+        await cut.InvokeAsync(() => cut.Instance.AnnounceAsync("Host note"));
         AppendCompletedTurn(messages, "answer-1");
         cut.Render(parameters => parameters.Add(component => component.Generating, false));
 
         cut.FindAll(AllAnnouncementsTestId).Select(node => node.TextContent).Should().Equal("Host note", "Answer complete");
 
         cut.Render(parameters => parameters.Add(component => component.Generating, true));
+        await cut.InvokeAsync(() => cut.Instance.AnnounceAsync("Host note 2"));
         AppendCompletedTurn(messages, "answer-2");
         cut.Render(parameters => parameters.Add(component => component.Generating, false));
 
         cut.FindAll(AllAnnouncementsTestId).Select(node => node.TextContent).Should().Equal(
-            new[] { "Host note", "Answer complete" },
-            "the host's own announcement stays untouched — only the completion note is a single replaceable slot");
+            new[] { "Host note 2", "Answer complete" },
+            "the current window's host note stays untouched by the completion replacement — only the window edge clears the previous one");
     }
 
     /// <summary>

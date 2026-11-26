@@ -178,6 +178,15 @@
                     @onclick="SimulateHostDrivenAnswerAsync">
                 @Loc["TmDemo_AiConversation_SimulateBusy"]
             </button>
+            @* The host channel of the transcript: a note spoken through AnnounceAsync — useful outside
+               a window (an idle note) and inside the simulated one (the note the window edge clears
+               when the next window opens). *@
+            <button type="button"
+                    class="ai-demo-button"
+                    data-testid="ai-demo-announce"
+                    @onclick="AnnounceHostNoteAsync">
+                @Loc["TmDemo_AiConversation_Announce"]
+            </button>
             @if (_messages.Count > 0)
             {
                 <button type="button"
@@ -283,6 +292,10 @@
             <div class="ai-demo-status__item">
                 <dt>@Loc["TmDemo_AiConversation_BusyWindow"]</dt>
                 <dd data-testid="ai-demo-busy-window">@(_isGenerating ? Loc["TmDemo_AiConversation_Busy"] : Loc["TmDemo_AiConversation_Idle"])</dd>
+            </div>
+            <div class="ai-demo-status__item">
+                <dt>@Loc["TmDemo_AiConversation_HostNotes"]</dt>
+                <dd data-testid="ai-demo-host-notes">@_hostNotesInTranscript</dd>
             </div>
         </dl>
     </div>
@@ -454,6 +467,15 @@
     /// <summary>The cancellation of the host-driven window's own delay — what the stop path flips.</summary>
     private CancellationTokenSource? _hostDrivenCts;
 
+    /// <summary>
+    /// How many host notes the transcript holds right now — the page's mirror of the
+    /// <c>[data-kind='host']</c> count a reader can compare with the visible transcript. It follows
+    /// the component's own bookkeeping: every <see cref="TmAiConversation.AnnounceAsync"/> call adds
+    /// one, and the next generation re-owning the live region (a stream start or the
+    /// <c>Generating</c> false→true edge) resets it to zero.
+    /// </summary>
+    private int _hostNotesInTranscript;
+
     /// <summary>The Pending answer of the open host-driven window; it is what a stop marks Stopped.</summary>
     private AiMessage? _hostDrivenAnswer;
 
@@ -521,6 +543,9 @@
         _messages.Add(answer);
         _generation++;
         _isGenerating = true;
+        // The stream start re-owns the host channel — the transcript's [data-kind='host'] notes are
+        // gone with it, so the mirror counter restarts at zero.
+        _hostNotesInTranscript = 0;
         _lastRetry = null;
         StateHasChanged();
 
@@ -573,6 +598,9 @@
         _messages.Add(new AiMessage(AiMessageRole.User, HostDrivenPrompt) { Status = AiMessageStatus.Completed });
         _messages.Add(answer);
         _isGenerating = true;
+        // The window edge re-owns the host channel (the previous window's notes are cleared), so the
+        // mirror counter restarts at zero with the window.
+        _hostNotesInTranscript = 0;
         _hostDrivenAnswer = answer;
 
         var cts = new CancellationTokenSource();
@@ -645,6 +673,20 @@
         }
     }
 
+    /// <summary>
+    /// The host channel of the transcript: speaks a note through <see cref="TmAiConversation.AnnounceAsync"/>
+    /// — outside any window (an idle note that survives until the next generation) or inside the open
+    /// host-driven window (a note the window edge clears when the next window opens).
+    /// </summary>
+    private async Task AnnounceHostNoteAsync()
+    {
+        if (_conversation is not null)
+        {
+            await _conversation.AnnounceAsync(Loc["TmDemo_AiConversation_HostAnnouncement"]);
+            _hostNotesInTranscript++;
+        }
+    }
+
     private async Task RegenerateAsync(AiMessage message)
     {
         if (_isGenerating || message.Role != AiMessageRole.Assistant)
@@ -664,6 +706,9 @@
 
         _isGenerating = true;
         _generation++;
+        // The stream start re-owns the host channel — the transcript's [data-kind='host'] notes are
+        // gone with it, so the mirror counter restarts at zero.
+        _hostNotesInTranscript = 0;
         StateHasChanged();
 
         try
@@ -767,6 +812,7 @@
         _feedback = null;
         _draft = null;
         _lastSubmission = LastSubmission.Empty;
+        _hostNotesInTranscript = 0;
         return InvokeAsync(StateHasChanged);
     }
 

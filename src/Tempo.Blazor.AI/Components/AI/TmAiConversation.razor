@@ -94,7 +94,8 @@
                    note: a new completion REPLACES the previous one — the slot is keyed by the announcement
                    sequence, so a repeated wording arrives as a new node and is announced again (a live
                    region ignores an unchanged text node). Host announcements (AnnounceAsync) are separate
-                   nodes (data-kind="host") and are never touched by the replacement; the completion note
+                   nodes (data-kind="host") that the replacement never touches; they live until the next
+                   generation window or stream start re-owns the live region. The completion note
                    (data-kind="completion") always renders as the LAST announcement node, after them. *@
                 @foreach (var announcement in _announcements)
                 {

@@ -415,18 +415,81 @@ public class AiConversationDemoPageTests : DemoPageLocalizationTestBase
         cut.FindAll("[data-testid='ai-conversation-announcement']").Should().BeEmpty();
     }
 
+    /// <summary>
+    /// The "Announce a host note" button speaks through <see cref="TmAiConversation.AnnounceAsync"/>
+    /// OUTSIDE any window: each click is a new keyed node (an identical wording is still re-announced),
+    /// so two clicks leave two distinct nodes — the idle host channel accumulates until a generation
+    /// window or a stream re-owns the live region.
+    /// </summary>
+    [Fact]
+    public async Task HostAnnounceButton_SpeaksIntoTheTranscriptOutsideAWindow()
+    {
+        var cut = Render<AiConversationPage>();
+
+        await cut.Find("[data-testid='ai-demo-announce']").ClickAsync();
+        var notes = cut.FindAll("[data-testid='ai-conversation-announcement'][data-kind='host']");
+        notes.Should().ContainSingle("one click speaks one host note");
+        AssertHostNotesCounterMatchesTranscript(cut, 1);
+
+        await cut.Find("[data-testid='ai-demo-announce']").ClickAsync();
+        notes = cut.FindAll("[data-testid='ai-conversation-announcement'][data-kind='host']");
+        notes.Should().HaveCount(2, "a second identical wording is a NEW keyed node, never swallowed by the live region");
+        notes[1].Should().NotBeSameAs(notes[0]);
+        notes.Select(node => node.TextContent).Should().OnlyContain(
+            text => text == notes[0].TextContent, "both notes carry the same localized wording");
+        AssertHostNotesCounterMatchesTranscript(cut, 2);
+    }
+
+    /// <summary>
+    /// A host note spoken INSIDE the simulated host-driven window survives its close and is cleared by
+    /// the NEXT window's edge — the host-channel symmetry with a stream start that the demo page makes
+    /// visible (the E2E lane drives the same flow in a real browser).
+    /// </summary>
+    [Fact]
+    public async Task HostAnnounceButton_InsideTheSimulatedWindow_TheNextWindowEdgeClearsTheNote()
+    {
+        var cut = Render<AiConversationPage>();
+
+        var window = cut.InvokeAsync(() => cut.Find("[data-testid='ai-demo-simulate-busy']").Click());
+        cut.WaitForState(() => cut.Find(".tm-ai-conversation").GetAttribute("data-generating") == "true");
+
+        await cut.Find("[data-testid='ai-demo-announce']").ClickAsync();
+        cut.FindAll("[data-testid='ai-conversation-announcement'][data-kind='host']").Should().ContainSingle(
+            "a note spoken inside the open window is in the transcript while the window runs");
+        AssertHostNotesCounterMatchesTranscript(cut, 1);
+
+        await cut.InvokeAsync(() => _clock.Advance(HostDrivenBusy));
+        await window;
+        cut.Find(".tm-ai-conversation").GetAttribute("data-generating").Should().Be("false");
+        cut.FindAll("[data-testid='ai-conversation-announcement'][data-kind='host']").Should().ContainSingle(
+            "the window's close is not a clearing edge — the note survives next to the completion note");
+        cut.FindAll("[data-testid='ai-conversation-announcement'][data-kind='completion']").Should().ContainSingle();
+        AssertHostNotesCounterMatchesTranscript(cut, 1);
+
+        var secondWindow = cut.InvokeAsync(() => cut.Find("[data-testid='ai-demo-simulate-busy']").Click());
+        cut.WaitForState(() => cut.Find(".tm-ai-conversation").GetAttribute("data-generating") == "true");
+        cut.FindAll("[data-testid='ai-conversation-announcement'][data-kind='host']").Should().BeEmpty(
+            "the next window's edge re-owns the host channel — the previous window's note is cleared");
+        AssertHostNotesCounterMatchesTranscript(cut, 0);
+
+        await cut.InvokeAsync(() => _clock.Advance(HostDrivenBusy));
+        await secondWindow;
+    }
+
     [Fact]
     public async Task Reset_RestoresTheEmptyState()
     {
         var cut = Render<AiConversationPage>();
         await cut.FindAll("[data-testid='ai-conversation-suggestion']")[0].ClickAsync();
         cut.FindAll("[data-testid='ai-message']").Count.Should().Be(2);
+        AssertHostNotesCounterMatchesTranscript(cut, 0);
 
         await cut.Find("[data-testid='ai-demo-reset']").ClickAsync();
 
         cut.FindAll("[data-testid='ai-message']").Count.Should().Be(0);
         cut.Find("[data-testid='ai-conversation-empty']").Should().NotBeNull();
         cut.Find("[data-testid='ai-demo-feedback']").TextContent.Trim().Should().Be("none");
+        AssertHostNotesCounterMatchesTranscript(cut, 0);
     }
 
     [Fact]
@@ -462,6 +525,21 @@ public class AiConversationDemoPageTests : DemoPageLocalizationTestBase
         titles.Should().HaveCount(3);
         titles.Should().OnlyContain(title => title.EndsWith(TaggedLocalizer.Tag, StringComparison.Ordinal),
             "the command title is the label the / list shows, so it resolves through ITmLocalizer too");
+    }
+
+    /// <summary>
+    /// The page's visible host-notes counter is the mirror of the transcript's
+    /// <c>[data-kind='host']</c> count — the pair must agree after every step, so a drift between what
+    /// the demo claims and what the live region holds turns red here.
+    /// </summary>
+    private static void AssertHostNotesCounterMatchesTranscript(
+        IRenderedComponent<AiConversationPage> cut, int expected)
+    {
+        cut.FindAll("[data-testid='ai-conversation-announcement'][data-kind='host']").Should().HaveCount(expected,
+            "the transcript holds exactly the expected host notes");
+        cut.Find("[data-testid='ai-demo-host-notes']").TextContent.Trim().Should()
+            .Be(expected.ToString(CultureInfo.InvariantCulture),
+                "the demo's visible counter mirrors the transcript's host-note count");
     }
 
     /// <summary>Renders the page with a localizer that tags every demo value it resolves.</summary>

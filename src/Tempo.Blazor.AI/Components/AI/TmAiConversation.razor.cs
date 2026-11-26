@@ -117,7 +117,9 @@ public partial class TmAiConversation
     /// running right now. The host sets it when it submits its request and clears it when the answer
     /// arrived; the component treats that window exactly like a stream: <see cref="IsGenerating"/> becomes
     /// true (the root's <c>data-generating</c>, the log's <c>aria-busy</c> and the built-in Stop pill
-    /// follow), the true→false edge announces the completed answer when the last turn is
+    /// follow), opening the window clears the previous turn's completion note AND the host announcements
+    /// (<see cref="AnnounceAsync"/>) — the window re-owns the live region the way a stream start does —
+    /// the true→false edge announces the completed answer when the last turn is
     /// <see cref="AiMessageStatus.Completed"/>, and <see cref="StopAsync"/> raises <see cref="OnStop"/> so
     /// the host can cancel its own work. Default false: a host that streams through
     /// <see cref="StreamAsync"/> binds nothing — the component drives the state itself and the edge stays
@@ -287,12 +289,16 @@ public partial class TmAiConversation
 
     /// <summary>
     /// The bookkeeping of a host-driven generation window. Opening one resets the two once-per-window
-    /// flags and clears the stale completion note of the previous turn; closing one announces the
-    /// completed answer — the same note <see cref="StreamAsync"/> speaks, written into the transcript's
-    /// single replaceable completion-note slot, so a screen reader hears "Answer complete" exactly once
-    /// per answer and never per past turn, no matter which half of the package drove the generation. A
-    /// window whose answer already arrived through <see cref="StreamAsync"/> stays silent: the stream
-    /// announced the completion, and <see cref="_completionAnnounced"/> is how the edge knows.
+    /// flags, clears the stale completion note of the previous turn AND the host announcements of the
+    /// previous window — the window re-owns the live region exactly like <see cref="StreamAsync"/> does
+    /// at stream start, so a host that drives its own windows never accumulates stale notes; a note
+    /// spoken through <see cref="AnnounceAsync"/> INSIDE the open window survives until the next edge.
+    /// Closing one announces the completed answer — the same note <see cref="StreamAsync"/> speaks,
+    /// written into the transcript's single replaceable completion-note slot, so a screen reader hears
+    /// "Answer complete" exactly once per answer and never per past turn, no matter which half of the
+    /// package drove the generation. A window whose answer already arrived through <see cref="StreamAsync"/>
+    /// stays silent: the stream announced the completion, and <see cref="_completionAnnounced"/> is how
+    /// the edge knows.
     /// </summary>
     private void SyncGeneratingWindow(IReadOnlyList<AiMessage> messages)
     {
@@ -300,9 +306,12 @@ public partial class TmAiConversation
         {
             // A new window means the previous turn's completion note is stale: while the new answer is
             // still being produced there is no completed answer to announce, so the transcript carries
-            // none — the same bookkeeping StreamAsync does at stream start. The host's OWN announcements
-            // (AnnounceAsync) are not touched.
+            // none — the same bookkeeping StreamAsync does at stream start. That bookkeeping includes
+            // the host's OWN announcements: the window owns the live region now, so the previous
+            // window's host notes go too (a note spoken INSIDE the open window arrives after this edge
+            // and survives until the next one).
             _completionNote = null;
+            _announcements.Clear();
             _completionAnnounced = false;
             _hostStopRaised = false;
         }
@@ -774,12 +783,26 @@ public partial class TmAiConversation
     /// Speaks <paramref name="text"/> into the transcript live region. Each call is a new keyed node
     /// (even when the text repeats), so a screen reader hears it again. Dispatched through
     /// <see cref="ComponentBase.InvokeAsync(Action)"/> so a host can call it from outside the renderer.
-    /// The announcements ACCUMULATE in the transcript: only the next <see cref="StreamAsync"/> start
-    /// clears them (the stream re-owns the live region). Opening a host-driven generation window
-    /// (<see cref="Generating"/>) does NOT clear them — a window does not own the host's channel — and
-    /// the completion note is a separate, single, replaceable slot that never touches these nodes. Clearing
-    /// <see cref="Messages"/> or announcing again does not remove earlier host announcements.
+    /// The announcements live until the next generation window re-owns the live region: the next
+    /// <see cref="StreamAsync"/> start clears them — also when the stream is started INSIDE an open
+    /// window — and so does opening a host-driven generation window (<see cref="Generating"/>) — a host
+    /// that drives its own windows never accumulates stale notes, and a note spoken INSIDE the open
+    /// window survives until the next edge. The completion note is a separate, single, replaceable slot
+    /// that never touches these nodes. Clearing <see cref="Messages"/> or announcing again does not
+    /// remove earlier host announcements.
     /// </summary>
+    /// <remarks>
+    /// Two wording/ordering pitfalls: a note spoken INSIDE an open window sits in the live region under
+    /// <c>aria-busy</c>, so a screen reader typically reads it only after the window closes — never
+    /// phrase it as progress ("preparing the answer…"); progress belongs to the pending placeholder
+    /// (<see cref="MessagePendingText"/>). And a note spoken just BEFORE the window opens in the SAME
+    /// render batch (<c>AnnounceAsync</c> immediately followed by setting <c>Generating</c> = true) is
+    /// wiped by the edge in that very batch — speak it only after the <c>Generating</c> = true render
+    /// has landed. <c>StateHasChanged</c> alone only QUEUES that render (and this method reaches the
+    /// component synchronously through <see cref="ComponentBase.InvokeAsync(Action)"/>), so in an event
+    /// handler add <c>await Task.Yield()</c> between setting the flag and the announcement — the render
+    /// batch is processed when the handler yields — or speak from <c>OnAfterRenderAsync</c>.
+    /// </remarks>
     /// <param name="text">The announcement. Null or whitespace is a no-op.</param>
     public Task AnnounceAsync(string text) => InvokeAsync(() =>
     {
