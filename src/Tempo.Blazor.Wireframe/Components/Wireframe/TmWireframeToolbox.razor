@@ -31,7 +31,7 @@
             {
                 <button class="tm-wd-toolbox__filter-btn @(_filterMode == f ? "tm-wd-toolbox__filter-btn--active" : "")"
                         role="tab"
-                        aria-selected="@(_filterMode == f)"
+                        aria-selected="@(_filterMode == f ? "true" : "false")"
                         @onclick="@(() => SetFilter(f))">
                     @GetFilterLabel(f)
                 </button>

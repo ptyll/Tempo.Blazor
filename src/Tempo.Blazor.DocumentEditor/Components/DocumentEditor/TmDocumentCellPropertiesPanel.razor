@@ -16,7 +16,7 @@
         {
             <button type="button"
                     class="@SegmentClass(alignment)"
-                    aria-pressed="@(CurrentVerticalAlignment == alignment)"
+                    aria-pressed="@(CurrentVerticalAlignment == alignment ? "true" : "false")"
                     data-testid="@($"{TestIdRoot}-valign-{alignment.ToString().ToLowerInvariant()}")"
                     @onclick="() => HandleVerticalAlignmentChangedAsync(alignment)">
                 @Loc[$"TmDocumentEditor_CellAlign{alignment}"]

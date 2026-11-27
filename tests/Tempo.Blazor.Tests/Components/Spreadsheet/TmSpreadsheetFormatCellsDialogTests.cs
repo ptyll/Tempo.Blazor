@@ -50,6 +50,33 @@ public class TmSpreadsheetFormatCellsDialogTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Tabs_RenderAriaSelectedAsStateStrings_InBothStates()
+    {
+        // Fáze 4h (plan b75365fb): aria-selected is an ARIA STATE attribute — the tab must carry
+        // the strings "true"/"false"; a bool comparison renders the invalid empty value on the
+        // active tab and drops the attribute on the inactive ones.
+        var cut = RenderDialog();
+
+        var tabs = cut.FindAll(".tm-fcd__tab");
+        tabs.Should().NotBeEmpty();
+        tabs.Should().OnlyContain(t => t.GetAttribute("aria-selected") == "true" || t.GetAttribute("aria-selected") == "false",
+            "every tab carries the string state — never an empty value, never a missing attribute");
+        tabs.Count(t => t.GetAttribute("aria-selected") == "true").Should().Be(1);
+        tabs.Single(t => t.GetAttribute("aria-selected") == "true")
+            .ClassList.Should().Contain("tm-fcd__tab--active", "aria-selected mirrors the active class");
+
+        var fontTab = cut.FindAll(".tm-fcd__tab").First(e => e.TextContent.Contains("Font"));
+        fontTab.GetAttribute("aria-selected").Should().Be("false");
+
+        fontTab.Click();
+
+        cut.FindAll(".tm-fcd__tab").First(e => e.TextContent.Contains("Font"))
+            .GetAttribute("aria-selected").Should().Be("true", "the clicked Font tab is active now");
+        cut.FindAll(".tm-fcd__tab").First(e => e.TextContent.Contains("Number"))
+            .GetAttribute("aria-selected").Should().Be("false");
+    }
+
+    [Fact]
     public void CtrlEnter_OnApplyButton_AppliesExactlyOnce()
     {
         var applies = 0;

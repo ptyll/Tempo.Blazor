@@ -32,6 +32,9 @@ namespace Tempo.Blazor.Tests.Components;
 /// </list>
 /// Known pre-existing offenders outside this phase's scope are FROZEN (the list may only
 /// shrink — fixing a site removes its entry; adding a new site fails the guard).
+/// Fáze 4h (plan b75365fb) extended the sweep to the demo surfaces
+/// (<c>Tempo.Blazor.Demo.SharedUI</c>, <c>Tempo.ReportServer.Web.Client</c>) with zero tolerance —
+/// no frozen entries there.
 /// </summary>
 public class AriaBooleanStateAttributeGuardTests
 {
@@ -82,14 +85,7 @@ public class AriaBooleanStateAttributeGuardTests
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDbTableView.razor|aria-expanded|@isExpanded",
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionBlockTypeSwitcher.razor|aria-selected|@isCurrent",
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionPageCommentPanel.razor|aria-expanded|@Expanded",
-        "src/Tempo.Blazor.Wireframe/Components/Wireframe/TmWireframeEditor.razor|aria-selected|@isActive",
         // ── parenthesised bool-expression offenders ───────────────────────────────────────────
-        "src/Tempo.Blazor.Reporting/Components/TmReportDesigner.razor|aria-selected|@(tab == _activeTab)",
-        "src/Tempo.Blazor.Wireframe/Components/Wireframe/TmWireframeToolbox.razor|aria-selected|@(_filterMode == f)",
-        "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/TmSpreadsheetFormatCellsDialog.razor|aria-selected|@(_activeTab == tab)",
-        "src/Tempo.Blazor/Components/Activity/TmActivityLog.razor|aria-selected|@(_activeTab == ActivityTab.Timeline)",
-        "src/Tempo.Blazor/Components/Activity/TmActivityLog.razor|aria-selected|@(_activeTab == ActivityTab.Comments)",
-        "src/Tempo.Blazor/Components/Activity/TmActivityLog.razor|aria-selected|@(_activeTab == ActivityTab.Attachments)",
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionPageHistory.razor|aria-pressed|@(_diffViewMode == NotionDiffViewMode.Inline)",
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionPageHistory.razor|aria-pressed|@(_diffViewMode == NotionDiffViewMode.SideBySide)",
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionMentionMenu.razor|aria-selected|@(_tab == MentionTab.People)",
@@ -102,8 +98,6 @@ public class AriaBooleanStateAttributeGuardTests
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionMentionMenu.razor|aria-selected|@(2 == _selectedIndex)",
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmCommentMentionInput.razor|aria-selected|@(idx == _selectedIndex)",
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionEmojiPicker.razor|aria-selected|@(_activeCategory == capturedTab.Category)",
-        "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentCellPropertiesPanel.razor|aria-pressed|@(CurrentVerticalAlignment == alignment)",
-        "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentTablePropertiesPanel.razor|aria-pressed|@(CurrentAlignment == alignment)",
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDbFieldEditor.razor|aria-pressed|@(o.Color == cc)",
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDatabaseBlock.razor|aria-selected|@(_activeViewId == v.Id)",
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDbTableView.razor|aria-expanded|@(!isCollapsed)",
@@ -111,9 +105,6 @@ public class AriaBooleanStateAttributeGuardTests
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDbImportExport.razor|aria-selected|@(_tab == ActiveTab.Export)",
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDbGroupBar.razor|aria-selected|@(_selectedFieldId is null)",
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDbGroupBar.razor|aria-selected|@(_selectedFieldId == f.Id)",
-        "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/TmSpreadsheetDataValidationDialog.razor|aria-selected|@(_activeTab == \"Settings\")",
-        "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/TmSpreadsheetDataValidationDialog.razor|aria-selected|@(_activeTab == \"InputMessage\")",
-        "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/TmSpreadsheetDataValidationDialog.razor|aria-selected|@(_activeTab == \"ErrorAlert\")",
         // ── dotted member paths (review round: a bool model property renders the invalid empty
         //    value; the guard cannot see the type across files, so these stay frozen until the
         //    sites pass the state as a string) ────────────────────────────────────────────────
@@ -272,11 +263,36 @@ public class AriaBooleanStateAttributeGuardTests
             || init.Contains("BoolText(", StringComparison.Ordinal);
     }
 
-    private static bool IsLibrarySource(string path)
+    // Pinned by the theory below: the demo sweep must include exactly the surfaces hosts copy
+    // (Demo.SharedUI pages, the Report Server web client) and exclude everything else demo-ish
+    // (the WASM/Server demo hosts, the Report Server host, build output).
+    [Theory]
+    [InlineData("C:/repo/src/Tempo.Blazor.Demo.SharedUI/Pages/ReportEmbeddingPage.razor", true)]
+    [InlineData("C:/repo/src/Tempo.Blazor.Demo.SharedUI/Pages/TestSuiteManagerPage.razor.cs", true)]
+    [InlineData("C:/repo/src/Tempo.ReportServer.Web.Client/Pages/ReportDesignerPage.razor", true)]
+    [InlineData("C:/repo/src/Tempo.Blazor.Demo/Pages/Index.razor", false)]
+    [InlineData("C:/repo/src/Tempo.ReportServer.Web/App.razor", false)]
+    [InlineData("C:/repo/src/Tempo.Blazor.Demo.SharedUI/obj/Debug/net10.0/Generated.razor", false)]
+    [InlineData("C:/repo/src/Tempo.Blazor/Components/Buttons/TmButton.razor", true)]
+    public void IsLibrarySource_PinsTheDemoSweepBoundaries(string path, bool expected)
+    {
+        IsLibrarySource(path).Should().Be(expected);
+    }
+
+    internal static bool IsLibrarySource(string path)
     {
         var p = path.Replace('\\', '/');
         if (!p.Contains("/src/")) return false;
         if (p.Contains("/bin/") || p.Contains("/obj/")) return false;
+        // Fáze 4h (plan b75365fb): the demo surfaces joined the sweep with ZERO tolerance (no
+        // frozen entries) — the Demo.SharedUI pages and the Report Server web client render the
+        // same attributes hosts copy, so a bool state there is the same defect.
+        if (p.Contains("/Tempo.Blazor.Demo.SharedUI/") || p.Contains("/Tempo.ReportServer.Web.Client/"))
+        {
+            return p.EndsWith(".razor", StringComparison.OrdinalIgnoreCase)
+                || p.EndsWith(".cs", StringComparison.OrdinalIgnoreCase);
+        }
+
         if (p.Contains(".Demo") || p.Contains("ReportServer")) return false;
         return p.EndsWith(".razor", StringComparison.OrdinalIgnoreCase)
             || p.EndsWith(".cs", StringComparison.OrdinalIgnoreCase);

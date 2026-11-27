@@ -375,7 +375,7 @@
                     var isActive = _activePage?.Id == pg.Id;
                     <div class="tm-wd-editor__page-tab @(isActive ? "tm-wd-editor__page-tab--active" : "")"
                          role="tab"
-                         aria-selected="@isActive"
+                         aria-selected="@(isActive ? "true" : "false")"
                          data-testid="@TestId($"wd-page-tab-{pg.Id}")"
                          draggable="true"
                          @ondragstart="() => OnPageDragStart(pg.Id)"

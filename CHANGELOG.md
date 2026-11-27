@@ -129,6 +129,27 @@
       "tm-signing-field-editor-panel--readonly");
   ```
 
+- **Inactive tabs, filter buttons and alignment segments of eight components now render `aria-selected="false"` / `aria-pressed="false"` instead of omitting the attribute, and the active one renders `"true"` instead of the invalid empty value.** Before: a bool attribute value (`aria-selected="@(_activeTab == tab)"`) rendered `aria-selected=""` on the active tab and dropped the attribute entirely on the inactive ones. After: every tab/segment carries the explicit state string. Affected: `TmActivityLog` (Timeline/Comments/Attachments tabs), `TmReportDesigner` (design/data/preview tabs), `TmWireframeToolbox` (All/Built-in/Custom filter tabs), `TmWireframeEditor` (page tabs), `TmSpreadsheetFormatCellsDialog` and `TmSpreadsheetDataValidationDialog` (tab bars), and the alignment segments of `TmDocumentCellPropertiesPanel` / `TmDocumentTablePropertiesPanel` (`aria-pressed`). A host or test that detected the active state by the PRESENCE of the attribute (or the inactive state by its absence) must switch to the explicit values:
+
+  ```css
+  /* before */ .tm-activity-tab[aria-selected] { … }          /* matched only the active tab */
+  /* after  */ .tm-activity-tab[aria-selected="true"] { … }   /* active   */
+  /* after  */ .tm-activity-tab[aria-selected="false"] { … }  /* inactive */
+  ```
+
+  ```csharp
+  // before: the presence of the attribute meant "active"
+  Assert.True(tab.HasAttribute("aria-selected"));
+  // after: assert the explicit state
+  Assert.Equal("true", tab.GetAttribute("aria-selected"));
+  ```
+
+  The visual state is unchanged — every affected component styles the active state through its BEM `--active` class, not through the attribute (a repo-wide CSS/JS sweep confirmed no presence selector or `hasAttribute` check keyed off these attributes). The demo pages `/test-suite-manager` and `/report-embedding` received the same fix — the report-embedding buttons also gained the missing `role="tab"`; demo markup is not a breaking-change surface.
+
+### Fixed — boolean ARIA states render as strings (`Tempo.Blazor` / `Tempo.Blazor.Reporting` / `Tempo.Blazor.Wireframe` / `Tempo.Blazor.Spreadsheet` / `Tempo.Blazor.DocumentEditor`)
+
+- **The tabs, filter buttons and alignment segments of eight components no longer emit the invalid empty ARIA state.** A bool attribute value renders as the attribute with an EMPTY value when true and is omitted entirely when false, so the active tab of `TmActivityLog` (3 tabs), `TmReportDesigner`, `TmWireframeToolbox` (filter tabs), `TmWireframeEditor` (page tabs), `TmSpreadsheetFormatCellsDialog` and `TmSpreadsheetDataValidationDialog` (3 tabs) rendered `aria-selected=""` while every inactive one dropped the attribute; the alignment segments of `TmDocumentCellPropertiesPanel` and `TmDocumentTablePropertiesPanel` did the same with `aria-pressed` (twelve sites from the frozen list of `AriaBooleanStateAttributeGuardTests`, remaining task of the phase-4c review). All twelve now pass the strings `? "true" : "false"` — the same mechanical fix the pickers got earlier in this Unreleased — and the guard's frozen list shrank by exactly these 12 entries; the guard now also sweeps the demo surfaces (`Tempo.Blazor.Demo.SharedUI`, `Tempo.ReportServer.Web.Client`) with zero tolerance, which caught and fixed the same defect on `/test-suite-manager` (mobile tree accordion `aria-expanded`) and `/report-embedding` (source-mode tabs). A CSS/JS sweep of the affected packages confirmed every state selector was already value-based (`[aria-selected="true"]` or the BEM `--active` classes) and no script read the attributes by presence, so the newly present `"false"` changes no rendering. Pinned in bUnit in both states per component (active `"true"`, inactive `"false"`, never empty, never missing — `TmActivityLogAccessibilityTests`, `TmReportDesignerTests`, `TmWireframeToolboxTests`, `TmWireframeEditorLayoutTests`, the two spreadsheet dialog suites and `DocumentEditorPhase21AccessibilityTests`) with a mutant (one ternary reverted to bool) RED on both the guard and the bUnit test, and in browser E2E on the affected screens (WASM demo; the report designer on the self-hosted Report Server) with scoped axe scans (aria-valid-attr-value) in both themes. The remaining frozen entries (NotionEditor) stay tracked as remaining work. See Breaking / Migration for the changed DOM attributes.
+
 ### Fixed — aria-readonly only where ARIA supports it (`Tempo.Blazor.Signing` / `Tempo.Blazor.NotionEditor`)
 
 - **The locked `TmSigningFieldEditorPanel` no longer puts `aria-readonly` on its root `<aside>`.** ARIA 1.2 supports the attribute only on checkbox, combobox, grid, gridcell, listbox, radiogroup, slider, spinbutton, textbox, columnheader, rowheader, menuitemcheckbox, menuitemradio and switch — never on the aside's implicit complementary role, so the attribute was invalid and a screen reader never announced the lock from it (remaining task of the phase-4c review; decision `READONLY-BUTTON-TRIGGER-ARIA-DISABLED` extended with the guard). The panel already disables every inner editor while `ReadOnly`, so the lock is announced where it applies — on the controls themselves — and the stable `tm-signing-field-editor-panel--readonly` root class (already rendered) stays the host hook for the locked panel. The `BoolText` helper stays: the section toggles still pass their `aria-expanded` through it.

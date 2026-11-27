@@ -22,16 +22,18 @@
              role="tablist"
              aria-label="Report source mode">
             <button type="button"
+                    role="tab"
                     class="@ModeButtonClass("embedded")"
                     data-testid="embedding-mode-embedded"
-                    aria-selected="@(_mode == "embedded")"
+                    aria-selected="@(_mode == "embedded" ? "true" : "false")"
                     @onclick="ShowEmbedded">
                 Embedded
             </button>
             <button type="button"
+                    role="tab"
                     class="@ModeButtonClass("remote")"
                     data-testid="embedding-mode-remote"
-                    aria-selected="@(_mode == "remote")"
+                    aria-selected="@(_mode == "remote" ? "true" : "false")"
                     @onclick="ShowRemote">
                 Remote
             </button>

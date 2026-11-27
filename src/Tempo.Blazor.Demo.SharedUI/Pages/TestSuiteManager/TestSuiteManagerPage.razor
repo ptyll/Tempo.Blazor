@@ -40,7 +40,7 @@
                 <span class="tsm-suite-count">@_store.GetRootSuites().Count root suites</span>
                 <!-- Mobile toggle -->
                 <button type="button" class="tsm-tree-toggle" @onclick="() => _treeOpen = !_treeOpen"
-                        aria-expanded="@_treeOpen" aria-label="Toggle suite tree">
+                        aria-expanded="@(_treeOpen ? "true" : "false")" aria-label="Toggle suite tree">
                     <svg class="w-4 h-4 tsm-tree-toggle-icon @(_treeOpen ? "tsm-tree-toggle-icon--open" : "")"
                          fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />

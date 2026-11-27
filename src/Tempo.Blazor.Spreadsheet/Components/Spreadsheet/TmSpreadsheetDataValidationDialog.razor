@@ -22,19 +22,19 @@
         <div class="tm-dvd__tabs" role="tablist">
             <button class="tm-dvd__tab @(_activeTab == "Settings" ? "tm-dvd__tab--active" : "")"
                     role="tab"
-                    aria-selected="@(_activeTab == "Settings")"
+                    aria-selected="@(_activeTab == "Settings" ? "true" : "false")"
                     @onclick='() => _activeTab = "Settings"'>
                 @Loc["TmSpreadsheet_Validation_TabSettings"]
             </button>
             <button class="tm-dvd__tab @(_activeTab == "InputMessage" ? "tm-dvd__tab--active" : "")"
                     role="tab"
-                    aria-selected="@(_activeTab == "InputMessage")"
+                    aria-selected="@(_activeTab == "InputMessage" ? "true" : "false")"
                     @onclick='() => _activeTab = "InputMessage"'>
                 @Loc["TmSpreadsheet_Validation_TabInputMessage"]
             </button>
             <button class="tm-dvd__tab @(_activeTab == "ErrorAlert" ? "tm-dvd__tab--active" : "")"
                     role="tab"
-                    aria-selected="@(_activeTab == "ErrorAlert")"
+                    aria-selected="@(_activeTab == "ErrorAlert" ? "true" : "false")"
                     @onclick='() => _activeTab = "ErrorAlert"'>
                 @Loc["TmSpreadsheet_Validation_TabErrorAlert"]
             </button>

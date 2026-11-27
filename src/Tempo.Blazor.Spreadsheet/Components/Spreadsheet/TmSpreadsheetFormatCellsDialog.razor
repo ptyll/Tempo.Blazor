@@ -25,7 +25,7 @@
             {
                 <button class="tm-fcd__tab @(_activeTab == tab ? "tm-fcd__tab--active" : "")"
                         role="tab"
-                        aria-selected="@(_activeTab == tab)"
+                        aria-selected="@(_activeTab == tab ? "true" : "false")"
                         @onclick="() => _activeTab = tab">
                     @Loc[$"TmSpreadsheet_Tab{tab}"]
                 </button>

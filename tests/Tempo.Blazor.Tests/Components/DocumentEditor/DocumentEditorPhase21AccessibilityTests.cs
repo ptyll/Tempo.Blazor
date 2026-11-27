@@ -132,6 +132,27 @@ public sealed class DocumentEditorPhase21AccessibilityTests : LocalizationTestBa
     }
 
     [Fact]
+    public void TableAndCellProperties_Segments_RenderAriaPressedAsStateStrings()
+    {
+        // Fáze 4h (plan b75365fb): aria-pressed is an ARIA STATE attribute — the segmented buttons
+        // must carry the strings "true"/"false"; a bool comparison renders the invalid empty value
+        // on the pressed segment and drops the attribute on the rest.
+        var table = Render<TmDocumentTablePropertiesPanel>(parameters => parameters
+            .Add(p => p.Layout, new TableLayoutContent { Alignment = TableHorizontalAlignment.Center }));
+
+        table.FindAll(".tm-document-table-properties__segment")
+            .Select(b => b.GetAttribute("aria-pressed"))
+            .Should().Equal(new[] { "false", "true", "false" }, "the Center segment is pressed");
+
+        var cell = Render<TmDocumentCellPropertiesPanel>(parameters => parameters
+            .Add(p => p.Cell, new TableCellContent { VerticalAlignment = TableCellVerticalAlignment.Bottom }));
+
+        cell.FindAll(".tm-document-cell-properties__segment")
+            .Select(b => b.GetAttribute("aria-pressed"))
+            .Should().Equal(new[] { "false", "false", "true" }, "the Bottom segment is pressed");
+    }
+
+    [Fact]
     public void GridPickerPasteReportAutocompleteAndLiveRegion_ExposeAccessibleStatusRoles()
     {
         var grid = Render<TmDocumentTableGridPicker>();

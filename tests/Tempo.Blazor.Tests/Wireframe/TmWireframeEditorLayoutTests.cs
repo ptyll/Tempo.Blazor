@@ -386,6 +386,28 @@ public class TmWireframeEditorLayoutTests : LocalizationTestBase
         Tab(cut, "Layers").GetAttribute("aria-selected").Should().Be("true");
     }
 
+    // ── Page tabs ──────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void PageTabs_RenderAriaSelectedAsStateStrings_InBothStates()
+    {
+        // Fáze 4h (plan b75365fb): aria-selected is an ARIA STATE attribute — the page tabs must
+        // carry the strings "true"/"false"; a bool renders the invalid empty value on the active
+        // tab and drops the attribute on the inactive ones.
+        var cut = RenderEditor();
+
+        var tabs = cut.FindAll(".tm-wd-editor__page-tab");
+        tabs.Should().HaveCount(2);
+        tabs[0].GetAttribute("aria-selected").Should().Be("true", "the active page p1 is selected");
+        tabs[1].GetAttribute("aria-selected").Should().Be("false");
+
+        tabs[1].Click();
+
+        var after = cut.FindAll(".tm-wd-editor__page-tab");
+        after[0].GetAttribute("aria-selected").Should().Be("false");
+        after[1].GetAttribute("aria-selected").Should().Be("true", "the clicked Pricing page is active now");
+    }
+
     // ── Render isolation ───────────────────────────────────────────────────────
 
     [Fact]

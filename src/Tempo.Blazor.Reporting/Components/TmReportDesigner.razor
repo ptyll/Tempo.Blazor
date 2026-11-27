@@ -34,7 +34,7 @@
         {
             <button type="button"
                     role="tab"
-                    aria-selected="@(tab == _activeTab)"
+                    aria-selected="@(tab == _activeTab ? "true" : "false")"
                     class="@TabCss(tab)"
                     data-testid="@TabTestId(tab)"
                     @onclick="() => SetTab(tab)">

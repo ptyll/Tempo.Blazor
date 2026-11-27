@@ -61,6 +61,23 @@ public class TmSpreadsheetDataValidationDialogTests : LocalizationTestBase
     // ── Tab navigation ────────────────────────────────────────────────────────
 
     [Fact]
+    public void Tabs_RenderAriaSelectedAsStateStrings_InBothStates()
+    {
+        // Fáze 4h (plan b75365fb): aria-selected is an ARIA STATE attribute — the tab must carry
+        // the strings "true"/"false"; a bool comparison renders the invalid empty value on the
+        // active tab and drops the attribute on the inactive ones.
+        var cut = Render<TmSpreadsheetDataValidationDialog>();
+
+        cut.FindAll(".tm-dvd__tab").Select(t => t.GetAttribute("aria-selected"))
+            .Should().Equal(new[] { "true", "false", "false" }, "Settings is the default tab");
+
+        cut.FindAll(".tm-dvd__tab")[2].Click();
+
+        cut.FindAll(".tm-dvd__tab").Select(t => t.GetAttribute("aria-selected"))
+            .Should().Equal(new[] { "false", "false", "true" }, "the clicked Error alert tab is active now");
+    }
+
+    [Fact]
     public void ClickTab_InputMessage_ShowsInputFields()
     {
         var cut = Render<TmSpreadsheetDataValidationDialog>();
