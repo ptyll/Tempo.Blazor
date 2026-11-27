@@ -69,6 +69,29 @@ on release (`announce=false` during ticks).
 - No new localization keys: swipe reuses `TmTimeSelector_Set` / `TmTimeSelector_HourValue_*`.
 - No new design tokens: `touch-action: none` is the only CSS addition.
 
+## TmTimePicker trigger inside a TmFormField (phase 4f)
+
+The `TmTimePicker` overlay trigger carries `aria-describedby` =
+`TmDescribedBy.Join(AriaDescribedBy, FormFieldErrorId, FormFieldDescribedByIds)` — the host's ids
+first, then the surrounding `TmFormField` cascade (the error id, then the help id). The host-first
+order is deliberate — the opposite of the cascade-first `TmDatePicker` join: the host's ids lead,
+so the attribute stays prefix-stable against the value it carried before the cascade joined. On a
+phone (`Presentation=Auto`) the trigger is the only focusable carrier of the value (the segments
+are hidden), so without the cascade it never read the field-level help or error; the same holds
+for the locked (`ReadOnly`) trigger, which can read WHY the field is locked from the help text.
+The desktop trigger carries the cascade too — it already carried `AriaDescribedBy`, so it consumes
+the same cascade for consistency. The segments (`TmTimeInput`) and the selector
+(`TmTimeSelector`) consume the cascade on their own — the joined value is never forwarded into
+them, so an id never doubles (verified for both halves of a `TmTimeRangePicker` under one
+`TmFormField`). Outside a `TmFormField` with no `AriaDescribedBy` the attribute is not rendered
+(null → omitted).
+
+A `TmFormField` `ErrorMessage` also paints the phone trigger: the trigger-only root gets
+`tm-time-picker--invalid` (previously only an out-of-range value set it), and the danger border
+lands on the trigger itself — the only element a phone renders — so an announced error is visible
+too. `aria-invalid` is NOT added to the trigger button (it is not a supported state on
+`role=button` here); the error is conveyed by the described-by cascade plus the painted border.
+
 ## Wireframe
 
 `TmTimeSelector` is a wireframe citizen: schema in `BuiltInComponentSchemas`, role `time-picker`

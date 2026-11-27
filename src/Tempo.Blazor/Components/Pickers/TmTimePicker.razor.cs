@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Linq.Expressions;
 using Microsoft.AspNetCore.Components;
 using Tempo.Blazor.Abstractions.Layout;
+using Tempo.Blazor.Components.Forms;
 using Tempo.Blazor.Models;
 
 namespace Tempo.Blazor.Components.Pickers;
@@ -66,7 +67,9 @@ public partial class TmTimePicker
     /// tab stop. On a phone (Auto) the trigger STAYS as the value's carrier: it announces the
     /// lock as <c>aria-disabled="true"</c> with <c>aria-haspopup="false"</c>, no
     /// <c>aria-expanded</c>/<c>aria-controls</c> and no opening icon, keeps its tab stop and
-    /// <see cref="AriaDescribedBy"/> reaches it, so a host can describe WHY the field is locked
+    /// <see cref="AriaDescribedBy"/> (joined with the surrounding <c>TmFormField</c> help/error
+    /// cascade — see <see cref="TriggerDescribedBy"/>) reaches it, so a host can describe WHY the
+    /// field is locked
     /// (<c>aria-readonly</c> is not a supported attribute on <c>role=button</c>). The root
     /// carries the <c>tm-time-picker--readonly</c> class so the locked trigger surface tints
     /// like the other read-only inputs (<c>--tm-bg-surface-secondary</c>, never the disabled
@@ -160,7 +163,8 @@ public partial class TmTimePicker
     /// Extra ids referenced from every segment / spinbutton <c>aria-describedby</c>. Forwarded to
     /// the nested input and selector, and rendered on the overlay trigger as well — so the
     /// description reaches the locked phone trigger too (the desktop locked trigger is not
-    /// rendered; the segments carry the description there).
+    /// rendered; the segments carry the description there). The trigger additionally joins the
+    /// surrounding <c>TmFormField</c> cascade (help and error) — see <see cref="TriggerDescribedBy"/>.
     /// </summary>
     [Parameter] public string? AriaDescribedBy { get; set; }
 
@@ -203,6 +207,39 @@ public partial class TmTimePicker
 
     /// <summary>The viewport's layout. Auto presentation (sheet vs popover) resolves from this cascade.</summary>
     [CascadingParameter(Name = TmLayoutScopes.Viewport)] public TmLayoutContext? Viewport { get; set; }
+
+    /// <summary>
+    /// Id of the error message a surrounding <c>TmFormField</c> currently renders (cascaded as
+    /// <c>TmFormField.ErrorIdCascadingName</c>; null when the field shows no error).
+    /// </summary>
+    [CascadingParameter(Name = TmFormField.ErrorIdCascadingName)]
+    private string? FormFieldErrorId { get; set; }
+
+    /// <summary>
+    /// Ids a surrounding <c>TmFormField</c> publishes for its own help text (cascaded as
+    /// <c>TmFormField.DescribedByIdsCascadingName</c>; null while the field shows no help).
+    /// </summary>
+    [CascadingParameter(Name = TmFormField.DescribedByIdsCascadingName)]
+    private string? FormFieldDescribedByIds { get; set; }
+
+    /// <summary>
+    /// The trigger's <c>aria-describedby</c>: the host's <see cref="AriaDescribedBy"/> joined with
+    /// the surrounding <c>TmFormField</c> cascade (error, then help) through
+    /// <see cref="TmDescribedBy.Join"/> — the same cascade the segments (TmTimeInput) and the
+    /// overlay selector (TmTimeSelector) already consume on their own (the joined value is never
+    /// forwarded INTO them, so an id never doubles). On a phone (Auto) the trigger is the only
+    /// focusable carrier of the value, so without the cascade it would never read the field-level
+    /// help/error. Null (attribute omitted) outside a <c>TmFormField</c> with no
+    /// <see cref="AriaDescribedBy"/>.
+    /// HOST-FIRST order is deliberate here — the opposite of TmDatePicker's cascade-first join:
+    /// the host's ids come first so the attribute stays PREFIX-STABLE against the value it carried
+    /// before the cascade joined (today's hosts keep their exact leading ids, the field-level ids
+    /// only ever append), while TmDatePicker had no pre-existing host-visible value to protect.
+    /// </summary>
+    private string? TriggerDescribedBy => TmDescribedBy.Join(
+        AriaDescribedBy,
+        FormFieldErrorId,
+        FormFieldDescribedByIds);
 
     private TmLayoutMode ResolvedLayout
         => TmLayout.Resolve(LayoutMode, Viewport, measured: null, TmLayoutMode.Desktop);
@@ -262,6 +299,16 @@ public partial class TmTimePicker
     private bool IsOutOfRange =>
         Value.HasValue &&
         !TimeOfDayFormat.IsInRange(Value.Value, MinTime, MaxTime, AllowOvernightRange);
+
+    /// <summary>
+    /// The root's <c>--invalid</c> state: the value is out of range, OR the surrounding
+    /// <c>TmFormField</c> currently shows an error for this field. On a phone (Auto) the
+    /// trigger-only layout has no segments to paint red, so the field-level error must reach
+    /// the trigger through this class — otherwise a field with <c>ErrorMessage</c> would render
+    /// visually identical to a valid one (the border stays neutral even though the trigger
+    /// announces the error id via <see cref="TriggerDescribedBy"/>).
+    /// </summary>
+    private bool IsInvalidState => IsOutOfRange || FormFieldErrorId is { Length: > 0 };
 
     /// <summary>Consumer <c>aria-*</c> attributes target the input group; everything else the root.</summary>
     private IReadOnlyDictionary<string, object>? AriaAttributes =>

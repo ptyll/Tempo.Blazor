@@ -756,6 +756,13 @@ public class UnconstrainedClassOwnershipTests
     /// decision; the (0,3,0) <c>.tm-dialog-footer</c> chain is strictly narrower still). The sweep
     /// cannot tell an intentional scoped override from an accident, so these are named here;
     /// anything NOT in this list is still a hard failure.
+    /// Fáze 4e (Fáze 4e nález reviewera) forced-colors blok: <c>.tm-btn:disabled</c> uvnitř
+    /// <c>@media (forced-colors: active)</c> nastavuje <c>color</c>/<c>border-color</c> na systémovou
+    /// GrayText a ZÁMĚRNĚ vyhrává nad inkou variant (<c>tm-btn-{ghost,outline-secondary,primary,secondary}</c>)
+    /// pořadím v souboru — blok sedí na konci _button.css, protože (0,2,0) × (0,2,0) rozhoduje
+    /// source order. Kdyby varianta vyhrála, disabled tlačítko by v high-contrast módu vypadalo
+    /// jako enabled (UA přemapuje netoknovou autorskou barvu na CanvasText). Blok hlídá
+    /// ButtonDisabledIdiomTests, takže jeho záměr je pinnutý zvlášť.
     /// </summary>
     private static readonly string[] RecordedModifierOverrideViolations =
     [
@@ -763,6 +770,14 @@ public class UnconstrainedClassOwnershipTests
         "tm-btn|tm-btn-md [height]: .tm-btn.tm-btn-md (0,2,0) v Tempo.Blazor/_button.css × .tm-dialog-footer.tm-modal-footer--stacked .tm-btn (0,3,0) v Tempo.Blazor/_modal.css",
         "tm-btn|tm-btn-sm [height]: .tm-btn.tm-btn-sm (0,2,0) v Tempo.Blazor/_button.css × .tm-modal-footer--stacked .tm-btn (0,2,0) v Tempo.Blazor/_modal.css",
         "tm-btn|tm-btn-sm [height]: .tm-btn.tm-btn-sm (0,2,0) v Tempo.Blazor/_button.css × .tm-dialog-footer.tm-modal-footer--stacked .tm-btn (0,3,0) v Tempo.Blazor/_modal.css",
+        "tm-btn|tm-btn-ghost [border-color]: .tm-btn.tm-btn-ghost (0,2,0) v Tempo.Blazor/_button.css × .tm-btn:disabled (0,2,0) v Tempo.Blazor/_button.css",
+        "tm-btn|tm-btn-ghost [color]: .tm-btn.tm-btn-ghost (0,2,0) v Tempo.Blazor/_button.css × .tm-btn:disabled (0,2,0) v Tempo.Blazor/_button.css",
+        "tm-btn|tm-btn-outline-secondary [border-color]: .tm-btn.tm-btn-outline-secondary (0,2,0) v Tempo.Blazor/_button.css × .tm-btn:disabled (0,2,0) v Tempo.Blazor/_button.css",
+        "tm-btn|tm-btn-outline-secondary [color]: .tm-btn.tm-btn-outline-secondary (0,2,0) v Tempo.Blazor/_button.css × .tm-btn:disabled (0,2,0) v Tempo.Blazor/_button.css",
+        "tm-btn|tm-btn-primary [border-color]: .tm-btn.tm-btn-primary (0,2,0) v Tempo.Blazor/_button.css × .tm-btn:disabled (0,2,0) v Tempo.Blazor/_button.css",
+        "tm-btn|tm-btn-primary [color]: .tm-btn.tm-btn-primary (0,2,0) v Tempo.Blazor/_button.css × .tm-btn:disabled (0,2,0) v Tempo.Blazor/_button.css",
+        "tm-btn|tm-btn-secondary [border-color]: .tm-btn.tm-btn-secondary (0,2,0) v Tempo.Blazor/_button.css × .tm-btn:disabled (0,2,0) v Tempo.Blazor/_button.css",
+        "tm-btn|tm-btn-secondary [color]: .tm-btn.tm-btn-secondary (0,2,0) v Tempo.Blazor/_button.css × .tm-btn:disabled (0,2,0) v Tempo.Blazor/_button.css",
     ];
 
     [Fact]
@@ -773,7 +788,8 @@ public class UnconstrainedClassOwnershipTests
         violations.Except(RecordedModifierOverrideViolations, StringComparer.Ordinal).Should().BeEmpty(
             "modifikátor musí nad základem vítězit SELEKTOREM — při shodné specificitě rozhoduje "
             + "pořadí importů v manifestu, a to je přesně remíza, kterou aplikace naměřila. "
-            + "Záměrné scoped override z Fáze 6 (stacked footer) jsou zapsané v "
+            + "Záměrné scoped override z Fáze 6 (stacked footer) a Fáze 4e (forced-colors "
+            + ".tm-btn:disabled GrayText proti ink variantám) jsou zapsané v "
             + "RecordedModifierOverrideViolations; cokoliv navíc je tvrdá chyba. "
             + "Nalezeno:\n{0}", string.Join("\n", violations));
     }

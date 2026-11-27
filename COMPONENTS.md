@@ -3209,6 +3209,7 @@ Výběr času s dropdownem.
 | `Label` | `string?` | `null` | Popisek |
 | `TriggerId` | `string?` | `null` | Volitelné explicitní id clock triggeru, aby ho mohla cílit `<label for>` nadřazené komponenty, když Auto na mobilu skryje segmenty |
 | `AriaLabelledBy` | `string?` | `null` | Id, která pojmenují group / overlay / trigger a přebijí `Label` |
+| `AriaDescribedBy` | `string?` | `null` | Extra id pro `aria-describedby` segmentů / spinbuttonů i triggeru. Trigger navíc připojuje kaskádu obalujícího `TmFormField` (chyba, pak nápověda) přes `TmDescribedBy.Join` — na telefonu (Auto) je trigger jediný fokusovatelný nosič hodnoty, takže čte nápovědu/chybu pole. Spojená hodnota se NEdává do vnořeného inputu/selektoru (ty kaskádu konzumují samy), takže se id nikdy nezdvojí |
 | `EnableSwipe` | `bool` | `false` | Předá `TmTimeSelector.EnableSwipe` v Popup/Auto (opt-in swipe; Segments ignoruje) |
 | `Class` | `string?` | `null` | Další CSS třídy |
 | `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |

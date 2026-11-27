@@ -214,6 +214,48 @@
     </div>
 </section>
 
+<section class="demo-section" data-testid="time-picker-formfield">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Picker inside TmFormField</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 rounded-full">aria-describedby</span>
+    </div>
+
+    <div class="showcase-card" data-testid="time-picker-formfield-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            The overlay trigger joins the field-level help and error into its
+            <code>aria-describedby</code> — on a phone the trigger is the only focusable carrier of
+            the value, and the read-only trigger reads WHY the field is locked from the same help.
+        </p>
+        <div class="grid gap-4 sm:grid-cols-2">
+            <TmFormField HelpText="Front desk opens at 08:00." Id="time-picker-ff-help">
+                <TmTimePicker @bind-Value="_ffHelp"
+                              Label="Check-in"
+                              Presentation="TimePickerPresentation.Auto"
+                              HourCycle="TimeHourCycle.H23"
+                              Id="time-picker-ff-help" />
+            </TmFormField>
+            <TmFormField HelpText="The shift ends the same day."
+                         ErrorMessage="@(_ffError <= _ffHelp ? "Check-out must be after check-in." : null)"
+                         Id="time-picker-ff-error">
+                <TmTimePicker @bind-Value="_ffError"
+                              Label="Check-out"
+                              Presentation="TimePickerPresentation.Auto"
+                              HourCycle="TimeHourCycle.H23"
+                              Id="time-picker-ff-error" />
+            </TmFormField>
+            <TmFormField HelpText="Locked after the shift plan was published." Id="time-picker-ff-readonly">
+                <TmTimePicker Value="@_ffReadOnly"
+                              ValueChanged="@(_ => { })"
+                              Label="Shift start"
+                              Presentation="TimePickerPresentation.Auto"
+                              ReadOnly="true"
+                              HourCycle="TimeHourCycle.H23"
+                              Id="time-picker-ff-readonly" />
+            </TmFormField>
+        </div>
+    </div>
+</section>
+
 <section class="demo-section" data-testid="time-range-overnight">
     <div class="flex items-center space-x-2 mb-4">
         <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Overnight range</h2>
@@ -297,6 +339,9 @@
     private TimeOnly? _popup = new TimeOnly(14, 30);
     private TimeOnly? _auto = new TimeOnly(9, 0);
     private TimeOnly? _autoReadOnly = new TimeOnly(9, 15);
+    private TimeOnly? _ffHelp = new TimeOnly(8, 30);
+    private TimeOnly? _ffError = new TimeOnly(7, 45);
+    private TimeOnly? _ffReadOnly = new TimeOnly(6, 0);
     private (TimeOnly? Start, TimeOnly? End) _overnightRange = (new TimeOnly(22, 0), new TimeOnly(6, 0));
     private TimeOnly? _overnightPicker = new TimeOnly(23, 30);
     private TimeOnly? _dstGap = new TimeOnly(2, 30);

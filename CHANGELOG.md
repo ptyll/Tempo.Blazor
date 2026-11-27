@@ -97,6 +97,20 @@
   ```
 
   The anchor variant (`<a class="tm-btn" disabled>`) is UNCHANGED — an anchor has no native disabled, so it keeps `pointer-events: none` (now also for `a.tm-btn[aria-disabled="true"]`); link-buttons need no migration. Note that `pointer-events: none` blocks the POINTER only: a disabled link must also lose its `href` (or render `tabindex="-1"` with `aria-disabled="true"`), otherwise the keyboard still activates it.
+- **The `TmTimePicker` trigger's `aria-describedby` now includes the `TmFormField` help/error ids.** Before: the overlay trigger carried only the host's `AriaDescribedBy`. After: inside a `TmFormField` with `HelpText` or `ErrorMessage` the trigger joins the cascade (the host's `AriaDescribedBy` first, then the error id, then the help id) — additive for assistive tech, but a host or test that asserts the EXACT attribute value of a picker inside a form field must expect the additional id(s):
+
+  ```csharp
+  // before (TmTimePicker inside a TmFormField with HelpText)
+  trigger.GetAttribute("aria-describedby").Should().Be("extra-hint");
+  // after
+  trigger.GetAttribute("aria-describedby").Should().Be("extra-hint check-in-field-field-help");
+  ```
+
+  Outside a `TmFormField` the attribute is byte-identical, and the segments/spinbuttons are unchanged (they consumed the cascade all along).
+
+### Fixed — TmTimePicker trigger reads the TmFormField help and error (`Tempo.Blazor`)
+
+- **The overlay trigger of `TmTimePicker` now consumes the `TmFormField` help/error cascade.** On a phone (`Presentation=Auto`) the trigger is the only focusable carrier of the value — the segments are hidden — yet its `aria-describedby` carried only the host's `AriaDescribedBy`, so a screen reader never read the field-level help or error (remaining task found by the architect while planning phase 4 of this plan, verified in code). The trigger now joins the cascade through `TmDescribedBy.Join(AriaDescribedBy, FormFieldErrorId, FormFieldDescribedByIds)` — the same cascade the segments (`TmTimeInput`) and the overlay selector (`TmTimeSelector`) already consumed on their own — host ids first, so the attribute stays prefix-stable against today's value (the desktop trigger joins it too, for consistency with the `AriaDescribedBy` it already carried). The joined value is never forwarded INTO the nested input/selector, so an id never doubles — verified for both halves of a `TmTimeRangePicker` under one `TmFormField`. The locked (`ReadOnly`) phone trigger reads WHY the field is locked from the same cascade. **The phone trigger now also SHOWS the field-level error:** a `TmFormField` `ErrorMessage` turns the trigger-only root `tm-time-picker--invalid` (previously only an out-of-range value did), so the danger border reaches the trigger — the only element a phone renders — and no longer leaves an announced-but-invisible error. Pinned in bUnit (`TmTimePickerTests` — help, error, read-only, desktop, no-form-field, invalid-state and range-picker cases, with the cascade-drop, error-drop and range-only-invalid mutants RED) and in WASM E2E `TmPickerAriaStateE2ETests` (the phone trigger resolves every referenced id to its text, the computed border colour of an errored field matches `--tm-color-danger`, desktop trigger + segments, scoped axe in both themes, light/dark/phone screenshots on the new `/time-input` card `time-picker-formfield-card`). See Breaking / Migration for the exact-value note.
 
 ### Fixed — disabled TmButton shows the not-allowed cursor (`Tempo.Blazor`)
 

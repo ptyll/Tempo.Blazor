@@ -23,6 +23,7 @@ public sealed class TmPickerAriaStateE2ETests : WasmTestBase
 {
     private const string AxeCdn = "https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.2/axe.min.js";
     private const string TimeReadOnlyCard = "[data-testid='time-picker-readonly-card']";
+    private const string FormFieldCard = "[data-testid='time-picker-formfield-card']";
     private const string MvlToolbarCard = "[data-testid='mvl-cards-toolbar-card']";
 
     private readonly List<string> _clientErrors = [];
@@ -208,6 +209,163 @@ public sealed class TmPickerAriaStateE2ETests : WasmTestBase
     }
 
     [TestMethod]
+    public async Task FormFieldTimePicker_Phone_TriggerReadsTheFieldHelpErrorAndLockReason()
+    {
+        // Fáze 4f: on a phone (Auto) the trigger is the ONLY focusable carrier of the value, so
+        // it must read the TmFormField help/error. Every referenced id resolves to a real element.
+        var page = await OpenTimeInputAsync(390, 844, touch: true);
+        var card = page.Locator(FormFieldCard);
+        await card.ScrollIntoViewIfNeededAsync();
+        await WaitForLayoutToSettleAsync(page, FormFieldCard);
+
+        await Assertions.Expect(card.Locator(".tm-time-seg")).ToHaveCountAsync(0);
+
+        var helpTrigger = card.Locator("#time-picker-ff-help .tm-time-picker__trigger");
+        Assert.AreEqual("time-picker-ff-help-field-help",
+            await helpTrigger.GetAttributeAsync("aria-describedby"),
+            "the editable phone trigger reads the field-level help");
+        await AssertDescribedByResolvesAsync(page, helpTrigger, "Front desk opens at 08:00.");
+
+        var errorTrigger = card.Locator("#time-picker-ff-error .tm-time-picker__trigger");
+        Assert.AreEqual("time-picker-ff-error-field-error",
+            await errorTrigger.GetAttributeAsync("aria-describedby"),
+            "the editable phone trigger reads the field-level error");
+        await AssertDescribedByResolvesAsync(page, errorTrigger, "Check-out must be after check-in.");
+
+        var lockedTrigger = card.Locator("#time-picker-ff-readonly .tm-time-picker__trigger");
+        Assert.AreEqual("true", await lockedTrigger.GetAttributeAsync("aria-disabled"));
+        Assert.AreEqual("time-picker-ff-readonly-field-help",
+            await lockedTrigger.GetAttributeAsync("aria-describedby"),
+            "the locked phone trigger reads WHY the field is locked from the field-level help");
+        await AssertDescribedByResolvesAsync(page, lockedTrigger, "Locked after the shift plan was published.");
+
+        var overflow = await page.EvaluateAsync<bool>(
+            "() => document.documentElement.scrollWidth > document.documentElement.clientWidth");
+        Assert.IsFalse(overflow, "the form-field card must not stretch the page horizontally");
+
+        // The errored field PAINTS the danger border on the trigger — on a phone the trigger is
+        // the only element the picker renders — while the help-only field keeps the neutral border.
+        var danger = await ResolveCssColorAsync(page, "var(--tm-color-danger)");
+        var errorBorder = await errorTrigger.EvaluateAsync<string>("el => getComputedStyle(el).borderColor");
+        Assert.AreEqual(danger, errorBorder,
+            "the trigger-only root carries --invalid, so the trigger paints the danger border");
+        var helpBorder = await helpTrigger.EvaluateAsync<string>("el => getComputedStyle(el).borderColor");
+        Assert.AreNotEqual(danger, helpBorder, "a help-only field keeps the neutral border");
+
+        await AssertNoAxeViolationsAsync(page, FormFieldCard, "time picker form-field card (phone)");
+
+        // Dark pass on the phone: axe + the dark screenshot (sticky header hidden so it cannot
+        // cover the card). EnsureDemoThemeAsync dispatches the toggle in-page — the phone band
+        // may hide the header toggle from the pointer.
+        await EnsureDemoThemeAsync(page, "dark");
+        await WaitForLayoutToSettleAsync(page, FormFieldCard);
+        await AssertNoAxeViolationsAsync(page, FormFieldCard, "time picker form-field card (phone, dark)");
+
+        var directory = Path.Combine(
+            FindRepoRoot().FullName, "tests", "Tempo.Blazor.E2E", "__screenshots__", "pickers");
+        Directory.CreateDirectory(directory);
+        await SetStickyHeaderVisibleAsync(page, false);
+        try
+        {
+            await card.ScreenshotAsync(new LocatorScreenshotOptions
+            {
+                Path = Path.Combine(directory, "fze-4f-timepicker-formfield-dark-390.png"),
+            });
+        }
+        finally
+        {
+            await SetStickyHeaderVisibleAsync(page, true);
+        }
+
+        AssertNoClientErrors();
+    }
+
+    [TestMethod]
+    public async Task FormFieldTimePicker_Desktop_TriggerAndSegments_ReadTheHelpOnce()
+    {
+        var page = await OpenTimeInputAsync();
+        var card = page.Locator(FormFieldCard);
+        await card.ScrollIntoViewIfNeededAsync();
+        await WaitForLayoutToSettleAsync(page, FormFieldCard);
+
+        var helpPicker = card.Locator("#time-picker-ff-help");
+        Assert.AreEqual("time-picker-ff-help-field-help",
+            await helpPicker.Locator(".tm-time-picker__trigger").GetAttributeAsync("aria-describedby"),
+            "the desktop trigger joins the cascade too (it already carries AriaDescribedBy)");
+        Assert.AreEqual("time-picker-ff-help-field-help",
+            await helpPicker.Locator(".tm-time-seg--hours").GetAttributeAsync("aria-describedby"),
+            "the segments consume the cascade themselves — never a doubled id");
+
+        // The locked picker renders NO trigger on a desktop; the read-only segments carry the help.
+        Assert.AreEqual(0, await card.Locator("#time-picker-ff-readonly .tm-time-picker__trigger").CountAsync(),
+            "where the segments render, the locked trigger is not rendered at all");
+        Assert.AreEqual("time-picker-ff-readonly-field-help",
+            await card.Locator("#time-picker-ff-readonly .tm-time-seg--hours").GetAttributeAsync("aria-describedby"));
+
+        // Edge: the demo binds the error to the VALUES (check-out 07:45 ≤ check-in 08:30). Fixing
+        // the value clears the error, and the trigger's aria-describedby then carries the HELP id —
+        // never the stale error id.
+        var errorTrigger = card.Locator("#time-picker-ff-error .tm-time-picker__trigger");
+        Assert.AreEqual("time-picker-ff-error-field-error",
+            await errorTrigger.GetAttributeAsync("aria-describedby"),
+            "the seeded values (07:45 ≤ 08:30) show the error");
+        var errorPicker = card.Locator("#time-picker-ff-error");
+        await errorPicker.Locator(".tm-time-seg--hours").FillAsync("17");
+        await errorPicker.Locator(".tm-time-seg--hours").PressAsync("Tab");
+        await errorPicker.Locator(".tm-time-seg--minutes").FillAsync("00");
+        await errorPicker.Locator(".tm-time-seg--minutes").PressAsync("Tab");
+        await Assertions.Expect(errorTrigger).ToHaveAttributeAsync(
+            "aria-describedby", "time-picker-ff-error-field-help");
+        Assert.IsFalse((await errorTrigger.GetAttributeAsync("aria-describedby") ?? string.Empty)
+                .Contains("-field-error", StringComparison.Ordinal),
+            "after the fix the described-by carries the help, not the stale error id");
+
+        await AssertNoAxeViolationsAsync(page, FormFieldCard, "time picker form-field card");
+
+        // Dark axe pass on the same card.
+        await ToggleDarkModeAsync(page);
+        await WaitForLayoutToSettleAsync(page, FormFieldCard);
+        await AssertNoAxeViolationsAsync(page, FormFieldCard, "time picker form-field card (dark)");
+        AssertNoClientErrors();
+    }
+
+    [TestMethod]
+    public async Task Screenshots_FormFieldTimePicker_LightDarkAndPhone()
+    {
+        var directory = Path.Combine(
+            FindRepoRoot().FullName, "tests", "Tempo.Blazor.E2E", "__screenshots__", "pickers");
+        Directory.CreateDirectory(directory);
+
+        var page = await OpenTimeInputAsync();
+        await page.Locator(FormFieldCard).ScrollIntoViewIfNeededAsync();
+        await CaptureCardAsync(page, FormFieldCard,
+            Path.Combine(directory, "fze-4f-timepicker-formfield-light-1440.png"));
+
+        await ToggleDarkModeAsync(page);
+        await CaptureCardAsync(page, FormFieldCard,
+            Path.Combine(directory, "fze-4f-timepicker-formfield-dark-1440.png"));
+
+        // Edge case: the phone layout — the trigger-only presentation carries the value.
+        var phone = await OpenTimeInputAsync(390, 844, touch: true);
+        await phone.Locator(FormFieldCard).ScrollIntoViewIfNeededAsync();
+        await WaitForLayoutToSettleAsync(phone, FormFieldCard);
+        await SetStickyHeaderVisibleAsync(phone, false);
+        try
+        {
+            await phone.Locator(FormFieldCard).ScreenshotAsync(new LocatorScreenshotOptions
+            {
+                Path = Path.Combine(directory, "fze-4f-timepicker-formfield-light-390.png"),
+            });
+        }
+        finally
+        {
+            await SetStickyHeaderVisibleAsync(phone, true);
+        }
+
+        AssertNoClientErrors();
+    }
+
+    [TestMethod]
     public async Task DateRangePicker_TriggerAriaExpanded_IsAString_InBothStates()
     {
         var page = await OpenPickersAsync();
@@ -325,13 +483,17 @@ public sealed class TmPickerAriaStateE2ETests : WasmTestBase
             """, visible);
 
     /// <summary>Captures the read-only card with the sticky header hidden and restored afterwards.</summary>
-    private static async Task CaptureCardAsync(IPage page, string screenshotPath)
+    private static Task CaptureCardAsync(IPage page, string screenshotPath)
+        => CaptureCardAsync(page, TimeReadOnlyCard, screenshotPath);
+
+    /// <summary>Captures a card with the sticky header hidden and restored afterwards.</summary>
+    private static async Task CaptureCardAsync(IPage page, string selector, string screenshotPath)
     {
-        await WaitForLayoutToSettleAsync(page, TimeReadOnlyCard);
+        await WaitForLayoutToSettleAsync(page, selector);
         await SetStickyHeaderVisibleAsync(page, false);
         try
         {
-            await page.Locator(TimeReadOnlyCard).ScreenshotAsync(new LocatorScreenshotOptions
+            await page.Locator(selector).ScreenshotAsync(new LocatorScreenshotOptions
             {
                 Path = screenshotPath,
             });
@@ -339,6 +501,38 @@ public sealed class TmPickerAriaStateE2ETests : WasmTestBase
         finally
         {
             await SetStickyHeaderVisibleAsync(page, true);
+        }
+    }
+
+    /// <summary>Resolves a CSS color expression (e.g. <c>var(--tm-color-danger)</c>) to the
+    /// computed color the browser would paint, through a throwaway probe element — token values
+    /// are authored as hex/keywords while <c>getComputedStyle</c> reports rgb().</summary>
+    private static async Task<string> ResolveCssColorAsync(IPage page, string cssColor)
+        => await page.EvaluateAsync<string>(
+            """
+            (cssColor) => {
+                const probe = document.createElement('div');
+                probe.style.borderColor = cssColor;
+                document.body.appendChild(probe);
+                const resolved = getComputedStyle(probe).borderColor;
+                probe.remove();
+                return resolved;
+            }
+            """, cssColor);
+
+    /// <summary>Every id in the element's <c>aria-describedby</c> resolves to a DOM element whose
+    /// text contains <paramref name="expectedText"/>.</summary>
+    private static async Task AssertDescribedByResolvesAsync(IPage page, ILocator element, string expectedText)
+    {
+        var ids = await element.GetAttributeAsync("aria-describedby") ?? string.Empty;
+        Assert.IsFalse(string.IsNullOrWhiteSpace(ids), "aria-describedby must reference at least one id");
+        foreach (var id in ids.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var text = await page.EvaluateAsync<string?>(
+                "(id) => document.getElementById(id)?.textContent?.trim() ?? null", id);
+            Assert.IsNotNull(text, $"aria-describedby id '{id}' must resolve to an element in the DOM");
+            StringAssert.Contains(text, expectedText,
+                $"the element '{id}' referenced from aria-describedby carries the expected text");
         }
     }
 

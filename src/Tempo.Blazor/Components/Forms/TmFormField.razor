@@ -52,8 +52,8 @@
     /// text of its own still references the field-level help — the same contract the error-id
     /// cascade has. The inputs that read it today: TmTextInput, TmTextArea, TmSelect, TmNumberInput,
     /// TmDecimalInput, TmMultiSelect, TmEntityPicker, TmRadioGroup, TmCodeEditor,
-    /// TmExpressionEditor and TmTimeInput (plus TmFilterableDropdown, which also reads the
-    /// error cascade). Every
+    /// TmExpressionEditor, TmTimeInput and TmTimePicker (trigger) (plus TmFilterableDropdown, which
+    /// also reads the error cascade). Every
     /// other component ignores the cascade and stays unchanged; the ids are merged through the
     /// internal <see cref="TmDescribedBy.Join"/> helper.
     /// </summary>

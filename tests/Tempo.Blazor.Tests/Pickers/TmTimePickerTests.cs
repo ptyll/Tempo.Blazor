@@ -1,6 +1,7 @@
 using Bunit;
 using FluentAssertions;
 using Tempo.Blazor.Abstractions.Layout;
+using Tempo.Blazor.Components.Forms;
 using Tempo.Blazor.Components.Pickers;
 using Tempo.Blazor.Models;
 using Tempo.Blazor.Tests.Localization;
@@ -394,5 +395,158 @@ public class TmTimePickerTests : LocalizationTestBase
 
         cut.Find(".tm-time-picker-body").GetAttribute("aria-labelledby").Should().Be("host-label",
             "a consumer attribute wins over the component default");
+    }
+
+    // ── Fáze 4f (plan b75365fb): the overlay trigger reads the TmFormField help/error ──────────
+    //    On a phone (Auto) the trigger is the ONLY focusable carrier of the value, so without the
+    //    cascade it never reads the field-level help/error. The desktop trigger joins the cascade
+    //    too (decision: it already carries AriaDescribedBy, so it consumes the same cascade there
+    //    for consistency); the segments/selector keep consuming the cascade themselves — the
+    //    joined value is never forwarded into them.
+
+    [Fact]
+    public void TimePicker_Auto_Mobile_Trigger_JoinsTheFormFieldHelp()
+    {
+        var cut = Render<TmFormField>(p => p
+            .Add(c => c.Id, "check-in-field")
+            .Add(c => c.HelpText, "Front desk opens at 08:00.")
+            .AddChildContent<TmTimePicker>(child => child
+                .Add(x => x.Value, new TimeOnly(9, 0))
+                .Add(x => x.Presentation, TimePickerPresentation.Auto)
+                .Add(x => x.LayoutMode, TmLayoutMode.Mobile)
+                .Add(x => x.AriaDescribedBy, "extra-hint")));
+
+        cut.FindAll(".tm-time-seg").Should().BeEmpty("Auto on a phone hides the segments");
+        cut.Find(".tm-time-picker__trigger").GetAttribute("aria-describedby")
+            .Should().Be("extra-hint check-in-field-field-help",
+                "the trigger joins its own AriaDescribedBy with the TmFormField help id — " +
+                "HOST-FIRST on purpose (the opposite of the cascade-first TmDatePicker join): " +
+                "the host's ids lead so the attribute stays prefix-stable against the value it " +
+                "carried before the cascade joined; the field-level ids only ever append");
+    }
+
+    [Fact]
+    public void TimePicker_Auto_Mobile_FormFieldError_PaintsTheInvalidState_OnTheTriggerOnlyRoot()
+    {
+        // Reviewer finding (phase 4f): on a phone the trigger-only layout has no segments to
+        // paint, so a field-level ErrorMessage must turn the ROOT --invalid — otherwise the
+        // error is announced (aria-describedby) but never shown. Mutant guard: an IsInvalidState
+        // without FormFieldErrorId (range-only) leaves this root un-painted → RED.
+        var withError = Render<TmFormField>(p => p
+            .Add(c => c.Id, "check-in-field")
+            .Add(c => c.ErrorMessage, "Check-out must be after check-in.")
+            .AddChildContent<TmTimePicker>(child => child
+                .Add(x => x.Value, new TimeOnly(9, 0))
+                .Add(x => x.Presentation, TimePickerPresentation.Auto)
+                .Add(x => x.LayoutMode, TmLayoutMode.Mobile)));
+
+        withError.FindAll(".tm-time-picker--invalid").Should().ContainSingle(
+            "the field-level error paints the trigger-only root — the phone has no segments " +
+            "to carry the danger ink");
+
+        var withHelpOnly = Render<TmFormField>(p => p
+            .Add(c => c.Id, "check-in-field")
+            .Add(c => c.HelpText, "Front desk opens at 08:00.")
+            .AddChildContent<TmTimePicker>(child => child
+                .Add(x => x.Value, new TimeOnly(9, 0))
+                .Add(x => x.Presentation, TimePickerPresentation.Auto)
+                .Add(x => x.LayoutMode, TmLayoutMode.Mobile)));
+
+        withHelpOnly.FindAll(".tm-time-picker--invalid").Should().BeEmpty(
+            "a help-only field is not invalid — the trigger keeps the neutral border");
+    }
+
+    [Fact]
+    public void TimePicker_Auto_Mobile_Trigger_JoinsTheFormFieldError()
+    {
+        var cut = Render<TmFormField>(p => p
+            .Add(c => c.Id, "check-in-field")
+            .Add(c => c.ErrorMessage, "The time is outside opening hours.")
+            .AddChildContent<TmTimePicker>(child => child
+                .Add(x => x.Value, new TimeOnly(9, 0))
+                .Add(x => x.Presentation, TimePickerPresentation.Auto)
+                .Add(x => x.LayoutMode, TmLayoutMode.Mobile)));
+
+        cut.Find(".tm-time-picker__trigger").GetAttribute("aria-describedby")
+            .Should().Be("check-in-field-field-error",
+                "the trigger reads the field-level error — on a phone it is the only focusable carrier");
+    }
+
+    [Fact]
+    public void TimePicker_Auto_Mobile_ReadOnly_Trigger_JoinsTheFormFieldCascade()
+    {
+        var cut = Render<TmFormField>(p => p
+            .Add(c => c.Id, "check-in-field")
+            .Add(c => c.HelpText, "Locked after the shift plan was published.")
+            .AddChildContent<TmTimePicker>(child => child
+                .Add(x => x.Value, new TimeOnly(9, 15))
+                .Add(x => x.Presentation, TimePickerPresentation.Auto)
+                .Add(x => x.LayoutMode, TmLayoutMode.Mobile)
+                .Add(x => x.ReadOnly, true)));
+
+        var trigger = cut.Find(".tm-time-picker__trigger");
+        trigger.GetAttribute("aria-disabled").Should().Be("true", "the locked trigger announces the lock");
+        trigger.GetAttribute("aria-describedby")
+            .Should().Be("check-in-field-field-help",
+                "the locked phone trigger reads WHY the field is locked from the field-level help");
+    }
+
+    [Fact]
+    public void TimePicker_Popup_Desktop_Trigger_JoinsTheFormFieldCascade_SegmentsConsumeItThemselves()
+    {
+        // Decision: the desktop trigger carries the cascade too — it already carries
+        // AriaDescribedBy, so it consumes the same cascade there for consistency. The segments
+        // consume the cascade on their own (the picker must NOT forward the joined value into
+        // the nested input — the id appears exactly once on each element).
+        var cut = Render<TmFormField>(p => p
+            .Add(c => c.Id, "check-in-field")
+            .Add(c => c.HelpText, "Front desk opens at 08:00.")
+            .AddChildContent<TmTimePicker>(child => child
+                .Add(x => x.Value, new TimeOnly(9, 0))
+                .Add(x => x.Presentation, TimePickerPresentation.Popup)));
+
+        cut.Find(".tm-time-picker__trigger").GetAttribute("aria-describedby")
+            .Should().Be("check-in-field-field-help");
+
+        cut.Find(".tm-time-seg--hours").GetAttribute("aria-describedby")
+            .Should().Be("check-in-field-field-help",
+                "the segments consume the same cascade themselves — never a doubled id");
+    }
+
+    [Fact]
+    public void TimePicker_WithoutFormField_TriggerDescribedBy_IsUnchanged()
+    {
+        var bare = Render<TmTimePicker>(p => p
+            .Add(c => c.Presentation, TimePickerPresentation.Popup));
+        bare.Find(".tm-time-picker__trigger").HasAttribute("aria-describedby").Should().BeFalse(
+            "with no host ids and no TmFormField the attribute stays off the trigger (null is omitted)");
+
+        var withHint = Render<TmTimePicker>(p => p
+            .Add(c => c.Presentation, TimePickerPresentation.Popup)
+            .Add(c => c.AriaDescribedBy, "hint"));
+        withHint.Find(".tm-time-picker__trigger").GetAttribute("aria-describedby")
+            .Should().Be("hint", "today's DOM is unchanged outside a TmFormField");
+    }
+
+    [Fact]
+    public void TimeRangePicker_BothEnds_ReadTheFieldHelp_ExactlyOnce()
+    {
+        // Both halves of the range live under ONE TmFormField — the cascade reaches each nested
+        // picker on its own and the trigger references the field help exactly once per end.
+        var cut = Render<TmFormField>(p => p
+            .Add(c => c.Id, "shift-field")
+            .Add(c => c.HelpText, "A night shift crosses midnight.")
+            .AddChildContent<TmTimeRangePicker>(child => child
+                .Add(x => x.Value, (new TimeOnly(22, 0), new TimeOnly(6, 0)))
+                .Add(x => x.AllowOvernightRange, true)
+                .Add(x => x.Presentation, TimePickerPresentation.Popup)));
+
+        var triggers = cut.FindAll(".tm-time-picker__trigger");
+        triggers.Should().HaveCount(2, "Popup renders one trigger per end");
+        foreach (var trigger in triggers)
+        {
+            trigger.GetAttribute("aria-describedby").Should().Be("shift-field-field-help",
+                "each end reads the field-level help exactly once — TmDescribedBy.Join dedupes");
+        }
     }
 }

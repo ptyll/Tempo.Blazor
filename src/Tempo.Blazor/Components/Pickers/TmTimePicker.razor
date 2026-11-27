@@ -2,7 +2,7 @@
 @using Tempo.Blazor.Abstractions.Layout
 @using Tempo.Blazor.Components.Icons
 
-<div class="tm-time-picker @Class @(IsOutOfRange ? "tm-time-picker--invalid" : "") @(IsMobileAuto ? "tm-time-picker--trigger-only" : null) @(ReadOnly ? "tm-time-picker--readonly" : null)"
+<div class="tm-time-picker @Class @(IsInvalidState ? "tm-time-picker--invalid" : "") @(IsMobileAuto ? "tm-time-picker--trigger-only" : null) @(ReadOnly ? "tm-time-picker--readonly" : null)"
      id="@Id"
      @attributes="RootAttributes">
 
@@ -75,8 +75,9 @@
                aria-disabled="true" with aria-haspopup="false", no aria-expanded/aria-controls
                (aria-readonly is not a supported attribute on role=button) and no opening icon —
                nothing on it advertises a popup that can never open. It keeps its natural tab stop
-               and ToggleOverlayAsync refuses every activation. AriaDescribedBy reaches the locked
-               trigger too, so a host can describe WHY the field is locked. The editable trigger
+               and ToggleOverlayAsync refuses every activation. TriggerDescribedBy reaches the locked
+               trigger too — the host's AriaDescribedBy joined with the TmFormField help/error
+               cascade — so a host can describe WHY the field is locked. The editable trigger
                is unchanged. *@
             <button type="button"
                     @ref="_triggerRef"
@@ -87,7 +88,7 @@
                     aria-expanded="@(ReadOnly ? null : _isOpen ? "true" : "false")"
                     aria-controls="@(ReadOnly ? null : _overlayId)"
                     aria-disabled="@(ReadOnly ? "true" : null)"
-                    aria-describedby="@AriaDescribedBy"
+                    aria-describedby="@TriggerDescribedBy"
                     aria-label="@TriggerAriaLabel"
                     aria-labelledby="@TriggerLabelledBy"
                     @onclick="ToggleOverlayAsync">

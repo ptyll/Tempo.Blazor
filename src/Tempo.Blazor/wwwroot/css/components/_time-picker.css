@@ -45,6 +45,17 @@
   border-color: var(--tm-border-color);
 }
 
+/* Invalid (out-of-range value or a surrounding TmFormField error): on a phone the trigger-only
+   layout has no segments to paint, so the danger border lands on the trigger itself. Placed
+   AFTER the --readonly rules so a locked-but-invalid field still reads as invalid; the hover
+   guard keeps the danger colour under the pointer instead of flashing the primary hover ink. */
+.tm-time-picker--trigger-only.tm-time-picker--invalid .tm-time-picker__trigger {
+  border-color: var(--tm-color-danger);
+}
+.tm-time-picker--trigger-only.tm-time-picker--invalid .tm-time-picker__trigger:hover:not(:disabled) {
+  border-color: var(--tm-color-danger);
+}
+
 .tm-time-picker__value {
   flex: 1 1 auto;
   min-inline-size: 0;

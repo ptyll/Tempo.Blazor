@@ -2676,6 +2676,8 @@ to{transform:translateY(0);opacity:1;}
 .tm-time-picker__trigger:disabled{opacity:var(--tm-opacity-disabled);cursor:not-allowed;}
 .tm-time-picker--readonly .tm-time-picker__trigger{cursor:default;background:var(--tm-bg-surface-secondary);}
 .tm-time-picker--readonly .tm-time-picker__trigger:hover:not(:disabled){border-color:var(--tm-border-color);}
+.tm-time-picker--trigger-only.tm-time-picker--invalid .tm-time-picker__trigger{border-color:var(--tm-color-danger);}
+.tm-time-picker--trigger-only.tm-time-picker--invalid .tm-time-picker__trigger:hover:not(:disabled){border-color:var(--tm-color-danger);}
 .tm-time-picker__value{flex:1 1 auto;min-inline-size:0;text-align:start;font-variant-numeric:tabular-nums;}
 .tm-time-picker__icon{margin-inline-start:auto;color:var(--tm-text-tertiary);}
 .tm-time-picker__popup{background:var(--tm-bg-surface);border:var(--tm-border-width) solid var(--tm-border-color);border-radius:var(--tm-radius-lg);box-shadow:var(--tm-shadow-lg);padding:var(--tm-space-2);min-inline-size:max-content;}

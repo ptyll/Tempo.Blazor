@@ -29461,7 +29461,7 @@
               "name": "AriaDescribedBy",
               "type": "string?",
               "isRequired": false,
-              "description": "Extra ids referenced from every segment / spinbutton aria-describedby. Forwarded to the nested input and selector."
+              "description": "Extra ids referenced from every segment / spinbutton aria-describedby. Forwarded to the nested input and selector, and rendered on the overlay trigger as well — so the description reaches the locked phone trigger too. The trigger additionally joins the surrounding TmFormField cascade (error, then help) through TmDescribedBy.Join: on a phone (Auto) the trigger is the only focusable carrier of the value, so it reads the field-level help/error. The joined value is never forwarded INTO the nested input/selector (they consume the cascade themselves), so an id never doubles. Null (attribute omitted) outside a TmFormField with no AriaDescribedBy."
             },
             {
               "name": "AriaLabelledBy",
