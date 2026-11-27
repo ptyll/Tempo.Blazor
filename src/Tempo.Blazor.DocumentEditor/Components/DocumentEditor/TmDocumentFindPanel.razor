@@ -26,21 +26,24 @@
               data-testid="@TestId("document-find-count")"
               aria-live="polite">@CountText</span>
 
-        <button class="tm-document-find-panel__btn"
+        <button class="tm-btn tm-btn-sm tm-btn-ghost tm-btn-icon tm-document-find-panel__btn"
+                type="button"
                 data-testid="@TestId("document-find-prev")"
                 title="@Loc["TmDocumentEditor_FindPrev"]"
                 aria-label="@Loc["TmDocumentEditor_FindPrev"]"
                 disabled="@(_results.Count == 0)"
                 @onclick="GoToPreviousAsync">&#8593;</button>
 
-        <button class="tm-document-find-panel__btn"
+        <button class="tm-btn tm-btn-sm tm-btn-ghost tm-btn-icon tm-document-find-panel__btn"
+                type="button"
                 data-testid="@TestId("document-find-next")"
                 title="@Loc["TmDocumentEditor_FindNext"]"
                 aria-label="@Loc["TmDocumentEditor_FindNext"]"
                 disabled="@(_results.Count == 0)"
                 @onclick="GoToNextAsync">&#8595;</button>
 
-        <button class="tm-document-find-panel__btn tm-document-find-panel__btn--close"
+        <button class="tm-btn tm-btn-sm tm-btn-ghost tm-btn-icon tm-document-find-panel__btn tm-document-find-panel__btn--close"
+                type="button"
                 data-testid="@TestId("document-find-close")"
                 title="@Loc["TmDocumentEditor_FindClose"]"
                 aria-label="@Loc["TmDocumentEditor_FindClose"]"
@@ -107,12 +110,14 @@
                    @onkeydown:stopPropagation="true"
                    @bind="_replacement" />
 
-            <button class="tm-document-find-panel__btn"
+            <button class="tm-btn tm-btn-sm tm-btn-primary tm-document-find-panel__btn"
+                    type="button"
                     data-testid="@TestId("document-find-replace-one")"
                     disabled="@(_results.Count == 0)"
                     @onclick="ReplaceOneAsync">@Loc["TmDocumentEditor_FindReplaceOne"]</button>
 
-            <button class="tm-document-find-panel__btn"
+            <button class="tm-btn tm-btn-sm tm-btn-secondary tm-document-find-panel__btn"
+                    type="button"
                     data-testid="@TestId("document-find-replace-all")"
                     disabled="@(_results.Count == 0)"
                     @onclick="ReplaceAllAsync">@Loc["TmDocumentEditor_FindReplaceAll"]</button>

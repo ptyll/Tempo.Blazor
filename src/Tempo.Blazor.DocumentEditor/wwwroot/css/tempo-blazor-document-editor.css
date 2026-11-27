@@ -3,3 +3,5 @@
 @import "components/_document-editor-toolbar.css";
 @import "components/_document-editor-comments.css";
 @import "components/_document-editor-find.css";
+@import "components/_document-editor-panels.css";
+@import "components/_document-editor-canvas-overlays.css";

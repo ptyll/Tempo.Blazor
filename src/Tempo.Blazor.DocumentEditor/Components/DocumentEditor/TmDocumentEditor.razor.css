@@ -6,7 +6,7 @@
     background: color-mix(in srgb, var(--tm-color-surface-muted) 88%, var(--tm-color-primary) 12%);
 }
 
-.tm-document-editor__state ::deep(.tm-alert) {
+.tm-document-editor__state ::deep .tm-alert {
     width: min(34rem, 100%);
     border-radius: var(--tm-radius-md);
     box-shadow: var(--tm-shadow-md);
@@ -17,7 +17,7 @@
     gap: var(--tm-space-4);
 }
 
-.tm-document-editor__loading ::deep(.tm-skeleton) {
+.tm-document-editor__loading ::deep .tm-skeleton {
     border-radius: var(--tm-radius-sm);
     box-shadow: var(--tm-shadow-sm);
 }
@@ -26,11 +26,11 @@
     background: var(--tm-color-surface);
 }
 
-.tm-document-editor--canvas-reading ::deep(.tm-document-canvas-engine-host__mount) {
+.tm-document-editor--canvas-reading ::deep .tm-document-canvas-engine-host__mount {
     padding: var(--tm-space-4);
 }
 
-.tm-document-editor--canvas-reading ::deep(.tm-document-canvas-engine) {
+.tm-document-editor--canvas-reading ::deep .tm-document-canvas-engine {
     background: var(--tm-color-surface);
 }
 

@@ -49,6 +49,7 @@ public class TmDocumentEditorCssTests
             File.ReadAllText(Path.Combine(cssRoot, "_document-editor.css")),
             File.ReadAllText(Path.Combine(cssRoot, "_document-editor-toolbar.css")),
             File.ReadAllText(Path.Combine(cssRoot, "_document-editor-comments.css")),
+            File.ReadAllText(Path.Combine(cssRoot, "_document-editor-canvas-overlays.css")),
             File.ReadAllText(Path.Combine(componentRoot, "TmDocumentCanvasEngineHost.razor.css")));
         var rules = CssRules.Parse(css);
 
@@ -114,7 +115,9 @@ public class TmDocumentEditorCssTests
             ".tm-document-diff__pane pre"
         })
         {
-            var hasDarkRule = rules.Any(rule => rule.Selectors.Any(selector => selector.StartsWith("[data-theme=\"dark\"] " + surface, StringComparison.Ordinal)));
+            // Phase 2: the package carries no manual dark block any more (ChromeStylesheets_PaintOnlyThrough...), so the
+            // contract is token-only colours - a surface paints through semantic tokens (or none / transparent / 0),
+            // never a colour literal, and tokens-dark.css flips it.
             var colourDeclarations = rules
                 .Where(rule => rule.Selectors.Any(selector => selector == surface))
                 .SelectMany(rule => rule.Body.Split(';'))
@@ -124,8 +127,8 @@ public class TmDocumentEditorCssTests
             var tokenOnly = colourDeclarations.Count > 0
                 && colourDeclarations.All(declaration =>
                     !System.Text.RegularExpressions.Regex.IsMatch(declaration, @"#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(")
-                    && System.Text.RegularExpressions.Regex.IsMatch(declaration, @"var\(--tm-|transparent|inherit|currentColor|none"));
-            (hasDarkRule || tokenOnly).Should().BeTrue($"{surface} needs a dark-mode rule or token-only colours");
+                    && System.Text.RegularExpressions.Regex.IsMatch(declaration, @"var\(--tm-|transparent|inherit|currentColor|none|:\s*0\s*$"));
+            tokenOnly.Should().BeTrue($"{surface} needs token-only colours");
         }
 
         // Focus: some :focus / :focus-within / :focus-visible rule draws the ring through a semantic token
@@ -275,6 +278,304 @@ public class TmDocumentEditorCssTests
         css.Should().Contain(".tm-document-canvas-engine-host--readonly");
         css.Should().Contain(".tm-document-canvas-engine-host__input");
         css.Should().Contain("cursor: not-allowed;");
+    }
+
+    // ── Phase 2 / DE-2.1: tokens, visual layer and the shared panel building blocks ─────────────────────────
+
+    private static readonly string[] ChromeStylesheets =
+    [
+        "_document-editor.css",
+        "_document-editor-toolbar.css",
+        "_document-editor-comments.css",
+        "_document-editor-find.css",
+        "_document-editor-panels.css",
+        "_document-editor-canvas-overlays.css"
+    ];
+
+    private static string ReadComponentCss(string fileName)
+    {
+        var root = FindRepositoryRoot();
+        return File.ReadAllText(Path.Combine(
+            root, "src", "Tempo.Blazor.DocumentEditor", "wwwroot", "css", "components", fileName));
+    }
+
+    [Fact]
+    public void NoDecorativeGradients_AndRadiusTokens()
+    {
+        var main = CssRules.Parse(ReadComponentCss("_document-editor.css"));
+
+        // The editor root and the workspace are flat: the workspace paints the semantic workspace token, the root a
+        // surface token, and neither carries a (radial or linear) gradient with the primary colour.
+        foreach (var selector in new[] { ".tm-document-editor", ".tm-document-editor__workspace" })
+        {
+            var body = CssRules.Body(main, selector);
+            body.Should().NotContain("radial-gradient", $"{selector} must not paint a decorative gradient");
+            body.Should().NotContain("linear-gradient", $"{selector} must not paint a decorative gradient");
+        }
+
+        CssRules.Body(main, ".tm-document-editor__workspace").Should().Contain("var(--tm-bg-workspace)");
+        CssRules.Body(main, ".tm-document-editor").Should().Contain("var(--tm-radius-card)").And.Contain("var(--tm-shadow-card)");
+
+        // Chrome radii are the two semantic steps: cards (root, panels, dialogs, menus) and controls (buttons, inputs).
+        // Content geometry (the rendered page, image, token chip, WYSIWYG fallback surface) keeps its own radii.
+        var contentSelector = new System.Text.RegularExpressions.Regex(
+            @"wysiwyg|tm-document-image(?!-(editor__fields|dialog|inspector|insert-menu|wrap-panel))|inline--token|token-chip|cursor__label|table-editor__cell|diff__pane|paste-error|canvas-");
+        var offenders = new List<string>();
+        foreach (var fileName in ChromeStylesheets)
+        {
+            foreach (var rule in CssRules.Parse(ReadComponentCss(fileName)))
+            {
+                if (rule.Selectors.All(selector => contentSelector.IsMatch(selector)))
+                {
+                    continue;
+                }
+
+                foreach (System.Text.RegularExpressions.Match match in System.Text.RegularExpressions.Regex.Matches(
+                             rule.Body, @"border-radius\s*:\s*var\(--tm-radius-(sm|md|lg|xl)\)"))
+                {
+                    offenders.Add($"{fileName}: {string.Join(", ", rule.Selectors)} -> {match.Value}");
+                }
+            }
+        }
+
+        offenders.Should().BeEmpty("chrome radii are --tm-radius-card / --tm-radius-control");
+    }
+
+    [Fact]
+    public void ChromeStylesheets_PaintOnlyThroughSemanticTokens_WithoutManualDarkBlocksOrLiteralFallbacks()
+    {
+        foreach (var fileName in ChromeStylesheets)
+        {
+            var css = System.Text.RegularExpressions.Regex.Replace(
+                ReadComponentCss(fileName), @"/\*.*?\*/", string.Empty, System.Text.RegularExpressions.RegexOptions.Singleline);
+
+            css.Should().NotContain("[data-theme=\"dark\"]", $"{fileName}: dark mode is carried by the token layer, not a manual block");
+            css.Should().NotContain(".tm-dark", $"{fileName}: dark mode is carried by the token layer, not a manual block");
+            System.Text.RegularExpressions.Regex.IsMatch(css, @"var\(--tm-[\w-]+\s*,\s*(#|rgb|hsl)")
+                .Should().BeFalse($"{fileName}: no colour fallback literal inside var()");
+        }
+    }
+
+    [Fact]
+    public void HighlightTokens_MapToSemanticTokens_ForLightAndDark()
+    {
+        var rules = CssRules.Parse(ReadComponentCss("_document-editor.css"));
+        var root = CssRules.Body(rules, ".tm-document-editor");
+
+        foreach (var name in new[] { "match", "match-active", "insert", "delete", "change" })
+        {
+            var declaration = System.Text.RegularExpressions.Regex.Match(root, $@"--tm-document-highlight-{name}\s*:\s*([^;]+);");
+            declaration.Success.Should().BeTrue($"--tm-document-highlight-{name} is declared on the editor root");
+            declaration.Groups[1].Value.Should().Contain("var(--tm-", "a highlight maps onto a core semantic token, which flips with the theme");
+            System.Text.RegularExpressions.Regex.IsMatch(declaration.Groups[1].Value, @"#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(")
+                .Should().BeFalse($"--tm-document-highlight-{name} carries no colour literal");
+        }
+    }
+
+    [Fact]
+    public void PanelsCss_IsSplitImportedAndDeclaresTheInspectorFormPattern()
+    {
+        var root = FindRepositoryRoot();
+        var entry = File.ReadAllText(Path.Combine(
+            root, "src", "Tempo.Blazor.DocumentEditor", "wwwroot", "css", "tempo-blazor-document-editor.css"));
+        entry.Should().Contain("@import \"components/_document-editor-panels.css\";");
+
+        var css = ReadComponentCss("_document-editor-panels.css");
+        var rules = CssRules.Parse(css);
+
+        foreach (var selector in new[]
+        {
+            ".tm-document-inspector-header",
+            ".tm-document-inspector-header__title",
+            ".tm-document-inspector-header__close",
+            ".tm-document-inspector-form",
+            ".tm-document-inspector-form__section",
+            ".tm-document-inspector-form__section-toggle",
+            ".tm-document-inspector-form__chevron",
+            ".tm-document-inspector-form__field",
+            ".tm-document-inspector-form__suffix",
+            ".tm-document-inspector-form__segmented",
+            ".tm-document-inspector-form--embedded"
+        })
+        {
+            rules.Any(rule => rule.Selectors.Any(candidate => candidate.StartsWith(selector, StringComparison.Ordinal)))
+                .Should().BeTrue($"{selector} must keep a rule");
+        }
+
+        // Label above the field by default, label beside it once the panel body is wide enough: a container query
+        // on the panel body, never the viewport.
+        css.Should().Contain("@container");
+        System.Text.RegularExpressions.Regex.IsMatch(css, @"container-type\s*:\s*inline-size").Should().BeTrue();
+
+        // The embedded modifier drops the card chrome (frame + shadow) for a panel hosted inside the inspector.
+        var embedded = CssRules.Body(rules, ".tm-document-inspector-form--embedded");
+        embedded.Should().Contain("box-shadow: none").And.Contain("border: 0");
+
+        // The section disclosure rotates a chevron icon instead of swapping a "+" / "-" glyph.
+        CssRules.Body(rules, ".tm-document-inspector-form__chevron").Should().Contain("transition");
+        CssRules.Body(rules, ".tm-document-inspector-form__section-toggle[aria-expanded=\"true\"] .tm-document-inspector-form__chevron")
+            .Should().Contain("rotate");
+    }
+
+    [Fact]
+    public void ActiveTabs_AreMarkedByAPrimaryUnderline()
+    {
+        var main = CssRules.Parse(ReadComponentCss("_document-editor.css"));
+        var toolbar = CssRules.Parse(ReadComponentCss("_document-editor-toolbar.css"));
+
+        var sideTab = string.Concat(main
+            .Where(rule => rule.Selectors.Any(selector => selector.StartsWith(".tm-document-side-panel__tab--active", StringComparison.Ordinal)))
+            .Select(rule => rule.Body));
+        sideTab.Should().MatchRegex(@"(border-bottom|box-shadow)[^;]*var\(--tm-color-primary\)", "the active side-panel tab is underlined in the primary colour");
+
+        var ribbonTab = string.Concat(toolbar
+            .Where(rule => rule.Selectors.Any(selector => selector.StartsWith(".tm-document-editor__ribbon-tab--active::after", StringComparison.Ordinal)))
+            .Select(rule => rule.Body));
+        ribbonTab.Should().Contain("var(--tm-color-primary)");
+    }
+
+    [Fact]
+    public void Shadows_NeverMixGrayTokens_BecauseGray900IsWhiteInDarkMode()
+    {
+        var offenders = new List<string>();
+        foreach (var fileName in ChromeStylesheets)
+        {
+            foreach (var rule in CssRules.Parse(ReadComponentCss(fileName)))
+            {
+                if (System.Text.RegularExpressions.Regex.IsMatch(rule.Body, @"box-shadow\s*:[^;]*--tm-color-gray-"))
+                {
+                    offenders.Add($"{fileName}: {string.Join(", ", rule.Selectors)}");
+                }
+            }
+        }
+
+        offenders.Should().BeEmpty("the gray scale flips in dark mode (gray-900 is white there); shadows use --tm-shadow-*");
+    }
+
+    [Fact]
+    public void CanvasOverlayMarkers_AreGlobal_AndUseTheHighlightTokensWithoutFallbacks()
+    {
+        var css = ReadComponentCss("_document-editor-canvas-overlays.css");
+        System.Text.RegularExpressions.Regex.Replace(css, @"/\*.*?\*/", string.Empty, System.Text.RegularExpressions.RegexOptions.Singleline)
+            .Should().NotContain("::deep");
+        var rules = CssRules.Parse(css);
+
+        CssRules.Body(rules, ".tm-document-canvas-engine-host .tm-document-canvas-revision-overlay__marker--insertion")
+            .Should().Contain("var(--tm-document-highlight-insert)");
+        CssRules.Body(rules, ".tm-document-canvas-engine-host .tm-document-canvas-revision-overlay__marker--deletion")
+            .Should().Contain("var(--tm-document-highlight-delete)");
+        CssRules.Body(rules, ".tm-document-canvas-engine-host .tm-document-canvas-revision-overlay__marker--formatting")
+            .Should().Contain("var(--tm-document-highlight-change)");
+
+        foreach (var file in new[] { "_document-editor-canvas-overlays.css", "_document-editor-find.css" })
+        {
+            System.Text.RegularExpressions.Regex.IsMatch(ReadComponentCss(file), @"var\(--tm-document-highlight-[a-z-]+\s*,")
+                .Should().BeFalse($"{file}: the highlight tokens are declared on .tm-document-editor and need no fallback");
+        }
+
+        // Generic -> specific: the base marker precedes the kinds, the state modifiers come last.
+        var order = new[]
+        {
+            ".tm-document-canvas-revision-overlay__marker {",
+            ".tm-document-canvas-revision-overlay__marker--insertion {",
+            ".tm-document-canvas-revision-overlay__marker--deletion {",
+            ".tm-document-canvas-revision-overlay__marker--formatting {",
+            ".tm-document-canvas-revision-overlay__marker--simple {",
+            ".tm-document-canvas-revision-overlay__marker--selected {"
+        }.Select(marker => css.IndexOf(marker, StringComparison.Ordinal)).ToList();
+        order.Should().OnlyContain(index => index >= 0).And.BeInAscendingOrder();
+
+        var entry = File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(), "src", "Tempo.Blazor.DocumentEditor", "wwwroot", "css", "tempo-blazor-document-editor.css"));
+        entry.Should().Contain("@import \"components/_document-editor-canvas-overlays.css\";");
+    }
+
+    // Frozen: the dead functional ::deep(...) rules of the canvas host. The list may only shrink; a new rule must use the
+    // combinator form ("host ::deep .child") or live in a global stylesheet.
+    private const int FrozenFunctionalDeepRulesInCanvasHost = 44;
+
+    [Fact]
+    public void ScopedCss_UsesDeepCombinator_NotFunctionalDeep()
+    {
+        var root = FindRepositoryRoot();
+        var componentRoot = Path.Combine(root, "src", "Tempo.Blazor.DocumentEditor", "Components");
+        foreach (var file in Directory.EnumerateFiles(componentRoot, "*.razor.css", SearchOption.AllDirectories))
+        {
+            var count = System.Text.RegularExpressions.Regex.Matches(File.ReadAllText(file), @"::deep\(").Count;
+            var allowed = Path.GetFileName(file) == "TmDocumentCanvasEngineHost.razor.css" ? FrozenFunctionalDeepRulesInCanvasHost : 0;
+            count.Should().BeLessThanOrEqualTo(allowed,
+                $"{Path.GetFileName(file)}: ::deep(.x) compiles to an invalid selector and never applies - write '.host ::deep .x'");
+        }
+    }
+
+    [Fact]
+    public void PanelContainers_HostingButtons_HaveNoBareTypeSelectorRules()
+    {
+        // A bare "span" / "div" under a panel out-specified the ink of every .tm-btn label inside it (the primary
+        // "Create version" label rendered muted grey on the primary fill).
+        var offenders = new List<string>();
+        foreach (var fileName in ChromeStylesheets)
+        {
+            foreach (var rule in CssRules.Parse(ReadComponentCss(fileName)))
+            {
+                foreach (var selector in rule.Selectors)
+                {
+                    if (System.Text.RegularExpressions.Regex.IsMatch(selector, @"^\.tm-document-[\w-]*(panel|rail)[\w-]* (span|div|p|a)$"))
+                    {
+                        offenders.Add($"{fileName}: {selector}");
+                    }
+                }
+            }
+        }
+
+        offenders.Should().BeEmpty();
+        CssRules.Body(CssRules.Parse(ReadComponentCss("_document-editor.css")), ".tm-document-panel__meta")
+            .Should().Contain("var(--tm-color-text-muted)");
+    }
+
+    [Fact]
+    public void CanvasWorkspace_PaintsTheWorkspaceToken_NotAPrimaryTint()
+    {
+        var root = FindRepositoryRoot();
+        var host = File.ReadAllText(Path.Combine(
+            root, "src", "Tempo.Blazor.DocumentEditor", "Components", "DocumentEditor", "TmDocumentCanvasEngineHost.razor.css"));
+
+        System.Text.RegularExpressions.Regex.Matches(host, @"--tm-document-canvas-workspace-background\s*:\s*([^;]+);")
+            .Select(match => match.Groups[1].Value)
+            .Where(value => value != "Canvas")
+            .Should().OnlyContain(value => value.Trim() == "var(--tm-bg-workspace)", "the workspace is the workspace token in every scheme");
+        host.Should().NotMatchRegex(@"\.tm-document-canvas-ruler\)\s*\{[^}]*--tm-color-primary", "the ruler is a plain surface");
+    }
+
+    [Fact]
+    public void ActiveRibbonTab_IsAFlatPrimaryUnderline()
+    {
+        var rules = CssRules.Parse(ReadComponentCss("_document-editor-toolbar.css"));
+        var active = CssRules.Body(rules, ".tm-document-editor__ribbon-tab--active");
+
+        active.Should().Contain("background: transparent").And.Contain("box-shadow: none").And.Contain("border-color: transparent")
+            .And.Contain("border-bottom-color: transparent").And.Contain("var(--tm-color-primary)");
+        CssRules.Body(rules, ".tm-document-editor__ribbon-tab--active::after").Should().Contain("var(--tm-color-primary)").And.Contain("bottom: 0");
+    }
+
+    [Fact]
+    public void SidePanel_IsBoundedByTheViewport_AndScrollsInside()
+    {
+        var rules = CssRules.Parse(ReadComponentCss("_document-editor.css"));
+        var panel = CssRules.Body(rules, ".tm-document-side-panel");
+        panel.Should().Contain("max-height").And.Contain("100dvh").And.Contain("align-self: start");
+        CssRules.Body(rules, ".tm-document-side-panel__body").Should().Contain("overflow: auto").And.Contain("min-height: 0");
+    }
+
+    [Fact]
+    public void PropertiesPanels_HostedInTheInspector_UseTheEmbeddedFormModifier()
+    {
+        var root = FindRepositoryRoot();
+        var dir = Path.Combine(root, "src", "Tempo.Blazor.DocumentEditor", "Components", "DocumentEditor");
+        File.ReadAllText(Path.Combine(dir, "TmDocumentTablePropertiesPanel.razor")).Should().Contain("tm-document-inspector-form--embedded");
+        File.ReadAllText(Path.Combine(dir, "TmDocumentCellPropertiesPanel.razor")).Should().Contain("tm-document-inspector-form--embedded");
+        var panels = CssRules.Parse(ReadComponentCss("_document-editor-panels.css"));
+        CssRules.Body(panels, ".tm-document-inspector-form--embedded").Should().Contain("max-inline-size: 100%").And.Contain("min-inline-size: 0");
     }
 
     private static string FindRepositoryRoot()

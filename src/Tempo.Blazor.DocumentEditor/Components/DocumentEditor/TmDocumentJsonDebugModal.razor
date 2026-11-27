@@ -1,82 +1,46 @@
 @namespace Tempo.Blazor.Components.DocumentEditor
 @inherits Tempo.Blazor.Components.TmComponentBase
-@using Microsoft.JSInterop
-@inject IJSRuntime JSRuntime
-@implements IAsyncDisposable
 
-@if (IsOpen)
-{
-    <div @ref="_dialog"
-         class="tm-document-json-debug-modal"
-         data-testid="@TestId("document-json-debug-modal")"
-         role="dialog"
-         aria-modal="true"
-         aria-label="@Loc["TmDocumentEditor_DebugDocumentJsonTitle"]">
-        <div class="tm-document-json-debug-modal__backdrop" @onclick="OnClose"></div>
-        <div class="tm-document-json-debug-modal__content">
-            <header class="tm-document-json-debug-modal__header">
-                <span class="tm-document-json-debug-modal__title">@Loc["TmDocumentEditor_DebugDocumentJsonTitle"]</span>
-                <button type="button"
-                        @ref="_copyButton"
-                        class="tm-document-json-debug-modal__copy"
-                        data-testid="@TestId("document-json-debug-copy")"
-                        title="@Loc["TmDocumentEditor_Copy"]"
-                        aria-label="@Loc["TmDocumentEditor_Copy"]"
-                        @onclick="OnCopyJson">
-                    <TmIcon Name="copy" Size="IconSize.Sm" />
-                </button>
-                <button type="button"
-                        class="tm-document-json-debug-modal__close"
-                        data-testid="@TestId("document-json-debug-close")"
-                        title="@Loc["TmDocumentEditor_Close"]"
-                        aria-label="@Loc["TmDocumentEditor_Close"]"
-                        @onclick="OnClose">
-                    <TmIcon Name="x" Size="IconSize.Sm" />
-                </button>
-            </header>
-            <section class="tm-document-json-debug-modal__section"
-                     data-testid="@TestId("document-canonical-debug")">
-                <h3 class="tm-document-json-debug-modal__section-title">@Loc["TmDocumentEditor_DebugCanonicalDocument"]</h3>
-                <pre class="tm-document-json-debug-modal__json"
-                     data-testid="@TestId("document-json-debug-content")">@Json</pre>
-            </section>
-            @if (!string.IsNullOrWhiteSpace(RuntimeDebugJson))
-            {
-                <section class="tm-document-json-debug-modal__section"
-                         data-testid="@TestId("document-runtime-debug")">
-                    <h3 class="tm-document-json-debug-modal__section-title">@Loc["TmDocumentEditor_DebugRuntimeState"]</h3>
-                    <pre class="tm-document-json-debug-modal__json"
-                         data-testid="@TestId("document-runtime-debug-content")">@RuntimeDebugJson</pre>
-                </section>
-            }
-            @if (!string.IsNullOrWhiteSpace(DocxDrawingMetadataJson))
-            {
-                <section class="tm-document-json-debug-modal__section"
-                         data-testid="@TestId("document-docx-drawing-debug")">
-                    <h3 class="tm-document-json-debug-modal__section-title">@Loc["TmDocumentEditor_DebugDocxDrawingMetadata"]</h3>
-                    <pre class="tm-document-json-debug-modal__json"
-                         data-testid="@TestId("document-docx-drawing-debug-content")">@DocxDrawingMetadataJson</pre>
-                </section>
-            }
-            @if (!string.IsNullOrWhiteSpace(RecoveryDetailJson))
-            {
-                <section class="tm-document-json-debug-modal__section"
-                         data-testid="@TestId("document-runtime-recovery-debug")">
-                    <h3 class="tm-document-json-debug-modal__section-title">@Loc["TmDocumentEditor_DebugRuntimeRecovery"]</h3>
-                    <pre class="tm-document-json-debug-modal__json"
-                         data-testid="@TestId("document-runtime-recovery-debug-content")">@RecoveryDetailJson</pre>
-                </section>
-            }
-        </div>
-    </div>
-}
+<TmDocumentDebugModal IsOpen="IsOpen"
+                      TestIdPrefix="@TestIdPrefix"
+                      Title="@Loc["TmDocumentEditor_DebugDocumentJsonTitle"]"
+                      ModalTestId="document-json-debug-modal"
+                      CopyTestId="document-json-debug-copy"
+                      CloseTestId="document-json-debug-close"
+                      OnCopy="OnCopyJson"
+                      OnClose="OnClose">
+    <TmDocumentDebugSection TestIdPrefix="@TestIdPrefix"
+                            Title="@Loc["TmDocumentEditor_DebugCanonicalDocument"]"
+                            SectionTestId="document-canonical-debug"
+                            ContentTestId="document-json-debug-content"
+                            Content="@Json" />
+    @if (!string.IsNullOrWhiteSpace(RuntimeDebugJson))
+    {
+        <TmDocumentDebugSection TestIdPrefix="@TestIdPrefix"
+                                Title="@Loc["TmDocumentEditor_DebugRuntimeState"]"
+                                SectionTestId="document-runtime-debug"
+                                ContentTestId="document-runtime-debug-content"
+                                Content="@RuntimeDebugJson" />
+    }
+    @if (!string.IsNullOrWhiteSpace(DocxDrawingMetadataJson))
+    {
+        <TmDocumentDebugSection TestIdPrefix="@TestIdPrefix"
+                                Title="@Loc["TmDocumentEditor_DebugDocxDrawingMetadata"]"
+                                SectionTestId="document-docx-drawing-debug"
+                                ContentTestId="document-docx-drawing-debug-content"
+                                Content="@DocxDrawingMetadataJson" />
+    }
+    @if (!string.IsNullOrWhiteSpace(RecoveryDetailJson))
+    {
+        <TmDocumentDebugSection TestIdPrefix="@TestIdPrefix"
+                                Title="@Loc["TmDocumentEditor_DebugRuntimeRecovery"]"
+                                SectionTestId="document-runtime-recovery-debug"
+                                ContentTestId="document-runtime-recovery-debug-content"
+                                Content="@RecoveryDetailJson" />
+    }
+</TmDocumentDebugModal>
 
 @code {
-    private ElementReference _dialog;
-    private ElementReference _copyButton;
-    private DocumentEditorFocusTrapController? _focusTrap;
-    private bool _focusTrapActive;
-
     /// <summary>Whether the modal is open.</summary>
     [Parameter] public bool IsOpen { get; set; }
 
@@ -97,42 +61,4 @@
 
     /// <summary>Raised when the modal should close.</summary>
     [Parameter] public EventCallback OnClose { get; set; }
-
-    /// <inheritdoc />
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (IsOpen)
-        {
-            if (!_focusTrapActive)
-            {
-                _focusTrap ??= new DocumentEditorFocusTrapController(JSRuntime);
-                await _focusTrap.ActivateAsync(_dialog, _copyButton);
-                _focusTrapActive = true;
-            }
-
-            return;
-        }
-
-        await ReleaseFocusTrapAsync(restoreFocus: true);
-    }
-
-    private async ValueTask ReleaseFocusTrapAsync(bool restoreFocus)
-    {
-        if (_focusTrap is not null && _focusTrapActive)
-        {
-            await _focusTrap.ReleaseAsync(restoreFocus);
-        }
-
-        _focusTrapActive = false;
-    }
-
-    /// <inheritdoc />
-    public async ValueTask DisposeAsync()
-    {
-        await ReleaseFocusTrapAsync(restoreFocus: false);
-        if (_focusTrap is not null)
-        {
-            await _focusTrap.DisposeAsync();
-        }
-    }
 }

@@ -1,0 +1,31 @@
+@namespace Tempo.Blazor.Components.DocumentEditor
+@inherits Tempo.Blazor.Components.TmComponentBase
+
+@{
+    var isEmpty = string.IsNullOrWhiteSpace(Content);
+}
+<section class="tm-document-json-debug-modal__section"
+         data-testid="@TestId(SectionTestId)">
+    <h3 class="tm-document-json-debug-modal__section-title">@Title</h3>
+    <pre class="tm-document-json-debug-modal__json"
+         hidden="@isEmpty"
+         data-testid="@TestId(ContentTestId)">@Content</pre>
+    @if (isEmpty)
+    {
+        <p class="tm-document-json-debug-modal__empty">@Loc["TmDocumentEditor_DebugNoData"]</p>
+    }
+</section>
+
+@code {
+    /// <summary>Section heading.</summary>
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+
+    /// <summary>Unprefixed test id of the section element (resolved through <c>TestIdPrefix</c>).</summary>
+    [Parameter, EditorRequired] public string SectionTestId { get; set; } = string.Empty;
+
+    /// <summary>Unprefixed test id of the content block (resolved through <c>TestIdPrefix</c>).</summary>
+    [Parameter, EditorRequired] public string ContentTestId { get; set; } = string.Empty;
+
+    /// <summary>Text shown in the monospace block. Null, empty or whitespace shows the localized "No data" notice instead.</summary>
+    [Parameter] public string? Content { get; set; }
+}

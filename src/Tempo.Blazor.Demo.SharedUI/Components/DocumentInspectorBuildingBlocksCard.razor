@@ -1,0 +1,118 @@
+@using Tempo.Blazor.Components.DocumentEditor
+
+@* Reference card of the shared DocumentEditor panel building blocks (redesign DE-2.1): TmDocumentInspectorHeader and
+   the CSS-only .tm-document-inspector-form pattern, framed and embedded. *@
+<section class="mt-8" data-testid="document-inspector-blocks-card" aria-labelledby="document-inspector-blocks-title">
+    <h2 id="document-inspector-blocks-title" class="text-xl font-semibold text-slate-900 dark:text-white mb-1">Inspector building blocks</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-300 mb-4">
+        The shared header and the form pattern that the image, table, cell, revision and version panels adopt.
+    </p>
+
+    <div class="grid gap-6 md:grid-cols-2">
+        <div>
+            <div class="tm-document-inspector-form" data-testid="document-inspector-blocks-framed">
+                <TmDocumentInspectorHeader Title="Image tools"
+                                           TitleId="demo-inspector-header-title"
+                                           Subtitle="evidence.png"
+                                           Icon="image"
+                                           CloseTestId="demo-inspector-close"
+                                           OnClose="HandleClose">
+                    <Actions>
+                        <button type="button" class="tm-btn tm-btn-sm tm-btn-ghost" data-testid="demo-inspector-action">Reset</button>
+                    </Actions>
+                </TmDocumentInspectorHeader>
+                @if (_closed)
+                {
+                    <p class="p-4 text-sm" data-testid="demo-inspector-closed">Closed. <button type="button" class="tm-btn tm-btn-sm tm-btn-secondary" @onclick="() => _closed = false">Reopen</button></p>
+                }
+                else
+                {
+                    @FormSections
+                }
+            </div>
+        </div>
+
+        <div>
+            <p class="text-sm font-medium mb-2 text-slate-700 dark:text-slate-200">Embedded (no frame, no shadow)</p>
+            <div class="tm-document-inspector-form tm-document-inspector-form--embedded" data-testid="document-inspector-blocks-embedded">
+                @FormSections
+            </div>
+        </div>
+    </div>
+</section>
+
+@code {
+    private bool _closed;
+    private bool _sizeOpen = true;
+    private bool _wrapOpen = true;
+    private string _align = "center";
+
+    private RenderFragment FormSections => @<text>
+        <div class="tm-document-inspector-form__section">
+            <button type="button"
+                    class="tm-document-inspector-form__section-toggle"
+                    aria-expanded="@(_sizeOpen ? "true" : "false")"
+                    aria-controls="@(IdPrefix)-size"
+                    data-testid="demo-inspector-size-toggle"
+                    @onclick="() => _sizeOpen = !_sizeOpen">
+                <span class="tm-document-inspector-form__chevron" aria-hidden="true"><TmIcon Name="chevron-down" Size="IconSize.Sm" /></span>
+                <span>Size</span>
+            </button>
+            @if (_sizeOpen)
+            {
+                <div class="tm-document-inspector-form__section-body" id="@(IdPrefix)-size">
+                    <label class="tm-document-inspector-form__field">
+                        <span class="tm-document-inspector-form__label">Width</span>
+                        <span class="tm-document-inspector-form__control">
+                            <input class="tm-input" type="number" value="156" />
+                            <span class="tm-document-inspector-form__suffix">mm</span>
+                        </span>
+                    </label>
+                    <label class="tm-document-inspector-form__field">
+                        <span class="tm-document-inspector-form__label">Rotation</span>
+                        <span class="tm-document-inspector-form__control">
+                            <input class="tm-input" type="number" value="0" />
+                            <span class="tm-document-inspector-form__suffix">&deg;</span>
+                        </span>
+                    </label>
+                </div>
+            }
+        </div>
+        <div class="tm-document-inspector-form__section">
+            <button type="button"
+                    class="tm-document-inspector-form__section-toggle"
+                    aria-expanded="@(_wrapOpen ? "true" : "false")"
+                    aria-controls="@(IdPrefix)-wrap"
+                    @onclick="() => _wrapOpen = !_wrapOpen">
+                <span class="tm-document-inspector-form__chevron" aria-hidden="true"><TmIcon Name="chevron-down" Size="IconSize.Sm" /></span>
+                <span>Alignment</span>
+            </button>
+            @if (_wrapOpen)
+            {
+                <div class="tm-document-inspector-form__section-body" id="@(IdPrefix)-wrap">
+                    <div class="tm-document-inspector-form__field tm-document-inspector-form__field--stacked">
+                        <span class="tm-document-inspector-form__label" id="@(IdPrefix)-align-label">Alignment</span>
+                        <div class="tm-document-inspector-form__segmented tm-document-inspector-form__segmented--icons" role="radiogroup" aria-labelledby="@(IdPrefix)-align-label">
+                            @foreach (var option in new[] { ("left", "align-left"), ("center", "align-center"), ("right", "align-right") })
+                            {
+                                var value = option.Item1;
+                                <button type="button"
+                                        class="tm-document-inspector-form__segmented-option"
+                                        role="radio"
+                                        aria-checked="@(_align == value ? "true" : "false")"
+                                        aria-label="@value"
+                                        @onclick="() => _align = value">
+                                    <TmIcon Name="@option.Item2" Size="IconSize.Sm" />
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </text>;
+
+    private string IdPrefix => "demo-inspector-" + (_closed ? "c" : "o");
+
+    private void HandleClose() => _closed = true;
+}

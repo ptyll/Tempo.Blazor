@@ -15,7 +15,7 @@
     </header>
 
     <button type="button"
-            class="tm-document-version-panel__create"
+            class="tm-btn tm-btn-sm tm-btn-primary tm-document-version-panel__create"
             disabled="@ReadOnly"
             @onclick="OnCreateVersion"
             data-testid="@TestId("document-version-create-open")">
@@ -31,11 +31,11 @@
     @if (PreviewVersion is not null)
     {
         <section class="tm-document-version-panel__preview" data-testid="@TestId("document-version-preview-state")">
-            <span>@Loc["TmDocumentEditor_PreviewingVersion", GetVersionTitle(PreviewVersion)]</span>
-            <button type="button" @onclick="OnReturnToCurrent" data-testid="@TestId("document-version-current")">
+            <span class="tm-document-panel__meta">@Loc["TmDocumentEditor_PreviewingVersion", GetVersionTitle(PreviewVersion)]</span>
+            <button type="button" class="tm-btn tm-btn-sm tm-btn-secondary" @onclick="OnReturnToCurrent" data-testid="@TestId("document-version-current")">
                 @Loc["TmDocumentEditor_ReturnToCurrentVersion"]
             </button>
-            <button type="button" @onclick="OpenRestoreConfirm" data-testid="@TestId("document-version-restore")">
+            <button type="button" class="tm-btn tm-btn-sm tm-btn-secondary" @onclick="OpenRestoreConfirm" data-testid="@TestId("document-version-restore")">
                 @Loc["TmDocumentEditor_RestoreVersion"]
             </button>
         </section>
@@ -44,11 +44,11 @@
     @if (_restoreConfirmOpen && PreviewVersion is not null)
     {
         <section class="tm-document-version-panel__confirm" data-testid="@TestId("document-version-restore-confirm")">
-            <span>@Loc["TmDocumentEditor_RestoreVersionConfirm"]</span>
-            <button type="button" @onclick="ConfirmRestoreAsync" data-testid="@TestId("document-version-restore-confirm-button")">
+            <span class="tm-document-panel__meta">@Loc["TmDocumentEditor_RestoreVersionConfirm"]</span>
+            <button type="button" class="tm-btn tm-btn-sm tm-btn-primary" @onclick="ConfirmRestoreAsync" data-testid="@TestId("document-version-restore-confirm-button")">
                 @Loc["TmDocumentEditor_RestoreVersion"]
             </button>
-            <button type="button" @onclick="CloseRestoreConfirm">@Loc["TmDocumentEditor_Cancel"]</button>
+            <button type="button" class="tm-btn tm-btn-sm tm-btn-ghost" @onclick="CloseRestoreConfirm">@Loc["TmDocumentEditor_Cancel"]</button>
         </section>
     }
 

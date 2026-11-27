@@ -67450,7 +67450,7 @@
           "kind": "Component",
           "category": "Document Editor",
           "namespace": "Tempo.Blazor.Components.DocumentEditor",
-          "description": "Developer debug modal that shows the last paste's raw clipboard HTML, the normalized Tempo block JSON, and pipeline warnings, each in a preformatted section, with a close action.",
+          "description": "Developer debug modal that shows the last paste's raw clipboard HTML, the normalized Tempo block JSON, and pipeline warnings, each in a preformatted section, with a close action. Thin wrapper over TmDocumentDebugModal / TmDocumentDebugSection (an empty section shows the localized \"No data\" notice).",
           "packageId": "Tempo.Blazor.DocumentEditor",
           "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentClipboardHtmlDebugModal.razor",
           "documentationStatus": "merged",
@@ -68031,6 +68031,145 @@
               "isRequired": false,
               "default": "true",
               "description": "Whether local comparison should be used when the provider fails."
+            }
+          ]
+        },
+        {
+          "itemName": "TmDocumentDebugModal",
+          "kind": "Component",
+          "category": "Document Editor",
+          "namespace": "Tempo.Blazor.Components.DocumentEditor",
+          "description": "Shared frame of the DocumentEditor developer debug modals (redesign DE-2.1): a centered modal dialog named by its Title with a scrim, a header with an optional Copy button (rendered only when OnCopy is bound), a Close button, a focus trap and the sections placed in ChildContent. TmDocumentJsonDebugModal and TmDocumentClipboardHtmlDebugModal are thin wrappers over it; their data-testid contract is unchanged.",
+          "packageId": "Tempo.Blazor.DocumentEditor",
+          "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentDebugModal.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.DocumentEditor"
+          ],
+          "parameters": [
+            {
+              "name": "ChildContent",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "The sections, normally TmDocumentDebugSection elements."
+            },
+            {
+              "name": "CloseTestId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Unprefixed test id of the close button. No test id when omitted."
+            },
+            {
+              "name": "CopyTestId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Unprefixed test id of the copy button. No test id when omitted."
+            },
+            {
+              "name": "IsOpen",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the modal is open."
+            },
+            {
+              "name": "ModalTestId",
+              "type": "string",
+              "isRequired": true,
+              "default": "\"\"",
+              "description": "Unprefixed test id of the dialog root (resolved through TestIdPrefix).",
+              "editorRequired": true
+            },
+            {
+              "name": "OnClose",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Raised when the modal should close (close button or backdrop)."
+            },
+            {
+              "name": "OnCopy",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Raised when the user asks to copy the payload. The copy button is rendered only when a handler is bound."
+            },
+            {
+              "name": "Title",
+              "type": "string",
+              "isRequired": true,
+              "default": "\"\"",
+              "description": "Modal title; it is the visible heading and the dialog's accessible name.",
+              "editorRequired": true
+            }
+          ],
+          "cssClasses": [
+            "tm-document-json-debug-modal",
+            "tm-document-json-debug-modal__backdrop",
+            "tm-document-json-debug-modal__content",
+            "tm-document-json-debug-modal__header",
+            "tm-document-json-debug-modal__title",
+            "tm-document-json-debug-modal__copy",
+            "tm-document-json-debug-modal__close"
+          ],
+          "examples": [
+            {
+              "title": "Debug modal with one section",
+              "code": "<TmDocumentDebugModal IsOpen=\"_open\" Title=\"Payload\" ModalTestId=\"payload-modal\" OnClose=\"() => _open = false\">\n    <TmDocumentDebugSection Title=\"Body\" SectionTestId=\"payload-body\" ContentTestId=\"payload-body-content\" Content=\"@_json\" />\n</TmDocumentDebugModal>"
+            }
+          ]
+        },
+        {
+          "itemName": "TmDocumentDebugSection",
+          "kind": "Component",
+          "category": "Document Editor",
+          "namespace": "Tempo.Blazor.Components.DocumentEditor",
+          "description": "One section of a TmDocumentDebugModal: a heading and a monospace block. A null, empty or whitespace Content hides the block and shows the localized \"No data\" notice instead; both test ids stay on the DOM so a host selector never goes stale.",
+          "packageId": "Tempo.Blazor.DocumentEditor",
+          "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentDebugSection.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.DocumentEditor"
+          ],
+          "parameters": [
+            {
+              "name": "Content",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Text shown in the monospace block. Null, empty or whitespace shows the localized \"No data\" notice instead."
+            },
+            {
+              "name": "ContentTestId",
+              "type": "string",
+              "isRequired": true,
+              "default": "\"\"",
+              "description": "Unprefixed test id of the content block (resolved through TestIdPrefix).",
+              "editorRequired": true
+            },
+            {
+              "name": "SectionTestId",
+              "type": "string",
+              "isRequired": true,
+              "default": "\"\"",
+              "description": "Unprefixed test id of the section element (resolved through TestIdPrefix).",
+              "editorRequired": true
+            },
+            {
+              "name": "Title",
+              "type": "string",
+              "isRequired": true,
+              "default": "\"\"",
+              "description": "Section heading.",
+              "editorRequired": true
+            }
+          ],
+          "cssClasses": [
+            "tm-document-json-debug-modal__section",
+            "tm-document-json-debug-modal__section-title",
+            "tm-document-json-debug-modal__json",
+            "tm-document-json-debug-modal__empty"
+          ],
+          "examples": [
+            {
+              "title": "Section",
+              "code": "<TmDocumentDebugSection Title=\"Warnings\" SectionTestId=\"warnings\" ContentTestId=\"warnings-content\" Content=\"@_warningsJson\" />"
             }
           ]
         },
@@ -69968,11 +70107,114 @@
           ]
         },
         {
+          "itemName": "TmDocumentInspectorHeader",
+          "kind": "Component",
+          "category": "Document Editor",
+          "namespace": "Tempo.Blazor.Components.DocumentEditor",
+          "description": "Shared header of a DocumentEditor inspector panel (redesign DE-2.1): an optional decorative icon, the title as a heading whose id the panel region labels itself by (aria-labelledby), an optional subtitle, a host actions slot and a close (X) button that appears only when OnClose is bound. The close button is named by the localized TmDocumentEditor_Close string. Panels of phases 5-7 adopt it; the form pattern it sits above is the .tm-document-inspector-form CSS pattern. The companion form pattern is CSS-only (_document-editor-panels.css): .tm-document-inspector-form with __section / __section-toggle (aria-expanded) / __chevron (TmIcon chevron-down, rotates), __section-body, __field (label above the control, beside it in a wide panel body through a container query), __label, __control, __suffix (units) and __segmented / __segmented-option (icon or icon + text); --embedded drops the frame and the shadow for a panel hosted inside the inspector. A field keeps the implicit label-wraps-control association.",
+          "packageId": "Tempo.Blazor.DocumentEditor",
+          "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentInspectorHeader.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.DocumentEditor"
+          ],
+          "parameters": [
+            {
+              "name": "Actions",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Host actions rendered before the close button (a filter menu, an overflow button)."
+            },
+            {
+              "name": "Class",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Additional CSS classes on the header root."
+            },
+            {
+              "name": "CloseTestId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Unprefixed test id of the close button (resolved through TestIdPrefix). No test id when omitted."
+            },
+            {
+              "name": "HeadingLevel",
+              "type": "int",
+              "isRequired": false,
+              "default": "2",
+              "description": "Heading level of the title (2-6). Defaults to 2."
+            },
+            {
+              "name": "Icon",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Optional leading icon name. The icon is decorative and always aria-hidden."
+            },
+            {
+              "name": "OnClose",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Raised by the close (X) button. The button is rendered only when a handler is bound."
+            },
+            {
+              "name": "Subtitle",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Optional secondary line under the title (a count, a file name, a status)."
+            },
+            {
+              "name": "Title",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Panel title, rendered as the heading the panel region labels itself by (aria-labelledby)."
+            },
+            {
+              "name": "TitleId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Id of the title heading. Set it when the host region needs a stable aria-labelledby target; when omitted a unique id is generated and readable through ResolvedTitleId."
+            }
+          ],
+          "cssClasses": [
+            "tm-document-inspector-header",
+            "tm-document-inspector-header__icon",
+            "tm-document-inspector-header__text",
+            "tm-document-inspector-header__title",
+            "tm-document-inspector-header__subtitle",
+            "tm-document-inspector-header__trailing",
+            "tm-document-inspector-header__actions",
+            "tm-document-inspector-header__close",
+            "tm-document-inspector-form",
+            "tm-document-inspector-form--embedded",
+            "tm-document-inspector-form__section",
+            "tm-document-inspector-form__section-toggle",
+            "tm-document-inspector-form__chevron",
+            "tm-document-inspector-form__section-body",
+            "tm-document-inspector-form__field",
+            "tm-document-inspector-form__label",
+            "tm-document-inspector-form__control",
+            "tm-document-inspector-form__suffix",
+            "tm-document-inspector-form__segmented",
+            "tm-document-inspector-form__segmented--icons",
+            "tm-document-inspector-form__segmented-option"
+          ],
+          "examples": [
+            {
+              "title": "Panel header labelling its region",
+              "code": "<aside role=\"complementary\" aria-labelledby=\"image-panel-title\">\n    <TmDocumentInspectorHeader Title=\"@Loc[\"Image_Title\"]\"\n                               TitleId=\"image-panel-title\"\n                               Icon=\"image\"\n                               OnClose=\"ClosePanel\" />\n    ...\n</aside>"
+            },
+            {
+              "title": "Form pattern",
+              "code": "<section class=\"tm-document-inspector-form tm-document-inspector-form--embedded\">\n    <div class=\"tm-document-inspector-form__section\">\n        <button type=\"button\" class=\"tm-document-inspector-form__section-toggle\" aria-expanded=\"true\" aria-controls=\"size-body\">\n            <span class=\"tm-document-inspector-form__chevron\" aria-hidden=\"true\"><TmIcon Name=\"chevron-down\" /></span>\n            Size\n        </button>\n        <div id=\"size-body\" class=\"tm-document-inspector-form__section-body\">\n            <label class=\"tm-document-inspector-form__field\">\n                <span class=\"tm-document-inspector-form__label\">Width</span>\n                <span class=\"tm-document-inspector-form__control\">\n                    <input class=\"tm-input\" type=\"number\" />\n                    <span class=\"tm-document-inspector-form__suffix\">mm</span>\n                </span>\n            </label>\n        </div>\n    </div>\n</section>"
+            }
+          ]
+        },
+        {
           "itemName": "TmDocumentJsonDebugModal",
           "kind": "Component",
           "category": "Document Editor",
           "namespace": "Tempo.Blazor.Components.DocumentEditor",
-          "description": "Developer debug modal that displays the document's canonical JSON along with optional runtime, DOCX DrawingML metadata, and recovery-detail JSON sections, with copy and close actions.",
+          "description": "Developer debug modal that displays the document's canonical JSON along with optional runtime, DOCX DrawingML metadata, and recovery-detail JSON sections, with copy and close actions. Thin wrapper over TmDocumentDebugModal / TmDocumentDebugSection (an empty section shows the localized \"No data\" notice; the Copy button needs OnCopyJson).",
           "packageId": "Tempo.Blazor.DocumentEditor",
           "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentJsonDebugModal.razor",
           "documentationStatus": "merged",
@@ -70956,11 +71198,19 @@
       "libraryExamples": [],
       "assets": [
         {
+          "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/css/components/_document-editor-canvas-overlays.css",
+          "kind": "Css"
+        },
+        {
           "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/css/components/_document-editor-comments.css",
           "kind": "Css"
         },
         {
           "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/css/components/_document-editor-find.css",
+          "kind": "Css"
+        },
+        {
+          "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/css/components/_document-editor-panels.css",
           "kind": "Css"
         },
         {
@@ -71704,6 +71954,10 @@
           "kind": "JavaScript"
         },
         {
+          "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor-canvas/render/text-rects.mjs",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor-canvas/render/__tests__/body-clip.test.mjs",
           "kind": "JavaScript"
         },
@@ -71761,6 +72015,10 @@
         },
         {
           "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor-canvas/search/search-overlay.mjs",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor-canvas/search/__tests__/search-overlay.test.mjs",
           "kind": "JavaScript"
         },
         {
@@ -73121,11 +73379,11 @@
         }
       ],
       "summary": {
-        "itemCount": 219,
-        "manualItemCount": 219,
-        "generatedItemCount": 216,
+        "itemCount": 222,
+        "manualItemCount": 222,
+        "generatedItemCount": 219,
         "generatedOnlyItemCount": 0,
-        "componentCount": 35,
+        "componentCount": 38,
         "publicApiTypeCount": 181
       }
     },
@@ -149646,10 +149904,10 @@
   ],
   "summary": {
     "packageCount": 29,
-    "itemCount": 3767,
-    "manualItemCount": 3767,
+    "itemCount": 3770,
+    "manualItemCount": 3770,
     "generatedOnlyItemCount": 0,
-    "componentCount": 567,
+    "componentCount": 570,
     "publicApiTypeCount": 3148
   }
 }

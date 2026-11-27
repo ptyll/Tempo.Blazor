@@ -36,7 +36,7 @@
 
     <label>
         <span>@Loc["TmDocumentEditor_VersionLabel"]</span>
-        <input value="@_label" @oninput="args => _label = args.Value?.ToString()" data-testid="@TestId("document-version-label")" />
+        <input class="tm-input" value="@_label" @oninput="args => _label = args.Value?.ToString()" data-testid="@TestId("document-version-label")" />
     </label>
 
     <label>
@@ -50,8 +50,8 @@
     }
 
     <footer class="tm-document-version-dialog__actions">
-        <button type="button" @onclick="OnCancel" data-testid="@TestId("document-version-cancel")">@Loc["TmDocumentEditor_Cancel"]</button>
-        <button type="button" @onclick="SubmitAsync" disabled="@IsBusy" data-testid="@TestId("document-version-create-submit")">
+        <button type="button" class="tm-btn tm-btn-sm tm-btn-ghost" @onclick="OnCancel" data-testid="@TestId("document-version-cancel")">@Loc["TmDocumentEditor_Cancel"]</button>
+        <button type="button" class="tm-btn tm-btn-sm tm-btn-primary" @onclick="SubmitAsync" disabled="@IsBusy" data-testid="@TestId("document-version-create-submit")">
             @Loc["TmDocumentEditor_CreateVersion"]
         </button>
     </footer>

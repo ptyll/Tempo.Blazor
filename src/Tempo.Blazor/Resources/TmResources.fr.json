@@ -1959,6 +1959,7 @@
   "TmDocumentEditor_DebugClipboardWarnings": "Avertissements",
   "TmDocumentEditor_DebugDocumentJsonTitle": "JSON du document",
   "TmDocumentEditor_DebugDocxDrawingMetadata": "Métadonnées DrawingML DOCX",
+  "TmDocumentEditor_DebugNoData": "Aucune donnée",
   "TmDocumentEditor_DebugRuntimeRecovery": "Récupération runtime",
   "TmDocumentEditor_DebugRuntimeState": "État runtime",
   "TmDocumentEditor_DecreaseFontSize": "Réduire",

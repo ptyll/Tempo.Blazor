@@ -1,0 +1,307 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   DocumentEditor — shared inspector panel building blocks (redesign plan 146c7e1b, phase 2 / DE-2.1).
+
+   Kept apart from _document-editor.css (the shell) so the panel CSS of phases 5-7 does not collide with the
+   shell. Semantic --tm-* tokens only: dark mode and the indigo theme ride the token layer, there is no manual
+   dark block here.
+
+     .tm-document-inspector-header   icon · title · subtitle · actions · close (TmDocumentInspectorHeader)
+     .tm-document-inspector-form     the form pattern of a panel: sections with a chevron disclosure, fields with
+                                     the label above the control (or beside it once the panel body is wide),
+                                     unit suffixes and segmented icon controls
+     --embedded                      the same form hosted inside the inspector: no frame, no shadow
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Panel header ─────────────────────────────────────────────────────────── */
+.tm-document-inspector-header {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-3);
+    min-width: 0;
+    padding: var(--tm-space-3) var(--tm-space-4);
+    color: var(--tm-color-text);
+    background: var(--tm-color-surface);
+    border-bottom: 1px solid var(--tm-color-border-subtle);
+}
+
+.tm-document-inspector-header__icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    color: var(--tm-color-text);
+}
+
+.tm-document-inspector-header__text {
+    display: grid;
+    flex: 1 1 auto;
+    gap: var(--tm-space-1);
+    min-width: 0;
+}
+
+.tm-document-inspector-header__title {
+    margin: 0;
+    overflow-wrap: anywhere;
+    font-size: var(--tm-font-size-lg);
+    font-weight: var(--tm-font-weight-semibold);
+    line-height: var(--tm-line-height-tight);
+}
+
+.tm-document-inspector-header__subtitle {
+    margin: 0;
+    color: var(--tm-color-text-muted);
+    font-size: var(--tm-font-size-sm);
+    overflow-wrap: anywhere;
+}
+
+.tm-document-inspector-header__trailing,
+.tm-document-inspector-header__actions {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: var(--tm-space-1);
+}
+
+.tm-document-inspector-header__close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    color: var(--tm-color-text-muted);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--tm-radius-control);
+    cursor: pointer;
+    transition: background-color var(--tm-transition-fast), color var(--tm-transition-fast);
+}
+
+.tm-document-inspector-header__close:hover {
+    color: var(--tm-color-text);
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-document-inspector-header__close:focus-visible {
+    outline: none;
+    box-shadow: var(--tm-focus-ring);
+}
+
+@media (pointer: coarse) {
+    .tm-document-inspector-header__close {
+        width: var(--tm-touch-target);
+        height: var(--tm-touch-target);
+    }
+}
+
+/* ── Form pattern ─────────────────────────────────────────────────────────── */
+/* The panel body is the size container: the label sits ABOVE its control by default and moves BESIDE it once
+   the body is wide enough, whatever the viewport or the layout mode says. */
+.tm-document-inspector-form {
+    container-type: inline-size;
+    container-name: tm-document-inspector-form;
+    display: grid;
+    min-width: 0;
+    color: var(--tm-color-text);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border-subtle);
+    border-radius: var(--tm-radius-card);
+    box-shadow: var(--tm-shadow-card);
+}
+
+/* Hosted inside the inspector (table / cell / wrap panel): the inspector already is the card. */
+.tm-document-inspector-form--embedded {
+    inline-size: auto;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+/* Fields of an embedded panel shrink to the inspector instead of keeping their standalone minimum width. */
+.tm-document-inspector-form--embedded input,
+.tm-document-inspector-form--embedded select {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+}
+
+.tm-document-inspector-form--embedded label,
+.tm-document-inspector-form--embedded header {
+    flex-wrap: wrap;
+    min-inline-size: 0;
+}
+
+.tm-document-inspector-form__section {
+    display: grid;
+    min-width: 0;
+    border-bottom: 1px solid var(--tm-color-border-subtle);
+}
+
+.tm-document-inspector-form__section:last-child {
+    border-bottom: 0;
+}
+
+.tm-document-inspector-form__section-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    width: 100%;
+    min-height: 2.5rem;
+    padding: var(--tm-space-2) var(--tm-space-4);
+    color: var(--tm-color-text);
+    background: transparent;
+    border: 0;
+    font: inherit;
+    font-weight: var(--tm-font-weight-semibold);
+    text-align: start;
+    cursor: pointer;
+}
+
+.tm-document-inspector-form__section-toggle:hover {
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-document-inspector-form__section-toggle:focus-visible {
+    outline: none;
+    box-shadow: inset var(--tm-focus-ring);
+}
+
+/* A disclosure chevron (the TmIcon "chevron-down") instead of a "+" / "-" glyph: pointing down while the
+   section is open, turned a quarter back while it is closed. */
+.tm-document-inspector-form__chevron {
+    display: inline-flex;
+    flex: 0 0 auto;
+    color: var(--tm-color-text-muted);
+    transform: rotate(-90deg);
+    transition: transform var(--tm-transition-fast);
+}
+
+.tm-document-inspector-form__section-toggle[aria-expanded="true"] .tm-document-inspector-form__chevron {
+    transform: rotate(0deg);
+}
+
+.tm-document-inspector-form__section-body {
+    display: grid;
+    gap: var(--tm-space-3);
+    min-width: 0;
+    padding: var(--tm-space-1) var(--tm-space-4) var(--tm-space-4);
+}
+
+.tm-document-inspector-form__field {
+    display: grid;
+    gap: var(--tm-space-1);
+    min-width: 0;
+}
+
+.tm-document-inspector-form__label {
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-document-inspector-form__control {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-width: 0;
+}
+
+.tm-document-inspector-form__control > * {
+    min-width: 0;
+}
+
+/* Unit suffix after a numeric control: "mm", "pt", "%", "°". */
+.tm-document-inspector-form__suffix {
+    flex: 0 0 auto;
+    color: var(--tm-color-text-muted);
+    font-size: var(--tm-font-size-xs);
+    white-space: nowrap;
+}
+
+/* A short exclusive choice rendered as a joined row of icon (or icon + text) buttons. */
+.tm-document-inspector-form__segmented {
+    display: inline-flex;
+    justify-self: start;
+    align-self: start;
+    max-width: 100%;
+    overflow: hidden;
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-control);
+}
+
+.tm-document-inspector-form__segmented-option {
+    display: inline-flex;
+    flex: 1 1 auto;
+    align-items: center;
+    justify-content: center;
+    gap: var(--tm-space-1);
+    min-width: 2.25rem;
+    min-height: 2.25rem;
+    padding: 0 var(--tm-space-2);
+    color: var(--tm-color-text-secondary);
+    background: transparent;
+    border: 0;
+    border-inline-start: 1px solid var(--tm-color-border);
+    font: inherit;
+    font-size: var(--tm-font-size-sm);
+    cursor: pointer;
+    transition: background-color var(--tm-transition-fast), color var(--tm-transition-fast);
+}
+
+.tm-document-inspector-form__segmented-option:first-child {
+    border-inline-start: 0;
+}
+
+.tm-document-inspector-form__segmented-option:hover:not(:disabled) {
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-document-inspector-form__segmented-option[aria-checked="true"],
+.tm-document-inspector-form__segmented-option[aria-pressed="true"],
+.tm-document-inspector-form__segmented-option--active {
+    color: var(--tm-color-primary);
+    background: var(--tm-color-primary-subtle);
+}
+
+.tm-document-inspector-form__segmented-option:focus-visible {
+    outline: none;
+    box-shadow: inset var(--tm-focus-ring);
+}
+
+.tm-document-inspector-form__segmented-option:disabled {
+    color: var(--tm-color-text-muted);
+    cursor: not-allowed;
+}
+
+/* Icon-only segments are square. */
+.tm-document-inspector-form__segmented--icons .tm-document-inspector-form__segmented-option {
+    flex: 0 0 auto;
+    padding: 0;
+    aspect-ratio: 1;
+}
+
+@container tm-document-inspector-form (min-width: 24rem) {
+    .tm-document-inspector-form__field {
+        grid-template-columns: minmax(6rem, 0.4fr) minmax(0, 1fr);
+        align-items: center;
+        gap: var(--tm-space-3);
+    }
+
+    .tm-document-inspector-form__field--stacked {
+        grid-template-columns: minmax(0, 1fr);
+        align-items: stretch;
+        gap: var(--tm-space-1);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tm-document-inspector-header__close,
+    .tm-document-inspector-form__chevron,
+    .tm-document-inspector-form__segmented-option {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}

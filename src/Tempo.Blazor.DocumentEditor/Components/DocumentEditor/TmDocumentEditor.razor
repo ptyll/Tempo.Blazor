@@ -376,7 +376,7 @@
                          data-testid="@TestId("document-token-insert-panel")">
                     <h3 class="tm-document-editor__token-insert-panel-title">@Loc["TmDocumentEditor_InsertTokenPanelLabel"]</h3>
                     <input type="text"
-                           class="tm-document-editor__token-insert-filter"
+                           class="tm-input tm-document-editor__token-insert-filter"
                            placeholder="@Loc["TmDocumentEditor_InsertTokenFilterPlaceholder"]"
                            value="@_tokenInsertQuery"
                            @oninput="HandleTokenInsertQueryChangedAsync"
@@ -456,12 +456,12 @@
                                 }
                                 <div class="tm-document-editor__image-dialog-actions">
                                     <button type="button"
-                                            class="tm-pivot-btn tm-pivot-btn--secondary"
+                                            class="tm-btn tm-btn-sm tm-btn-secondary"
                                             @onclick="CancelCanvasImageDialog">
                                         @Loc["Tm_Cancel"]
                                     </button>
                                     <button type="button"
-                                            class="tm-pivot-btn tm-pivot-btn--primary"
+                                            class="tm-btn tm-btn-sm tm-btn-primary"
                                             disabled="@string.IsNullOrWhiteSpace(_canvasImageUrl)"
                                             @onclick="InsertCanvasImageFromDialogAsync"
                                             data-testid="@TestId("document-canvas-insert-image-url")">
@@ -573,6 +573,7 @@
                                     <label class="tm-document-editor__content-control-field">
                                         <span>@Loc["TmDocumentEditor_ContentControlDateLabel"]</span>
                                         <input type="date"
+                                               class="tm-input"
                                                value="@_activeCanvasContentControl.DateIso"
                                                disabled="@_activeCanvasContentControl.LockContent"
                                                @onchange="SetCanvasContentControlDateAsync"
@@ -584,7 +585,8 @@
                                 {
                                     <label class="tm-document-editor__content-control-field">
                                         <span>@Loc["TmDocumentEditor_ContentControlChoiceLabel"]</span>
-                                        <select value="@_activeCanvasContentControl.SelectedValue"
+                                        <select class="tm-input"
+                                                value="@_activeCanvasContentControl.SelectedValue"
                                                 disabled="@(_activeCanvasContentControl.LockContent || _activeCanvasContentControl.Items.Count == 0)"
                                                 @onchange="SetCanvasContentControlChoiceAsync"
                                                 data-testid="@TestId("document-canvas-content-control-choice")">
@@ -607,6 +609,7 @@
                                         <label class="tm-document-editor__content-control-field">
                                             <span>@Loc["TmDocumentEditor_ContentControlComboTextLabel"]</span>
                                             <input type="text"
+                                                   class="tm-input"
                                                    value="@_activeCanvasContentControl.Text"
                                                    disabled="@_activeCanvasContentControl.LockContent"
                                                    @onchange="SetCanvasContentControlComboTextAsync"
@@ -619,7 +622,8 @@
                                     var pictureAssetOptions = CanvasContentControlImageAssetOptions;
                                     <label class="tm-document-editor__content-control-field">
                                         <span>@Loc["TmDocumentEditor_ContentControlPictureLabel"]</span>
-                                        <select value="@_activeCanvasContentControl.AssetId"
+                                        <select class="tm-input"
+                                                value="@_activeCanvasContentControl.AssetId"
                                                 disabled="@(_activeCanvasContentControl.LockContent || pictureAssetOptions.Count == 0)"
                                                 @onchange="SetCanvasContentControlPictureAsync"
                                                 data-testid="@TestId("document-canvas-content-control-picture")">

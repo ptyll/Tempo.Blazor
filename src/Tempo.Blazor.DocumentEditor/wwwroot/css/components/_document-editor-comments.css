@@ -36,12 +36,12 @@
     color: var(--tm-color-text);
     background: var(--tm-color-surface);
     border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-sm);
+    border-radius: var(--tm-radius-control);
 }
 
 .tm-document-comment-thread {
     scroll-margin-block: var(--tm-space-4);
-    box-shadow: 0 1px 2px color-mix(in srgb, var(--tm-color-gray-900) 5%, transparent);
+    box-shadow: var(--tm-shadow-xs);
 }
 
 .tm-document-comment-thread--selected {
@@ -124,7 +124,7 @@
 
     .tm-document-comment-thread,
     .tm-document-comment-composer {
-        border-radius: var(--tm-radius-sm);
+        border-radius: var(--tm-radius-card);
     }
 
     .tm-document-comment-entry__meta {
@@ -133,36 +133,17 @@
     }
 }
 
-[data-theme="dark"] .tm-document-editor__comment-rail > header,
-.tm-dark .tm-document-editor__comment-rail > header {
-    background: var(--tm-color-surface-elevated);
-}
-
-[data-theme="dark"] .tm-document-comment-thread,
-[data-theme="dark"] .tm-document-comment-composer,
-.tm-dark .tm-document-comment-thread,
-.tm-dark .tm-document-comment-composer {
-    background: var(--tm-color-surface-elevated);
-    border-color: var(--tm-color-border-subtle);
-}
-
-[data-theme="dark"] .tm-document-inline--comment-anchor,
-.tm-dark .tm-document-inline--comment-anchor {
-    color: var(--tm-color-text);
-    background: var(--tm-color-warning-subtle);
-}
-
 /* Phase 8: per-participant comment colors + panel legend. The palette tokens are declared here
    (component scope) so hosts can override them via theming; indexes wrap modulo 8. */
 .tm-document-editor__comment-rail {
-    --tm-comment-participant-0: #2563eb;
-    --tm-comment-participant-1: #d97706;
-    --tm-comment-participant-2: #059669;
-    --tm-comment-participant-3: #dc2626;
-    --tm-comment-participant-4: #7c3aed;
-    --tm-comment-participant-5: #0891b2;
-    --tm-comment-participant-6: #db2777;
-    --tm-comment-participant-7: #65a30d;
+    --tm-comment-participant-0: var(--tm-chart-series-1);
+    --tm-comment-participant-1: var(--tm-chart-series-2);
+    --tm-comment-participant-2: var(--tm-chart-series-3);
+    --tm-comment-participant-3: var(--tm-chart-series-4);
+    --tm-comment-participant-4: var(--tm-chart-series-5);
+    --tm-comment-participant-5: var(--tm-chart-series-6);
+    --tm-comment-participant-6: var(--tm-chart-series-7);
+    --tm-comment-participant-7: var(--tm-chart-series-8);
 }
 
 .tm-document-comment-thread--participant-0 { border-left: 3px solid var(--tm-comment-participant-0); }
@@ -229,7 +210,7 @@
     font-size: 0.6875rem;
     font-weight: 700;
     letter-spacing: 0.05em;
-    color: var(--tm-color-warning-text, #92400e);
+    color: var(--tm-color-warning-text);
     background: var(--tm-color-warning-subtle);
 }
 
@@ -239,7 +220,3 @@
     }
 }
 
-[data-theme="dark"] .tm-document-comment-legend,
-.tm-dark .tm-document-comment-legend {
-    border-color: var(--tm-color-border-subtle);
-}

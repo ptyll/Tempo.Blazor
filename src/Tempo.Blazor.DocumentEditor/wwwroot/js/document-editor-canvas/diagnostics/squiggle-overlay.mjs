@@ -1,4 +1,5 @@
 import { mapDiagnosticRects } from './proofing-service.mjs';
+import { extractTextRects } from '../render/text-rects.mjs';
 
 const SQUIGGLE_COLOR = '#dc2626';
 
@@ -158,41 +159,5 @@ export function createCanvasProofingSquiggleOverlay(options = {}) {
         diagnosticAtPoint,
         snapshot,
         destroy,
-    };
-}
-
-function extractTextRects(render) {
-    const commands = Array.isArray(render?.displayList?.commands)
-        ? render.displayList.commands
-        : Array.isArray(render?.commands)
-            ? render.commands
-            : [];
-    const commandRects = commands
-        .filter(command => command?.type === 'textRun' || command?.type === 'field' || command?.type === 'listLabel')
-        .map(normalizeTextRect);
-    if (commandRects.some(rect => rect.end > rect.start)) {
-        return commandRects;
-    }
-
-    const layoutRects = Array.isArray(render?.displayList?.textRects)
-        ? render.displayList.textRects
-        : Array.isArray(render?.selectionLayout?.textRects)
-            ? render.selectionLayout.textRects
-            : [];
-    return layoutRects.map(normalizeTextRect);
-}
-
-function normalizeTextRect(item) {
-    const rect = item?.rect || item || {};
-    return {
-        blockId: String(item?.blockId || ''),
-        start: Number(item?.start ?? item?.startOffset ?? 0) || 0,
-        end: Number(item?.end ?? item?.endOffset ?? 0) || 0,
-        pageIndex: Number(item?.pageIndex || 0) || 0,
-        x: Number(rect?.x || 0) || 0,
-        y: Number(rect?.y || 0) || 0,
-        width: Math.max(0, Number(rect?.width || 0) || 0),
-        height: Math.max(1, Number(rect?.height || 0) || 16),
-        baseline: Number(item?.baseline || 0) || 0,
     };
 }

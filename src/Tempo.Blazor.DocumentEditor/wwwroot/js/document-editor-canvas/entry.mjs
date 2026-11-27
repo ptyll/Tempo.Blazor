@@ -1,3 +1,4 @@
+import { extractTextRects } from './render/text-rects.mjs';
 import { createAccessibilityMirror } from './a11y/accessibility-mirror.mjs';
 import { createCanvasLiveRegion } from './a11y/live-region.mjs';
 import {
@@ -1740,7 +1741,7 @@ export class CanvasDocumentEngine {
             return;
         }
 
-        const rect = firstRectForMatch(this.lastRender?.selectionLayout?.textRects || [], match);
+        const rect = firstRectForMatch(extractTextRects(this.lastRender), match);
         const page = this.canvasStack.pages.get(String(rect?.pageIndex ?? 0));
         page?.pageElement?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
     }

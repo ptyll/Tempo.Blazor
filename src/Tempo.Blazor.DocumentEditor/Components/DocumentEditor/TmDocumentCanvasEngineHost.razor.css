@@ -1,5 +1,5 @@
 .tm-document-canvas-engine-host {
-    --tm-document-canvas-workspace-background: color-mix(in srgb, var(--tm-color-surface-muted) 90%, var(--tm-color-primary) 10%);
+    --tm-document-canvas-workspace-background: var(--tm-bg-workspace);
     --tm-document-canvas-page-border-color: color-mix(in srgb, var(--tm-color-border) 82%, var(--tm-color-text-muted) 18%);
     --tm-document-canvas-page-radius: var(--tm-radius-sm, 0.25rem);
     --tm-document-canvas-page-shadow: 0 1.4rem 3rem color-mix(in srgb, var(--tm-color-text) 16%, transparent), 0 0.2rem 0.8rem color-mix(in srgb, var(--tm-color-text) 8%, transparent);
@@ -106,7 +106,7 @@
     padding-inline: var(--tm-space-3);
     border: var(--tm-border-width) solid var(--tm-color-border);
     border-radius: var(--tm-radius-md);
-    background: color-mix(in srgb, var(--tm-color-surface) 92%, var(--tm-color-primary) 8%);
+    background: var(--tm-color-surface);
     box-shadow: var(--tm-shadow-sm);
 }
 
@@ -341,95 +341,11 @@
     box-shadow: var(--tm-shadow-sm);
 }
 
-.tm-document-canvas-engine-host ::deep(.tm-document-canvas-comment-overlay),
-.tm-document-canvas-engine-host ::deep(.tm-document-canvas-revision-overlay) {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-}
-
-.tm-document-canvas-engine-host ::deep(.tm-document-canvas-comment-overlay__marker),
-.tm-document-canvas-engine-host ::deep(.tm-document-canvas-revision-overlay__marker),
-.tm-document-canvas-engine-host ::deep([data-testid="document-canvas-comment-marker"]),
-.tm-document-canvas-engine-host ::deep([data-testid="document-canvas-revision-marker"]) {
-    appearance: none;
-    margin: 0;
-    padding: 0;
-    border: 0;
-    border-radius: var(--tm-radius-xs);
-    color: transparent;
-    cursor: pointer;
-    font-size: 0;
-    line-height: 0;
-    opacity: 0.88;
-}
-
-.tm-document-canvas-engine-host ::deep(.tm-document-canvas-comment-overlay__marker),
-.tm-document-canvas-engine-host ::deep([data-testid="document-canvas-comment-marker"]) {
-    background: color-mix(in srgb, var(--tm-color-info) 18%, transparent);
-    box-shadow:
-        inset 0 -2px 0 color-mix(in srgb, var(--tm-color-info) 78%, transparent),
-        0 0 0 1px color-mix(in srgb, var(--tm-color-info) 22%, transparent);
-}
-
-.tm-document-canvas-engine-host ::deep(.tm-document-canvas-comment-overlay__marker[data-canvas-comment-status="resolved"]),
-.tm-document-canvas-engine-host ::deep([data-testid="document-canvas-comment-marker"][data-canvas-comment-status="resolved"]) {
-    background: color-mix(in srgb, var(--tm-color-text-muted) 16%, transparent);
-    box-shadow:
-        inset 0 -2px 0 color-mix(in srgb, var(--tm-color-text-muted) 62%, transparent),
-        0 0 0 1px color-mix(in srgb, var(--tm-color-text-muted) 18%, transparent);
-}
-
-.tm-document-canvas-engine-host ::deep(.tm-document-canvas-comment-overlay__marker--selected) {
-    opacity: 1;
-    box-shadow:
-        inset 0 -3px 0 var(--tm-color-info),
-        0 0 0 2px color-mix(in srgb, var(--tm-color-info) 38%, transparent);
-}
-
-.tm-document-canvas-engine-host ::deep(.tm-document-canvas-revision-overlay__marker--insertion),
-.tm-document-canvas-engine-host ::deep([data-testid="document-canvas-revision-marker"][data-canvas-revision-kind="insertion"]) {
-    background: color-mix(in srgb, var(--tm-color-success) 16%, transparent);
-    box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--tm-color-success) 78%, transparent);
-}
-
-.tm-document-canvas-engine-host ::deep([data-testid="document-canvas-revision-marker"]) {
-    background: color-mix(in srgb, var(--tm-color-warning) 16%, transparent);
-    box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--tm-color-warning) 80%, transparent);
-}
-
-.tm-document-canvas-engine-host ::deep(.tm-document-canvas-revision-overlay__marker--deletion),
-.tm-document-canvas-engine-host ::deep([data-testid="document-canvas-revision-marker"][data-canvas-revision-kind="deletion"]) {
-    background:
-        linear-gradient(
-            to bottom,
-            transparent calc(50% - 1px),
-            color-mix(in srgb, var(--tm-color-danger) 86%, transparent) calc(50% - 1px) calc(50% + 1px),
-            transparent calc(50% + 1px)
-        ),
-        color-mix(in srgb, var(--tm-color-danger) 12%, transparent);
-}
-
-.tm-document-canvas-engine-host ::deep(.tm-document-canvas-revision-overlay__marker--formatting),
-.tm-document-canvas-engine-host ::deep([data-testid="document-canvas-revision-marker"][data-canvas-revision-kind="formatting"]) {
-    background: color-mix(in srgb, var(--tm-color-warning) 16%, transparent);
-    box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--tm-color-warning) 80%, transparent);
-}
-
-.tm-document-canvas-engine-host ::deep(.tm-document-canvas-revision-overlay__marker--simple) {
-    border-radius: var(--tm-radius-pill);
-    opacity: 1;
-}
-
-.tm-document-canvas-engine-host ::deep(.tm-document-canvas-revision-overlay__marker--selected) {
-    opacity: 1;
-    outline: 2px solid color-mix(in srgb, var(--tm-color-primary) 52%, transparent);
-    outline-offset: 1px;
-}
+/* The comment / revision overlay markers live in the global _document-editor-canvas-overlays.css: the engine
+   owns that DOM and a scoped ::deep(...) rule cannot reach it (it compiles to an invalid selector). */
 
 @media (prefers-color-scheme: dark) {
     .tm-document-canvas-engine-host {
-        --tm-document-canvas-workspace-background: color-mix(in srgb, var(--tm-color-surface-muted) 86%, black 14%);
         --tm-document-canvas-page-border-color: color-mix(in srgb, var(--tm-color-border-subtle) 78%, var(--tm-color-primary) 22%);
         --tm-document-canvas-page-shadow: 0 1.4rem 3rem color-mix(in srgb, black 48%, transparent), 0 0.15rem 0.75rem color-mix(in srgb, black 34%, transparent);
         --tm-document-canvas-selection-fill: color-mix(in srgb, var(--tm-color-primary) 34%, transparent);
@@ -484,15 +400,6 @@
         outline-color: HighlightText;
         border-color: HighlightText;
         box-shadow: none;
-    }
-
-    .tm-document-canvas-engine-host ::deep(.tm-document-canvas-comment-overlay__marker),
-    .tm-document-canvas-engine-host ::deep(.tm-document-canvas-revision-overlay__marker),
-    .tm-document-canvas-engine-host ::deep([data-testid="document-canvas-comment-marker"]),
-    .tm-document-canvas-engine-host ::deep([data-testid="document-canvas-revision-marker"]) {
-        background: Highlight;
-        box-shadow: inset 0 -2px 0 HighlightText;
-        forced-color-adjust: none;
     }
 }
 

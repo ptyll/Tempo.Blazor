@@ -2,7 +2,7 @@
   "itemName": "TmDocumentJsonDebugModal",
   "kind": "Component",
   "category": "Document Editor",
-  "description": "Developer debug modal that displays the document's canonical JSON along with optional runtime, DOCX DrawingML metadata, and recovery-detail JSON sections, with copy and close actions.",
+  "description": "Developer debug modal that displays the document's canonical JSON along with optional runtime, DOCX DrawingML metadata, and recovery-detail JSON sections, with copy and close actions. Thin wrapper over TmDocumentDebugModal / TmDocumentDebugSection (an empty section shows the localized \"No data\" notice; the Copy button needs OnCopyJson).",
   "packageId": "Tempo.Blazor.DocumentEditor",
   "namespace": "Tempo.Blazor.Components.DocumentEditor",
   "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentJsonDebugModal.razor",

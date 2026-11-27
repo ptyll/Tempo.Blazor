@@ -1,0 +1,102 @@
+{
+  "itemName": "TmDocumentInspectorHeader",
+  "kind": "Component",
+  "category": "Document Editor",
+  "description": "Shared header of a DocumentEditor inspector panel (redesign DE-2.1): an optional decorative icon, the title as a heading whose id the panel region labels itself by (aria-labelledby), an optional subtitle, a host actions slot and a close (X) button that appears only when OnClose is bound. The close button is named by the localized TmDocumentEditor_Close string. Panels of phases 5-7 adopt it; the form pattern it sits above is the .tm-document-inspector-form CSS pattern. The companion form pattern is CSS-only (_document-editor-panels.css): .tm-document-inspector-form with __section / __section-toggle (aria-expanded) / __chevron (TmIcon chevron-down, rotates), __section-body, __field (label above the control, beside it in a wide panel body through a container query), __label, __control, __suffix (units) and __segmented / __segmented-option (icon or icon + text); --embedded drops the frame and the shadow for a panel hosted inside the inspector. A field keeps the implicit label-wraps-control association.",
+  "packageId": "Tempo.Blazor.DocumentEditor",
+  "namespace": "Tempo.Blazor.Components.DocumentEditor",
+  "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentInspectorHeader.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.DocumentEditor"
+  ],
+  "parameters": [
+    {
+      "name": "Title",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Panel title, rendered as the heading the panel region labels itself by (aria-labelledby)."
+    },
+    {
+      "name": "TitleId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Id of the title heading. Set it when the host region needs a stable aria-labelledby target; when omitted a unique id is generated and readable through ResolvedTitleId."
+    },
+    {
+      "name": "Subtitle",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional secondary line under the title (a count, a file name, a status)."
+    },
+    {
+      "name": "Icon",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional leading icon name. The icon is decorative and always aria-hidden."
+    },
+    {
+      "name": "HeadingLevel",
+      "type": "int",
+      "isRequired": false,
+      "description": "Heading level of the title (2-6). Defaults to 2."
+    },
+    {
+      "name": "Actions",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Host actions rendered before the close button (a filter menu, an overflow button)."
+    },
+    {
+      "name": "OnClose",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised by the close (X) button. The button is rendered only when a handler is bound."
+    },
+    {
+      "name": "CloseTestId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Unprefixed test id of the close button (resolved through TestIdPrefix). No test id when omitted."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS classes on the header root."
+    }
+  ],
+  "cssClasses": [
+    "tm-document-inspector-header",
+    "tm-document-inspector-header__icon",
+    "tm-document-inspector-header__text",
+    "tm-document-inspector-header__title",
+    "tm-document-inspector-header__subtitle",
+    "tm-document-inspector-header__trailing",
+    "tm-document-inspector-header__actions",
+    "tm-document-inspector-header__close",
+    "tm-document-inspector-form",
+    "tm-document-inspector-form--embedded",
+    "tm-document-inspector-form__section",
+    "tm-document-inspector-form__section-toggle",
+    "tm-document-inspector-form__chevron",
+    "tm-document-inspector-form__section-body",
+    "tm-document-inspector-form__field",
+    "tm-document-inspector-form__label",
+    "tm-document-inspector-form__control",
+    "tm-document-inspector-form__suffix",
+    "tm-document-inspector-form__segmented",
+    "tm-document-inspector-form__segmented--icons",
+    "tm-document-inspector-form__segmented-option"
+  ],
+  "examples": [
+    {
+      "title": "Panel header labelling its region",
+      "code": "<aside role=\"complementary\" aria-labelledby=\"image-panel-title\">\n    <TmDocumentInspectorHeader Title=\"@Loc[\"Image_Title\"]\"\n                               TitleId=\"image-panel-title\"\n                               Icon=\"image\"\n                               OnClose=\"ClosePanel\" />\n    ...\n</aside>"
+    },
+    {
+      "title": "Form pattern",
+      "code": "<section class=\"tm-document-inspector-form tm-document-inspector-form--embedded\">\n    <div class=\"tm-document-inspector-form__section\">\n        <button type=\"button\" class=\"tm-document-inspector-form__section-toggle\" aria-expanded=\"true\" aria-controls=\"size-body\">\n            <span class=\"tm-document-inspector-form__chevron\" aria-hidden=\"true\"><TmIcon Name=\"chevron-down\" /></span>\n            Size\n        </button>\n        <div id=\"size-body\" class=\"tm-document-inspector-form__section-body\">\n            <label class=\"tm-document-inspector-form__field\">\n                <span class=\"tm-document-inspector-form__label\">Width</span>\n                <span class=\"tm-document-inspector-form__control\">\n                    <input class=\"tm-input\" type=\"number\" />\n                    <span class=\"tm-document-inspector-form__suffix\">mm</span>\n                </span>\n            </label>\n        </div>\n    </div>\n</section>"
+    }
+  ]
+}

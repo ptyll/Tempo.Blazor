@@ -86,8 +86,9 @@ public class DarkThemeSelectorParityTests
         var offenders = PartsWithoutTwin(AttributeSwitch, ClassSwitch, out var scanned);
 
         // Non-vacuous: the sweep has to have found dark rules at all. A refactor that renames the switch,
-        // or a glob that stops matching, would otherwise leave this permanently and silently green.
-        scanned.Should().BeGreaterThan(140,
+        // or a glob that stops matching, would otherwise leave this permanently and silently green. (The floor was 140 until DocumentEditor phase 2 dropped its
+        // 26 manual dark rules in favour of the token layer; the sweep finds ~114 now.)
+        scanned.Should().BeGreaterThan(100,
             "the shipped packages carry a large body of dark rules — a near-empty sweep means the scan broke, "
             + "not that the drift is gone");
 

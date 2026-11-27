@@ -1861,25 +1861,26 @@
                  @onkeydown:stopPropagation="true">
             <label>
                 <span>@Loc["TmDocumentEditor_LinkUrl"]</span>
-                <input @ref="_linkUrlInput"
+                <input class="tm-input"
+                       @ref="_linkUrlInput"
                        value="@_pendingLinkUrl"
                        @oninput="args => _pendingLinkUrl = args.Value?.ToString()"
                        data-testid="@TestId("document-link-url")" />
             </label>
             <label>
                 <span>@Loc["TmDocumentEditor_LinkTitle"]</span>
-                <input value="@_pendingLinkTitle" @oninput="args => _pendingLinkTitle = args.Value?.ToString()" data-testid="@TestId("document-link-title")" />
+                <input class="tm-input" value="@_pendingLinkTitle" @oninput="args => _pendingLinkTitle = args.Value?.ToString()" data-testid="@TestId("document-link-title")" />
             </label>
             @if (!string.IsNullOrWhiteSpace(_linkError))
             {
                 <span class="tm-document-editor__link-error" role="alert" data-testid="@TestId("document-link-error")">@_linkError</span>
             }
-            <button type="button" @onclick="ApplyLinkAsync" data-testid="@TestId("document-apply-link")">@Loc["TmDocumentEditor_ApplyLink"]</button>
+            <button type="button" class="tm-btn tm-btn-sm tm-btn-primary" @onclick="ApplyLinkAsync" data-testid="@TestId("document-apply-link")">@Loc["TmDocumentEditor_ApplyLink"]</button>
             @if (!string.IsNullOrWhiteSpace(_pendingLinkUrl) && OnLinkRemoved.HasDelegate)
             {
-                <button type="button" @onclick="RemoveLinkAsync" data-testid="@TestId("document-remove-link")">@Loc["TmDocumentEditor_RemoveLink"]</button>
+                <button type="button" class="tm-btn tm-btn-sm tm-btn-secondary" @onclick="RemoveLinkAsync" data-testid="@TestId("document-remove-link")">@Loc["TmDocumentEditor_RemoveLink"]</button>
             }
-            <button type="button" @onclick="CloseLinkDialog">@Loc["TmDocumentEditor_Cancel"]</button>
+            <button type="button" class="tm-btn tm-btn-sm tm-btn-ghost" @onclick="CloseLinkDialog">@Loc["TmDocumentEditor_Cancel"]</button>
         </section>
     }
     @if (_docxImportOpen && CanImportDocx)

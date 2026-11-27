@@ -1942,6 +1942,7 @@
   "TmDocumentEditor_DebugClipboardWarnings": "Warnings",
   "TmDocumentEditor_DebugDocumentJsonTitle": "Document JSON",
   "TmDocumentEditor_DebugDocxDrawingMetadata": "DOCX DrawingML metadata",
+  "TmDocumentEditor_DebugNoData": "No data",
   "TmDocumentEditor_DebugRuntimeRecovery": "Runtime recovery",
   "TmDocumentEditor_DebugRuntimeState": "Runtime state",
   "TmDocumentEditor_DecreaseFontSize": "Decrease size",

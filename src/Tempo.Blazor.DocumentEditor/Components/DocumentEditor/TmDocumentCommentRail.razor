@@ -11,7 +11,7 @@
     <header class="tm-document-comment-rail__header">
         <div>
             <h3>@Loc["TmDocumentEditor_Comments"]</h3>
-            <span>@Loc["TmDocumentEditor_CommentCountVisible", VisibleComments.Count, Comments.Count]</span>
+            <span class="tm-document-panel__meta">@Loc["TmDocumentEditor_CommentCountVisible", VisibleComments.Count, Comments.Count]</span>
         </div>
         @if (CanComment)
         {
@@ -26,7 +26,7 @@
 
     <div class="tm-document-comment-rail__controls" data-testid="@TestId("document-comment-controls")">
         <label class="tm-document-comment-rail__field">
-            <span>@Loc["TmDocumentEditor_CommentFilter"]</span>
+            <span class="tm-document-panel__meta">@Loc["TmDocumentEditor_CommentFilter"]</span>
             <select value="@Filter"
                     disabled="@IsBusy"
                     @onchange="HandleFilterChangedAsync"
@@ -38,7 +38,7 @@
             </select>
         </label>
         <label class="tm-document-comment-rail__field">
-            <span>@Loc["TmDocumentEditor_CommentSort"]</span>
+            <span class="tm-document-panel__meta">@Loc["TmDocumentEditor_CommentSort"]</span>
             <select value="@SortMode"
                     disabled="@IsBusy"
                     @onchange="HandleSortChangedAsync"

@@ -13,7 +13,7 @@
     overflow: visible;
     background: var(--tm-color-surface-elevated);
     border-bottom: 1px solid var(--tm-color-border);
-    box-shadow: 0 0.35rem 1rem color-mix(in srgb, var(--tm-color-gray-900) 7%, transparent);
+    box-shadow: var(--tm-shadow-card);
 }
 
 .tm-document-editor__ribbon-tabs {
@@ -41,35 +41,35 @@
     padding: 0 var(--tm-space-3);
     border: 1px solid transparent;
     border-bottom-width: 1px;
-    border-radius: var(--tm-radius-sm) var(--tm-radius-sm) 0 0;
+    border-radius: var(--tm-radius-control) var(--tm-radius-control) 0 0;
     color: var(--tm-color-text-muted);
     background: transparent;
     cursor: pointer;
     font-size: var(--tm-font-size-sm);
     font-weight: var(--tm-font-weight-medium);
     white-space: nowrap;
-    transition: background-color var(--tm-duration-fast, 120ms), border-color var(--tm-duration-fast, 120ms), color var(--tm-duration-fast, 120ms), box-shadow var(--tm-duration-fast, 120ms);
+    transition: background-color var(--tm-duration-quick), border-color var(--tm-duration-quick), color var(--tm-duration-quick), box-shadow var(--tm-duration-quick);
 }
 
 .tm-document-editor__ribbon-tab:hover {
     color: var(--tm-color-text);
 }
 
+/* Active tab = primary ink + a primary underline (the ::after bar). No fill, no frame, no drop shadow:
+   the tab is flat like the side-panel tabs. */
 .tm-document-editor__ribbon-tab--active {
     color: var(--tm-color-primary);
-    background: color-mix(in srgb, var(--tm-color-primary-subtle) 64%, var(--tm-color-surface-elevated));
-    border-color: color-mix(in srgb, var(--tm-color-primary) 45%, var(--tm-color-border));
-    border-bottom-color: var(--tm-color-surface-elevated);
-    box-shadow:
-        inset 0 3px 0 var(--tm-color-primary),
-        0 0.45rem 1rem color-mix(in srgb, var(--tm-color-primary) 12%, transparent);
+    background: transparent;
+    border-color: transparent;
+    border-bottom-color: transparent;
+    box-shadow: none;
     font-weight: var(--tm-font-weight-semibold);
 }
 
 .tm-document-editor__ribbon-tab--active::after {
     position: absolute;
     right: var(--tm-space-2);
-    bottom: 0.25rem;
+    bottom: 0;
     left: var(--tm-space-2);
     height: 2px;
     content: "";
@@ -153,14 +153,14 @@
     padding: var(--tm-space-1);
     overflow: hidden;
     border: 1px solid transparent;
-    border-radius: var(--tm-radius-sm);
+    border-radius: var(--tm-radius-control);
     color: var(--tm-color-text);
     background: transparent;
     cursor: pointer;
     font-size: var(--tm-font-size-xs);
     line-height: var(--tm-line-height-tight);
     text-align: center;
-    transition: background-color var(--tm-duration-fast, 120ms), border-color var(--tm-duration-fast, 120ms), color var(--tm-duration-fast, 120ms), box-shadow var(--tm-duration-fast, 120ms);
+    transition: background-color var(--tm-duration-quick), border-color var(--tm-duration-quick), color var(--tm-duration-quick), box-shadow var(--tm-duration-quick);
 }
 
 .tm-document-editor__ribbon-button:disabled {
@@ -290,8 +290,8 @@
     height: 0.44rem;
     background: var(--tm-color-text-muted);
     border-radius: var(--tm-radius-full);
-    box-shadow: 0 1px 2px color-mix(in srgb, var(--tm-color-gray-900) 20%, transparent);
-    transition: right var(--tm-duration-fast, 120ms), background-color var(--tm-duration-fast, 120ms);
+    box-shadow: var(--tm-shadow-xs);
+    transition: right var(--tm-duration-quick), background-color var(--tm-duration-quick);
 }
 
 .tm-document-editor__track-toggle--on {
@@ -334,7 +334,7 @@
     padding: 0 var(--tm-space-2);
     overflow: hidden;
     border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-sm);
+    border-radius: var(--tm-radius-control);
     background: var(--tm-color-surface);
     color: var(--tm-color-text);
     font-size: var(--tm-font-size-xs);
@@ -400,7 +400,7 @@
     color: var(--tm-color-text);
     background: var(--tm-color-surface);
     border-color: transparent;
-    border-radius: var(--tm-radius-sm);
+    border-radius: var(--tm-radius-control);
     font-size: var(--tm-font-size-xs);
 }
 
@@ -453,7 +453,7 @@
     overflow: auto;
     background: var(--tm-color-surface-elevated);
     border: 1px solid var(--tm-color-border);
-    box-shadow: 0 1rem 2.5rem color-mix(in srgb, var(--tm-color-gray-900) 18%, transparent);
+    box-shadow: var(--tm-shadow-popover);
 }
 
 .tm-document-editor__ribbon-tempo-color-picker .tm-flat-color-picker {
@@ -461,7 +461,7 @@
     min-height: 0;
     overflow: auto;
     border: 0;
-    border-radius: var(--tm-radius-md) var(--tm-radius-md) 0 0;
+    border-radius: var(--tm-radius-card) var(--tm-radius-card) 0 0;
     box-shadow: none;
 }
 
@@ -546,8 +546,8 @@
     overflow: auto;
     background: var(--tm-color-surface-elevated);
     border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-sm);
-    box-shadow: 0 0.5rem 1.5rem color-mix(in srgb, var(--tm-color-gray-900) 14%, transparent);
+    border-radius: var(--tm-radius-card);
+    box-shadow: var(--tm-shadow-popover);
 }
 
 .tm-document-editor__overflow-search {
@@ -562,7 +562,7 @@
     color: var(--tm-color-text);
     background: var(--tm-color-surface);
     border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-sm);
+    border-radius: var(--tm-radius-control);
     font-size: var(--tm-font-size-sm);
 }
 
@@ -644,7 +644,7 @@
     padding: var(--tm-space-2);
     background: var(--tm-color-surface-elevated);
     border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-md);
+    border-radius: var(--tm-radius-card);
     box-shadow: var(--tm-shadow-lg);
     user-select: none;
 }
@@ -697,7 +697,7 @@
 /* Header/footer scope skupina — jemné zvýraznění kontextového režimu. */
 .tm-document-editor__ribbon-group--scope {
     background: color-mix(in srgb, var(--tm-color-primary-subtle) 45%, transparent);
-    border-radius: var(--tm-radius-sm);
+    border-radius: var(--tm-radius-card);
     border-right-color: transparent;
 }
 
@@ -800,30 +800,3 @@
     }
 }
 
-[data-theme="dark"] .tm-document-editor__ribbon,
-.tm-dark .tm-document-editor__ribbon {
-    background: var(--tm-color-surface-elevated);
-    border-bottom-color: var(--tm-color-border-subtle);
-}
-
-[data-theme="dark"] .tm-document-editor__ribbon-button:hover:not(:disabled),
-.tm-dark .tm-document-editor__ribbon-button:hover:not(:disabled) {
-    background: var(--tm-color-surface-hover);
-    border-color: var(--tm-color-border-subtle);
-}
-
-[data-theme="dark"] .tm-document-editor__ribbon-button--active,
-.tm-dark .tm-document-editor__ribbon-button--active {
-    background: var(--tm-color-primary-subtle);
-    border-color: var(--tm-color-primary);
-}
-
-[data-theme="dark"] .tm-document-editor__ribbon-separator,
-.tm-dark .tm-document-editor__ribbon-separator {
-    background: var(--tm-color-border);
-}
-
-[data-theme="dark"] .tm-document-editor__ribbon-group--scope,
-.tm-dark .tm-document-editor__ribbon-group--scope {
-    background: color-mix(in srgb, var(--tm-color-primary-subtle) 60%, transparent);
-}

@@ -1,59 +1,30 @@
 @namespace Tempo.Blazor.Components.DocumentEditor
 @inherits Tempo.Blazor.Components.TmComponentBase
-@using Microsoft.JSInterop
-@inject IJSRuntime JSRuntime
-@implements IAsyncDisposable
 
-@if (IsOpen)
-{
-    <div @ref="_dialog"
-         class="tm-document-json-debug-modal"
-         data-testid="@TestId("document-clipboard-html-debug-modal")"
-         role="dialog"
-         aria-modal="true"
-         aria-label="@Loc["TmDocumentEditor_DebugClipboardHtmlTitle"]">
-        <div class="tm-document-json-debug-modal__backdrop" @onclick="OnClose"></div>
-        <div class="tm-document-json-debug-modal__content">
-            <header class="tm-document-json-debug-modal__header">
-                <span class="tm-document-json-debug-modal__title">@Loc["TmDocumentEditor_DebugClipboardHtmlTitle"]</span>
-                <button type="button"
-                        @ref="_closeButton"
-                        class="tm-document-json-debug-modal__close"
-                        data-testid="@TestId("document-clipboard-html-debug-close")"
-                        title="@Loc["TmDocumentEditor_Close"]"
-                        aria-label="@Loc["TmDocumentEditor_Close"]"
-                        @onclick="OnClose">
-                    <TmIcon Name="x" Size="IconSize.Sm" />
-                </button>
-            </header>
-            <section class="tm-document-json-debug-modal__section"
-                     data-testid="@TestId("document-clipboard-raw-debug")">
-                <h3 class="tm-document-json-debug-modal__section-title">@Loc["TmDocumentEditor_DebugClipboardRawHtml"]</h3>
-                <pre class="tm-document-json-debug-modal__json"
-                     data-testid="@TestId("document-clipboard-html-debug-content")">@(RawHtml ?? Html)</pre>
-            </section>
-            <section class="tm-document-json-debug-modal__section"
-                     data-testid="@TestId("document-clipboard-normalized-debug")">
-                <h3 class="tm-document-json-debug-modal__section-title">@Loc["TmDocumentEditor_DebugClipboardNormalized"]</h3>
-                <pre class="tm-document-json-debug-modal__json"
-                     data-testid="@TestId("document-clipboard-normalized-debug-content")">@NormalizedJson</pre>
-            </section>
-            <section class="tm-document-json-debug-modal__section"
-                     data-testid="@TestId("document-clipboard-warnings-debug")">
-                <h3 class="tm-document-json-debug-modal__section-title">@Loc["TmDocumentEditor_DebugClipboardWarnings"]</h3>
-                <pre class="tm-document-json-debug-modal__json"
-                     data-testid="@TestId("document-clipboard-warnings-debug-content")">@WarningsJson</pre>
-            </section>
-        </div>
-    </div>
-}
+<TmDocumentDebugModal IsOpen="IsOpen"
+                      TestIdPrefix="@TestIdPrefix"
+                      Title="@Loc["TmDocumentEditor_DebugClipboardHtmlTitle"]"
+                      ModalTestId="document-clipboard-html-debug-modal"
+                      CloseTestId="document-clipboard-html-debug-close"
+                      OnClose="OnClose">
+    <TmDocumentDebugSection TestIdPrefix="@TestIdPrefix"
+                            Title="@Loc["TmDocumentEditor_DebugClipboardRawHtml"]"
+                            SectionTestId="document-clipboard-raw-debug"
+                            ContentTestId="document-clipboard-html-debug-content"
+                            Content="@(RawHtml ?? Html)" />
+    <TmDocumentDebugSection TestIdPrefix="@TestIdPrefix"
+                            Title="@Loc["TmDocumentEditor_DebugClipboardNormalized"]"
+                            SectionTestId="document-clipboard-normalized-debug"
+                            ContentTestId="document-clipboard-normalized-debug-content"
+                            Content="@NormalizedJson" />
+    <TmDocumentDebugSection TestIdPrefix="@TestIdPrefix"
+                            Title="@Loc["TmDocumentEditor_DebugClipboardWarnings"]"
+                            SectionTestId="document-clipboard-warnings-debug"
+                            ContentTestId="document-clipboard-warnings-debug-content"
+                            Content="@WarningsJson" />
+</TmDocumentDebugModal>
 
 @code {
-    private ElementReference _dialog;
-    private ElementReference _closeButton;
-    private DocumentEditorFocusTrapController? _focusTrap;
-    private bool _focusTrapActive;
-
     /// <summary>Whether the modal is open.</summary>
     [Parameter] public bool IsOpen { get; set; }
 
@@ -71,42 +42,4 @@
 
     /// <summary>Raised when the modal should close.</summary>
     [Parameter] public EventCallback OnClose { get; set; }
-
-    /// <inheritdoc />
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (IsOpen)
-        {
-            if (!_focusTrapActive)
-            {
-                _focusTrap ??= new DocumentEditorFocusTrapController(JSRuntime);
-                await _focusTrap.ActivateAsync(_dialog, _closeButton);
-                _focusTrapActive = true;
-            }
-
-            return;
-        }
-
-        await ReleaseFocusTrapAsync(restoreFocus: true);
-    }
-
-    private async ValueTask ReleaseFocusTrapAsync(bool restoreFocus)
-    {
-        if (_focusTrap is not null && _focusTrapActive)
-        {
-            await _focusTrap.ReleaseAsync(restoreFocus);
-        }
-
-        _focusTrapActive = false;
-    }
-
-    /// <inheritdoc />
-    public async ValueTask DisposeAsync()
-    {
-        await ReleaseFocusTrapAsync(restoreFocus: false);
-        if (_focusTrap is not null)
-        {
-            await _focusTrap.DisposeAsync();
-        }
-    }
 }

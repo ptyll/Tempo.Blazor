@@ -1976,6 +1976,7 @@
   "TmDocumentEditor_DebugClipboardWarnings": "Varování",
   "TmDocumentEditor_DebugDocumentJsonTitle": "JSON dokumentu",
   "TmDocumentEditor_DebugDocxDrawingMetadata": "DOCX DrawingML metadata",
+  "TmDocumentEditor_DebugNoData": "Žádná data",
   "TmDocumentEditor_DebugRuntimeRecovery": "Obnova runtime",
   "TmDocumentEditor_DebugRuntimeState": "Stav runtime",
   "TmDocumentEditor_DecreaseFontSize": "Zmenšit písmo",

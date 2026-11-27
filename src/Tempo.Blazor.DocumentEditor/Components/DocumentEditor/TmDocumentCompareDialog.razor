@@ -59,6 +59,7 @@
 
     <footer class="tm-document-version-dialog__actions">
         <button type="button"
+                class="tm-btn tm-btn-sm tm-btn-primary"
                 disabled="@_isComparing"
                 @onclick="RunCompareAsync"
                 data-testid="@TestId("document-compare-run")">
@@ -67,6 +68,7 @@
         @if (_result is not null && _result.Summary.HasChanges && OnExportRedline.HasDelegate)
         {
             <button type="button"
+                    class="tm-btn tm-btn-sm tm-btn-secondary"
                     disabled="@_isComparing"
                     aria-label="@Loc["TmDocumentEditor_CompareExportRedlineAria"]"
                     @onclick="() => OnExportRedline.InvokeAsync(_result)"
@@ -74,7 +76,7 @@
                 @Loc["TmDocumentEditor_CompareExportRedline"]
             </button>
         }
-        <button type="button" @onclick="OnClose">@Loc["TmDocumentEditor_Cancel"]</button>
+        <button type="button" class="tm-btn tm-btn-sm tm-btn-ghost" @onclick="OnClose">@Loc["TmDocumentEditor_Cancel"]</button>
     </footer>
 </section>
 

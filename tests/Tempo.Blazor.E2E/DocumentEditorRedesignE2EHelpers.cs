@@ -64,6 +64,39 @@ internal static class DocumentEditorRedesignE2EHelpers
         await page.WaitForTimeoutAsync(200);
     }
 
+    /// <summary>
+    /// Forces light/dark and the default/indigo brand the way a host does: every themed ancestor flips (the demo
+    /// shell wraps the page in its own [data-theme] element) and the opt-in indigo brand rides
+    /// <c>data-tm-theme</c> on the root element.
+    /// </summary>
+    public static async Task ApplyThemeAsync(IPage page, bool dark, bool indigo)
+    {
+        await page.EvaluateAsync(
+            """
+            ([dark, indigo]) => {
+                const nodes = new Set([document.documentElement, document.body, ...document.querySelectorAll('[data-theme]')]);
+                for (const node of nodes) {
+                    node.setAttribute('data-theme', dark ? 'dark' : 'light');
+                    node.classList.toggle('tm-dark', dark);
+                    node.classList.toggle('dark', dark);
+                }
+                if (indigo) document.documentElement.setAttribute('data-tm-theme', 'indigo');
+                else document.documentElement.removeAttribute('data-tm-theme');
+            }
+            """,
+            new object[] { dark, indigo });
+        await page.WaitForTimeoutAsync(500); // colour transitions (~120 ms) must have settled before a computed style is read
+    }
+
+    /// <summary>The four light/dark x default/indigo combinations of the redesign screenshot matrix.</summary>
+    public static readonly (bool Dark, bool Indigo, string Name)[] ThemeMatrix =
+    [
+        (false, false, "light-default"),
+        (true, false, "dark-default"),
+        (false, true, "light-indigo"),
+        (true, true, "dark-indigo"),
+    ];
+
     public static async Task<string> BackgroundOfAsync(ILocator locator)
         => await locator.EvaluateAsync<string>("el => getComputedStyle(el).backgroundColor");
 

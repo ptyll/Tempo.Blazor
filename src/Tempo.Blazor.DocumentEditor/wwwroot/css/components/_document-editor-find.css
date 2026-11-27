@@ -1,6 +1,6 @@
 /* ── Show-blocks overlay ── */
 .tm-wysiwyg--show-blocks [data-block-id] {
-    outline: 1px dashed #90caf9;
+    outline: 1px dashed var(--tm-color-info);
     position: relative;
 }
 
@@ -11,8 +11,8 @@
     left: -1px;
     font-size: 9px;
     line-height: 1;
-    background: #90caf9;
-    color: #0d47a1;
+    background: var(--tm-color-info-subtle);
+    color: var(--tm-color-info-text);
     padding: 1px 3px;
     border-radius: 2px 0 2px 0;
     pointer-events: none;
@@ -38,13 +38,29 @@ body.tm-document-editor--fullscreen .tm-document-editor {
     position: relative;
     z-index: var(--tm-document-z-search, 16);
     background-color: color-mix(in srgb, var(--tm-color-warning) 35%, transparent);
-    border-radius: var(--tm-radius-sm);
+    border-radius: var(--tm-radius-card);
 }
 
 .tm-wysiwyg-marker--search-active,
 .tm-wysiwyg-search-match--active {
     background-color: var(--tm-color-warning-strong);
     color: var(--tm-text-inverse);
+}
+
+/* ── Canvas search overlay (DOM elements created by search-overlay.mjs, which sets the geometry only) ──
+   The colours are the editor's highlight tokens (declared on .tm-document-editor, mapped onto the warning tokens, so
+   they flip with the theme).
+   Global on purpose: the overlay lives in the engine-owned DOM, and the scoped host stylesheet cannot reach it
+   (a functional ::deep(...) selector compiles to an invalid selector). */
+.tm-document-canvas-search-highlight {
+    border-radius: var(--tm-radius-xs);
+    background: var(--tm-document-highlight-match);
+}
+
+.tm-document-canvas-search-highlight--active {
+    background: var(--tm-document-highlight-match-active);
+    outline: 2px solid var(--tm-color-warning-strong);
+    outline-offset: 0;
 }
 
 .tm-wysiwyg-marker--search.tm-wysiwyg-marker--comment,
@@ -70,7 +86,7 @@ body.tm-document-editor--fullscreen .tm-document-editor {
     background: var(--tm-color-surface-elevated);
     border: 1px solid var(--tm-color-border);
     border-top: none;
-    border-radius: 0 0 var(--tm-radius-md) var(--tm-radius-md);
+    border-radius: 0 0 var(--tm-radius-card) var(--tm-radius-card);
     box-shadow: var(--tm-shadow-lg);
 }
 
@@ -87,7 +103,7 @@ body.tm-document-editor--fullscreen .tm-document-editor {
     color: var(--tm-color-text);
     background: var(--tm-bg-surface);
     border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-sm);
+    border-radius: var(--tm-radius-card);
 }
 
 .tm-document-editor__token-insert-filter:focus-visible {
@@ -113,7 +129,7 @@ body.tm-document-editor--fullscreen .tm-document-editor {
     background: var(--tm-bg-surface);
     border: 1px solid var(--tm-border-color);
     border-top: none;
-    border-radius: 0 0 var(--tm-radius-md) var(--tm-radius-md);
+    border-radius: 0 0 var(--tm-radius-card) var(--tm-radius-card);
     box-shadow: var(--tm-shadow-md);
 }
 
@@ -131,7 +147,7 @@ body.tm-document-editor--fullscreen .tm-document-editor {
     color: var(--tm-text-primary);
     background: var(--tm-bg-surface);
     border: 1px solid var(--tm-border-color);
-    border-radius: var(--tm-radius-sm);
+    border-radius: var(--tm-radius-control);
     font-size: var(--tm-font-size-sm);
     line-height: 1.4;
     outline: none;
@@ -150,29 +166,9 @@ body.tm-document-editor--fullscreen .tm-document-editor {
     white-space: nowrap;
 }
 
+/* The find actions are library buttons (tm-btn + a variant); only the flex placement is local. */
 .tm-document-find-panel__btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.75rem;
-    height: 1.75rem;
-    padding: 0;
-    color: var(--tm-text-primary);
-    background: transparent;
-    border: 1px solid var(--tm-border-color);
-    border-radius: var(--tm-radius-sm);
-    cursor: pointer;
-    font-size: var(--tm-font-size-sm);
-    transition: background var(--tm-transition-fast);
-}
-
-.tm-document-find-panel__btn:hover:not(:disabled) {
-    background: var(--tm-color-surface-hover);
-}
-
-.tm-document-find-panel__btn:disabled {
-    opacity: var(--tm-opacity-disabled);
-    cursor: not-allowed;
+    flex: 0 0 auto;
 }
 
 .tm-document-find-panel__btn--close {
@@ -201,7 +197,7 @@ body.tm-document-editor--fullscreen .tm-document-editor {
     color: var(--tm-text-primary);
     background: var(--tm-bg-surface);
     border: 1px solid var(--tm-border-color);
-    border-radius: var(--tm-radius-sm);
+    border-radius: var(--tm-radius-control);
     font: inherit;
 }
 
@@ -223,7 +219,7 @@ body.tm-document-editor--fullscreen .tm-document-editor {
     color: var(--tm-text-primary);
     background: transparent;
     border: 0;
-    border-radius: var(--tm-radius-sm);
+    border-radius: var(--tm-radius-control);
     font: inherit;
     text-align: left;
     cursor: pointer;

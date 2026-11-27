@@ -1,3 +1,6 @@
+import { extractTextRects } from '../render/text-rects.mjs';
+import { mapDiagnosticRects } from '../diagnostics/proofing-service.mjs';
+
 export function createCanvasSearchOverlay(options = {}) {
     const doc = options.document || globalThis.document;
     const canvasStack = options.canvasStack;
@@ -10,11 +13,7 @@ export function createCanvasSearchOverlay(options = {}) {
         }
 
         const activeIndex = Math.max(0, Number(searchState.activeIndex || 0) || 0);
-        const textRects = Array.isArray(render?.selectionLayout?.textRects)
-            ? render.selectionLayout.textRects
-            : Array.isArray(render?.displayList?.layout?.textRects)
-                ? render.displayList.layout.textRects
-                : [];
+        const textRects = extractTextRects(render);
         let rectCount = 0;
         for (const match of matches) {
             const fragments = rectsForMatch(textRects, match);
@@ -63,15 +62,12 @@ export function createCanvasSearchOverlay(options = {}) {
         element.setAttribute('data-testid', active ? 'document-canvas-search-active' : 'document-canvas-search-match');
         element.setAttribute('data-canvas-search-highlight', active ? 'active' : 'match');
         element.style.position = 'absolute';
-        element.style.left = `${fragment.x}px`;
-        element.style.top = `${fragment.y}px`;
-        element.style.width = `${Math.max(1, fragment.width)}px`;
-        element.style.height = `${Math.max(1, fragment.height)}px`;
-        element.style.borderRadius = '3px';
-        element.style.background = active
-            ? 'color-mix(in srgb, var(--tm-color-warning, #f59e0b) 48%, transparent)'
-            : 'color-mix(in srgb, var(--tm-color-warning, #f59e0b) 28%, transparent)';
-        element.style.outline = active ? '2px solid var(--tm-color-primary, #2563eb)' : '0';
+        // Layout units -> screen pixels: the page element carries the zoom factor (same as the selection layer).
+        const scale = Math.max(0.01, Number(page.pageElement.getAttribute?.('data-canvas-page-zoom-scale') || 1) || 1);
+        element.style.left = `${fragment.x * scale}px`;
+        element.style.top = `${fragment.y * scale}px`;
+        element.style.width = `${Math.max(1, fragment.width * scale)}px`;
+        element.style.height = `${Math.max(1, fragment.height * scale)}px`;
         layer.appendChild(element);
     }
 
@@ -83,7 +79,10 @@ export function createCanvasSearchOverlay(options = {}) {
             layer.style.position = 'absolute';
             layer.style.inset = '0';
             layer.style.pointerEvents = 'none';
-            layer.style.zIndex = '8';
+            // Above the selection layer (z-index 12): the active match IS the selection while the user steps through
+            // results, and the amber highlight must stay visible instead of reading as the blue selection tint.
+            // Colours and the radius live in _document-editor-find.css (--tm-document-highlight-match[-active]).
+            layer.style.zIndex = '13';
             pageElement.appendChild(layer);
         }
 
@@ -101,37 +100,10 @@ export function createCanvasSearchOverlay(options = {}) {
 }
 
 function rectsForMatch(textRects, match) {
-    const start = Number(match.start || 0) || 0;
-    const end = Number(match.end || 0) || 0;
-    const blockId = String(match.blockId || '');
-    const fragments = [];
-    for (const rect of textRects) {
-        if (String(rect.blockId || '') !== blockId) {
-            continue;
-        }
-
-        const rectStart = Number(rect.start || 0) || 0;
-        const rectEnd = Number(rect.end || rectStart) || rectStart;
-        const overlapStart = Math.max(start, rectStart);
-        const overlapEnd = Math.min(end, rectEnd);
-        if (overlapEnd <= overlapStart || rectEnd <= rectStart) {
-            continue;
-        }
-
-        const ratioStart = (overlapStart - rectStart) / (rectEnd - rectStart);
-        const ratioEnd = (overlapEnd - rectStart) / (rectEnd - rectStart);
-        const x = Number(rect.x || 0) + Number(rect.width || 0) * ratioStart;
-        const width = Number(rect.width || 0) * Math.max(0.01, ratioEnd - ratioStart);
-        fragments.push({
-            pageIndex: Number(rect.pageIndex || 0) || 0,
-            x,
-            y: Number(rect.y || 0) || 0,
-            width,
-            height: Number(rect.height || 0) || 0,
-        });
-    }
-
-    return fragments;
+    // The same range -> rectangles mapping the proofing squiggles use (one implementation, one set of fixtures).
+    return mapDiagnosticRects(
+        { blockId: match?.blockId, start: match?.start, end: match?.end },
+        textRects);
 }
 
 function findLayer(pageElement) {

@@ -1,0 +1,78 @@
+{
+  "itemName": "TmDocumentDebugModal",
+  "kind": "Component",
+  "category": "Document Editor",
+  "description": "Shared frame of the DocumentEditor developer debug modals (redesign DE-2.1): a centered modal dialog named by its Title with a scrim, a header with an optional Copy button (rendered only when OnCopy is bound), a Close button, a focus trap and the sections placed in ChildContent. TmDocumentJsonDebugModal and TmDocumentClipboardHtmlDebugModal are thin wrappers over it; their data-testid contract is unchanged.",
+  "packageId": "Tempo.Blazor.DocumentEditor",
+  "namespace": "Tempo.Blazor.Components.DocumentEditor",
+  "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentDebugModal.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.DocumentEditor"
+  ],
+  "parameters": [
+    {
+      "name": "IsOpen",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the modal is open."
+    },
+    {
+      "name": "Title",
+      "type": "string",
+      "isRequired": true,
+      "description": "Modal title; it is the visible heading and the dialog's accessible name."
+    },
+    {
+      "name": "ModalTestId",
+      "type": "string",
+      "isRequired": true,
+      "description": "Unprefixed test id of the dialog root (resolved through TestIdPrefix)."
+    },
+    {
+      "name": "CloseTestId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Unprefixed test id of the close button. No test id when omitted."
+    },
+    {
+      "name": "CopyTestId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Unprefixed test id of the copy button. No test id when omitted."
+    },
+    {
+      "name": "OnCopy",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when the user asks to copy the payload. The copy button is rendered only when a handler is bound."
+    },
+    {
+      "name": "OnClose",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when the modal should close (close button or backdrop)."
+    },
+    {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "The sections, normally TmDocumentDebugSection elements."
+    }
+  ],
+  "cssClasses": [
+    "tm-document-json-debug-modal",
+    "tm-document-json-debug-modal__backdrop",
+    "tm-document-json-debug-modal__content",
+    "tm-document-json-debug-modal__header",
+    "tm-document-json-debug-modal__title",
+    "tm-document-json-debug-modal__copy",
+    "tm-document-json-debug-modal__close"
+  ],
+  "examples": [
+    {
+      "title": "Debug modal with one section",
+      "code": "<TmDocumentDebugModal IsOpen=\"_open\" Title=\"Payload\" ModalTestId=\"payload-modal\" OnClose=\"() => _open = false\">\n    <TmDocumentDebugSection Title=\"Body\" SectionTestId=\"payload-body\" ContentTestId=\"payload-body-content\" Content=\"@_json\" />\n</TmDocumentDebugModal>"
+    }
+  ]
+}

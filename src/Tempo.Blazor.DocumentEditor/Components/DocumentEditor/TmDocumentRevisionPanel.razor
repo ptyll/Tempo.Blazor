@@ -37,7 +37,7 @@
                 </select>
             </label>
             <button type="button"
-                    class="tm-document-revision-panel__batch-action tm-document-revision-panel__batch-action--accept"
+                    class="tm-btn tm-btn-sm tm-btn-primary tm-document-revision-panel__batch-action tm-document-revision-panel__batch-action--accept"
                     disabled="@(!CanBatchReview)"
                     aria-disabled="@BatchActionAriaDisabled"
                     data-review-action="accept-all"
@@ -47,7 +47,7 @@
                 @Loc["TmDocumentEditor_AcceptAllRevisions"]
             </button>
             <button type="button"
-                    class="tm-document-revision-panel__batch-action tm-document-revision-panel__batch-action--reject"
+                    class="tm-btn tm-btn-sm tm-btn-secondary tm-document-revision-panel__batch-action tm-document-revision-panel__batch-action--reject"
                     disabled="@(!CanBatchReview)"
                     aria-disabled="@BatchActionAriaDisabled"
                     data-review-action="reject-all"
@@ -75,7 +75,7 @@
                     </button>
                     <div class="tm-document-revision-panel__actions">
                         <button type="button"
-                                class="tm-document-revision-panel__action tm-document-revision-panel__action--accept"
+                                class="tm-btn tm-btn-sm tm-btn-secondary tm-document-revision-panel__action tm-document-revision-panel__action--accept"
                                 disabled="@ReviewActionDisabled"
                                 aria-disabled="@ReviewActionAriaDisabled"
                                 aria-label="@Loc["TmDocumentEditor_AcceptRevisionAria", GetAuthorLabel(revision)]"
@@ -86,7 +86,7 @@
                             @Loc["TmDocumentEditor_AcceptRevision"]
                         </button>
                         <button type="button"
-                                class="tm-document-revision-panel__action tm-document-revision-panel__action--reject"
+                                class="tm-btn tm-btn-sm tm-btn-secondary tm-document-revision-panel__action tm-document-revision-panel__action--reject"
                                 disabled="@ReviewActionDisabled"
                                 aria-disabled="@ReviewActionAriaDisabled"
                                 aria-label="@Loc["TmDocumentEditor_RejectRevisionAria", GetAuthorLabel(revision)]"

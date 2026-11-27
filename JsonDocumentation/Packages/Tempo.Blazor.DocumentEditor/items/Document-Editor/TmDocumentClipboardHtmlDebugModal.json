@@ -2,7 +2,7 @@
   "itemName": "TmDocumentClipboardHtmlDebugModal",
   "kind": "Component",
   "category": "Document Editor",
-  "description": "Developer debug modal that shows the last paste's raw clipboard HTML, the normalized Tempo block JSON, and pipeline warnings, each in a preformatted section, with a close action.",
+  "description": "Developer debug modal that shows the last paste's raw clipboard HTML, the normalized Tempo block JSON, and pipeline warnings, each in a preformatted section, with a close action. Thin wrapper over TmDocumentDebugModal / TmDocumentDebugSection (an empty section shows the localized \"No data\" notice).",
   "packageId": "Tempo.Blazor.DocumentEditor",
   "namespace": "Tempo.Blazor.Components.DocumentEditor",
   "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentClipboardHtmlDebugModal.razor",

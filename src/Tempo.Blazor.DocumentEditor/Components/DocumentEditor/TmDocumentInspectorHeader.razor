@@ -1,0 +1,89 @@
+@namespace Tempo.Blazor.Components.DocumentEditor
+@inherits Tempo.Blazor.Components.TmComponentBase
+
+<header class="@RootClass" data-testid="@RootTestId("document-inspector-header")">
+    @if (!string.IsNullOrWhiteSpace(Icon))
+    {
+        <span class="tm-document-inspector-header__icon" aria-hidden="true">
+            <TmIcon Name="@Icon" Size="IconSize.Md" />
+        </span>
+    }
+    <div class="tm-document-inspector-header__text">
+        @RenderHeading
+        @if (!string.IsNullOrWhiteSpace(Subtitle))
+        {
+            <p class="tm-document-inspector-header__subtitle">@Subtitle</p>
+        }
+    </div>
+    @if (Actions is not null || OnClose.HasDelegate)
+    {
+        <div class="tm-document-inspector-header__trailing">
+            @if (Actions is not null)
+            {
+                <div class="tm-document-inspector-header__actions">@Actions</div>
+            }
+            @if (OnClose.HasDelegate)
+            {
+                <button type="button"
+                        class="tm-document-inspector-header__close"
+                        aria-label="@Loc["TmDocumentEditor_Close"]"
+                        title="@Loc["TmDocumentEditor_Close"]"
+                        data-testid="@(string.IsNullOrEmpty(CloseTestId) ? null : TestId(CloseTestId))"
+                        @onclick="OnClose">
+                    <TmIcon Name="x" Size="IconSize.Sm" />
+                </button>
+            }
+        </div>
+    }
+</header>
+
+@code {
+    private readonly string _generatedTitleId = $"tm-document-inspector-title-{Guid.NewGuid():N}";
+
+    /// <summary>Panel title, rendered as the heading the panel region labels itself by (<c>aria-labelledby</c>).</summary>
+    [Parameter] public string? Title { get; set; }
+
+    /// <summary>
+    /// Id of the title heading. Set it when the host region needs a stable <c>aria-labelledby</c> target; when
+    /// omitted a unique id is generated and readable through <see cref="ResolvedTitleId"/>.
+    /// </summary>
+    [Parameter] public string? TitleId { get; set; }
+
+    /// <summary>Optional secondary line under the title (a count, a file name, a status).</summary>
+    [Parameter] public string? Subtitle { get; set; }
+
+    /// <summary>Optional leading icon name. The icon is decorative and always <c>aria-hidden</c>.</summary>
+    [Parameter] public string? Icon { get; set; }
+
+    /// <summary>Heading level of the title (2-6). Defaults to 2.</summary>
+    [Parameter] public int HeadingLevel { get; set; } = 2;
+
+    /// <summary>Host actions rendered before the close button (a filter menu, an overflow button).</summary>
+    [Parameter] public RenderFragment? Actions { get; set; }
+
+    /// <summary>Raised by the close (X) button. The button is rendered only when a handler is bound.</summary>
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    /// <summary>Unprefixed test id of the close button (resolved through <c>TestIdPrefix</c>). No test id when omitted.</summary>
+    [Parameter] public string? CloseTestId { get; set; }
+
+    /// <summary>Additional CSS classes on the header root.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>The id the title heading renders with: <see cref="TitleId"/> or the generated one.</summary>
+    public string ResolvedTitleId => string.IsNullOrWhiteSpace(TitleId) ? _generatedTitleId : TitleId!;
+
+    private string RootClass => string.IsNullOrWhiteSpace(Class)
+        ? "tm-document-inspector-header"
+        : $"tm-document-inspector-header {Class}";
+
+    private RenderFragment RenderHeading => builder =>
+    {
+        var level = Math.Clamp(HeadingLevel, 2, 6);
+        builder.OpenElement(0, $"h{level}");
+        builder.AddAttribute(1, "id", ResolvedTitleId);
+        builder.AddAttribute(2, "class", "tm-document-inspector-header__title");
+        builder.AddContent(3, Title);
+        builder.CloseElement();
+    };
+}

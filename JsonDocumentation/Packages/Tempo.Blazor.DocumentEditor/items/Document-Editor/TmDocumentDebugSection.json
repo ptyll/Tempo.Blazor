@@ -1,0 +1,51 @@
+{
+  "itemName": "TmDocumentDebugSection",
+  "kind": "Component",
+  "category": "Document Editor",
+  "description": "One section of a TmDocumentDebugModal: a heading and a monospace block. A null, empty or whitespace Content hides the block and shows the localized \"No data\" notice instead; both test ids stay on the DOM so a host selector never goes stale.",
+  "packageId": "Tempo.Blazor.DocumentEditor",
+  "namespace": "Tempo.Blazor.Components.DocumentEditor",
+  "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentDebugSection.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.DocumentEditor"
+  ],
+  "parameters": [
+    {
+      "name": "Title",
+      "type": "string",
+      "isRequired": true,
+      "description": "Section heading."
+    },
+    {
+      "name": "SectionTestId",
+      "type": "string",
+      "isRequired": true,
+      "description": "Unprefixed test id of the section element (resolved through TestIdPrefix)."
+    },
+    {
+      "name": "ContentTestId",
+      "type": "string",
+      "isRequired": true,
+      "description": "Unprefixed test id of the content block (resolved through TestIdPrefix)."
+    },
+    {
+      "name": "Content",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Text shown in the monospace block. Null, empty or whitespace shows the localized \"No data\" notice instead."
+    }
+  ],
+  "cssClasses": [
+    "tm-document-json-debug-modal__section",
+    "tm-document-json-debug-modal__section-title",
+    "tm-document-json-debug-modal__json",
+    "tm-document-json-debug-modal__empty"
+  ],
+  "examples": [
+    {
+      "title": "Section",
+      "code": "<TmDocumentDebugSection Title=\"Warnings\" SectionTestId=\"warnings\" ContentTestId=\"warnings-content\" Content=\"@_warningsJson\" />"
+    }
+  ]
+}
