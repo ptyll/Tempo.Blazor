@@ -386,12 +386,15 @@ public sealed class DocumentEditorCanvasImportExportE2ETests : WasmTestBase
         string screenshotPath)
     {
         await page.GetByTestId("document-ribbon-tab-review").ClickAsync();
+        var workspaceBefore = await DocumentEditorLayoutShiftGuard.MeasureWorkspaceAsync(page);
         await page.GetByTestId("document-compare-open").ClickAsync();
         await Assertions.Expect(page.GetByTestId("document-compare-dialog")).ToBeVisibleAsync(new() { Timeout = 10_000 });
+        await DocumentEditorLayoutShiftGuard.AssertWorkspaceUnchangedAsync(page, workspaceBefore, "opening the compare dialog");
         await page.GetByTestId("document-compare-target-document-id").FillAsync(targetDocumentId);
         await page.GetByTestId("document-compare-run").ClickAsync();
         await Assertions.Expect(page.GetByTestId("document-diff-viewer")).ToBeVisibleAsync(new() { Timeout = 15_000 });
         await Assertions.Expect(page.GetByTestId("document-diff-side-by-side")).ToContainTextAsync(expectedMarker, new() { Timeout = 10_000 });
+        await DocumentEditorLayoutShiftGuard.AssertWorkspaceUnchangedAsync(page, workspaceBefore, "rendering the compare result");
         await page.GetByTestId("document-compare-dialog").ScreenshotAsync(new LocatorScreenshotOptions
         {
             Path = screenshotPath,

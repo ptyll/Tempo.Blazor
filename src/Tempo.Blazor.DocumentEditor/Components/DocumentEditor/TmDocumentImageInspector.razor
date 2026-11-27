@@ -40,259 +40,292 @@
                 </div>
             }
 
-            <label class="tm-document-image-inspector__field tm-document-image-inspector__checkbox">
-                <span>@Loc["TmDocumentEditor_ImageToggleCaption"]</span>
-                <input type="checkbox"
-                       checked="@HasCaption"
-                       data-testid="@TestId("document-image-inspector-caption-toggle")"
-                       @onchange="HandleCaptionToggleChangedAsync" />
-            </label>
-
-            <label class="tm-document-image-inspector__field">
-                <span>@Loc["TmDocumentEditor_ImageCaption"]</span>
-                <input value="@_captionInput"
-                       placeholder="@Loc["TmDocumentEditor_ImageCaption"]"
-                       data-testid="@TestId("document-image-inspector-caption")"
-                       data-human-testid="document-image-caption-input"
-                       @oninput="HandleCaptionInputAsync"
-                       @onchange="HandleCaptionChangedAsync" />
-            </label>
-        </div>
-    </details>
-
-    <details class="tm-document-image-inspector__section" data-testid="@TestId("document-image-inspector-section-size")" open>
-        <summary>
-            <TmIcon Name="crop" Size="IconSize.Xs" />
-            <span>@Loc["TmDocumentEditor_ImageSectionSizeRotation"]</span>
-        </summary>
-        <div class="tm-document-image-inspector__section-body">
-            <div class="tm-document-image-inspector__size">
-                <label class="tm-document-image-inspector__field">
-                    <span>@Loc["TmDocumentEditor_ImageWidth"]</span>
-                    <input type="number"
-                           min="1"
-                           step="1"
-                           value="@_widthInput"
-                           data-testid="@TestId("document-image-inspector-width")"
-                           data-human-testid="document-image-width-input"
-                           @oninput="HandleWidthInputAsync"
-                           @onchange="HandleWidthChangedAsync" />
+            @if (ToggleCaption.HasDelegate || CaptionChanged.HasDelegate)
+            {
+                <label class="tm-document-image-inspector__field tm-document-image-inspector__checkbox">
+                    <span>@Loc["TmDocumentEditor_ImageToggleCaption"]</span>
+                    <input type="checkbox"
+                           checked="@HasCaption"
+                           data-testid="@TestId("document-image-inspector-caption-toggle")"
+                           @onchange="HandleCaptionToggleChangedAsync" />
                 </label>
+            }
+
+            @if (CaptionChanged.HasDelegate)
+            {
                 <label class="tm-document-image-inspector__field">
-                    <span>@Loc["TmDocumentEditor_ImageHeight"]</span>
-                    <input type="number"
-                           min="1"
-                           step="1"
-                           value="@_heightInput"
-                           data-testid="@TestId("document-image-inspector-height")"
-                           data-human-testid="document-image-height-input"
-                           @oninput="HandleHeightInputAsync"
-                           @onchange="HandleHeightChangedAsync" />
+                    <span>@Loc["TmDocumentEditor_ImageCaption"]</span>
+                    <input value="@_captionInput"
+                           placeholder="@Loc["TmDocumentEditor_ImageCaption"]"
+                           data-testid="@TestId("document-image-inspector-caption")"
+                           data-human-testid="document-image-caption-input"
+                           @oninput="HandleCaptionInputAsync"
+                           @onchange="HandleCaptionChangedAsync" />
                 </label>
-            </div>
-            <label class="tm-document-image-inspector__field">
-                <span>@Loc["TmDocumentEditor_ImageRotation"]</span>
-                <input type="number"
-                       value="@RotationValue"
-                       data-testid="@TestId("document-image-inspector-rotation")"
-                       readonly />
-            </label>
-            <label class="tm-document-image-inspector__field tm-document-image-inspector__checkbox">
-                <span>@Loc["TmDocumentEditor_ImageLockAspectRatio"]</span>
-                <input type="checkbox"
-                       checked="@LockAspectRatio"
-                       data-testid="@TestId("document-image-inspector-lock-aspect")"
-                       @onchange="HandleLockAspectRatioChangedAsync" />
-            </label>
-            <button type="button"
-                    class="tm-document-image-inspector__command"
-                    data-testid="@TestId("document-image-inspector-reset-size")"
-                    @onclick="HandleResetSizeAsync">
-                @Loc["TmDocumentEditor_ImageResetSize"]
-            </button>
+            }
         </div>
     </details>
 
-    <details class="tm-document-image-inspector__section" data-testid="@TestId("document-image-inspector-section-wrap")" open>
-        <summary>
-            <TmIcon Name="align-left" Size="IconSize.Xs" />
-            <span>@Loc["TmDocumentEditor_ImageSectionWrapping"]</span>
-        </summary>
-        <div class="tm-document-image-inspector__section-body">
-            <div class="tm-document-image-inspector__group" role="group" aria-label="@Loc["TmDocumentEditor_ImageWrapMode"]">
-                <button type="button"
-                        class="@WrapButtonClass(DocumentWrapMode.Inline)"
-                        aria-pressed="@AriaPressed(CurrentWrapMode == DocumentWrapMode.Inline)"
-                        data-testid="@TestId("document-image-inspector-wrap-inline")"
-                        data-human-testid="document-image-wrap-button"
-                        data-wrap-mode="Inline"
-                        title="@Loc["TmDocumentEditor_ImageWrapInline"]"
-                        @onclick="() => WrapModeChanged.InvokeAsync(DocumentWrapMode.Inline)">
-                    <TmIcon Name="@WrapIcon(DocumentWrapMode.Inline)" Size="IconSize.Xs" />
-                    <span class="tm-document-editor__sr-only">@Loc["TmDocumentEditor_ImageWrapInline"]</span>
-                </button>
-                <button type="button"
-                        class="@WrapButtonClass(DocumentWrapMode.Square)"
-                        aria-pressed="@AriaPressed(CurrentWrapMode == DocumentWrapMode.Square)"
-                        data-testid="@TestId("document-image-inspector-wrap-square")"
-                        data-human-testid="document-image-wrap-button"
-                        data-wrap-mode="Square"
-                        title="@Loc["TmDocumentEditor_ImageWrapSquare"]"
-                        @onclick="() => WrapModeChanged.InvokeAsync(DocumentWrapMode.Square)">
-                    <TmIcon Name="@WrapIcon(DocumentWrapMode.Square)" Size="IconSize.Xs" />
-                    <span class="tm-document-editor__sr-only">@Loc["TmDocumentEditor_ImageWrapSquare"]</span>
-                </button>
-                <button type="button"
-                        class="@WrapButtonClass(DocumentWrapMode.Tight)"
-                        aria-pressed="@AriaPressed(CurrentWrapMode == DocumentWrapMode.Tight)"
-                        data-testid="@TestId("document-image-inspector-wrap-tight")"
-                        data-human-testid="document-image-wrap-button"
-                        data-wrap-mode="Tight"
-                        title="@Loc["TmDocumentEditor_ImageWrapTight"]"
-                        @onclick="() => WrapModeChanged.InvokeAsync(DocumentWrapMode.Tight)">
-                    <TmIcon Name="@WrapIcon(DocumentWrapMode.Tight)" Size="IconSize.Xs" />
-                    <span class="tm-document-editor__sr-only">@Loc["TmDocumentEditor_ImageWrapTight"]</span>
-                </button>
-                <button type="button"
-                        class="@WrapButtonClass(DocumentWrapMode.Through)"
-                        aria-pressed="@AriaPressed(CurrentWrapMode == DocumentWrapMode.Through)"
-                        data-testid="@TestId("document-image-inspector-wrap-through")"
-                        data-human-testid="document-image-wrap-button"
-                        data-wrap-mode="Through"
-                        title="@Loc["TmDocumentEditor_ImageWrapThrough"]"
-                        @onclick="() => WrapModeChanged.InvokeAsync(DocumentWrapMode.Through)">
-                    <TmIcon Name="@WrapIcon(DocumentWrapMode.Through)" Size="IconSize.Xs" />
-                    <span class="tm-document-editor__sr-only">@Loc["TmDocumentEditor_ImageWrapThrough"]</span>
-                </button>
-                <button type="button"
-                        class="@WrapButtonClass(DocumentWrapMode.TopBottom)"
-                        aria-pressed="@AriaPressed(CurrentWrapMode == DocumentWrapMode.TopBottom)"
-                        data-testid="@TestId("document-image-inspector-wrap-top-bottom")"
-                        data-human-testid="document-image-wrap-button"
-                        data-wrap-mode="TopBottom"
-                        title="@Loc["TmDocumentEditor_ImageWrapTopBottom"]"
-                        @onclick="() => WrapModeChanged.InvokeAsync(DocumentWrapMode.TopBottom)">
-                    <TmIcon Name="@WrapIcon(DocumentWrapMode.TopBottom)" Size="IconSize.Xs" />
-                    <span class="tm-document-editor__sr-only">@Loc["TmDocumentEditor_ImageWrapTopBottom"]</span>
-                </button>
-                <button type="button"
-                        class="@WrapButtonClass(DocumentWrapMode.BehindText)"
-                        aria-pressed="@AriaPressed(CurrentWrapMode == DocumentWrapMode.BehindText)"
-                        data-testid="@TestId("document-image-inspector-wrap-behind")"
-                        data-human-testid="document-image-wrap-button"
-                        data-wrap-mode="BehindText"
-                        title="@Loc["TmDocumentEditor_ImageWrapBehindText"]"
-                        @onclick="() => WrapModeChanged.InvokeAsync(DocumentWrapMode.BehindText)">
-                    <TmIcon Name="@WrapIcon(DocumentWrapMode.BehindText)" Size="IconSize.Xs" />
-                    <span class="tm-document-editor__sr-only">@Loc["TmDocumentEditor_ImageWrapBehindText"]</span>
-                </button>
-                <button type="button"
-                        class="@WrapButtonClass(DocumentWrapMode.InFrontOfText)"
-                        aria-pressed="@AriaPressed(CurrentWrapMode == DocumentWrapMode.InFrontOfText)"
-                        data-testid="@TestId("document-image-inspector-wrap-in-front")"
-                        data-human-testid="document-image-wrap-button"
-                        data-wrap-mode="InFrontOfText"
-                        title="@Loc["TmDocumentEditor_ImageWrapInFrontOfText"]"
-                        @onclick="() => WrapModeChanged.InvokeAsync(DocumentWrapMode.InFrontOfText)">
-                    <TmIcon Name="@WrapIcon(DocumentWrapMode.InFrontOfText)" Size="IconSize.Xs" />
-                    <span class="tm-document-editor__sr-only">@Loc["TmDocumentEditor_ImageWrapInFrontOfText"]</span>
-                </button>
-            </div>
-        </div>
-    </details>
-
-    <details class="tm-document-image-inspector__section" data-testid="@TestId("document-image-inspector-section-position")" open>
-        <summary>
-            <TmIcon Name="move" Size="IconSize.Xs" />
-            <span>@Loc["TmDocumentEditor_ImageSectionPosition"]</span>
-        </summary>
-        <div class="tm-document-image-inspector__section-body">
-            <div class="tm-document-image-inspector__group" role="group" aria-label="@Loc["TmDocumentEditor_ImageAlignment"]">
-                <button type="button"
-                        class="@AlignmentButtonClass(DocumentImageAlignment.Start)"
-                        aria-pressed="@AriaPressed(CurrentAlignment == DocumentImageAlignment.Start)"
-                        data-testid="@TestId("document-image-inspector-align-start")"
-                        title="@Loc["TmDocumentEditor_ImageAlignStart"]"
-                        @onclick="() => AlignmentChanged.InvokeAsync(DocumentImageAlignment.Start)">
-                    <TmIcon Name="@AlignmentIcon(DocumentImageAlignment.Start)" Size="IconSize.Xs" />
-                    <span class="tm-document-editor__sr-only">@Loc["TmDocumentEditor_ImageAlignStart"]</span>
-                </button>
-                <button type="button"
-                        class="@AlignmentButtonClass(DocumentImageAlignment.Center)"
-                        aria-pressed="@AriaPressed(CurrentAlignment == DocumentImageAlignment.Center)"
-                        data-testid="@TestId("document-image-inspector-align-center")"
-                        title="@Loc["TmDocumentEditor_ImageAlignCenter"]"
-                        @onclick="() => AlignmentChanged.InvokeAsync(DocumentImageAlignment.Center)">
-                    <TmIcon Name="@AlignmentIcon(DocumentImageAlignment.Center)" Size="IconSize.Xs" />
-                    <span class="tm-document-editor__sr-only">@Loc["TmDocumentEditor_ImageAlignCenter"]</span>
-                </button>
-                <button type="button"
-                        class="@AlignmentButtonClass(DocumentImageAlignment.End)"
-                        aria-pressed="@AriaPressed(CurrentAlignment == DocumentImageAlignment.End)"
-                        data-testid="@TestId("document-image-inspector-align-end")"
-                        title="@Loc["TmDocumentEditor_ImageAlignEnd"]"
-                        @onclick="() => AlignmentChanged.InvokeAsync(DocumentImageAlignment.End)">
-                    <TmIcon Name="@AlignmentIcon(DocumentImageAlignment.End)" Size="IconSize.Xs" />
-                    <span class="tm-document-editor__sr-only">@Loc["TmDocumentEditor_ImageAlignEnd"]</span>
-                </button>
-            </div>
-            <div class="tm-document-image-inspector__size">
+    @if (SizeChanged.HasDelegate)
+    {
+        <details class="tm-document-image-inspector__section" data-testid="@TestId("document-image-inspector-section-size")" open>
+            <summary>
+                <TmIcon Name="crop" Size="IconSize.Xs" />
+                <span>@Loc["TmDocumentEditor_ImageSectionSizeRotation"]</span>
+            </summary>
+            <div class="tm-document-image-inspector__section-body">
+                <div class="tm-document-image-inspector__size">
+                    <label class="tm-document-image-inspector__field">
+                        <span>@Loc["TmDocumentEditor_ImageWidth"]</span>
+                        <input type="number"
+                               min="1"
+                               step="1"
+                               value="@_widthInput"
+                               data-testid="@TestId("document-image-inspector-width")"
+                               data-human-testid="document-image-width-input"
+                               @oninput="HandleWidthInputAsync"
+                               @onchange="HandleWidthChangedAsync" />
+                    </label>
+                    <label class="tm-document-image-inspector__field">
+                        <span>@Loc["TmDocumentEditor_ImageHeight"]</span>
+                        <input type="number"
+                               min="1"
+                               step="1"
+                               value="@_heightInput"
+                               data-testid="@TestId("document-image-inspector-height")"
+                               data-human-testid="document-image-height-input"
+                               @oninput="HandleHeightInputAsync"
+                               @onchange="HandleHeightChangedAsync" />
+                    </label>
+                </div>
                 <label class="tm-document-image-inspector__field">
-                    <span>@Loc["TmDocumentEditor_ImagePositionX"]</span>
+                    <span>@Loc["TmDocumentEditor_ImageRotation"]</span>
                     <input type="number"
-                           step="1"
-                           value="@_xInput"
-                           data-testid="@TestId("document-image-inspector-position-x")"
-                           @oninput="HandlePositionXInputAsync"
-                           @onchange="HandlePositionXChangedAsync" />
+                           value="@RotationValue"
+                           data-testid="@TestId("document-image-inspector-rotation")"
+                           readonly />
                 </label>
-                <label class="tm-document-image-inspector__field">
-                    <span>@Loc["TmDocumentEditor_ImagePositionY"]</span>
-                    <input type="number"
-                           step="1"
-                           value="@_yInput"
-                           data-testid="@TestId("document-image-inspector-position-y")"
-                           @oninput="HandlePositionYInputAsync"
-                           @onchange="HandlePositionYChangedAsync" />
+                <label class="tm-document-image-inspector__field tm-document-image-inspector__checkbox">
+                    <span>@Loc["TmDocumentEditor_ImageLockAspectRatio"]</span>
+                    <input type="checkbox"
+                           checked="@LockAspectRatio"
+                           data-testid="@TestId("document-image-inspector-lock-aspect")"
+                           @onchange="HandleLockAspectRatioChangedAsync" />
                 </label>
+                <button type="button"
+                        class="tm-document-image-inspector__command"
+                        data-testid="@TestId("document-image-inspector-reset-size")"
+                        @onclick="HandleResetSizeAsync">
+                    @Loc["TmDocumentEditor_ImageResetSize"]
+                </button>
             </div>
-            <div class="tm-document-image-inspector__asset"
-                 data-testid="@TestId("document-image-inspector-anchor-paragraph")">
-                <span>@Loc["TmDocumentEditor_ImageAnchorParagraph"]</span>
-                <strong>@AnchorParagraphLabel</strong>
-            </div>
-            <label class="tm-document-image-inspector__field tm-document-image-inspector__checkbox">
-                <span>@Loc["TmDocumentEditor_ImageLockAnchor"]</span>
-                <input type="checkbox"
-                       checked="@IsAnchorLocked"
-                       data-testid="@TestId("document-image-inspector-lock-anchor")"
-                       @onchange="HandleLockAnchorChangedAsync" />
-            </label>
-        </div>
-    </details>
+        </details>
+    }
 
-    <details class="tm-document-image-inspector__section" data-testid="@TestId("document-image-inspector-section-order")">
-        <summary>
-            <TmIcon Name="layers" Size="IconSize.Xs" />
-            <span>@Loc["TmDocumentEditor_ImageSectionOrder"]</span>
-        </summary>
-        <div class="tm-document-image-inspector__section-body">
-            <div class="tm-document-image-inspector__group" role="group" aria-label="@Loc["TmDocumentEditor_ImageSectionOrder"]">
-                <button type="button"
-                        class="tm-document-image-inspector__swatch"
-                        data-testid="@TestId("document-image-inspector-bring-forward")"
-                        @onclick="() => BringForward.InvokeAsync()">
-                    @Loc["TmDocumentEditor_ImageBringForward"]
-                </button>
-                <button type="button"
-                        class="tm-document-image-inspector__swatch"
-                        data-testid="@TestId("document-image-inspector-send-backward")"
-                        @onclick="() => SendBackward.InvokeAsync()">
-                    @Loc["TmDocumentEditor_ImageSendBackward"]
-                </button>
+    @if (WrapModeChanged.HasDelegate)
+    {
+        <details class="tm-document-image-inspector__section" data-testid="@TestId("document-image-inspector-section-wrap")" open>
+            <summary>
+                <TmIcon Name="align-left" Size="IconSize.Xs" />
+                <span>@Loc["TmDocumentEditor_ImageSectionWrapping"]</span>
+            </summary>
+            <div class="tm-document-image-inspector__section-body">
+                <div class="tm-document-image-inspector__group" role="group" aria-label="@Loc["TmDocumentEditor_ImageWrapMode"]">
+                    <button type="button"
+                            class="@WrapButtonClass(DocumentWrapMode.Inline)"
+                            aria-pressed="@AriaPressed(CurrentWrapMode == DocumentWrapMode.Inline)"
+                            data-testid="@TestId("document-image-inspector-wrap-inline")"
+                            data-human-testid="document-image-wrap-button"
+                            data-wrap-mode="Inline"
+                            title="@Loc["TmDocumentEditor_ImageWrapInline"]"
+                            @onclick="() => WrapModeChanged.InvokeAsync(DocumentWrapMode.Inline)">
+                        <TmIcon Name="@WrapIcon(DocumentWrapMode.Inline)" Size="IconSize.Xs" />
+                        <span class="tm-document-editor__sr-only">@Loc["TmDocumentEditor_ImageWrapInline"]</span>
+                    </button>
+                    <button type="button"
+                            class="@WrapButtonClass(DocumentWrapMode.Square)"
+                            aria-pressed="@AriaPressed(CurrentWrapMode == DocumentWrapMode.Square)"
+                            data-testid="@TestId("document-image-inspector-wrap-square")"
+                            data-human-testid="document-image-wrap-button"
+                            data-wrap-mode="Square"
+                            title="@Loc["TmDocumentEditor_ImageWrapSquare"]"
+                            @onclick="() => WrapModeChanged.InvokeAsync(DocumentWrapMode.Square)">
+                        <TmIcon Name="@WrapIcon(DocumentWrapMode.Square)" Size="IconSize.Xs" />
+                        <span class="tm-document-editor__sr-only">@Loc["TmDocumentEditor_ImageWrapSquare"]</span>
+                    </button>
+                    <button type="button"
+                            class="@WrapButtonClass(DocumentWrapMode.Tight)"
+                            aria-pressed="@AriaPressed(CurrentWrapMode == DocumentWrapMode.Tight)"
+                            data-testid="@TestId("document-image-inspector-wrap-tight")"
+                            data-human-testid="document-image-wrap-button"
+                            data-wrap-mode="Tight"
+                            title="@Loc["TmDocumentEditor_ImageWrapTight"]"
+                            @onclick="() => WrapModeChanged.InvokeAsync(DocumentWrapMode.Tight)">
+                        <TmIcon Name="@WrapIcon(DocumentWrapMode.Tight)" Size="IconSize.Xs" />
+                        <span class="tm-document-editor__sr-only">@Loc["TmDocumentEditor_ImageWrapTight"]</span>
+                    </button>
+                    <button type="button"
+                            class="@WrapButtonClass(DocumentWrapMode.Through)"
+                            aria-pressed="@AriaPressed(CurrentWrapMode == DocumentWrapMode.Through)"
+                            data-testid="@TestId("document-image-inspector-wrap-through")"
+                            data-human-testid="document-image-wrap-button"
+                            data-wrap-mode="Through"
+                            title="@Loc["TmDocumentEditor_ImageWrapThrough"]"
+                            @onclick="() => WrapModeChanged.InvokeAsync(DocumentWrapMode.Through)">
+                        <TmIcon Name="@WrapIcon(DocumentWrapMode.Through)" Size="IconSize.Xs" />
+                        <span class="tm-document-editor__sr-only">@Loc["TmDocumentEditor_ImageWrapThrough"]</span>
+                    </button>
+                    <button type="button"
+                            class="@WrapButtonClass(DocumentWrapMode.TopBottom)"
+                            aria-pressed="@AriaPressed(CurrentWrapMode == DocumentWrapMode.TopBottom)"
+                            data-testid="@TestId("document-image-inspector-wrap-top-bottom")"
+                            data-human-testid="document-image-wrap-button"
+                            data-wrap-mode="TopBottom"
+                            title="@Loc["TmDocumentEditor_ImageWrapTopBottom"]"
+                            @onclick="() => WrapModeChanged.InvokeAsync(DocumentWrapMode.TopBottom)">
+                        <TmIcon Name="@WrapIcon(DocumentWrapMode.TopBottom)" Size="IconSize.Xs" />
+                        <span class="tm-document-editor__sr-only">@Loc["TmDocumentEditor_ImageWrapTopBottom"]</span>
+                    </button>
+                    <button type="button"
+                            class="@WrapButtonClass(DocumentWrapMode.BehindText)"
+                            aria-pressed="@AriaPressed(CurrentWrapMode == DocumentWrapMode.BehindText)"
+                            data-testid="@TestId("document-image-inspector-wrap-behind")"
+                            data-human-testid="document-image-wrap-button"
+                            data-wrap-mode="BehindText"
+                            title="@Loc["TmDocumentEditor_ImageWrapBehindText"]"
+                            @onclick="() => WrapModeChanged.InvokeAsync(DocumentWrapMode.BehindText)">
+                        <TmIcon Name="@WrapIcon(DocumentWrapMode.BehindText)" Size="IconSize.Xs" />
+                        <span class="tm-document-editor__sr-only">@Loc["TmDocumentEditor_ImageWrapBehindText"]</span>
+                    </button>
+                    <button type="button"
+                            class="@WrapButtonClass(DocumentWrapMode.InFrontOfText)"
+                            aria-pressed="@AriaPressed(CurrentWrapMode == DocumentWrapMode.InFrontOfText)"
+                            data-testid="@TestId("document-image-inspector-wrap-in-front")"
+                            data-human-testid="document-image-wrap-button"
+                            data-wrap-mode="InFrontOfText"
+                            title="@Loc["TmDocumentEditor_ImageWrapInFrontOfText"]"
+                            @onclick="() => WrapModeChanged.InvokeAsync(DocumentWrapMode.InFrontOfText)">
+                        <TmIcon Name="@WrapIcon(DocumentWrapMode.InFrontOfText)" Size="IconSize.Xs" />
+                        <span class="tm-document-editor__sr-only">@Loc["TmDocumentEditor_ImageWrapInFrontOfText"]</span>
+                    </button>
+                </div>
             </div>
-        </div>
-    </details>
+        </details>
+    }
+
+    @if (AlignmentChanged.HasDelegate || PositionChanged.HasDelegate || LockAnchorChanged.HasDelegate)
+    {
+        <details class="tm-document-image-inspector__section" data-testid="@TestId("document-image-inspector-section-position")" open>
+            <summary>
+                <TmIcon Name="move" Size="IconSize.Xs" />
+                <span>@Loc["TmDocumentEditor_ImageSectionPosition"]</span>
+            </summary>
+            <div class="tm-document-image-inspector__section-body">
+                @if (AlignmentChanged.HasDelegate)
+                {
+                    <div class="tm-document-image-inspector__group" role="group" aria-label="@Loc["TmDocumentEditor_ImageAlignment"]">
+                        <button type="button"
+                                class="@AlignmentButtonClass(DocumentImageAlignment.Start)"
+                                aria-pressed="@AriaPressed(CurrentAlignment == DocumentImageAlignment.Start)"
+                                data-testid="@TestId("document-image-inspector-align-start")"
+                                title="@Loc["TmDocumentEditor_ImageAlignStart"]"
+                                @onclick="() => AlignmentChanged.InvokeAsync(DocumentImageAlignment.Start)">
+                            <TmIcon Name="@AlignmentIcon(DocumentImageAlignment.Start)" Size="IconSize.Xs" />
+                            <span class="tm-document-editor__sr-only">@Loc["TmDocumentEditor_ImageAlignStart"]</span>
+                        </button>
+                        <button type="button"
+                                class="@AlignmentButtonClass(DocumentImageAlignment.Center)"
+                                aria-pressed="@AriaPressed(CurrentAlignment == DocumentImageAlignment.Center)"
+                                data-testid="@TestId("document-image-inspector-align-center")"
+                                title="@Loc["TmDocumentEditor_ImageAlignCenter"]"
+                                @onclick="() => AlignmentChanged.InvokeAsync(DocumentImageAlignment.Center)">
+                            <TmIcon Name="@AlignmentIcon(DocumentImageAlignment.Center)" Size="IconSize.Xs" />
+                            <span class="tm-document-editor__sr-only">@Loc["TmDocumentEditor_ImageAlignCenter"]</span>
+                        </button>
+                        <button type="button"
+                                class="@AlignmentButtonClass(DocumentImageAlignment.End)"
+                                aria-pressed="@AriaPressed(CurrentAlignment == DocumentImageAlignment.End)"
+                                data-testid="@TestId("document-image-inspector-align-end")"
+                                title="@Loc["TmDocumentEditor_ImageAlignEnd"]"
+                                @onclick="() => AlignmentChanged.InvokeAsync(DocumentImageAlignment.End)">
+                            <TmIcon Name="@AlignmentIcon(DocumentImageAlignment.End)" Size="IconSize.Xs" />
+                            <span class="tm-document-editor__sr-only">@Loc["TmDocumentEditor_ImageAlignEnd"]</span>
+                        </button>
+                    </div>
+                }
+                @if (PositionChanged.HasDelegate)
+                {
+                    <div class="tm-document-image-inspector__size">
+                        <label class="tm-document-image-inspector__field">
+                            <span>@Loc["TmDocumentEditor_ImagePositionX"]</span>
+                            <input type="number"
+                                   step="1"
+                                   value="@_xInput"
+                                   data-testid="@TestId("document-image-inspector-position-x")"
+                                   @oninput="HandlePositionXInputAsync"
+                                   @onchange="HandlePositionXChangedAsync" />
+                        </label>
+                        <label class="tm-document-image-inspector__field">
+                            <span>@Loc["TmDocumentEditor_ImagePositionY"]</span>
+                            <input type="number"
+                                   step="1"
+                                   value="@_yInput"
+                                   data-testid="@TestId("document-image-inspector-position-y")"
+                                   @oninput="HandlePositionYInputAsync"
+                                   @onchange="HandlePositionYChangedAsync" />
+                        </label>
+                    </div>
+                }
+                <div class="tm-document-image-inspector__asset"
+                     data-testid="@TestId("document-image-inspector-anchor-paragraph")">
+                    <span>@Loc["TmDocumentEditor_ImageAnchorParagraph"]</span>
+                    <strong>@AnchorParagraphLabel</strong>
+                </div>
+                @if (LockAnchorChanged.HasDelegate)
+                {
+                    <label class="tm-document-image-inspector__field tm-document-image-inspector__checkbox">
+                        <span>@Loc["TmDocumentEditor_ImageLockAnchor"]</span>
+                        <input type="checkbox"
+                               checked="@IsAnchorLocked"
+                               data-testid="@TestId("document-image-inspector-lock-anchor")"
+                               @onchange="HandleLockAnchorChangedAsync" />
+                    </label>
+                }
+            </div>
+        </details>
+    }
+
+    @if (BringForward.HasDelegate || SendBackward.HasDelegate)
+    {
+        <details class="tm-document-image-inspector__section" data-testid="@TestId("document-image-inspector-section-order")">
+            <summary>
+                <TmIcon Name="layers" Size="IconSize.Xs" />
+                <span>@Loc["TmDocumentEditor_ImageSectionOrder"]</span>
+            </summary>
+            <div class="tm-document-image-inspector__section-body">
+                <div class="tm-document-image-inspector__group" role="group" aria-label="@Loc["TmDocumentEditor_ImageSectionOrder"]">
+                    @if (BringForward.HasDelegate)
+                    {
+                        <button type="button"
+                                class="tm-document-image-inspector__swatch"
+                                data-testid="@TestId("document-image-inspector-bring-forward")"
+                                @onclick="() => BringForward.InvokeAsync()">
+                            @Loc["TmDocumentEditor_ImageBringForward"]
+                        </button>
+                    }
+                    @if (SendBackward.HasDelegate)
+                    {
+                        <button type="button"
+                                class="tm-document-image-inspector__swatch"
+                                data-testid="@TestId("document-image-inspector-send-backward")"
+                                @onclick="() => SendBackward.InvokeAsync()">
+                            @Loc["TmDocumentEditor_ImageSendBackward"]
+                        </button>
+                    }
+                </div>
+            </div>
+        </details>
+    }
 
     <details class="tm-document-image-inspector__section" data-testid="@TestId("document-image-inspector-section-accessibility")" open>
         <summary>
@@ -300,22 +333,28 @@
             <span>@Loc["TmDocumentEditor_ImageSectionAccessibility"]</span>
         </summary>
         <div class="tm-document-image-inspector__section-body">
-            <label class="tm-document-image-inspector__field">
-                <span>@Loc["TmDocumentEditor_ImageAltText"]</span>
-                <input value="@_altInput"
-                       disabled="@IsDecorative"
-                       data-testid="@TestId("document-image-inspector-alt")"
-                       data-human-testid="document-image-alt-input"
-                       @oninput="HandleAltTextInputAsync"
-                       @onchange="HandleAltTextChangedAsync" />
-            </label>
-            <label class="tm-document-image-inspector__field tm-document-image-inspector__checkbox">
-                <span>@Loc["TmDocumentEditor_ImageDecorative"]</span>
-                <input type="checkbox"
-                       checked="@IsDecorative"
-                       data-testid="@TestId("document-image-inspector-decorative")"
-                       @onchange="HandleDecorativeChangedAsync" />
-            </label>
+            @if (AltTextChanged.HasDelegate)
+            {
+                <label class="tm-document-image-inspector__field">
+                    <span>@Loc["TmDocumentEditor_ImageAltText"]</span>
+                    <input value="@_altInput"
+                           disabled="@IsDecorative"
+                           data-testid="@TestId("document-image-inspector-alt")"
+                           data-human-testid="document-image-alt-input"
+                           @oninput="HandleAltTextInputAsync"
+                           @onchange="HandleAltTextChangedAsync" />
+                </label>
+            }
+            @if (DecorativeChanged.HasDelegate)
+            {
+                <label class="tm-document-image-inspector__field tm-document-image-inspector__checkbox">
+                    <span>@Loc["TmDocumentEditor_ImageDecorative"]</span>
+                    <input type="checkbox"
+                           checked="@IsDecorative"
+                           data-testid="@TestId("document-image-inspector-decorative")"
+                           @onchange="HandleDecorativeChangedAsync" />
+                </label>
+            }
             @if (IsDecorative)
             {
                 <div class="tm-document-image-inspector__hint"
@@ -340,40 +379,40 @@
     /// <summary>Image content displayed by the inspector.</summary>
     [Parameter] public ImageBlockContent? Image { get; set; }
 
-    /// <summary>Raised when alternative text changes.</summary>
+    /// <summary>Raised when alternative text changes. The control renders only when this callback is bound.</summary>
     [Parameter] public EventCallback<string> AltTextChanged { get; set; }
 
-    /// <summary>Raised when decorative image mode changes.</summary>
+    /// <summary>Raised when decorative image mode changes. The control renders only when this callback is bound.</summary>
     [Parameter] public EventCallback<bool> DecorativeChanged { get; set; }
 
-    /// <summary>Raised when the caption should be toggled.</summary>
+    /// <summary>Raised when the caption should be toggled. The caption toggle renders only when this callback (or CaptionChanged) is bound.</summary>
     [Parameter] public EventCallback ToggleCaption { get; set; }
 
-    /// <summary>Raised when the image caption text changes.</summary>
+    /// <summary>Raised when the image caption text changes. The caption field (and the caption toggle) render only when this callback is bound.</summary>
     [Parameter] public EventCallback<string> CaptionChanged { get; set; }
 
-    /// <summary>Raised when the source URL of an URL-backed image changes.</summary>
+    /// <summary>Raised when the source URL of an URL-backed image changes. The editable URL field renders only when this callback is bound; otherwise the source is shown read-only.</summary>
     [Parameter] public EventCallback<string?> UrlChanged { get; set; }
 
-    /// <summary>Raised when text wrapping mode changes.</summary>
+    /// <summary>Raised when text wrapping mode changes. The whole Wrapping section renders only when this callback is bound.</summary>
     [Parameter] public EventCallback<DocumentWrapMode> WrapModeChanged { get; set; }
 
-    /// <summary>Raised when alignment changes.</summary>
+    /// <summary>Raised when alignment changes. The alignment buttons render only when this callback is bound.</summary>
     [Parameter] public EventCallback<DocumentImageAlignment> AlignmentChanged { get; set; }
 
-    /// <summary>Raised when image size changes.</summary>
+    /// <summary>Raised when image size changes. The whole Size section renders only when this callback is bound.</summary>
     [Parameter] public EventCallback<DocumentImageSize> SizeChanged { get; set; }
 
-    /// <summary>Raised when image object position offsets change.</summary>
+    /// <summary>Raised when image object position offsets change. The X / Y position fields render only when this callback is bound.</summary>
     [Parameter] public EventCallback<DocumentObjectPosition> PositionChanged { get; set; }
 
-    /// <summary>Raised when the object anchor lock changes.</summary>
+    /// <summary>Raised when the object anchor lock changes. The control renders only when this callback is bound.</summary>
     [Parameter] public EventCallback<bool> LockAnchorChanged { get; set; }
 
-    /// <summary>Raised when the image should move one layer forward.</summary>
+    /// <summary>Raised when the image should move one layer forward. The control renders only when this callback is bound.</summary>
     [Parameter] public EventCallback BringForward { get; set; }
 
-    /// <summary>Raised when the image should move one layer backward.</summary>
+    /// <summary>Raised when the image should move one layer backward. The control renders only when this callback is bound.</summary>
     [Parameter] public EventCallback SendBackward { get; set; }
 
     private const int InputDebounceMilliseconds = 250;
@@ -406,7 +445,7 @@
     private bool HasCaption => !string.IsNullOrWhiteSpace(CaptionValue);
 
     private bool ShowUrlImageLinkField =>
-        Image?.Source == DocumentImageSource.Url && IsEditableImageUrl(Image.Url);
+        UrlChanged.HasDelegate && Image?.Source == DocumentImageSource.Url && IsEditableImageUrl(Image.Url);
 
     private DocumentWrapMode CurrentWrapMode => Image?.Layout.Wrap.Mode ?? DocumentWrapMode.Inline;
 

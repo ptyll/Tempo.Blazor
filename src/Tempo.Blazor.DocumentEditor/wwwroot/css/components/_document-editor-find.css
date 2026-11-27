@@ -27,16 +27,31 @@ body.tm-document-editor--fullscreen .tm-document-editor {
     overflow: hidden;
 }
 
-/* ── Search result highlights ── */
+/* ── Search result highlights (the ONLY declaration of the search marker look) ──
+   Warning tokens, not literals or the primary glow: a plain match is a translucent warning wash so the text
+   keeps its own ink in light and dark; the active match is the filled-badge pair (--tm-color-warning-strong
+   with --tm-text-inverse), which tokens-dark.css re-points together, so no dark-mode override is needed.
+   Both the legacy .tm-wysiwyg-search-match classes and the marker classes the renderer emits
+   (.tm-wysiwyg-marker--search*) share it. */
+.tm-wysiwyg-marker--search,
 .tm-wysiwyg-search-match {
-    background-color: #fff176;
-    border-radius: 2px;
+    position: relative;
+    z-index: var(--tm-document-z-search, 16);
+    background-color: color-mix(in srgb, var(--tm-color-warning) 35%, transparent);
+    border-radius: var(--tm-radius-sm);
 }
 
+.tm-wysiwyg-marker--search-active,
 .tm-wysiwyg-search-match--active {
-    background-color: #ff9800;
-    color: #fff;
-    border-radius: 2px;
+    background-color: var(--tm-color-warning-strong);
+    color: var(--tm-text-inverse);
+}
+
+.tm-wysiwyg-marker--search.tm-wysiwyg-marker--comment,
+.tm-wysiwyg-search-match.tm-wysiwyg-marker--comment,
+.tm-wysiwyg-search-match .tm-wysiwyg-marker--comment {
+    background-color: color-mix(in srgb, var(--tm-color-warning) 35%, var(--tm-color-warning-subtle));
+    box-shadow: inset 0 -2px 0 var(--tm-color-warning);
 }
 
 /* ── Token insert panel (phase 9 — Blazor-side token menu) ── */
@@ -89,68 +104,75 @@ body.tm-document-editor--fullscreen .tm-document-editor {
     z-index: 200;
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    padding: 8px 12px;
-    min-width: 320px;
-    background: var(--tm-surface, #fff);
-    border: 1px solid var(--tm-border, #e0e0e0);
+    gap: var(--tm-space-1);
+    box-sizing: border-box;
+    padding: var(--tm-space-2) var(--tm-space-3);
+    min-width: min(20rem, calc(100vw - (var(--tm-space-2) * 2)));
+    max-width: calc(100vw - (var(--tm-space-2) * 2));
+    color: var(--tm-text-primary);
+    background: var(--tm-bg-surface);
+    border: 1px solid var(--tm-border-color);
     border-top: none;
-    border-radius: 0 0 6px 6px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, .12);
+    border-radius: 0 0 var(--tm-radius-md) var(--tm-radius-md);
+    box-shadow: var(--tm-shadow-md);
 }
 
 .tm-document-find-panel__row {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 6px;
+    gap: var(--tm-space-2);
 }
 
 .tm-document-find-panel__input {
-    flex: 1;
-    padding: 4px 8px;
-    border: 1px solid var(--tm-border, #e0e0e0);
-    border-radius: 4px;
-    font-size: 13px;
+    flex: 1 1 8rem;
+    min-width: 0;
+    padding: var(--tm-space-1) var(--tm-space-2);
+    color: var(--tm-text-primary);
+    background: var(--tm-bg-surface);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-sm);
+    font-size: var(--tm-font-size-sm);
     line-height: 1.4;
     outline: none;
 }
 
 .tm-document-find-panel__input:focus {
-    border-color: var(--tm-primary, #1976d2);
-    box-shadow: 0 0 0 2px rgba(25, 118, 210, .2);
+    border-color: var(--tm-color-primary);
+    box-shadow: var(--tm-focus-ring);
 }
 
 .tm-document-find-panel__count {
-    font-size: 12px;
-    color: var(--tm-text-secondary, #757575);
-    white-space: nowrap;
-    min-width: 60px;
+    min-width: 4rem;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
     text-align: right;
+    white-space: nowrap;
 }
 
 .tm-document-find-panel__btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
+    width: 1.75rem;
+    height: 1.75rem;
     padding: 0;
-    border: 1px solid var(--tm-border, #e0e0e0);
-    border-radius: 4px;
+    color: var(--tm-text-primary);
     background: transparent;
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-sm);
     cursor: pointer;
-    font-size: 14px;
-    color: var(--tm-text, #212121);
-    transition: background .15s;
+    font-size: var(--tm-font-size-sm);
+    transition: background var(--tm-transition-fast);
 }
 
-.tm-document-find-panel__btn:hover {
-    background: var(--tm-hover, #f5f5f5);
+.tm-document-find-panel__btn:hover:not(:disabled) {
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-document-find-panel__btn:disabled {
-    opacity: .4;
-    cursor: default;
+    opacity: var(--tm-opacity-disabled);
+    cursor: not-allowed;
 }
 
 .tm-document-find-panel__btn--close {
@@ -159,34 +181,35 @@ body.tm-document-editor--fullscreen .tm-document-editor {
 
 .tm-document-find-panel__options {
     display: flex;
-    gap: 8px;
+    flex-wrap: wrap;
+    gap: var(--tm-space-2);
     align-items: center;
-    font-size: 12px;
-    color: var(--tm-text-secondary, #757575);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
 }
 
 .tm-document-find-panel__options label {
     display: flex;
     align-items: center;
-    gap: 3px;
+    gap: var(--tm-space-1);
     cursor: pointer;
     user-select: none;
 }
 
 .tm-document-find-panel__scope {
-    min-height: 26px;
-    border: 1px solid var(--tm-border-color, #d0d0d0);
-    border-radius: var(--tm-radius-sm, 4px);
-    background: var(--tm-bg-surface, #fff);
-    color: var(--tm-text-primary, #212121);
+    min-height: 1.625rem;
+    color: var(--tm-text-primary);
+    background: var(--tm-bg-surface);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-sm);
     font: inherit;
 }
 
 .tm-document-find-panel__results {
     display: grid;
-    gap: 2px;
-    max-height: 132px;
-    margin: 6px 0 0;
+    gap: var(--tm-space-1);
+    max-height: 8.25rem;
+    margin: var(--tm-space-2) 0 0;
     padding: 0;
     overflow: auto;
     list-style: none;
@@ -194,13 +217,13 @@ body.tm-document-editor--fullscreen .tm-document-editor {
 
 .tm-document-find-panel__result {
     display: grid;
-    grid-template-columns: 24px minmax(0, 1fr);
+    grid-template-columns: 1.5rem minmax(0, 1fr);
     width: 100%;
-    padding: 4px 6px;
-    border: 0;
-    border-radius: var(--tm-radius-sm, 4px);
+    padding: var(--tm-space-1) var(--tm-space-2);
+    color: var(--tm-text-primary);
     background: transparent;
-    color: var(--tm-text-primary, #212121);
+    border: 0;
+    border-radius: var(--tm-radius-sm);
     font: inherit;
     text-align: left;
     cursor: pointer;
@@ -214,11 +237,11 @@ body.tm-document-editor--fullscreen .tm-document-editor {
 
 .tm-document-find-panel__result:hover,
 .tm-document-find-panel__result--active {
-    background: var(--tm-color-primary-subtle, #e8f0fe);
+    background: var(--tm-color-primary-subtle);
 }
 
 .tm-document-find-panel__replace-row {
     display: flex;
-    gap: 6px;
+    gap: var(--tm-space-2);
     align-items: center;
 }

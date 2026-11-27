@@ -213,10 +213,43 @@
             ? author.Id ?? Loc["TmDocumentEditor_UnknownAuthor"]
             : author.DisplayName;
 
+    // PayloadJson is dual-purpose: for an insertion / deletion it is the plain inserted / deleted text, for every
+    // other revision type it is an opaque structured payload (formatting marks, block ids such as "splitBlock",
+    // table / image descriptors). The panel never prints the opaque payloads; it shows the text of an insertion /
+    // deletion (unless that text itself is a JSON object / array) and a localized "details in the document" line
+    // for everything else. The full preview resolver follows in a later phase.
     private string GetPreview(DocumentRevision revision)
-        => string.IsNullOrWhiteSpace(revision.PayloadJson)
-            ? Loc["TmDocumentEditor_RevisionPreviewUnavailable"]
-            : revision.PayloadJson!;
+    {
+        var payload = revision.PayloadJson;
+        if (string.IsNullOrWhiteSpace(payload))
+        {
+            return Loc["TmDocumentEditor_RevisionPreviewUnavailable"];
+        }
+
+        var isTextRevision = revision.Type is DocumentRevisionType.Insertion or DocumentRevisionType.Deletion;
+        return isTextRevision && !IsStructuredJson(payload)
+            ? payload
+            : Loc["TmDocumentEditor_RevisionPreviewStructured"];
+    }
+
+    private static bool IsStructuredJson(string payload)
+    {
+        var trimmed = payload.AsSpan().Trim();
+        if (trimmed.Length < 2 || (trimmed[0] != '{' && trimmed[0] != '['))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var document = System.Text.Json.JsonDocument.Parse(payload);
+            return document.RootElement.ValueKind is System.Text.Json.JsonValueKind.Object or System.Text.Json.JsonValueKind.Array;
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return false;
+        }
+    }
 
     private void HandleAuthorFilterChanged(ChangeEventArgs args)
     {

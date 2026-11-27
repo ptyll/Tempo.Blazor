@@ -2366,6 +2366,7 @@
   "TmDocumentEditor_RevisionFilterType": "Type",
   "TmDocumentEditor_RevisionPanelLabel": "Document revisions",
   "TmDocumentEditor_RevisionPreviewUnavailable": "No preview available",
+  "TmDocumentEditor_RevisionPreviewStructured": "Details available in the document",
   "TmDocumentEditor_RevisionRejected": "Revision rejected",
   "TmDocumentEditor_RevisionTypeDeletion": "Deletion",
   "TmDocumentEditor_RevisionTypeFormatting": "Formatting",

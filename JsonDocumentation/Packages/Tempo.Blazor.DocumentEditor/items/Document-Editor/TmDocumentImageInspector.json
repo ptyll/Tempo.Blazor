@@ -2,7 +2,7 @@
   "itemName": "TmDocumentImageInspector",
   "kind": "Component",
   "category": "Document Editor",
-  "description": "Detailed image properties inspector with collapsible sections for the picture (URL and caption), size and rotation with aspect lock, text wrapping, position (alignment, X/Y, anchor lock), z-order, and accessibility (alt text, decorative). Dispatches changes debounced.",
+  "description": "Detailed image properties inspector with collapsible sections for the picture (URL and caption), size and rotation with aspect lock, text wrapping, position (alignment, X/Y, anchor lock), z-order, and accessibility (alt text, decorative). Dispatches changes debounced. Every editing control renders only when its callback (AltTextChanged, DecorativeChanged, ToggleCaption/CaptionChanged, UrlChanged, SizeChanged, WrapModeChanged, AlignmentChanged, PositionChanged, LockAnchorChanged, BringForward, SendBackward) is bound; an unbound callback hides the control (an unbound URL falls back to the read-only source line).",
   "packageId": "Tempo.Blazor.DocumentEditor",
   "namespace": "Tempo.Blazor.Components.DocumentEditor",
   "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentImageInspector.razor",
@@ -21,73 +21,73 @@
       "name": "AlignmentChanged",
       "type": "EventCallback<DocumentImageAlignment>",
       "isRequired": false,
-      "description": "Raised when alignment changes."
+      "description": "Raised when alignment changes. The control renders only when this callback is bound."
     },
     {
       "name": "AltTextChanged",
       "type": "EventCallback<string>",
       "isRequired": false,
-      "description": "Raised when alternative text changes."
+      "description": "Raised when alternative text changes. The control renders only when this callback is bound."
     },
     {
       "name": "BringForward",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when the image should move one layer forward."
+      "description": "Raised when the image should move one layer forward. The control renders only when this callback is bound."
     },
     {
       "name": "CaptionChanged",
       "type": "EventCallback<string>",
       "isRequired": false,
-      "description": "Raised when the image caption text changes."
+      "description": "Raised when the image caption text changes. The control renders only when this callback is bound."
     },
     {
       "name": "DecorativeChanged",
       "type": "EventCallback<bool>",
       "isRequired": false,
-      "description": "Raised when decorative image mode changes."
+      "description": "Raised when decorative image mode changes. The control renders only when this callback is bound."
     },
     {
       "name": "LockAnchorChanged",
       "type": "EventCallback<bool>",
       "isRequired": false,
-      "description": "Raised when the object anchor lock changes."
+      "description": "Raised when the object anchor lock changes. The control renders only when this callback is bound."
     },
     {
       "name": "PositionChanged",
       "type": "EventCallback<DocumentObjectPosition>",
       "isRequired": false,
-      "description": "Raised when image object position offsets change."
+      "description": "Raised when image object position offsets change. The control renders only when this callback is bound."
     },
     {
       "name": "SendBackward",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when the image should move one layer backward."
+      "description": "Raised when the image should move one layer backward. The control renders only when this callback is bound."
     },
     {
       "name": "SizeChanged",
       "type": "EventCallback<DocumentImageSize>",
       "isRequired": false,
-      "description": "Raised when image size changes."
+      "description": "Raised when image size changes. The control renders only when this callback is bound."
     },
     {
       "name": "ToggleCaption",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when the caption should be toggled."
+      "description": "Raised when the caption should be toggled. The control renders only when this callback is bound."
     },
     {
       "name": "UrlChanged",
       "type": "EventCallback<string?>",
       "isRequired": false,
-      "description": "Raised when the source URL of an URL-backed image changes."
+      "description": "Raised when the source URL of an URL-backed image changes. The control renders only when this callback is bound."
     },
     {
       "name": "WrapModeChanged",
       "type": "EventCallback<DocumentWrapMode>",
       "isRequired": false,
-      "description": "Raised when text wrapping mode changes."
+      "description": "Raised when text wrapping mode changes. The control renders only when this callback is bound."
     }
   ]
 }

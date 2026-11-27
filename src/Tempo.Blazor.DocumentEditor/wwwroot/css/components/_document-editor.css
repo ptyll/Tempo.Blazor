@@ -958,6 +958,7 @@
 .tm-document-version-dialog {
     box-sizing: border-box;
     display: grid;
+    align-content: start;
     gap: var(--tm-space-3);
     width: min(52rem, calc(100% - (var(--tm-space-3) * 2)));
     max-width: calc(100vw - (var(--tm-space-3) * 2));
@@ -1011,8 +1012,145 @@
 .tm-document-version-dialog__actions {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     justify-content: flex-end;
     gap: var(--tm-space-2);
+}
+
+/* ── Modal surfaces rendered in the floating root (phase 1, DE-2.0) ──
+   Temporary hand-rolled modality: phase 5 moves these dialogs onto TmModal and deletes these rules. */
+/* The scrim's own z-index only orders it among the floating root's children: the effective layer is the
+   floating root's (--tm-document-z-floating-ui), because the root is the stacking context. */
+.tm-document-dialog-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: var(--tm-z-modal);
+    display: grid;
+    place-items: center;
+    padding: var(--tm-space-3);
+    overflow: auto;
+    background: var(--tm-bg-overlay);
+}
+
+.tm-document-dialog-scrim > .tm-document-version-dialog {
+    margin: 0;
+}
+
+.tm-document-compare-dialog {
+    width: min(64rem, 100%);
+    max-height: calc(100vh - (var(--tm-space-3) * 2));
+    overflow: auto;
+}
+
+.tm-document-compare-dialog__sources {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--tm-space-3);
+}
+
+.tm-document-json-debug-modal {
+    position: fixed;
+    inset: 0;
+    z-index: var(--tm-z-modal);
+    display: grid;
+    place-items: center;
+    padding: var(--tm-space-3);
+}
+
+.tm-document-json-debug-modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: var(--tm-bg-overlay);
+}
+
+.tm-document-json-debug-modal__content {
+    position: relative;
+    box-sizing: border-box;
+    display: grid;
+    gap: var(--tm-space-3);
+    width: min(52rem, 100%);
+    max-height: 85vh;
+    padding: var(--tm-space-4);
+    overflow: auto;
+    color: var(--tm-color-text);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-md);
+    box-shadow: var(--tm-shadow-lg);
+}
+
+.tm-document-json-debug-modal__header {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+}
+
+.tm-document-json-debug-modal__title {
+    flex: 1;
+    min-width: 0;
+    font-size: var(--tm-font-size-base);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-document-json-debug-modal__copy,
+.tm-document-json-debug-modal__close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    min-height: 2rem;
+    color: var(--tm-color-text);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-sm);
+    cursor: pointer;
+}
+
+.tm-document-json-debug-modal__copy:hover,
+.tm-document-json-debug-modal__close:hover {
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-document-json-debug-modal__section {
+    display: grid;
+    gap: var(--tm-space-2);
+    min-width: 0;
+}
+
+.tm-document-json-debug-modal__section-title {
+    margin: 0;
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-document-json-debug-modal pre {
+    max-height: 16rem;
+    margin: 0;
+    padding: var(--tm-space-2);
+    overflow: auto;
+    color: var(--tm-color-text);
+    background: var(--tm-color-surface-secondary);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-sm);
+    font-family: var(--tm-font-mono);
+    font-size: var(--tm-font-size-xs);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 40rem) {
+    .tm-document-compare-dialog__sources {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    /* On a phone the dialog fills the scrim and scrolls inside it; the generic mobile rule below pins it
+       fixed, which inside the scrim stretched its rows to the full height. */
+    .tm-document-dialog-scrim > .tm-document-version-dialog {
+        position: relative;
+        inset: auto;
+        width: 100%;
+        max-height: 100%;
+    }
 }
 
 .tm-document-editor__comment-rail span,
@@ -1275,22 +1413,6 @@
     z-index: var(--tm-document-z-comment, 14);
 }
 
-.tm-wysiwyg-marker--search,
-.tm-wysiwyg-search-match {
-    position: relative;
-    z-index: var(--tm-document-z-search, 16);
-    background: color-mix(in srgb, var(--tm-color-primary-subtle) 72%, transparent);
-    box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--tm-color-primary) 72%, transparent);
-}
-
-.tm-wysiwyg-marker--search-active,
-.tm-wysiwyg-search-match--active {
-    background: color-mix(in srgb, var(--tm-color-primary) 28%, var(--tm-color-primary-subtle));
-    box-shadow:
-        inset 0 0 0 2px var(--tm-color-primary),
-        0 0 0 3px color-mix(in srgb, var(--tm-color-primary) 20%, transparent);
-}
-
 .tm-wysiwyg-marker--revision .tm-wysiwyg-marker--comment,
 .tm-document-inline--revision .tm-document-inline--comment-anchor {
     background: linear-gradient(
@@ -1299,15 +1421,6 @@
         color-mix(in srgb, var(--tm-color-success-subtle) 64%, transparent)
     );
     box-shadow: inset 0 -2px 0 var(--tm-color-warning);
-}
-
-.tm-wysiwyg-marker--search.tm-wysiwyg-marker--comment,
-.tm-wysiwyg-search-match.tm-wysiwyg-marker--comment,
-.tm-wysiwyg-search-match .tm-wysiwyg-marker--comment {
-    background: color-mix(in srgb, var(--tm-color-primary-subtle) 58%, var(--tm-color-warning-subtle));
-    box-shadow:
-        inset 0 -2px 0 var(--tm-color-warning),
-        inset 0 0 0 1px color-mix(in srgb, var(--tm-color-primary) 52%, transparent);
 }
 
 .tm-document-editor__dirty,
@@ -1458,8 +1571,7 @@
     display: inline-flex;
 }
 
-.tm-document-header-footer-menu,
-.tm-document-page-layout-inspector {
+.tm-document-header-footer-menu {
     position: absolute;
     top: calc(100% + var(--tm-space-1));
     left: 0;
@@ -1538,10 +1650,25 @@
     border-radius: var(--tm-radius-sm);
 }
 
+/* One source for the page layout inspector root (it used to be split across a shared popover rule, a second
+   grid rule and the scoped toolbar stylesheet; the 30rem width came from the scoped one). */
 .tm-document-page-layout-inspector {
+    position: absolute;
+    top: calc(100% + var(--tm-space-1));
+    left: 0;
+    z-index: var(--tm-z-popover, 1000);
     display: grid;
     grid-template-columns: minmax(5rem, 7rem) minmax(0, 1fr);
     gap: var(--tm-space-2);
+    width: min(30rem, calc(100vw - 2rem));
+    max-height: min(70vh, 30rem);
+    overflow: auto;
+    padding: var(--tm-space-2);
+    color: var(--tm-color-text);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-sm);
+    box-shadow: var(--tm-shadow-lg);
 }
 
 .tm-document-page-layout-inspector label {

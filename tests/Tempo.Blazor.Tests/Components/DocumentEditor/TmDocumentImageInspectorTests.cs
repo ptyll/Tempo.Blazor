@@ -9,6 +9,71 @@ namespace Tempo.Blazor.Tests.Components.DocumentEditor;
 public sealed class TmDocumentImageInspectorTests : LocalizationTestBase
 {
     [Fact]
+    public void ControlsWithoutDelegate_AreNotRendered()
+    {
+        // Phase 1 / DE-2.0: an inspector control whose callback is not bound would do nothing; it is not drawn.
+        var bare = Render<TmDocumentImageInspector>(parameters => parameters
+            .Add(p => p.Image, ActiveDrawingImage(drawing =>
+            {
+                drawing.Source = DocumentImageSource.Url;
+                drawing.Url = "https://example.test/evidence.png";
+            })));
+
+        bare.FindAll("[data-testid='document-image-inspector-link']").Should().BeEmpty();
+        bare.FindAll("[data-testid='document-image-inspector-decorative']").Should().BeEmpty();
+        bare.FindAll("[data-testid='document-image-inspector-lock-anchor']").Should().BeEmpty();
+        bare.FindAll("[data-testid='document-image-inspector-bring-forward']").Should().BeEmpty();
+        bare.FindAll("[data-testid='document-image-inspector-send-backward']").Should().BeEmpty();
+        bare.FindAll("[data-testid='document-image-inspector-section-order']").Should().BeEmpty();
+        foreach (var testId in new[]
+        {
+            "document-image-inspector-alt", "document-image-inspector-caption", "document-image-inspector-caption-toggle",
+            "document-image-inspector-width", "document-image-inspector-height", "document-image-inspector-lock-aspect",
+            "document-image-inspector-reset-size", "document-image-inspector-wrap-square", "document-image-inspector-align-start",
+            "document-image-inspector-position-x", "document-image-inspector-position-y",
+            "document-image-inspector-section-size", "document-image-inspector-section-wrap", "document-image-inspector-section-position"
+        })
+        {
+            bare.FindAll($"[data-testid='{testId}']").Should().BeEmpty($"{testId} has no bound callback");
+        }
+        // The read-only source line replaces the editable URL field.
+        bare.Find("[data-testid='document-image-inspector-asset-info']").Should().NotBeNull();
+
+        var wired = Render<TmDocumentImageInspector>(parameters => parameters
+            .Add(p => p.Image, ActiveDrawingImage(drawing =>
+            {
+                drawing.Source = DocumentImageSource.Url;
+                drawing.Url = "https://example.test/evidence.png";
+            }))
+            .Add(p => p.UrlChanged, _ => { })
+            .Add(p => p.AltTextChanged, _ => { })
+            .Add(p => p.CaptionChanged, _ => { })
+            .Add(p => p.SizeChanged, _ => { })
+            .Add(p => p.WrapModeChanged, _ => { })
+            .Add(p => p.AlignmentChanged, _ => { })
+            .Add(p => p.PositionChanged, _ => { })
+            .Add(p => p.DecorativeChanged, _ => { })
+            .Add(p => p.LockAnchorChanged, _ => { })
+            .Add(p => p.BringForward, () => { })
+            .Add(p => p.SendBackward, () => { }));
+
+        wired.Find("[data-testid='document-image-inspector-link']").Should().NotBeNull();
+        wired.Find("[data-testid='document-image-inspector-decorative']").Should().NotBeNull();
+        wired.Find("[data-testid='document-image-inspector-lock-anchor']").Should().NotBeNull();
+        wired.Find("[data-testid='document-image-inspector-bring-forward']").Should().NotBeNull();
+        wired.Find("[data-testid='document-image-inspector-send-backward']").Should().NotBeNull();
+        foreach (var testId in new[]
+        {
+            "document-image-inspector-alt", "document-image-inspector-caption", "document-image-inspector-caption-toggle",
+            "document-image-inspector-width", "document-image-inspector-lock-aspect", "document-image-inspector-reset-size",
+            "document-image-inspector-wrap-square", "document-image-inspector-align-start", "document-image-inspector-position-x"
+        })
+        {
+            wired.Find($"[data-testid='{testId}']").Should().NotBeNull($"{testId} renders once its callback is bound");
+        }
+    }
+
+    [Fact]
     public void Inspector_RendersAltWarning_ForActiveDrawingObject_WhenAltTextIsEmpty()
     {
         var cut = Render<TmDocumentImageInspector>(parameters => parameters
@@ -38,6 +103,7 @@ public sealed class TmDocumentImageInspectorTests : LocalizationTestBase
         bool? received = null;
         var cut = Render<TmDocumentImageInspector>(parameters => parameters
             .Add(p => p.Image, ActiveDrawingImage(drawing => drawing.IsDecorative = true))
+            .Add(p => p.AltTextChanged, _ => { })
             .Add(p => p.DecorativeChanged, value => received = value));
 
         cut.Find("[data-testid='document-image-inspector-decorative']")
@@ -68,7 +134,8 @@ public sealed class TmDocumentImageInspectorTests : LocalizationTestBase
     public void Inspector_WrapButtons_AreIconSegmentsWithAccessibleLabels_ForActiveDrawingObject()
     {
         var cut = Render<TmDocumentImageInspector>(parameters => parameters
-            .Add(p => p.Image, ActiveDrawingImage()));
+            .Add(p => p.Image, ActiveDrawingImage())
+            .Add(p => p.WrapModeChanged, _ => { }));
 
         var square = cut.Find("[data-testid='document-image-inspector-wrap-square']");
         square.QuerySelector(".tm-icon").Should().NotBeNull();
@@ -80,7 +147,8 @@ public sealed class TmDocumentImageInspectorTests : LocalizationTestBase
     public void Inspector_CaptionCheckboxReflectsCaption_ForActiveDrawingObject()
     {
         var cut = Render<TmDocumentImageInspector>(parameters => parameters
-            .Add(p => p.Image, ActiveDrawingImage(drawing => drawing.Caption = "Evidence caption")));
+            .Add(p => p.Image, ActiveDrawingImage(drawing => drawing.Caption = "Evidence caption"))
+            .Add(p => p.CaptionChanged, _ => { }));
 
         cut.Find("[data-testid='document-image-inspector-caption-toggle']")
             .HasAttribute("checked").Should().BeTrue();
@@ -145,7 +213,8 @@ public sealed class TmDocumentImageInspectorTests : LocalizationTestBase
                     Wrap = new DocumentObjectWrap { Mode = DocumentWrapMode.Square },
                     Position = new DocumentObjectPosition { HorizontalAlignment = horizontalPosition }
                 };
-            })));
+            }))
+            .Add(p => p.AlignmentChanged, _ => { }));
 
         cut.Find($"[data-testid='{activeTestId}']").ClassList
             .Should().Contain("tm-document-image-inspector__swatch--active");

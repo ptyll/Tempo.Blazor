@@ -96,7 +96,11 @@ public sealed class DocumentEditorPhase21AccessibilityTests : LocalizationTestBa
     public void ImageInspector_ExposesComplementaryLandmarkLabelsAndLiveWarning()
     {
         var cut = Render<TmDocumentImageInspector>(parameters => parameters
-            .Add(p => p.Image, new ImageBlockContent { Source = DocumentImageSource.Url, Url = "https://example.test/evidence.png" }));
+            .Add(p => p.Image, new ImageBlockContent { Source = DocumentImageSource.Url, Url = "https://example.test/evidence.png" })
+            .Add(p => p.UrlChanged, _ => { })
+            .Add(p => p.AltTextChanged, _ => { })
+            .Add(p => p.WrapModeChanged, _ => { })
+            .Add(p => p.AlignmentChanged, _ => { }));
 
         var inspector = cut.Find("[data-testid='document-image-inspector']");
         inspector.GetAttribute("role").Should().Be("complementary");

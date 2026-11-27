@@ -212,21 +212,19 @@
         await OnRestoreVersion.InvokeAsync(PreviewVersion);
     }
 
-    private string GetVersionTitle(DocumentVersion version)
-    {
-        if (!string.IsNullOrWhiteSpace(version.Label))
-        {
-            return version.Label;
-        }
-
-        return version.Kind switch
+    private string GetVersionKindLabel(DocumentVersionKind kind)
+        => kind switch
         {
             DocumentVersionKind.Major => Loc["TmDocumentEditor_VersionKindMajor"],
             DocumentVersionKind.Autosave => Loc["TmDocumentEditor_VersionKindAutosave"],
             DocumentVersionKind.Restore => Loc["TmDocumentEditor_VersionKindRestore"],
             _ => Loc["TmDocumentEditor_VersionKindMinor"]
         };
-    }
+
+    private string GetVersionTitle(DocumentVersion version)
+        => !string.IsNullOrWhiteSpace(version.Label)
+            ? version.Label
+            : GetVersionKindLabel(version.Kind);
 
     private string GetVersionMeta(DocumentVersion version)
     {
@@ -234,6 +232,6 @@
             ? Loc["TmDocumentEditor_UnknownAuthor"].ToString()
             : version.Author.DisplayName;
 
-        return Loc["TmDocumentEditor_VersionMeta", version.Kind, version.CreatedAt.ToLocalTime().ToString("g"), author];
+        return Loc["TmDocumentEditor_VersionMeta", GetVersionKindLabel(version.Kind), version.CreatedAt.ToLocalTime().ToString("g"), author];
     }
 }

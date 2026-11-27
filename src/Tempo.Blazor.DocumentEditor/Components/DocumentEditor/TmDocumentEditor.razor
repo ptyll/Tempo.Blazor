@@ -239,37 +239,6 @@
                                      DisabledFeatures="@EffectiveDisabledFeatures" />
         }
 
-        @if (ShowDebugTools)
-        {
-            <TmDocumentJsonDebugModal IsOpen="@_jsonDebugModalOpen"
-                                      Json="@_jsonDebugDocumentJson"
-                                      RuntimeDebugJson="@_runtimeDebugJson"
-                                      DocxDrawingMetadataJson="@_jsonDebugDocxDrawingMetadataJson"
-                                      RecoveryDetailJson="@GetRuntimeRecoveryDetailJson()"
-                                      OnCopyJson="CopyDocumentDebugJsonAsync"
-                                      OnClose="CloseJsonDebugModalAsync" />
-            <TmDocumentClipboardHtmlDebugModal IsOpen="@_clipboardHtmlModalOpen"
-                                               Html="@_clipboardHtmlSnapshot"
-                                               RawHtml="@_clipboardDebugRawHtml"
-                                               NormalizedJson="@_clipboardDebugNormalizedJson"
-                                               WarningsJson="@_clipboardDebugWarningsJson"
-                                               OnClose="CloseClipboardHtmlModalAsync" />
-        }
-
-        @if (_compareDialogOpen && _compareDocumentSnapshot is not null)
-        {
-            <TmDocumentCompareDialog CurrentDocument="@_compareDocumentSnapshot"
-                                     DocumentProvider="@Provider"
-                                     FormatProvider="@FormatProvider"
-                                     ComparisonProvider="@ComparisonProvider"
-                                     UseLocalComparisonFallback="@UseLocalComparisonFallback"
-                                     Author="@Author"
-                                     OnCompared="HandleDocumentComparedAsync"
-                                     OnCompareFailed="HandleDocumentCompareFailedAsync"
-                                     OnExportRedline="ExportRedlineDocxAsync"
-                                     OnClose="CloseCompareDialog" />
-        }
-
         @if (!string.IsNullOrWhiteSpace(_formatMessage) || _formatWarnings.Count > 0)
         {
             <div class="tm-document-editor__format-banner" data-testid="@TestId("document-format-message")">
@@ -768,6 +737,9 @@
                                  data-active-anchor-block-id="@ActiveImageCommandBlockId">
                             <TmDocumentImageInspector Image="coreImage"
                                                       AltTextChanged="SetActiveImageAltTextFromPanelAsync"
+                                                      DecorativeChanged="SetActiveImageDecorativeFromPanelAsync"
+                                                      UrlChanged="SetActiveImageUrlFromPanelAsync"
+                                                      LockAnchorChanged="SetActiveImageLockAnchorFromPanelAsync"
                                                       WrapModeChanged="SetActiveImageWrapModeFromPanelAsync"
                                                       SizeChanged="SetActiveImageSizeFromPanelAsync"
                                                       AlignmentChanged="SetActiveImageAlignmentFromPanelAsync"
@@ -1344,10 +1316,45 @@
 
             @if (_versionDialogOpen)
             {
-                <TmDocumentVersionDialog IsBusy="@_isCreatingVersion"
-                                         RequireMajorDescription="@RequireMajorVersionDescription"
-                                         OnCreate="CreateVersionAsync"
-                                         OnCancel="CloseVersionDialog" />
+                <div class="tm-document-dialog-scrim" data-testid="@TestId("document-version-scrim")">
+                    <TmDocumentVersionDialog IsBusy="@_isCreatingVersion"
+                                             RequireMajorDescription="@RequireMajorVersionDescription"
+                                             OnCreate="CreateVersionAsync"
+                                             OnCancel="CloseVersionDialog" />
+                </div>
+            }
+
+            @if (ShowDebugTools)
+            {
+                <TmDocumentJsonDebugModal IsOpen="@_jsonDebugModalOpen"
+                                          Json="@_jsonDebugDocumentJson"
+                                          RuntimeDebugJson="@_runtimeDebugJson"
+                                          DocxDrawingMetadataJson="@_jsonDebugDocxDrawingMetadataJson"
+                                          RecoveryDetailJson="@GetRuntimeRecoveryDetailJson()"
+                                          OnCopyJson="CopyDocumentDebugJsonAsync"
+                                          OnClose="CloseJsonDebugModalAsync" />
+                <TmDocumentClipboardHtmlDebugModal IsOpen="@_clipboardHtmlModalOpen"
+                                                   Html="@_clipboardHtmlSnapshot"
+                                                   RawHtml="@_clipboardDebugRawHtml"
+                                                   NormalizedJson="@_clipboardDebugNormalizedJson"
+                                                   WarningsJson="@_clipboardDebugWarningsJson"
+                                                   OnClose="CloseClipboardHtmlModalAsync" />
+            }
+
+            @if (_compareDialogOpen && _compareDocumentSnapshot is not null)
+            {
+                <div class="tm-document-dialog-scrim" data-testid="@TestId("document-compare-scrim")">
+                    <TmDocumentCompareDialog CurrentDocument="@_compareDocumentSnapshot"
+                                             DocumentProvider="@Provider"
+                                             FormatProvider="@FormatProvider"
+                                             ComparisonProvider="@ComparisonProvider"
+                                             UseLocalComparisonFallback="@UseLocalComparisonFallback"
+                                             Author="@Author"
+                                             OnCompared="HandleDocumentComparedAsync"
+                                             OnCompareFailed="HandleDocumentCompareFailedAsync"
+                                             OnExportRedline="ExportRedlineDocxAsync"
+                                             OnClose="CloseCompareDialog" />
+                </div>
             }
         </div>
     }

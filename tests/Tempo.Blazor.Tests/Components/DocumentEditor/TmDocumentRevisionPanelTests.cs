@@ -129,6 +129,66 @@ public class TmDocumentRevisionPanelTests : LocalizationTestBase
         filter!.AuthorId.Should().Be("author-2");
     }
 
+    [Theory]
+    [InlineData(DocumentRevisionType.Formatting, "{\"markType\":\"Bold\",\"newActive\":true}")]
+    [InlineData(DocumentRevisionType.Table, "{\"rows\":2}")]
+    [InlineData(DocumentRevisionType.Structure, "splitBlock")]
+    [InlineData(DocumentRevisionType.Structure, "InsertBlock")]
+    [InlineData(DocumentRevisionType.Move, "[\"block-1\",\"block-2\"]")]
+    [InlineData(DocumentRevisionType.Insertion, "{\"text\":\"Inserted\"}")]
+    public void Preview_NeverRendersRawPayloadJson(DocumentRevisionType type, string payload)
+    {
+        var revision = CreateRevision("revision-structured", DocumentRevisionAction.Pending, type: type);
+        revision.PayloadJson = payload;
+
+        var cut = Render<TmDocumentRevisionPanel>(parameters => parameters
+            .Add(p => p.Revisions, new[] { revision })
+            .Add(p => p.CanReview, true));
+
+        var preview = cut.Find(".tm-document-revision-panel__preview").TextContent;
+        preview.Should().Be("Details available in the document", "opaque payloads show a localized line, never the payload (or a repeat of the type label)");
+        cut.Markup.Should().NotContain("markType").And.NotContain("splitBlock").And.NotContain("InsertBlock");
+    }
+
+    [Theory]
+    [InlineData(DocumentRevisionType.Insertion, "{x}")]
+    [InlineData(DocumentRevisionType.Insertion, "42")]
+    [InlineData(DocumentRevisionType.Deletion, "removed words")]
+    public void Preview_ShowsPlainTextOfInsertionAndDeletion(DocumentRevisionType type, string text)
+    {
+        var revision = CreateRevision("revision-text", DocumentRevisionAction.Pending, type: type);
+        revision.PayloadJson = text;
+
+        var cut = Render<TmDocumentRevisionPanel>(parameters => parameters
+            .Add(p => p.Revisions, new[] { revision })
+            .Add(p => p.CanReview, true));
+
+        cut.Find(".tm-document-revision-panel__preview").TextContent.Should().Be(text);
+    }
+
+    [Fact]
+    public void Preview_KeepsPlainTextPayloadOfTextRevisions()
+    {
+        var cut = Render<TmDocumentRevisionPanel>(parameters => parameters
+            .Add(p => p.Revisions, new[] { CreateRevision("revision-text", DocumentRevisionAction.Pending) })
+            .Add(p => p.CanReview, true));
+
+        cut.Find(".tm-document-revision-panel__preview").TextContent.Should().Be("Inserted");
+    }
+
+    [Fact]
+    public void Preview_WithoutPayload_ShowsUnavailableText()
+    {
+        var revision = CreateRevision("revision-empty", DocumentRevisionAction.Pending);
+        revision.PayloadJson = null;
+
+        var cut = Render<TmDocumentRevisionPanel>(parameters => parameters
+            .Add(p => p.Revisions, new[] { revision })
+            .Add(p => p.CanReview, true));
+
+        cut.Find(".tm-document-revision-panel__preview").TextContent.Should().Be("No preview available");
+    }
+
     private static DocumentRevision CreateRevision(
         string id,
         DocumentRevisionAction action,

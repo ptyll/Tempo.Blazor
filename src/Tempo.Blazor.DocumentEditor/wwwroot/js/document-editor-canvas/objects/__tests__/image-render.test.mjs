@@ -256,6 +256,32 @@ test('image commands support provider assets and inspector command aliases', () 
     assert.equal(image.layout.stacking.zIndex, -1);
 });
 
+test('setImageAnchorMode with the inspector PascalCase payload flips the anchor lock (canvas inspector parity)', () => {
+    let model = createImageModel();
+    let selection = { anchor: { blockId: 'phase15-anchor', offset: 0 }, focus: { blockId: 'phase15-anchor', offset: 0 } };
+    const runtime = createCanvasCommandRuntime({
+        getModel: () => model,
+        getSelection: () => selection,
+        commit(change) {
+            model = change.model;
+            selection = change.selection;
+        },
+        history: createHistory(),
+    });
+    runtime.execCommand('insertImage', { id: 'lock-image', url: tinyPng(), width: 120, height: 80, wrapMode: 'Square' });
+    const read = () => model.body.blocks.find(block => block.id === 'lock-image').content.image.layout.anchor.lockAnchor;
+    assert.notEqual(read(), true);
+
+    // The Blazor inspector (TmDocumentEditor.SetActiveImageLockAnchorFromPanelAsync) sends exactly this shape.
+    const locked = runtime.execCommand('setImageAnchorMode', { ObjectId: 'lock-image', BlockId: 'lock-image', RunId: '', LockAnchor: true });
+    assert.equal(locked.result.changed, true);
+    assert.equal(read(), true);
+
+    const unlocked = runtime.execCommand('setImageAnchorMode', { ObjectId: 'lock-image', LockAnchor: false });
+    assert.equal(unlocked.result.changed, true);
+    assert.equal(read(), false);
+});
+
 test('image wrap modes choose the expected text exclusion and paint layers', () => {
     const expected = [
         ['Inline', false, 'objects'],

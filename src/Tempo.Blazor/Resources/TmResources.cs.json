@@ -2404,6 +2404,7 @@
   "TmDocumentEditor_RevisionFilterType": "Typ",
   "TmDocumentEditor_RevisionPanelLabel": "Revize dokumentu",
   "TmDocumentEditor_RevisionPreviewUnavailable": "Náhled není k dispozici",
+  "TmDocumentEditor_RevisionPreviewStructured": "Podrobnosti jsou k dispozici v dokumentu",
   "TmDocumentEditor_RevisionRejected": "Revize odmítnuta",
   "TmDocumentEditor_RevisionTypeDeletion": "Smazání",
   "TmDocumentEditor_RevisionTypeFormatting": "Formátování",

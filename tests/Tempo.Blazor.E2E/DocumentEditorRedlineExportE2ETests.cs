@@ -37,13 +37,16 @@ public sealed class DocumentEditorRedlineExportE2ETests : WasmTestBase
         // 2) Compare the SAVED version (base = v1) against the edited current document (target = v2),
         //    so the typed marker is an INSERTION in the redline.
         await page.GetByTestId("document-ribbon-tab-review").ClickAsync();
+        var workspaceBefore = await DocumentEditorLayoutShiftGuard.MeasureWorkspaceAsync(page);
         await page.GetByTestId("document-compare-open").ClickAsync();
         await Assertions.Expect(page.GetByTestId("document-compare-dialog")).ToBeVisibleAsync(new() { Timeout = 10_000 });
+        await DocumentEditorLayoutShiftGuard.AssertWorkspaceUnchangedAsync(page, workspaceBefore, "opening the compare dialog");
         await page.GetByTestId("document-compare-base-source").SelectOptionAsync("DocumentId");
         await page.GetByTestId("document-compare-base-document-id").FillAsync(DocumentId);
         await page.GetByTestId("document-compare-target-source").SelectOptionAsync("Current");
         await page.GetByTestId("document-compare-run").ClickAsync();
         await Assertions.Expect(page.GetByTestId("document-diff-viewer")).ToBeVisibleAsync(new() { Timeout = 15_000 });
+        await DocumentEditorLayoutShiftGuard.AssertWorkspaceUnchangedAsync(page, workspaceBefore, "rendering the compare result");
 
         var screenshotDir = Path.Combine(FindRepositoryRootDirectory(), "tests", "Tempo.Blazor.E2E", "__screenshots__", "document-editor-redline");
         Directory.CreateDirectory(screenshotDir);

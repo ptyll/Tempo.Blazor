@@ -4465,6 +4465,123 @@ public class TmDocumentEditorTests : LocalizationTestBase
             element.GetAttribute("data-testid") == "document-canvas-hidden-input");
     }
 
+    [Fact]
+    public async Task CompareDialog_And_DebugModals_AreChildrenOfFloatingRoot()
+    {
+        // Phase 1 / DE-2.0 (modality), INTERIM: the dialogs used to render in the document flow between the toolbar and
+        // the workspace and pushed the canvas down; they now live in the fixed floating root, where a scrim covers the
+        // page without shifting any layout. Phase 5 moves them onto TmModal (rendered as SIBLINGS of the floating root)
+        // and replaces this ancestry assertion with the TmModal contract.
+        SetDocumentCanvasRuntimeDebugSnapshotJson("""{"runtime":"canvas","state":"ready"}""");
+        var provider = new InMemoryDocumentEditorProvider();
+        var seeded = provider.SeedContractDocument("doc-1");
+        SetCanvasRuntimeDocument(Clone(seeded));
+
+        var cut = RenderDocumentEditor(parameters => parameters
+            .Add(p => p.DocumentId, "doc-1")
+            .Add(p => p.Provider, provider)
+            .Add(p => p.ShowDebugTools, true));
+        await MarkCanvasReadyAsync(cut);
+
+        cut.Find("[data-testid='document-ribbon-tab-view']").Click();
+        cut.Find("[data-testid='document-view-json']").Click();
+        cut.WaitForAssertion(() => cut.Find("[data-testid='document-json-debug-modal']").Should().NotBeNull());
+        cut.Find("[data-testid='document-floating-root'] [data-testid='document-json-debug-modal']").Should().NotBeNull();
+
+        cut.Find("[data-testid='document-view-clipboard-html']").Click();
+        cut.WaitForAssertion(() => cut.Find("[data-testid='document-clipboard-html-debug-modal']").Should().NotBeNull());
+        cut.Find("[data-testid='document-floating-root'] [data-testid='document-clipboard-html-debug-modal']").Should().NotBeNull();
+
+        cut.Find("[data-testid='document-ribbon-tab-review']").Click();
+        cut.Find("[data-testid='document-compare-open']").Click();
+        cut.WaitForAssertion(() => cut.Find("[data-testid='document-compare-dialog']").Should().NotBeNull());
+        cut.Find("[data-testid='document-floating-root'] [data-testid='document-compare-dialog']").Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task CanvasImageInspector_ForwardsDecorativeUrlLockAnchor_OrHidesControls()
+    {
+        // Phase 1 / DE-2.0: the canvas branch of the Properties panel used to omit UrlChanged, DecorativeChanged and
+        // LockAnchorChanged, so its inspector drew controls that did nothing. The engine supports all three
+        // (setImageUrl / setImageDecorative / setImageAnchorMode), so the branch forwards them.
+        var provider = new InMemoryDocumentEditorProvider();
+        var seeded = provider.SeedContractDocument("doc-1");
+        var paragraph = seeded.Blocks.First(block => block.Content is ParagraphBlockContent);
+        var cut = RenderDocumentEditor(parameters =>
+            parameters.Add(p => p.DocumentId, "doc-1")
+                      .Add(p => p.Provider, provider));
+
+        await MarkCanvasReadyAsync(cut);
+        await NotifyCanvasMiniToolbarAsync(cut, new WysiwygMiniToolbarRequest
+        {
+            IsVisible = true,
+            Left = 220,
+            Top = 120,
+            Width = 184,
+            Height = 40,
+            Reason = "canvas-object-selection",
+            Selection = new WysiwygSelectionSnapshot
+            {
+                Region = "Body",
+                SelectionMode = "Object",
+                AnchorBlockId = paragraph.Id,
+                FocusBlockId = paragraph.Id,
+                ActiveImageBlockId = paragraph.Id,
+                ActiveObjectId = "drawing-1",
+                HitTargetKind = "image",
+                IsCollapsed = true,
+                ObjectSelection = new WysiwygObjectSelectionSnapshot
+                {
+                    Region = "Body",
+                    Kind = "image",
+                    ObjectId = "drawing-1",
+                    BlockId = paragraph.Id,
+                    AnchorBlockId = paragraph.Id,
+                    AnchorInlineId = "drawing-run-1",
+                    RunId = "drawing-run-1"
+                }
+            }
+        }, new TmDocumentCanvasEngineHost.CanvasEngineUiState
+        {
+            Formatting = new TmDocumentCanvasEngineHost.CanvasEngineFormattingState
+            {
+                Image = new TmDocumentCanvasEngineHost.CanvasEngineImageState
+                {
+                    ObjectId = "drawing-1",
+                    BlockId = paragraph.Id,
+                    RunId = "drawing-run-1",
+                    Url = "https://example.test/drawing.png",
+                    AltText = "Selected drawing object",
+                    Width = 144,
+                    Height = 96,
+                    WrapMode = "square"
+                }
+            }
+        });
+
+        cut.WaitForAssertion(() =>
+        {
+            cut.Find("[data-testid='document-image-inspector-link']").Should().NotBeNull();
+            cut.Find("[data-testid='document-image-inspector-decorative']").Should().NotBeNull();
+            cut.Find("[data-testid='document-image-inspector-lock-anchor']").Should().NotBeNull();
+        });
+
+        cut.Find("[data-testid='document-image-inspector-decorative']").Change(true);
+        cut.Find("[data-testid='document-image-inspector-lock-anchor']").Change(true);
+        cut.Find("[data-testid='document-image-inspector-link']").Change("https://example.test/replaced.png");
+
+        cut.WaitForAssertion(() =>
+        {
+            var commands = SetupDocumentCanvasModule().Invocations
+                .Where(invocation => invocation.Identifier == "execCommand" && invocation.Arguments.Count > 1)
+                .Select(invocation => invocation.Arguments[1]?.ToString()?.ToLowerInvariant())
+                .ToList();
+            commands.Should().Contain("setimagedecorative");
+            commands.Should().Contain("setimageanchormode");
+            commands.Should().Contain("setimageurl");
+        });
+    }
+
     private static IRenderedComponent<TmDocumentCanvasEngineHost> FindCanvasHost(IRenderedComponent<TmDocumentEditor> cut)
     {
         cut.WaitForAssertion(() =>
