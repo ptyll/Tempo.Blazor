@@ -113,7 +113,7 @@ public class TmDocumentEditorCssTests
             ".tm-document-editor__page-surface",
             ".tm-document-editor__ribbon",
             ".tm-document-comment-thread",
-            ".tm-document-diff__pane pre"
+            ".tm-document-diff__rows"
         })
         {
             // Phase 2: the package carries no manual dark block any more (ChromeStylesheets_PaintOnlyThrough...), so the
@@ -349,6 +349,40 @@ public class TmDocumentEditorCssTests
         var root = FindRepositoryRoot();
         return File.ReadAllText(Path.Combine(
             root, "src", "Tempo.Blazor.DocumentEditor", "wwwroot", "css", "components", fileName));
+    }
+
+    // Phase 7 review fixes: semantic contracts of the mode styles (selectors and tokens, never pixels).
+    [Fact]
+    public void ModeStyles_NarrowDiff_PrintPreviewAndTouchContracts()
+    {
+        var panels = ReadComponentCss("_document-editor-panels.css");
+        var root = FindRepositoryRoot();
+        var scoped = File.ReadAllText(Path.Combine(root, "src", "Tempo.Blazor.DocumentEditor", "Components", "DocumentEditor", "TmDocumentEditor.razor.css"));
+
+        // A narrow viewer shows an unchanged block once and names the side of a changed one.
+        panels.Should().Contain("@container tm-doc-diff (width < 640px)");
+        panels.Should().Contain(".tm-document-diff__row--unchanged .tm-document-diff__cell--old");
+        panels.Should().Contain(".tm-document-diff__side-label");
+
+        // <ins> / <del>: the UA decoration is reset and "added" carries its own non-colour cue.
+        var rules = CssRules.Parse(panels);
+        CssRules.Body(rules, ".tm-document-diff__segment").Should().Contain("text-decoration: none");
+        CssRules.Body(rules, ".tm-document-diff__segment--added").Should().Contain("underline");
+        CssRules.Body(rules, ".tm-document-diff__segment--removed").Should().Contain("line-through");
+
+        // The changed tint also has a bar (dark mode), the highlight mapping has NO fallback, touch targets grow on a coarse pointer.
+        CssRules.Body(rules, ".tm-document-diff__row--changed .tm-document-diff__cell").Should().Contain("border-inline-start");
+        panels.Should().NotContain("var(--tm-document-highlight-insert,").And.NotContain("var(--tm-document-highlight-delete,").And.NotContain("var(--tm-document-highlight-change,");
+        panels.Should().Contain("@media (pointer: coarse)");
+        panels.Should().Contain(".tm-document-diff__nav-button");
+
+        // The print preview: the ruler is hidden (it kept the mount wider than the region), the thumbnails are paper, a phone has only Close filled
+        // and no zoom group; the short Close word replaces the long one.
+        scoped.Should().Contain(".tm-document-editor--canvas-print-preview ::deep .tm-document-canvas-ruler-shell");
+        CssRules.Body(rules, ".tm-document-print-pages .tm-document-page-navigator__thumbnail").Should().Contain("var(--tm-paper)");
+        panels.Should().Contain("[data-layout=\"mobile\"] .tm-document-print-toolbar__group--zoom");
+        panels.Should().Contain("[data-layout=\"mobile\"] .tm-document-print-actions__label--short");
+        panels.Should().Contain("[data-layout=\"mobile\"] .tm-document-print-actions__card--primary");
     }
 
     [Fact]

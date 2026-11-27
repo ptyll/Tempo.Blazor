@@ -34,95 +34,10 @@
     background: var(--tm-color-surface);
 }
 
-.tm-document-editor--canvas-print-preview {
-    --tm-document-editor-preview-bar-bg: color-mix(in srgb, var(--tm-color-surface) 92%, var(--tm-color-primary) 8%);
-    --tm-document-editor-preview-bar-border: color-mix(in srgb, var(--tm-color-border) 78%, var(--tm-color-primary) 22%);
-}
-
-.tm-document-editor__print-preview-actions {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--tm-space-3);
-    margin: var(--tm-space-3) var(--tm-space-4);
-    padding: var(--tm-space-2) var(--tm-space-3);
-    border: 1px solid var(--tm-document-editor-preview-bar-border);
-    border-radius: var(--tm-radius-md);
-    background: var(--tm-document-editor-preview-bar-bg);
-    box-shadow: var(--tm-shadow-sm);
-}
-
-.tm-document-editor__print-preview-title,
-.tm-document-editor__print-preview-buttons,
-.tm-document-editor__print-preview-button,
-.tm-document-editor__print-preview-close {
-    display: inline-flex;
-    align-items: center;
-}
-
-.tm-document-editor__print-preview-title {
-    min-inline-size: 0;
-    gap: var(--tm-space-2);
-    color: var(--tm-color-text);
-    font: var(--tm-font-weight-semibold) var(--tm-font-size-sm) / var(--tm-line-height-tight) var(--tm-font-sans);
-}
-
-.tm-document-editor__print-preview-title span {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.tm-document-editor__print-preview-buttons {
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    gap: var(--tm-space-2);
-}
-
-.tm-document-editor__print-preview-button,
-.tm-document-editor__print-preview-close {
-    min-block-size: 2.25rem;
-    justify-content: center;
-    gap: var(--tm-space-2);
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-sm);
-    background: var(--tm-color-surface);
-    color: var(--tm-color-text);
-    font: var(--tm-font-weight-medium) var(--tm-font-size-sm) / 1 var(--tm-font-sans);
-    box-shadow: var(--tm-shadow-xs);
-    cursor: pointer;
-}
-
-.tm-document-editor__print-preview-button {
-    padding-inline: var(--tm-space-3);
-}
-
-.tm-document-editor__print-preview-button--primary {
-    border-color: var(--tm-color-primary);
-    background: var(--tm-color-primary);
-    color: var(--tm-text-inverse);
-}
-
-.tm-document-editor__print-preview-close {
-    inline-size: 2.25rem;
-    padding: 0;
-}
-
-.tm-document-editor__print-preview-button:hover:not(:disabled),
-.tm-document-editor__print-preview-close:hover:not(:disabled) {
-    border-color: var(--tm-color-primary);
-    box-shadow: var(--tm-shadow-md);
-}
-
-.tm-document-editor__print-preview-button:disabled {
-    cursor: not-allowed;
-    opacity: 0.55;
-}
-
-.tm-document-editor__print-preview-button:focus-visible,
-.tm-document-editor__print-preview-close:focus-visible {
-    outline: 2px solid var(--tm-color-primary);
-    outline-offset: var(--tm-space-1);
+/* The print preview is a printout, not an editing surface: the horizontal ruler (an editing aid, as wide as the page at 100 percent) is
+   hidden. Left in the layout it kept the mount wider than the narrowed document region, so the fitted page sat off-centre and clipped. */
+.tm-document-editor--canvas-print-preview ::deep .tm-document-canvas-ruler-shell {
+    display: none;
 }
 
 .tm-document-editor__empty {
@@ -144,8 +59,8 @@
     position: relative;
 }
 
-/* The loading / error states and the print-preview bar sit outside the size container (they replace or precede the
-   workspace), so they follow the resolved layout the root publishes. */
+/* The loading / error states sit outside the size container (they replace the workspace), so they follow the resolved
+   layout the root publishes. */
 .tm-document-editor[data-layout="mobile"] .tm-document-editor__state {
     min-block-size: min(34rem, calc(100vh - 6rem));
     padding: var(--tm-space-4);
@@ -156,23 +71,3 @@
     margin: var(--tm-space-2) auto;
     padding: var(--tm-space-4);
 }
-
-.tm-document-editor[data-layout="mobile"] .tm-document-editor__print-preview-actions {
-    align-items: stretch;
-    flex-direction: column;
-    margin-inline: var(--tm-space-2);
-}
-
-.tm-document-editor[data-layout="mobile"] .tm-document-editor__print-preview-title,
-.tm-document-editor[data-layout="mobile"] .tm-document-editor__print-preview-buttons {
-    inline-size: 100%;
-}
-
-.tm-document-editor[data-layout="mobile"] .tm-document-editor__print-preview-buttons {
-    justify-content: stretch;
-}
-
-.tm-document-editor[data-layout="mobile"] .tm-document-editor__print-preview-button {
-    flex: 1 1 10rem;
-}
-

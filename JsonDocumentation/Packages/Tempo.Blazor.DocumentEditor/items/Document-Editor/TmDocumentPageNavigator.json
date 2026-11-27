@@ -2,7 +2,7 @@
   "itemName": "TmDocumentPageNavigator",
   "kind": "Component",
   "category": "Document Editor",
-  "description": "Page navigator showing the total page count and a list of clickable page thumbnails. Marks the active page, indicates virtual or overflow pages, and raises OnNavigateToPage when a page is chosen.",
+  "description": "Page navigator showing the total page count and a list of clickable page thumbnails. Marks the active page, indicates virtual or overflow pages, and raises OnNavigateToPage when a page is chosen. ShowHeader=false drops the \"Pages / N pages\" header (the print preview names the list itself).",
   "packageId": "Tempo.Blazor.DocumentEditor",
   "namespace": "Tempo.Blazor.Components.DocumentEditor",
   "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentPageNavigator.razor",
@@ -28,6 +28,13 @@
       "type": "EventCallback<int>",
       "isRequired": false,
       "description": "Raised when a page thumbnail is selected."
+    },
+    {
+      "name": "ShowHeader",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the \"Pages / N pages\" header renders. Defaults to true; the print preview passes false because its own header (\"Print preview\", the page total) already names the list."
     }
   ]
 }

@@ -3,87 +3,648 @@
 @using Tempo.Blazor.DocumentEditor.Models
 @using Tempo.Blazor.DocumentEditor.Services
 
-<section class="tm-document-diff" data-testid="@TestId("document-diff-viewer")">
+@* Redesign 146c7e1b, phase 7 (DE-2.6, decision DE3): the diff is TEXT, aligned by BLOCK. A header (title, the found-changes sentence, the
+   legend and the view switch) sits above two columns - the old side on the left, the new side on the right - with ONE row per block, so a
+   block that exists on both sides is level with its counterpart and a removed block leaves an empty cell opposite. The grid is CSS only
+   (rows are grids of two equal columns); a changed block carries a tint on both sides and its words are marked inside it. There is no
+   formatted preview (the engine never renders two copies of the document). The rows are built once per input, not per render. *@
+<section class="tm-document-diff"
+         data-testid="@TestId("document-diff-viewer")"
+         data-view-mode="@_mode.ToString().ToLowerInvariant()"
+         aria-label="@HeaderTitle">
     <header class="tm-document-diff__header">
-        <h4>@Loc["TmDocumentEditor_DiffTitle"]</h4>
-        <span data-testid="@TestId("document-diff-summary")">@DiffSummary</span>
+        <div class="tm-document-diff__titles">
+            @if (OnBack.HasDelegate)
+            {
+                <button type="button"
+                        class="tm-btn tm-btn-sm tm-btn-ghost tm-document-diff__back"
+                        data-testid="@TestId("document-diff-back")"
+                        @onclick="() => OnBack.InvokeAsync()">
+                    <TmIcon Name="arrow-left" Size="IconSize.Sm" />
+                    <span>@Loc["TmDocumentEditor_DiffBack"]</span>
+                </button>
+            }
+            <h4 class="tm-document-diff__title">@HeaderTitle</h4>
+            <p class="tm-document-diff__summary" data-testid="@TestId("document-diff-summary")">@SummaryText</p>
+            @if (_degraded)
+            {
+                <p class="tm-document-diff__degraded" data-testid="@TestId("document-diff-degraded")">@Loc["TmDocumentEditor_DiffDegraded"]</p>
+            }
+        </div>
+        <div class="tm-document-diff__controls">
+            <label class="tm-document-diff__view-mode">
+                <span>@Loc["TmDocumentEditor_DiffViewMode"]</span>
+                <select class="tm-input"
+                        value="@_mode.ToString()"
+                        data-testid="@TestId("document-diff-view-mode")"
+                        @onchange="ChangeViewModeAsync">
+                    <option value="@DiffViewMode.SideBySide">@Loc["TmDocumentEditor_DiffViewSideBySide"]</option>
+                    <option value="@DiffViewMode.Unified">@Loc["TmDocumentEditor_DiffViewUnified"]</option>
+                </select>
+            </label>
+            <div class="tm-document-diff__nav" role="group" aria-label="@Loc["TmDocumentEditor_DiffNavigationLabel"]">
+                <button type="button"
+                        class="tm-btn tm-btn-sm tm-btn-secondary tm-document-diff__nav-button"
+                        disabled="@(_changeCount == 0)"
+                        aria-label="@Loc["TmDocumentEditor_DiffPrevious"]"
+                        title="@Loc["TmDocumentEditor_DiffPrevious"]"
+                        data-testid="@TestId("document-diff-previous")"
+                        @onclick="() => MoveAsync(-1)">
+                    <TmIcon Name="chevron-up" Size="IconSize.Sm" />
+                </button>
+                <span class="tm-document-diff__position" role="status" aria-live="polite" data-testid="@TestId("document-diff-position")">@PositionText</span>
+                <button type="button"
+                        class="tm-btn tm-btn-sm tm-btn-secondary tm-document-diff__nav-button"
+                        disabled="@(_changeCount == 0)"
+                        aria-label="@Loc["TmDocumentEditor_DiffNext"]"
+                        title="@Loc["TmDocumentEditor_DiffNext"]"
+                        data-testid="@TestId("document-diff-next")"
+                        @onclick="() => MoveAsync(1)">
+                    <TmIcon Name="chevron-down" Size="IconSize.Sm" />
+                </button>
+            </div>
+        </div>
+        <ul class="tm-document-diff__legend" aria-label="@Loc["TmDocumentEditor_DiffLegendLabel"]" data-testid="@TestId("document-diff-legend")">
+            <li class="tm-document-diff__legend-item tm-document-diff__legend-item--added" data-legend="added">
+                <span class="tm-document-diff__swatch" aria-hidden="true"></span>@Loc["TmDocumentEditor_DiffLegendAdded"]
+            </li>
+            <li class="tm-document-diff__legend-item tm-document-diff__legend-item--removed" data-legend="removed">
+                <span class="tm-document-diff__swatch" aria-hidden="true"></span>@Loc["TmDocumentEditor_DiffLegendRemoved"]
+            </li>
+            <li class="tm-document-diff__legend-item tm-document-diff__legend-item--changed" data-legend="changed">
+                <span class="tm-document-diff__swatch" aria-hidden="true"></span>@Loc["TmDocumentEditor_DiffLegendChanged"]
+            </li>
+        </ul>
     </header>
 
-    @if (SideBySide)
+    @if (_mode == DiffViewMode.SideBySide)
     {
-        <div class="tm-document-diff__side-by-side" data-testid="@TestId("document-diff-side-by-side")">
-            <article class="tm-document-diff__pane">
-                <h5>@(string.IsNullOrWhiteSpace(OldTitle) ? Loc["TmDocumentEditor_DiffOld"] : OldTitle)</h5>
-                <pre>@OldText</pre>
-            </article>
-            <article class="tm-document-diff__pane">
-                <h5>@(string.IsNullOrWhiteSpace(NewTitle) ? Loc["TmDocumentEditor_DiffNew"] : NewTitle)</h5>
-                <pre>@NewText</pre>
-            </article>
+        <div class="tm-document-diff__heads" data-testid="@TestId("document-diff-heads")">
+            <div class="tm-document-diff__head tm-document-diff__head--old" data-testid="@TestId("document-diff-old-head")">
+                <h5>@OldHeading</h5>
+                @if (!string.IsNullOrWhiteSpace(OldMeta))
+                {
+                    <p class="tm-document-diff__meta" data-testid="@TestId("document-diff-old-meta")">@OldMeta</p>
+                }
+            </div>
+            <div class="tm-document-diff__head tm-document-diff__head--new" data-testid="@TestId("document-diff-new-head")">
+                <h5>@NewHeading</h5>
+                @if (!string.IsNullOrWhiteSpace(NewMeta))
+                {
+                    <p class="tm-document-diff__meta" data-testid="@TestId("document-diff-new-meta")">@NewMeta</p>
+                }
+            </div>
         </div>
     }
 
-    <div class="tm-document-diff__inline" data-testid="@TestId("document-diff-inline")">
-        @foreach (var segment in Diff.Segments)
-        {
-            <span class="@GetSegmentClass(segment.Kind)" data-diff-kind="@segment.Kind.ToString().ToLowerInvariant()">@segment.Text</span>@(" ")
-        }
-    </div>
+    @if (_rows.Count == 0)
+    {
+        <p class="tm-document-diff__empty" data-testid="@TestId("document-diff-empty")">@Loc["TmDocumentEditor_DiffNoChanges"]</p>
+    }
+    else
+    {
+        <div class="@(_mode == DiffViewMode.SideBySide ? "tm-document-diff__rows" : "tm-document-diff__rows tm-document-diff__rows--unified")"
+             role="list"
+             aria-label="@HeaderTitle"
+             data-testid="@TestId(_mode == DiffViewMode.SideBySide ? "document-diff-side-by-side" : "document-diff-unified")">
+            @foreach (var row in _rows)
+            {
+                @* The selected change is the only row that needs an element reference (to take the focus), so it is the one branch with @ref. *@
+                @if (row.ChangeIndex >= 0 && row.ChangeIndex == _current)
+                {
+                    <div @ref="_currentRow" @attributes="RowAttributes(row, true)">@RenderRowBody(row)</div>
+                }
+                else
+                {
+                    <div @attributes="RowAttributes(row, false)">@RenderRowBody(row)</div>
+                }
+            }
+        </div>
+    }
 </section>
 
 @code {
-    /// <summary>Old document snapshot.</summary>
+    private enum RowKind { Unchanged, Changed, Added, Removed }
+
+    private sealed record DiffRow(string Key, RowKind Kind, string? BlockId, string OldText, string NewText, IReadOnlyList<DocumentTextDiffSegment> Segments, int ChangeIndex);
+
+    private ElementReference _currentRow;
+    private List<DiffRow> _rows = [];
+    private int _changeCount;
+    private int _added;
+    private int _removed;
+    private int _changed;
+    private bool _degraded;
+    private int _current = -1;
+    private int _focusPending = -1;
+    private DiffViewMode _mode = DiffViewMode.SideBySide;
+    private DiffViewMode _lastModeParameter = DiffViewMode.SideBySide;
+    private bool? _sideBySideAlias;
+    private bool _viewModeExplicit;
+    private object? _rowsOldKey;
+    private object? _rowsNewKey;
+    private object? _rowsResultKey;
+    private string? _initialBlockApplied;
+
+    /// <summary>Old document snapshot. With <see cref="NewDocument"/> and no <see cref="ComparisonResult"/> the viewer compares them itself.</summary>
     [Parameter] public DocumentEditorDocument? OldDocument { get; set; }
 
     /// <summary>New document snapshot.</summary>
     [Parameter] public DocumentEditorDocument? NewDocument { get; set; }
 
-    /// <summary>Optional title for the old side.</summary>
+    /// <summary>Optional title for the old side. Blank shows the localized "Older version".</summary>
     [Parameter] public string? OldTitle { get; set; }
 
-    /// <summary>Optional title for the new side.</summary>
+    /// <summary>Optional title for the new side. Blank shows the localized "Newer version".</summary>
     [Parameter] public string? NewTitle { get; set; }
 
-    /// <summary>Whether side-by-side text panes should be shown.</summary>
-    [Parameter] public bool SideBySide { get; set; } = true;
+    /// <summary>Optional one-line description of the old side, for example "Version 1.0 - 12 Apr 2024 14:32 - Jan Prochazka".</summary>
+    [Parameter] public string? OldMeta { get; set; }
 
-    /// <summary>Optional precomputed comparison result.</summary>
+    /// <summary>Optional one-line description of the new side.</summary>
+    [Parameter] public string? NewMeta { get; set; }
+
+    /// <summary>Optional heading of the viewer. Blank shows the localized "Version comparison".</summary>
+    [Parameter] public string? Title { get; set; }
+
+    /// <summary>
+    /// How the two sides are laid out: <see cref="DiffViewMode.SideBySide"/> (default) or <see cref="DiffViewMode.Unified"/>. The viewer
+    /// keeps its own copy once the reader switches; a new parameter value from the host wins again.
+    /// </summary>
+    [Parameter] public DiffViewMode ViewMode { get; set; } = DiffViewMode.SideBySide;
+
+    /// <summary>Raised when the reader switches the view mode with the built-in selector.</summary>
+    [Parameter] public EventCallback<DiffViewMode> ViewModeChanged { get; set; }
+
+    /// <summary>
+    /// Obsolete alias of <see cref="ViewMode"/>: <c>true</c> is <see cref="DiffViewMode.SideBySide"/>, <c>false</c> is
+    /// <see cref="DiffViewMode.Unified"/>. Use <see cref="ViewMode"/>.
+    /// </summary>
+    [Obsolete("Use ViewMode (DiffViewMode.SideBySide / DiffViewMode.Unified).")]
+    [Parameter]
+    public bool SideBySide
+    {
+        get => ModeParameter == DiffViewMode.SideBySide;
+        set => _sideBySideAlias = value;
+    }
+
+    /// <summary>Optional precomputed comparison result; its block changes drive the rows.</summary>
     [Parameter] public DocumentCompareResult? ComparisonResult { get; set; }
 
-    private DocumentEditorDocument? EffectiveOldDocument => ComparisonResult?.BaseDocument ?? OldDocument;
+    /// <summary>When bound, a "Back to document" button is shown in the header and raises this callback.</summary>
+    [Parameter] public EventCallback OnBack { get; set; }
 
-    private DocumentEditorDocument? EffectiveNewDocument => ComparisonResult?.CompareDocument ?? NewDocument;
+    /// <summary>Id of a block whose row is selected (and brought into view) when the viewer first shows it.</summary>
+    [Parameter] public string? InitialBlockId { get; set; }
 
-    private string OldText => DocumentTextDiffHelper.ExtractPlainText(EffectiveOldDocument);
+    private string HeaderTitle => string.IsNullOrWhiteSpace(Title) ? Loc["TmDocumentEditor_DiffTitle"] : Title!;
 
-    private string NewText => DocumentTextDiffHelper.ExtractPlainText(EffectiveNewDocument);
+    private string OldHeading => string.IsNullOrWhiteSpace(OldTitle) ? Loc["TmDocumentEditor_DiffOld"] : OldTitle!;
 
-    private DocumentTextDiffResult Diff => ComparisonResult?.TextDiff ?? DocumentTextDiffHelper.Diff(OldText, NewText);
+    private string NewHeading => string.IsNullOrWhiteSpace(NewTitle) ? Loc["TmDocumentEditor_DiffNew"] : NewTitle!;
 
-    private string DiffSummary
+    private string SummaryText => _changeCount == 0
+        ? Loc["TmDocumentEditor_DiffNoChanges"]
+        : Loc.Plural("TmDocumentEditor_DiffFoundChanges", _changeCount, _added, _removed, _changed);
+
+    private string PositionText => _changeCount == 0
+        ? string.Empty
+        : _current < 0
+            ? Loc["TmDocumentEditor_DiffPositionNone", _changeCount]
+            : Loc["TmDocumentEditor_DiffPosition", _current + 1, _changeCount];
+
+    // ViewMode wins whenever the host sets it; the obsolete SideBySide alias only counts when ViewMode is not set, whatever the order of the two.
+    private DiffViewMode ModeParameter => _viewModeExplicit || _sideBySideAlias is null
+        ? ViewMode
+        : _sideBySideAlias.Value ? DiffViewMode.SideBySide : DiffViewMode.Unified;
+
+    /// <inheritdoc />
+    public override Task SetParametersAsync(ParameterView parameters)
     {
-        get
+        _viewModeExplicit = parameters.TryGetValue<DiffViewMode>(nameof(ViewMode), out _);
+        if (!parameters.TryGetValue<bool>("SideBySide", out _))
         {
-            var added = ComparisonResult?.Summary.AddedBlocks
-                ?? Diff.Segments.Count(segment => segment.Kind == DocumentTextDiffSegmentKind.Added);
-            var removed = ComparisonResult?.Summary.RemovedBlocks
-                ?? Diff.Segments.Count(segment => segment.Kind == DocumentTextDiffSegmentKind.Removed);
-            var changed = ComparisonResult?.Summary.ChangedBlocks ?? 0;
-            return Diff.HasChanges
-                ? ComparisonResult is null
-                    ? Loc["TmDocumentEditor_DiffSummary", added, removed]
-                    : Loc["TmDocumentEditor_CompareSummary", added, removed, changed]
-                : Loc["TmDocumentEditor_DiffNoChanges"];
+            _sideBySideAlias = null;
+        }
+
+        return base.SetParametersAsync(parameters);
+    }
+
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        var requested = ModeParameter;
+        if (requested != _lastModeParameter)
+        {
+            _lastModeParameter = requested;
+            _mode = requested;
+        }
+
+        EnsureRows();
+    }
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusPending >= 0 && _focusPending == _current)
+        {
+            _focusPending = -1;
+            try
+            {
+                await _currentRow.FocusAsync();
+            }
+            catch (InvalidOperationException)
+            {
+                // No JS runtime (prerender / disposed circuit): the selection still shows through aria-current.
+            }
         }
     }
 
-    private static string GetSegmentClass(DocumentTextDiffSegmentKind kind)
+    private Dictionary<string, object?> RowAttributes(DiffRow row, bool current) => new()
     {
-        return kind switch
+        ["class"] = RowClass(row, current),
+        ["role"] = "listitem",
+        ["tabindex"] = row.ChangeIndex >= 0 ? "-1" : null,
+        ["aria-current"] = current ? "true" : null,
+        ["data-change-kind"] = KindName(row.Kind),
+        ["data-change-index"] = row.ChangeIndex >= 0 ? row.ChangeIndex.ToString() : null,
+        ["data-block-id"] = row.BlockId,
+    };
+
+    private RenderFragment RenderRowBody(DiffRow row) => @<text>
+        @if (_mode == DiffViewMode.SideBySide)
         {
-            DocumentTextDiffSegmentKind.Added => "tm-document-diff__segment tm-document-diff__segment--added",
-            DocumentTextDiffSegmentKind.Removed => "tm-document-diff__segment tm-document-diff__segment--removed",
-            _ => "tm-document-diff__segment"
-        };
+            <div class="@CellClass(row, true)" data-side="old" aria-hidden="@(row.Kind == RowKind.Added ? "true" : null)">
+                @if (row.Kind != RowKind.Added)
+                {
+                    @RenderCell(row, true)
+                }
+            </div>
+            <div class="@CellClass(row, false)" data-side="new" aria-hidden="@(row.Kind == RowKind.Removed ? "true" : null)">
+                @if (row.Kind != RowKind.Removed)
+                {
+                    @RenderCell(row, false)
+                }
+            </div>
+        }
+        else
+        {
+            <div class="tm-document-diff__cell tm-document-diff__cell--unified" data-side="unified">
+                @RenderUnified(row)
+            </div>
+        }
+    </text>;
+
+    private async Task ChangeViewModeAsync(ChangeEventArgs args)
+    {
+        if (!Enum.TryParse<DiffViewMode>(args.Value?.ToString(), out var mode) || mode == _mode)
+        {
+            return;
+        }
+
+        _mode = mode;
+        await ViewModeChanged.InvokeAsync(mode);
+    }
+
+    private Task MoveAsync(int direction)
+    {
+        if (_changeCount == 0)
+        {
+            return Task.CompletedTask;
+        }
+
+        _current = _current < 0
+            ? direction > 0 ? 0 : _changeCount - 1
+            : (_current + direction + _changeCount) % _changeCount;
+        _focusPending = _current;
+        return Task.CompletedTask;
+    }
+
+    private void EnsureRows()
+    {
+        if (ReferenceEquals(_rowsResultKey, ComparisonResult)
+            && ReferenceEquals(_rowsOldKey, OldDocument)
+            && ReferenceEquals(_rowsNewKey, NewDocument))
+        {
+            ApplyInitialBlock();
+            return;
+        }
+
+        _rowsResultKey = ComparisonResult;
+        _rowsOldKey = OldDocument;
+        _rowsNewKey = NewDocument;
+        _current = -1;
+        _initialBlockApplied = null;
+
+        var result = ComparisonResult;
+        if (result is null && OldDocument is not null && NewDocument is not null)
+        {
+            result = new DocumentComparisonService().Compare(OldDocument, NewDocument);
+        }
+
+        _rows = result is null ? [] : BuildRows(result);
+        _changeCount = _rows.Count(row => row.ChangeIndex >= 0);
+        _added = result?.Summary.AddedBlocks ?? 0;
+        _removed = result?.Summary.RemovedBlocks ?? 0;
+        _changed = result?.Summary.ChangedBlocks ?? 0;
+        if (result is not null && (_added + _removed + _changed) == 0 && result.Changes.Count > 0)
+        {
+            _added = result.Changes.Count(c => c.Kind == DocumentCompareChangeKind.Added);
+            _removed = result.Changes.Count(c => c.Kind == DocumentCompareChangeKind.Removed);
+            _changed = result.Changes.Count(c => c.Kind == DocumentCompareChangeKind.Changed);
+        }
+
+        _degraded = result?.TextDiff.IsDegraded == true || result?.Changes.Any(c => c.TextDiff.IsDegraded) == true;
+        ApplyInitialBlock();
+    }
+
+    private void ApplyInitialBlock()
+    {
+        if (string.IsNullOrEmpty(InitialBlockId) || _initialBlockApplied == InitialBlockId)
+        {
+            return;
+        }
+
+        _initialBlockApplied = InitialBlockId;
+        var row = _rows.FirstOrDefault(r => r.ChangeIndex >= 0 && r.BlockId == InitialBlockId);
+        if (row is not null)
+        {
+            _current = row.ChangeIndex;
+            _focusPending = row.ChangeIndex;
+        }
+    }
+
+    /// <summary>
+    /// Walks the new document in order and lines the base blocks up with it: a block id on both sides is one row (unchanged or changed, as the
+    /// comparison's block changes say), a base-only block is a removed row placed where it stood, a new-only block an added row. Changes the
+    /// documents cannot place (a provider result without snapshots) are appended so no reported change is ever dropped.
+    /// </summary>
+    private static List<DiffRow> BuildRows(DocumentCompareResult result)
+    {
+        var rows = new List<DiffRow>();
+        var changes = result.Changes;
+        var consumed = new HashSet<DocumentCompareBlockChange>();
+        var changeByKey = new Dictionary<(string, DocumentCompareChangeKind), DocumentCompareBlockChange>();
+        foreach (var change in changes)
+        {
+            if (change.BlockId is { Length: > 0 } id)
+            {
+                changeByKey.TryAdd((id, change.Kind), change);
+            }
+        }
+
+        if (result.BaseDocument is not null && result.CompareDocument is not null)
+        {
+            var baseBlocks = result.BaseDocument.Blocks.OrderBy(block => block.Order).ToList();
+            var compareBlocks = result.CompareDocument.Blocks.OrderBy(block => block.Order).ToList();
+            var baseIndexById = new Dictionary<string, int>(StringComparer.Ordinal);
+            for (var i = 0; i < baseBlocks.Count; i++)
+            {
+                baseIndexById.TryAdd(baseBlocks[i].Id, i);
+            }
+
+            var compareIds = new HashSet<string>(compareBlocks.Select(block => block.Id), StringComparer.Ordinal);
+            var next = 0;
+
+            void EmitRemoved(int from, int to)
+            {
+                for (var k = from; k < to; k++)
+                {
+                    var block = baseBlocks[k];
+                    if (compareIds.Contains(block.Id))
+                    {
+                        continue; // reordered: shown where the new document has it
+                    }
+
+                    if (changeByKey.TryGetValue((block.Id, DocumentCompareChangeKind.Removed), out var change))
+                    {
+                        consumed.Add(change);
+                        rows.Add(new DiffRow("r-" + block.Id, RowKind.Removed, block.Id, change.OldText, string.Empty, change.TextDiff.Segments, -1));
+                    }
+                    else
+                    {
+                        var text = DocumentTextDiffHelper.ExtractBlockPlainText(block);
+                        if (text.Length > 0)
+                        {
+                            rows.Add(new DiffRow("r-" + block.Id, RowKind.Removed, block.Id, text, string.Empty, [], -1));
+                        }
+                    }
+                }
+            }
+
+            foreach (var compareBlock in compareBlocks)
+            {
+                if (baseIndexById.TryGetValue(compareBlock.Id, out var baseIndex))
+                {
+                    if (baseIndex >= next)
+                    {
+                        EmitRemoved(next, baseIndex);
+                        next = baseIndex + 1;
+                    }
+
+                    if (changeByKey.TryGetValue((compareBlock.Id, DocumentCompareChangeKind.Changed), out var change))
+                    {
+                        consumed.Add(change);
+                        rows.Add(new DiffRow("c-" + compareBlock.Id, RowKind.Changed, compareBlock.Id, change.OldText, change.NewText, change.TextDiff.Segments, -1));
+                    }
+                    else
+                    {
+                        var text = DocumentTextDiffHelper.ExtractBlockPlainText(compareBlock);
+                        if (text.Length > 0)
+                        {
+                            rows.Add(new DiffRow("u-" + compareBlock.Id, RowKind.Unchanged, compareBlock.Id, text, text, [], -1));
+                        }
+                    }
+                }
+                else if (changeByKey.TryGetValue((compareBlock.Id, DocumentCompareChangeKind.Added), out var added))
+                {
+                    consumed.Add(added);
+                    rows.Add(new DiffRow("a-" + compareBlock.Id, RowKind.Added, compareBlock.Id, string.Empty, added.NewText, added.TextDiff.Segments, -1));
+                }
+                else
+                {
+                    var text = DocumentTextDiffHelper.ExtractBlockPlainText(compareBlock);
+                    if (text.Length > 0)
+                    {
+                        rows.Add(new DiffRow("a-" + compareBlock.Id, RowKind.Added, compareBlock.Id, string.Empty, text, [], -1));
+                    }
+                }
+            }
+
+            EmitRemoved(next, baseBlocks.Count);
+        }
+
+        var extra = 0;
+        foreach (var change in changes.Where(change => !consumed.Contains(change)))
+        {
+            var kind = change.Kind switch
+            {
+                DocumentCompareChangeKind.Added => RowKind.Added,
+                DocumentCompareChangeKind.Removed => RowKind.Removed,
+                _ => RowKind.Changed
+            };
+            rows.Add(new DiffRow("x-" + extra++, kind, change.BlockId, change.OldText, change.NewText, change.TextDiff.Segments, -1));
+        }
+
+        var index = 0;
+        for (var i = 0; i < rows.Count; i++)
+        {
+            if (rows[i].Kind != RowKind.Unchanged)
+            {
+                rows[i] = rows[i] with { ChangeIndex = index++ };
+            }
+        }
+
+        return rows;
+    }
+
+    private static string KindName(RowKind kind) => kind.ToString().ToLowerInvariant();
+
+    private static string RowClass(DiffRow row, bool current)
+    {
+        var css = "tm-document-diff__row tm-document-diff__row--" + KindName(row.Kind);
+        return current ? css + " tm-document-diff__row--current" : css;
+    }
+
+    private static string CellClass(DiffRow row, bool oldSide)
+    {
+        var css = "tm-document-diff__cell tm-document-diff__cell--" + (oldSide ? "old" : "new");
+        var empty = oldSide ? row.Kind == RowKind.Added : row.Kind == RowKind.Removed;
+        return empty ? css + " tm-document-diff__cell--empty" : css;
+    }
+
+    private string KindWord(RowKind kind) => kind switch
+    {
+        RowKind.Added => Loc["TmDocumentEditor_DiffLegendAdded"],
+        RowKind.Removed => Loc["TmDocumentEditor_DiffLegendRemoved"],
+        RowKind.Changed => Loc["TmDocumentEditor_DiffLegendChanged"],
+        _ => string.Empty
+    };
+
+    private RenderFragment RenderCell(DiffRow row, bool oldSide) => builder =>
+    {
+        var seq = 0;
+        if (row.Kind != RowKind.Unchanged)
+        {
+            // A stacked (narrow) layout shows which side a cell is; wide, the column heads say it.
+            builder.OpenElement(seq++, "span");
+            builder.AddAttribute(seq++, "class", "tm-document-diff__side-label");
+            builder.AddAttribute(seq++, "aria-hidden", "true");
+            builder.AddContent(seq++, oldSide ? OldHeading : NewHeading);
+            builder.CloseElement();
+        }
+
+        if (row.Kind == RowKind.Changed)
+        {
+            builder.OpenElement(seq++, "span");
+            builder.AddAttribute(seq++, "class", "tm-document-diff__sr");
+            builder.AddContent(seq++, KindWord(row.Kind) + ": ");
+            builder.CloseElement();
+        }
+
+        switch (row.Kind)
+        {
+            case RowKind.Unchanged:
+                builder.AddContent(seq++, oldSide ? row.OldText : row.NewText);
+                break;
+            case RowKind.Removed:
+                WriteSegment(builder, ref seq, DocumentTextDiffSegmentKind.Removed, row.OldText);
+                break;
+            case RowKind.Added:
+                WriteSegment(builder, ref seq, DocumentTextDiffSegmentKind.Added, row.NewText);
+                break;
+            default:
+                if (row.Segments.Count == 0)
+                {
+                    WriteSegment(builder, ref seq, oldSide ? DocumentTextDiffSegmentKind.Removed : DocumentTextDiffSegmentKind.Added, oldSide ? row.OldText : row.NewText);
+                }
+                else
+                {
+                    WriteSegments(builder, ref seq, row.Segments, oldSide ? DocumentTextDiffSegmentKind.Added : DocumentTextDiffSegmentKind.Removed);
+                }
+
+                break;
+        }
+    };
+
+    private RenderFragment RenderUnified(DiffRow row) => builder =>
+    {
+        var seq = 0;
+        if (row.Kind == RowKind.Changed)
+        {
+            builder.OpenElement(seq++, "span");
+            builder.AddAttribute(seq++, "class", "tm-document-diff__sr");
+            builder.AddContent(seq++, KindWord(row.Kind) + ": ");
+            builder.CloseElement();
+        }
+
+        switch (row.Kind)
+        {
+            case RowKind.Unchanged:
+                builder.AddContent(seq++, row.OldText);
+                break;
+            case RowKind.Removed:
+                WriteSegment(builder, ref seq, DocumentTextDiffSegmentKind.Removed, row.OldText);
+                break;
+            case RowKind.Added:
+                WriteSegment(builder, ref seq, DocumentTextDiffSegmentKind.Added, row.NewText);
+                break;
+            default:
+                if (row.Segments.Count == 0)
+                {
+                    WriteSegment(builder, ref seq, DocumentTextDiffSegmentKind.Removed, row.OldText);
+                    builder.AddContent(seq++, " ");
+                    WriteSegment(builder, ref seq, DocumentTextDiffSegmentKind.Added, row.NewText);
+                }
+                else
+                {
+                    WriteSegments(builder, ref seq, row.Segments, null);
+                }
+
+                break;
+        }
+    };
+
+    private void WriteSegments(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder builder, ref int seq, IReadOnlyList<DocumentTextDiffSegment> segments, DocumentTextDiffSegmentKind? skip)
+    {
+        var first = true;
+        foreach (var segment in segments)
+        {
+            if (skip is { } hidden && segment.Kind == hidden)
+            {
+                continue;
+            }
+
+            if (!first)
+            {
+                builder.AddContent(seq++, " ");
+            }
+
+            first = false;
+            WriteSegment(builder, ref seq, segment.Kind, segment.Text);
+        }
+    }
+
+    private void WriteSegment(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder builder, ref int seq, DocumentTextDiffSegmentKind kind, string text)
+    {
+        if (kind == DocumentTextDiffSegmentKind.Unchanged)
+        {
+            builder.AddContent(seq++, text);
+            return;
+        }
+
+        // <ins> / <del>: the semantics are in the markup (not only in the colour), and a hidden word names the kind for a reader that skips them.
+        var added = kind == DocumentTextDiffSegmentKind.Added;
+        builder.OpenElement(seq++, added ? "ins" : "del");
+        builder.AddAttribute(seq++, "class", added
+            ? "tm-document-diff__segment tm-document-diff__segment--added"
+            : "tm-document-diff__segment tm-document-diff__segment--removed");
+        builder.AddAttribute(seq++, "data-diff-kind", added ? "added" : "removed");
+        builder.OpenElement(seq++, "span");
+        builder.AddAttribute(seq++, "class", "tm-document-diff__sr");
+        builder.AddContent(seq++, Loc[added ? "TmDocumentEditor_DiffSegmentAdded" : "TmDocumentEditor_DiffSegmentRemoved"] + " ");
+        builder.CloseElement();
+        builder.AddContent(seq++, text);
+        builder.CloseElement();
     }
 }

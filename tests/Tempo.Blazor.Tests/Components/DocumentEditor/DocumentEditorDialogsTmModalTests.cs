@@ -64,7 +64,10 @@ public sealed class DocumentEditorDialogsTmModalTests : LocalizationTestBase
         AssertCoreModal(cut, "document-compare-dialog");
         cut.FindComponent<Tempo.Blazor.Components.Feedback.TmModal>().Instance.MobilePresentation
             .Should().Be(Tempo.Blazor.Components.Feedback.MobilePresentation.AutoFullscreen);
-        foreach (var id in new[] { "document-compare-run", "document-compare-close", "document-compare-base-source", "document-compare-target-source", "document-compare-empty" })
+        // Phase 7: the source pickers open under their cards ("Change..."), so their ids exist only once the card is expanded.
+        cut.Find("[data-testid='document-compare-base-change']").Click();
+        cut.Find("[data-testid='document-compare-target-change']").Click();
+        foreach (var id in new[] { "document-compare-run", "document-compare-close", "document-compare-base-source", "document-compare-target-source", "document-compare-empty", "document-compare-base-card", "document-compare-target-card" })
         {
             cut.FindAll($"[data-testid='{id}']").Should().ContainSingle(id);
         }

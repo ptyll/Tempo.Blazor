@@ -593,7 +593,7 @@ public class TmDocumentEditorTests : LocalizationTestBase
         cut.Find("[data-testid='document-dirty-status']").TextContent.Should().Contain("Unsaved changes");
         cut.Find("[data-testid='document-save-message']").TextContent.Should().Contain("Saved");
         cut.Find("[data-testid='document-status-word-count']").TextContent.Should().Contain("42 words");
-        cut.Find("[data-testid='document-status-page-count']").TextContent.Should().Contain("3 pages");
+        cut.Find("[data-testid='document-status-page-count']").TextContent.Should().Contain("of 3");
         cut.Find("[data-testid='document-status-region']").TextContent.Should().Contain("body");
         cut.Find("[data-testid='document-status-zoom']").TextContent.Should().Contain("110%");
     }
@@ -632,10 +632,10 @@ public class TmDocumentEditorTests : LocalizationTestBase
 
         cut.WaitForAssertion(() => cut.Find("[data-testid='document-status-bar']").Should().NotBeNull());
         cut.FindAll(".tm-document-editor__ribbon-status").Should().BeEmpty();
-        cut.Find("[data-testid='document-status-page-count']").TextContent.Should().Contain("2 pages");
+        cut.Find("[data-testid='document-status-page-count']").TextContent.Should().Contain("of 2");
         cut.Find("[data-testid='document-status-word-count']").TextContent.Should().Contain("words");
         cut.Find("[data-testid='document-status-region']").TextContent.Should().Contain("body");
-        cut.Find("[data-testid='document-status-zoom']").TextContent.Should().Contain("Zoom 100%");
+        cut.Find("[data-testid='document-status-zoom']").GetAttribute("aria-label").Should().Contain("Zoom 100%");
     }
 
     [Fact]

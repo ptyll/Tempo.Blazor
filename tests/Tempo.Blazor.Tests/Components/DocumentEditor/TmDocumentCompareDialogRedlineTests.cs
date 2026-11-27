@@ -27,6 +27,7 @@ public class TmDocumentCompareDialogRedlineTests : LocalizationTestBase
             .Add(p => p.DocumentProvider, provider)
             .Add(p => p.OnExportRedline, EventCallback.Factory.Create<DocumentCompareResult>(this, result => exported = result)));
 
+        cut.Find("[data-testid='document-compare-target-change']").Click();
         cut.Find("[data-testid='document-compare-target-document-id']").Input("doc-v1");
         cut.Find("[data-testid='document-compare-run']").Click();
 
@@ -50,6 +51,7 @@ public class TmDocumentCompareDialogRedlineTests : LocalizationTestBase
             .Add(p => p.CurrentDocument, Document("current", "Stejný text."))
             .Add(p => p.DocumentProvider, provider));
 
+        cut.Find("[data-testid='document-compare-target-change']").Click();
         cut.Find("[data-testid='document-compare-target-document-id']").Input("doc-same");
         cut.Find("[data-testid='document-compare-run']").Click();
 

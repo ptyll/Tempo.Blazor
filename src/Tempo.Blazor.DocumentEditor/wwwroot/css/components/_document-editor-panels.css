@@ -1063,3 +1063,1041 @@
         transition-duration: 0.01ms !important;
     }
 }
+
+/* ══ Redesign 146c7e1b, phase 7: document-region modes (print preview, comparison) and the compare dialog ══════════════════════ */
+
+/* ── Diff viewer (DE-2.6, decision DE3) ───────────────────────────────────
+   The diff is TEXT aligned by BLOCK: a header (title, sentence, view switch, navigation, legend), two column heads, then one grid row per
+   block - the old side left, the new side right - so a block on both sides is level with its counterpart and a removed block leaves an
+   empty cell opposite. No formatted preview. The highlights come from the editor's --tm-document-highlight-* mapping (core semantic tokens,
+   they flip with the theme); a viewer used outside the editor declares that mapping on a wrapper (see the demo card). */
+.tm-document-diff {
+    --tm-document-diff-added: var(--tm-document-highlight-insert);
+    --tm-document-diff-removed: var(--tm-document-highlight-delete);
+    --tm-document-diff-changed: var(--tm-document-highlight-change);
+
+    container: tm-doc-diff / inline-size;
+    display: grid;
+    gap: var(--tm-space-3);
+    min-width: 0;
+}
+
+.tm-document-diff__header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: var(--tm-space-3) var(--tm-space-4);
+}
+
+.tm-document-diff__titles {
+    display: grid;
+    justify-items: start;
+    gap: var(--tm-space-1);
+    min-width: 0;
+}
+
+.tm-document-diff__title {
+    margin: 0;
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-xl);
+    font-weight: var(--tm-font-weight-semibold);
+    line-height: var(--tm-line-height-tight);
+}
+
+.tm-document-diff__summary,
+.tm-document-diff__degraded,
+.tm-document-diff__empty {
+    margin: 0;
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-md);
+}
+
+.tm-document-diff__degraded {
+    color: var(--tm-color-warning-text);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-document-diff__controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--tm-space-2) var(--tm-space-3);
+}
+
+.tm-document-diff__view-mode {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-document-diff__nav {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+}
+
+.tm-document-diff__position {
+    min-inline-size: 6rem;
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+    text-align: center;
+    white-space: nowrap;
+}
+
+.tm-document-diff__nav-button {
+    min-inline-size: 2rem;
+}
+
+.tm-document-diff__legend {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--tm-space-2) var(--tm-space-4);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tm-document-diff__legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-document-diff__swatch {
+    display: inline-block;
+    inline-size: 1.25rem;
+    block-size: 1rem;
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-control);
+}
+
+.tm-document-diff__legend-item--added .tm-document-diff__swatch {
+    background: color-mix(in srgb, var(--tm-document-diff-added) 30%, var(--tm-color-surface));
+    border-color: color-mix(in srgb, var(--tm-document-diff-added) 55%, var(--tm-color-border));
+}
+
+.tm-document-diff__legend-item--removed .tm-document-diff__swatch {
+    background: color-mix(in srgb, var(--tm-document-diff-removed) 30%, var(--tm-color-surface));
+    border-color: color-mix(in srgb, var(--tm-document-diff-removed) 55%, var(--tm-color-border));
+}
+
+.tm-document-diff__legend-item--changed .tm-document-diff__swatch {
+    background: color-mix(in srgb, var(--tm-document-diff-changed) 30%, var(--tm-color-surface));
+    border-color: color-mix(in srgb, var(--tm-document-diff-changed) 55%, var(--tm-color-border));
+}
+
+.tm-document-diff__heads {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--tm-space-4);
+    padding-inline: var(--tm-space-3);
+}
+
+.tm-document-diff__head {
+    min-width: 0;
+    padding: var(--tm-space-3);
+    background: var(--tm-color-surface-secondary);
+    border: 1px solid var(--tm-color-border-subtle);
+    border-radius: var(--tm-radius-card);
+}
+
+.tm-document-diff__head h5 {
+    margin: 0;
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-md);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-document-diff__meta {
+    margin: var(--tm-space-1) 0 0;
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-document-diff__rows {
+    display: grid;
+    min-width: 0;
+    padding: var(--tm-space-3);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border-subtle);
+    border-radius: var(--tm-radius-card);
+}
+
+/* One grid row per block: two equal columns, so the two sides of a block are always level. */
+.tm-document-diff__row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+    gap: var(--tm-space-4);
+    min-width: 0;
+    padding-block: var(--tm-space-1);
+    border-radius: var(--tm-radius-control);
+}
+
+.tm-document-diff__rows--unified .tm-document-diff__row {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.tm-document-diff__cell {
+    min-width: 0;
+    padding: var(--tm-space-1) var(--tm-space-3);
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-md);
+    line-height: var(--tm-line-height-normal);
+    overflow-wrap: anywhere;
+    border-radius: var(--tm-radius-control);
+}
+
+.tm-document-diff__cell--empty {
+    padding-block: 0;
+}
+
+/* A changed block carries a tint on BOTH sides; the words inside it are marked on top. */
+.tm-document-diff__row--changed .tm-document-diff__cell {
+    background: color-mix(in srgb, var(--tm-document-diff-changed) 12%, transparent);
+}
+
+.tm-document-diff__row--added .tm-document-diff__cell--new,
+.tm-document-diff__row--added .tm-document-diff__cell--unified {
+    background: color-mix(in srgb, var(--tm-document-diff-added) 14%, transparent);
+}
+
+.tm-document-diff__row--removed .tm-document-diff__cell--old,
+.tm-document-diff__row--removed .tm-document-diff__cell--unified {
+    background: color-mix(in srgb, var(--tm-document-diff-removed) 14%, transparent);
+}
+
+.tm-document-diff__side-label {
+    display: none;
+}
+
+/* <ins> / <del>: the user agent underlines / strikes them; the component decides. Colour is never the only cue: removed is struck through,
+   added is underlined (2px). */
+.tm-document-diff__segment {
+    padding: 0 var(--tm-space-1);
+    border-radius: var(--tm-radius-control);
+    text-decoration: none;
+}
+
+.tm-document-diff__segment--added {
+    background: color-mix(in srgb, var(--tm-document-diff-added) 32%, transparent);
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 0.2em;
+}
+
+.tm-document-diff__segment--removed {
+    background: color-mix(in srgb, var(--tm-document-diff-removed) 28%, transparent);
+    text-decoration: line-through;
+}
+
+/* The kind of a change is also a word for assistive technology: colour never carries it alone. */
+.tm-document-diff__sr {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.tm-document-diff__row--current {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
+}
+
+.tm-document-diff__row:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
+}
+
+/* A narrow viewer (a phone, or a tablet with the panels open): the two sides stack instead of squeezing. */
+@container tm-doc-diff (width < 640px) {
+    .tm-document-diff__header {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .tm-document-diff__controls,
+    .tm-document-diff__legend {
+        justify-content: flex-start;
+    }
+
+    .tm-document-diff__heads {
+        grid-template-columns: minmax(0, 1fr);
+        padding-inline: 0;
+    }
+
+    .tm-document-diff__row {
+        grid-template-columns: minmax(0, 1fr);
+        gap: var(--tm-space-1);
+    }
+
+    .tm-document-diff__cell--empty {
+        display: none;
+    }
+
+    /* An unchanged block says the same on both sides: stacked, it is shown once. A changed one names each side. */
+    .tm-document-diff__row--unchanged .tm-document-diff__cell--old {
+        display: none;
+    }
+
+    .tm-document-diff__side-label {
+        display: block;
+        color: var(--tm-color-text-secondary);
+        font-size: var(--tm-font-size-xs);
+        font-weight: var(--tm-font-weight-semibold);
+    }
+}
+
+@media (forced-colors: active) {
+    .tm-document-diff__segment--added {
+        outline: 1px solid Highlight;
+    }
+
+    .tm-document-diff__row--current {
+        outline-color: Highlight;
+    }
+}
+
+/* ── The diff as a mode of the document region ───────────────────────────── */
+.tm-document-editor__diff-mode {
+    min-width: 0;
+}
+
+/* The comparison owns the whole workspace: the navigation and the inspector step aside (they stay mounted, so nothing is lost). */
+.tm-document-editor[data-layout] .tm-document-editor__main .tm-document-editor__workspace.tm-document-editor__workspace--diff {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "doc";
+}
+
+.tm-document-editor__workspace--diff > [data-region="nav"],
+.tm-document-editor__workspace--diff > [data-region="inspector"] {
+    display: none;
+}
+
+/* ── Version panel: "Show differences" ───────────────────────────────────── */
+/* The action stays on screen while the list scrolls: Base and Compare are picked down the list, the button is what they are for. */
+.tm-document-version-panel__compare {
+    position: sticky;
+    inset-block-end: 0;
+    display: grid;
+    gap: var(--tm-space-1);
+    padding-block: var(--tm-space-2);
+    background: var(--tm-color-surface);
+}
+
+.tm-document-version-panel__show-diff {
+    justify-content: center;
+}
+
+.tm-document-version-panel__show-diff-hint {
+    color: var(--tm-color-text-muted);
+    font-size: var(--tm-font-size-xs);
+    text-align: center;
+}
+
+/* ── Print preview (DE-1.8) ──────────────────────────────────────────────────
+   No ribbon. The left region is the page thumbnails, the doc region carries a page / zoom bar above the printout, the right region (desktop)
+   the actions as cards and the read-only document information. A tablet moves the actions into a bar above the printout, a phone into a
+   bottom bar. */
+.tm-document-print-pages {
+    position: sticky;
+    top: calc(var(--tm-document-ribbon-block-size) + var(--tm-space-2));
+    display: grid;
+    gap: var(--tm-space-3);
+    align-content: start;
+    max-block-size: calc(100dvh - var(--tm-document-ribbon-block-size) - var(--tm-space-6));
+    overflow-y: auto;
+}
+
+.tm-document-print-pages__header {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-3);
+}
+
+.tm-document-print-pages__icon {
+    display: inline-flex;
+    color: var(--tm-color-text-secondary);
+}
+
+.tm-document-print-pages__titles {
+    display: grid;
+    min-width: 0;
+}
+
+.tm-document-print-pages__title {
+    margin: 0;
+    overflow: hidden;
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-md);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: var(--tm-font-weight-semibold);
+    line-height: var(--tm-line-height-tight);
+}
+
+.tm-document-print-pages__count {
+    color: var(--tm-color-text-muted);
+    font-size: var(--tm-font-size-sm);
+}
+
+/* The thumbnails of the preview are tall page cards with their number underneath, not the list rows of the editing navigation. */
+.tm-document-print-pages .tm-document-page-navigator__item {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-2);
+    border-color: transparent;
+}
+
+.tm-document-print-pages .tm-document-page-navigator__thumbnail {
+    inline-size: 100%;
+    max-inline-size: 8rem;
+}
+
+.tm-document-print-pages .tm-document-page-navigator__item--active {
+    border-color: var(--tm-color-primary);
+}
+
+.tm-document-print-pages .tm-document-page-navigator__item--active .tm-document-page-navigator__label {
+    color: var(--tm-color-primary);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-document-print-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: var(--tm-space-2) var(--tm-space-4);
+    order: -2;
+    min-width: 0;
+}
+
+.tm-document-print-toolbar__group {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-1);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-control);
+    box-shadow: var(--tm-shadow-xs);
+}
+
+.tm-document-print-toolbar__button {
+    display: inline-grid;
+    place-items: center;
+    inline-size: 2.25rem;
+    block-size: 2.25rem;
+    padding: 0;
+    color: var(--tm-color-text);
+    background: transparent;
+    border: 0;
+    border-radius: var(--tm-radius-control);
+    cursor: pointer;
+}
+
+.tm-document-print-toolbar__button:hover:not(:disabled) {
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-document-print-toolbar__button:disabled {
+    cursor: not-allowed;
+    opacity: var(--tm-opacity-disabled);
+}
+
+.tm-document-print-toolbar__button:focus-visible,
+.tm-document-print-toolbar__page-input:focus-visible,
+.tm-document-print-toolbar__zoom:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: var(--tm-space-1);
+}
+
+.tm-document-print-toolbar__page {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-md);
+}
+
+.tm-document-print-toolbar__page-input {
+    inline-size: 3.5rem;
+    block-size: 2.25rem;
+    color: var(--tm-color-text);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-control);
+    font: inherit;
+    text-align: center;
+}
+
+.tm-document-print-toolbar__zoom {
+    block-size: 2.25rem;
+    padding-inline: var(--tm-space-2);
+    color: var(--tm-color-text);
+    background: transparent;
+    border: 0;
+    font: inherit;
+    cursor: pointer;
+}
+
+/* The actions: cards, the primary one filled. */
+.tm-document-print-actions {
+    display: grid;
+    gap: var(--tm-space-3);
+    min-width: 0;
+}
+
+.tm-document-print-actions__title,
+.tm-document-print-info__title {
+    margin: 0;
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-lg);
+    font-weight: var(--tm-font-weight-semibold);
+    line-height: var(--tm-line-height-tight);
+}
+
+.tm-document-print-actions__list {
+    display: grid;
+    gap: var(--tm-space-2);
+}
+
+.tm-document-print-actions__card {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-3);
+    min-block-size: 3.5rem;
+    padding: var(--tm-space-3);
+    color: var(--tm-color-text);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-card);
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+}
+
+.tm-document-print-actions__card:hover:not(:disabled) {
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-document-print-actions__card:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: var(--tm-space-1);
+}
+
+.tm-document-print-actions__card:disabled {
+    cursor: not-allowed;
+    opacity: var(--tm-opacity-disabled);
+}
+
+.tm-document-print-actions__card--primary {
+    color: var(--tm-text-inverse);
+    background: var(--tm-color-primary);
+    border-color: var(--tm-color-primary);
+}
+
+.tm-document-print-actions__card--primary:hover:not(:disabled) {
+    background: var(--tm-color-primary-hover);
+}
+
+.tm-document-print-actions__text {
+    display: grid;
+    min-width: 0;
+}
+
+.tm-document-print-actions__label {
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-document-print-actions__hint {
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-document-print-actions__card:not(.tm-document-print-actions__card--primary) .tm-document-print-actions__hint {
+    color: var(--tm-color-text-secondary);
+}
+
+/* The read-only document information. */
+.tm-document-print-info {
+    display: grid;
+    gap: var(--tm-space-3);
+    margin-block-start: var(--tm-space-4);
+    padding-block-start: var(--tm-space-4);
+    border-block-start: 1px solid var(--tm-color-border-subtle);
+}
+
+.tm-document-print-info__list {
+    display: grid;
+    gap: var(--tm-space-3);
+    margin: 0;
+}
+
+.tm-document-print-info__row {
+    display: grid;
+    gap: var(--tm-space-1);
+}
+
+.tm-document-print-info__row dt {
+    color: var(--tm-color-text);
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-document-print-info__row dd {
+    margin: 0;
+    color: var(--tm-color-text-secondary);
+    overflow-wrap: anywhere;
+}
+
+/* In the print preview the right region holds ONLY the actions and the information; the panels of the editing inspector stay mounted. */
+.tm-document-editor__workspace--print-preview .tm-document-editor__inspector > :not(.tm-document-print-actions):not(.tm-document-print-info) {
+    display: none;
+}
+
+/* A tablet: thumbnails rail | document, the actions as a bar above the printout, no inspector region. */
+.tm-document-editor[data-layout="tablet"] .tm-document-editor__main .tm-document-editor__workspace.tm-document-editor__workspace--print-preview {
+    grid-template-columns: minmax(7rem, 9rem) minmax(0, 1fr);
+    grid-template-areas: "nav doc";
+}
+
+.tm-document-editor[data-layout="tablet"] .tm-document-editor__workspace--print-preview > [data-region="inspector"],
+.tm-document-editor[data-layout="mobile"] .tm-document-editor__workspace--print-preview > [data-region="inspector"] {
+    display: none;
+}
+
+.tm-document-editor[data-layout="tablet"] .tm-document-editor__surface > .tm-document-print-actions,
+.tm-document-editor[data-layout="mobile"] .tm-document-editor__surface > .tm-document-print-actions {
+    order: -3;
+}
+
+.tm-document-editor[data-layout="tablet"] .tm-document-print-actions__title,
+.tm-document-editor[data-layout="mobile"] .tm-document-print-actions__title {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+}
+
+.tm-document-editor[data-layout="tablet"] .tm-document-print-actions__list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.tm-document-editor[data-layout="tablet"] .tm-document-print-actions__card {
+    min-block-size: 3rem;
+    padding: var(--tm-space-2) var(--tm-space-3);
+}
+
+/* A phone: one column, the printout, and the actions as a bar glued to the bottom edge (icon above its word, Close filled). */
+.tm-document-editor[data-layout="mobile"] .tm-document-editor__main .tm-document-editor__workspace.tm-document-editor__workspace--print-preview {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "doc";
+}
+
+/* overflow: clip (not hidden) - the workspace must not become the scroll container the bar sticks to, or it would never stick to the screen. */
+.tm-document-editor[data-layout="mobile"] .tm-document-editor__main .tm-document-editor__workspace.tm-document-editor__workspace--print-preview {
+    overflow: clip;
+}
+
+.tm-document-editor[data-layout="mobile"] .tm-document-editor__surface > .tm-document-print-actions {
+    position: sticky;
+    inset-block-end: 0;
+    z-index: 1;
+    order: 99;
+    margin-inline: calc(var(--tm-space-2) * -1);
+    margin-block-end: calc(var(--tm-space-2) * -1);
+    padding: var(--tm-space-2);
+    background: var(--tm-color-surface);
+    border-block-start: 1px solid var(--tm-color-border-subtle);
+}
+
+.tm-document-editor[data-layout="mobile"] .tm-document-print-actions__list {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+}
+
+.tm-document-editor[data-layout="mobile"] .tm-document-print-actions__card {
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--tm-space-1);
+    min-block-size: var(--tm-touch-target);
+    padding: var(--tm-space-2);
+    border-color: transparent;
+    text-align: center;
+}
+
+.tm-document-editor[data-layout="mobile"] .tm-document-print-actions__hint {
+    display: none;
+}
+
+.tm-document-editor[data-layout="mobile"] .tm-document-print-actions__card--close {
+    color: var(--tm-text-inverse);
+    background: var(--tm-color-primary);
+}
+
+/* Only Close is filled on a phone (the mockup); Print is a plain card like Print to PDF, both with a visible border. */
+.tm-document-editor[data-layout="mobile"] .tm-document-print-actions__card--primary {
+    color: var(--tm-color-text);
+    background: var(--tm-color-surface);
+    border-color: var(--tm-color-border);
+}
+
+.tm-document-editor[data-layout="mobile"] .tm-document-print-actions__card {
+    border-color: var(--tm-color-border);
+}
+
+.tm-document-editor[data-layout="mobile"] .tm-document-print-actions__card--close {
+    border-color: var(--tm-color-primary);
+}
+
+/* The short word ("Close") replaces the long one on a phone, where three cards share one row. */
+.tm-document-print-actions__label--short {
+    display: none;
+}
+
+.tm-document-editor[data-layout="mobile"] .tm-document-print-actions__label--full {
+    display: none;
+}
+
+.tm-document-editor[data-layout="mobile"] .tm-document-print-actions__label--short {
+    display: inline;
+}
+
+/* A phone pages with the thumbnails-free bar of the mockup: previous, "n / N", next; the zoom is the status bar's and the pinch. */
+.tm-document-editor[data-layout="mobile"] .tm-document-print-toolbar__group--zoom {
+    display: none;
+}
+
+.tm-document-editor[data-layout="mobile"] .tm-document-print-toolbar {
+    justify-content: center;
+}
+
+.tm-document-print-toolbar__page {
+    white-space: nowrap;
+}
+
+.tm-document-editor[data-layout="mobile"] .tm-document-print-toolbar {
+    justify-content: space-between;
+}
+
+@media (pointer: coarse) {
+    .tm-document-print-toolbar__button,
+    .tm-document-print-toolbar__page-input,
+    .tm-document-print-toolbar__zoom {
+        min-inline-size: var(--tm-touch-target);
+        min-block-size: var(--tm-touch-target);
+    }
+}
+
+@media (forced-colors: active) {
+    .tm-document-print-actions__card--primary,
+    .tm-document-print-actions__card--close {
+        border-color: Highlight;
+    }
+}
+
+/* ── Compare dialog (DE-2.6): source cards and the result ────────────────── */
+.tm-document-compare-source {
+    display: grid;
+    gap: var(--tm-space-3);
+    align-content: start;
+    min-inline-size: 0;
+    padding: var(--tm-space-3);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border-subtle);
+    border-radius: var(--tm-radius-card);
+}
+
+.tm-document-compare-source__title {
+    margin: 0;
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-md);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-document-compare-source__body {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-3);
+    min-width: 0;
+}
+
+.tm-document-compare-source__icon {
+    display: inline-grid;
+    flex: 0 0 auto;
+    place-items: center;
+    inline-size: 2.5rem;
+    block-size: 2.5rem;
+    color: var(--tm-color-primary);
+    background: var(--tm-color-primary-subtle);
+    border-radius: var(--tm-radius-control);
+}
+
+/* The words wrap (a long file name is read in full); the button drops under them when the card is too narrow for both. */
+.tm-document-compare-source__text {
+    display: grid;
+    flex: 1 1 9rem;
+    min-width: 0;
+}
+
+.tm-document-compare-source__label {
+    color: var(--tm-color-text);
+    font-weight: var(--tm-font-weight-medium);
+    overflow-wrap: anywhere;
+}
+
+.tm-document-compare-source__description {
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+    overflow-wrap: anywhere;
+}
+
+.tm-document-compare-source__change {
+    flex: 0 0 auto;
+}
+
+.tm-document-compare-source__editor {
+    padding-block-start: var(--tm-space-3);
+    border-block-start: 1px solid var(--tm-color-border-subtle);
+}
+
+.tm-document-compare-dialog__picker {
+    display: grid;
+    gap: var(--tm-space-2);
+}
+
+.tm-document-compare-dialog__field {
+    display: grid;
+    gap: var(--tm-space-1);
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-document-compare-dialog__field .tm-input {
+    inline-size: 100%;
+}
+
+.tm-document-compare-dialog__result {
+    display: grid;
+    gap: var(--tm-space-3);
+    margin-block-start: var(--tm-space-3);
+    padding: var(--tm-space-3);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border-subtle);
+    border-radius: var(--tm-radius-card);
+}
+
+.tm-document-compare-dialog__result-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-2) var(--tm-space-4);
+}
+
+.tm-document-compare-dialog__result-title,
+.tm-document-compare-dialog__changes-title {
+    margin: 0;
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-document-compare-dialog__summary {
+    display: flex;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    gap: var(--tm-space-2) var(--tm-space-3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tm-document-compare-dialog__stat {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-1) var(--tm-space-3);
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+    border-radius: var(--tm-radius-control);
+}
+
+.tm-document-compare-dialog__stat-value {
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-lg);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-document-compare-dialog__stat--added {
+    background: color-mix(in srgb, var(--tm-document-highlight-insert) 16%, transparent);
+}
+
+.tm-document-compare-dialog__stat--removed {
+    background: color-mix(in srgb, var(--tm-document-highlight-delete) 16%, transparent);
+}
+
+.tm-document-compare-dialog__stat--changed {
+    background: color-mix(in srgb, var(--tm-document-highlight-change) 16%, transparent);
+}
+
+.tm-document-compare-dialog__changes {
+    display: grid;
+    gap: var(--tm-space-1);
+    max-block-size: 16rem;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+}
+
+.tm-document-compare-dialog__change {
+    display: flex;
+    align-items: baseline;
+    gap: var(--tm-space-3);
+    min-width: 0;
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border-radius: var(--tm-radius-control);
+}
+
+.tm-document-compare-dialog__change-button {
+    display: flex;
+    align-items: baseline;
+    gap: var(--tm-space-3);
+    inline-size: 100%;
+    min-width: 0;
+    margin: calc(var(--tm-space-1) * -1) calc(var(--tm-space-2) * -1);
+    padding: var(--tm-space-1) var(--tm-space-2);
+    color: inherit;
+    background: transparent;
+    border: 0;
+    border-radius: var(--tm-radius-control);
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+}
+
+.tm-document-compare-dialog__change-button:hover {
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-document-compare-dialog__change-button:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: -2px;
+}
+
+.tm-document-compare-dialog__change-kind {
+    flex: 0 0 auto;
+    min-inline-size: 5rem;
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+    text-transform: uppercase;
+}
+
+.tm-document-compare-dialog__change--added .tm-document-compare-dialog__change-kind {
+    color: var(--tm-color-success-text);
+}
+
+.tm-document-compare-dialog__change--removed .tm-document-compare-dialog__change-kind {
+    color: var(--tm-color-danger-text);
+}
+
+.tm-document-compare-dialog__change--changed .tm-document-compare-dialog__change-kind {
+    color: var(--tm-color-info-text);
+}
+
+.tm-document-compare-dialog__change-quote {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-sm);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-document-compare-dialog__cancel {
+    margin-inline-start: auto;
+}
+
+/* ── Phase 7 review fixes ─────────────────────────────────────────────────── */
+
+/* The review summary and the version strip belong to editing; the print preview and the comparison show neither. */
+.tm-document-editor__workspace--print-preview .tm-document-editor__doc-banners,
+.tm-document-editor__workspace--diff .tm-document-editor__doc-banners {
+    display: none;
+}
+
+/* The preview needs the page, not the panels: thumbnails and the actions get narrower columns, so a 794 px page fits a ~1100 px editor. */
+.tm-document-editor[data-layout="desktop"] .tm-document-editor__main .tm-document-editor__workspace.tm-document-editor__workspace--print-preview {
+    --tm-document-nav-width: clamp(9rem, 12cqw, 11rem);
+    --tm-document-inspector-width: clamp(16rem, 20cqw, 19rem);
+
+    grid-template-columns: var(--tm-document-nav-width) minmax(0, 1fr) var(--tm-document-inspector-width);
+    grid-template-areas: "nav doc inspector";
+}
+
+/* One row on a phone: the page group and the zoom group side by side. */
+.tm-document-editor[data-layout="mobile"] .tm-document-print-toolbar {
+    flex-wrap: nowrap;
+    gap: var(--tm-space-2);
+}
+
+.tm-document-editor[data-layout="mobile"] .tm-document-print-toolbar__group {
+    gap: 0;
+    min-width: 0;
+}
+
+.tm-document-editor[data-layout="mobile"] .tm-document-print-toolbar__page-input {
+    inline-size: 2.75rem;
+}
+
+.tm-document-editor[data-layout="mobile"] .tm-document-print-toolbar__zoom {
+    min-inline-size: 0;
+    inline-size: 4.75rem;
+    padding-inline: var(--tm-space-1);
+}
+
+/* A changed block also carries a bar on its inline-start edge: the tint alone is faint in dark mode. */
+.tm-document-diff__row--changed .tm-document-diff__cell {
+    border-inline-start: 3px solid var(--tm-document-diff-changed);
+}
+
+@media (pointer: coarse) {
+    .tm-document-diff__nav-button,
+    .tm-document-diff__view-mode .tm-input {
+        min-block-size: var(--tm-touch-target);
+        min-inline-size: var(--tm-touch-target);
+    }
+}
+
+/* The thumbnails of the print preview are PAPER: white in every theme (the printed page does not flip), a page ratio and a few lines of text. */
+.tm-document-print-pages .tm-document-page-navigator__thumbnail {
+    position: relative;
+    aspect-ratio: 210 / 297;
+    background: var(--tm-paper);
+    border-color: var(--tm-paper-border);
+}
+
+.tm-document-print-pages .tm-document-page-navigator__thumbnail::after {
+    content: "";
+    position: absolute;
+    inset: 14% 12% 14% 12%;
+    background: repeating-linear-gradient(to bottom, var(--tm-paper-border) 0 2px, transparent 2px 7px);
+    opacity: 0.8;
+}

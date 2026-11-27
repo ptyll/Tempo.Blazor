@@ -2,7 +2,7 @@
   "itemName": "TmDocumentCompareDialog",
   "kind": "Component",
   "category": "Document Editor",
-  "description": "Modal dialog for comparing two document sources - the current document, another document by id, or an uploaded DOCX snapshot - running a provider or local comparison and rendering the result via TmDocumentDiffViewer, with loading, empty, and error states.",
+  "description": "Modal dialog for comparing two document sources - the current document, another document by id, or an uploaded DOCX snapshot - running a provider or local comparison and rendering the result via TmDocumentDiffViewer, with loading, empty, and error states. Phase 7 (DE-2.6): the two sources are TmDocumentCompareSourceCard cards (\"Change...\" opens the picker: current document, Versions from history, document id, uploaded DOCX); the result is a summary of the block changes and the list of changes (a click raises OnOpenComparison with that block), the diff itself is shown by the editor in the document region. The footer is Compare, Export redline, Cancel.",
   "packageId": "Tempo.Blazor.DocumentEditor",
   "namespace": "Tempo.Blazor.Components.DocumentEditor",
   "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentCompareDialog.razor",
@@ -77,6 +77,19 @@
       "type": "string?",
       "isRequired": false,
       "description": "The id of the element focus returns to when the dialog closes - the editor passes its canvas input, so the keyboard lands back in the document whatever opened the dialog. Null keeps the core modal's own restore (the opener)."
+    },
+    {
+      "name": "OnOpenComparison",
+      "type": "EventCallback<DocumentCompareOpenRequest>",
+      "isRequired": false,
+      "description": "Raised when the reader asks to open the finished comparison in the document region (\"Open comparison\", or a click on one change of the list, which carries that block's id). The button and the clickable list render only when it is bound."
+    },
+    {
+      "name": "Versions",
+      "type": "IReadOnlyList<DocumentVersion>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "History versions the reader can compare against (\"Version from history\" in the source picker). Empty hides that choice."
     }
   ]
 }

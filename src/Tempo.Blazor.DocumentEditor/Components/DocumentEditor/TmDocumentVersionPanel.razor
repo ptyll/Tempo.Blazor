@@ -95,13 +95,25 @@
             }
         </ol>
 
-        @if (DiffBaseVersion is not null && DiffCompareVersion is not null)
+        @* Phase 7 (DE-2.6): the diff is a MODE of the document region, not a block inside this panel - the button hands the picked pair to the host. *@
+        @if (OnShowDiff.HasDelegate)
         {
-            <TmDocumentDiffViewer OldDocument="@ReadSnapshot(DiffBaseVersion)"
-                                  NewDocument="@ReadSnapshot(DiffCompareVersion)"
-                                  OldTitle="@GetVersionTitle(DiffBaseVersion)"
-                                  NewTitle="@GetVersionTitle(DiffCompareVersion)"
-                                  SideBySide="true" />
+            <div class="tm-document-version-panel__compare" data-testid="@TestId("document-version-compare")">
+                <button type="button"
+                        class="tm-btn tm-btn-secondary tm-document-version-panel__show-diff"
+                        disabled="@(!CanShowDiff)"
+                        title="@(CanShowDiff ? null : Loc["TmDocumentEditor_VersionShowDiffHint"])"
+                        aria-describedby="@(CanShowDiff ? null : _diffHintId)"
+                        data-testid="@TestId("document-version-show-diff")"
+                        @onclick="ShowDiffAsync">
+                    <TmIcon Name="git-compare" Size="IconSize.Sm" />
+                    <span>@Loc["TmDocumentEditor_VersionShowDiff"]</span>
+                </button>
+                @if (!CanShowDiff)
+                {
+                    <span id="@_diffHintId" class="tm-document-version-panel__show-diff-hint">@Loc["TmDocumentEditor_VersionShowDiffHint"]</span>
+                }
+            </div>
         }
     }
 </aside>
@@ -110,6 +122,7 @@
     [Inject] private IServiceProvider Services { get; set; } = default!;
 
     private ITmRelativeTimeFormatter? _relativeTime;
+    private readonly string _diffHintId = $"tm-document-version-diff-hint-{Guid.NewGuid():N}";
     private string? _diffBaseVersionId;
     private string? _diffCompareVersionId;
 
@@ -159,6 +172,19 @@
         .OrderByDescending(version => version.CreatedAt)
         .ToList();
 
+    /// <summary>
+    /// Raised with the picked Base and Compare versions when "Show differences" is pressed. The button is disabled until both sides are picked;
+    /// the editor opens the comparison as a mode of the document region (the diff no longer renders inside this panel). The button renders only while this callback is bound.
+    /// </summary>
+    [Parameter] public EventCallback<DocumentVersionDiffRequest> OnShowDiff { get; set; }
+
+    private bool CanShowDiff => DiffBaseVersion is not null && DiffCompareVersion is not null;
+
+    private Task ShowDiffAsync()
+        => DiffBaseVersion is { } baseVersion && DiffCompareVersion is { } compareVersion
+            ? OnShowDiff.InvokeAsync(new DocumentVersionDiffRequest(baseVersion, compareVersion))
+            : Task.CompletedTask;
+
     private DocumentVersion? DiffBaseVersion => Versions.FirstOrDefault(version => version.Id == _diffBaseVersionId);
 
     private DocumentVersion? DiffCompareVersion => Versions.FirstOrDefault(version => version.Id == _diffCompareVersionId);
@@ -193,13 +219,6 @@
         return active
             ? "tm-btn tm-btn-sm tm-btn-primary tm-document-version-panel__diff-button tm-document-version-panel__diff-button--active"
             : "tm-btn tm-btn-sm tm-btn-secondary tm-document-version-panel__diff-button";
-    }
-
-    private static DocumentEditorDocument? ReadSnapshot(DocumentVersion version)
-    {
-        return string.IsNullOrWhiteSpace(version.Snapshot.Json)
-            ? null
-            : DocumentEditorJson.Deserialize(version.Snapshot.Json);
     }
 
     private static string AriaPressed(bool value) => value ? "true" : "false";

@@ -390,18 +390,24 @@ public sealed class DocumentEditorCanvasImportExportE2ETests : WasmTestBase
         await DocumentEditorRedesignE2EHelpers.ClickRibbonAsync(page, "document-compare-open");
         await Assertions.Expect(page.GetByTestId("document-compare-dialog")).ToBeVisibleAsync(new() { Timeout = 10_000 });
         await DocumentEditorLayoutShiftGuard.AssertWorkspaceUnchangedAsync(page, workspaceBefore, "opening the compare dialog");
+        // Phase 7 (DE-2.6): the picker opens with "Change..."; the dialog lists the changes and "Open comparison" shows the diff in the document region.
+        await page.GetByTestId("document-compare-target-change").ClickAsync();
         await page.GetByTestId("document-compare-target-document-id").FillAsync(targetDocumentId);
         await page.GetByTestId("document-compare-run").ClickAsync();
-        await Assertions.Expect(page.GetByTestId("document-diff-viewer")).ToBeVisibleAsync(new() { Timeout = 15_000 });
-        await Assertions.Expect(page.GetByTestId("document-diff-side-by-side")).ToContainTextAsync(expectedMarker, new() { Timeout = 10_000 });
+        await Assertions.Expect(page.GetByTestId("document-compare-result")).ToBeVisibleAsync(new() { Timeout = 15_000 });
+        Assert.IsTrue(await page.GetByTestId("document-compare-change").CountAsync() > 0, "the compare dialog lists the block changes");
         await DocumentEditorLayoutShiftGuard.AssertWorkspaceUnchangedAsync(page, workspaceBefore, "rendering the compare result");
         await page.GetByTestId("document-compare-dialog").ScreenshotAsync(new LocatorScreenshotOptions
         {
             Path = screenshotPath,
             Type = ScreenshotType.Png
         });
-        await page.GetByTestId("document-compare-close").ClickAsync();
+        await page.GetByTestId("document-compare-open-comparison").ClickAsync();
         await Assertions.Expect(page.GetByTestId("document-compare-dialog")).ToBeHiddenAsync(new() { Timeout = 5_000 });
+        await Assertions.Expect(page.GetByTestId("document-diff-mode").GetByTestId("document-diff-viewer")).ToBeVisibleAsync(new() { Timeout = 15_000 });
+        await Assertions.Expect(page.GetByTestId("document-diff-side-by-side")).ToContainTextAsync(expectedMarker, new() { Timeout = 10_000 });
+        await page.GetByTestId("document-diff-back").ClickAsync();
+        await Assertions.Expect(page.GetByTestId("document-diff-viewer")).ToHaveCountAsync(0, new() { Timeout = 5_000 });
     }
 
     private static HttpClient CreateApiClient() => DemoApiTestHttp.CreateClient();

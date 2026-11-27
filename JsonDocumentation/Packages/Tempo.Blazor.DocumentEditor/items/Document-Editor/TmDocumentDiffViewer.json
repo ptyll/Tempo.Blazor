@@ -2,7 +2,7 @@
   "itemName": "TmDocumentDiffViewer",
   "kind": "Component",
   "category": "Document Editor",
-  "description": "Renders a document diff with a summary header, an optional side-by-side old/new plain-text comparison, and an inline colored view of added, removed, and unchanged segments computed from two documents or a precomputed compare result.",
+  "description": "Renders a document comparison as TEXT aligned by BLOCK (redesign 146c7e1b, phase 7, DE-2.6, decision DE3): a header with the title, the 'N changes found (a added, r removed, c changed)' sentence, a legend (Added / Removed / Changed), a DiffViewMode switch and next / previous change navigation, two column heads (OldTitle / OldMeta, NewTitle / NewMeta) and one grid row per block - the removed side left, the added side right, a changed block tinted on both sides - or, in Unified mode, one column. It computes the comparison itself from two documents (DocumentComparisonService) or takes a precomputed DocumentCompareResult. There is no formatted preview and the engine never draws the two documents. With OnBack it shows 'Back to document'.",
   "packageId": "Tempo.Blazor.DocumentEditor",
   "namespace": "Tempo.Blazor.Components.DocumentEditor",
   "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentDiffViewer.razor",
@@ -47,6 +47,64 @@
       "isRequired": false,
       "default": "true",
       "description": "Whether side-by-side text panes should be shown."
+    },
+    {
+      "name": "InitialBlockId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Id of a block whose row is selected (and brought into view) when the viewer first shows it."
+    },
+    {
+      "name": "NewMeta",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional one-line description of the new side."
+    },
+    {
+      "name": "OldMeta",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional one-line description of the old side, for example \"Version 1.0 - 12 Apr 2024 14:32 - Jan Prochazka\"."
+    },
+    {
+      "name": "OnBack",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "When bound, a \"Back to document\" button is shown in the header and raises this callback."
+    },
+    {
+      "name": "Title",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional heading of the viewer. Blank shows the localized \"Version comparison\"."
+    },
+    {
+      "name": "ViewMode",
+      "type": "DiffViewMode",
+      "isRequired": false,
+      "default": "DiffViewMode.SideBySide",
+      "description": "How the two sides are laid out: SideBySide (default) or Unified. The viewer keeps its own copy once the reader switches; a new parameter value from the host wins again."
+    },
+    {
+      "name": "ViewModeChanged",
+      "type": "EventCallback<DiffViewMode>",
+      "isRequired": false,
+      "description": "Raised when the reader switches the view mode with the built-in selector."
     }
+  ],
+  "cssClasses": [
+    "tm-document-diff",
+    "tm-document-diff__header",
+    "tm-document-diff__heads",
+    "tm-document-diff__rows",
+    "tm-document-diff__rows--unified",
+    "tm-document-diff__row",
+    "tm-document-diff__row--changed",
+    "tm-document-diff__row--added",
+    "tm-document-diff__row--removed",
+    "tm-document-diff__row--current",
+    "tm-document-diff__cell",
+    "tm-document-diff__segment--added",
+    "tm-document-diff__segment--removed"
   ]
 }

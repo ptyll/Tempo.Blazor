@@ -601,6 +601,21 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
             await AttachRegionCycleAsync();
         }
 
+        if (_restoreZoomOnRender)
+        {
+            _restoreZoomOnRender = false;
+            await RestoreEditingZoomAsync();
+        }
+
+        if (_fitPrintPreviewOnRender)
+        {
+            _fitPrintPreviewOnRender = false;
+            if (CanvasPrintPreviewActive && !_zoomPageWidth)
+            {
+                await SetZoomPageWidthAsync();
+            }
+        }
+
         if (_focusNavigationOnRender && IsDesktopLayout && _navigationPanel is not null)
         {
             _focusNavigationOnRender = false;
@@ -933,9 +948,22 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
             var classes = _sidePanelOpen
                 ? "tm-document-editor__workspace tm-document-editor__workspace--side-panel-open"
                 : "tm-document-editor__workspace tm-document-editor__workspace--side-panel-closed";
-            return IsDesktopLayout && NavCollapsed
-                ? classes + " tm-document-editor__workspace--nav-collapsed"
-                : classes;
+            if (IsDesktopLayout && NavCollapsed && !CanvasPrintPreviewActive)
+            {
+                classes += " tm-document-editor__workspace--nav-collapsed";
+            }
+
+            if (CanvasPrintPreviewActive)
+            {
+                classes += " tm-document-editor__workspace--print-preview";
+            }
+
+            if (DiffModeActive)
+            {
+                classes += " tm-document-editor__workspace--diff";
+            }
+
+            return classes;
         }
     }
 
@@ -1212,6 +1240,7 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
             _loadedFontProvider = null;
             _compareDialogOpen = false;
             _compareDocumentSnapshot = null;
+            _diffRequest = null;
             _lastSavedAt = null;
             _offlineDraft = null;
             _offlineConflict = null;
@@ -1249,6 +1278,7 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
             _loadedFontProvider = null;
             _compareDialogOpen = false;
             _compareDocumentSnapshot = null;
+            _diffRequest = null;
             _lastSavedAt = null;
             _offlineDraft = null;
             _offlineConflict = null;
@@ -1418,6 +1448,7 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
             _versionDialogOpen = false;
             _compareDialogOpen = false;
             _compareDocumentSnapshot = null;
+            _diffRequest = null;
             _sidePanelOpen = ShowComments || ShowVersionHistory || _trackChangesEnabled;
             _activeSidePanelTab = _trackChangesEnabled
                 ? DocumentSidePanelTab.Revisions
@@ -2643,6 +2674,7 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
             return;
         }
 
+        await LeaveComparisonForCommandAsync("insertImage");
         await _canvasHost.ExecCommandAsync("insertImage", payload);
         _canvasImageDialogOpen = false;
         _canvasImageUrl = string.Empty;
@@ -3534,6 +3566,7 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
         var activeSectionId = string.IsNullOrWhiteSpace(setup.SectionId) ? ActiveSection?.Id : setup.SectionId;
         if (UsingCanvasEngine && _canvasHost is not null)
         {
+            await LeaveComparisonForCommandAsync("setPageSetup");
             var command = await _canvasHost.ExecCommandAsync("setPageSetup", new
             {
                 sectionId = activeSectionId,
@@ -4779,6 +4812,7 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
         var commandPayload = commandName == "clearFormatting" && payload is null && selection is not null
             ? selection
             : payload;
+        await LeaveComparisonForRegistryCommandAsync(commandName);
         await _commandRegistry.ExecuteAsync(commandName, BuildCommandContext(), commandPayload);
         if (closeAfterCommand)
         {
@@ -6541,6 +6575,7 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
         await _canvasHost.ExecCommandAsync("closePrintPreview");
         _canvasPrintPreviewActive = false;
         await SyncCanvasEngineStateAsync();
+        await RestoreEditingZoomAsync();
         await _canvasHost.FocusAsync();
         await InvokeAsync(StateHasChanged);
     }
@@ -7801,6 +7836,8 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
             return false;
         }
 
+        await LeaveComparisonForCommandAsync(command);
+
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var result = await _canvasHost!.ExecCommandAsync(command, argument);
         _routeExecMs = sw.Elapsed.TotalMilliseconds;
@@ -8105,6 +8142,17 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
         }
 
         _zoomPageWidth = string.Equals(fmt.ZoomPreset, "fitWidth", StringComparison.OrdinalIgnoreCase);
+        // Entering the print preview fits the page to the (now narrower) document region once, like a browser's print preview does.
+        if (fmt.PrintPreviewActive && !_canvasPrintPreviewActive && !_zoomPageWidth)
+        {
+            _fitPrintPreviewOnRender = true;
+            _zoomBeforePrintPreview = _zoomPercent;
+        }
+        else if (!fmt.PrintPreviewActive && _canvasPrintPreviewActive && _zoomBeforePrintPreview is not null)
+        {
+            _restoreZoomOnRender = true;
+        }
+
         _canvasPrintPreviewActive = fmt.PrintPreviewActive;
         SyncCanvasActiveImage(fmt.Image);
     }
@@ -8950,6 +8998,7 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
                 return;
             }
 
+
             var state = _commandRegistry.GetState(registryName);
             if (state?.IsEnabled != true)
             {
@@ -8972,7 +9021,13 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
             return;
         }
 
-        switch (_keyboardManager.GetCommand(args))
+        var keyboardCommand = _keyboardManager.GetCommand(args);
+        if (DiffModeActive && keyboardCommand != DocumentEditorKeyboardCommand.ClosePanel)
+        {
+            return;
+        }
+
+        switch (keyboardCommand)
         {
             case DocumentEditorKeyboardCommand.OpenVersions:
                 OpenSidePanel(DocumentSidePanelTab.Versions, manual: true);
@@ -9000,7 +9055,7 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
     private bool IsHandledEditorKeyDown(KeyboardEventArgs args)
     {
         if (args.Key == "Escape"
-            && (_textContextMenu is not null || _tableContextMenu is not null || _miniToolbar is not null || _commandPaletteOpen || _sidePanelOpen || _isFullscreen))
+            && (_textContextMenu is not null || _tableContextMenu is not null || _miniToolbar is not null || _commandPaletteOpen || _sidePanelOpen || _isFullscreen || DiffModeActive))
         {
             return true;
         }
@@ -9051,6 +9106,7 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
             return;
         }
 
+        await LeaveComparisonForRegistryCommandAsync(commandName);
         await _commandRegistry.ExecuteAsync(commandName, BuildCommandContext());
         await RefreshCommandRegistryAsync();
     }
@@ -9189,6 +9245,7 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
         // chosen command. The command decides where focus goes (a dialog opens and takes it), so the focus request of that close is withdrawn.
         _commandPaletteOpen = false;
         _focusDocumentOnRender = false;
+        await LeaveComparisonForRegistryCommandAsync(commandName);
         await _commandRegistry.ExecuteAsync(commandName, BuildCommandContext());
         await RefreshCommandRegistryAsync();
         await InvokeAsync(StateHasChanged);
@@ -9271,6 +9328,7 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
     {
         if (UsingCanvasEngine && _canvasHost is not null)
         {
+            await LeaveComparisonForCommandAsync("replaceCurrent");
             await _canvasHost.ExecCommandAsync("replaceCurrent", new { replacement = request.Replacement });
             await SyncCanvasEngineStateAsync();
             return;
@@ -9281,6 +9339,7 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
     {
         if (UsingCanvasEngine && _canvasHost is not null)
         {
+            await LeaveComparisonForCommandAsync("replaceAll");
             await _canvasHost.ExecCommandAsync("replaceAll", new
             {
                 query = request.Query.Text,
@@ -9302,7 +9361,8 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
 
     private async Task ActivateRibbonKeyboardModeAsync()
     {
-        if (!ShowToolbar || _toolbar is null)
+        // The print preview has no ribbon, so there is nothing for Alt / F10 to enter.
+        if (!ShowToolbar || _toolbar is null || CanvasPrintPreviewActive)
         {
             return;
         }
@@ -9319,6 +9379,12 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
             await _floatingLayerStack.CloseTopmostAsync();
             await FocusDocumentAsync();
             await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        if (DiffModeActive)
+        {
+            await CloseDiffModeAsync();
             return;
         }
 

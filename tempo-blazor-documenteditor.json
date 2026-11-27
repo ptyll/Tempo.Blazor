@@ -343,6 +343,16 @@
       ]
     },
     {
+      "itemName": "DiffViewMode",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.DocumentEditor",
+      "description": "How TmDocumentDiffViewer lays the two sides of a comparison out: SideBySide (two columns, one row per block, the old text left and the new text right) or Unified (one column, a changed block shows its removed and added words in the same line). Replaces the obsolete SideBySide boolean.",
+      "packageId": "Tempo.Blazor.DocumentEditor",
+      "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/DiffViewMode.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "DocumentBorderPresets",
       "kind": "Class",
       "category": "Components",
@@ -712,6 +722,16 @@
       "description": "Single comment entry.",
       "packageId": "Tempo.Blazor.DocumentEditor",
       "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/Wysiwyg/Model/DocumentModel.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "DocumentCompareOpenRequest",
+      "kind": "Record",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.DocumentEditor",
+      "description": "What TmDocumentCompareDialog.OnOpenComparison reports: the finished comparison (Result), the block whose change the reader picked in the list (BlockId, null to start at the top) and the headings of the two sides (BaseTitle, CompareTitle). The editor shows it in the comparison mode of the document region.",
+      "packageId": "Tempo.Blazor.DocumentEditor",
+      "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/DocumentCompareOpenRequest.cs",
       "documentationStatus": "merged"
     },
     {
@@ -2410,6 +2430,16 @@
       "description": "Draft values entered in the create-version dialog.",
       "packageId": "Tempo.Blazor.DocumentEditor",
       "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/DocumentEditorEditRequests.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "DocumentVersionDiffRequest",
+      "kind": "Record",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.DocumentEditor",
+      "description": "What TmDocumentVersionPanel.OnShowDiff reports: the version picked as Base (the old side) and the version picked as Compare (the new side).",
+      "packageId": "Tempo.Blazor.DocumentEditor",
+      "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/DocumentCompareOpenRequest.cs",
       "documentationStatus": "merged"
     },
     {
@@ -4907,7 +4937,7 @@
       "kind": "Component",
       "category": "Document Editor",
       "namespace": "Tempo.Blazor.Components.DocumentEditor",
-      "description": "Modal dialog for comparing two document sources - the current document, another document by id, or an uploaded DOCX snapshot - running a provider or local comparison and rendering the result via TmDocumentDiffViewer, with loading, empty, and error states.",
+      "description": "Modal dialog for comparing two document sources - the current document, another document by id, or an uploaded DOCX snapshot - running a provider or local comparison and rendering the result via TmDocumentDiffViewer, with loading, empty, and error states. Phase 7 (DE-2.6): the two sources are TmDocumentCompareSourceCard cards (\"Change...\" opens the picker: current document, Versions from history, document id, uploaded DOCX); the result is a summary of the block changes and the list of changes (a click raises OnOpenComparison with that block), the diff itself is shown by the editor in the document region. The footer is Compare, Export redline, Cancel.",
       "packageId": "Tempo.Blazor.DocumentEditor",
       "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentCompareDialog.razor",
       "documentationStatus": "merged",
@@ -4970,6 +5000,12 @@
           "description": "Raised when the user asks to export the current comparison as a redline (tracked-changes) document. The button renders only when the callback is wired and the result has changes."
         },
         {
+          "name": "OnOpenComparison",
+          "type": "EventCallback<DocumentCompareOpenRequest>",
+          "isRequired": false,
+          "description": "Raised when the reader asks to open the finished comparison in the document region (\"Open comparison\", or a click on one change of the list, which carries that block's id). The button and the clickable list render only when it is bound."
+        },
+        {
           "name": "RestoreFocusTargetId",
           "type": "string?",
           "isRequired": false,
@@ -4981,7 +5017,93 @@
           "isRequired": false,
           "default": "true",
           "description": "Whether local comparison should be used when the provider fails."
+        },
+        {
+          "name": "Versions",
+          "type": "IReadOnlyList<DocumentVersion>",
+          "isRequired": false,
+          "default": "[]",
+          "description": "History versions the reader can compare against (\"Version from history\" in the source picker). Empty hides that choice."
         }
+      ]
+    },
+    {
+      "itemName": "TmDocumentCompareSourceCard",
+      "kind": "Component",
+      "category": "Document Editor",
+      "namespace": "Tempo.Blazor.Components.DocumentEditor",
+      "description": "One source of a document comparison as a card (redesign 146c7e1b, phase 7, DE-2.6): the role of the source as the title ('Original document', 'New document'), an icon, what the source is (a label and an optional second line) and a 'Change...' button that opens the picker, which the host renders as ChildContent under the card body while Expanded. The card owns no state - the compare dialog decides what is chosen and whether the picker is open. Test ids: document-compare-{Side}-card, -label, -change, -editor.",
+      "packageId": "Tempo.Blazor.DocumentEditor",
+      "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentCompareSourceCard.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.DocumentEditor"
+      ],
+      "parameters": [
+        {
+          "name": "ChildContent",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "The picker, rendered under the card body while Expanded."
+        },
+        {
+          "name": "Description",
+          "type": "string?",
+          "isRequired": false,
+          "description": "An optional second line under the label (the kind of source, the author and time of a version)."
+        },
+        {
+          "name": "Disabled",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Disables the 'Change...' button, for example while a comparison runs."
+        },
+        {
+          "name": "Expanded",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the picker below the card is open. The card never changes it: the host handles OnChange."
+        },
+        {
+          "name": "Icon",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"file-text\"",
+          "description": "Icon name of the source kind."
+        },
+        {
+          "name": "Label",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"\"",
+          "description": "What the source is: the current document, a file name, a version label or a document id."
+        },
+        {
+          "name": "OnChange",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised when 'Change...' is pressed."
+        },
+        {
+          "name": "Side",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"base\"",
+          "description": "Which side of the comparison the card stands for: base or target. It names the card's test ids and data-side."
+        },
+        {
+          "name": "Title",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"\"",
+          "description": "The role of the source, shown as the card title (\"Original document\", \"New document\")."
+        }
+      ],
+      "cssClasses": [
+        "tm-document-compare-source",
+        "tm-document-compare-source__title",
+        "tm-document-compare-source__body",
+        "tm-document-compare-source__editor"
       ]
     },
     {
@@ -5134,7 +5256,7 @@
       "kind": "Component",
       "category": "Document Editor",
       "namespace": "Tempo.Blazor.Components.DocumentEditor",
-      "description": "Renders a document diff with a summary header, an optional side-by-side old/new plain-text comparison, and an inline colored view of added, removed, and unchanged segments computed from two documents or a precomputed compare result.",
+      "description": "Renders a document comparison as TEXT aligned by BLOCK (redesign 146c7e1b, phase 7, DE-2.6, decision DE3): a header with the title, the 'N changes found (a added, r removed, c changed)' sentence, a legend (Added / Removed / Changed), a DiffViewMode switch and next / previous change navigation, two column heads (OldTitle / OldMeta, NewTitle / NewMeta) and one grid row per block - the removed side left, the added side right, a changed block tinted on both sides - or, in Unified mode, one column. It computes the comparison itself from two documents (DocumentComparisonService) or takes a precomputed DocumentCompareResult. There is no formatted preview and the engine never draws the two documents. With OnBack it shows 'Back to document'.",
       "packageId": "Tempo.Blazor.DocumentEditor",
       "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentDiffViewer.razor",
       "documentationStatus": "merged",
@@ -5144,15 +5266,27 @@
       "parameters": [
         {
           "name": "ComparisonResult",
-          "type": "DocumentCompareResult?",
+          "type": "bool SideBySide { get => ModeParameter == DiffViewMode.SideBySide; set => _sideBySideAlias = value; } /// <summary>Optional precomputed comparison result; its block changes drive the rows.</summary> [Parameter] public DocumentCompareResult?",
           "isRequired": false,
           "description": "Optional precomputed comparison result."
+        },
+        {
+          "name": "InitialBlockId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Id of a block whose row is selected (and brought into view) when the viewer first shows it."
         },
         {
           "name": "NewDocument",
           "type": "DocumentEditorDocument?",
           "isRequired": false,
           "description": "New document snapshot."
+        },
+        {
+          "name": "NewMeta",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Optional one-line description of the new side."
         },
         {
           "name": "NewTitle",
@@ -5167,10 +5301,41 @@
           "description": "Old document snapshot."
         },
         {
+          "name": "OldMeta",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Optional one-line description of the old side, for example \"Version 1.0 - 12 Apr 2024 14:32 - Jan Prochazka\"."
+        },
+        {
           "name": "OldTitle",
           "type": "string?",
           "isRequired": false,
           "description": "Optional title for the old side."
+        },
+        {
+          "name": "OnBack",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "When bound, a \"Back to document\" button is shown in the header and raises this callback."
+        },
+        {
+          "name": "Title",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Optional heading of the viewer. Blank shows the localized \"Version comparison\"."
+        },
+        {
+          "name": "ViewMode",
+          "type": "DiffViewMode",
+          "isRequired": false,
+          "default": "DiffViewMode.SideBySide",
+          "description": "How the two sides are laid out: SideBySide (default) or Unified. The viewer keeps its own copy once the reader switches; a new parameter value from the host wins again."
+        },
+        {
+          "name": "ViewModeChanged",
+          "type": "EventCallback<DiffViewMode>",
+          "isRequired": false,
+          "description": "Raised when the reader switches the view mode with the built-in selector."
         },
         {
           "name": "SideBySide",
@@ -5179,6 +5344,21 @@
           "default": "true",
           "description": "Whether side-by-side text panes should be shown."
         }
+      ],
+      "cssClasses": [
+        "tm-document-diff",
+        "tm-document-diff__header",
+        "tm-document-diff__heads",
+        "tm-document-diff__rows",
+        "tm-document-diff__rows--unified",
+        "tm-document-diff__row",
+        "tm-document-diff__row--changed",
+        "tm-document-diff__row--added",
+        "tm-document-diff__row--removed",
+        "tm-document-diff__row--current",
+        "tm-document-diff__cell",
+        "tm-document-diff__segment--added",
+        "tm-document-diff__segment--removed"
       ]
     },
     {
@@ -5806,7 +5986,7 @@
       "kind": "Component",
       "category": "Document Editor",
       "namespace": "Tempo.Blazor.Components.DocumentEditor",
-      "description": "Editor status bar footer showing save and dirty state, a save message with optional retry, the last-saved time, runtime recovery messages, and document metrics such as word count, page count, active region, and zoom.",
+      "description": "Editor status bar footer showing save and dirty state, a save message with optional retry, the last-saved time, runtime recovery messages, and document metrics such as word count, page count, active region, and zoom. Phase 7: \"Page X of Y\" (CurrentPage / PageCount), plural word count, and - when OnZoomChanged / OnToggleFullscreen are bound - zoom minus / value / plus (10 percent steps within ZoomMin..ZoomMax) and the fullscreen switch.",
       "packageId": "Tempo.Blazor.DocumentEditor",
       "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentEditorStatusBar.razor",
       "documentationStatus": "merged",
@@ -5828,10 +6008,23 @@
           "description": "Whether the latest save failure can be retried."
         },
         {
+          "name": "CurrentPage",
+          "type": "int",
+          "isRequired": false,
+          "default": "1",
+          "description": "The page the reader is on, one-based (\"Page 2 of 6\")."
+        },
+        {
           "name": "IsDirty",
           "type": "bool",
           "isRequired": false,
           "description": "Whether the document has local unsaved changes."
+        },
+        {
+          "name": "IsFullscreen",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the editor is in fullscreen (the switch is pressed)."
         },
         {
           "name": "LastSavedAt",
@@ -5844,6 +6037,18 @@
           "type": "EventCallback",
           "isRequired": false,
           "description": "Raised when the user requests retry after a recoverable save failure."
+        },
+        {
+          "name": "OnToggleFullscreen",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised when the fullscreen switch is pressed. The switch renders only when it is bound."
+        },
+        {
+          "name": "OnZoomChanged",
+          "type": "EventCallback<int>",
+          "isRequired": false,
+          "description": "Raised with the new zoom percent when the reader presses minus / plus. The controls render only when it is bound."
         },
         {
           "name": "PageCount",
@@ -5901,6 +6106,34 @@
           "isRequired": false,
           "default": "\"100%\"",
           "description": "Current zoom label."
+        },
+        {
+          "name": "ZoomMax",
+          "type": "int",
+          "isRequired": false,
+          "default": "200",
+          "description": "The highest zoom the buttons reach, in percent. Defaults to the editor's own ceiling, 200."
+        },
+        {
+          "name": "ZoomMin",
+          "type": "int",
+          "isRequired": false,
+          "default": "50",
+          "description": "The lowest zoom the buttons reach, in percent. Defaults to the editor's own floor, 50."
+        },
+        {
+          "name": "ZoomPercent",
+          "type": "int",
+          "isRequired": false,
+          "default": "100",
+          "description": "The zoom in percent; the minus / plus buttons step from it and disable at ZoomMin / ZoomMax."
+        },
+        {
+          "name": "ZoomStep",
+          "type": "int",
+          "isRequired": false,
+          "default": "10",
+          "description": "How far one press of minus / plus moves the zoom, in percent. Defaults to 10."
         }
       ]
     },
@@ -7981,7 +8214,7 @@
       "kind": "Component",
       "category": "Document Editor",
       "namespace": "Tempo.Blazor.Components.DocumentEditor",
-      "description": "Page navigator showing the total page count and a list of clickable page thumbnails. Marks the active page, indicates virtual or overflow pages, and raises OnNavigateToPage when a page is chosen.",
+      "description": "Page navigator showing the total page count and a list of clickable page thumbnails. Marks the active page, indicates virtual or overflow pages, and raises OnNavigateToPage when a page is chosen. ShowHeader=false drops the \"Pages / N pages\" header (the print preview names the list itself).",
       "packageId": "Tempo.Blazor.DocumentEditor",
       "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentPageNavigator.razor",
       "documentationStatus": "merged",
@@ -8006,6 +8239,13 @@
           "type": "EventCallback<int>",
           "isRequired": false,
           "description": "Raised when a page thumbnail is selected."
+        },
+        {
+          "name": "ShowHeader",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the \"Pages / N pages\" header renders. Defaults to true; the print preview passes false because its own header (\"Print preview\", the page total) already names the list."
         }
       ]
     },
@@ -8841,7 +9081,7 @@
       "kind": "Component",
       "category": "Document Editor",
       "namespace": "Tempo.Blazor.Components.DocumentEditor",
-      "description": "Docked panel showing the document's version history. Lists saved versions with their metadata and offers create, preview, return-to-current, and restore (with confirmation) actions, and can render an inline diff of two selected versions via TmDocumentDiffViewer.",
+      "description": "Docked panel showing the document's version history. Lists saved versions with their metadata and offers create, preview, return-to-current, and restore (with confirmation) actions, and can render an inline diff of two selected versions via TmDocumentDiffViewer. Phase 7: the inline diff is gone; \"Show differences\" (disabled until Base and Compare are both picked) raises OnShowDiff with the picked pair and the editor opens the comparison mode of the document region.",
       "packageId": "Tempo.Blazor.DocumentEditor",
       "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentVersionPanel.razor",
       "documentationStatus": "merged",
@@ -8884,6 +9124,12 @@
           "type": "EventCallback<DocumentVersion>",
           "isRequired": false,
           "description": "Raised when a historical version should be previewed."
+        },
+        {
+          "name": "OnShowDiff",
+          "type": "EventCallback<DocumentVersionDiffRequest>",
+          "isRequired": false,
+          "description": "Raised with the picked Base and Compare versions when \"Show differences\" is pressed. The button is disabled until both sides are picked; the editor opens the comparison as a mode of the document region (the diff no longer renders inside this panel)."
         },
         {
           "name": "PreviewVersion",
@@ -11260,11 +11506,11 @@
     }
   ],
   "summary": {
-    "itemCount": 236,
-    "manualItemCount": 236,
-    "generatedItemCount": 233,
+    "itemCount": 240,
+    "manualItemCount": 240,
+    "generatedItemCount": 237,
     "generatedOnlyItemCount": 0,
-    "componentCount": 46,
-    "publicApiTypeCount": 187
+    "componentCount": 47,
+    "publicApiTypeCount": 190
   }
 }

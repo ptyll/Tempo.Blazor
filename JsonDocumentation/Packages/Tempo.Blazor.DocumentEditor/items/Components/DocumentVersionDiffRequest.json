@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.DocumentEditor",
+  "description": "What TmDocumentVersionPanel.OnShowDiff reports: the version picked as Base (the old side) and the version picked as Compare (the new side).",
+  "packageId": "Tempo.Blazor.DocumentEditor",
+  "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/DocumentCompareOpenRequest.cs",
+  "documentationStatus": "generated",
+  "itemName": "DocumentVersionDiffRequest"
+}

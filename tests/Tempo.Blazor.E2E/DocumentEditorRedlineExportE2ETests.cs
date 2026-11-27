@@ -41,11 +41,14 @@ public sealed class DocumentEditorRedlineExportE2ETests : WasmTestBase
         await DocumentEditorRedesignE2EHelpers.ClickRibbonAsync(page, "document-compare-open");
         await Assertions.Expect(page.GetByTestId("document-compare-dialog")).ToBeVisibleAsync(new() { Timeout = 10_000 });
         await DocumentEditorLayoutShiftGuard.AssertWorkspaceUnchangedAsync(page, workspaceBefore, "opening the compare dialog");
+        // Phase 7 (DE-2.6): a source is a card; its picker opens with "Change..." (the document id field is no longer on the dialog itself).
+        await page.GetByTestId("document-compare-base-change").ClickAsync();
         await page.GetByTestId("document-compare-base-source").SelectOptionAsync("DocumentId");
         await page.GetByTestId("document-compare-base-document-id").FillAsync(DocumentId);
+        await page.GetByTestId("document-compare-target-change").ClickAsync();
         await page.GetByTestId("document-compare-target-source").SelectOptionAsync("Current");
         await page.GetByTestId("document-compare-run").ClickAsync();
-        await Assertions.Expect(page.GetByTestId("document-diff-viewer")).ToBeVisibleAsync(new() { Timeout = 15_000 });
+        await Assertions.Expect(page.GetByTestId("document-compare-result")).ToBeVisibleAsync(new() { Timeout = 15_000 });
         await DocumentEditorLayoutShiftGuard.AssertWorkspaceUnchangedAsync(page, workspaceBefore, "rendering the compare result");
 
         var screenshotDir = Path.Combine(FindRepositoryRootDirectory(), "tests", "Tempo.Blazor.E2E", "__screenshots__", "document-editor-redline");
@@ -112,9 +115,10 @@ public sealed class DocumentEditorRedlineExportE2ETests : WasmTestBase
         await page.GetByTestId("document-ribbon-tab-review").ClickAsync();
         await DocumentEditorRedesignE2EHelpers.ClickRibbonAsync(page, "document-compare-open");
         await Assertions.Expect(page.GetByTestId("document-compare-dialog")).ToBeVisibleAsync(new() { Timeout = 10_000 });
+        await page.GetByTestId("document-compare-target-change").ClickAsync();
         await page.GetByTestId("document-compare-target-document-id").FillAsync(DocumentId);
         await page.GetByTestId("document-compare-run").ClickAsync();
-        await Assertions.Expect(page.GetByTestId("document-diff-viewer")).ToBeVisibleAsync(new() { Timeout = 15_000 });
+        await Assertions.Expect(page.GetByTestId("document-compare-result")).ToBeVisibleAsync(new() { Timeout = 15_000 });
 
         await Assertions.Expect(page.GetByTestId("document-compare-export-redline")).ToHaveCountAsync(0);
     }

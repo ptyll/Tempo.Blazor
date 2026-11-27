@@ -747,29 +747,6 @@
     gap: var(--tm-space-3);
 }
 
-.tm-document-compare-dialog__source {
-    display: grid;
-    gap: var(--tm-space-2);
-    align-content: start;
-    min-inline-size: 0;
-    padding: var(--tm-space-3);
-    background: var(--tm-color-surface);
-    border: 1px solid var(--tm-color-border-subtle);
-    border-radius: var(--tm-radius-card);
-}
-
-.tm-document-compare-dialog__source label {
-    display: grid;
-    gap: var(--tm-space-1);
-    color: var(--tm-color-text-secondary);
-    font-size: var(--tm-font-size-sm);
-}
-
-/* The controls are the shared tm-input; only the width is the dialog's. */
-.tm-document-compare-dialog__source .tm-input {
-    inline-size: 100%;
-}
-
 .tm-document-compare-dialog__message {
     margin-block-start: var(--tm-space-3);
     color: var(--tm-color-text-secondary);

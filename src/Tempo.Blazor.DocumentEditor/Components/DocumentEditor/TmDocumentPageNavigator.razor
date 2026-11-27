@@ -6,12 +6,15 @@
 <aside class="tm-document-page-navigator"
        data-testid="@TestId("document-page-navigator")"
        aria-label="@Loc["TmDocumentEditor_Pages"]">
-    <header class="tm-document-page-navigator__header">
-        <span>@Loc["TmDocumentEditor_Pages"]</span>
-        <span data-testid="@TestId("document-page-navigator-count")">
-            @string.Format(CultureInfo.InvariantCulture, Loc["TmDocumentEditor_PageCount"], PageCount)
-        </span>
-    </header>
+    @if (ShowHeader)
+    {
+        <header class="tm-document-page-navigator__header">
+            <span>@Loc["TmDocumentEditor_Pages"]</span>
+            <span data-testid="@TestId("document-page-navigator-count")">
+                @Loc.Plural("TmDocumentEditor_PageCount", PageCount)
+            </span>
+        </header>
+    }
 
     @if (VisiblePages.Count == 0)
     {
@@ -60,6 +63,12 @@
 
     /// <summary>Zero-based active page index.</summary>
     [Parameter] public int ActivePageIndex { get; set; }
+
+    /// <summary>
+    /// Whether the "Pages / N pages" header renders. Defaults to <c>true</c>; the print preview passes <c>false</c> because its own header
+    /// ("Print preview", the page total) already names the list.
+    /// </summary>
+    [Parameter] public bool ShowHeader { get; set; } = true;
 
     /// <summary>Raised when a page thumbnail is selected.</summary>
     [Parameter] public EventCallback<int> OnNavigateToPage { get; set; }

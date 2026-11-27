@@ -136,6 +136,16 @@ Shared panel building blocks (stylesheet `_document-editor-panels.css`, imported
   `DocumentRevisionPreview` is a DocumentEditor-package record): the editor reads the text from the document by the
   revision's range; the panel fills what the resolver leaves from the payload (plain text of an insertion / deletion,
   "Bold: on" for a formatting change) - the raw payload is never printed. A long list renders in windows of `PageSize` (default 40, "Show N more"; windowing rather than `Virtualize`, decision `DE-REVISION-PANEL-WINDOWING`: a card has no fixed height). The window always grows to cover `SelectedRevisionId`; the find panel uses the same pattern (100 hits a window, the active hit always rendered, the heading keeps the full count).
+- **Document-region modes (phase 7).** Besides editing the doc region has two modes. The print preview is the engine's own state
+  (`openPrintPreview` / `closePrintPreview`): while it is up the ribbon is not rendered, the left region holds the page thumbnails
+  (`TmDocumentPageNavigator ShowHeader="false"`), the doc region a page / zoom bar and the inspector region (desktop) the action cards and
+  the read-only information; a tablet / phone render the actions as a bar inside the doc region. The comparison mode shows
+  `TmDocumentDiffViewer` (text aligned by block, `ViewMode` = `DiffViewMode.SideBySide | Unified`, `OldMeta` / `NewMeta`, next / previous
+  change, `OnBack`) in `[data-testid="document-diff-mode"]`; the canvas engine stays mounted and the page surface is `hidden`. It is opened by
+  `TmDocumentVersionPanel.OnShowDiff(DocumentVersionDiffRequest)` ("Show differences") and `TmDocumentCompareDialog.OnOpenComparison(DocumentCompareOpenRequest)`
+  ("Open comparison"); a host that embeds the panel or the dialog without the editor renders the viewer itself. The compare sources are
+  `TmDocumentCompareSourceCard`s (`Versions` feeds "Version from history"; `DocumentCompareSource` is not extended). `TmDocumentEditorStatusBar`
+  shows "Page X of Y" and, when `OnZoomChanged` / `OnToggleFullscreen` are bound, the zoom and fullscreen controls.
 - `TmDocumentDebugModal` + `TmDocumentDebugSection` - the shared frame of the developer debug modals; an empty section
   shows the localized "No data" notice. Panel actions use `tm-btn` (`tm-btn-primary` for the panel's primary action) and
   `tm-input`; the BEM classes stay on the elements as aliases.

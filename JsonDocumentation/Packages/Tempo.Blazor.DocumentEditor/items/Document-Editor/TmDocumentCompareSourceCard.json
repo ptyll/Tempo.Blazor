@@ -1,0 +1,77 @@
+{
+  "kind": "Component",
+  "category": "Document Editor",
+  "packageId": "Tempo.Blazor.DocumentEditor",
+  "namespace": "Tempo.Blazor.Components.DocumentEditor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.DocumentEditor"
+  ],
+  "itemName": "TmDocumentCompareSourceCard",
+  "description": "One source of a document comparison as a card (redesign 146c7e1b, phase 7, DE-2.6): the role of the source as the title ('Original document', 'New document'), an icon, what the source is (a label and an optional second line) and a 'Change...' button that opens the picker, which the host renders as ChildContent under the card body while Expanded. The card owns no state - the compare dialog decides what is chosen and whether the picker is open. Test ids: document-compare-{Side}-card, -label, -change, -editor.",
+  "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentCompareSourceCard.razor",
+  "parameters": [
+    {
+      "name": "Side",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"base\"",
+      "description": "Which side of the comparison the card stands for: base or target. It names the card's test ids and data-side."
+    },
+    {
+      "name": "Title",
+      "type": "string",
+      "isRequired": false,
+      "description": "The role of the source, shown as the card title (\"Original document\", \"New document\")."
+    },
+    {
+      "name": "Label",
+      "type": "string",
+      "isRequired": false,
+      "description": "What the source is: the current document, a file name, a version label or a document id."
+    },
+    {
+      "name": "Description",
+      "type": "string?",
+      "isRequired": false,
+      "description": "An optional second line under the label (the kind of source, the author and time of a version)."
+    },
+    {
+      "name": "Icon",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"file-text\"",
+      "description": "Icon name of the source kind."
+    },
+    {
+      "name": "Expanded",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the picker below the card is open. The card never changes it: the host handles OnChange."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Disables the 'Change...' button, for example while a comparison runs."
+    },
+    {
+      "name": "OnChange",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when 'Change...' is pressed."
+    },
+    {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "The picker, rendered under the card body while Expanded."
+    }
+  ],
+  "cssClasses": [
+    "tm-document-compare-source",
+    "tm-document-compare-source__title",
+    "tm-document-compare-source__body",
+    "tm-document-compare-source__editor"
+  ]
+}

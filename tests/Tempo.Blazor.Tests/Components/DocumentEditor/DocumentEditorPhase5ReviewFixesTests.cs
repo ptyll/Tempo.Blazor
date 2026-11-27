@@ -356,16 +356,18 @@ public sealed class DocumentEditorPhase5ReviewFixesTests : LocalizationTestBase
     // ─── dialogs ─────────────────────────────────────────────────────────────
 
     [Fact]
-    public void CompareDialog_FooterEndsWithThePrimaryAction_AndTheSourcesAreTmInputs()
+    public void CompareDialog_FooterStartsWithThePrimaryAction_CancelIsTheLast_AndThePickersAreTmInputs()
     {
+        // Phase 7 (DE-2.6) follows the mockup: the primary "Compare" first, then the export, and Cancel at the far end.
         var cut = Render<TmDocumentCompareDialog>(p => p.Add(x => x.CurrentDocument, DocumentEditorDocument.Empty()));
 
         var order = cut.FindAll(".tm-modal-footer button").Select(b => b.GetAttribute("data-testid")).ToList();
-        order.Should().Equal("document-compare-cancel", "document-compare-run");
+        order.Should().Equal("document-compare-run", "document-compare-cancel");
         cut.Find("[data-testid='document-compare-run']").ClassList.Should().Contain("tm-btn-primary");
-        cut.FindAll(".tm-document-compare-dialog__cancel").Should().BeEmpty();
-        cut.FindAll(".tm-document-compare-dialog__source select").Should().OnlyContain(e => e.ClassList.Contains("tm-input"));
-        FloatingCss().Should().NotContain(".tm-document-compare-dialog__cancel");
+
+        cut.Find("[data-testid='document-compare-base-change']").Click();
+        cut.Find("[data-testid='document-compare-target-change']").Click();
+        cut.FindAll(".tm-document-compare-dialog__picker select, .tm-document-compare-dialog__picker input").Should().OnlyContain(e => e.ClassList.Contains("tm-input"));
     }
 
     [Fact]

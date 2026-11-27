@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.DocumentEditor",
+  "description": "How TmDocumentDiffViewer lays the two sides of a comparison out: SideBySide (two columns, one row per block, the old text left and the new text right) or Unified (one column, a changed block shows its removed and added words in the same line). Replaces the obsolete SideBySide boolean.",
+  "packageId": "Tempo.Blazor.DocumentEditor",
+  "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/DiffViewMode.cs",
+  "documentationStatus": "generated",
+  "itemName": "DiffViewMode"
+}

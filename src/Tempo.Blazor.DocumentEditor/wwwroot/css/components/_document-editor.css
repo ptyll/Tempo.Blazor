@@ -478,7 +478,65 @@
 
 .tm-document-editor__status-bar-group--metrics {
     flex: 0 1 auto;
+}
+
+/* Phase 7 (DE-1.8): the zoom and the fullscreen switch are CONTROLS of the bar, on its right edge. */
+.tm-document-editor__status-bar-group--controls {
+    flex: 0 0 auto;
     justify-content: flex-end;
+    gap: var(--tm-space-2);
+}
+
+.tm-document-editor__status-zoom {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+}
+
+.tm-document-editor__status-zoom-value {
+    min-inline-size: 3rem;
+    color: var(--tm-color-text);
+    text-align: center;
+}
+
+.tm-document-editor__status-button {
+    display: inline-grid;
+    place-items: center;
+    inline-size: 1.75rem;
+    block-size: 1.75rem;
+    padding: 0;
+    color: var(--tm-color-text-secondary);
+    background: transparent;
+    border: 0;
+    border-radius: var(--tm-radius-control);
+    cursor: pointer;
+}
+
+.tm-document-editor__status-button:hover:not(:disabled) {
+    color: var(--tm-color-text);
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-document-editor__status-button[aria-pressed="true"] {
+    color: var(--tm-color-primary);
+    background: var(--tm-color-primary-subtle);
+}
+
+.tm-document-editor__status-button:disabled {
+    cursor: not-allowed;
+    opacity: var(--tm-opacity-disabled);
+}
+
+.tm-document-editor__status-button:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: var(--tm-space-1);
+}
+
+@media (pointer: coarse) {
+    .tm-document-editor__status-button {
+        inline-size: var(--tm-touch-target);
+        block-size: var(--tm-touch-target);
+    }
 }
 
 .tm-document-editor__status-bar span {
@@ -1931,66 +1989,6 @@
     gap: var(--tm-space-2);
 }
 
-.tm-document-diff {
-    display: grid;
-    gap: var(--tm-space-3);
-    margin-top: var(--tm-space-3);
-    padding-top: var(--tm-space-3);
-    border-top: 1px solid var(--tm-color-border);
-}
-
-.tm-document-diff__header {
-    display: flex;
-    justify-content: space-between;
-    gap: var(--tm-space-2);
-    align-items: center;
-}
-
-.tm-document-diff__header h4,
-.tm-document-diff__pane h5 {
-    margin: 0;
-}
-
-.tm-document-diff__side-by-side {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: var(--tm-space-2);
-}
-
-.tm-document-diff__pane {
-    min-width: 0;
-    display: grid;
-    gap: var(--tm-space-1);
-}
-
-.tm-document-diff__pane pre {
-    margin: 0;
-    min-height: 7rem;
-    max-height: 14rem;
-    overflow: auto;
-    white-space: pre-wrap;
-    padding: var(--tm-space-2);
-    color: var(--tm-color-text);
-    background: var(--tm-color-surface);
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-sm);
-}
-
-.tm-document-diff__inline {
-    line-height: 1.8;
-}
-
-.tm-document-diff__segment--added {
-    color: var(--tm-color-success-text);
-    background: var(--tm-color-success-subtle);
-}
-
-.tm-document-diff__segment--removed {
-    color: var(--tm-color-danger-text);
-    background: var(--tm-color-danger-subtle);
-    text-decoration: line-through;
-}
-
 .tm-document-cursors {
     display: flex;
     flex-wrap: wrap;
@@ -2101,12 +2099,6 @@
     outline-offset: 2px;
 }
 
-.tm-document-diff__segment--added,
-.tm-document-diff__segment--removed {
-    padding: 0 var(--tm-space-1);
-    border-radius: var(--tm-radius-xs);
-}
-
 /* Phone container: the inspector sits under the document with a bounded height (the sheets arrive with phase 8). */
 @container tm-doc-editor (width < 640px) {
     .tm-document-editor__workspace {
@@ -2179,10 +2171,6 @@
     .tm-document-table {
         display: block;
         overflow-x: auto;
-    }
-
-    .tm-document-diff__side-by-side {
-        grid-template-columns: minmax(0, 1fr);
     }
 
     .tm-document-side-panel {

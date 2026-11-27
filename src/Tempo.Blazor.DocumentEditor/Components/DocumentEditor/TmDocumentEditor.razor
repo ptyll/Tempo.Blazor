@@ -110,7 +110,8 @@
                                     OnExportPdf="ExportPdfAsync" />
         }
 
-        @if (ShowToolbar && !CanvasReadingMode)
+        @* Phase 7 (DE-1.8): the print preview is a mode of the editor, not a ribbon state - there is no editing ribbon in it. *@
+        @if (ShowToolbar && !CanvasReadingMode && !CanvasPrintPreviewActive)
         {
             <TmDocumentEditorToolbar @ref="_toolbar"
                                      CommandRegistry="@_commandRegistry"
@@ -353,54 +354,37 @@
                                   OnExecuteCommand="ExecuteCommandPaletteCommandAsync"
                                   OnClose="CloseCommandPaletteAsync" />
 
-        @if (CanvasPrintPreviewActive)
-        {
-            <section class="tm-document-editor__print-preview-actions"
-                     aria-label="@Loc["TmDocumentEditor_PrintPreviewActions"]"
-                     data-testid="@TestId("document-print-preview-actions")">
-                <div class="tm-document-editor__print-preview-title">
-                    <TmIcon Name="printer" Size="IconSize.Sm" />
-                    <span>@Loc["TmDocumentEditor_PrintPreview"]</span>
-                </div>
-                <div class="tm-document-editor__print-preview-buttons">
-                    <button type="button"
-                            class="tm-document-editor__print-preview-button"
-                            title="@Loc["TmDocumentEditor_PrintDocumentAria"]"
-                            aria-label="@Loc["TmDocumentEditor_PrintDocumentAria"]"
-                            @onclick="PrintCanvasDocumentAsync"
-                            data-testid="@TestId("document-print-preview-browser-print")">
-                        <TmIcon Name="printer" Size="IconSize.Sm" />
-                        <span>@Loc["TmDocumentEditor_PrintDocument"]</span>
-                    </button>
-                    <button type="button"
-                            class="tm-document-editor__print-preview-button tm-document-editor__print-preview-button--primary"
-                            disabled="@(!CanExportPdf || _isExportingPdf)"
-                            title="@Loc["TmDocumentEditor_PrintToPdfAria"]"
-                            aria-label="@Loc["TmDocumentEditor_PrintToPdfAria"]"
-                            @onclick="ExportPdfAsync"
-                            data-testid="@TestId("document-print-preview-export-pdf")">
-                        <TmIcon Name="file-down" Size="IconSize.Sm" />
-                        <span>@Loc["TmDocumentEditor_PrintToPdf"]</span>
-                    </button>
-                    <button type="button"
-                            class="tm-document-editor__print-preview-close"
-                            title="@Loc["TmDocumentEditor_ClosePrintPreview"]"
-                            aria-label="@Loc["TmDocumentEditor_ClosePrintPreview"]"
-                            @onclick="CloseCanvasPrintPreviewAsync"
-                            data-testid="@TestId("document-print-preview-close")">
-                        <TmIcon Name="x" Size="IconSize.Sm" />
-                    </button>
-                </div>
-            </section>
-        }
-
         <div class="tm-document-editor__main" data-testid="@TestId("document-editor-main")">
         <div class="@WorkspaceClass"
              data-testid="@TestId("document-editor-workspace")"
              data-side-panel-state="@(_sidePanelOpen ? "open" : "closed")"
              data-side-panel-layout="docked-tabs"
              data-active-side-panel-tab="@ActiveSidePanelDataValue">
-            @if (IsDesktopLayout)
+            @if (CanvasPrintPreviewActive && !IsMobileLayout)
+            {
+                @* Phase 7 (DE-1.8): in the print preview the left region is the page thumbnails of the printout, on a desktop and a tablet. *@
+                <nav class="tm-document-editor__navigation tm-document-editor__navigation--print-preview"
+                     data-region="nav"
+                     data-focus-region="nav"
+                     aria-label="@Loc["TmDocumentEditor_PrintPreviewPagesLabel"]"
+                     data-testid="@TestId("document-print-preview-pages")">
+                    <div class="tm-document-print-pages">
+                        <header class="tm-document-print-pages__header">
+                            <span class="tm-document-print-pages__icon" aria-hidden="true"><TmIcon Name="printer" Size="IconSize.Md" /></span>
+                            <div class="tm-document-print-pages__titles">
+                                <h2 class="tm-document-print-pages__title">@Loc["TmDocumentEditor_PrintPreview"]</h2>
+                                <span class="tm-document-print-pages__count" data-testid="@TestId("document-print-preview-page-total")">@Loc.Plural("TmDocumentEditor_PageCount", PrintPreviewPageCount)</span>
+                            </div>
+                        </header>
+                        <TmDocumentPageNavigator Metrics="@_pageMetrics"
+                                                 ActivePageIndex="@_activePageIndex"
+                                                 ShowHeader="false"
+                                                 TestIdPrefix="@TestIdPrefix"
+                                                 OnNavigateToPage="NavigateToPageAsync" />
+                    </div>
+                </nav>
+            }
+            else if (IsDesktopLayout)
             {
                 <nav class="tm-document-editor__navigation"
                      data-region="nav"
@@ -435,7 +419,33 @@
                                              OpenComments="OpenCommentsPanelAsync"
                                              OpenRevisions="OpenRevisionsPanelAsync" />
                 </div>
-                <article class="tm-document-editor__page-surface" aria-label="@Loc["TmDocumentEditor_PageLabel"]">
+                @if (CanvasPrintPreviewActive)
+                {
+                    @PrintPreviewToolbar
+                    @if (!IsDesktopLayout)
+                    {
+                        @PrintPreviewActions
+                    }
+                }
+
+                @* Phase 7 (DE-2.6, decision DE3): a comparison is a MODE of the document region - the diff as text, aligned by block, with "Back to
+                   document". The canvas stays mounted (it keeps the document, the selection and the undo stack) but is not rendered while hidden:
+                   two copies of the document are never drawn. *@
+                @if (DiffModeActive)
+                {
+                    <div class="tm-document-editor__diff-mode" data-testid="@TestId("document-diff-mode")">
+                        <TmDocumentDiffViewer ComparisonResult="@_diffRequest!.Result"
+                                              OldTitle="@_diffRequest.BaseTitle"
+                                              NewTitle="@_diffRequest.CompareTitle"
+                                              OldMeta="@_diffOldMeta"
+                                              NewMeta="@_diffNewMeta"
+                                              InitialBlockId="@_diffRequest.BlockId"
+                                              TestIdPrefix="@TestIdPrefix"
+                                              OnBack="CloseDiffModeAsync" />
+                    </div>
+                }
+
+                <article class="tm-document-editor__page-surface" aria-label="@Loc["TmDocumentEditor_PageLabel"]" hidden="@DiffModeActive">
 
                         <TmDocumentCanvasEngineHost @ref="_canvasHost"
                                                     Document="@DisplayedDocument"
@@ -466,6 +476,11 @@
             </section>
 
             <div class="tm-document-editor__inspector" data-region="inspector" data-focus-region="inspector">
+            @if (CanvasPrintPreviewActive && IsDesktopLayout)
+            {
+                @PrintPreviewActions
+                @PrintPreviewInfo
+            }
             <TmDocumentSidePanel @ref="_sidePanel"
                                  IsOpen="@_sidePanelOpen"
                                  TextTabs="@IsDesktopLayout"
@@ -558,6 +573,7 @@
                                             OnSelectVersion="PreviewVersionAsync"
                                             OnReturnToCurrent="ReturnToCurrentVersionAsync"
                                             OnRestoreVersion="RestoreVersionAsync"
+                                            OnShowDiff="ShowVersionDiffAsync"
                                             OnClose="CloseVersionPanel" />
                 </VersionsContent>
                 <PropertiesContent>
@@ -616,8 +632,13 @@
                                    LastSavedAt="@_lastSavedAt"
                                    WordCount="@DocumentWordCount"
                                    PageCount="@DocumentPageCount"
+                                   CurrentPage="@(_activePageIndex + 1)"
                                    ActiveRegionLabel="@ActiveRegionLabel"
                                    ZoomLabel="@ZoomStatusLabel"
+                                   ZoomPercent="@_zoomPercent"
+                                   OnZoomChanged="SetZoomPercentAsync"
+                                   IsFullscreen="@_isFullscreen"
+                                   OnToggleFullscreen="ToggleFullscreenAsync"
                                    RuntimeMessage="@_runtimeMessage"
                                    RuntimeFailed="@_runtimeFailed" />
         </div>
@@ -1381,6 +1402,8 @@
                                      OnCompared="HandleDocumentComparedAsync"
                                      OnCompareFailed="HandleDocumentCompareFailedAsync"
                                      OnExportRedline="ExportRedlineDocxAsync"
+                                     Versions="@_versions"
+                                     OnOpenComparison="OpenComparisonModeAsync"
                                      OnClose="CloseCompareDialog" />
         }
     }
@@ -1489,4 +1512,150 @@
                                                    @onclick="RetryAsync">
         @Loc["TmDocumentEditor_Retry"]
     </button>;
+
+    // Redesign 146c7e1b, phase 7 (DE-1.8): the print preview. The ribbon is gone; the doc region carries a page / zoom bar, the inspector region
+    // (desktop) the actions and the read-only document information, the nav region the page thumbnails. A tablet / phone has no inspector
+    // region in the preview, so the same actions render as a bar of the doc region (a bottom bar on a phone, by CSS).
+    private RenderFragment PrintPreviewToolbar => @<div class="tm-document-print-toolbar"
+                                                          role="group"
+                                                          aria-label="@Loc["TmDocumentEditor_PrintPreviewToolbarLabel"]"
+                                                          data-testid="@TestId("document-print-preview-toolbar")">
+        <div class="tm-document-print-toolbar__group tm-document-print-toolbar__group--pages">
+            <button type="button"
+                    class="tm-document-print-toolbar__button"
+                    disabled="@(PrintPreviewCurrentPage <= 1)"
+                    aria-label="@Loc["TmDocumentEditor_PrintPreviewPreviousPage"]"
+                    title="@Loc["TmDocumentEditor_PrintPreviewPreviousPage"]"
+                    data-testid="@TestId("document-print-preview-previous")"
+                    @onclick="() => PrintPreviewStepPageAsync(-1)">
+                <TmIcon Name="chevron-left" Size="IconSize.Sm" />
+            </button>
+            <span class="tm-document-print-toolbar__page">
+                <input @key="_printPageInputEpoch"
+                       type="number"
+                       class="tm-document-print-toolbar__page-input"
+                       min="1"
+                       max="@PrintPreviewPageCount"
+                       value="@PrintPreviewCurrentPage"
+                       aria-label="@Loc["TmDocumentEditor_PrintPreviewPageInput"]"
+                       data-testid="@TestId("document-print-preview-page-input")"
+                       @onchange="PrintPreviewPageInputAsync" />
+                <span class="tm-document-print-toolbar__page-total" data-testid="@TestId("document-print-preview-page-of")">/ @PrintPreviewPageCount</span>
+            </span>
+            <button type="button"
+                    class="tm-document-print-toolbar__button"
+                    disabled="@(PrintPreviewCurrentPage >= PrintPreviewPageCount)"
+                    aria-label="@Loc["TmDocumentEditor_PrintPreviewNextPage"]"
+                    title="@Loc["TmDocumentEditor_PrintPreviewNextPage"]"
+                    data-testid="@TestId("document-print-preview-next")"
+                    @onclick="() => PrintPreviewStepPageAsync(1)">
+                <TmIcon Name="chevron-right" Size="IconSize.Sm" />
+            </button>
+        </div>
+        <div class="tm-document-print-toolbar__group tm-document-print-toolbar__group--zoom" role="group" aria-label="@Loc["TmDocumentEditor_ZoomGroupLabel"]">
+            <button type="button"
+                    class="tm-document-print-toolbar__button"
+                    disabled="@(_zoomPercent <= PrintPreviewZoomMin)"
+                    aria-label="@Loc["TmDocumentEditor_ZoomOut"]"
+                    title="@Loc["TmDocumentEditor_ZoomOut"]"
+                    data-testid="@TestId("document-print-preview-zoom-out")"
+                    @onclick="() => PrintPreviewStepZoomAsync(-PrintPreviewZoomStep)">
+                <TmIcon Name="zoom-out" Size="IconSize.Sm" />
+            </button>
+            <select class="tm-document-print-toolbar__zoom"
+                    aria-label="@Loc["TmDocumentEditor_ZoomGroupLabel"]"
+                    value="@PrintPreviewZoomValue"
+                    data-testid="@TestId("document-print-preview-zoom")"
+                    @onchange="PrintPreviewZoomSelectAsync">
+                <option value="fit">@Loc["TmDocumentEditor_ZoomPageWidth"]</option>
+                @foreach (var preset in PrintPreviewZoomOptions)
+                {
+                    <option value="@preset">@(preset)%</option>
+                }
+            </select>
+            <button type="button"
+                    class="tm-document-print-toolbar__button"
+                    disabled="@(_zoomPercent >= PrintPreviewZoomMax)"
+                    aria-label="@Loc["TmDocumentEditor_ZoomIn"]"
+                    title="@Loc["TmDocumentEditor_ZoomIn"]"
+                    data-testid="@TestId("document-print-preview-zoom-in")"
+                    @onclick="() => PrintPreviewStepZoomAsync(PrintPreviewZoomStep)">
+                <TmIcon Name="zoom-in" Size="IconSize.Sm" />
+            </button>
+        </div>
+    </div>;
+
+    private RenderFragment PrintPreviewActions => @<section class="tm-document-print-actions"
+                                                           aria-labelledby="@_printActionsTitleId"
+                                                           data-testid="@TestId("document-print-preview-actions")">
+        <h2 id="@_printActionsTitleId" class="tm-document-print-actions__title">@Loc["TmDocumentEditor_PrintPreviewActions"]</h2>
+        <div class="tm-document-print-actions__list">
+            <button type="button"
+                    class="tm-document-print-actions__card tm-document-print-actions__card--primary"
+                    title="@Loc["TmDocumentEditor_PrintDocumentAria"]"
+                    @onclick="PrintCanvasDocumentAsync"
+                    data-testid="@TestId("document-print-preview-browser-print")">
+                <TmIcon Name="printer" Size="IconSize.Md" />
+                <span class="tm-document-print-actions__text">
+                    <span class="tm-document-print-actions__label">@Loc["TmDocumentEditor_PrintDocument"]</span>
+                    <span class="tm-document-print-actions__hint">@Loc["TmDocumentEditor_PrintPreviewPrintHint"]</span>
+                </span>
+            </button>
+            @if (CanExportPdf)
+            {
+                <button type="button"
+                        class="tm-document-print-actions__card"
+                        disabled="@_isExportingPdf"
+                        title="@Loc["TmDocumentEditor_PrintToPdfAria"]"
+                        @onclick="ExportPdfAsync"
+                        data-testid="@TestId("document-print-preview-export-pdf")">
+                    <TmIcon Name="file-down" Size="IconSize.Md" />
+                    <span class="tm-document-print-actions__text">
+                        <span class="tm-document-print-actions__label">@Loc["TmDocumentEditor_PrintToPdf"]</span>
+                        <span class="tm-document-print-actions__hint">@Loc["TmDocumentEditor_PrintPreviewPdfHint"]</span>
+                    </span>
+                </button>
+            }
+            <button type="button"
+                    class="tm-document-print-actions__card tm-document-print-actions__card--close"
+                    title="@Loc["TmDocumentEditor_ClosePrintPreview"]"
+                    @onclick="CloseCanvasPrintPreviewAsync"
+                    data-testid="@TestId("document-print-preview-close")">
+                <TmIcon Name="x" Size="IconSize.Md" />
+                <span class="tm-document-print-actions__text">
+                    <span class="tm-document-print-actions__label tm-document-print-actions__label--full">@Loc["TmDocumentEditor_ClosePrintPreview"]</span>
+                    <span class="tm-document-print-actions__label tm-document-print-actions__label--short" aria-hidden="true">@Loc["TmDocumentEditor_PrintPreviewCloseShort"]</span>
+                    <span class="tm-document-print-actions__hint">@Loc["TmDocumentEditor_PrintPreviewCloseHint"]</span>
+                </span>
+            </button>
+        </div>
+    </section>;
+
+    private RenderFragment PrintPreviewInfo => @<section class="tm-document-print-info"
+                                                         aria-labelledby="@_printInfoTitleId"
+                                                         data-testid="@TestId("document-print-preview-info")">
+        <h2 id="@_printInfoTitleId" class="tm-document-print-info__title">@Loc["TmDocumentEditor_PrintPreviewInfoTitle"]</h2>
+        <dl class="tm-document-print-info__list">
+            <div class="tm-document-print-info__row">
+                <dt>@Loc["TmDocumentEditor_PrintPreviewInfoName"]</dt>
+                <dd data-testid="@TestId("document-print-preview-info-name")">@DocumentTitle</dd>
+            </div>
+            <div class="tm-document-print-info__row">
+                <dt>@Loc["TmDocumentEditor_PrintPreviewInfoPages"]</dt>
+                <dd data-testid="@TestId("document-print-preview-info-pages")">@PrintPreviewPageCount</dd>
+            </div>
+            <div class="tm-document-print-info__row">
+                <dt>@Loc["TmDocumentEditor_PrintPreviewInfoPaper"]</dt>
+                <dd data-testid="@TestId("document-print-preview-info-paper")">@PrintPreviewPaperText</dd>
+            </div>
+            <div class="tm-document-print-info__row">
+                <dt>@Loc["TmDocumentEditor_PrintPreviewInfoOrientation"]</dt>
+                <dd data-testid="@TestId("document-print-preview-info-orientation")">@PrintPreviewOrientationText</dd>
+            </div>
+            <div class="tm-document-print-info__row">
+                <dt>@Loc["TmDocumentEditor_PrintPreviewInfoScale"]</dt>
+                <dd data-testid="@TestId("document-print-preview-info-scale")">@ZoomStatusLabel</dd>
+            </div>
+        </dl>
+    </section>;
 }

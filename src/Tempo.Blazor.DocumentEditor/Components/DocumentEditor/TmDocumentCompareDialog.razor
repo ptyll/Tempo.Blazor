@@ -23,9 +23,33 @@
     <ChildContent>
         <p class="tm-document-compare-dialog__intro">@Loc["TmDocumentEditor_CompareEmpty"]</p>
 
+        @* Redesign 146c7e1b, phase 7 (DE-2.6): each source is a CARD (title, what it is, "Change..."); the picker (current / history version /
+           document id / uploaded DOCX) opens under the card instead of living in the dialog as two bare selects. *@
         <div class="tm-document-compare-dialog__sources">
-            @RenderSourceEditor(true)
-            @RenderSourceEditor(false)
+            <TmDocumentCompareSourceCard @ref="_baseCard"
+                                         Side="base"
+                                         Title="@Loc["TmDocumentEditor_CompareBaseSource"]"
+                                         Label="@SourceLabel(true)"
+                                         Description="@SourceDescription(true)"
+                                         Icon="@SourceIcon(true)"
+                                         Expanded="@_baseEditing"
+                                         Disabled="@_isComparing"
+                                         TestIdPrefix="@TestIdPrefix"
+                                         OnChange="() => ToggleEditor(true)">
+                @RenderPicker(true)
+            </TmDocumentCompareSourceCard>
+            <TmDocumentCompareSourceCard @ref="_targetCard"
+                                         Side="target"
+                                         Title="@Loc["TmDocumentEditor_CompareTargetSource"]"
+                                         Label="@SourceLabel(false)"
+                                         Description="@SourceDescription(false)"
+                                         Icon="@SourceIcon(false)"
+                                         Expanded="@_compareEditing"
+                                         Disabled="@_isComparing"
+                                         TestIdPrefix="@TestIdPrefix"
+                                         OnChange="() => ToggleEditor(false)">
+                @RenderPicker(false)
+            </TmDocumentCompareSourceCard>
         </div>
 
         @if (!string.IsNullOrWhiteSpace(_message))
@@ -41,9 +65,7 @@
         }
         else if (_result is not null)
         {
-            <TmDocumentDiffViewer ComparisonResult="@_result"
-                                  OldTitle="@GetSourceTitle(true)"
-                                  NewTitle="@GetSourceTitle(false)" />
+            @RenderResult()
         }
         else
         {
@@ -58,7 +80,15 @@
         }
     </ChildContent>
     <Footer>
-        <button type="button" class="tm-btn tm-btn-sm tm-btn-secondary" @onclick="OnClose" data-testid="@TestId("document-compare-cancel")">@Loc["TmDocumentEditor_Cancel"]</button>
+        @* The primary action first, Cancel at the far end (the mockup's order). *@
+        <button type="button"
+                class="tm-btn tm-btn-sm tm-btn-primary"
+                disabled="@(_isComparing || !CanCompare)"
+                title="@(CanCompare ? null : Loc["TmDocumentEditor_CompareRunHint"])"
+                @onclick="RunCompareAsync"
+                data-testid="@TestId("document-compare-run")">
+            @Loc["TmDocumentEditor_CompareRun"]
+        </button>
         @if (_result is not null && _result.Summary.HasChanges && OnExportRedline.HasDelegate)
         {
             <button type="button"
@@ -70,14 +100,7 @@
                 @Loc["TmDocumentEditor_CompareExportRedline"]
             </button>
         }
-        @* The primary action is the LAST one (the dialog's footer is end-aligned: Cancel, the secondary action, then the primary). *@
-        <button type="button"
-                class="tm-btn tm-btn-sm tm-btn-primary"
-                disabled="@_isComparing"
-                @onclick="RunCompareAsync"
-                data-testid="@TestId("document-compare-run")">
-            @Loc["TmDocumentEditor_CompareRun"]
-        </button>
+        <button type="button" class="tm-btn tm-btn-sm tm-btn-secondary tm-document-compare-dialog__cancel" @onclick="OnClose" data-testid="@TestId("document-compare-cancel")">@Loc["TmDocumentEditor_Cancel"]</button>
     </Footer>
 </TmModal>
 
@@ -90,8 +113,6 @@
 
     private const long MaxCompareUploadSize = 20 * 1024 * 1024;
     private readonly DocumentComparisonService _localComparison = new();
-    private DocumentCompareSourceKind _baseKind = DocumentCompareSourceKind.Current;
-    private DocumentCompareSourceKind _compareKind = DocumentCompareSourceKind.DocumentId;
     private string? _baseDocumentId;
     private string? _compareDocumentId;
     private DocumentEditorDocument? _baseUploadedDocument;
@@ -102,6 +123,7 @@
     private string? _message;
     private DocumentCompareResult? _result;
     private readonly string _readyTitleId = $"tm-document-compare-ready-{Guid.NewGuid():N}";
+    private readonly string _resultTitleId = $"tm-document-compare-result-{Guid.NewGuid():N}";
 
     private Dictionary<string, object> CloseButtonAttributes => new()
     {
@@ -141,100 +163,318 @@
     /// </summary>
     [Parameter] public EventCallback<DocumentCompareResult> OnExportRedline { get; set; }
 
-    private RenderFragment RenderSourceEditor(bool isBase) => builder =>
+    /// <summary>History versions the reader can compare against ("Version from history" in the source picker). Empty hides that choice.</summary>
+    [Parameter] public IReadOnlyList<DocumentVersion> Versions { get; set; } = [];
+
+    /// <summary>
+    /// Raised when the reader asks to open the finished comparison in the document region ("Open comparison", or a click on one change of
+    /// the list, which carries that block's id). The button and the clickable list render only when it is bound.
+    /// </summary>
+    [Parameter] public EventCallback<DocumentCompareOpenRequest> OnOpenComparison { get; set; }
+
+    /// <summary>What the picker of a source can choose. The values are the option values of the picker's select.</summary>
+    private enum SourceChoice
     {
-        var sequence = 0;
-        var kind = isBase ? _baseKind : _compareKind;
-        var titleKey = isBase ? "TmDocumentEditor_CompareBaseSource" : "TmDocumentEditor_CompareTargetSource";
-        var selectTestId = isBase ? "document-compare-base-source" : "document-compare-target-source";
-        var idTestId = isBase ? "document-compare-base-document-id" : "document-compare-target-document-id";
-        var uploadTestId = isBase ? "document-compare-base-upload" : "document-compare-target-upload";
+        Current,
+        Version,
+        DocumentId,
+        JsonSnapshot
+    }
 
-        builder.OpenElement(sequence++, "div");
-        builder.AddAttribute(sequence++, "class", "tm-document-compare-dialog__source");
-        builder.OpenElement(sequence++, "label");
-        builder.OpenElement(sequence++, "span");
-        builder.AddContent(sequence++, Loc[titleKey]);
-        builder.CloseElement();
-        builder.OpenElement(sequence++, "select");
-        builder.AddAttribute(sequence++, "class", "tm-input");
-        builder.AddAttribute(sequence++, "value", kind.ToString());
-        builder.AddAttribute(sequence++, "aria-label", Loc[isBase ? "TmDocumentEditor_CompareBaseSourceAria" : "TmDocumentEditor_CompareTargetSourceAria"]);
-        builder.AddAttribute(sequence++, "data-testid", selectTestId);
-        builder.AddAttribute(sequence++, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(this, args => ChangeSourceKind(isBase, args.Value?.ToString())));
-        RenderOption(builder, ref sequence, DocumentCompareSourceKind.Current, Loc["TmDocumentEditor_CompareSourceCurrent"]);
-        RenderOption(builder, ref sequence, DocumentCompareSourceKind.DocumentId, Loc["TmDocumentEditor_CompareSourceDocumentId"]);
-        RenderOption(builder, ref sequence, DocumentCompareSourceKind.JsonSnapshot, Loc["TmDocumentEditor_CompareSourceJsonSnapshot"]);
-        builder.CloseElement();
-        builder.CloseElement();
+    private SourceChoice _baseChoice = SourceChoice.Current;
+    private SourceChoice _compareChoice = SourceChoice.DocumentId;
+    private string? _baseVersionId;
+    private string? _compareVersionId;
+    private bool _baseEditing;
+    private bool _compareEditing;
+    private TmDocumentCompareSourceCard? _baseCard;
+    private TmDocumentCompareSourceCard? _targetCard;
+    private bool? _focusChangeOfBase;
 
-        if (kind == DocumentCompareSourceKind.DocumentId)
-        {
-            builder.OpenElement(sequence++, "label");
-            builder.OpenElement(sequence++, "span");
-            builder.AddContent(sequence++, Loc["TmDocumentEditor_CompareDocumentId"]);
-            builder.CloseElement();
-            builder.OpenElement(sequence++, "input");
-            builder.AddAttribute(sequence++, "class", "tm-input");
-            builder.AddAttribute(sequence++, "value", isBase ? _baseDocumentId : _compareDocumentId);
-            builder.AddAttribute(sequence++, "aria-label", Loc[isBase ? "TmDocumentEditor_CompareBaseDocumentIdAria" : "TmDocumentEditor_CompareTargetDocumentIdAria"]);
-            builder.AddAttribute(sequence++, "data-testid", idTestId);
-            builder.AddAttribute(sequence++, "oninput", EventCallback.Factory.Create<ChangeEventArgs>(this, args => ChangeDocumentId(isBase, args.Value?.ToString())));
-            builder.CloseElement();
-            builder.CloseElement();
-        }
-        else if (kind == DocumentCompareSourceKind.JsonSnapshot)
-        {
-            builder.OpenComponent<TmFileDropZone>(sequence++);
-            builder.AddAttribute(sequence++, "Multiple", false);
-            builder.AddAttribute(sequence++, "MaxFileCount", 1);
-            builder.AddAttribute(sequence++, "Accept", ".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document");
-            builder.AddAttribute(sequence++, "Disabled", _isComparing);
-            builder.AddAttribute(sequence++, "InputTestId", uploadTestId);
-            builder.AddAttribute(sequence++, "InputAriaLabel", Loc[isBase ? "TmDocumentEditor_CompareBaseUploadAria" : "TmDocumentEditor_CompareTargetUploadAria"]);
-            builder.AddAttribute(sequence++, "OnFilesSelected", EventCallback.Factory.Create<InputFileChangeEventArgs>(this, args => ImportCompareSourceAsync(isBase, args)));
-            builder.AddAttribute(sequence++, "ChildContent", (RenderFragment)(childBuilder =>
-            {
-                childBuilder.OpenElement(0, "div");
-                childBuilder.AddContent(1, Loc["TmDocumentEditor_CompareUploadDocx"]);
-                var uploadedName = isBase ? _baseUploadedName : _compareUploadedName;
-                if (!string.IsNullOrWhiteSpace(uploadedName))
-                {
-                    childBuilder.OpenElement(2, "span");
-                    childBuilder.AddContent(3, uploadedName);
-                    childBuilder.CloseElement();
-                }
+    // Compare needs both sources to name something: a current document, a picked version, a typed id, an uploaded file.
+    private bool CanCompare => IsSourceValid(true) && IsSourceValid(false);
 
-                childBuilder.CloseElement();
-            }));
-            builder.CloseComponent();
-        }
-
-        builder.CloseElement();
+    private bool IsSourceValid(bool isBase) => ChoiceOf(isBase) switch
+    {
+        SourceChoice.Current => CurrentDocument is not null,
+        SourceChoice.Version => VersionOf(isBase) is not null,
+        SourceChoice.DocumentId => !string.IsNullOrWhiteSpace(isBase ? _baseDocumentId : _compareDocumentId),
+        _ => (isBase ? _baseUploadedDocument : _compareUploadedDocument) is not null
     };
 
-    private static void RenderOption(RenderTreeBuilder builder, ref int sequence, DocumentCompareSourceKind kind, string label)
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        builder.OpenElement(sequence++, "option");
-        builder.AddAttribute(sequence++, "value", kind.ToString());
-        builder.AddContent(sequence++, label);
-        builder.CloseElement();
+        if (_focusChangeOfBase is bool isBase)
+        {
+            _focusChangeOfBase = null;
+            var card = isBase ? _baseCard : _targetCard;
+            if (card is not null)
+            {
+                await card.FocusChangeAsync();
+            }
+        }
+    }
+
+    // Choosing something finished the job of the picker: it closes and the focus returns to "Change..." (a typed id keeps it open).
+    private void CollapseEditor(bool isBase)
+    {
+        if (isBase)
+        {
+            _baseEditing = false;
+        }
+        else
+        {
+            _compareEditing = false;
+        }
+
+        _focusChangeOfBase = isBase;
+    }
+
+    private SourceChoice ChoiceOf(bool isBase) => isBase ? _baseChoice : _compareChoice;
+
+    private IReadOnlyList<DocumentVersion> OrderedVersions => Versions.OrderByDescending(version => version.CreatedAt).ToList();
+
+    private DocumentVersion? VersionOf(bool isBase)
+    {
+        var id = isBase ? _baseVersionId : _compareVersionId;
+        return id is null ? null : Versions.FirstOrDefault(version => version.Id == id);
+    }
+
+    private void ToggleEditor(bool isBase)
+    {
+        if (isBase)
+        {
+            _baseEditing = !_baseEditing;
+        }
+        else
+        {
+            _compareEditing = !_compareEditing;
+        }
+    }
+
+    private string SourceLabel(bool isBase) => ChoiceOf(isBase) switch
+    {
+        SourceChoice.Current => Loc["TmDocumentEditor_CompareSourceCurrent"],
+        SourceChoice.Version => VersionOf(isBase) is { } version
+            ? DocumentVersionText.Title(Loc, version)
+            : Loc["TmDocumentEditor_CompareVersionNone"],
+        SourceChoice.DocumentId => string.IsNullOrWhiteSpace(isBase ? _baseDocumentId : _compareDocumentId)
+            ? Loc["TmDocumentEditor_CompareDocumentIdNone"]
+            : (isBase ? _baseDocumentId : _compareDocumentId)!,
+        _ => string.IsNullOrWhiteSpace(isBase ? _baseUploadedName : _compareUploadedName)
+            ? Loc["TmDocumentEditor_CompareUploadNone"]
+            : (isBase ? _baseUploadedName : _compareUploadedName)!
+    };
+
+    private string SourceDescription(bool isBase) => ChoiceOf(isBase) switch
+    {
+        SourceChoice.Current => Loc["TmDocumentEditor_CompareSourceCurrentHint"],
+        SourceChoice.Version => VersionOf(isBase) is { } version
+            ? string.Join(" \u00B7 ", new[] { DocumentVersionText.KindLabel(Loc, version.Kind), version.Author.DisplayName }.Where(part => !string.IsNullOrWhiteSpace(part)))
+            : Loc["TmDocumentEditor_CompareSourceVersion"],
+        SourceChoice.DocumentId => Loc["TmDocumentEditor_CompareSourceDocumentId"],
+        _ => Loc["TmDocumentEditor_CompareSourceJsonSnapshot"]
+    };
+
+    private string SourceIcon(bool isBase) => ChoiceOf(isBase) switch
+    {
+        SourceChoice.Version => "history",
+        SourceChoice.JsonSnapshot => "upload",
+        _ => "file-text"
+    };
+
+    private RenderFragment RenderPicker(bool isBase) => @<div class="tm-document-compare-dialog__picker">
+        <label class="tm-document-compare-dialog__field">
+            <span>@Loc["TmDocumentEditor_CompareSourceKind"]</span>
+            <select class="tm-input"
+                    value="@ChoiceOf(isBase).ToString()"
+                    aria-label="@Loc[isBase ? "TmDocumentEditor_CompareBaseSourceAria" : "TmDocumentEditor_CompareTargetSourceAria"]"
+                    data-testid="@TestId(isBase ? "document-compare-base-source" : "document-compare-target-source")"
+                    @onchange="args => ChangeSourceKind(isBase, args.Value?.ToString())">
+                <option value="@SourceChoice.Current">@Loc["TmDocumentEditor_CompareSourceCurrent"]</option>
+                @if (Versions.Count > 0)
+                {
+                    <option value="@SourceChoice.Version">@Loc["TmDocumentEditor_CompareSourceVersion"]</option>
+                }
+                <option value="@SourceChoice.DocumentId">@Loc["TmDocumentEditor_CompareSourceDocumentId"]</option>
+                <option value="@SourceChoice.JsonSnapshot">@Loc["TmDocumentEditor_CompareSourceJsonSnapshot"]</option>
+            </select>
+        </label>
+        @if (ChoiceOf(isBase) == SourceChoice.Version)
+        {
+            <label class="tm-document-compare-dialog__field">
+                <span>@Loc["TmDocumentEditor_CompareSourceVersion"]</span>
+                <select class="tm-input"
+                        value="@(isBase ? _baseVersionId : _compareVersionId)"
+                        aria-label="@Loc[isBase ? "TmDocumentEditor_CompareBaseVersionAria" : "TmDocumentEditor_CompareTargetVersionAria"]"
+                        data-testid="@TestId(isBase ? "document-compare-base-version" : "document-compare-target-version")"
+                        @onchange="args => ChangeVersion(isBase, args.Value?.ToString())">
+                    <option value="">@Loc["TmDocumentEditor_CompareVersionPlaceholder"]</option>
+                    @foreach (var version in OrderedVersions)
+                    {
+                        <option value="@version.Id">@DocumentVersionText.Title(Loc, version)</option>
+                    }
+                </select>
+            </label>
+        }
+        else if (ChoiceOf(isBase) == SourceChoice.DocumentId)
+        {
+            <label class="tm-document-compare-dialog__field">
+                <span>@Loc["TmDocumentEditor_CompareDocumentId"]</span>
+                <input class="tm-input"
+                       value="@(isBase ? _baseDocumentId : _compareDocumentId)"
+                       aria-label="@Loc[isBase ? "TmDocumentEditor_CompareBaseDocumentIdAria" : "TmDocumentEditor_CompareTargetDocumentIdAria"]"
+                       data-testid="@TestId(isBase ? "document-compare-base-document-id" : "document-compare-target-document-id")"
+                       @oninput="args => ChangeDocumentId(isBase, args.Value?.ToString())" />
+            </label>
+        }
+        else if (ChoiceOf(isBase) == SourceChoice.JsonSnapshot)
+        {
+            <TmFileDropZone Multiple="false"
+                            MaxFileCount="1"
+                            Accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                            Disabled="@_isComparing"
+                            InputTestId="@TestId(isBase ? "document-compare-base-upload" : "document-compare-target-upload")"
+                            InputAriaLabel="@Loc[isBase ? "TmDocumentEditor_CompareBaseUploadAria" : "TmDocumentEditor_CompareTargetUploadAria"]"
+                            OnFilesSelected="args => ImportCompareSourceAsync(isBase, args)">
+                <div>@Loc["TmDocumentEditor_CompareUploadDocx"]</div>
+            </TmFileDropZone>
+        }
+    </div>;
+
+    private RenderFragment RenderResult() => @<section class="tm-document-compare-dialog__result" aria-labelledby="@_resultTitleId" data-testid="@TestId("document-compare-result")">
+        <header class="tm-document-compare-dialog__result-header">
+            <h4 id="@_resultTitleId" class="tm-document-compare-dialog__result-title">@Loc["TmDocumentEditor_CompareResultTitle"]</h4>
+            <ul class="tm-document-compare-dialog__summary" data-testid="@TestId("document-compare-summary")" aria-label="@Loc["TmDocumentEditor_CompareResultTitle"]">
+                <li class="tm-document-compare-dialog__stat tm-document-compare-dialog__stat--added">
+                    <span class="tm-document-compare-dialog__stat-value" data-testid="@TestId("document-compare-summary-added")">@_result!.Summary.AddedBlocks</span>
+                    <span>@Loc["TmDocumentEditor_DiffLegendAdded"]</span>
+                </li>
+                <li class="tm-document-compare-dialog__stat tm-document-compare-dialog__stat--removed">
+                    <span class="tm-document-compare-dialog__stat-value" data-testid="@TestId("document-compare-summary-removed")">@_result.Summary.RemovedBlocks</span>
+                    <span>@Loc["TmDocumentEditor_DiffLegendRemoved"]</span>
+                </li>
+                <li class="tm-document-compare-dialog__stat tm-document-compare-dialog__stat--changed">
+                    <span class="tm-document-compare-dialog__stat-value" data-testid="@TestId("document-compare-summary-changed")">@_result.Summary.ChangedBlocks</span>
+                    <span>@Loc["TmDocumentEditor_DiffLegendChanged"]</span>
+                </li>
+            </ul>
+            @if (_result.Summary.HasChanges && OnOpenComparison.HasDelegate)
+            {
+                <button type="button"
+                        class="tm-btn tm-btn-sm tm-btn-secondary tm-document-compare-dialog__open"
+                        data-testid="@TestId("document-compare-open-comparison")"
+                        @onclick="() => OpenComparisonAsync(null)">
+                    <TmIcon Name="git-compare" Size="IconSize.Sm" />
+                    <span>@Loc["TmDocumentEditor_CompareOpenComparison"]</span>
+                </button>
+            }
+        </header>
+        @if (_result.Changes.Count == 0)
+        {
+            <div class="tm-document-compare-dialog__no-differences" data-testid="@TestId("document-compare-no-differences")">
+                <TmEmptyState Icon="check"
+                              Title="@Loc["TmDocumentEditor_CompareNoDifferencesTitle"]"
+                              Description="@Loc["TmDocumentEditor_CompareNoDifferencesHint"]" />
+            </div>
+        }
+        else
+        {
+            <h5 class="tm-document-compare-dialog__changes-title">@Loc["TmDocumentEditor_CompareChangesList", _result.Changes.Count]</h5>
+            <ol class="tm-document-compare-dialog__changes" data-testid="@TestId("document-compare-changes")">
+                @foreach (var change in _result.Changes)
+                {
+                    var quote = ChangeQuote(change);
+                    var blockId = change.BlockId;
+                    <li class="tm-document-compare-dialog__change tm-document-compare-dialog__change--@change.Kind.ToString().ToLowerInvariant()"
+                        data-change-kind="@change.Kind.ToString().ToLowerInvariant()"
+                        data-testid="@TestId("document-compare-change")">
+                        @if (OnOpenComparison.HasDelegate)
+                        {
+                            <button type="button"
+                                    class="tm-document-compare-dialog__change-button"
+                                    aria-label="@Loc["TmDocumentEditor_CompareShowChangeAria", ChangeKindLabel(change.Kind), quote]"
+                                    @onclick="() => OpenComparisonAsync(blockId)">
+                                <span class="tm-document-compare-dialog__change-kind">@ChangeKindLabel(change.Kind)</span>
+                                <span class="tm-document-compare-dialog__change-quote">@quote</span>
+                            </button>
+                        }
+                        else
+                        {
+                            <span class="tm-document-compare-dialog__change-kind">@ChangeKindLabel(change.Kind)</span>
+                            <span class="tm-document-compare-dialog__change-quote">@quote</span>
+                        }
+                    </li>
+                }
+            </ol>
+        }
+    </section>;
+
+    private string ChangeKindLabel(DocumentCompareChangeKind kind) => kind switch
+    {
+        DocumentCompareChangeKind.Added => Loc["TmDocumentEditor_DiffLegendAdded"],
+        DocumentCompareChangeKind.Removed => Loc["TmDocumentEditor_DiffLegendRemoved"],
+        _ => Loc["TmDocumentEditor_DiffLegendChanged"]
+    };
+
+    private static string ChangeQuote(DocumentCompareBlockChange change)
+    {
+        var text = change.Kind == DocumentCompareChangeKind.Removed ? change.OldText : change.NewText;
+        text = string.IsNullOrWhiteSpace(text) ? change.OldText : text;
+        text = string.Join(' ', (text ?? string.Empty).Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+        return text.Length <= 140 ? text : text[..139] + "\u2026";
+    }
+
+    private async Task OpenComparisonAsync(string? blockId)
+    {
+        if (_result is null)
+        {
+            return;
+        }
+
+        await OnOpenComparison.InvokeAsync(new DocumentCompareOpenRequest(_result, blockId, GetSourceTitle(true), GetSourceTitle(false)));
     }
 
     private void ChangeSourceKind(bool isBase, string? value)
     {
-        if (!Enum.TryParse<DocumentCompareSourceKind>(value, out var kind))
+        if (!Enum.TryParse<SourceChoice>(value, out var choice))
         {
             return;
         }
 
         if (isBase)
         {
-            _baseKind = kind;
+            _baseChoice = choice;
         }
         else
         {
-            _compareKind = kind;
+            _compareChoice = choice;
+        }
+
+        _result = null;
+        if (choice == SourceChoice.Current)
+        {
+            CollapseEditor(isBase);
+        }
+    }
+
+    private void ChangeVersion(bool isBase, string? value)
+    {
+        var id = string.IsNullOrEmpty(value) ? null : value;
+        if (isBase)
+        {
+            _baseVersionId = id;
+        }
+        else
+        {
+            _compareVersionId = id;
+        }
+
+        _result = null;
+        if (id is not null)
+        {
+            CollapseEditor(isBase);
         }
     }
 
@@ -248,6 +488,8 @@
         {
             _compareDocumentId = value;
         }
+
+        _result = null;
     }
 
     private async Task ImportCompareSourceAsync(bool isBase, InputFileChangeEventArgs args)
@@ -297,6 +539,8 @@
             }
 
             _message = Loc["TmDocumentEditor_CompareImportComplete"];
+            _result = null;
+            CollapseEditor(isBase);
         }
         catch
         {
@@ -374,26 +618,56 @@
 
     private DocumentCompareSource BuildSource(bool isBase)
     {
-        var kind = isBase ? _baseKind : _compareKind;
-        var document = isBase ? _baseUploadedDocument : _compareUploadedDocument;
-        var documentId = isBase ? _baseDocumentId : _compareDocumentId;
-        var label = isBase ? _baseUploadedName : _compareUploadedName;
-
-        if (kind == DocumentCompareSourceKind.Current)
+        var choice = ChoiceOf(isBase);
+        switch (choice)
         {
-            document = CurrentDocument;
-            documentId = CurrentDocument?.DocumentId;
-            label = Loc["TmDocumentEditor_CompareSourceCurrent"];
+            case SourceChoice.Current:
+                return new DocumentCompareSource
+                {
+                    Kind = DocumentCompareSourceKind.Current,
+                    DocumentId = CurrentDocument?.DocumentId,
+                    Document = CurrentDocument,
+                    JsonSnapshot = CurrentDocument is null ? null : DocumentEditorJson.Serialize(CurrentDocument),
+                    Label = Loc["TmDocumentEditor_CompareSourceCurrent"]
+                };
+            case SourceChoice.Version:
+                var version = VersionOf(isBase);
+                DocumentEditorDocument? snapshot = null;
+                if (version is not null && !string.IsNullOrWhiteSpace(version.Snapshot.Json))
+                {
+                    try
+                    {
+                        snapshot = DocumentEditorJson.Deserialize(version.Snapshot.Json);
+                    }
+                    catch (System.Text.Json.JsonException)
+                    {
+                        // A snapshot that is not valid JSON names no document: the comparison fails with the localized message.
+                    }
+                }
+
+                return new DocumentCompareSource
+                {
+                    Kind = DocumentCompareSourceKind.JsonSnapshot,
+                    Document = snapshot,
+                    JsonSnapshot = snapshot is null ? null : version!.Snapshot.Json,
+                    Label = version is null ? null : DocumentVersionText.Title(Loc, version)
+                };
+            case SourceChoice.DocumentId:
+                return new DocumentCompareSource
+                {
+                    Kind = DocumentCompareSourceKind.DocumentId,
+                    DocumentId = isBase ? _baseDocumentId : _compareDocumentId
+                };
+            default:
+                var document = isBase ? _baseUploadedDocument : _compareUploadedDocument;
+                return new DocumentCompareSource
+                {
+                    Kind = DocumentCompareSourceKind.JsonSnapshot,
+                    Document = document,
+                    JsonSnapshot = document is null ? null : DocumentEditorJson.Serialize(document),
+                    Label = isBase ? _baseUploadedName : _compareUploadedName
+                };
         }
-
-        return new DocumentCompareSource
-        {
-            Kind = kind,
-            DocumentId = documentId,
-            Document = document,
-            JsonSnapshot = document is null ? null : DocumentEditorJson.Serialize(document),
-            Label = label
-        };
     }
 
     private async Task<DocumentCompareResult> CompareLocallyAsync(DocumentCompareRequest request)

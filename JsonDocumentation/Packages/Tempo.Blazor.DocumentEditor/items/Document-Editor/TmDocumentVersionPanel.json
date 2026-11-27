@@ -2,7 +2,7 @@
   "itemName": "TmDocumentVersionPanel",
   "kind": "Component",
   "category": "Document Editor",
-  "description": "Docked panel showing the document's version history. Lists saved versions with their metadata and offers create, preview, return-to-current, and restore (with confirmation) actions, and can render an inline diff of two selected versions via TmDocumentDiffViewer.",
+  "description": "Docked panel showing the document's version history. Lists saved versions with their metadata and offers create, preview, return-to-current, and restore (with confirmation) actions, and can render an inline diff of two selected versions via TmDocumentDiffViewer. Phase 7: the inline diff is gone; \"Show differences\" (disabled until Base and Compare are both picked) raises OnShowDiff with the picked pair and the editor opens the comparison mode of the document region.",
   "packageId": "Tempo.Blazor.DocumentEditor",
   "namespace": "Tempo.Blazor.Components.DocumentEditor",
   "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentVersionPanel.razor",
@@ -83,6 +83,12 @@
       "type": "bool",
       "isRequired": false,
       "description": "Whether the panel renders the 'You are viewing version X' strip itself. Defaults to true; the editor shows the strip in the document region and passes false."
+    },
+    {
+      "name": "OnShowDiff",
+      "type": "EventCallback<DocumentVersionDiffRequest>",
+      "isRequired": false,
+      "description": "Raised with the picked Base and Compare versions when \"Show differences\" is pressed. The button is disabled until both sides are picked; the editor opens the comparison as a mode of the document region (the diff no longer renders inside this panel)."
     }
   ]
 }

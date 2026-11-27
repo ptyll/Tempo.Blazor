@@ -1,0 +1,88 @@
+@namespace Tempo.Blazor.Components.DocumentEditor
+@inherits Tempo.Blazor.Components.TmComponentBase
+
+@* Redesign 146c7e1b, phase 7 (DE-2.6): one SOURCE of the comparison as a card - the role as its title ("Original document", "New document"),
+   an icon, what the source is (the label, a file name or a version) and a "Change..." button that opens the picker (ChildContent, rendered
+   under the card body while Expanded). It replaces the bare select that used to sit in the dialog. The card owns no state: the dialog
+   decides what is chosen and whether the picker is open. *@
+<section class="tm-document-compare-source"
+         role="group"
+         aria-labelledby="@_titleId"
+         data-side="@Side"
+         data-expanded="@(Expanded ? "true" : "false")"
+         data-testid="@TestId($"document-compare-{Side}-card")">
+    <h4 id="@_titleId" class="tm-document-compare-source__title">@Title</h4>
+    <div class="tm-document-compare-source__body">
+        <span class="tm-document-compare-source__icon" aria-hidden="true"><TmIcon Name="@Icon" Size="IconSize.Md" /></span>
+        <div class="tm-document-compare-source__text">
+            <span class="tm-document-compare-source__label" data-testid="@TestId($"document-compare-{Side}-label")">@Label</span>
+            @if (!string.IsNullOrWhiteSpace(Description))
+            {
+                <span class="tm-document-compare-source__description">@Description</span>
+            }
+        </div>
+        <button @ref="_changeButton"
+                type="button"
+                class="tm-btn tm-btn-sm tm-btn-secondary tm-document-compare-source__change"
+                disabled="@Disabled"
+                aria-expanded="@(Expanded ? "true" : "false")"
+                aria-controls="@_editorId"
+                aria-label="@Loc["TmDocumentEditor_CompareChangeSourceAria", Title]"
+                data-testid="@TestId($"document-compare-{Side}-change")"
+                @onclick="() => OnChange.InvokeAsync()">
+            @Loc["TmDocumentEditor_CompareChangeSource"]
+        </button>
+    </div>
+    @if (Expanded)
+    {
+        <div id="@_editorId" class="tm-document-compare-source__editor" data-testid="@TestId($"document-compare-{Side}-editor")">
+            @ChildContent
+        </div>
+    }
+</section>
+
+@code {
+    private ElementReference _changeButton;
+    private readonly string _titleId = $"tm-document-compare-source-title-{Guid.NewGuid():N}";
+    private readonly string _editorId = $"tm-document-compare-source-editor-{Guid.NewGuid():N}";
+
+    /// <summary>Which side of the comparison the card stands for: <c>base</c> or <c>target</c>. It names the card's test ids and <c>data-side</c>.</summary>
+    [Parameter] public string Side { get; set; } = "base";
+
+    /// <summary>The role of the source, shown as the card title ("Original document", "New document").</summary>
+    [Parameter] public string Title { get; set; } = string.Empty;
+
+    /// <summary>What the source is: the current document, a file name, a version label or a document id.</summary>
+    [Parameter] public string Label { get; set; } = string.Empty;
+
+    /// <summary>An optional second line under the label (the kind of source, the author and time of a version).</summary>
+    [Parameter] public string? Description { get; set; }
+
+    /// <summary>Icon name of the source kind. Defaults to <c>file-text</c>.</summary>
+    [Parameter] public string Icon { get; set; } = "file-text";
+
+    /// <summary>Whether the picker below the card is open. The card never changes it: the host handles <see cref="OnChange"/>.</summary>
+    [Parameter] public bool Expanded { get; set; }
+
+    /// <summary>Disables the "Change..." button, for example while a comparison runs.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Raised when "Change..." is pressed.</summary>
+    [Parameter] public EventCallback OnChange { get; set; }
+
+    /// <summary>The picker, rendered under the card body while <see cref="Expanded"/>.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Moves the focus to the "Change..." button, for example after the picker closed because a source was chosen.</summary>
+    public async ValueTask FocusChangeAsync()
+    {
+        try
+        {
+            await _changeButton.FocusAsync();
+        }
+        catch (InvalidOperationException)
+        {
+            // No JS runtime (prerender or a disposed circuit): nothing to focus.
+        }
+    }
+}

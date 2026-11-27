@@ -2,7 +2,7 @@
   "itemName": "TmDocumentEditorStatusBar",
   "kind": "Component",
   "category": "Document Editor",
-  "description": "Editor status bar footer showing save and dirty state, a save message with optional retry, the last-saved time, runtime recovery messages, and document metrics such as word count, page count, active region, and zoom.",
+  "description": "Editor status bar footer showing save and dirty state, a save message with optional retry, the last-saved time, runtime recovery messages, and document metrics such as word count, page count, active region, and zoom. Phase 7: \"Page X of Y\" (CurrentPage / PageCount), plural word count, and - when OnZoomChanged / OnToggleFullscreen are bound - zoom minus / value / plus (10 percent steps within ZoomMin..ZoomMax) and the fullscreen switch.",
   "packageId": "Tempo.Blazor.DocumentEditor",
   "namespace": "Tempo.Blazor.Components.DocumentEditor",
   "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentEditorStatusBar.razor",
@@ -97,6 +97,59 @@
       "type": "bool",
       "isRequired": false,
       "description": "Whether the last-saved text is shown here. Defaults to true; the editor passes false while its header is visible, because the header owns the save state then and the same text must not render twice."
+    },
+    {
+      "name": "CurrentPage",
+      "type": "int",
+      "isRequired": false,
+      "default": "1",
+      "description": "The page the reader is on, one-based (\"Page 2 of 6\")."
+    },
+    {
+      "name": "IsFullscreen",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the editor is in fullscreen (the switch is pressed)."
+    },
+    {
+      "name": "OnToggleFullscreen",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when the fullscreen switch is pressed. The switch renders only when it is bound."
+    },
+    {
+      "name": "OnZoomChanged",
+      "type": "EventCallback<int>",
+      "isRequired": false,
+      "description": "Raised with the new zoom percent when the reader presses minus / plus. The controls render only when it is bound."
+    },
+    {
+      "name": "ZoomMax",
+      "type": "int",
+      "isRequired": false,
+      "default": "200",
+      "description": "The highest zoom the buttons reach, in percent. Defaults to the editor's own ceiling, 200."
+    },
+    {
+      "name": "ZoomMin",
+      "type": "int",
+      "isRequired": false,
+      "default": "50",
+      "description": "The lowest zoom the buttons reach, in percent. Defaults to the editor's own floor, 50."
+    },
+    {
+      "name": "ZoomPercent",
+      "type": "int",
+      "isRequired": false,
+      "default": "100",
+      "description": "The zoom in percent; the minus / plus buttons step from it and disable at ZoomMin / ZoomMax."
+    },
+    {
+      "name": "ZoomStep",
+      "type": "int",
+      "isRequired": false,
+      "default": "10",
+      "description": "How far one press of minus / plus moves the zoom, in percent. Defaults to 10."
     }
   ]
 }

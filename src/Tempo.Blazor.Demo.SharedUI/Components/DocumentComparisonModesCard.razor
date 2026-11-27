@@ -1,0 +1,73 @@
+@using Tempo.Blazor.Components.DocumentEditor
+@using Tempo.Blazor.DocumentEditor.Models
+
+@* Reference card of the DocumentEditor comparison surfaces (redesign DE-2.6): the compare source card and the block-aligned diff viewer
+   with its two view modes. The editor itself opens the same viewer as a mode of its document region ("Show differences" in the version
+   panel, "Open comparison" in the compare dialog). *@
+<section class="mt-8" data-testid="document-comparison-modes-card" aria-labelledby="document-comparison-modes-title">
+    <h2 id="document-comparison-modes-title" class="text-xl font-semibold text-slate-900 dark:text-white mb-1">Comparison surfaces</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-300 mb-4">
+        A compare source is a card with a "Change..." picker; the diff is text aligned by block, with the removed side on the left and the added side on the right.
+    </p>
+
+    <div class="grid gap-4 md:grid-cols-2 mb-6">
+        <TmDocumentCompareSourceCard Side="base"
+                                     Title="Original document"
+                                     Label="Proposal_v1.docx"
+                                     Description="Uploaded DOCX"
+                                     Icon="upload"
+                                     Expanded="_baseOpen"
+                                     OnChange="() => _baseOpen = !_baseOpen"
+                                     TestIdPrefix="demo">
+            <p class="text-sm" data-testid="demo-compare-source-picker">The picker (current document, history version, document id, uploaded DOCX) renders here.</p>
+        </TmDocumentCompareSourceCard>
+        <TmDocumentCompareSourceCard Side="target"
+                                     Title="New document"
+                                     Label="Current document"
+                                     Description="The document open in the editor"
+                                     TestIdPrefix="demo" />
+    </div>
+
+    @* Outside the editor root the highlight mapping is not declared: a wrapper supplies it (core semantic tokens). *@
+    <div style="--tm-document-highlight-insert: var(--tm-color-success); --tm-document-highlight-delete: var(--tm-color-danger); --tm-document-highlight-change: var(--tm-color-info);">
+    <TmDocumentDiffViewer OldDocument="_old"
+                          NewDocument="_new"
+                          OldTitle="Version 1.0"
+                          OldMeta="Draft - 12 Apr 2024 14:32 - Jan Prochazka"
+                          NewTitle="Version 1.1"
+                          NewMeta="Final - 3 May 2024 09:18 - Eva Novakova"
+                          ViewMode="_mode"
+                          ViewModeChanged="mode => _mode = mode"
+                          TestIdPrefix="demo" />
+    </div>
+</section>
+
+@code {
+    private bool _baseOpen;
+    private DiffViewMode _mode = DiffViewMode.SideBySide;
+    private readonly DocumentEditorDocument _old = Build(
+        ("h1", "1. Introduction"),
+        ("p1", "Project Aurora aims to modernise internal systems and make key processes more effective."),
+        ("p2", "Reduce operating costs by 15 percent."),
+        ("p3", "Strengthen cyber security."));
+    private readonly DocumentEditorDocument _new = Build(
+        ("h1", "1. Introduction"),
+        ("p1", "Project Aurora aims to modernise internal systems and make key processes more effective and sustainable."),
+        ("p3", "Strengthen cyber security."),
+        ("p4", "Improve the experience of employees."));
+
+    private static DocumentEditorDocument Build(params (string Id, string Text)[] blocks)
+    {
+        var document = DocumentEditorDocument.Empty("comparison-demo");
+        document.Blocks = blocks
+            .Select((block, index) => new DocumentBlock
+            {
+                Id = block.Id,
+                Order = index + 1,
+                Type = DocumentBlockType.Paragraph,
+                Content = new ParagraphBlockContent { Inlines = [new TextRun { Text = block.Text }] }
+            })
+            .ToList();
+        return document;
+    }
+}

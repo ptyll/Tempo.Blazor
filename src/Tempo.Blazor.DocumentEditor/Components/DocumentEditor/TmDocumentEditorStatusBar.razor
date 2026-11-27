@@ -1,12 +1,20 @@
 @namespace Tempo.Blazor.Components.DocumentEditor
 @inherits Tempo.Blazor.Components.TmComponentBase
 
+@* Only the save group is a live region: the page, the zoom and the controls change at the reader's own hand and must not be announced as a whole. *@
 <footer class="tm-document-editor__status-bar"
-        role="status"
-        aria-live="polite"
         aria-label="@Loc["TmDocumentEditor_StatusBarLabel"]"
         data-testid="@TestId("document-status-bar")">
-    <div class="tm-document-editor__status-bar-group tm-document-editor__status-bar-group--save">
+    <div class="tm-document-editor__status-bar-group tm-document-editor__status-bar-group--metrics">
+        @* Phase 7 (DE-1.8): the page the reader is on ("Page 2 of 6") and the word count read through plural families; the zoom and the
+           fullscreen switch are controls of the bar, not just text. *@
+        <span data-testid="@TestId("document-status-page-count")" data-current-page="@Math.Max(1, CurrentPage)" data-page-count="@Math.Max(1, PageCount)">@Loc["TmDocumentEditor_StatusPageOf", Math.Max(1, CurrentPage), Math.Max(1, PageCount)]</span>
+        <span data-testid="@TestId("document-status-word-count")">@Loc.Plural("TmDocumentEditor_WordCount", WordCount)</span>
+        <span data-testid="@TestId("document-status-region")">@Loc["TmDocumentEditor_ActiveRegion", ActiveRegionLabel]</span>
+    </div>
+
+
+    <div class="tm-document-editor__status-bar-group tm-document-editor__status-bar-group--save" role="status" aria-live="polite">
         @if (PendingCount > 0)
         {
             <span class="tm-document-editor__pending" data-testid="@TestId("document-pending-status")" aria-live="polite">
@@ -51,11 +59,47 @@
         }
     </div>
 
-    <div class="tm-document-editor__status-bar-group tm-document-editor__status-bar-group--metrics">
-        <span data-testid="@TestId("document-status-word-count")">@Loc["TmDocumentEditor_WordCount", WordCount]</span>
-        <span data-testid="@TestId("document-status-page-count")">@Loc["TmDocumentEditor_PageCount", PageCount]</span>
-        <span data-testid="@TestId("document-status-region")">@Loc["TmDocumentEditor_ActiveRegion", ActiveRegionLabel]</span>
-        <span data-testid="@TestId("document-status-zoom")">@Loc["TmDocumentEditor_ZoomStatus", ZoomLabel]</span>
+    <div class="tm-document-editor__status-bar-group tm-document-editor__status-bar-group--controls">
+        @if (OnZoomChanged.HasDelegate)
+        {
+            <div class="tm-document-editor__status-zoom" role="group" aria-label="@Loc["TmDocumentEditor_ZoomGroupLabel"]" data-testid="@TestId("document-status-zoom-controls")">
+                <button type="button"
+                        class="tm-document-editor__status-button"
+                        disabled="@(ZoomPercent <= ZoomMin)"
+                        aria-label="@Loc["TmDocumentEditor_ZoomOut"]"
+                        title="@Loc["TmDocumentEditor_ZoomOut"]"
+                        data-testid="@TestId("document-status-zoom-out")"
+                        @onclick="() => StepZoomAsync(-ZoomStep)">
+                    <TmIcon Name="zoom-out" Size="IconSize.Sm" />
+                </button>
+                <span class="tm-document-editor__status-zoom-value" data-testid="@TestId("document-status-zoom")" aria-label="@Loc["TmDocumentEditor_ZoomStatus", ZoomLabel]">@ZoomLabel</span>
+                <button type="button"
+                        class="tm-document-editor__status-button"
+                        disabled="@(ZoomPercent >= ZoomMax)"
+                        aria-label="@Loc["TmDocumentEditor_ZoomIn"]"
+                        title="@Loc["TmDocumentEditor_ZoomIn"]"
+                        data-testid="@TestId("document-status-zoom-in")"
+                        @onclick="() => StepZoomAsync(ZoomStep)">
+                    <TmIcon Name="zoom-in" Size="IconSize.Sm" />
+                </button>
+            </div>
+        }
+        else
+        {
+            <span data-testid="@TestId("document-status-zoom")">@Loc["TmDocumentEditor_ZoomStatus", ZoomLabel]</span>
+        }
+        @if (OnToggleFullscreen.HasDelegate)
+        {
+            <button type="button"
+                    class="tm-document-editor__status-button"
+                    aria-pressed="@(IsFullscreen ? "true" : "false")"
+                    aria-label="@Loc["TmDocumentEditor_Fullscreen"]"
+                    title="@Loc["TmDocumentEditor_Fullscreen"]"
+                    data-testid="@TestId("document-status-fullscreen")"
+                    @onclick="() => OnToggleFullscreen.InvokeAsync()">
+                <TmIcon Name="@(IsFullscreen ? "minimize-2" : "maximize")" Size="IconSize.Sm" />
+            </button>
+        }
     </div>
 </footer>
 
@@ -93,6 +137,30 @@
     /// <summary>Current document page count.</summary>
     [Parameter] public int PageCount { get; set; } = 1;
 
+    /// <summary>The page the reader is on, one-based ("Page 2 of 6").</summary>
+    [Parameter] public int CurrentPage { get; set; } = 1;
+
+    /// <summary>The zoom in percent; the minus / plus buttons step from it and disable at <see cref="ZoomMin"/> / <see cref="ZoomMax"/>.</summary>
+    [Parameter] public int ZoomPercent { get; set; } = 100;
+
+    /// <summary>The lowest zoom the buttons reach, in percent. Defaults to the editor's own floor, 50.</summary>
+    [Parameter] public int ZoomMin { get; set; } = 50;
+
+    /// <summary>The highest zoom the buttons reach, in percent. Defaults to the editor's own ceiling, 200.</summary>
+    [Parameter] public int ZoomMax { get; set; } = 200;
+
+    /// <summary>How far one press of minus / plus moves the zoom, in percent. Defaults to 10.</summary>
+    [Parameter] public int ZoomStep { get; set; } = 10;
+
+    /// <summary>Raised with the new zoom percent when the reader presses minus / plus. The controls render only when it is bound.</summary>
+    [Parameter] public EventCallback<int> OnZoomChanged { get; set; }
+
+    /// <summary>Whether the editor is in fullscreen (the switch is pressed).</summary>
+    [Parameter] public bool IsFullscreen { get; set; }
+
+    /// <summary>Raised when the fullscreen switch is pressed. The switch renders only when it is bound.</summary>
+    [Parameter] public EventCallback OnToggleFullscreen { get; set; }
+
     /// <summary>Label for the active editing region.</summary>
     [Parameter] public string ActiveRegionLabel { get; set; } = string.Empty;
 
@@ -104,4 +172,7 @@
 
     /// <summary>When <c>true</c>, <see cref="RuntimeMessage"/> describes a recovery failure.</summary>
     [Parameter] public bool RuntimeFailed { get; set; }
+
+    private Task StepZoomAsync(int delta)
+        => OnZoomChanged.InvokeAsync(Math.Clamp(ZoomPercent + delta, ZoomMin, ZoomMax));
 }

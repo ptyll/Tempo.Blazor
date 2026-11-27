@@ -1,5 +1,6 @@
 using Bunit;
 using FluentAssertions;
+using Microsoft.AspNetCore.Components;
 using Tempo.Blazor.Components.DocumentEditor;
 using Tempo.Blazor.Tests.Localization;
 
@@ -215,5 +216,119 @@ public class TmDocumentEditorStatusBarTests : LocalizationTestBase
 
         cut.Find("[data-testid='document-runtime-message']")
            .GetAttribute("role").Should().Be("alert");
+    }
+
+    // ── Phase 7 (DE-1.8): page X of Y, plural counts, zoom and fullscreen controls ─────────────────────
+
+    [Fact]
+    public void StatusBar_ShowsPageXOfY_FromTheActivePage()
+    {
+        var cut = Render<TmDocumentEditorStatusBar>(p => p.Add(x => x.CurrentPage, 2).Add(x => x.PageCount, 6));
+
+        cut.Find("[data-testid='document-status-page-count']").TextContent.Should().Be("Page 2 of 6");
+    }
+
+    [Theory]
+    [InlineData(1, "1 word")]
+    [InlineData(0, "0 words")]
+    [InlineData(42, "42 words")]
+    public void StatusBar_WordCount_UsesThePluralFamily(int words, string expected)
+    {
+        var cut = Render<TmDocumentEditorStatusBar>(p => p.Add(x => x.WordCount, words));
+
+        cut.Find("[data-testid='document-status-word-count']").TextContent.Should().Be(expected);
+    }
+
+    [Fact]
+    public void StatusBar_ZoomButtons_StepByTenPercent_AndRaiseTheNewZoom()
+    {
+        var raised = new List<int>();
+        var cut = Render<TmDocumentEditorStatusBar>(p => p
+            .Add(x => x.ZoomPercent, 100)
+            .Add(x => x.ZoomLabel, "100%")
+            .Add(x => x.OnZoomChanged, EventCallback.Factory.Create<int>(this, raised.Add)));
+
+        cut.Find("[data-testid='document-status-zoom-in']").Click();
+        cut.Find("[data-testid='document-status-zoom-out']").Click();
+
+        raised.Should().Equal(110, 90);
+        cut.Find("[data-testid='document-status-zoom']").TextContent.Should().Contain("100%");
+    }
+
+    [Fact]
+    public void StatusBar_ZoomButtons_DisableAtTheLimits()
+    {
+        var atMin = Render<TmDocumentEditorStatusBar>(p => p.Add(x => x.ZoomPercent, 50).Add(x => x.OnZoomChanged, EventCallback.Factory.Create<int>(this, _ => { })));
+        atMin.Find("[data-testid='document-status-zoom-out']").HasAttribute("disabled").Should().BeTrue();
+        atMin.Find("[data-testid='document-status-zoom-in']").HasAttribute("disabled").Should().BeFalse();
+
+        var atMax = Render<TmDocumentEditorStatusBar>(p => p.Add(x => x.ZoomPercent, 200).Add(x => x.OnZoomChanged, EventCallback.Factory.Create<int>(this, _ => { })));
+        atMax.Find("[data-testid='document-status-zoom-in']").HasAttribute("disabled").Should().BeTrue();
+        atMax.Find("[data-testid='document-status-zoom-out']").HasAttribute("disabled").Should().BeFalse();
+    }
+
+    [Fact]
+    public void StatusBar_ZoomStepNeverLeavesTheRange()
+    {
+        var raised = new List<int>();
+        var cut = Render<TmDocumentEditorStatusBar>(p => p
+            .Add(x => x.ZoomPercent, 195)
+            .Add(x => x.OnZoomChanged, EventCallback.Factory.Create<int>(this, raised.Add)));
+
+        cut.Find("[data-testid='document-status-zoom-in']").Click();
+
+        raised.Should().Equal(200);
+    }
+
+    [Fact]
+    public void StatusBar_WithoutZoomHandler_HasNoZoomButtons_ButKeepsTheLabel()
+    {
+        var cut = Render<TmDocumentEditorStatusBar>(p => p.Add(x => x.ZoomLabel, "75%"));
+
+        cut.FindAll("[data-testid='document-status-zoom-in']").Should().BeEmpty();
+        cut.Find("[data-testid='document-status-zoom']").TextContent.Should().Contain("75%");
+    }
+
+    [Fact]
+    public void StatusBar_Fullscreen_RunsTheExistingCommand_AndReflectsThePressedState()
+    {
+        var calls = 0;
+        var cut = Render<TmDocumentEditorStatusBar>(p => p
+            .Add(x => x.IsFullscreen, true)
+            .Add(x => x.OnToggleFullscreen, EventCallback.Factory.Create(this, () => calls++)));
+
+        var button = cut.Find("[data-testid='document-status-fullscreen']");
+        button.GetAttribute("aria-pressed").Should().Be("true");
+        button.Click();
+
+        calls.Should().Be(1);
+    }
+
+    [Fact]
+    public void StatusBar_LastSaved_IsShownOnlyWhenTheHeaderDoesNotOwnTheSaveState()
+    {
+        var saved = DateTimeOffset.UtcNow;
+        var withHeader = Render<TmDocumentEditorStatusBar>(p => p.Add(x => x.LastSavedAt, saved).Add(x => x.ShowLastSaved, false));
+        var withoutHeader = Render<TmDocumentEditorStatusBar>(p => p.Add(x => x.LastSavedAt, saved).Add(x => x.ShowLastSaved, true));
+
+        withHeader.FindAll("[data-testid='document-last-saved']").Should().BeEmpty();
+        withoutHeader.FindAll("[data-testid='document-last-saved']").Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void StatusBar_OnlyTheSaveGroupIsALiveRegion_NotTheWholeBar()
+    {
+        var cut = Render<TmDocumentEditorStatusBar>(p => p
+            .Add(x => x.OnZoomChanged, EventCallback.Factory.Create<int>(this, _ => { })));
+
+        var footer = cut.Find("[data-testid='document-status-bar']");
+        footer.HasAttribute("role").Should().BeFalse("controls and counts inside one status region would be announced as a whole");
+        footer.HasAttribute("aria-live").Should().BeFalse();
+        footer.GetAttribute("aria-label").Should().Be("Document status");
+
+        var save = cut.Find(".tm-document-editor__status-bar-group--save");
+        save.GetAttribute("role").Should().Be("status");
+        save.GetAttribute("aria-live").Should().Be("polite");
+        cut.FindAll("[role='status'] button").Should().BeEmpty("no control lives inside a live region");
     }
 }
