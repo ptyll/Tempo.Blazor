@@ -3817,7 +3817,7 @@
               "name": "Disabled",
               "type": "bool",
               "isRequired": false,
-              "description": "Disables the button."
+              "description": "Disables the button (native disabled attribute; OnClick is refused). The disabled look speaks the shared disabled idiom: the button dims through the --tm-opacity-disabled token and shows the not-allowed cursor. A disabled button still receives pointer events, so a host title tooltip, mouseenter handlers and elementFromPoint work on it and a click no longer falls through onto the element underneath — an anchor styled as .tm-btn keeps pointer-events: none because it has no native disabled (the property blocks the pointer only; a disabled link must also lose its href or render tabindex=\"-1\" with aria-disabled=\"true\"). aria-disabled on a <button> is component-owned — the shared base rule does not dim it. In forced-colors mode the disabled button paints the system GrayText at full opacity. Contract: docs/buttons.md."
             },
             {
               "name": "Icon",

@@ -87,6 +87,37 @@
                 <TmButton Variant="ButtonVariant.Outline" Disabled="true">Disabled</TmButton>
             </div>
         </div>
+        <div class="showcase-card" data-testid="buttons-disabled-idiom-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Disabled idiom (shared)</h3>
+            <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                A disabled button dims through the shared token, shows the not-allowed cursor — and it still
+                receives pointer events, so a native <code>title</code> tooltip, <code>mouseenter</code>
+                handlers and <code>elementFromPoint</code> work on it (a <code>TmTooltip</code> around it
+                keeps working too — its hover always lived on the wrapper).
+            </p>
+            <div class="flex flex-wrap items-center gap-3">
+                <TmButton Variant="ButtonVariant.Primary" Disabled="true"
+                          OnClick="() => _disabledClicks++"
+                          data-testid="button-disabled-idiom">Disabled (click guarded)</TmButton>
+                <span class="text-sm text-slate-600 dark:text-slate-400">
+                    OnClick fired
+                    <span class="font-medium" data-testid="button-disabled-click-count">@_disabledClicks</span>
+                    times
+                </span>
+                <TmButton Variant="ButtonVariant.Secondary" Disabled="true"
+                          title="Unavailable while the document is locked"
+                          data-testid="button-disabled-title">Disabled with title</TmButton>
+                <TmTooltip Text="This action is unavailable while the document is locked" Position="TooltipPosition.Top">
+                    <TmButton Variant="ButtonVariant.Secondary" Disabled="true"
+                              data-testid="button-disabled-tooltip">Disabled with tooltip</TmButton>
+                </TmTooltip>
+            </div>
+            @* The tooltip/title is hover-only — a native disabled button is not focusable, so a keyboard
+               or screen-reader user never opens it. The reason must therefore ALSO be visible text. *@
+            <p class="text-sm text-slate-500 dark:text-slate-400 mt-3" data-testid="button-disabled-reason">
+                These actions are unavailable while the document is locked.
+            </p>
+        </div>
     </div>
 </section>
 
@@ -221,6 +252,7 @@
 
 @code {
     private int _count;
+    private int _disabledClicks;
     private bool _softPressed;
     private bool _primaryPressed;
 }

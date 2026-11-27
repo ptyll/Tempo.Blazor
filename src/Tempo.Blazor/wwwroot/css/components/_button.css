@@ -38,10 +38,37 @@
 .tm-btn-label {
   display: contents;
 }
+/* Disabled idiom (decision AI-PACKAGE-DISABLED-IDIOM, extended to the core by plan b75365fb fáze 4e):
+   ONE disabled look — the --tm-opacity-disabled token and the not-allowed cursor.
+
+   pointer-events: none is deliberately NOT on the button: it swallowed the rule's own cursor (the
+   element never saw a hover, so not-allowed never showed), blocked host title tooltips, mouseenter
+   handlers and elementFromPoint, and let a click fall THROUGH the button onto whatever sits under it.
+   The native disabled attribute already refuses activation and every variant hover guard below is
+   :hover:not(:disabled), so the fill cannot light up either.
+
+   aria-disabled on a <button> is NOT named here on purpose: that state is COMPONENT-OWNED. The
+   component keeps the button focusable (WCAG 2.4.3), refuses re-entry in its own handler and paints
+   its own disabled look — the library's own aria-disabled buttons do exactly that
+   (.tm-comment-submit-btn in _activity-comments.css, the TmEmailTemplateEditor Save, the
+   TmPromptLibrary Use). A base-rule dim would not only second-guess those components, it would also
+   sit next to a LIVE hover fill: aria-disabled is not :disabled, so every :hover:not(:disabled) guard
+   below still matches an aria-disabled button. Only the ANCHOR form is named — <a class="tm-btn"
+   aria-disabled="true"> has no component owner and no native disabled, so the base rule gives it the
+   shared look.
+
+   The anchor keeps pointer-events: none because nothing else stops a MOUSE from following it — but
+   that property blocks the pointer only. The keyboard still activates an <a href>, so a disabled link
+   must ALSO lose its href (or render tabindex="-1" with aria-disabled="true"); pointer-events alone
+   never makes an anchor inert. */
 .tm-btn:disabled,
-.tm-btn[disabled] {
-  opacity: 0.5;
+.tm-btn[disabled],
+a.tm-btn[aria-disabled="true"] {
+  opacity: var(--tm-opacity-disabled);
   cursor: not-allowed;
+}
+a.tm-btn[disabled],
+a.tm-btn[aria-disabled="true"] {
   pointer-events: none;
 }
 
@@ -293,4 +320,20 @@
 }
 .tm-btn.tm-btn-default:hover:not(:disabled) {
   background-color: var(--tm-color-gray-50);
+}
+
+/* Forced colors (Windows high contrast): the UA forces its own palette, so the shared dim would only
+   lower the contrast the mode itself guarantees. The system GrayText carries the disabled state at
+   FULL opacity — the same idiom the AI package and the time selector speak. The block sits at the END
+   of the sheet on purpose: `.tm-btn:disabled` and `.tm-btn.tm-btn-primary` tie at (0,2,0), and only
+   source order lets the system colour win over the variant ink (a non-system author colour would be
+   remapped to CanvasText by the UA, reading exactly like an enabled button). */
+@media (forced-colors: active) {
+  .tm-btn:disabled,
+  .tm-btn[disabled],
+  a.tm-btn[aria-disabled="true"] {
+    color: GrayText;
+    border-color: GrayText;
+    opacity: 1;
+  }
 }
