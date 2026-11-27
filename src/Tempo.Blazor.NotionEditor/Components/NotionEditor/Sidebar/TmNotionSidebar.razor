@@ -116,7 +116,7 @@ else
                 disabled="@_isCreatingPage"
                 title="@Loc["TmNotionSidebar_NewPage"]"
                 aria-label="@Loc["TmNotionSidebar_NewPage"]"
-                aria-busy="@_isCreatingPage"
+                aria-busy="@(_isCreatingPage ? "true" : null)"
                 @onclick="CreateNewPageAsync">
             @if (_isCreatingPage)
             {

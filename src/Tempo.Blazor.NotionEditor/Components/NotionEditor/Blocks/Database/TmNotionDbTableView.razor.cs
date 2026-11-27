@@ -51,6 +51,10 @@ public partial class TmNotionDbTableView : IAsyncDisposable
 
     private string HeaderDraggable => (!ReadOnly && !CoarsePointer).ToString().ToLowerInvariant();
 
+    // ARIA state attributes carry the strings "true"/"false" — a bool renders as an empty
+    // attribute value (invalid ARIA) or is omitted entirely (plan b75365fb, fáze 4k).
+    private static string BoolText(bool value) => value ? "true" : "false";
+
     // ── Inline edit state ────────────────────────────────────────────────────
 
     private Guid? _editRecordId;

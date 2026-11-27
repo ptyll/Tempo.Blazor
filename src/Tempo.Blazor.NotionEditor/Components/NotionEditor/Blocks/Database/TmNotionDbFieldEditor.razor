@@ -114,16 +114,24 @@
                                     </svg>
                                 </button>
                             </div>
-                            <div class="tm-dbfe__color-dots">
+                            <div class="tm-dbfe__color-dots" role="radiogroup" aria-label="@Loc["TmNotionDbFieldEditor_OptionColor"]">
                                 @foreach (var c in SelectColors)
                                 {
                                     var cc = c;
+                                    @* APG radiogroup (the TmColorPalette pattern): a roving tabindex
+                                       keeps exactly ONE dot in the tab order, and the arrow keys move
+                                       the focus AND the selection together. Enter/Space stay with the
+                                       native button — never emulated. *@
                                     <button class="tm-dbfe__color-dot tm-dbfe__color-dot--@cc @(o.Color == cc ? "tm-dbfe__color-dot--active" : "")"
                                             type="button"
+                                            role="radio"
                                             title="@ColorLabel(cc)"
                                             aria-label="@ColorLabel(cc)"
-                                            aria-pressed="@(o.Color == cc)"
-                                            @onclick="() => o.Color = cc"></button>
+                                            aria-checked="@BoolText(o.Color == cc)"
+                                            tabindex="@ColorDotTabIndex(o, cc)"
+                                            @ref="_dotRefs[DotRefKey(o, cc)]"
+                                            @onclick="() => o.Color = cc"
+                                            @onkeydown="e => HandleColorDotKeyDownAsync(e, o, cc)"></button>
                                 }
                             </div>
                             <button class="tm-dbfe__opt-remove"

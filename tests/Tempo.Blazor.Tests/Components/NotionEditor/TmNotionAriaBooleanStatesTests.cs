@@ -349,6 +349,35 @@ public sealed class TmNotionAriaBooleanStatesTests : LocalizationTestBase
         });
     }
 
+    // ── TmNotionSidebar — New page aria-busy (fáze 4k review) ─────────────────────────────
+
+    [Fact]
+    public void Sidebar_NewPageButton_AnnouncesBusyAsString_WhileCreatePageIsPending()
+    {
+        var provider = new StubDataProvider();
+        provider.HoldCreatePage();
+
+        var cut = Render<CascadingValue<NotionEditorContext>>(parameters => parameters
+            .Add(p => p.Value, new NotionEditorContext { DataProvider = provider })
+            .AddChildContent<TmNotionSidebar>());
+
+        cut.WaitForAssertion(() =>
+            cut.Find(".tm-ns-btn-new").HasAttribute("aria-busy").Should().BeFalse(
+                "an idle New page button renders NO aria-busy — a true/false-token attribute " +
+                "omits the attribute instead of rendering \"false\""));
+
+        cut.Find(".tm-ns-btn-new").Click();
+
+        cut.WaitForAssertion(() =>
+            cut.Find(".tm-ns-btn-new").GetAttribute("aria-busy").Should().Be("true",
+                "a pending CreatePage announces the string \"true\" — never an empty bool value"));
+
+        provider.CompleteCreatePage();
+        cut.WaitForAssertion(() =>
+            cut.Find(".tm-ns-btn-new").HasAttribute("aria-busy").Should().BeFalse(
+                "once the create completes the attribute is omitted again"));
+    }
+
     // ── TmNotionPageTreeItem ───────────────────────────────────────────────────────────────
 
     [Fact]
@@ -587,8 +616,18 @@ public sealed class TmNotionAriaBooleanStatesTests : LocalizationTestBase
         public Task<IEnumerable<INotionPage>> GetFavoritesAsync() => Task.FromResult(Enumerable.Empty<INotionPage>());
         public Task<IEnumerable<INotionPage>> GetRecentPagesAsync(int count) => Task.FromResult(Enumerable.Empty<INotionPage>());
         public Task<IEnumerable<INotionPage>> GetTrashAsync() => Task.FromResult(Enumerable.Empty<INotionPage>());
+
+        private TaskCompletionSource<INotionPage>? _createPageGate;
+
+        /// <summary>Keeps <see cref="CreatePageAsync"/> pending until <see cref="CompleteCreatePage"/>.</summary>
+        public void HoldCreatePage()
+            => _createPageGate = new TaskCompletionSource<INotionPage>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        /// <summary>Releases the pending <see cref="CreatePageAsync"/> with a fresh page.</summary>
+        public void CompleteCreatePage() => _createPageGate?.SetResult(Page("Created page"));
+
         public Task<INotionPage> CreatePageAsync(string? parentId, string title)
-            => Task.FromResult<INotionPage>(Page(title));
+            => _createPageGate?.Task ?? Task.FromResult<INotionPage>(Page(title));
         public Task UpdatePageAsync(INotionPage page) => Task.CompletedTask;
         public Task DeletePageAsync(string pageId) => Task.CompletedTask;
         public Task RestorePageAsync(string pageId) => Task.CompletedTask;

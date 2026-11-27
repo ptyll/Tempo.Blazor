@@ -23,6 +23,10 @@ public partial class TmNotionDbGroupBar : ComponentBase
     private SortDirection _sortDirection = SortDirection.Ascending;
     private bool          _initialized;
 
+    // ARIA state attributes carry the strings "true"/"false" — a bool renders as an empty
+    // attribute value (invalid ARIA) or is omitted entirely (plan b75365fb, fáze 4k).
+    private static string BoolText(bool value) => value ? "true" : "false";
+
     protected override void OnParametersSet()
     {
         if (!_initialized)

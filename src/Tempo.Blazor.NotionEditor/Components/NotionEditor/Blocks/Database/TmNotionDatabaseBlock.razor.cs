@@ -38,6 +38,10 @@ public partial class TmNotionDatabaseBlock : TmComponentBase
     /// </summary>
     [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
 
+    // ARIA state attributes carry the strings "true"/"false" — a bool renders as an empty
+    // attribute value (invalid ARIA) or is omitted entirely (plan b75365fb, fáze 4k).
+    private static string BoolText(bool value) => value ? "true" : "false";
+
     /// <summary>Shows the client-side "search records" field (NO2). Default off, so existing hosts are unchanged.</summary>
     [Parameter] public bool ShowSearch { get; set; }
 
@@ -701,6 +705,21 @@ public partial class TmNotionDatabaseBlock : TmComponentBase
     private readonly string _groupTriggerId = $"tm-db-group-{Guid.NewGuid():N}";
     private readonly string _fieldsTriggerId = $"tm-db-fields-{Guid.NewGuid():N}";
     private readonly string _templatesTriggerId = $"tm-db-templates-{Guid.NewGuid():N}";
+    private readonly string _viewTabIdPrefix = $"tm-db-viewtab-{Guid.NewGuid():N}";
+    private readonly string _viewPanelId = $"tm-db-viewpanel-{Guid.NewGuid():N}";
+
+    /// <summary>DOM id of a view tab button — the tabpanel's <c>aria-labelledby</c> target.</summary>
+    private string ViewTabDomId(Guid viewId) => $"{_viewTabIdPrefix}-{viewId:N}";
+
+    /// <summary>The id of the ACTIVE view's tab button, or null when the tablist is not rendered
+    /// (mobile layout), the active tab is being renamed (its button is replaced by the rename
+    /// input) or the view lives in the "more views" overflow — in all three cases no tab element
+    /// exists to label the tabpanel from.</summary>
+    private string? ActiveViewTabDomId
+        => !IsMobileLayout
+           && _renamingView?.Id != _activeViewId
+           && _views.Take(VisibleTabCount).Any(v => v.Id == _activeViewId)
+            ? ViewTabDomId(_activeViewId) : null;
 
     /// <summary>
     /// The trigger the panel anchors on. A tool that the toolbar moved into "More" is not in the tab

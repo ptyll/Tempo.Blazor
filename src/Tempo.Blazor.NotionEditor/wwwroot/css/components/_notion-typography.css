@@ -447,8 +447,7 @@
     cursor:        pointer;
     user-select:   none;
     font-size:     0.75em;
-    transition:    transform var(--tm-notion-anim-fast), color var(--tm-notion-anim-fast);
-    transform:     rotate(0deg);
+    transition:    color var(--tm-notion-anim-fast);
     border-radius: var(--tm-radius-sm);
 }
 
@@ -457,9 +456,9 @@
     color:      var(--tm-text-primary);
 }
 
-.tm-notion-toggle--open .tm-notion-toggle__arrow {
-    transform: rotate(90deg);
-}
+/* The arrow rotates through the SVG (TmNotionToggleBlock.razor.css rotates the svg 90° when
+   open). The button itself must NOT rotate too — the two 90° turns used to compound into a
+   180° turn, so an open toggle pointed the arrow left ("<") instead of down (fáze 4k review). */
 
 .tm-notion-toggle__children {
     padding-left: var(--tm-notion-indent-size);
