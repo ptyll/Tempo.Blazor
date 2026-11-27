@@ -107,6 +107,18 @@ public class TmColorPickerTests : LocalizationTestBase
     }
 
     [Fact]
+    public void TmColorPicker_ClearText_NamesTheClearCommand_AndDefaultsToTheLocalizedClear()
+    {
+        var named = Render<TmColorPicker>(parameters => parameters.Add(p => p.ClearText, "No color"));
+        named.Find(".tm-color-picker-trigger").Click();
+        named.Find(".tm-color-palette-clear").TextContent.Trim().Should().Be("No color");
+
+        var plain = Render<TmColorPicker>();
+        plain.Find(".tm-color-picker-trigger").Click();
+        plain.Find(".tm-color-palette-clear").TextContent.Trim().Should().Be("Clear", "without ClearText the localized default stays");
+    }
+
+    [Fact]
     public void TmColorPicker_Selection_Closes_Dropdown()
     {
         var selectedValue = string.Empty;

@@ -2,6 +2,10 @@
 @inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.DocumentEditor.Models
 
+@* Redesign 146c7e1b, phase 6 (DE-2.4): a pending change reads as a card - the author's avatar, the type and its icon, "author . time",
+   the text that was inserted / deleted (or a line describing the change) and a compact Accept / Reject. "Accept all" is the primary
+   batch action. The card is the one shared with the suggestion panel. A long list renders in windows (see PageSize), so 200 pending
+   changes never put 200 cards in the DOM at once. *@
 <aside class="tm-document-revision-panel" data-testid="@TestId("document-revision-panel")" aria-label="@Loc["TmDocumentEditor_RevisionPanelLabel"]">
     <h3 class="tm-document-revision-panel__title">@Loc["TmDocumentEditor_Revisions"]</h3>
 
@@ -16,9 +20,9 @@
     else
     {
         <div class="tm-document-revision-panel__toolbar" data-testid="@TestId("document-revision-toolbar")">
-            <label>
-                <span>@Loc["TmDocumentEditor_RevisionFilterAuthor"]</span>
-                <select value="@_filterAuthorId" disabled="@IsBusy" @onchange="HandleAuthorFilterChanged" data-testid="@TestId("document-revision-filter-author")">
+            <label class="tm-document-revision-panel__filter">
+                <span class="tm-document-inspector-form__label">@Loc["TmDocumentEditor_RevisionFilterAuthor"]</span>
+                <select class="tm-input" value="@_filterAuthorId" disabled="@IsBusy" @onchange="HandleAuthorFilterChanged" data-testid="@TestId("document-revision-filter-author")">
                     <option value="">@Loc["TmDocumentEditor_RevisionFilterAllAuthors"]</option>
                     @foreach (var author in RevisionAuthors)
                     {
@@ -26,9 +30,9 @@
                     }
                 </select>
             </label>
-            <label>
-                <span>@Loc["TmDocumentEditor_RevisionFilterType"]</span>
-                <select value="@_filterType" disabled="@IsBusy" @onchange="HandleTypeFilterChanged" data-testid="@TestId("document-revision-filter-type")">
+            <label class="tm-document-revision-panel__filter">
+                <span class="tm-document-inspector-form__label">@Loc["TmDocumentEditor_RevisionFilterType"]</span>
+                <select class="tm-input" value="@_filterType" disabled="@IsBusy" @onchange="HandleTypeFilterChanged" data-testid="@TestId("document-revision-filter-type")">
                     <option value="">@Loc["TmDocumentEditor_RevisionFilterAllTypes"]</option>
                     @foreach (var type in RevisionTypes)
                     {
@@ -58,48 +62,48 @@
             </button>
         </div>
 
-        <ul class="tm-document-revision-panel__list">
-            @foreach (var revision in FilteredPendingRevisions)
+        <ul class="tm-document-revision-panel__list" data-visible-count="@VisibleRevisions.Count" data-total-count="@FilteredPendingRevisions.Count">
+            @foreach (var revision in VisibleRevisions)
             {
-                <li class="@GetItemClass(revision)"
-                    data-testid="@TestId("document-revision-item")"
-                    data-revision-id="@revision.Id"
-                    aria-current="@(string.Equals(SelectedRevisionId, revision.Id, StringComparison.Ordinal) ? "true" : "false")">
-                    <button type="button"
-                            class="tm-document-revision-panel__summary"
-                            @onclick="() => OnSelectRevision.InvokeAsync(revision)">
-                        <span class="tm-document-revision-panel__meta">
-                            @GetTypeLabel(revision) · @GetAuthorLabel(revision)
-                        </span>
-                        <span class="tm-document-revision-panel__preview">@GetPreview(revision)</span>
-                    </button>
-                    <div class="tm-document-revision-panel__actions">
-                        <button type="button"
-                                class="tm-btn tm-btn-sm tm-btn-secondary tm-document-revision-panel__action tm-document-revision-panel__action--accept"
-                                disabled="@ReviewActionDisabled"
-                                aria-disabled="@ReviewActionAriaDisabled"
-                                aria-label="@Loc["TmDocumentEditor_AcceptRevisionAria", GetAuthorLabel(revision)]"
-                                @onclick="() => OnAcceptRevision.InvokeAsync(revision)"
-                                data-review-action="accept"
-                                data-testid="@TestId("document-revision-accept")">
-                            <TmIcon Name="check" Size="IconSize.Sm" />
-                            @Loc["TmDocumentEditor_AcceptRevision"]
-                        </button>
-                        <button type="button"
-                                class="tm-btn tm-btn-sm tm-btn-secondary tm-document-revision-panel__action tm-document-revision-panel__action--reject"
-                                disabled="@ReviewActionDisabled"
-                                aria-disabled="@ReviewActionAriaDisabled"
-                                aria-label="@Loc["TmDocumentEditor_RejectRevisionAria", GetAuthorLabel(revision)]"
-                                @onclick="() => OnRejectRevision.InvokeAsync(revision)"
-                                data-review-action="reject"
-                                data-testid="@TestId("document-revision-reject")">
-                            <TmIcon Name="x" Size="IconSize.Sm" />
-                            @Loc["TmDocumentEditor_RejectRevision"]
-                        </button>
-                    </div>
+                var preview = ResolvePreview(revision);
+                <li @key="revision.Id">
+                    <TmDocumentReviewCard Kind="revision.Type"
+                                          Title="@GetTypeLabel(revision)"
+                                          AuthorName="@GetAuthorLabel(revision)"
+                                          AuthorId="@revision.Author.Id"
+                                          AuthorAvatarUrl="@revision.Author.AvatarUrl"
+                                          CreatedAt="revision.CreatedAt"
+                                          Preview="preview"
+                                          FallbackText="@GetFallbackText(revision)"
+                                          Selected="@IsSelected(revision)"
+                                          ActionsDisabled="ReviewActionDisabled"
+                                          AcceptLabel="@Loc["TmDocumentEditor_AcceptRevision"]"
+                                          RejectLabel="@Loc["TmDocumentEditor_RejectRevision"]"
+                                          AcceptAriaLabel="@Loc["TmDocumentEditor_AcceptRevisionAria", GetAuthorLabel(revision)]"
+                                          RejectAriaLabel="@Loc["TmDocumentEditor_RejectRevisionAria", GetAuthorLabel(revision)]"
+                                          ClassPrefix="tm-document-revision-panel"
+                                          AcceptTestId="document-revision-accept"
+                                          RejectTestId="document-revision-reject"
+                                          TestIdPrefix="@TestIdPrefix"
+                                          OnSelect="() => OnSelectRevision.InvokeAsync(revision)"
+                                          OnAccept="() => OnAcceptRevision.InvokeAsync(revision)"
+                                          OnReject="() => OnRejectRevision.InvokeAsync(revision)"
+                                          data-testid="@TestId("document-revision-item")"
+                                          data-revision-id="@revision.Id"
+                                          aria-current="@(IsSelected(revision) ? "true" : "false")" />
                 </li>
             }
         </ul>
+
+        @if (HiddenCount > 0)
+        {
+            <button type="button"
+                    class="tm-btn tm-btn-sm tm-btn-ghost tm-document-revision-panel__more"
+                    data-testid="@TestId("document-revision-show-more")"
+                    @onclick="ShowMore">
+                @string.Format(Loc["TmDocumentEditor_RevisionsShowMore"], Math.Min(PageSize, HiddenCount))
+            </button>
+        }
     }
 
     @if (!string.IsNullOrWhiteSpace(StatusMessage))
@@ -136,6 +140,16 @@
     /// <summary>Raised when a revision should be rejected.</summary>
     [Parameter] public EventCallback<DocumentRevision> OnRejectRevision { get; set; }
 
+    /// <summary>
+    /// Resolves what a card shows of a revision (the inserted or deleted text, a description of a formatting change). The editor supplies
+    /// one that reads the text from the document or the canvas snapshot by the revision's range. Whatever it leaves empty is filled from
+    /// the revision's own payload (plain text of an insertion / deletion, the mark of a formatting change); the raw payload is never printed.
+    /// </summary>
+    [Parameter] public Func<DocumentRevision, DocumentRevisionPreview?>? PreviewResolver { get; set; }
+
+    /// <summary>How many cards render at once; a long list shows the next window on "Show more" (windowing, not Virtualize - decision <c>DE-REVISION-PANEL-WINDOWING</c>). The window always grows to cover <see cref="SelectedRevisionId"/>. Defaults to 40.</summary>
+    [Parameter] public int PageSize { get; set; } = 40;
+
     /// <summary>Raised when all filtered pending revisions should be accepted.</summary>
     [Parameter] public EventCallback<DocumentRevisionFilter> OnAcceptAllRevisions { get; set; }
 
@@ -144,29 +158,69 @@
 
     private string _filterAuthorId = string.Empty;
     private string _filterType = string.Empty;
+    private int _windows = 1;
+    private int EffectivePageSize => Math.Max(1, PageSize);
+    private IReadOnlyList<DocumentRevision> VisibleRevisions => _filtered.Take(_windows * EffectivePageSize).ToList();
+    private int HiddenCount => Math.Max(0, _filtered.Count - _windows * EffectivePageSize);
+    private bool IsSelected(DocumentRevision revision) => string.Equals(SelectedRevisionId, revision.Id, StringComparison.Ordinal);
 
-    private IReadOnlyList<DocumentRevision> PendingRevisions => Revisions
-        .Where(revision => revision.Action == DocumentRevisionAction.Pending)
-        .OrderByDescending(revision => revision.CreatedAt)
-        .ToList();
+    private void ShowMore() => _windows++;
 
-    private IReadOnlyList<DocumentRevision> FilteredPendingRevisions => PendingRevisions
-        .Where(revision => CurrentFilter.Matches(revision))
-        .ToList();
+    // The lists are computed ONCE per parameter set (and per filter change), never per access: a render reads each of them several times and
+    // every read used to sort and filter the whole revision list again.
+    private IReadOnlyList<DocumentRevision> _pending = [];
+    private IReadOnlyList<DocumentRevision> _filtered = [];
+    private IReadOnlyList<DocumentRevisionAuthor> _authors = [];
+    private IReadOnlyList<DocumentRevisionType> _types = [];
 
-    private IReadOnlyList<DocumentRevisionAuthor> RevisionAuthors => PendingRevisions
-        .Select(revision => revision.Author)
-        .Where(author => !string.IsNullOrWhiteSpace(author.Id))
-        .GroupBy(author => author.Id, StringComparer.Ordinal)
-        .Select(group => group.First())
-        .OrderBy(GetAuthorName)
-        .ToList();
+    private IReadOnlyList<DocumentRevision> PendingRevisions => _pending;
+    private IReadOnlyList<DocumentRevision> FilteredPendingRevisions => _filtered;
+    private IReadOnlyList<DocumentRevisionAuthor> RevisionAuthors => _authors;
+    private IReadOnlyList<DocumentRevisionType> RevisionTypes => _types;
 
-    private IReadOnlyList<DocumentRevisionType> RevisionTypes => PendingRevisions
-        .Select(revision => revision.Type)
-        .Distinct()
-        .OrderBy(type => type)
-        .ToList();
+    protected override void OnParametersSet()
+    {
+        _pending = Revisions
+            .Where(revision => revision.Action == DocumentRevisionAction.Pending)
+            .OrderByDescending(revision => revision.CreatedAt)
+            .ToList();
+        _authors = _pending
+            .Select(revision => revision.Author)
+            .Where(author => !string.IsNullOrWhiteSpace(author.Id))
+            .GroupBy(author => author.Id, StringComparer.Ordinal)
+            .Select(group => group.First())
+            .OrderBy(GetAuthorName)
+            .ToList();
+        _types = _pending
+            .Select(revision => revision.Type)
+            .Distinct()
+            .OrderBy(type => type)
+            .ToList();
+        RefreshFiltered();
+        EnsureSelectedRevisionIsRendered();
+    }
+
+    private void RefreshFiltered()
+    {
+        var filter = CurrentFilter;
+        _filtered = _pending.Where(revision => filter.Matches(revision)).ToList();
+    }
+
+    // A selected revision further down than the rendered windows would be selected but invisible (and the panel would never scroll to it):
+    // the window grows by whole pages until it covers the selection. A selection inside the window never shrinks it.
+    private void EnsureSelectedRevisionIsRendered()
+    {
+        if (string.IsNullOrEmpty(SelectedRevisionId))
+        {
+            return;
+        }
+
+        var index = _filtered.ToList().FindIndex(revision => string.Equals(revision.Id, SelectedRevisionId, StringComparison.Ordinal));
+        if (index >= 0)
+        {
+            _windows = Math.Max(_windows, index / EffectivePageSize + 1);
+        }
+    }
 
     private DocumentRevisionFilter CurrentFilter
         => new()
@@ -179,14 +233,7 @@
 
     private bool ReviewActionDisabled => !CanReview || IsBusy;
 
-    private string ReviewActionAriaDisabled => ReviewActionDisabled ? "true" : "false";
-
     private string BatchActionAriaDisabled => CanBatchReview ? "false" : "true";
-
-    private string GetItemClass(DocumentRevision revision)
-        => string.Equals(SelectedRevisionId, revision.Id, StringComparison.Ordinal)
-            ? "tm-document-revision-panel__item tm-document-revision-panel__item--selected"
-            : "tm-document-revision-panel__item";
 
     private string GetTypeLabel(DocumentRevision revision)
         => GetTypeLabel(revision.Type);
@@ -213,23 +260,70 @@
             ? author.Id ?? Loc["TmDocumentEditor_UnknownAuthor"]
             : author.DisplayName;
 
-    // PayloadJson is dual-purpose: for an insertion / deletion it is the plain inserted / deleted text, for every
-    // other revision type it is an opaque structured payload (formatting marks, block ids such as "splitBlock",
-    // table / image descriptors). The panel never prints the opaque payloads; it shows the text of an insertion /
-    // deletion (unless that text itself is a JSON object / array) and a localized "details in the document" line
-    // for everything else. The full preview resolver follows in a later phase.
-    private string GetPreview(DocumentRevision revision)
+    // PayloadJson is dual-purpose: for an insertion / deletion it is the plain inserted / deleted text, for every other revision type it is
+    // an opaque structured payload (formatting marks, block ids such as "splitBlock", table / image descriptors). A card never prints the
+    // opaque payloads: it shows the text of an insertion / deletion (unless that text itself is a JSON object / array), a human line for a
+    // formatting change ("Bold: on"), and a localized "details in the document" line for everything else.
+    private DocumentRevisionPreview ResolvePreview(DocumentRevision revision)
+    {
+        var fallback = DefaultPreview(revision);
+        var resolved = PreviewResolver?.Invoke(revision);
+        if (resolved is null || !resolved.HasContent)
+        {
+            return fallback;
+        }
+
+        return new DocumentRevisionPreview
+        {
+            Text = string.IsNullOrWhiteSpace(resolved.Text) ? fallback.Text : resolved.Text,
+            Description = string.IsNullOrWhiteSpace(resolved.Description) ? fallback.Description : resolved.Description
+        };
+    }
+
+    private DocumentRevisionPreview DefaultPreview(DocumentRevision revision)
     {
         var payload = revision.PayloadJson;
         if (string.IsNullOrWhiteSpace(payload))
         {
-            return Loc["TmDocumentEditor_RevisionPreviewUnavailable"];
+            return DocumentRevisionPreview.Empty;
         }
 
-        var isTextRevision = revision.Type is DocumentRevisionType.Insertion or DocumentRevisionType.Deletion;
-        return isTextRevision && !IsStructuredJson(payload)
-            ? payload
+        if (revision.Type is DocumentRevisionType.Insertion or DocumentRevisionType.Deletion)
+        {
+            return IsStructuredJson(payload)
+                ? DocumentRevisionPreview.Empty
+                : new DocumentRevisionPreview { Text = payload };
+        }
+
+        if (revision.Type == DocumentRevisionType.Formatting && DocumentRevisionPreview.ReadFormatting(payload) is { } formatting)
+        {
+            return new DocumentRevisionPreview { Description = DescribeFormatting(formatting.MarkType, formatting.NewActive) };
+        }
+
+        return DocumentRevisionPreview.Empty;
+    }
+
+    private string GetFallbackText(DocumentRevision revision)
+        => string.IsNullOrWhiteSpace(revision.PayloadJson)
+            ? Loc["TmDocumentEditor_RevisionPreviewUnavailable"]
             : Loc["TmDocumentEditor_RevisionPreviewStructured"];
+
+    private string DescribeFormatting(InlineMarkType mark, bool active)
+    {
+        var name = mark switch
+        {
+            InlineMarkType.Bold => Loc["TmDocumentEditor_Bold"].ToString(),
+            InlineMarkType.Italic => Loc["TmDocumentEditor_Italic"].ToString(),
+            InlineMarkType.Underline => Loc["TmDocumentEditor_Underline"].ToString(),
+            InlineMarkType.Strikethrough => Loc["TmDocumentEditor_Strikethrough"].ToString(),
+            InlineMarkType.Superscript => Loc["TmDocumentEditor_Superscript"].ToString(),
+            InlineMarkType.Subscript => Loc["TmDocumentEditor_Subscript"].ToString(),
+            _ => null
+        };
+
+        return name is null
+            ? Loc["TmDocumentEditor_RevisionFormatGeneric"].ToString()
+            : Loc[active ? "TmDocumentEditor_RevisionFormatOn" : "TmDocumentEditor_RevisionFormatOff", name].ToString();
     }
 
     private static bool IsStructuredJson(string payload)
@@ -254,11 +348,17 @@
     private void HandleAuthorFilterChanged(ChangeEventArgs args)
     {
         _filterAuthorId = args.Value?.ToString() ?? string.Empty;
+        _windows = 1;
+        RefreshFiltered();
+        EnsureSelectedRevisionIsRendered();
     }
 
     private void HandleTypeFilterChanged(ChangeEventArgs args)
     {
         _filterType = args.Value?.ToString() ?? string.Empty;
+        _windows = 1;
+        RefreshFiltered();
+        EnsureSelectedRevisionIsRendered();
     }
 
     private Task AcceptAllAsync()

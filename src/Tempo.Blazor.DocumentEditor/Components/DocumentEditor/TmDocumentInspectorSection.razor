@@ -1,0 +1,70 @@
+@namespace Tempo.Blazor.Components.DocumentEditor
+@inherits Tempo.Blazor.Components.TmComponentBase
+
+@* One collapsible section of an inspector form (redesign 146c7e1b, phase 6): a chevron disclosure button over a body, with no
+   frame around it - the CSS is the .tm-document-inspector-form__section* pattern of phase 2. The body stays in the DOM while
+   the section is folded (the `hidden` attribute), so a control inside it keeps its state and its test id.
+
+   Why not the core TmFormSection: its collapsible header is a click handler on a <div> (no button, no keyboard activation, no
+   aria-expanded / aria-controls) with a text arrow, and it REMOVES the body when folded, which would drop the state and the test ids of the
+   fields inside. An inspector section needs the APG disclosure pattern (a real button, aria-expanded, the body kept in the DOM). *@
+<div class="@RootClass"
+     data-testid="@(string.IsNullOrEmpty(SectionTestId) ? null : TestId(SectionTestId))"
+     data-expanded="@(_expanded ? "true" : "false")">
+    <button type="button"
+            class="tm-document-inspector-form__section-toggle"
+            aria-expanded="@(_expanded ? "true" : "false")"
+            aria-controls="@_bodyId"
+            data-testid="@(string.IsNullOrEmpty(SectionTestId) ? null : TestId(SectionTestId + "-toggle"))"
+            @onclick="ToggleAsync">
+        <span class="tm-document-inspector-form__chevron" aria-hidden="true"><TmIcon Name="chevron-down" Size="IconSize.Sm" /></span>
+        @if (!string.IsNullOrWhiteSpace(Icon))
+        {
+            <span class="tm-document-inspector-form__section-icon" aria-hidden="true"><TmIcon Name="@Icon" Size="IconSize.Sm" /></span>
+        }
+        <span class="tm-document-inspector-form__section-title">@Title</span>
+    </button>
+    <div id="@_bodyId"
+         class="tm-document-inspector-form__section-body"
+         hidden="@(!_expanded)">
+        @ChildContent
+    </div>
+</div>
+
+@code {
+    private readonly string _bodyId = $"tm-document-inspector-section-{Guid.NewGuid():N}";
+    private bool _expanded = true;
+
+    /// <summary>Section title, the label of the disclosure button.</summary>
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+
+    /// <summary>Optional decorative icon between the chevron and the title.</summary>
+    [Parameter] public string? Icon { get; set; }
+
+    /// <summary>Unprefixed test id of the section root (resolved through <c>TestIdPrefix</c>); the disclosure button gets the same id plus <c>-toggle</c>.</summary>
+    [Parameter] public string? SectionTestId { get; set; }
+
+    /// <summary>Whether the section starts unfolded. Defaults to <c>true</c>; the state is the reader's after the first render.</summary>
+    [Parameter] public bool DefaultExpanded { get; set; } = true;
+
+    /// <summary>Additional CSS classes on the section root.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Raised when the reader folds or unfolds the section, with the new state (a notification only: the section owns its state).</summary>
+    [Parameter] public EventCallback<bool> OnExpandedChanged { get; set; }
+
+    /// <summary>The section body.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private string RootClass => string.IsNullOrWhiteSpace(Class)
+        ? "tm-document-inspector-form__section"
+        : $"tm-document-inspector-form__section {Class}";
+
+    protected override void OnInitialized() => _expanded = DefaultExpanded;
+
+    private Task ToggleAsync()
+    {
+        _expanded = !_expanded;
+        return OnExpandedChanged.InvokeAsync(_expanded);
+    }
+}

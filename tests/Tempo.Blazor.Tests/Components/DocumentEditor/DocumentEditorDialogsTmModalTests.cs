@@ -49,7 +49,7 @@ public sealed class DocumentEditorDialogsTmModalTests : LocalizationTestBase
             .Add(x => x.OnCreate, EventCallback.Factory.Create<DocumentVersionDialogResult>(this, _ => created++)));
 
         cut.Find("[data-testid='document-version-kind']").Change(DocumentVersionKind.Major.ToString());
-        cut.Find("[data-testid='document-version-create-submit']").Click();
+        cut.Find("form.tm-document-version-dialog__form").Submit();
 
         cut.Find("[data-testid='document-version-error']").GetAttribute("role").Should().Be("alert");
         created.Should().Be(0);

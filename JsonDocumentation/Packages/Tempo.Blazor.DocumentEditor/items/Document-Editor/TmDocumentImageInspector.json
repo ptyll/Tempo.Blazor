@@ -88,6 +88,18 @@
       "type": "EventCallback<DocumentWrapMode>",
       "isRequired": false,
       "description": "Raised when text wrapping mode changes. The control renders only when this callback is bound."
+    },
+    {
+      "name": "AnchorText",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Text of the paragraph the image is anchored to (its first ~40 characters), resolved by the host. Shown instead of the block id."
+    },
+    {
+      "name": "ShowHeader",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the inspector renders its own header. The desktop inspector hosts it as a contextual surface whose header names it and passes false."
     }
   ]
 }

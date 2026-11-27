@@ -149,6 +149,48 @@
       "type": "bool",
       "isRequired": false,
       "description": "Text-only tabs in the reference order (Properties, Comments, Revisions, Versions) instead of the icon + text tabs. The desktop editor sets it: its inspector is a text-tab surface and Outline / Pages live in the left column."
+    },
+    {
+      "name": "ContextContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Contextual content (a selected image or table, an open find). While it is bound the tab bar is replaced by a header with the context title, a back arrow and an X, and this fragment is the body. The editor binds it on a desktop layout only."
+    },
+    {
+      "name": "ContextTitle",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Title of the contextual header."
+    },
+    {
+      "name": "ContextIcon",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional leading icon of the contextual header."
+    },
+    {
+      "name": "ContextKind",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Kind of the context (image, table, find), exposed as data-context."
+    },
+    {
+      "name": "ContextCloseTestId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Unprefixed test id of the contextual X button."
+    },
+    {
+      "name": "OnContextBack",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised by the back arrow of the contextual header."
+    },
+    {
+      "name": "OnContextClose",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised by the X of the contextual header."
     }
   ]
 }

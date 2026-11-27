@@ -347,6 +347,15 @@
         return CanvasDocumentModelConverter.FromCanvasModel(model, Document);
     }
 
+    private bool _preserveSelectionOnNextModelPush;
+
+    /// <summary>
+    /// The next model push to the engine is the mirror refresh that follows a panel edit (the C# mirror re-synced after the engine applied the
+    /// edit): the engine keeps its caret instead of restarting at the top of the document. One-shot, consumed (or dropped) by the next push.
+    /// Every other replacement - accept / reject, a template, an import, a version preview or restore - leaves it unset.
+    /// </summary>
+    internal void PreserveSelectionOnNextModelPush() => _preserveSelectionOnNextModelPush = true;
+
     /// <summary>Replaces the mounted canvas engine model with an imported or provider-loaded document.</summary>
     public async Task ReplaceDocumentAsync(DocumentEditorDocument document)
     {
@@ -355,9 +364,10 @@
         var modelJson = JsonSerializer.Serialize(CanvasDocumentModelConverter.ToCanvasModel(document), CanvasJsonOptions);
         _lastModelJson = modelJson;
         _lastParameterModelJson = modelJson;
+        _preserveSelectionOnNextModelPush = false;
         if (_module is not null && _handle is not null)
         {
-            await _module.InvokeVoidAsync("replaceModel", _handle, modelJson);
+            await _module.InvokeVoidAsync("replaceModel", _handle, modelJson, new { preserveSelection = false });
         }
     }
 
@@ -1197,6 +1207,10 @@
 
         _lastMountedDocumentRef = Document;
 
+        // One-shot: whatever this push is, the request does not outlive it.
+        var preserveSelection = _preserveSelectionOnNextModelPush;
+        _preserveSelectionOnNextModelPush = false;
+
         await EnsureAssetUrlsResolvedAsync();
         var modelJson = JsonSerializer.Serialize(BuildCanvasModel(), CanvasJsonOptions);
         if (string.Equals(_lastParameterModelJson, modelJson, StringComparison.Ordinal))
@@ -1211,7 +1225,7 @@
         }
 
         _lastModelJson = modelJson;
-        await _module.InvokeVoidAsync("replaceModel", _handle, modelJson);
+        await _module.InvokeVoidAsync("replaceModel", _handle, modelJson, new { preserveSelection });
     }
 
     private object BuildCanvasOptions()

@@ -1,68 +1,89 @@
 @namespace Tempo.Blazor.Components.DocumentEditor
 @using System.Globalization
+@using Tempo.Blazor.Abstractions.Models
 @using Tempo.Blazor.DocumentEditor.Models
 
-<section class="tm-document-cell-properties tm-document-inspector-form--embedded"
+@* Redesign 146c7e1b, phase 6 (DE-2.2, Q2-5): the cell section of the one "Table" inspector. The vertical alignment is a row of icon + text
+   tiles (aria-pressed), the background the compact core colour picker ("No color" clears it), the border a preset, and the spans are
+   read-only rows - merging cells is a table action, not a number to type here. *@
+<section class="tm-document-cell-properties tm-document-inspector-form tm-document-inspector-form--embedded"
          role="region"
          aria-label="@Loc["TmDocumentEditor_CellProperties"]"
          data-testid="@($"{TestIdRoot}-panel")">
-    <header>
-        <TmIcon Name="square" Size="IconSize.Sm" />
-        <span>@Loc["TmDocumentEditor_CellProperties"]</span>
-    </header>
+    <TmDocumentInspectorSection Title="@Loc["TmDocumentEditor_CellProperties"]"
+                                Icon="square"
+                                SectionTestId="@($"{TestIdRoot}-section")">
+        <div class="tm-document-inspector-form__field tm-document-inspector-form__field--stacked">
+            <span class="tm-document-inspector-form__label">@Loc["TmDocumentEditor_CellVerticalAlign"]</span>
+            <div class="tm-document-cell-properties__tiles" role="group" aria-label="@Loc["TmDocumentEditor_CellVerticalAlign"]">
+                @foreach (var alignment in VerticalAlignments)
+                {
+                    <button type="button"
+                            class="@TileClass(alignment)"
+                            aria-pressed="@AriaPressed(CurrentVerticalAlignment == alignment)"
+                            data-testid="@($"{TestIdRoot}-valign-{alignment.ToString().ToLowerInvariant()}")"
+                            @onclick="() => HandleVerticalAlignmentChangedAsync(alignment)">
+                        <TmIcon Name="@VerticalIcon(alignment)" Size="IconSize.Sm" />
+                        <span class="tm-document-cell-properties__tile-label">@Loc[$"TmDocumentEditor_CellAlign{alignment}"]</span>
+                    </button>
+                }
+            </div>
+        </div>
 
-    <div class="tm-document-cell-properties__segmented" role="group" aria-label="@Loc["TmDocumentEditor_CellVerticalAlign"]">
-        @foreach (var alignment in VerticalAlignments)
-        {
-            <button type="button"
-                    class="@SegmentClass(alignment)"
-                    aria-pressed="@(CurrentVerticalAlignment == alignment)"
-                    data-testid="@($"{TestIdRoot}-valign-{alignment.ToString().ToLowerInvariant()}")"
-                    @onclick="() => HandleVerticalAlignmentChangedAsync(alignment)">
-                @Loc[$"TmDocumentEditor_CellAlign{alignment}"]
-            </button>
-        }
-    </div>
+        <div class="tm-document-inspector-form__field tm-document-inspector-form__field--stacked">
+            <span class="tm-document-inspector-form__label">@Loc["TmDocumentEditor_CellBackground"]</span>
+            <TmColorPicker Value="@BackgroundValue"
+                           ValueChanged="HandleBackgroundChangedAsync"
+                           Format="ColorFormat.Hex"
+                           ShowAlpha="false"
+                           ShowGradient="false"
+                           ShowHexInput="true"
+                           ShowPalette="true"
+                           ShowClearButton="true"
+                           ClearText="@Loc["TmDocumentEditor_NoColor"]"
+                           Placeholder="@Loc["TmDocumentEditor_NoColor"]"
+                           TriggerAriaLabel="@Loc["TmDocumentEditor_CellBackground"]"
+                           Class="tm-document-inspector-form__color"
+                           data-testid="@($"{TestIdRoot}-background")" />
+        </div>
 
-    <label>
-        <span>@Loc["TmDocumentEditor_CellBackground"]</span>
-        <input type="color"
-               value="@BackgroundValue"
-               data-testid="@($"{TestIdRoot}-background")"
-               @onchange="HandleBackgroundChangedAsync" />
-    </label>
+        <label class="tm-document-inspector-form__field tm-document-inspector-form__field--stacked tm-document-inspector-form__field--unit">
+            <span class="tm-document-inspector-form__label">@Loc["TmDocumentEditor_CellPadding"]</span>
+            <input class="tm-input"
+                   type="number"
+                   min="0"
+                   step="1"
+                   value="@PaddingValue"
+                   aria-describedby="@_paddingUnitId"
+                   data-testid="@($"{TestIdRoot}-padding")"
+                   @onchange="HandlePaddingChangedAsync" />
+            <span class="tm-document-inspector-form__suffix" id="@_paddingUnitId">@Loc["TmDocumentEditor_UnitPx"]</span>
+        </label>
 
-    <label>
-        <span>@Loc["TmDocumentEditor_CellPadding"]</span>
-        <input type="number"
-               min="0"
-               step="1"
-               value="@PaddingValue"
-               data-testid="@($"{TestIdRoot}-padding")"
-               @onchange="HandlePaddingChangedAsync" />
-    </label>
-
-    <label>
-        <span>@Loc["TmDocumentEditor_CellBorder"]</span>
-        <select value="@BorderValue"
+        <label class="tm-document-inspector-form__field tm-document-inspector-form__field--stacked">
+            <span class="tm-document-inspector-form__label">@Loc["TmDocumentEditor_CellBorder"]</span>
+            <select class="tm-input"
+                value="@BorderPreset"
                 data-testid="@($"{TestIdRoot}-border")"
                 @onchange="HandleBorderChangedAsync">
-            <option value="">@Loc["TmDocumentEditor_None"]</option>
-            <option value="1px solid var(--tm-color-border)">@Loc["TmDocumentEditor_TableBorderDefault"]</option>
-            <option value="2px solid var(--tm-color-primary)">@Loc["TmDocumentEditor_TableBorderStrong"]</option>
-        </select>
-    </label>
+            <option value="@DocumentBorderPresets.None">@Loc["TmDocumentEditor_None"]</option>
+            <option value="@DocumentBorderPresets.Default">@Loc["TmDocumentEditor_TableBorderDefault"]</option>
+            <option value="@DocumentBorderPresets.Strong">@Loc["TmDocumentEditor_TableBorderStrong"]</option>
+            <option value="@DocumentBorderPresets.Custom" disabled="@(BorderPreset != DocumentBorderPresets.Custom)">@Loc["TmDocumentEditor_BorderCustom"]</option>
+            </select>
+        </label>
 
-    <dl class="tm-document-cell-properties__meta" data-testid="@($"{TestIdRoot}-span-info")">
-        <div>
-            <dt>@Loc["TmDocumentEditor_ColumnSpan"]</dt>
-            <dd>@(Cell?.ColumnSpan ?? 1)</dd>
-        </div>
-        <div>
-            <dt>@Loc["TmDocumentEditor_RowSpan"]</dt>
-            <dd>@(Cell?.RowSpan ?? 1)</dd>
-        </div>
-    </dl>
+        <dl class="tm-document-cell-properties__meta" data-testid="@($"{TestIdRoot}-span-info")">
+            <div class="tm-document-inspector-form__readonly-row">
+                <dt>@Loc["TmDocumentEditor_ColumnSpan"]</dt>
+                <dd>@(Cell?.ColumnSpan ?? 1)</dd>
+            </div>
+            <div class="tm-document-inspector-form__readonly-row">
+                <dt>@Loc["TmDocumentEditor_RowSpan"]</dt>
+                <dd>@(Cell?.RowSpan ?? 1)</dd>
+            </div>
+        </dl>
+    </TmDocumentInspectorSection>
 </section>
 
 @code {
@@ -72,6 +93,8 @@
         TableCellVerticalAlignment.Middle,
         TableCellVerticalAlignment.Bottom
     ];
+
+    private readonly string _paddingUnitId = $"tm-document-cell-padding-unit-{Guid.NewGuid():N}";
 
     /// <summary>Current cell content.</summary>
     [Parameter] public TableCellContent? Cell { get; set; }
@@ -97,14 +120,24 @@
 
     private TableCellVerticalAlignment CurrentVerticalAlignment => Cell?.VerticalAlignment ?? TableCellVerticalAlignment.Top;
 
-    private string BackgroundValue => string.IsNullOrWhiteSpace(Cell?.BackgroundColor) ? "#ffffff" : Cell!.BackgroundColor!;
+    // No background is no value - not a made-up white. The picker shows its "No color" placeholder.
+    private string? BackgroundValue => string.IsNullOrWhiteSpace(Cell?.BackgroundColor) ? null : Cell!.BackgroundColor;
 
     private string PaddingValue => Cell?.Padding?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
 
-    private string BorderValue => Cell?.Borders.Top ?? string.Empty;
+    private string BorderPreset => DocumentBorderPresets.Resolve(Cell?.Borders.Top);
 
-    private string SegmentClass(TableCellVerticalAlignment alignment) =>
-        "tm-document-cell-properties__segment" + (CurrentVerticalAlignment == alignment ? " tm-document-cell-properties__segment--active" : string.Empty);
+    private string TileClass(TableCellVerticalAlignment alignment) =>
+        "tm-document-cell-properties__tile" + (CurrentVerticalAlignment == alignment ? " tm-document-cell-properties__tile--active" : string.Empty);
+
+    private static string AriaPressed(bool value) => value ? "true" : "false";
+
+    private static string VerticalIcon(TableCellVerticalAlignment alignment) => alignment switch
+    {
+        TableCellVerticalAlignment.Middle => "align-vertical-justify-center",
+        TableCellVerticalAlignment.Bottom => "align-vertical-justify-end",
+        _ => "align-vertical-justify-start"
+    };
 
     private Task HandleVerticalAlignmentChangedAsync(TableCellVerticalAlignment alignment)
     {
@@ -113,10 +146,10 @@
         return CellChanged.InvokeAsync(next);
     }
 
-    private Task HandleBackgroundChangedAsync(ChangeEventArgs args)
+    private Task HandleBackgroundChangedAsync(string? color)
     {
         var next = CloneCell();
-        next.BackgroundColor = args.Value?.ToString();
+        next.BackgroundColor = string.IsNullOrWhiteSpace(color) ? null : color;
         return CellChanged.InvokeAsync(next);
     }
 
@@ -129,8 +162,13 @@
 
     private Task HandleBorderChangedAsync(ChangeEventArgs args)
     {
+        // Same CSS strings as before the redesign; "custom" is the display state of an imported value and is never written.
+        if (!DocumentBorderPresets.TryGetCss(args.Value?.ToString(), out var border))
+        {
+            return Task.CompletedTask;
+        }
+
         var next = CloneCell();
-        var border = args.Value?.ToString();
         next.Borders = new TableCellBorders { Top = border, Right = border, Bottom = border, Left = border };
         return CellChanged.InvokeAsync(next);
     }

@@ -708,6 +708,11 @@
 }
 
 /* ── Dialogs (core TmModal bodies) ─────────────────────────────────────────── */
+/* The version dialog is a form with a label and a description: the core "small" width (360 px) is too tight for it. */
+.tm-document-version-dialog .tm-modal--sm {
+    max-width: 30rem;
+}
+
 .tm-document-version-dialog__form {
     display: grid;
     gap: var(--tm-space-3);

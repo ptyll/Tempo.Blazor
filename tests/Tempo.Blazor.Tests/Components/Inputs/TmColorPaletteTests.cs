@@ -376,4 +376,13 @@ public class TmColorPaletteTests : LocalizationTestBase
             .Add(p => p.Columns, 2)
             .Add(p => p.ShowClearButton, false)
             .Add(p => p.ValueChanged, EventCallback.Factory.Create<string>(this, onChanged ?? (_ => { }))));
+
+    [Fact]
+    public void ClearText_ReplacesTheLocalizedClearLabel()
+    {
+        var cut = Render<TmColorPalette>(parameters => parameters.Add(p => p.ClearText, "No color"));
+
+        cut.Find(".tm-color-palette-clear").TextContent.Trim().Should().Be("No color");
+        Render<TmColorPalette>().Find(".tm-color-palette-clear").TextContent.Trim().Should().Be("Clear");
+    }
 }

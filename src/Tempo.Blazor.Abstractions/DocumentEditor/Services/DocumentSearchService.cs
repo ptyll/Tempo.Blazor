@@ -6,6 +6,9 @@ namespace Tempo.Blazor.DocumentEditor.Services;
 /// <summary>Searches a <see cref="DocumentEditorDocument"/> for text matches.</summary>
 public sealed class DocumentSearchService
 {
+    /// <summary>Characters of context kept on each side of a match (<see cref="DocumentSearchResult.ContextBefore"/> / <see cref="DocumentSearchResult.ContextAfter"/>).</summary>
+    private const int ContextLength = 30;
+
     /// <summary>Finds all occurrences of <paramref name="query"/> in <paramref name="document"/>.</summary>
     public IReadOnlyList<DocumentSearchResult> Search(DocumentEditorDocument document, DocumentSearchQuery query)
     {
@@ -38,7 +41,9 @@ public sealed class DocumentSearchService
                 Length = r.Length,
                 Scope = r.Scope,
                 MarkerId = BuildMarkerId(i, r),
-                Preview = r.Preview
+                Preview = r.Preview,
+                ContextBefore = r.ContextBefore,
+                ContextAfter = r.ContextAfter
             };
         }
 
@@ -223,6 +228,8 @@ public sealed class DocumentSearchService
         List<DocumentSearchResult> results)
     {
         var matchText = text.Substring(start, length);
+        var beforeStart = Math.Max(0, start - ContextLength);
+        var afterEnd = Math.Min(text.Length, start + length + ContextLength);
         results.Add(new DocumentSearchResult
         {
             Index = results.Count,
@@ -230,7 +237,9 @@ public sealed class DocumentSearchService
             BlockTextOffset = start,
             Length = length,
             Scope = resultScope,
-            Preview = matchText.Length <= 80 ? matchText : matchText[..80]
+            Preview = matchText.Length <= 80 ? matchText : matchText[..80],
+            ContextBefore = text[beforeStart..start],
+            ContextAfter = text[(start + length)..afterEnd]
         });
     }
 

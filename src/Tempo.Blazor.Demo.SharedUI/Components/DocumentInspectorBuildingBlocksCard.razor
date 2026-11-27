@@ -1,4 +1,6 @@
 @using Tempo.Blazor.Components.DocumentEditor
+@using Tempo.Blazor.DocumentEditor.Models
+@inject TimeProvider Clock
 
 @* Reference card of the shared DocumentEditor panel building blocks (redesign DE-2.1): TmDocumentInspectorHeader and
    the CSS-only .tm-document-inspector-form pattern, framed and embedded. *@
@@ -39,9 +41,64 @@
             </div>
         </div>
     </div>
+
+    @* Phase 6 (DE-2.2 .. DE-2.5): the contextual header with its back arrow, the foldable section, the review card and the version strip. *@
+    <div class="grid gap-6 md:grid-cols-2 mt-6" data-testid="document-inspector-blocks-phase6">
+        <div class="tm-document-inspector-form" data-testid="document-inspector-blocks-context">
+            <TmDocumentInspectorHeader Title="Image tools"
+                                       Icon="image"
+                                       HeadingLevel="3"
+                                       OnBack="HandleBack"
+                                       BackTestId="demo-inspector-back"
+                                       OnClose="HandleClose"
+                                       CloseTestId="demo-inspector-context-close" />
+            <TmDocumentInspectorSection Title="Size and rotation" SectionTestId="demo-inspector-section">
+                <label class="tm-document-inspector-form__field tm-document-inspector-form__field--stacked tm-document-inspector-form__field--unit">
+                    <span class="tm-document-inspector-form__label">Width</span>
+                    <input class="tm-input" type="number" value="156" aria-describedby="demo-inspector-width-unit" />
+                    <span class="tm-document-inspector-form__suffix" id="demo-inspector-width-unit">px</span>
+                </label>
+            </TmDocumentInspectorSection>
+            @if (_backPressed)
+            {
+                <p class="p-4 text-sm" data-testid="demo-inspector-back-pressed">Back to the tabs was pressed.</p>
+            }
+        </div>
+
+        <div class="grid gap-3" data-testid="document-inspector-blocks-cards">
+            <TmDocumentReviewCard Kind="DocumentRevisionType.Insertion"
+                                  Title="Inserted text"
+                                  AuthorName="Jan Prochazka"
+                                  AuthorId="jp"
+                                  CreatedAt="Clock.GetUtcNow().AddHours(-2)"
+                                  Preview="@(new DocumentRevisionPreview { Text = "Modern solution for more effective cooperation" })"
+                                  AcceptLabel="Accept"
+                                  RejectLabel="Reject"
+                                  ClassPrefix="tm-document-revision-panel" />
+            <TmDocumentReviewCard Kind="DocumentRevisionType.Deletion"
+                                  Title="Deleted text"
+                                  AuthorName="Martina Kralova"
+                                  AuthorId="mk"
+                                  CreatedAt="Clock.GetUtcNow().AddHours(-3)"
+                                  Preview="@(new DocumentRevisionPreview { Text = "and digital transformation" })"
+                                  AcceptLabel="Accept"
+                                  RejectLabel="Reject"
+                                  ClassPrefix="tm-document-revision-panel" />
+            <TmDocumentVersionPreviewStrip TestIdPrefix="demo" PreviewVersion="_previewVersion" OnRestoreVersion="HandleRestore" OnReturnToCurrent="HandleReturn" />
+        </div>
+    </div>
 </section>
 
 @code {
+    private bool _backPressed;
+    private DocumentVersion? _previewVersion = new() { Id = "demo-version", Label = "1.3", Kind = DocumentVersionKind.Minor };
+
+    private void HandleBack() => _backPressed = true;
+
+    private void HandleReturn() => _previewVersion = null;
+
+    private void HandleRestore(DocumentVersion version) => _previewVersion = null;
+
     private bool _closed;
     private bool _sizeOpen = true;
     private bool _wrapOpen = true;

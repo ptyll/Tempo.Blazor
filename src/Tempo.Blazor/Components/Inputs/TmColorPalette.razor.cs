@@ -82,6 +82,9 @@ public partial class TmColorPalette
     /// <summary>Shows a clear button. Default true.</summary>
     [Parameter] public bool ShowClearButton { get; set; } = true;
 
+    /// <summary>Text of the clear button (for example "No color"). When null the localized <c>TmColorPalette_Clear</c> text is used.</summary>
+    [Parameter] public string? ClearText { get; set; }
+
     /// <summary>Additional CSS class.</summary>
     [Parameter] public string? Class { get; set; }
 

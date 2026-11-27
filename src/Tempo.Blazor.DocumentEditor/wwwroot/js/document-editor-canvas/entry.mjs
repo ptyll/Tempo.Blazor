@@ -1743,8 +1743,56 @@ export class CanvasDocumentEngine {
         }
 
         const rect = firstRectForMatch(extractTextRects(this.lastRender), match);
+        const pageIndex = rect?.pageIndex ?? 0;
+        const view = this.document?.defaultView || globalThis;
+        const frame = view.requestAnimationFrame?.bind(view);
+        const mounted = () => this.canvasStack.pages.get(String(pageIndex))?.pageElement;
+
+        if (!mounted()) {
+            // The match is on a virtualized page that is not mounted yet: bring the page in (it mounts on a later frame).
+            this.scrollToPage(pageIndex);
+        } else {
+            mounted().scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+            this.scrollMatchRectIntoView(rect);
+        }
+
+        // A page that was just mounted re-measures (the estimate gives way to the real page height) and moves what is below it, so the
+        // match is brought into view again once the layout has settled: wait for the page, then two more frames.
+        let attempts = 0;
+        const settle = () => {
+            if (!mounted() && attempts < 12) {
+                attempts += 1;
+                frame?.(settle);
+                return;
+            }
+
+            this.scrollMatchRectIntoView(rect);
+            frame?.(() => frame(() => this.scrollMatchRectIntoView(rect)));
+        };
+        frame?.(settle);
+    }
+
+    // A page can be taller than the viewport, so "the page is visible" says nothing about the match: scroll a transient probe placed at the
+    // match's rectangle into the middle of whatever scrolls (the host or the window).
+    scrollMatchRectIntoView(rect) {
         const page = this.canvasStack.pages.get(String(rect?.pageIndex ?? 0));
-        page?.pageElement?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+        const element = page?.pageElement;
+        const doc = this.document;
+        if (!rect || !element || !doc?.createElement || !element.appendChild) {
+            return;
+        }
+
+        const scale = Math.max(0.01, Number(element.getAttribute?.('data-canvas-page-zoom-scale') || 1) || 1);
+        const probe = doc.createElement('div');
+        probe.setAttribute?.('aria-hidden', 'true');
+        probe.style.cssText = `position:absolute;left:${(Number(rect.x) || 0) * scale}px;top:${(Number(rect.y) || 0) * scale}px;`
+            + `width:1px;height:${Math.max(1, (Number(rect.height) || 0) * scale)}px;pointer-events:none;visibility:hidden;`;
+        element.appendChild(probe);
+        try {
+            probe.scrollIntoView?.({ block: 'center', inline: 'nearest' });
+        } finally {
+            probe.remove?.();
+        }
     }
 
     scrollMarkerIntoView(marker) {

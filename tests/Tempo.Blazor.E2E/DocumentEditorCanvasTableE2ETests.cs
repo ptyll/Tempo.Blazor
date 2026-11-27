@@ -464,8 +464,12 @@ public sealed class DocumentEditorCanvasTableE2ETests : WasmTestBase
 
         // Background: applies to the table layout (seed cells carry explicit colors which win by
         // design — assert the model flag; a plain-cell visual check is covered by the phase-5 test).
-        await page.GetByTestId("document-table-properties-background").FillAsync("#ffedd5");
-        await page.GetByTestId("document-table-properties-background").DispatchEventAsync("change");
+        // Phase 6: the background is the core colour picker (a swatch and a hex) - open it and type the hex.
+        await page.GetByTestId("document-table-properties-background").Locator(".tm-color-picker-trigger").ClickAsync();
+        var hex = page.Locator(".tm-color-picker-dropdown:visible .tm-flat-color-picker-hex input").First;
+        await Assertions.Expect(hex).ToBeVisibleAsync(new() { Timeout = 10_000 });
+        await hex.FillAsync("#ffedd5");
+        await hex.PressAsync("Tab");
         await WaitForPredicateAsync(page, """
             async () => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');

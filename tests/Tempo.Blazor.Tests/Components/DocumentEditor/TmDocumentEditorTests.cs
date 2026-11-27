@@ -1689,7 +1689,8 @@ public class TmDocumentEditorTests : LocalizationTestBase
         await cut.Find("[data-testid='document-version-create-open']").ClickAsync(new MouseEventArgs());
         cut.WaitForAssertion(() => cut.Find("[data-testid='document-version-dialog']").Should().NotBeNull());
         await NotifyCanvasChangedAsync(cut);
-        await cut.Find("[data-testid='document-version-create-submit']").ClickAsync(new MouseEventArgs());
+        // The submit button lives in the modal footer and is bound to the form (the `form` attribute), so the dialog is submitted as a form.
+        await cut.InvokeAsync(() => cut.Find("form.tm-document-version-dialog__form").Submit());
 
         cut.WaitForAssertion(() => capturedSave.Should().NotBeNull());
         GetParagraphText(capturedSave!.Document!).Should().StartWith("Runtime version text");
@@ -2348,7 +2349,7 @@ public class TmDocumentEditorTests : LocalizationTestBase
             cut.FindAll("[data-testid='document-revision-item']")
                 .Select(item => item.TextContent)
                 .Should()
-                .Contain(text => text.Contains("Insertion", StringComparison.Ordinal)));
+                .Contain(text => text.Contains("Inserted text", StringComparison.Ordinal)));
         cut.Find("[data-testid='document-save']").Click();
 
         cut.WaitForAssertion(() => cut.Find(".tm-document-editor__save-message").TextContent.Should().Contain("Saved"));

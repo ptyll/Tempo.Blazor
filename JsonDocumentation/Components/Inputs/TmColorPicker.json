@@ -118,6 +118,12 @@
       "description": "Shows the clear color command."
     },
     {
+      "name": "ClearText",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Text of the clear command in the palette (for example \"No color\" for a field whose empty value means \"none\"). When null the localized default is used."
+    },
+    {
       "name": "ShowGradient",
       "type": "bool",
       "isRequired": false,

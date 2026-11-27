@@ -131,16 +131,177 @@ public sealed class TmDocumentImageInspectorTests : LocalizationTestBase
     }
 
     [Fact]
-    public void Inspector_WrapButtons_AreIconSegmentsWithAccessibleLabels_ForActiveDrawingObject()
+    public void Inspector_WrapButtons_AreIconTilesWithAVisibleLabel_ForActiveDrawingObject()
     {
+        // Phase 6 / DE-2.2: the wrap tiles carry their name as visible text under the icon, not as screen-reader-only text.
         var cut = Render<TmDocumentImageInspector>(parameters => parameters
             .Add(p => p.Image, ActiveDrawingImage())
             .Add(p => p.WrapModeChanged, _ => { }));
 
         var square = cut.Find("[data-testid='document-image-inspector-wrap-square']");
         square.QuerySelector(".tm-icon").Should().NotBeNull();
-        square.QuerySelector(".tm-document-editor__sr-only")!.TextContent.Should().NotBeNullOrWhiteSpace();
-        square.GetAttribute("title").Should().NotBeNullOrWhiteSpace();
+        square.QuerySelector(".tm-document-editor__sr-only").Should().BeNull("the label is visible text");
+        var label = square.QuerySelector(".tm-document-image-inspector__tile-label")!;
+        label.TextContent.Should().Be("Square");
+        square.GetAttribute("aria-pressed").Should().Be("false");
+        cut.FindAll("[data-wrap-mode]").Should().HaveCount(7, "seven wrap modes, one tile each");
+        cut.Find("[data-testid='document-image-inspector-wrap-inline']").GetAttribute("aria-pressed").Should().Be("true");
+    }
+
+    [Fact]
+    public void Inspector_Alignment_IsASegmentedControlWithText()
+    {
+        var cut = Render<TmDocumentImageInspector>(parameters => parameters
+            .Add(p => p.Image, ActiveDrawingImage())
+            .Add(p => p.AlignmentChanged, _ => { }));
+
+        var group = cut.Find("[data-testid='document-image-inspector-align-center']").ParentElement!;
+        group.ClassList.Should().Contain("tm-document-inspector-form__segmented");
+        group.GetAttribute("role").Should().Be("group");
+        group.Children.Select(child => child.TextContent.Trim()).Should().Equal("Start", "Center", "End");
+        group.QuerySelectorAll(".tm-document-editor__sr-only").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Inspector_Anchor_ShowsTheResolvedParagraphText_NotTheBlockId()
+    {
+        var cut = Render<TmDocumentImageInspector>(parameters => parameters
+            .Add(p => p.Image, ActiveDrawingImage(drawing =>
+            {
+                drawing.Layout = new DocumentObjectLayout
+                {
+                    Kind = DocumentObjectLayoutKind.Anchored,
+                    Anchor = new DocumentObjectAnchor { BlockId = "block-7f3a9c" }
+                };
+            }))
+            .Add(p => p.LockAnchorChanged, _ => { })
+            .Add(p => p.AnchorText, "Project Aurora si klade za cil vybudovat…"));
+
+        var anchor = cut.Find("[data-testid='document-image-inspector-anchor-paragraph']");
+        anchor.TextContent.Should().Contain("Project Aurora si klade za cil vybudovat…");
+        anchor.TextContent.Should().NotContain("block-7f3a9c");
+    }
+
+    [Fact]
+    public void Inspector_Anchor_WithABlockButNoResolvedText_ShowsAGenericLabel_NeverTheBlockId()
+    {
+        var cut = Render<TmDocumentImageInspector>(parameters => parameters
+            .Add(p => p.Image, ActiveDrawingImage(drawing =>
+            {
+                drawing.Layout = new DocumentObjectLayout
+                {
+                    Kind = DocumentObjectLayoutKind.Anchored,
+                    Anchor = new DocumentObjectAnchor { BlockId = "block-7f3a9c" }
+                };
+            }))
+            .Add(p => p.LockAnchorChanged, _ => { }));
+
+        var anchor = cut.Find("[data-testid='document-image-inspector-anchor-paragraph']");
+        anchor.TextContent.Should().Contain("Current paragraph").And.NotContain("block-7f3a9c");
+    }
+
+    [Fact]
+    public void Inspector_NumericFields_CarryTheirUnitAsASuffix()
+    {
+        var cut = Render<TmDocumentImageInspector>(parameters => parameters
+            .Add(p => p.Image, ActiveDrawingImage())
+            .Add(p => p.SizeChanged, _ => { })
+            .Add(p => p.PositionChanged, _ => { }));
+
+        string Suffix(string testId) => cut.Find($"[data-testid='{testId}']").ParentElement!
+            .QuerySelector(".tm-document-inspector-form__suffix")!.TextContent;
+
+        Suffix("document-image-inspector-width").Should().Be("px");
+        Suffix("document-image-inspector-height").Should().Be("px");
+        Suffix("document-image-inspector-position-x").Should().Be("px");
+        Suffix("document-image-inspector-position-y").Should().Be("px");
+        Suffix("document-image-inspector-rotation").Should().Be("°");
+        cut.Find("[data-testid='document-image-inspector-rotation']").HasAttribute("readonly").Should().BeTrue("rotation editing is backlog");
+    }
+
+    [Fact]
+    public void Inspector_UnitSuffixes_AreTiedToTheirInputs_NotHiddenFromTheAccessibilityTree()
+    {
+        var cut = Render<TmDocumentImageInspector>(parameters => parameters
+            .Add(p => p.Image, ActiveDrawingImage())
+            .Add(p => p.SizeChanged, _ => { })
+            .Add(p => p.PositionChanged, _ => { }));
+
+        foreach (var testId in new[]
+        {
+            "document-image-inspector-width", "document-image-inspector-height", "document-image-inspector-rotation",
+            "document-image-inspector-position-x", "document-image-inspector-position-y"
+        })
+        {
+            var input = cut.Find($"[data-testid='{testId}']");
+            var suffix = input.ParentElement!.QuerySelector(".tm-document-inspector-form__suffix")!;
+            suffix.HasAttribute("aria-hidden").Should().BeFalse($"{testId}: a unit is part of the value's meaning");
+            suffix.Id.Should().NotBeNullOrEmpty();
+            input.GetAttribute("aria-describedby").Should().Be(suffix.Id);
+            input.ParentElement!.ClassList.Should().Contain("tm-document-inspector-form__adorned", "the unit sits inside the field");
+        }
+
+        cut.FindAll(".tm-document-inspector-form__suffix").Select(suffix => suffix.Id).Should().OnlyHaveUniqueItems();
+    }
+
+    [Fact]
+    public void Inspector_WrapTiles_UseSevenDistinctIcons()
+    {
+        var cut = Render<TmDocumentImageInspector>(parameters => parameters
+            .Add(p => p.Image, ActiveDrawingImage())
+            .Add(p => p.WrapModeChanged, _ => { }));
+
+        var icons = cut.FindAll("[data-wrap-mode]")
+            .Select(tile => tile.QuerySelector(".tm-icon")!.InnerHtml)
+            .ToList();
+
+        icons.Should().HaveCount(7);
+        icons.Distinct().Should().HaveCount(7, "Tight and Through must not share a picture");
+    }
+
+    [Fact]
+    public void Inspector_WidthHeightRotation_ShareOneThreeColumnRow()
+    {
+        var cut = Render<TmDocumentImageInspector>(parameters => parameters
+            .Add(p => p.Image, ActiveDrawingImage())
+            .Add(p => p.SizeChanged, _ => { }));
+
+        var row = cut.Find("[data-testid='document-image-inspector-width']").Closest(".tm-document-image-inspector__triple")!;
+        row.QuerySelector("[data-testid='document-image-inspector-height']").Should().NotBeNull();
+        row.QuerySelector("[data-testid='document-image-inspector-rotation']").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Inspector_Sections_AreChevronDisclosures_WithoutFrames()
+    {
+        var cut = Render<TmDocumentImageInspector>(parameters => parameters
+            .Add(p => p.Image, ActiveDrawingImage())
+            .Add(p => p.SizeChanged, _ => { })
+            .Add(p => p.WrapModeChanged, _ => { }));
+
+        cut.FindAll("details").Should().BeEmpty("the sections are the shared disclosure pattern, not <details>");
+        var toggle = cut.Find("[data-testid='document-image-inspector-section-size-toggle']");
+        toggle.GetAttribute("aria-expanded").Should().Be("true");
+        toggle.QuerySelector(".tm-document-inspector-form__chevron").Should().NotBeNull();
+
+        var body = cut.Find("#" + toggle.GetAttribute("aria-controls"));
+        body.HasAttribute("hidden").Should().BeFalse();
+        toggle.Click();
+        cut.Find("[data-testid='document-image-inspector-section-size-toggle']").GetAttribute("aria-expanded").Should().Be("false");
+        cut.Find("#" + toggle.GetAttribute("aria-controls")).HasAttribute("hidden").Should().BeTrue("a folded body stays in the DOM, hidden");
+        cut.Find("[data-testid='document-image-inspector-width']").Should().NotBeNull("its state survives a fold");
+    }
+
+    [Fact]
+    public void Inspector_Header_UsesTheSharedInspectorHeader_AndCanBeHiddenByTheContextHost()
+    {
+        var withHeader = Render<TmDocumentImageInspector>(parameters => parameters.Add(p => p.Image, ActiveDrawingImage()));
+        withHeader.Find("[data-testid='document-inspector-header'] .tm-document-inspector-header__title").TextContent.Should().Be("Image tools");
+
+        var without = Render<TmDocumentImageInspector>(parameters => parameters
+            .Add(p => p.Image, ActiveDrawingImage())
+            .Add(p => p.ShowHeader, false));
+        without.FindAll("[data-testid='document-inspector-header']").Should().BeEmpty("the contextual inspector header already names the panel");
     }
 
     [Fact]
@@ -216,8 +377,9 @@ public sealed class TmDocumentImageInspectorTests : LocalizationTestBase
             }))
             .Add(p => p.AlignmentChanged, _ => { }));
 
-        cut.Find($"[data-testid='{activeTestId}']").ClassList
-            .Should().Contain("tm-document-image-inspector__swatch--active");
+        cut.Find($"[data-testid='{activeTestId}']").GetAttribute("aria-pressed")
+            .Should().Be("true");
+        cut.FindAll("[data-testid^='document-image-inspector-align-'][aria-pressed='true']").Should().ContainSingle();
     }
 
     [Fact]

@@ -4,70 +4,102 @@
 @using Tempo.Blazor.DocumentEditor.Services
 @using Microsoft.AspNetCore.Components.Web
 
+@* Redesign 146c7e1b, phase 6 (DE-2.3, decision DE2): find and replace as a panel. On a desktop layout it is the contextual content of the
+   inspector (the host's header names it, ShowHeader=false); on a tablet or phone it is the body of a floating panel. Standalone it carries
+   its own header. A labelled field with the count inside it and the clear button, the previous / next arrows, the options as a column,
+   the scope on the full width, a divider, a Replace toggle, and the results as cards with the match marked in its sentence. *@
 <div class="tm-document-find-panel"
      data-testid="@TestId("document-find-panel")"
      role="search"
      aria-label="@Loc["TmDocumentEditor_FindPanelLabel"]"
      @onkeydown="HandleRootKeyDownAsync">
 
-    <div class="tm-document-find-panel__row">
-        <input class="tm-document-find-panel__input"
-               data-testid="@TestId("document-find-input")"
-               type="search"
-               placeholder="@Loc["TmDocumentEditor_FindPlaceholder"]"
-               aria-label="@Loc["TmDocumentEditor_FindPlaceholder"]"
-               value="@_query"
-               @oninput="HandleSearchInput"
-               @onkeydown="HandleKeyDownAsync"
-               @onkeydown:stopPropagation="true"
-               @ref="_searchInput" />
+    @if (ShowHeader)
+    {
+        <TmDocumentInspectorHeader Title="@Loc["TmDocumentEditor_FindPanelTitle"]"
+                                   Icon="search"
+                                   TestIdPrefix="@TestIdPrefix"
+                                   CloseTestId="document-find-close"
+                                   OnClose="CloseAsync" />
+    }
 
-        <span class="tm-document-find-panel__count"
-              data-testid="@TestId("document-find-count")"
-              aria-live="polite">@CountText</span>
+    <div class="tm-document-find-panel__body">
+        <div class="tm-document-find-panel__group">
+            <label class="tm-document-inspector-form__label" for="@_findInputId">@Loc["TmDocumentEditor_FindLabel"]</label>
+            <div class="tm-document-find-panel__row">
+                <div class="tm-document-find-panel__field">
+                    <input class="tm-document-find-panel__input"
+                           id="@_findInputId"
+                           data-testid="@TestId("document-find-input")"
+                           type="search"
+                           placeholder="@Loc["TmDocumentEditor_FindPlaceholder"]"
+                           value="@_query"
+                           @oninput="HandleSearchInput"
+                           @onkeydown="HandleKeyDownAsync"
+                           @onkeydown:stopPropagation="true"
+                           @ref="_searchInput" />
 
-        <button class="tm-btn tm-btn-sm tm-btn-ghost tm-btn-icon tm-document-find-panel__btn"
-                type="button"
-                data-testid="@TestId("document-find-prev")"
-                title="@Loc["TmDocumentEditor_FindPrev"]"
-                aria-label="@Loc["TmDocumentEditor_FindPrev"]"
-                disabled="@(_results.Count == 0)"
-                @onclick="GoToPreviousAsync">&#8593;</button>
+                    <span class="tm-document-find-panel__count"
+                          data-testid="@TestId("document-find-count")"
+                          aria-live="polite">@CountText</span>
 
-        <button class="tm-btn tm-btn-sm tm-btn-ghost tm-btn-icon tm-document-find-panel__btn"
-                type="button"
-                data-testid="@TestId("document-find-next")"
-                title="@Loc["TmDocumentEditor_FindNext"]"
-                aria-label="@Loc["TmDocumentEditor_FindNext"]"
-                disabled="@(_results.Count == 0)"
-                @onclick="GoToNextAsync">&#8595;</button>
+                    @if (_query.Length > 0)
+                    {
+                        <button class="tm-document-find-panel__clear"
+                                type="button"
+                                data-testid="@TestId("document-find-clear")"
+                                title="@Loc["TmDocumentEditor_FindClear"]"
+                                aria-label="@Loc["TmDocumentEditor_FindClear"]"
+                                @onclick="ClearQueryAsync">
+                            <TmIcon Name="x" Size="IconSize.Xs" />
+                        </button>
+                    }
+                </div>
 
-        <button class="tm-btn tm-btn-sm tm-btn-ghost tm-btn-icon tm-document-find-panel__btn tm-document-find-panel__btn--close"
-                type="button"
-                data-testid="@TestId("document-find-close")"
-                title="@Loc["TmDocumentEditor_FindClose"]"
-                aria-label="@Loc["TmDocumentEditor_FindClose"]"
-                @onclick="CloseAsync">&#10005;</button>
-    </div>
+                <button class="tm-btn tm-btn-sm tm-btn-secondary tm-btn-icon tm-document-find-panel__btn"
+                        type="button"
+                        data-testid="@TestId("document-find-prev")"
+                        title="@Loc["TmDocumentEditor_FindPrev"]"
+                        aria-label="@Loc["TmDocumentEditor_FindPrev"]"
+                        disabled="@(_results.Count == 0)"
+                        @onclick="GoToPreviousAsync">
+                    <TmIcon Name="arrow-up" Size="IconSize.Sm" />
+                </button>
 
-    <div class="tm-document-find-panel__options">
-        <label>
-            <input type="checkbox" @bind="_caseSensitive" @bind:after="RunSearchAsync" />
-            @Loc["TmDocumentEditor_FindCaseSensitive"]
-        </label>
-        <label>
-            <input type="checkbox" @bind="_wholeWord" @bind:after="RunSearchAsync" />
-            @Loc["TmDocumentEditor_FindWholeWord"]
-        </label>
-        <label>
-            <input type="checkbox" data-testid="@TestId("document-find-regex")" @bind="_useRegex" @bind:after="RunSearchAsync" />
-            @Loc["TmDocumentEditor_FindRegex"]
-        </label>
-        <label>
-            <span>@Loc["TmDocumentEditor_FindScopeLabel"]</span>
-            <select class="tm-document-find-panel__scope"
+                <button class="tm-btn tm-btn-sm tm-btn-secondary tm-btn-icon tm-document-find-panel__btn"
+                        type="button"
+                        data-testid="@TestId("document-find-next")"
+                        title="@Loc["TmDocumentEditor_FindNext"]"
+                        aria-label="@Loc["TmDocumentEditor_FindNext"]"
+                        disabled="@(_results.Count == 0)"
+                        @onclick="GoToNextAsync">
+                    <TmIcon Name="arrow-down" Size="IconSize.Sm" />
+                </button>
+            </div>
+        </div>
+
+        <div class="tm-document-find-panel__options"
+             role="group"
+             aria-label="@Loc["TmDocumentEditor_FindOptionsLabel"]"
+             data-testid="@TestId("document-find-options")">
+            <label class="tm-document-inspector-form__check">
+                <input type="checkbox" data-testid="@TestId("document-find-case")" @bind="_caseSensitive" @bind:after="RunSearchAsync" />
+                <span>@Loc["TmDocumentEditor_FindCaseSensitive"]</span>
+            </label>
+            <label class="tm-document-inspector-form__check">
+                <input type="checkbox" data-testid="@TestId("document-find-whole-word")" @bind="_wholeWord" @bind:after="RunSearchAsync" />
+                <span>@Loc["TmDocumentEditor_FindWholeWord"]</span>
+            </label>
+            <label class="tm-document-inspector-form__check">
+                <input type="checkbox" data-testid="@TestId("document-find-regex")" @bind="_useRegex" @bind:after="RunSearchAsync" />
+                <span>@Loc["TmDocumentEditor_FindRegex"]</span>
+            </label>
+        </div>
+
+        <label class="tm-document-find-panel__group tm-document-find-panel__scope-field">
+            <span class="tm-document-inspector-form__label">@Loc["TmDocumentEditor_FindScopeLabel"]</span>
+            <select class="tm-input tm-document-find-panel__scope"
                     data-testid="@TestId("document-find-scope")"
-                    aria-label="@Loc["TmDocumentEditor_FindScopeLabel"]"
                     value="@_scope"
                     @onchange="HandleScopeChangedAsync">
                 <option value="@DocumentSearchScope.Body">@Loc["TmDocumentEditor_FindScopeBody"]</option>
@@ -76,62 +108,127 @@
                 <option value="@DocumentSearchScope.All">@Loc["TmDocumentEditor_FindScopeAll"]</option>
             </select>
         </label>
-    </div>
 
-    @if (_results.Count > 1)
-    {
-        <ol class="tm-document-find-panel__results" data-testid="@TestId("document-find-results")">
-            @foreach (var result in _results)
+        <hr class="tm-document-find-panel__divider" />
+
+        <button class="tm-document-find-panel__replace-toggle"
+                type="button"
+                aria-expanded="@(_replaceVisible ? "true" : "false")"
+                aria-controls="@_replaceRegionId"
+                data-testid="@TestId("document-find-replace-toggle")"
+                @onclick="ToggleReplace">
+            <span class="tm-document-find-panel__replace-chevron" aria-hidden="true"><TmIcon Name="chevron-down" Size="IconSize.Sm" /></span>
+            <span>@Loc["TmDocumentEditor_FindReplaceToggle"]</span>
+        </button>
+
+        <div id="@_replaceRegionId" class="tm-document-find-panel__replace" hidden="@(!_replaceVisible)">
+            @if (_replaceVisible)
             {
-                var active = result.Index == _activeIndex;
-                <li>
-                    <button class="tm-document-find-panel__result @(active ? "tm-document-find-panel__result--active" : null)"
+                <div class="tm-document-find-panel__group">
+                    <label class="tm-document-inspector-form__label" for="@_replaceInputId">@Loc["TmDocumentEditor_ReplaceLabel"]</label>
+                    <div class="tm-document-find-panel__field">
+                        <input class="tm-document-find-panel__input"
+                               id="@_replaceInputId"
+                               data-testid="@TestId("document-replace-input")"
+                               type="text"
+                               placeholder="@Loc["TmDocumentEditor_ReplacePlaceholder"]"
+                               @onkeydown="HandleKeyDownAsync"
+                               @onkeydown:stopPropagation="true"
+                               @bind="_replacement" />
+                        @if (_replacement.Length > 0)
+                        {
+                            <button class="tm-document-find-panel__clear"
+                                    type="button"
+                                    data-testid="@TestId("document-replace-clear")"
+                                    title="@Loc["TmDocumentEditor_ReplaceClear"]"
+                                    aria-label="@Loc["TmDocumentEditor_ReplaceClear"]"
+                                    @onclick="() => _replacement = string.Empty">
+                                <TmIcon Name="x" Size="IconSize.Xs" />
+                            </button>
+                        }
+                    </div>
+                </div>
+
+                <div class="tm-document-find-panel__replace-actions">
+                    <button class="tm-btn tm-btn-sm tm-btn-primary tm-document-find-panel__btn"
                             type="button"
-                            data-testid="@TestId("document-find-result")"
-                            aria-current="@(active ? "true" : null)"
-                            @onclick="() => GoToResultAsync(result.Index)">
-                        <span>@(result.Index + 1)</span>
-                        <span>@result.Preview</span>
-                    </button>
-                </li>
+                            data-testid="@TestId("document-find-replace-one")"
+                            disabled="@(_results.Count == 0)"
+                            @onclick="ReplaceOneAsync">@Loc["TmDocumentEditor_FindReplaceOne"]</button>
+
+                    <button class="tm-btn tm-btn-sm tm-btn-secondary tm-document-find-panel__btn"
+                            type="button"
+                            data-testid="@TestId("document-find-replace-all")"
+                            disabled="@(_results.Count == 0)"
+                            @onclick="ReplaceAllAsync">@Loc["TmDocumentEditor_FindReplaceAll"]</button>
+                </div>
             }
-        </ol>
-    }
-
-    @if (ShowReplace)
-    {
-        <div class="tm-document-find-panel__replace-row">
-            <input class="tm-document-find-panel__input"
-                   data-testid="@TestId("document-replace-input")"
-                   type="text"
-                   placeholder="@Loc["TmDocumentEditor_ReplacePlaceholder"]"
-                   aria-label="@Loc["TmDocumentEditor_ReplacePlaceholder"]"
-                   @onkeydown="HandleKeyDownAsync"
-                   @onkeydown:stopPropagation="true"
-                   @bind="_replacement" />
-
-            <button class="tm-btn tm-btn-sm tm-btn-primary tm-document-find-panel__btn"
-                    type="button"
-                    data-testid="@TestId("document-find-replace-one")"
-                    disabled="@(_results.Count == 0)"
-                    @onclick="ReplaceOneAsync">@Loc["TmDocumentEditor_FindReplaceOne"]</button>
-
-            <button class="tm-btn tm-btn-sm tm-btn-secondary tm-document-find-panel__btn"
-                    type="button"
-                    data-testid="@TestId("document-find-replace-all")"
-                    disabled="@(_results.Count == 0)"
-                    @onclick="ReplaceAllAsync">@Loc["TmDocumentEditor_FindReplaceAll"]</button>
         </div>
-    }
+
+        @if (_results.Count > 0)
+        {
+            <section class="tm-document-find-panel__results-section" aria-labelledby="@_resultsHeadingId">
+                <h3 class="tm-document-find-panel__results-heading"
+                    id="@_resultsHeadingId"
+                    data-testid="@TestId("document-find-results-heading")">@string.Format(Loc["TmDocumentEditor_FindResultsHeading"], _results.Count)</h3>
+                <ol class="tm-document-find-panel__results" data-testid="@TestId("document-find-results")">
+                    @foreach (var result in VisibleResults)
+                    {
+                        var active = result.Index == _activeIndex;
+                        <li>
+                            <button class="tm-document-find-panel__result @(active ? "tm-document-find-panel__result--active" : null)"
+                                    type="button"
+                                    data-testid="@TestId("document-find-result")"
+                                    aria-current="@(active ? "true" : null)"
+                                    @onclick="() => GoToResultAsync(result.Index)">
+                                <span class="tm-document-find-panel__result-index">@(result.Index + 1)</span>
+                                <span class="tm-document-find-panel__result-text">
+                                    <span class="tm-document-find-panel__context-before">@ContextBefore(result)</span><mark class="tm-document-find-panel__match">@result.Preview</mark><span class="tm-document-find-panel__context-after">@ContextAfter(result)</span>
+                                </span>
+                            </button>
+                        </li>
+                    }
+                </ol>
+                @if (HiddenResultCount > 0)
+                {
+                    <button type="button"
+                            class="tm-btn tm-btn-sm tm-btn-ghost tm-document-find-panel__more"
+                            data-testid="@TestId("document-find-show-more")"
+                            @onclick="ShowMoreResults">
+                        @string.Format(Loc["TmDocumentEditor_RevisionsShowMore"], Math.Min(ResultWindowSize, HiddenResultCount))
+                    </button>
+                }
+            </section>
+        }
+    </div>
 </div>
 
 @code {
+    /// <summary>The document searched. The panel never changes it; a replace is requested through the replace callbacks.</summary>
     [Parameter] public DocumentEditorDocument? Document { get; set; }
+
+    /// <summary>Whether the Replace section is expanded. The reader can also toggle it; a change of this parameter (Ctrl+H) applies again.</summary>
     [Parameter] public bool ShowReplace { get; set; }
+
+    /// <summary>
+    /// Whether the panel renders its own header (the title and the X). Defaults to <c>true</c>; the editor hosts the panel in the desktop
+    /// inspector or in a floating panel, whose header already names it and carries the X (<c>document-find-close</c>), and passes <c>false</c>.
+    /// </summary>
+    [Parameter] public bool ShowHeader { get; set; } = true;
+
+    /// <summary>Raised when the panel should close (the X, Escape).</summary>
     [Parameter] public EventCallback OnClose { get; set; }
+
+    /// <summary>Raised with the results after every search run.</summary>
     [Parameter] public EventCallback<IReadOnlyList<DocumentSearchResult>> OnResultsChanged { get; set; }
+
+    /// <summary>Raised with the result that became the active one (a search, next / previous, a click on a result).</summary>
     [Parameter] public EventCallback<DocumentSearchResult> OnActiveResultChanged { get; set; }
+
+    /// <summary>Raised when the active result should be replaced.</summary>
     [Parameter] public EventCallback<DocumentFindReplaceRequest> OnReplaceOneRequested { get; set; }
+
+    /// <summary>Raised when every result should be replaced.</summary>
     [Parameter] public EventCallback<DocumentFindReplaceRequest> OnReplaceAllRequested { get; set; }
 
     /// <summary>R.4.8 — raised when the query/options change, so a host (e.g. the core engine)
@@ -142,6 +239,12 @@
     [Parameter] public EventCallback<int> OnNavigateRequested { get; set; }
 
     private readonly DocumentSearchService _searchService = new();
+    private readonly string _findInputId = $"tm-document-find-input-{Guid.NewGuid():N}";
+    private readonly string _replaceInputId = $"tm-document-replace-input-{Guid.NewGuid():N}";
+    private readonly string _replaceRegionId = $"tm-document-find-replace-{Guid.NewGuid():N}";
+    private readonly string _resultsHeadingId = $"tm-document-find-results-{Guid.NewGuid():N}";
+    private bool _replaceVisible;
+    private bool? _lastShowReplace;
 
     private string _query = string.Empty;
     private string _replacement = string.Empty;
@@ -151,17 +254,80 @@
     private DocumentSearchScope _scope = DocumentSearchScope.Body;
     private IReadOnlyList<DocumentSearchResult> _results = [];
     private int _activeIndex;
+
+    // A thousand hits would put a thousand cards into the inspector: the list renders in windows of ResultWindowSize, grows by "Show N more",
+    // and ALWAYS includes the active hit (it may be far past the window after a Previous from the first hit); the heading keeps the full count.
+    private const int ResultWindowSize = 100;
+    private int _resultWindows = 1;
+
+    private IReadOnlyList<DocumentSearchResult> VisibleResults
+    {
+        get
+        {
+            var windowEnd = Math.Min(_results.Count, _resultWindows * ResultWindowSize);
+            if (_activeIndex < windowEnd || _activeIndex >= _results.Count)
+            {
+                return _results.Take(windowEnd).ToList();
+            }
+
+            var visible = _results.Take(windowEnd).ToList();
+            visible.Add(_results[_activeIndex]);
+            return visible;
+        }
+    }
+
+    private int HiddenResultCount => Math.Max(0, _results.Count - _resultWindows * ResultWindowSize);
+
+    private void ShowMoreResults() => _resultWindows++;
     private ElementReference _searchInput;
+
+    // The service cuts the context at a fixed length, which can land in the middle of a word: a context that is as long as the cut loses its
+    // partial word and gains an ellipsis, so a result never starts or ends with a broken fragment.
+    private const int ContextCut = 30;
+
+    private static string ContextBefore(DocumentSearchResult result)
+    {
+        var text = result.ContextBefore;
+        if (text.Length < ContextCut)
+        {
+            return text;
+        }
+
+        var space = text.IndexOf(' ');
+        return space < 0 ? "…" : "…" + text[(space + 1)..];
+    }
+
+    private static string ContextAfter(DocumentSearchResult result)
+    {
+        var text = result.ContextAfter;
+        if (text.Length < ContextCut)
+        {
+            return text;
+        }
+
+        var space = text.LastIndexOf(' ');
+        return space < 0 ? "…" : text[..space] + "…";
+    }
 
     private string CountText => _results.Count == 0
         ? Loc["TmDocumentEditor_FindNoResults"]
         : string.Format(Loc["TmDocumentEditor_FindResultCount"], _activeIndex + 1, _results.Count);
 
+    protected override void OnParametersSet()
+    {
+        // The host's replace mode (Ctrl+H) applies when it CHANGES; between changes the reader's own toggle wins.
+        if (_lastShowReplace != ShowReplace)
+        {
+            _lastShowReplace = ShowReplace;
+            _replaceVisible = ShowReplace;
+        }
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            try { await _searchInput.FocusAsync(); } catch { }
+            try { await _searchInput.FocusAsync(preventScroll: true); } catch { }
         }
     }
 
@@ -205,6 +371,8 @@
             _results = _searchService.Search(Document, query);
             _activeIndex = 0;
         }
+
+        _resultWindows = 1;
 
         await OnResultsChanged.InvokeAsync(_results);
         await OnSearchRequested.InvokeAsync(CurrentQuery()); // R.4.8 — host-driven highlight (core engine)
@@ -263,6 +431,15 @@
         await ClearRuntimeSearchStateAsync();
     }
 
+    private void ToggleReplace() => _replaceVisible = !_replaceVisible;
+
+    private async Task ClearQueryAsync()
+    {
+        _query = string.Empty;
+        await RunSearchAsync();
+        try { await _searchInput.FocusAsync(preventScroll: true); } catch { }
+    }
+
     private async Task CloseAsync()
     {
         await OnClose.InvokeAsync();
@@ -312,6 +489,12 @@
         _results = [];
         _activeIndex = 0;
         await OnResultsChanged.InvokeAsync(_results);
+    }
+
+    /// <summary>Moves keyboard focus into the search field (a floating host calls it once the panel is displayed).</summary>
+    public async ValueTask FocusAsync()
+    {
+        try { await _searchInput.FocusAsync(preventScroll: true); } catch { }
     }
 
     /// <summary>Allows the host editor to programmatically set the search query (e.g. pre-fill on Ctrl+F).</summary>

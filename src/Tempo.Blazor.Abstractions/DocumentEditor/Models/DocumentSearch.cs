@@ -68,4 +68,14 @@ public sealed class DocumentSearchResult
 
     /// <summary>Short context snippet (the matched text itself, trimmed to 80 chars).</summary>
     public string Preview { get; init; } = string.Empty;
+
+    /// <summary>
+    /// The text just before the match inside the same block (up to 30 characters, empty at the start of the block). Together with
+    /// <see cref="ContextAfter"/> it lets a results list show the match in its sentence. Defaults to empty, so a host that builds
+    /// results itself is unaffected.
+    /// </summary>
+    public string ContextBefore { get; init; } = string.Empty;
+
+    /// <summary>The text just after the match inside the same block (up to 30 characters, empty at the end of the block).</summary>
+    public string ContextAfter { get; init; } = string.Empty;
 }

@@ -55,6 +55,9 @@ public partial class TmColorPicker
     /// <summary>Shows the clear color command.</summary>
     [Parameter] public bool ShowClearButton { get; set; } = true;
 
+    /// <summary>Text of the clear command in the palette (for example "No color" for a field whose empty value means "none"). When null the localized default is used.</summary>
+    [Parameter] public string? ClearText { get; set; }
+
     /// <summary>
     /// When true, the dropdown shows an Apply button and only closes when the user explicitly clicks it.
     /// Changing the color inside the picker does not close the dropdown.

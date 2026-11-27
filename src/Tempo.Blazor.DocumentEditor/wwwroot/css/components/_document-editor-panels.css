@@ -230,6 +230,34 @@
     white-space: nowrap;
 }
 
+/* A unit INSIDE the field: the suffix floats over the end of the input, which keeps room for it. */
+.tm-document-inspector-form__adorned {
+    position: relative;
+    display: block;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.tm-document-inspector-form__adorned > input {
+    width: 100%;
+    padding-inline-end: var(--tm-space-8);
+}
+
+.tm-document-inspector-form__adorned > .tm-document-inspector-form__suffix {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: var(--tm-space-2);
+    display: inline-flex;
+    align-items: center;
+    pointer-events: none;
+}
+
+/* A read-only field looks inert, not merely empty. */
+.tm-document-inspector-form input[readonly] {
+    color: var(--tm-color-text-secondary);
+    background: var(--tm-color-surface-muted);
+}
+
 /* A short exclusive choice rendered as a joined row of icon (or icon + text) buttons. */
 .tm-document-inspector-form__segmented {
     display: inline-flex;
@@ -293,7 +321,740 @@
     aspect-ratio: 1;
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   Phase 6 (DE-2.2 .. DE-2.5): the contextual inspector, the object inspectors, the review cards, the review summary and the versions.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Header back arrow (leads from a contextual inspector to the tab bar) ── */
+.tm-document-inspector-header__back {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    color: var(--tm-color-text-muted);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--tm-radius-control);
+    cursor: pointer;
+    transition: background-color var(--tm-transition-fast), color var(--tm-transition-fast);
+}
+
+.tm-document-inspector-header__back:hover {
+    color: var(--tm-color-text);
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-document-inspector-header__back:focus-visible {
+    outline: none;
+    box-shadow: var(--tm-focus-ring);
+}
+
+@media (pointer: coarse) {
+    .tm-document-inspector-header__back {
+        width: var(--tm-touch-target);
+        height: var(--tm-touch-target);
+    }
+}
+
+/* ── The contextual inspector: the header names it, the body is the panel itself ── */
+.tm-document-side-panel__context-header {
+    background: var(--tm-color-surface);
+}
+
+.tm-document-side-panel__body--context {
+    padding: 0;
+}
+
+/* ── Form pattern additions ─────────────────────────────────────────────── */
+.tm-document-inspector-form__section-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    color: var(--tm-color-text-muted);
+}
+
+.tm-document-inspector-form__section-title {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+/* A native control directly in a field row (label | control) takes the room the label leaves. */
+.tm-document-inspector-form__field > .tm-input {
+    flex: 1 1 8rem;
+    min-width: 0;
+}
+
+.tm-document-inspector-form__field--stacked > .tm-input {
+    width: 100%;
+}
+
+/* A number with its unit: the label on its own line, the control and the unit side by side. */
+.tm-document-inspector-form__field--unit {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: var(--tm-space-2);
+}
+
+.tm-document-inspector-form__field--unit > .tm-document-inspector-form__label {
+    grid-column: 1 / -1;
+}
+
+/* The compact colour picker fills its row. */
+.tm-document-inspector-form__color,
+.tm-document-inspector-form__color .tm-color-picker-trigger {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+}
+
+.tm-document-inspector-form__check {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--tm-space-2);
+    min-width: 0;
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-sm);
+    cursor: pointer;
+}
+
+.tm-document-inspector-form__check > input {
+    flex: 0 0 auto;
+    margin-block-start: var(--tm-space-1);
+}
+
+.tm-document-inspector-form__readonly-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--tm-space-3);
+    padding-block: var(--tm-space-1);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-document-inspector-form__readonly-row dt {
+    color: var(--tm-color-text-secondary);
+}
+
+.tm-document-inspector-form__readonly-row dd {
+    margin: 0;
+    color: var(--tm-color-text);
+    font-weight: var(--tm-font-weight-medium);
+}
+
+/* ── Image inspector ────────────────────────────────────────────────────── */
+.tm-document-image-inspector {
+    display: grid;
+    align-content: start;
+    min-width: 0;
+    container: tm-doc-image-inspector / inline-size;
+}
+
+.tm-document-image-inspector__triple {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--tm-space-2);
+}
+
+.tm-document-image-inspector__pair {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--tm-space-2);
+}
+
+.tm-document-image-inspector__pair .tm-document-inspector-form__label {
+    flex: 0 0 auto;
+}
+
+.tm-document-image-inspector__size-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tm-space-2);
+}
+
+.tm-document-image-inspector__order {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--tm-space-2);
+}
+
+.tm-document-image-inspector__asset {
+    flex-wrap: nowrap;
+}
+
+.tm-document-image-inspector__asset-value {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-medium);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-document-image-inspector__hint,
+.tm-document-image-inspector__warning {
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border-radius: var(--tm-radius-control);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-document-image-inspector__hint {
+    color: var(--tm-color-text-muted);
+    background: var(--tm-color-surface-secondary);
+}
+
+.tm-document-image-inspector__warning {
+    color: var(--tm-color-warning-text);
+    background: var(--tm-color-warning-subtle);
+    border: 1px solid var(--tm-color-warning);
+}
+
+/* Wrap modes and the vertical alignment of a cell: a tile is an icon over its name. */
+.tm-document-image-inspector__tiles {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: var(--tm-space-1);
+}
+
+/* Five tiles a row (7 modes = 5 + 2) keep the xs label readable and hyphenate a long word; a narrow inspector falls back to four. */
+.tm-document-image-inspector__tiles .tm-document-image-inspector__tile {
+    padding-inline: 0.125rem;
+    hyphens: auto;
+}
+
+@container tm-doc-image-inspector (width < 19rem) {
+    .tm-document-image-inspector__tiles {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+.tm-document-cell-properties__tiles {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--tm-space-1);
+}
+
+.tm-document-image-inspector__tile,
+.tm-document-cell-properties__tile {
+    display: grid;
+    justify-items: center;
+    align-content: start;
+    gap: var(--tm-space-1);
+    min-width: 0;
+    padding: var(--tm-space-2) var(--tm-space-1);
+    color: var(--tm-color-text-secondary);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-control);
+    font: inherit;
+    font-size: var(--tm-font-size-xs);
+    line-height: var(--tm-line-height-tight);
+    text-align: center;
+    cursor: pointer;
+    transition: background-color var(--tm-transition-fast), border-color var(--tm-transition-fast), color var(--tm-transition-fast);
+}
+
+.tm-document-image-inspector__tile-label,
+.tm-document-cell-properties__tile-label {
+    min-width: 0;
+    overflow-wrap: break-word;
+}
+
+.tm-document-image-inspector__tile:hover,
+.tm-document-cell-properties__tile:hover {
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-document-image-inspector__tile[aria-pressed="true"],
+.tm-document-cell-properties__tile[aria-pressed="true"],
+.tm-document-image-inspector__tile--active,
+.tm-document-cell-properties__tile--active {
+    color: var(--tm-color-primary);
+    background: var(--tm-color-primary-subtle);
+    border-color: var(--tm-color-primary);
+}
+
+.tm-document-image-inspector__tile:focus-visible,
+.tm-document-cell-properties__tile:focus-visible {
+    outline: none;
+    box-shadow: var(--tm-focus-ring);
+}
+
+@media (pointer: coarse) {
+    .tm-document-image-inspector__tile,
+    .tm-document-cell-properties__tile {
+        min-height: var(--tm-touch-target);
+    }
+}
+
+/* ── Table + cell: one inspector, two sections ─────────────────────────── */
+.tm-document-table-selection-properties-panel {
+    display: grid;
+    align-content: start;
+    min-width: 0;
+}
+
+.tm-document-table-properties__segmented {
+    display: flex;
+    width: 100%;
+}
+
+.tm-document-table-properties__segmented .tm-document-inspector-form__segmented-option {
+    flex: 1 1 0;
+}
+
+.tm-document-cell-properties__meta {
+    display: grid;
+    margin: 0;
+    border-block-start: 1px solid var(--tm-color-border-subtle);
+}
+
+/* ── The review card (revision panel + suggestion panel) ──────────────── */
+.tm-document-revision-panel,
+.tm-document-suggestion-panel {
+    display: grid;
+    gap: var(--tm-space-3);
+    min-width: 0;
+    width: 100%;
+    padding: 0;
+}
+
+.tm-document-revision-panel__title,
+.tm-document-suggestion-panel__title {
+    margin: 0;
+    font-size: var(--tm-font-size-base);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-document-revision-panel__status,
+.tm-document-suggestion-panel__status,
+.tm-document-suggestion-panel__empty {
+    margin: 0;
+    color: var(--tm-color-text-muted);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-document-revision-panel__toolbar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--tm-space-2);
+}
+
+.tm-document-revision-panel__filter {
+    display: grid;
+    gap: var(--tm-space-1);
+    min-width: 0;
+}
+
+.tm-document-revision-panel__batch-action {
+    justify-content: center;
+}
+
+.tm-document-revision-panel__list,
+.tm-document-suggestion-panel__list {
+    display: grid;
+    gap: var(--tm-space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tm-document-revision-panel__more {
+    justify-self: center;
+}
+
+.tm-document-review-card {
+    --tm-review-accent: var(--tm-color-info);
+    display: grid;
+    gap: var(--tm-space-2);
+    min-width: 0;
+    padding: var(--tm-space-3);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border-subtle);
+    border-radius: var(--tm-radius-card);
+    border-inline-start: var(--tm-space-1) solid var(--tm-review-accent);
+    box-shadow: var(--tm-shadow-xs);
+}
+
+/* The accent of a type: success for what was added, danger for what was removed, info for the rest. It never carries the type alone - the
+   card says it in words and in an icon. */
+.tm-document-review-card--insertion {
+    --tm-review-accent: var(--tm-color-success);
+}
+
+.tm-document-review-card--deletion {
+    --tm-review-accent: var(--tm-color-danger);
+}
+
+.tm-document-review-card--selected {
+    background: var(--tm-color-primary-subtle);
+    border-color: var(--tm-color-primary);
+    border-inline-start-color: var(--tm-color-primary);
+}
+
+/* The avatar is decoration beside the button, never a <div> inside it (a button's content is phrasing content). */
+.tm-document-review-card__head {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--tm-space-2);
+    min-width: 0;
+}
+
+.tm-document-review-card__head > .tm-avatar {
+    flex: 0 0 auto;
+}
+
+.tm-document-review-card__summary {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: flex-start;
+    gap: var(--tm-space-2);
+    min-width: 0;
+    padding: 0;
+    color: var(--tm-color-text);
+    font: inherit;
+    text-align: start;
+    background: transparent;
+    border: 0;
+    border-radius: var(--tm-radius-control);
+    cursor: pointer;
+}
+
+.tm-document-review-card__summary:focus-visible {
+    outline: none;
+    box-shadow: var(--tm-focus-ring);
+}
+
+.tm-document-review-card__text {
+    display: grid;
+    flex: 1 1 auto;
+    gap: var(--tm-space-1);
+    min-width: 0;
+}
+
+.tm-document-review-card__title {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-document-review-card__type-icon {
+    display: inline-flex;
+    color: var(--tm-review-accent);
+}
+
+.tm-document-review-card__meta {
+    color: var(--tm-color-text-muted);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-document-review-card__preview {
+    display: grid;
+    gap: var(--tm-space-1);
+    overflow-wrap: anywhere;
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-sm);
+    line-height: var(--tm-line-height-normal);
+}
+
+.tm-document-review-card__ins {
+    justify-self: start;
+    padding-inline: var(--tm-space-1);
+    color: var(--tm-color-success-text);
+    background: var(--tm-color-success-subtle);
+    border-radius: var(--tm-radius-xs);
+    text-decoration: none;
+}
+
+.tm-document-review-card__del {
+    justify-self: start;
+    padding-inline: var(--tm-space-1);
+    color: var(--tm-color-danger-text);
+    background: var(--tm-color-danger-subtle);
+    border-radius: var(--tm-radius-xs);
+    text-decoration: line-through;
+}
+
+.tm-document-review-card__description,
+.tm-document-review-card__excerpt {
+    color: var(--tm-color-text-secondary);
+}
+
+.tm-document-review-card__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--tm-space-2);
+}
+
+.tm-document-review-card__action {
+    gap: var(--tm-space-1);
+}
+
+.tm-document-review-card__action:disabled {
+    cursor: not-allowed;
+}
+
+/* ── Review summary: ONE row of the doc region ───────────────────────── */
+.tm-document-review-summary {
+    position: relative;
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: var(--tm-space-2) var(--tm-space-3);
+    min-width: 0;
+    padding: var(--tm-space-2) var(--tm-space-3);
+    color: var(--tm-color-text);
+    background: var(--tm-color-warning-subtle);
+    border: 1px solid color-mix(in srgb, var(--tm-color-warning) 35%, var(--tm-color-border));
+    border-radius: var(--tm-radius-card);
+}
+
+.tm-document-review-summary__icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    color: var(--tm-color-warning);
+}
+
+.tm-document-review-summary__text {
+    display: flex;
+    flex: 1 1 0;
+    flex-wrap: nowrap;
+    align-items: baseline;
+    gap: var(--tm-space-3);
+    min-width: 0;
+}
+
+.tm-document-review-summary__text strong {
+    flex: 0 0 auto;
+    font-weight: var(--tm-font-weight-semibold);
+    white-space: nowrap;
+}
+
+/* The sentence is the part that gives way: it ellipsizes first, and below a tablet it leaves the row (it stays in the accessibility tree). */
+.tm-document-review-summary__text span {
+    min-width: 0;
+    padding-inline-start: var(--tm-space-3);
+    overflow: hidden;
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    border-inline-start: 1px solid var(--tm-color-border);
+}
+
+.tm-document-review-summary__actions {
+    display: flex;
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    gap: var(--tm-space-2);
+}
+
+.tm-document-review-summary__actions .tm-btn {
+    gap: var(--tm-space-1);
+}
+
+@container tm-doc-editor (width < 1024px) {
+    .tm-document-review-summary__text span {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        padding: 0;
+        overflow: hidden;
+        border: 0;
+        clip: rect(0 0 0 0);
+        clip-path: inset(50%);
+        white-space: nowrap;
+    }
+}
+
+@container tm-doc-editor (width < 640px) {
+    .tm-document-review-summary,
+    .tm-document-review-summary__actions {
+        flex-wrap: wrap;
+    }
+}
+
+/* ── Version panel: a timeline, not a stack of cards ─────────────────── */
+.tm-document-editor__version-panel .tm-document-inspector-header {
+    padding-inline: 0;
+    border-bottom: 0;
+    background: transparent;
+}
+
+.tm-document-version-panel__create {
+    width: 100%;
+    justify-content: center;
+}
+
+.tm-document-version-panel__status,
+.tm-document-version-panel__empty {
+    color: var(--tm-color-text-muted);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-document-version-panel__status[hidden] {
+    display: none;
+}
+
+.tm-document-version-panel__list {
+    display: grid;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tm-document-version-panel__entry {
+    display: grid;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-3) var(--tm-space-2);
+    border-block-end: 1px solid var(--tm-color-border-subtle);
+    border-radius: var(--tm-radius-control);
+}
+
+/* The previewed version is highlighted on the whole entry, so the Base / Compare buttons sit inside the highlight too. */
+.tm-document-version-panel__entry.tm-document-version-panel__item--preview {
+    background: var(--tm-color-primary-subtle);
+}
+
+.tm-document-version-panel__entry:last-child {
+    border-block-end: 0;
+}
+
+.tm-document-version-panel__item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--tm-space-2);
+    width: 100%;
+    padding: var(--tm-space-2);
+    color: var(--tm-color-text);
+    font: inherit;
+    text-align: start;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--tm-radius-control);
+    cursor: pointer;
+}
+
+.tm-document-version-panel__item:hover {
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-document-version-panel__item--active,
+.tm-document-version-panel__item--active:hover {
+    background: transparent;
+}
+
+.tm-document-version-panel__item:focus-visible {
+    outline: none;
+    box-shadow: var(--tm-focus-ring);
+}
+
+.tm-document-version-panel__item-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    color: var(--tm-color-text-muted);
+}
+
+.tm-document-version-panel__item-body {
+    display: grid;
+    flex: 1 1 auto;
+    gap: var(--tm-space-1);
+    min-width: 0;
+}
+
+.tm-document-version-panel__item-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tm-space-1) var(--tm-space-2);
+}
+
+.tm-document-version-panel__item-title {
+    color: var(--tm-color-text);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-document-version-panel__badge {
+    padding: 0 var(--tm-space-2);
+    color: var(--tm-color-primary);
+    background: var(--tm-color-primary-subtle);
+    border-radius: var(--tm-radius-full);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-medium);
+    white-space: nowrap;
+}
+
+.tm-document-version-panel__item-meta,
+.tm-document-version-panel__item-description {
+    color: var(--tm-color-text-muted);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-document-version-panel__item-description {
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-document-version-panel__diff-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--tm-space-2);
+}
+
+.tm-document-version-panel__diff-button {
+    justify-content: center;
+}
+
+/* ── Version preview strip (the doc region) ───────────────────────────── */
+.tm-document-version-preview-strip {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-2) var(--tm-space-3);
+    min-width: 0;
+    padding: var(--tm-space-2) var(--tm-space-3);
+    color: var(--tm-color-text);
+    background: var(--tm-color-info-subtle);
+    border: 1px solid color-mix(in srgb, var(--tm-color-info) 35%, var(--tm-color-border));
+    border-radius: var(--tm-radius-card);
+}
+
+.tm-document-version-preview-strip__icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    color: var(--tm-color-info);
+}
+
+.tm-document-version-preview-strip__text {
+    flex: 1 1 12rem;
+    min-width: 0;
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-document-version-preview-strip__actions,
+.tm-document-version-preview-strip__confirm {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-2);
+}
+
+.tm-document-version-preview-strip__question {
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+}
+
 @media (prefers-reduced-motion: reduce) {
+    .tm-document-inspector-header__back,
+    .tm-document-image-inspector__tile,
+    .tm-document-cell-properties__tile,
     .tm-document-inspector-header__close,
     .tm-document-inspector-form__chevron,
     .tm-document-inspector-form__segmented-option {

@@ -806,15 +806,15 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
             && (string.Equals(block.Id, _selectionContext.ActiveTableId, StringComparison.Ordinal)
                 || string.Equals(block.Id, _selection.ActiveTableId, StringComparison.Ordinal)
                 || string.Equals(block.Id, _selection.ActiveBlockId, StringComparison.Ordinal)
-                || TableContainsCell(table, _selectionContext.ActiveTableCellId ?? _selection.ActiveTableCellId)));
+                || TableContainsCell(table, EffectiveActiveTableCellId)));
 
     private TableBlockContent? ActiveTableContent => ActiveTableBlock?.Content as TableBlockContent;
 
-    private TableCellContent? ActiveTableCell => string.IsNullOrWhiteSpace(_selectionContext.ActiveTableCellId ?? _selection.ActiveTableCellId)
+    private TableCellContent? ActiveTableCell => string.IsNullOrWhiteSpace(EffectiveActiveTableCellId)
         ? null
         : ActiveTableContent?.Rows
             .SelectMany(row => row.Cells)
-            .FirstOrDefault(cell => string.Equals(cell.Id, _selectionContext.ActiveTableCellId ?? _selection.ActiveTableCellId, StringComparison.Ordinal));
+            .FirstOrDefault(cell => string.Equals(cell.Id, EffectiveActiveTableCellId, StringComparison.Ordinal));
 
     private bool IsTemplatePreview => _templatePreviewEnabled;
 
@@ -1387,6 +1387,7 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
             _currentDocument = _document;
             _concurrencyToken = result.ConcurrencyToken;
             _selection = new DocumentEditorSelectionState();
+            ResetInspectorSelectionMemory();
             _activeImageInspectorBlockId = null;
             _activeWysiwygRegion = "Body";
             _lastBodySelectionSnapshot = null;
@@ -2031,6 +2032,7 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
             _documentOutline = _outlineService.GetOutline(_document);
             _currentDocument = imported;
             _selection = new DocumentEditorSelectionState();
+            ResetInspectorSelectionMemory();
             _activeImageInspectorBlockId = null;
             _activeWysiwygRegion = "Body";
             _lastBodySelectionSnapshot = null;
@@ -3177,7 +3179,7 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
     {
         await RouteToCanvasEngineAsync("setTableProperties", new
         {
-            CellId = _selectionContext.ActiveTableCellId ?? _selection.ActiveTableCellId,
+            CellId = EffectiveActiveTableCellId,
             layout.Width,
             Alignment = layout.Alignment.ToString(),
             layout.CellPadding,
@@ -3188,15 +3190,26 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
         // The panel binds the C# mirror's layout — without a refresh the NEXT panel edit would
         // send the stale pre-edit values and silently revert this one (change alignment, then
         // change background → alignment snapped back).
-        await GetCurrentDocumentForProviderExportAsync();
+        await RefreshMirrorAfterPanelEditAsync();
         await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// Re-syncs the C# mirror after a PANEL edit and tells the engine that the model push this causes is only that mirror refresh, so the
+    /// caret the engine had (the cell the reader edits) survives it. No other path asks for this: accept / reject, templates, imports and
+    /// version preview / restore replace the document on purpose.
+    /// </summary>
+    private async Task RefreshMirrorAfterPanelEditAsync()
+    {
+        await GetCurrentDocumentForProviderExportAsync();
+        _canvasHost?.PreserveSelectionOnNextModelPush();
     }
 
     private async Task SetActiveCellPropertiesFromPanelAsync(TableCellContent cell)
     {
         await RouteToCanvasEngineAsync("setCellProperties", new
         {
-            CellId = _selectionContext.ActiveTableCellId ?? _selection.ActiveTableCellId,
+            CellId = EffectiveActiveTableCellId,
             cell.Width,
             cell.BackgroundColor,
             VerticalAlignment = cell.VerticalAlignment.ToString(),
@@ -3205,7 +3218,7 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
         }, focus: true);
 
         // Same stale-mirror hazard as the table panel above.
-        await GetCurrentDocumentForProviderExportAsync();
+        await RefreshMirrorAfterPanelEditAsync();
         await InvokeAsync(StateHasChanged);
     }
 
@@ -3860,6 +3873,7 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
             PageIndex = snapshot.PageIndex
         };
 
+        TrackStickyTableCell(snapshot);
         _formattingState = await ResolveRuntimeFormattingStateAsync(snapshot);
         _selectionContext = DocumentEditorSelectionContext.FromSnapshot(snapshot, _formattingState, GetActiveObjectPropertiesSnapshot(snapshot));
         ApplySelectionContextToSidePanel(_selectionContext);
@@ -4625,8 +4639,10 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
         var selection = context.SelectionSnapshot ?? NormalizeTableContextSelection() ?? _lastBodySelectionSnapshot;
         if (selection is not null)
         {
+            var resolvedSelection = await ResolveActiveTableSelectionAsync(selection);
+            TrackStickyTableCell(resolvedSelection);
             _selectionContext = DocumentEditorSelectionContext.FromSnapshot(
-                await ResolveActiveTableSelectionAsync(selection),
+                resolvedSelection,
                 _formattingState,
                 GetActiveObjectPropertiesSnapshot(selection));
         }
@@ -4646,8 +4662,10 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
         var selection = NormalizeTableContextSelection();
         if (selection is not null)
         {
+            var resolvedSelection = await ResolveActiveTableSelectionAsync(selection);
+            TrackStickyTableCell(resolvedSelection);
             _selectionContext = DocumentEditorSelectionContext.FromSnapshot(
-                await ResolveActiveTableSelectionAsync(selection),
+                resolvedSelection,
                 _formattingState,
                 GetActiveObjectPropertiesSnapshot(selection));
             OpenSidePanel(DocumentSidePanelTab.Properties);
@@ -5530,6 +5548,11 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
     {
         _selection.ActiveTableCellId = string.IsNullOrWhiteSpace(selection.CellId) ? null : selection.CellId;
         _selection.ActiveTableId = string.IsNullOrWhiteSpace(selection.TableId) ? null : selection.TableId;
+        TrackStickyTableCell(
+            selection.CellId,
+            selection.AnchorBlockId,
+            selection.FocusBlockId,
+            !string.IsNullOrWhiteSpace(selection.AnchorBlockId) || !string.IsNullOrWhiteSpace(selection.FocusBlockId));
     }
 
     /// <summary>Pulls the live canvas selection into <c>_selection</c> before a registry refresh, so
@@ -7815,6 +7838,7 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
 
     private async Task HandleCanvasMiniToolbarChangedAsync(WysiwygMiniToolbarRequest? request)
     {
+        NoteCanvasSelectionReport(request);
         // HandleMiniToolbarChangedAsync only re-renders when the mini toolbar actually shows/hides; the
         // formatting-state readback + collaboration cursor broadcast are debounced (the selection changes
         // on every keystroke, so doing them synchronously here froze typing).
@@ -8120,11 +8144,17 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
     {
         if (image is null || string.IsNullOrWhiteSpace(image.ObjectId))
         {
+            ForgetDismissedContext("image:");
             _activeCanvasImageObjectId = null;
             _activeCanvasImageBlockId = null;
             _activeCanvasImageRunId = null;
             _canvasActiveImage = null;
             return;
+        }
+
+        if (!string.Equals(_activeCanvasImageObjectId, image.ObjectId, StringComparison.Ordinal))
+        {
+            ForgetDismissedContext("image:");
         }
 
         _activeCanvasImageObjectId = image.ObjectId;
@@ -9035,6 +9065,13 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
     {
         _findReplaceMode = replaceMode;
         _findPanelOpen = true;
+        // Phase 6 (DE2): on a desktop layout find is the inspector's context, so a closed inspector opens for it - and closes again with it.
+        if (IsDesktopLayout && !_sidePanelOpen)
+        {
+            _sidePanelOpen = true;
+            _findOpenedTheSidePanel = true;
+        }
+
         _floatingLayerStack.Push(new DocumentFloatingLayerState
         {
             LayerId = FloatingLayerId.FindPanel,
@@ -9045,6 +9082,7 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
             CloseAsync = async () =>
             {
                 _findPanelOpen = false;
+                RestoreSidePanelAfterFind();
                 await ClearSearchMarkersAsync();
             }
         });
@@ -9156,9 +9194,19 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
         await InvokeAsync(StateHasChanged);
     }
 
+    private void RestoreSidePanelAfterFind()
+    {
+        if (_findOpenedTheSidePanel)
+        {
+            _findOpenedTheSidePanel = false;
+            _sidePanelOpen = false;
+        }
+    }
+
     private async Task CloseFindPanelAsync()
     {
         _findPanelOpen = false;
+        RestoreSidePanelAfterFind();
         _floatingLayerStack.Remove(FloatingLayerId.FindPanel);
         await ClearSearchMarkersAsync();
         await InvokeAsync(StateHasChanged);
@@ -11290,7 +11338,9 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
             _previewVersion = version;
             _document = DocumentEditorJson.Deserialize(version.Snapshot.Json);
             _selection = new DocumentEditorSelectionState();
-            _versionMessage = Loc["TmDocumentEditor_PreviewingVersion", GetVersionTitle(version)];
+            ResetInspectorSelectionMemory();
+            // The strip of the doc region says "You are viewing version X" - a second status line in the panel would only repeat it.
+            _versionMessage = null;
             await _commandStack.ClearAsync();
         }
         catch
@@ -11307,6 +11357,7 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
         _document = _currentDocument;
         _versionMessage = null;
         _selection = new DocumentEditorSelectionState();
+        ResetInspectorSelectionMemory();
         await _commandStack.ClearAsync();
     }
 
@@ -11323,6 +11374,7 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
             _templatePreviewDocument = null;
             _templatePreviewMessage = null;
             _selection = new DocumentEditorSelectionState();
+            ResetInspectorSelectionMemory();
             _isDirty = true;
             _versionMessage = Loc["TmDocumentEditor_VersionRestored"];
             await _commandStack.ClearAsync();

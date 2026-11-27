@@ -55,4 +55,62 @@ public class TmDocumentReviewSummaryTests : LocalizationTestBase
         openedRevisions.Should().BeTrue();
         openedComments.Should().BeTrue();
     }
+    [Fact]
+    public void Summary_IsASingleStrip_WithALeadingIcon_AndIconPlusTextButtons()
+    {
+        var cut = Render<TmDocumentReviewSummary>(parameters => parameters
+            .Add(p => p.PendingRevisionCount, 3)
+            .Add(p => p.OpenCommentCount, 2));
+
+        var strip = cut.Find("[data-testid='document-review-summary']");
+        strip.TagName.Should().Be("SECTION");
+        strip.GetAttribute("aria-label").Should().NotBeNullOrWhiteSpace();
+        strip.QuerySelector(".tm-document-review-summary__icon .tm-icon").Should().NotBeNull();
+        strip.QuerySelector(".tm-document-review-summary__text strong")!.TextContent.Should().Be("Needs review");
+        strip.Children.Select(child => child.ClassName).Should().Equal(
+            "tm-document-review-summary__icon", "tm-document-review-summary__text", "tm-document-review-summary__actions");
+
+        foreach (var testId in new[] { "document-review-summary-revisions", "document-review-summary-comments" })
+        {
+            var button = cut.Find($"[data-testid='{testId}']");
+            button.QuerySelector(".tm-icon").Should().NotBeNull("the button carries an icon");
+            button.TextContent.Trim().Should().NotBeEmpty("and its text");
+            button.ClassList.Should().Contain("tm-btn");
+        }
+    }
+
+    [Theory]
+    [InlineData(1, "1 pending change")]
+    [InlineData(2, "2 pending changes")]
+    public void English_RevisionCount_UsesTheOneAndOtherForms(int pending, string expected)
+    {
+        var cut = Render<TmDocumentReviewSummary>(parameters => parameters
+            .Add(p => p.PendingRevisionCount, pending)
+            .Add(p => p.OpenCommentCount, 0));
+
+        cut.Find("[data-testid='document-review-summary-revisions']").TextContent.Trim().Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData(1, "1 otevřený komentář")]
+    [InlineData(3, "3 otevřené komentáře")]
+    [InlineData(5, "5 otevřených komentářů")]
+    public void Czech_OpenComments_UseTheGrammaticalFamilyInTheSentence(int open, string expected)
+    {
+        UseCzechLocalization();
+
+        var cut = Render<TmDocumentReviewSummary>(parameters => parameters
+            .Add(p => p.PendingRevisionCount, 1)
+            .Add(p => p.OpenCommentCount, open));
+
+        cut.Find(".tm-document-review-summary__text span").TextContent.Should().EndWith(expected);
+    }
+
+    [Fact]
+    public void Summary_RendersNothing_WhenThereIsNothingToReview()
+    {
+        var cut = Render<TmDocumentReviewSummary>();
+
+        cut.FindAll("[data-testid='document-review-summary']").Should().BeEmpty();
+    }
 }

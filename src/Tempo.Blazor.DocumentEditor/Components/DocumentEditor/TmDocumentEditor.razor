@@ -17,7 +17,7 @@
                   IsContainer="false"
                   Class="tm-document-editor-host">
 <LayoutContent Context="lay">
-@{ ApplyLayout(lay.Resolved); }
+@{ ApplyLayout(lay.Resolved); _inspectorContext = ResolveInspectorContext(); }
 @* A forced LayoutMode is a decision about the whole editor, so the viewport-level surfaces inside it (the floating root, the ribbon
    panels, the dialogs) follow it too: they read the viewport scope, which a forced mode fills. With Auto nothing is cascaded and
    they resolve the real viewport themselves. *@
@@ -348,20 +348,6 @@
             </div>
         }
 
-        @if (_findPanelOpen)
-        {
-            <TmDocumentFindPanel @ref="_findPanel"
-                                 Document="@_document"
-                                 ShowReplace="@_findReplaceMode"
-                                 OnClose="CloseFindPanelAsync"
-                                 OnResultsChanged="HandleFindResultsChangedAsync"
-                                 OnActiveResultChanged="HandleActiveSearchResultChangedAsync"
-                                 OnReplaceOneRequested="HandleFindReplaceOneRequestedAsync"
-                                 OnReplaceAllRequested="HandleFindReplaceAllRequestedAsync"
-                                 OnSearchRequested="HandleFindSearchRequestedAsync"
-                                 OnNavigateRequested="HandleFindNavigateAsync" />
-        }
-
         <TmDocumentCommandPalette IsOpen="@_commandPaletteOpen"
                                   Commands="@_commandRegistry.CurrentState"
                                   OnExecuteCommand="ExecuteCommandPaletteCommandAsync"
@@ -440,6 +426,10 @@
                 @* Internal slot of the doc region (DE-1.1): banners that belong to the document, not to the whole
                    editor - today the review summary; the version preview and the diff land here in later phases. *@
                 <div class="tm-document-editor__doc-banners" data-testid="@TestId("document-doc-banners")">
+                    @* Phase 6 (DE-2.5): the preview of a historical version is a strip of the DOCUMENT - visible with the version panel closed. *@
+                    <TmDocumentVersionPreviewStrip PreviewVersion="@_previewVersion"
+                                                   OnReturnToCurrent="ReturnToCurrentVersionAsync"
+                                                   OnRestoreVersion="RestoreVersionAsync" />
                     <TmDocumentReviewSummary PendingRevisionCount="@PendingRevisionCount"
                                              OpenCommentCount="@OpenCommentCount"
                                              OpenComments="OpenCommentsPanelAsync"
@@ -487,6 +477,13 @@
                                  ShowProperties="true"
                                  ShowOutline="@(!IsDesktopLayout)"
                                  ShowPages="@(!IsDesktopLayout)"
+                                 ContextContent="@InspectorContextContent"
+                                 ContextKind="@_inspectorContext?.Kind"
+                                 ContextTitle="@_inspectorContext?.Title"
+                                 ContextIcon="@_inspectorContext?.Icon"
+                                 ContextCloseTestId="@(_inspectorContext?.Kind == "find" ? "document-find-close" : null)"
+                                 OnContextBack="InspectorBackCallback"
+                                 OnContextClose="CloseInspectorContextAsync"
                                  CommentsCount="@_comments.Count"
                                  RevisionsCount="@PendingRevisionCount"
                                  VersionsCount="@_versions.Count"
@@ -530,6 +527,7 @@
                                              CanReview="@CanReviewRevisions"
                                              StatusMessage="@_revisionMessage"
                                              SelectedRevisionId="@_selectedRevisionId"
+                                             PreviewResolver="ResolveRevisionPreview"
                                              OnSelectRevision="SelectRevision"
                                              OnAcceptRevision="AcceptRevisionAsync"
                                              OnRejectRevision="RejectRevisionAsync"
@@ -550,6 +548,7 @@
                 </RevisionsContent>
                 <VersionsContent>
                     <TmDocumentVersionPanel ShowClose="false"
+                                            ShowPreviewStrip="false"
                                             Versions="@_versions"
                                             IsLoading="@_isLoadingVersions"
                                             ReadOnly="@(!CanCreateVersion)"
@@ -562,60 +561,15 @@
                                             OnClose="CloseVersionPanel" />
                 </VersionsContent>
                 <PropertiesContent>
-                    @if (UsingCanvasEngine && _canvasActiveImage is { } coreImage)
+                    @* On a desktop layout an image or a table is the contextual inspector (ContextContent) while it is open; once the reader
+                       dismissed it, the Properties tab carries the object inspector. Tablet and phone have no context mode - it stays in the tab. *@
+                    @if (ShowImageInspectorInTab)
                     {
-                        @* Engine image inspector reuses the document image panel for the active object selection. *@
-                        <section class="tm-document-image-properties-panel"
-                                 data-testid="@TestId("document-image-properties-panel")"
-                                 data-active-object-id="@ActiveImageCommandObjectId"
-                                 data-active-anchor-block-id="@ActiveImageCommandBlockId">
-                            <TmDocumentImageInspector Image="coreImage"
-                                                      AltTextChanged="SetActiveImageAltTextFromPanelAsync"
-                                                      DecorativeChanged="SetActiveImageDecorativeFromPanelAsync"
-                                                      UrlChanged="SetActiveImageUrlFromPanelAsync"
-                                                      LockAnchorChanged="SetActiveImageLockAnchorFromPanelAsync"
-                                                      WrapModeChanged="SetActiveImageWrapModeFromPanelAsync"
-                                                      SizeChanged="SetActiveImageSizeFromPanelAsync"
-                                                      AlignmentChanged="SetActiveImageAlignmentFromPanelAsync"
-                                                      CaptionChanged="SetActiveImageCaptionFromPanelAsync"
-                                                      ToggleCaption="ToggleActiveImageCaptionFromPanelAsync"
-                                                      PositionChanged="SetActiveImagePositionFromPanelAsync"
-                                                      BringForward="BringActiveImageForwardFromPanelAsync"
-                                                      SendBackward="SendActiveImageBackwardFromPanelAsync" />
-                        </section>
+                        @ImageInspector(true)
                     }
-                    else if (ActiveImageContent is { } activeImage)
+                    else if (ShowTableInspectorInTab)
                     {
-                        <section class="tm-document-image-properties-panel"
-                                 data-testid="@TestId("document-image-properties-panel")"
-                                 data-active-object-id="@ActiveImageInspectorObjectId"
-                                 data-active-anchor-block-id="@ActiveImageInspectorBlockId">
-                            <TmDocumentImageInspector Image="activeImage"
-                                                      AltTextChanged="SetActiveImageAltTextFromPanelAsync"
-                                                      DecorativeChanged="SetActiveImageDecorativeFromPanelAsync"
-                                                      ToggleCaption="ToggleActiveImageCaptionFromPanelAsync"
-                                                      CaptionChanged="SetActiveImageCaptionFromPanelAsync"
-                                                      UrlChanged="SetActiveImageUrlFromPanelAsync"
-                                                      WrapModeChanged="SetActiveImageWrapModeFromPanelAsync"
-                                                      AlignmentChanged="SetActiveImageAlignmentFromPanelAsync"
-                                                      SizeChanged="SetActiveImageSizeFromPanelAsync"
-                                                      PositionChanged="SetActiveImagePositionFromPanelAsync"
-                                                      LockAnchorChanged="SetActiveImageLockAnchorFromPanelAsync"
-                                                      BringForward="BringActiveImageForwardFromPanelAsync"
-                                                      SendBackward="SendActiveImageBackwardFromPanelAsync" />
-                        </section>
-                    }
-                    else if (ActiveTableContent is { } activeTable && ActiveTableCell is { } activeCell)
-                    {
-                        <section class="tm-document-table-selection-properties-panel"
-                                 data-testid="@TestId("document-table-selection-properties-panel")"
-                                 data-active-table-id="@ActiveTableBlock?.Id"
-                                 data-active-cell-id="@activeCell.Id">
-                            <TmDocumentTablePropertiesPanel Layout="activeTable.Layout"
-                                                            LayoutChanged="SetActiveTablePropertiesFromPanelAsync" />
-                            <TmDocumentCellPropertiesPanel Cell="activeCell"
-                                                           CellChanged="SetActiveCellPropertiesFromPanelAsync" />
-                        </section>
+                        @TableInspector(true)
                     }
                     else
                     {
@@ -673,6 +627,29 @@
              @onclick:stopPropagation="true">
             @* Phase 5 (DE-1.4 .. DE-1.6): every floating editing surface lives HERE, in the floating root - never inside the page
                surface (an overflow / containment ancestor would clip or re-anchor it). They are core top-layer popovers anyway. *@
+            @* Phase 6 (DE-2.3, decision DE2): find is the desktop inspector's context; a tablet or a phone has no room for a docked inspector,
+               so it is a floating panel under the ribbon, at its end (a bottom sheet on a phone). An outside press does not close it - the
+               reader clicks into the document while searching. *@
+            @if (_findPanelOpen && !IsDesktopLayout)
+            {
+                <TmDocumentFloatingPanel IsOpen="true"
+                                         Kind="find"
+                                         Title="@Loc["TmDocumentEditor_FindPanelTitle"]"
+                                         Icon="search"
+                                         Width="DocumentFloatingPanelWidth.Medium"
+                                         PanelTestId="document-find-floating"
+                                         CloseTestId="document-find-close"
+                                         TestIdPrefix="@TestIdPrefix"
+                                         Anchor="@FindPanelAnchor"
+                                         Align="Tempo.Blazor.Components.Overlay.OverlayAlign.End"
+                                         CloseOnOutsidePointerDown="false"
+                                         FocusOnOpen="false"
+                                         OnClose="@(_ => CloseFindPanelAsync())"
+                                         OnOpened="FocusFindPanelAsync">
+                    @FindInspector
+                </TmDocumentFloatingPanel>
+            }
+
             @if (_canvasImageDialogOpen)
             {
                 var imagePanelSeq = _imagePanelOpenSeq;
@@ -1413,6 +1390,99 @@
 </TmLayoutObserver>
 
 @code {
+    // Redesign 146c7e1b, phase 6 (DE-2.2 / DE-2.3): the contextual inspector fragments. The image and the table are the same markup in the
+    // desktop context and in the tablet / phone Properties tab; only the header differs (the context's own header names the panel).
+    private RenderFragment<bool> ImageInspector => showHeader => @<text>
+        @if (UsingCanvasEngine && _canvasActiveImage is { } coreImage)
+        {
+            @* Engine image inspector reuses the document image panel for the active object selection. *@
+            <section class="tm-document-image-properties-panel"
+                     data-testid="@TestId("document-image-properties-panel")"
+                     data-active-object-id="@ActiveImageCommandObjectId"
+                     data-active-anchor-block-id="@ActiveImageCommandBlockId">
+                <TmDocumentImageInspector Image="coreImage"
+                                          ShowHeader="showHeader"
+                                          AnchorText="@ActiveImageAnchorText"
+                                          AltTextChanged="SetActiveImageAltTextFromPanelAsync"
+                                          DecorativeChanged="SetActiveImageDecorativeFromPanelAsync"
+                                          UrlChanged="SetActiveImageUrlFromPanelAsync"
+                                          LockAnchorChanged="SetActiveImageLockAnchorFromPanelAsync"
+                                          WrapModeChanged="SetActiveImageWrapModeFromPanelAsync"
+                                          SizeChanged="SetActiveImageSizeFromPanelAsync"
+                                          AlignmentChanged="SetActiveImageAlignmentFromPanelAsync"
+                                          CaptionChanged="SetActiveImageCaptionFromPanelAsync"
+                                          ToggleCaption="ToggleActiveImageCaptionFromPanelAsync"
+                                          PositionChanged="SetActiveImagePositionFromPanelAsync"
+                                          BringForward="BringActiveImageForwardFromPanelAsync"
+                                          SendBackward="SendActiveImageBackwardFromPanelAsync" />
+            </section>
+        }
+        else if (ActiveImageContent is { } activeImage)
+        {
+            <section class="tm-document-image-properties-panel"
+                     data-testid="@TestId("document-image-properties-panel")"
+                     data-active-object-id="@ActiveImageInspectorObjectId"
+                     data-active-anchor-block-id="@ActiveImageInspectorBlockId">
+                <TmDocumentImageInspector Image="activeImage"
+                                          ShowHeader="showHeader"
+                                          AnchorText="@ActiveImageAnchorText"
+                                          AltTextChanged="SetActiveImageAltTextFromPanelAsync"
+                                          DecorativeChanged="SetActiveImageDecorativeFromPanelAsync"
+                                          ToggleCaption="ToggleActiveImageCaptionFromPanelAsync"
+                                          CaptionChanged="SetActiveImageCaptionFromPanelAsync"
+                                          UrlChanged="SetActiveImageUrlFromPanelAsync"
+                                          WrapModeChanged="SetActiveImageWrapModeFromPanelAsync"
+                                          AlignmentChanged="SetActiveImageAlignmentFromPanelAsync"
+                                          SizeChanged="SetActiveImageSizeFromPanelAsync"
+                                          PositionChanged="SetActiveImagePositionFromPanelAsync"
+                                          LockAnchorChanged="SetActiveImageLockAnchorFromPanelAsync"
+                                          BringForward="BringActiveImageForwardFromPanelAsync"
+                                          SendBackward="SendActiveImageBackwardFromPanelAsync" />
+            </section>
+        }
+    </text>;
+
+    // Q2-5: the table and the cell are ONE inspector with two foldable sections.
+    private RenderFragment<bool> TableInspector => showHeader => @<text>
+        @if (ActiveTableContent is { } activeTable && ActiveTableCell is { } activeCell)
+        {
+            @if (showHeader)
+            {
+                @* In the Properties tab (tablet, phone, or a dismissed desktop context) the inspector names itself like the image inspector does:
+                   the shared header, a title and no X (the tab host owns the close button). The desktop context's own header does that job. *@
+                <TmDocumentInspectorHeader Title="@Loc["TmDocumentEditor_TableInspector"]"
+                                           Icon="table"
+                                           HeadingLevel="3"
+                                           TestIdPrefix="@TestIdPrefix" />
+            }
+
+            <section class="tm-document-table-selection-properties-panel tm-document-inspector-form tm-document-inspector-form--embedded"
+                     data-testid="@TestId("document-table-selection-properties-panel")"
+                     data-active-table-id="@ActiveTableBlock?.Id"
+                     data-active-cell-id="@activeCell.Id">
+                <TmDocumentTablePropertiesPanel Layout="activeTable.Layout"
+                                                LayoutChanged="SetActiveTablePropertiesFromPanelAsync" />
+                <TmDocumentCellPropertiesPanel Cell="activeCell"
+                                               CellChanged="SetActiveCellPropertiesFromPanelAsync" />
+            </section>
+        }
+    </text>;
+
+    // The find panel as the inspector's context (desktop). On a tablet / phone it is a floating panel instead (see the floating root).
+    private RenderFragment FindInspector => @<text>
+        <TmDocumentFindPanel @ref="_findPanel"
+                             Document="@_document"
+                             ShowReplace="@_findReplaceMode"
+                             ShowHeader="false"
+                             OnClose="CloseFindPanelAsync"
+                             OnResultsChanged="HandleFindResultsChangedAsync"
+                             OnActiveResultChanged="HandleActiveSearchResultChangedAsync"
+                             OnReplaceOneRequested="HandleFindReplaceOneRequestedAsync"
+                             OnReplaceAllRequested="HandleFindReplaceAllRequestedAsync"
+                             OnSearchRequested="HandleFindSearchRequestedAsync"
+                             OnNavigateRequested="HandleFindNavigateAsync" />
+    </text>;
+
     private RenderFragment RetryAction => @<button type="button"
                                                    class="tm-document-editor__retry"
                                                    data-testid="@TestId("document-editor-retry")"

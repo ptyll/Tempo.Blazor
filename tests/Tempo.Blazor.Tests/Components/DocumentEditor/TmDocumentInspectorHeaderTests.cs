@@ -125,4 +125,25 @@ public sealed class TmDocumentInspectorHeaderTests : LocalizationTestBase
             .Add(p => p.Subtitle, "3 versions"));
         with.Find(".tm-document-inspector-header__subtitle").TextContent.Should().Be("3 versions");
     }
+    [Fact]
+    public void BackArrow_RendersOnlyWithAHandler_BeforeTheTitle_AndRaisesIt()
+    {
+        var without = Render<TmDocumentInspectorHeader>(parameters => parameters.Add(p => p.Title, "Plain"));
+        without.FindAll(".tm-document-inspector-header__back").Should().BeEmpty();
+
+        var raised = 0;
+        var with = Render<TmDocumentInspectorHeader>(parameters => parameters
+            .Add(p => p.Title, "Image tools")
+            .Add(p => p.BackTestId, "image-back")
+            .Add(p => p.OnBack, () => raised++));
+
+        var back = with.Find(".tm-document-inspector-header__back");
+        back.GetAttribute("aria-label").Should().Be("Back to tabs");
+        back.GetAttribute("data-testid").Should().Be("image-back");
+        back.QuerySelector(".tm-icon").Should().NotBeNull();
+        with.Find(".tm-document-inspector-header").FirstElementChild!.ClassList.Should().Contain("tm-document-inspector-header__back", "the arrow leads the header");
+
+        back.Click();
+        raised.Should().Be(1);
+    }
 }

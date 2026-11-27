@@ -60,6 +60,12 @@
       "description": "Shows a clear button. Default true."
     },
     {
+      "name": "ClearText",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Text of the clear button (for example \"No color\"). When null the localized \"Clear\" is used."
+    },
+    {
       "name": "ValueChanged",
       "type": "EventCallback<string>",
       "isRequired": false,

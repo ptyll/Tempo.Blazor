@@ -56,9 +56,8 @@
                             <div class="tm-document-comment-entry__meta">
                                 <strong>@GetAuthorName(entry.Author)</strong>
                                 <time class="tm-document-comment-entry__time"
-                                      datetime="@entry.CreatedAt.UtcDateTime.ToString("O")">
-                                    @entry.CreatedAt.ToLocalTime().ToString("g")
-                                </time>
+                                      datetime="@entry.CreatedAt.UtcDateTime.ToString("O")"
+                                      title="@AbsoluteTime(entry.CreatedAt)">@RelativeTime(entry.CreatedAt)</time>
                                 @if (entry.IsExternalAuthor)
                                 {
                                     <span class="tm-document-comment-entry__external">@Loc["TmDocumentEditor_CommentClientBadge"]</span>
@@ -150,6 +149,18 @@
 }
 
 @code {
+    [Inject] private IServiceProvider Services { get; set; } = default!;
+
+    private ITmRelativeTimeFormatter? _relativeTime;
+
+    // Phase 6 (DE-2.5): the entry stamp is relative ("5 min ago") through the shared formatter, the absolute moment in the tooltip -
+    // no private ToString("g") any more.
+    private string RelativeTime(DateTimeOffset value)
+        => (_relativeTime ??= TmRelativeTime.Resolve(Services, Loc)).Format(value);
+
+    private string AbsoluteTime(DateTimeOffset value)
+        => (_relativeTime ??= TmRelativeTime.Resolve(Services, Loc)).Absolute(value);
+
     /// <summary>Comment thread to render.</summary>
     [Parameter] public DocumentComment? Comment { get; set; }
 

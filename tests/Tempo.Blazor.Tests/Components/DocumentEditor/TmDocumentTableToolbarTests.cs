@@ -83,7 +83,9 @@ public sealed class TmDocumentTableToolbarTests : LocalizationTestBase
             .Add(p => p.Cell, new TableCellContent { Id = "cell-1" })
             .Add(p => p.CellChanged, value => received = value));
 
-        cut.Find("[data-testid='document-cell-properties-background']").Change("#ff0000");
+        // The background is the core colour picker (phase 6): a pick raises the value through its ValueChanged.
+        var picker = cut.FindComponent<Tempo.Blazor.Components.Inputs.TmColorPicker>();
+        cut.InvokeAsync(() => picker.Instance.ValueChanged.InvokeAsync("#ff0000"));
 
         received.Should().NotBeNull();
         received!.BackgroundColor.Should().Be("#ff0000");

@@ -4106,6 +4106,9 @@
     // toolbar only says WHICH tab and where the request came from, so the editor can anchor the panel to the right element.
     private bool _imageFromMenu;
 
+    /// <summary>The ribbon's command row: the anchor of a floating panel that is not tied to one command (the tablet / phone find panel).</summary>
+    public ElementReference RibbonAnchor => _ribbonPanel;
+
     /// <summary>The element the image panel anchors to: the ribbon's image button, or the ribbon row when the request came from "More".</summary>
     public ElementReference ImagePanelAnchor
         => _imageFromMenu || _imageButton is null || _imageButton.Element.Id is null ? _ribbonPanel : _imageButton.Element;

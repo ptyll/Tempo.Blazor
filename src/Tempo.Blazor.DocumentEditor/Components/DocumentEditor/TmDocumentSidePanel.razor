@@ -1,8 +1,45 @@
 @namespace Tempo.Blazor.Components.DocumentEditor
 @inherits Tempo.Blazor.Components.TmComponentBase
 @using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
+@implements IAsyncDisposable
+@inject IJSRuntime JSRuntime
 
-@if (IsOpen)
+@if (IsOpen && HasContext)
+{
+    @* Phase 6 (DE-2.2 / DE-2.3, decision DE2): a selected object or an open find owns the inspector. The tab bar is gone, the
+       header names the context and leads back to the tabs ("<-") or closes it (X). No new DocumentSidePanelTab value exists. *@
+    <aside class="tm-document-side-panel tm-document-side-panel--context"
+           data-testid="@TestId("document-side-panel")"
+           data-panel-layout="docked-tabs"
+           data-active-tab="@GetTabDataValue(EffectiveActiveTab)"
+           data-context="@ContextKind"
+           data-visible-panel-count="1"
+           data-tab-style="@(TextTabs ? "text" : "icon")"
+           role="complementary"
+           aria-label="@Loc["TmDocumentEditor_SidePanelLabel"]">
+        <TmDocumentInspectorHeader TitleId="@_contextTitleId"
+                                   Class="tm-document-side-panel__context-header"
+                                   DataTestId="@TestId("document-side-panel-context-header")"
+                                   Title="@ContextTitle"
+                                   Icon="@ContextIcon"
+                                   TestIdPrefix="@TestIdPrefix"
+                                   BackTestId="document-side-panel-context-back"
+                                   OnBack="OnContextBack"
+                                   CloseTestId="@(string.IsNullOrWhiteSpace(ContextCloseTestId) ? "document-side-panel-context-close" : ContextCloseTestId)"
+                                   OnClose="@(OnContextClose.HasDelegate ? OnContextClose : OnClose)" />
+
+        <section class="tm-document-side-panel__body tm-document-side-panel__body--context"
+                 role="region"
+                 aria-labelledby="@_contextTitleId"
+                 data-active-tab="@GetTabDataValue(EffectiveActiveTab)"
+                 data-visible-panel-count="1"
+                 data-testid="@TestId("document-side-panel-body")">
+            @ContextContent
+        </section>
+    </aside>
+}
+else if (IsOpen)
 {
     <aside class="tm-document-side-panel"
            data-testid="@TestId("document-side-panel")"
@@ -14,6 +51,7 @@
            aria-label="@Loc["TmDocumentEditor_SidePanelLabel"]">
         <header class="tm-document-side-panel__header">
             <div class="tm-document-side-panel__tabs"
+                 @ref="_tabList"
                  role="tablist"
                  aria-label="@Loc["TmDocumentEditor_SidePanelTabsLabel"]">
                 @if (TextTabs)
@@ -216,6 +254,58 @@ else if (ShowEdgeToggle)
     </text>;
 
     private const string PanelId = "document-side-panel-content";
+    private const string TabScrollerModulePath = "./_content/Tempo.Blazor.DocumentEditor/js/document-editor/interop/side-panel-tabs.mjs";
+    private ElementReference _tabList;
+    private IJSObjectReference? _tabScrollerModule;
+    private ElementReference _attachedTabList;
+
+    // The text tabs scroll sideways in a narrow inspector. After EVERY render of the tab bar - so after an ActiveTab change from any source,
+    // a click or code (the review summary, find) - the active tab is scrolled into the row and the overflow cue is refreshed.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!IsOpen || HasContext || !TextTabs || _tabList.Id is null)
+        {
+            return;
+        }
+
+        try
+        {
+            _tabScrollerModule ??= await JSRuntime.InvokeAsync<IJSObjectReference>("import", TabScrollerModulePath);
+            if (_attachedTabList.Id != _tabList.Id)
+            {
+                _attachedTabList = _tabList;
+                await _tabScrollerModule.InvokeVoidAsync("attachTabScroller", _tabList);
+            }
+
+            await _tabScrollerModule.InvokeVoidAsync("syncTabScroller", _tabList);
+        }
+        catch (Exception exception) when (exception is JSException or InvalidOperationException or JSDisconnectedException
+                                                or TaskCanceledException or ObjectDisposedException)
+        {
+            // Best effort: without JS the row still scrolls by hand.
+            _tabScrollerModule = null;
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        var module = _tabScrollerModule;
+        _tabScrollerModule = null;
+        if (module is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await module.DisposeAsync();
+        }
+        catch
+        {
+            // The JS runtime may already be disconnected during teardown.
+        }
+    }
+    private readonly string _contextTitleId = $"tm-document-side-panel-context-title-{Guid.NewGuid():N}";
     private ElementReference _commentsTab;
     private ElementReference _revisionsTab;
     private ElementReference _versionsTab;
@@ -286,11 +376,38 @@ else if (ShowEdgeToggle)
     /// <summary>Content rendered for the pages tab.</summary>
     [Parameter] public RenderFragment? PagesContent { get; set; }
 
+    /// <summary>
+    /// Contextual content (a selected image or table, an open find). While it is bound the tab bar is replaced by a header with
+    /// <see cref="ContextTitle"/>, a back arrow (<see cref="OnContextBack"/>) and an X (<see cref="OnContextClose"/>), and this
+    /// fragment is the body. The editor binds it on a desktop layout only; the tablet and phone inspectors keep the tabs.
+    /// </summary>
+    [Parameter] public RenderFragment? ContextContent { get; set; }
+
+    /// <summary>Title of the contextual header (for example "Image tools").</summary>
+    [Parameter] public string? ContextTitle { get; set; }
+
+    /// <summary>Optional leading icon of the contextual header.</summary>
+    [Parameter] public string? ContextIcon { get; set; }
+
+    /// <summary>Kind of the context (<c>image</c>, <c>table</c>, <c>find</c>), exposed as <c>data-context</c> for CSS and E2E.</summary>
+    [Parameter] public string? ContextKind { get; set; }
+
+    /// <summary>Unprefixed test id of the contextual X button. Defaults to <c>document-side-panel-context-close</c>.</summary>
+    [Parameter] public string? ContextCloseTestId { get; set; }
+
+    /// <summary>Raised by the back arrow of the contextual header. The arrow is rendered only when a handler is bound.</summary>
+    [Parameter] public EventCallback OnContextBack { get; set; }
+
+    /// <summary>Raised by the X of the contextual header. When unbound the X raises <see cref="OnClose"/> instead.</summary>
+    [Parameter] public EventCallback OnContextClose { get; set; }
+
     /// <summary>Raised when the side panel should close.</summary>
     [Parameter] public EventCallback OnClose { get; set; }
 
     /// <summary>Raised when the side panel should reopen.</summary>
     [Parameter] public EventCallback OnOpen { get; set; }
+
+    private bool HasContext => ContextContent is not null;
 
     // Icon tabs keep their label as the accessible name (and a title tooltip); the visible text is the text-tab style's.
     private string? TabLabelClass => TextTabs ? null : "tm-document-editor__sr-only";
@@ -307,7 +424,7 @@ else if (ShowEdgeToggle)
 
     /// <summary>Moves keyboard focus to the active side-panel tab.</summary>
     public ValueTask FocusActiveTabAsync()
-        => EffectiveActiveTab switch
+        => HasContext ? ValueTask.CompletedTask : EffectiveActiveTab switch
         {
             DocumentSidePanelTab.Comments => _commentsTab.FocusAsync(),
             DocumentSidePanelTab.Revisions => _revisionsTab.FocusAsync(),

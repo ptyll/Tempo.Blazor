@@ -1,0 +1,63 @@
+{
+  "itemName": "TmDocumentInspectorSection",
+  "kind": "Component",
+  "category": "Document Editor",
+  "description": "One collapsible section of an inspector form (redesign 146c7e1b, phase 6): a chevron disclosure button over a body, no frame. The body stays in the DOM while the section is folded (the hidden attribute), so a control inside keeps its state and its test id. The image inspector and the table / cell panels are built from it.",
+  "packageId": "Tempo.Blazor.DocumentEditor",
+  "namespace": "Tempo.Blazor.Components.DocumentEditor",
+  "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentInspectorSection.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.DocumentEditor"
+  ],
+  "parameters": [
+    {
+      "name": "Title",
+      "type": "string",
+      "isRequired": false,
+      "description": "Section title, the label of the disclosure button."
+    },
+    {
+      "name": "Icon",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional decorative icon between the chevron and the title."
+    },
+    {
+      "name": "SectionTestId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Unprefixed test id of the section root; the disclosure button gets the same id plus -toggle."
+    },
+    {
+      "name": "DefaultExpanded",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the section starts unfolded. Defaults to true."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS classes on the section root."
+    },
+    {
+      "name": "OnExpandedChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Raised when the reader folds or unfolds the section."
+    },
+    {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "The section body."
+    }
+  ],
+  "cssClasses": [
+    "tm-document-inspector-form__section",
+    "tm-document-inspector-form__section-toggle",
+    "tm-document-inspector-form__chevron",
+    "tm-document-inspector-form__section-body"
+  ]
+}

@@ -13127,7 +13127,7 @@
       "kind": "Class",
       "category": "Document Editor",
       "namespace": "Tempo.Blazor.DocumentEditor.Models",
-      "description": "A single match returned by DocumentSearchService.",
+      "description": "A single match returned by DocumentSearchService. ContextBefore / ContextAfter (up to 30 characters of the same block on each side of the match, empty at the block boundaries) let a results list show the match in its sentence; both default to empty.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/DocumentEditor/Models/DocumentSearch.cs",
       "documentationStatus": "merged"

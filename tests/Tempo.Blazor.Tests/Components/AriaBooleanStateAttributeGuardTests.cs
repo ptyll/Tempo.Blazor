@@ -102,8 +102,6 @@ public class AriaBooleanStateAttributeGuardTests
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionMentionMenu.razor|aria-selected|@(2 == _selectedIndex)",
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmCommentMentionInput.razor|aria-selected|@(idx == _selectedIndex)",
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionEmojiPicker.razor|aria-selected|@(_activeCategory == capturedTab.Category)",
-        "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentCellPropertiesPanel.razor|aria-pressed|@(CurrentVerticalAlignment == alignment)",
-        "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentTablePropertiesPanel.razor|aria-pressed|@(CurrentAlignment == alignment)",
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDbFieldEditor.razor|aria-pressed|@(o.Color == cc)",
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDatabaseBlock.razor|aria-selected|@(_activeViewId == v.Id)",
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDbTableView.razor|aria-expanded|@(!isCollapsed)",

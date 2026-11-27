@@ -1,0 +1,38 @@
+{
+  "itemName": "TmDocumentVersionPreviewStrip",
+  "kind": "Component",
+  "category": "Document Editor",
+  "description": "The strip of the document region shown while a historical version is previewed (redesign 146c7e1b, phase 6, DE-2.5): 'You are viewing version X' with 'Return to current' and 'Restore'. Restore asks inline - a question and Restore / Cancel replace the two buttons - instead of a dialog. It belongs to the document, so it stays visible with the version panel closed. Renders nothing while PreviewVersion is null.",
+  "packageId": "Tempo.Blazor.DocumentEditor",
+  "namespace": "Tempo.Blazor.Components.DocumentEditor",
+  "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentVersionPreviewStrip.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.DocumentEditor"
+  ],
+  "parameters": [
+    {
+      "name": "PreviewVersion",
+      "type": "DocumentVersion?",
+      "isRequired": false,
+      "description": "The version being previewed; the strip renders nothing while this is null."
+    },
+    {
+      "name": "OnReturnToCurrent",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when the preview should return to the current document."
+    },
+    {
+      "name": "OnRestoreVersion",
+      "type": "EventCallback<DocumentVersion>",
+      "isRequired": false,
+      "description": "Raised when the reader confirmed that the previewed version becomes the current draft."
+    }
+  ],
+  "cssClasses": [
+    "tm-document-version-preview-strip",
+    "tm-document-version-preview-strip__actions",
+    "tm-document-version-preview-strip__confirm"
+  ]
+}

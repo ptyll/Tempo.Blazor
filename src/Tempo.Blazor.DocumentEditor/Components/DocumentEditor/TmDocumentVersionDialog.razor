@@ -18,7 +18,13 @@
          OnClose="OnCancel"
          data-testid="@TestId("document-version-dialog")">
     <ChildContent>
-        <div class="tm-document-version-dialog__form">
+        @* A real form (phase 6, DE-2.5): Enter in the label field submits, the footer's primary button is bound to it through the `form`
+           attribute (the modal footer is a sibling of the body, so it cannot sit inside the form). *@
+        <form id="@_formId"
+              class="tm-document-version-dialog__form"
+              novalidate
+              @onsubmit="SubmitAsync"
+              @onsubmit:preventDefault="true">
             <label class="tm-document-version-dialog__field">
                 <span>@Loc["TmDocumentEditor_VersionKind"]</span>
                 <select id="@_kindSelectId"
@@ -38,18 +44,23 @@
 
             <label class="tm-document-version-dialog__field">
                 <span>@Loc["TmDocumentEditor_VersionDescription"]</span>
-                <textarea class="tm-input" value="@_description" @oninput="args => _description = args.Value?.ToString()" data-testid="@TestId("document-version-description")"></textarea>
+                <textarea class="tm-input"
+                          value="@_description"
+                          aria-invalid="@(string.IsNullOrWhiteSpace(_validationMessage) ? null : "true")"
+                          aria-describedby="@(string.IsNullOrWhiteSpace(_validationMessage) ? null : _errorId)"
+                          @oninput="HandleDescriptionInput"
+                          data-testid="@TestId("document-version-description")"></textarea>
             </label>
 
             @if (!string.IsNullOrWhiteSpace(_validationMessage))
             {
-                <div class="tm-document-version-dialog__error" role="alert" data-testid="@TestId("document-version-error")">@_validationMessage</div>
+                <div class="tm-document-version-dialog__error" id="@_errorId" role="alert" data-testid="@TestId("document-version-error")">@_validationMessage</div>
             }
-        </div>
+        </form>
     </ChildContent>
     <Footer>
         <button type="button" class="tm-btn tm-btn-sm tm-btn-ghost" @onclick="OnCancel" data-testid="@TestId("document-version-cancel")">@Loc["TmDocumentEditor_Cancel"]</button>
-        <button type="button" class="tm-btn tm-btn-sm tm-btn-primary" @onclick="SubmitAsync" disabled="@IsBusy" data-testid="@TestId("document-version-create-submit")">
+        <button type="submit" form="@_formId" class="tm-btn tm-btn-sm tm-btn-primary" disabled="@IsBusy" data-testid="@TestId("document-version-create-submit")">
             @Loc["TmDocumentEditor_CreateVersion"]
         </button>
     </Footer>
@@ -63,6 +74,8 @@
     [Parameter] public string? RestoreFocusTargetId { get; set; }
 
     private readonly string _kindSelectId = $"tm-document-version-kind-{Guid.NewGuid():N}";
+    private readonly string _formId = $"tm-document-version-form-{Guid.NewGuid():N}";
+    private readonly string _errorId = $"tm-document-version-error-{Guid.NewGuid():N}";
     private DocumentVersionKind _kind = DocumentVersionKind.Minor;
     private string? _label;
     private string? _description;
@@ -94,8 +107,23 @@
         }
     }
 
+    private void HandleDescriptionInput(ChangeEventArgs args)
+    {
+        _description = args.Value?.ToString();
+        if (!string.IsNullOrWhiteSpace(_description))
+        {
+            _validationMessage = null;
+        }
+    }
+
     private async Task SubmitAsync()
     {
+        // Enter in the label field submits the form; a create that is already running must not be started a second time.
+        if (IsBusy)
+        {
+            return;
+        }
+
         if (RequireMajorDescription
             && _kind == DocumentVersionKind.Major
             && string.IsNullOrWhiteSpace(_description))

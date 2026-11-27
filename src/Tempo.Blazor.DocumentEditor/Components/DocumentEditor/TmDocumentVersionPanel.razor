@@ -2,23 +2,20 @@
 @inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.DocumentEditor.Models
 
+@* Redesign 146c7e1b, phase 6 (DE-2.5): the shared inspector header (one X, none while the docked side panel hosts the panel), a primary
+   full-width "Create version", and a card-less timeline - the version, a "Current preview" badge on the previewed one, "kind . time .
+   author" with the time through the shared relative-time formatter, the description and the Base / Compare pair (the active one is
+   primary). The preview of a version is a strip in the doc region (TmDocumentVersionPreviewStrip); this panel renders that strip itself
+   only when no host takes it over (ShowPreviewStrip). *@
 <aside class="tm-document-editor__version-panel" aria-label="@Loc["TmDocumentEditor_VersionsLabel"]" data-testid="@TestId("document-version-panel")">
-    <header class="tm-document-version-panel__header">
-        <h3>@Loc["TmDocumentEditor_Versions"]</h3>
-        @if (ShowClose)
-        {
-            <button type="button"
-                    class="tm-document-version-panel__icon-button"
-                    title="@Loc["TmDocumentEditor_CloseVersionPanel"]"
-                    @onclick="OnClose"
-                    data-testid="@TestId("document-version-panel-close")">
-                <TmIcon Name="x" Size="IconSize.Sm" />
-            </button>
-        }
-    </header>
+    <TmDocumentInspectorHeader Title="@Loc["TmDocumentEditor_Versions"]"
+                               HeadingLevel="3"
+                               CloseTestId="document-version-panel-close"
+                               TestIdPrefix="@TestIdPrefix"
+                               OnClose="@(ShowClose ? OnClose : default)" />
 
     <button type="button"
-            class="tm-btn tm-btn-sm tm-btn-primary tm-document-version-panel__create"
+            class="tm-btn tm-btn-primary tm-document-version-panel__create"
             disabled="@ReadOnly"
             @onclick="OnCreateVersion"
             data-testid="@TestId("document-version-create-open")">
@@ -26,33 +23,20 @@
         <span>@Loc["TmDocumentEditor_CreateVersion"]</span>
     </button>
 
-    @if (!string.IsNullOrWhiteSpace(StatusMessage))
-    {
-        <div class="tm-document-version-panel__status" data-testid="@TestId("document-version-status")">@StatusMessage</div>
-    }
+    @* One polite live region that is always in the DOM (a region inserted together with its text is not announced reliably); the editor
+       clears the message on the reader's next action. *@
+    <div class="tm-document-version-panel__status"
+         role="status"
+         aria-live="polite"
+         data-testid="@TestId("document-version-status")"
+         hidden="@string.IsNullOrWhiteSpace(StatusMessage)">@StatusMessage</div>
 
-    @if (PreviewVersion is not null)
+    @if (ShowPreviewStrip && PreviewVersion is not null)
     {
-        <section class="tm-document-version-panel__preview" data-testid="@TestId("document-version-preview-state")">
-            <span class="tm-document-panel__meta">@Loc["TmDocumentEditor_PreviewingVersion", GetVersionTitle(PreviewVersion)]</span>
-            <button type="button" class="tm-btn tm-btn-sm tm-btn-secondary" @onclick="OnReturnToCurrent" data-testid="@TestId("document-version-current")">
-                @Loc["TmDocumentEditor_ReturnToCurrentVersion"]
-            </button>
-            <button type="button" class="tm-btn tm-btn-sm tm-btn-secondary" @onclick="OpenRestoreConfirm" data-testid="@TestId("document-version-restore")">
-                @Loc["TmDocumentEditor_RestoreVersion"]
-            </button>
-        </section>
-    }
-
-    @if (_restoreConfirmOpen && PreviewVersion is not null)
-    {
-        <section class="tm-document-version-panel__confirm" data-testid="@TestId("document-version-restore-confirm")">
-            <span class="tm-document-panel__meta">@Loc["TmDocumentEditor_RestoreVersionConfirm"]</span>
-            <button type="button" class="tm-btn tm-btn-sm tm-btn-primary" @onclick="ConfirmRestoreAsync" data-testid="@TestId("document-version-restore-confirm-button")">
-                @Loc["TmDocumentEditor_RestoreVersion"]
-            </button>
-            <button type="button" class="tm-btn tm-btn-sm tm-btn-ghost" @onclick="CloseRestoreConfirm">@Loc["TmDocumentEditor_Cancel"]</button>
-        </section>
+        <TmDocumentVersionPreviewStrip PreviewVersion="PreviewVersion"
+                                       TestIdPrefix="@TestIdPrefix"
+                                       OnReturnToCurrent="OnReturnToCurrent"
+                                       OnRestoreVersion="OnRestoreVersion" />
     }
 
     @if (IsLoading)
@@ -68,27 +52,40 @@
         <ol class="tm-document-version-panel__list" data-testid="@TestId("document-version-list")">
             @foreach (var version in OrderedVersions)
             {
-                <li>
+                var previewed = PreviewVersion?.Id == version.Id;
+                <li @key="version.Id" class="tm-document-version-panel__entry@(previewed ? " tm-document-version-panel__item--preview" : null)">
                     <button type="button"
-                            class="tm-document-version-panel__item @(PreviewVersion?.Id == version.Id ? "tm-document-version-panel__item--active" : null)"
+                            class="tm-document-version-panel__item @(previewed ? "tm-document-version-panel__item--active" : null)"
+                            aria-current="@(previewed ? "true" : null)"
                             @onclick="() => SelectVersionAsync(version)"
                             data-testid="@TestId("document-version-item")">
-                        <span class="tm-document-version-panel__item-title">@GetVersionTitle(version)</span>
-                        <span class="tm-document-version-panel__item-meta">@GetVersionMeta(version)</span>
-                        @if (!string.IsNullOrWhiteSpace(version.Description))
-                        {
-                            <span class="tm-document-version-panel__item-description">@version.Description</span>
-                        }
+                        <span class="tm-document-version-panel__item-icon" aria-hidden="true"><TmIcon Name="file-text" Size="IconSize.Md" /></span>
+                        <span class="tm-document-version-panel__item-body">
+                            <span class="tm-document-version-panel__item-head">
+                                <span class="tm-document-version-panel__item-title">@GetVersionTitle(version)</span>
+                                @if (previewed)
+                                {
+                                    <span class="tm-document-version-panel__badge">@Loc["TmDocumentEditor_VersionCurrentPreview"]</span>
+                                }
+                            </span>
+                            <span class="tm-document-version-panel__item-meta">@RenderMeta(version)</span>
+                            @if (!string.IsNullOrWhiteSpace(version.Description))
+                            {
+                                <span class="tm-document-version-panel__item-description">@version.Description</span>
+                            }
+                        </span>
                     </button>
                     <div class="tm-document-version-panel__diff-actions">
                         <button type="button"
                                 class="@GetDiffButtonClass(version, true)"
+                                aria-pressed="@AriaPressed(_diffBaseVersionId == version.Id)"
                                 @onclick="() => SelectDiffBase(version)"
                                 data-testid="@TestId("document-version-diff-base")">
                             @Loc["TmDocumentEditor_DiffBase"]
                         </button>
                         <button type="button"
                                 class="@GetDiffButtonClass(version, false)"
+                                aria-pressed="@AriaPressed(_diffCompareVersionId == version.Id)"
                                 @onclick="() => SelectDiffCompare(version)"
                                 data-testid="@TestId("document-version-diff-compare")">
                             @Loc["TmDocumentEditor_DiffCompare"]
@@ -110,7 +107,9 @@
 </aside>
 
 @code {
-    private bool _restoreConfirmOpen;
+    [Inject] private IServiceProvider Services { get; set; } = default!;
+
+    private ITmRelativeTimeFormatter? _relativeTime;
     private string? _diffBaseVersionId;
     private string? _diffCompareVersionId;
 
@@ -141,6 +140,12 @@
     /// <summary>Raised when the previewed version should be restored.</summary>
     [Parameter] public EventCallback<DocumentVersion> OnRestoreVersion { get; set; }
 
+    /// <summary>
+    /// Whether the panel renders the "You are viewing version X" strip itself. Defaults to <c>true</c> so a standalone panel keeps working;
+    /// the editor passes <c>false</c> because it shows the strip in the document region, where it stays visible with the panel closed.
+    /// </summary>
+    [Parameter] public bool ShowPreviewStrip { get; set; } = true;
+
     /// <summary>Raised when the panel should close.</summary>
     [Parameter] public EventCallback OnClose { get; set; }
 
@@ -159,10 +164,7 @@
     private DocumentVersion? DiffCompareVersion => Versions.FirstOrDefault(version => version.Id == _diffCompareVersionId);
 
     private Task SelectVersionAsync(DocumentVersion version)
-    {
-        _restoreConfirmOpen = false;
-        return OnSelectVersion.InvokeAsync(version);
-    }
+        => OnSelectVersion.InvokeAsync(version);
 
     private void SelectDiffBase(DocumentVersion version)
     {
@@ -189,8 +191,8 @@
             : _diffCompareVersionId == version.Id;
 
         return active
-            ? "tm-document-version-panel__diff-button tm-document-version-panel__diff-button--active"
-            : "tm-document-version-panel__diff-button";
+            ? "tm-btn tm-btn-sm tm-btn-primary tm-document-version-panel__diff-button tm-document-version-panel__diff-button--active"
+            : "tm-btn tm-btn-sm tm-btn-secondary tm-document-version-panel__diff-button";
     }
 
     private static DocumentEditorDocument? ReadSnapshot(DocumentVersion version)
@@ -200,47 +202,53 @@
             : DocumentEditorJson.Deserialize(version.Snapshot.Json);
     }
 
-    private void OpenRestoreConfirm()
-    {
-        _restoreConfirmOpen = true;
-    }
-
-    private void CloseRestoreConfirm()
-    {
-        _restoreConfirmOpen = false;
-    }
-
-    private async Task ConfirmRestoreAsync()
-    {
-        if (PreviewVersion is null)
-        {
-            return;
-        }
-
-        _restoreConfirmOpen = false;
-        await OnRestoreVersion.InvokeAsync(PreviewVersion);
-    }
-
-    private string GetVersionKindLabel(DocumentVersionKind kind)
-        => kind switch
-        {
-            DocumentVersionKind.Major => Loc["TmDocumentEditor_VersionKindMajor"],
-            DocumentVersionKind.Autosave => Loc["TmDocumentEditor_VersionKindAutosave"],
-            DocumentVersionKind.Restore => Loc["TmDocumentEditor_VersionKindRestore"],
-            _ => Loc["TmDocumentEditor_VersionKindMinor"]
-        };
+    private static string AriaPressed(bool value) => value ? "true" : "false";
 
     private string GetVersionTitle(DocumentVersion version)
-        => !string.IsNullOrWhiteSpace(version.Label)
-            ? version.Label
-            : GetVersionKindLabel(version.Kind);
+        => DocumentVersionText.Title(Loc, version);
 
-    private string GetVersionMeta(DocumentVersion version)
+    // "Minor version . yesterday at 4:20 PM . Ada Author": the localized template "{0} . {1} . {2}" is walked once, the kind and the author
+    // are text, the time is a <time> element whose tooltip is the absolute moment - the stamp is relative without hiding when it really was.
+    private RenderFragment RenderMeta(DocumentVersion version) => builder =>
     {
         var author = string.IsNullOrWhiteSpace(version.Author.DisplayName)
             ? Loc["TmDocumentEditor_UnknownAuthor"].ToString()
             : version.Author.DisplayName;
+        var formatter = _relativeTime ??= TmRelativeTime.Resolve(Services, Loc);
+        var template = Loc["TmDocumentEditor_VersionMeta"].ToString();
 
-        return Loc["TmDocumentEditor_VersionMeta", GetVersionKindLabel(version.Kind), version.CreatedAt.ToLocalTime().ToString("g"), author];
-    }
+        var sequence = 0;
+        var position = 0;
+        foreach (System.Text.RegularExpressions.Match match in System.Text.RegularExpressions.Regex.Matches(template, @"\{([012])\}"))
+        {
+            if (match.Index > position)
+            {
+                builder.AddContent(sequence++, template[position..match.Index]);
+            }
+
+            switch (match.Groups[1].Value)
+            {
+                case "0":
+                    builder.AddContent(sequence++, DocumentVersionText.KindLabel(Loc, version.Kind));
+                    break;
+                case "1":
+                    builder.OpenElement(sequence++, "time");
+                    builder.AddAttribute(sequence++, "datetime", version.CreatedAt.UtcDateTime.ToString("O"));
+                    builder.AddAttribute(sequence++, "title", formatter.Absolute(version.CreatedAt));
+                    builder.AddContent(sequence++, formatter.Format(version.CreatedAt));
+                    builder.CloseElement();
+                    break;
+                default:
+                    builder.AddContent(sequence++, author);
+                    break;
+            }
+
+            position = match.Index + match.Length;
+        }
+
+        if (position < template.Length)
+        {
+            builder.AddContent(sequence++, template[position..]);
+        }
+    };
 }

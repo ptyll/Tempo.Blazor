@@ -1,27 +1,35 @@
 @namespace Tempo.Blazor.Components.DocumentEditor
 @inherits Tempo.Blazor.Components.TmComponentBase
 
+@* Redesign 146c7e1b, phase 6 (DE-2.4): the review summary is ONE strip in the doc region (the editor places it in its banner slot): a
+   warning icon, "Needs review" and the sentence, and the two shortcuts as icon + text buttons. The counts read through the plural
+   families (Loc.Plural), so Czech says "1 komentář / 3 komentáře / 5 komentářů". *@
 @if (PendingRevisionCount > 0 || OpenCommentCount > 0)
 {
     <section class="tm-document-review-summary"
              data-testid="@TestId("document-review-summary")"
              aria-label="@Loc["TmDocumentEditor_ReviewSummaryLabel"]">
+        <span class="tm-document-review-summary__icon" aria-hidden="true"><TmIcon Name="alert-circle" Size="IconSize.Md" /></span>
         <div class="tm-document-review-summary__text">
             <strong>@Loc["TmDocumentEditor_ReviewSummaryTitle"]</strong>
             <span>@Loc["TmDocumentEditor_ReviewSummaryText", Loc.Plural("TmDocumentEditor_ReviewSummaryRevisions", PendingRevisionCount), Loc.Plural("TmDocumentEditor_ReviewSummaryOpenComments", OpenCommentCount)]</span>
         </div>
         <div class="tm-document-review-summary__actions">
             <button type="button"
+                    class="tm-btn tm-btn-sm tm-btn-secondary"
                     data-testid="@TestId("document-review-summary-revisions")"
                     disabled="@(PendingRevisionCount == 0)"
                     @onclick="() => OpenRevisions.InvokeAsync()">
-                @Loc.Plural("TmDocumentEditor_ReviewSummaryRevisions", PendingRevisionCount)
+                <TmIcon Name="file-diff" Size="IconSize.Sm" />
+                <span>@Loc.Plural("TmDocumentEditor_ReviewSummaryRevisions", PendingRevisionCount)</span>
             </button>
             <button type="button"
+                    class="tm-btn tm-btn-sm tm-btn-secondary"
                     data-testid="@TestId("document-review-summary-comments")"
                     disabled="@(OpenCommentCount == 0)"
                     @onclick="() => OpenComments.InvokeAsync()">
-                @Loc.Plural("TmDocumentEditor_ReviewSummaryComments", OpenCommentCount)
+                <TmIcon Name="message-square" Size="IconSize.Sm" />
+                <span>@Loc.Plural("TmDocumentEditor_ReviewSummaryComments", OpenCommentCount)</span>
             </button>
         </div>
     </section>

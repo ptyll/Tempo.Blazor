@@ -138,7 +138,7 @@
    density and the cqw track widths. Mobile first: one column, the inspector under the document. */
 .tm-document-editor__workspace {
     --tm-document-nav-width: clamp(14rem, 18cqw, 17rem);
-    --tm-document-inspector-width: clamp(18rem, 26cqw, 24rem);
+    --tm-document-inspector-width: clamp(20rem, 26cqw, 24rem);
 
     position: relative;
     display: grid;
@@ -775,75 +775,14 @@
     border-radius: 0;
 }
 
-.tm-document-editor__comment-rail h3,
-.tm-document-editor__version-panel h3 {
+.tm-document-editor__comment-rail h3 {
     margin: 0 0 var(--tm-space-2);
     color: var(--tm-color-text);
     font-size: var(--tm-font-size-base);
     font-weight: var(--tm-font-weight-semibold);
 }
 
-.tm-document-version-panel__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--tm-space-2);
-}
-
-.tm-document-version-panel__icon-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 2rem;
-    height: 2rem;
-    color: var(--tm-color-text-muted);
-    background: transparent;
-    border: 1px solid transparent;
-    border-radius: var(--tm-radius-control);
-}
-
-.tm-document-version-panel__icon-button:hover {
-    color: var(--tm-color-text);
-    background: var(--tm-color-surface-hover);
-    border-color: var(--tm-color-border);
-}
-
 /* The version actions are library buttons (tm-btn + a variant); only the grid placement is local. */
-.tm-document-version-panel__create {
-    justify-self: stretch;
-}
-
-.tm-document-version-panel__preview button,
-.tm-document-version-panel__confirm button {
-    justify-self: start;
-}
-
-.tm-document-version-panel__status,
-.tm-document-version-panel__empty,
-.tm-document-version-panel__preview,
-.tm-document-version-panel__confirm {
-    display: grid;
-    gap: var(--tm-space-2);
-    margin-top: var(--tm-space-2);
-    color: var(--tm-color-text-muted);
-    font-size: var(--tm-font-size-sm);
-}
-
-.tm-document-version-panel__confirm {
-    padding: var(--tm-space-2);
-    background: var(--tm-color-warning-subtle);
-    border: 1px solid var(--tm-color-warning);
-    border-radius: var(--tm-radius-control);
-}
-
-.tm-document-version-panel__list {
-    display: grid;
-    gap: var(--tm-space-2);
-    margin: var(--tm-space-3) 0 0;
-    padding: 0;
-    list-style: none;
-}
-
 .tm-document-side-panel {
     /* Bounded by the viewport, not by the (arbitrarily tall) document next to it: the body scrolls inside. */
     align-self: start;
@@ -912,18 +851,49 @@
     border-radius: 0;
 }
 
-/* The desktop inspector: text-only tabs in a left-aligned row (Properties, Comments, Revisions, Versions). */
+/* The desktop inspector: text-only tabs in ONE left-aligned row (Properties, Comments, Revisions, Versions). A narrow inspector
+   scrolls the row sideways instead of wrapping it onto a second line; the close button lives in the header grid, outside the scroller. */
 .tm-document-side-panel[data-tab-style="text"] .tm-document-side-panel__tabs {
     display: flex;
-    flex-wrap: wrap;
-    gap: var(--tm-space-1) var(--tm-space-2);
+    flex-wrap: nowrap;
+    gap: var(--tm-space-1);
     min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.tm-document-side-panel[data-tab-style="text"] .tm-document-side-panel__tabs::-webkit-scrollbar {
+    display: none;
+}
+
+/* The overflow cue: side-panel-tabs.mjs publishes which side still hides tabs, and that edge fades out (the mask only uses alpha). */
+.tm-document-side-panel[data-tab-style="text"] .tm-document-side-panel__tabs[data-overflow-end="true"] {
+    mask-image: linear-gradient(to right, var(--tm-color-text) calc(100% - var(--tm-space-6)), transparent);
+}
+
+.tm-document-side-panel[data-tab-style="text"] .tm-document-side-panel__tabs[data-overflow-start="true"] {
+    mask-image: linear-gradient(to right, transparent, var(--tm-color-text) var(--tm-space-6));
+}
+
+.tm-document-side-panel[data-tab-style="text"] .tm-document-side-panel__tabs[data-overflow-start="true"][data-overflow-end="true"] {
+    mask-image: linear-gradient(to right, transparent, var(--tm-color-text) var(--tm-space-6), var(--tm-color-text) calc(100% - var(--tm-space-6)), transparent);
 }
 
 .tm-document-side-panel[data-tab-style="text"] .tm-document-side-panel__tab {
     flex: 0 0 auto;
-    padding-inline: var(--tm-space-1);
+    padding-inline: var(--tm-space-2);
     font-size: var(--tm-font-size-sm);
+    white-space: nowrap;
+}
+
+.tm-document-side-panel[data-tab-style="text"] .tm-document-side-panel__badge {
+    min-width: 1rem;
+    height: 1rem;
+    padding-inline: 0.25rem;
+}
+
+.tm-document-side-panel[data-tab-style="text"] .tm-document-side-panel__close {
+    flex: none;
 }
 
 /* Icon tabs sit in ONE row, whatever the panel width: equal columns that never shrink below the tab size, the close button
@@ -1270,35 +1240,6 @@
     font-size: var(--tm-font-size-sm);
 }
 
-.tm-document-version-panel__item {
-    display: grid;
-    gap: var(--tm-space-1);
-    width: 100%;
-    padding: var(--tm-space-2);
-    text-align: left;
-    color: var(--tm-color-text);
-    background: var(--tm-color-surface-secondary);
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-control);
-}
-
-.tm-document-version-panel__item:hover,
-.tm-document-version-panel__item--active {
-    border-color: var(--tm-color-primary);
-    background: var(--tm-color-primary-subtle);
-}
-
-.tm-document-version-panel__item-title {
-    color: var(--tm-color-text);
-    font-weight: var(--tm-font-weight-semibold);
-}
-
-.tm-document-version-panel__item-meta,
-.tm-document-version-panel__item-description {
-    color: var(--tm-color-text-muted);
-    font-size: var(--tm-font-size-xs);
-}
-
 /* ── Modal surfaces rendered in the floating root (phase 1, DE-2.0) ──
    Temporary hand-rolled modality: phase 5 moves these dialogs onto TmModal and deletes these rules. */
 /* The scrim's own z-index only orders it among the floating root's children: the effective layer is the
@@ -1313,15 +1254,6 @@
 .tm-document-comment-entry__external {
     color: var(--tm-color-text-muted);
     font-size: var(--tm-font-size-sm);
-}
-
-.tm-document-editor__version-panel .tm-document-version-panel__item-title {
-    color: var(--tm-color-text);
-}
-
-.tm-document-editor__version-panel .tm-document-version-panel__item-meta,
-.tm-document-editor__version-panel .tm-document-version-panel__item-description {
-    font-size: var(--tm-font-size-xs);
 }
 
 .tm-document-comment-rail__header {
@@ -1795,9 +1727,7 @@
     cursor: pointer;
 }
 
-.tm-document-table-toolbar,
-.tm-document-table-properties,
-.tm-document-cell-properties {
+.tm-document-table-toolbar {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -1811,16 +1741,7 @@
     box-shadow: var(--tm-shadow-lg);
 }
 
-.tm-document-table-properties,
-.tm-document-cell-properties {
-    align-items: stretch;
-    flex-direction: column;
-    inline-size: min(22rem, calc(100vw - var(--tm-space-6)));
-}
-
-.tm-document-table-toolbar button,
-.tm-document-table-properties button,
-.tm-document-cell-properties button {
+.tm-document-table-toolbar button {
     display: inline-flex;
     align-items: center;
     gap: var(--tm-space-1);
@@ -1832,59 +1753,7 @@
     border-radius: var(--tm-radius-control);
 }
 
-.tm-document-table-properties header,
-.tm-document-cell-properties header,
-.tm-document-table-properties label,
-.tm-document-cell-properties label {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--tm-space-2);
-}
-
-.tm-document-table-properties input,
-.tm-document-table-properties select,
-.tm-document-cell-properties input,
-.tm-document-cell-properties select {
-    min-inline-size: 7rem;
-}
-
-.tm-document-table-properties__segmented,
-.tm-document-cell-properties__segmented {
-    display: inline-flex;
-    gap: var(--tm-space-1);
-}
-
-.tm-document-table-properties__segment--active,
-.tm-document-cell-properties__segment--active {
-    color: var(--tm-color-primary);
-    background: var(--tm-color-primary-subtle);
-    border-color: var(--tm-color-primary);
-}
-
-.tm-document-cell-properties__meta {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--tm-space-2);
-    margin: 0;
-}
-
-.tm-document-cell-properties__meta div {
-    display: grid;
-    gap: var(--tm-space-1);
-}
-
-.tm-document-cell-properties__meta dt {
-    color: var(--tm-color-text-muted);
-    font-size: var(--tm-font-size-xs);
-}
-
-.tm-document-cell-properties__meta dd {
-    margin: 0;
-}
-
 .tm-document-image-editor__fields,
-.tm-document-image-inspector,
 .tm-document-image-wrap-panel,
 .tm-document-notes-editor,
 .tm-document-revisions-panel,
@@ -1903,7 +1772,6 @@
 }
 
 .tm-document-image-editor__fields label,
-.tm-document-image-inspector__field,
 .tm-document-note-editor,
 .tm-document-header-footer-surface {
     display: grid;
@@ -1913,7 +1781,6 @@
 }
 
 .tm-document-image-editor__fields input,
-.tm-document-image-inspector input,
 .tm-document-note-editor input,
 .tm-document-header-footer-surface input {
     width: 100%;
@@ -1922,172 +1789,6 @@
     background: var(--tm-color-surface);
     border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-control);
-}
-
-.tm-document-image-inspector__command,
-.tm-document-image-inspector__swatch {
-    display: inline-flex;
-    align-items: center;
-    justify-content: flex-start;
-    gap: var(--tm-space-1);
-    min-height: 2rem;
-    padding: var(--tm-space-1) var(--tm-space-2);
-    color: var(--tm-color-text);
-    font: inherit;
-    background: transparent;
-    border: 1px solid transparent;
-    border-radius: var(--tm-radius-control);
-    cursor: pointer;
-}
-
-.tm-document-image-inspector__command:hover,
-.tm-document-image-inspector__command:focus-visible,
-.tm-document-image-inspector__swatch:hover,
-.tm-document-image-inspector__swatch:focus-visible {
-    background: var(--tm-color-primary-subtle);
-    outline: none;
-}
-
-.tm-document-image-inspector {
-    box-sizing: border-box;
-    width: min(100vw - var(--tm-space-4), 22rem);
-    max-width: 100%;
-    max-height: calc(100vh - var(--tm-space-8));
-    align-content: start;
-    overflow: auto;
-}
-
-.tm-document-image-inspector__header,
-.tm-document-image-inspector__group,
-.tm-document-image-inspector__size {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--tm-space-2);
-}
-
-.tm-document-image-inspector__header {
-    font-weight: var(--tm-font-weight-semibold);
-    color: var(--tm-color-text);
-}
-
-.tm-document-image-inspector__section {
-    overflow: hidden;
-    background: var(--tm-color-surface);
-    border: 1px solid var(--tm-color-border-subtle);
-    border-radius: var(--tm-radius-card);
-}
-
-.tm-document-image-inspector__section summary {
-    display: flex;
-    align-items: center;
-    gap: var(--tm-space-2);
-    min-height: 2rem;
-    padding: var(--tm-space-2);
-    color: var(--tm-color-text);
-    font-weight: var(--tm-font-weight-semibold);
-    cursor: pointer;
-    list-style: none;
-}
-
-.tm-document-image-inspector__section summary::-webkit-details-marker {
-    display: none;
-}
-
-.tm-document-image-inspector__section summary::after {
-    margin-inline-start: auto;
-    color: var(--tm-color-text-muted);
-    content: "+";
-}
-
-.tm-document-image-inspector__section[open] summary::after {
-    content: "-";
-}
-
-.tm-document-image-inspector__section-body {
-    display: grid;
-    gap: var(--tm-space-2);
-    padding: 0 var(--tm-space-2) var(--tm-space-2);
-}
-
-.tm-document-image-inspector__group {
-    padding-block-start: var(--tm-space-1);
-    border-block-start: 1px solid var(--tm-color-border-subtle);
-}
-
-.tm-document-image-inspector__section-body .tm-document-image-inspector__group[role="group"] {
-    display: inline-flex;
-    width: fit-content;
-    max-width: 100%;
-    gap: 0;
-    padding: var(--tm-space-1);
-    background: var(--tm-color-surface-secondary);
-    border: 1px solid var(--tm-color-border-subtle);
-    border-radius: var(--tm-radius-card);
-}
-
-.tm-document-image-inspector__size {
-    align-items: flex-start;
-}
-
-.tm-document-image-inspector__size .tm-document-image-inspector__field {
-    flex: 1 1 8rem;
-}
-
-.tm-document-image-inspector__checkbox {
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-}
-
-.tm-document-image-inspector__checkbox input {
-    width: auto;
-}
-
-.tm-document-image-inspector__asset {
-    display: grid;
-    gap: var(--tm-space-1);
-    padding: var(--tm-space-2);
-    color: var(--tm-color-text-muted);
-    background: var(--tm-color-surface-secondary);
-    border: 1px solid var(--tm-color-border-subtle);
-    border-radius: var(--tm-radius-card);
-    font-size: var(--tm-font-size-xs);
-}
-
-.tm-document-image-inspector__asset strong {
-    overflow: hidden;
-    color: var(--tm-color-text);
-    font-weight: var(--tm-font-weight-medium);
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.tm-document-image-inspector input[readonly] {
-    color: var(--tm-color-text-muted);
-    background: var(--tm-color-surface-secondary);
-}
-
-.tm-document-image-inspector__swatch--active {
-    color: var(--tm-color-primary);
-    background: var(--tm-color-primary-subtle);
-    border-color: var(--tm-color-primary);
-}
-
-.tm-document-image-inspector__section-body .tm-document-image-inspector__group[role="group"] .tm-document-image-inspector__swatch {
-    justify-content: center;
-    min-width: 2rem;
-    min-height: 2rem;
-    padding: var(--tm-space-1);
-    border-radius: var(--tm-radius-xs);
-}
-
-.tm-document-image-inspector__warning {
-    padding: var(--tm-space-1) var(--tm-space-2);
-    color: var(--tm-color-warning-text, var(--tm-color-text));
-    background: var(--tm-color-warning-subtle, var(--tm-color-surface-secondary));
-    border: 1px solid var(--tm-color-warning);
-    border-radius: var(--tm-radius-card);
-    font-size: var(--tm-font-size-xs);
 }
 
 .tm-document-image-wrap-panel {
@@ -2228,30 +1929,6 @@
     flex-wrap: wrap;
     align-items: center;
     gap: var(--tm-space-2);
-}
-
-.tm-document-version-panel__diff-actions {
-    display: flex;
-    gap: var(--tm-space-1);
-    padding: var(--tm-space-1) 0 var(--tm-space-2);
-}
-
-.tm-document-version-panel__diff-button {
-    display: inline-flex;
-    align-items: center;
-    min-height: 1.75rem;
-    padding: 0 var(--tm-space-2);
-    color: var(--tm-color-text-muted);
-    background: var(--tm-color-surface);
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-control);
-    cursor: pointer;
-}
-
-.tm-document-version-panel__diff-button--active {
-    color: var(--tm-color-primary);
-    border-color: var(--tm-color-primary);
-    background: var(--tm-color-primary-subtle);
 }
 
 .tm-document-diff {
@@ -2422,11 +2099,6 @@
 .tm-document-editor__page-surface:focus-within {
     outline: 2px solid var(--tm-color-primary);
     outline-offset: 2px;
-}
-
-.tm-document-version-panel__preview {
-    border-left: 3px solid var(--tm-color-primary);
-    background: var(--tm-color-primary-subtle);
 }
 
 .tm-document-diff__segment--added,
@@ -4610,65 +4282,6 @@
     text-decoration-line: inherit;
 }
 
-.tm-document-review-summary {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--tm-space-3);
-    margin: 0 var(--tm-space-4) var(--tm-space-3);
-    padding: var(--tm-space-3);
-    color: var(--tm-color-text);
-    background: var(--tm-color-warning-subtle);
-    border: 1px solid color-mix(in srgb, var(--tm-color-warning) 35%, var(--tm-color-border));
-    border-radius: var(--tm-radius-card);
-}
-
-.tm-document-review-summary__text {
-    display: grid;
-    gap: var(--tm-space-1);
-    min-width: 0;
-}
-
-.tm-document-review-summary__text span {
-    color: var(--tm-color-text-muted);
-    font-size: var(--tm-font-size-sm);
-}
-
-.tm-document-review-summary__actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--tm-space-2);
-}
-
-.tm-document-review-summary__actions button,
-.tm-document-revision-panel__toolbar select {
-    min-height: 2rem;
-    padding: var(--tm-space-1) var(--tm-space-2);
-    color: var(--tm-color-text);
-    background: var(--tm-color-surface);
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-control);
-}
-
-.tm-document-revision-panel__toolbar {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--tm-space-2);
-    margin-block-end: var(--tm-space-3);
-}
-
-.tm-document-revision-panel__toolbar label {
-    display: grid;
-    gap: var(--tm-space-1);
-    color: var(--tm-color-text-muted);
-    font-size: var(--tm-font-size-xs);
-}
-
-.tm-document-revision-panel__batch-action {
-    align-self: end;
-    justify-content: center;
-}
-
 .tm-document-suggestion {
     display: inline-flex;
     align-items: center;
@@ -4695,140 +4308,9 @@
     text-decoration-thickness: 2px;
 }
 
-.tm-document-suggestion-panel,
-.tm-document-revision-panel {
-    width: 100%;
-    padding: 0;
-    border-inline-start: 0;
-    background: var(--tm-color-surface);
-}
-
-.tm-document-suggestion-panel__title,
-.tm-document-revision-panel__title {
-    margin: 0 0 var(--tm-space-3);
-    font-size: var(--tm-font-size-base);
-    font-weight: var(--tm-font-weight-semibold);
-}
-
-.tm-document-suggestion-panel__list,
-.tm-document-revision-panel__list {
-    display: grid;
-    gap: var(--tm-space-2);
-    margin: 0;
-    padding: 0;
-    list-style: none;
-}
-
-.tm-document-suggestion-panel__item,
-.tm-document-revision-panel__item {
-    display: grid;
-    gap: var(--tm-space-2);
-    padding: var(--tm-space-3);
-    text-align: start;
-    border: 1px solid var(--tm-color-border-subtle);
-    border-radius: var(--tm-radius-control);
-    background: var(--tm-color-surface);
-    box-shadow: var(--tm-shadow-xs);
-}
-
-.tm-document-revision-panel__item--selected {
-    border-color: var(--tm-color-primary);
-    background: var(--tm-color-primary-subtle);
-    box-shadow:
-        inset 3px 0 0 var(--tm-color-primary),
-        var(--tm-shadow-xs);
-}
-
-.tm-document-revision-panel__summary {
-    display: grid;
-    gap: var(--tm-space-1);
-    padding: 0;
-    color: var(--tm-color-text);
-    text-align: start;
-    background: transparent;
-    border: 0;
-}
-
-.tm-document-suggestion-panel__meta,
-.tm-document-revision-panel__meta {
-    display: flex;
-    justify-content: space-between;
-    gap: var(--tm-space-2);
-    color: var(--tm-color-text-muted);
-    font-size: var(--tm-font-size-xs);
-}
-
-.tm-document-suggestion-panel__preview,
-.tm-document-revision-panel__preview {
-    overflow-wrap: anywhere;
-    color: var(--tm-color-text);
-    font-size: var(--tm-font-size-sm);
-    line-height: 1.45;
-}
-
-.tm-document-suggestion-panel__actions,
-.tm-document-revision-panel__actions {
-    display: flex;
-    gap: var(--tm-space-2);
-}
-
-.tm-document-suggestion-panel__actions button {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--tm-space-1);
-    padding: var(--tm-space-1) var(--tm-space-2);
-    border: 1px solid var(--tm-color-border-subtle);
-    border-radius: var(--tm-radius-control);
-    background: var(--tm-color-surface);
-    color: var(--tm-color-text);
-}
-
-.tm-document-suggestion-panel__actions button:first-child {
-    color: var(--tm-color-success-text);
-    background: var(--tm-color-success-subtle);
-    border-color: color-mix(in srgb, var(--tm-color-success) 35%, var(--tm-color-border));
-}
-
-.tm-document-suggestion-panel__actions button:last-child {
-    color: var(--tm-color-danger-text);
-    background: var(--tm-color-danger-subtle);
-    border-color: color-mix(in srgb, var(--tm-color-danger) 35%, var(--tm-color-border));
-}
-
 /* The revision actions are library buttons (tm-btn). Only the decision TONE is local: the per-item and the
    bulk Reject carry the danger ink, the per-item Accept the success ink; the bulk Accept is the panel's primary
    action and keeps the primary fill. */
-.tm-document-revision-panel__action {
-    gap: var(--tm-space-1);
-}
-
-.tm-btn.tm-document-revision-panel__action--accept {
-    color: var(--tm-color-success-text);
-    border-color: color-mix(in srgb, var(--tm-color-success) 35%, var(--tm-color-border));
-}
-
-.tm-btn.tm-document-revision-panel__action--reject,
-.tm-btn.tm-document-revision-panel__batch-action--reject {
-    color: var(--tm-color-danger-text);
-    border-color: color-mix(in srgb, var(--tm-color-danger) 35%, var(--tm-color-border));
-}
-
-.tm-document-revision-panel__batch-action--accept {
-    flex: 1 1 auto;
-}
-
-.tm-document-revision-panel__action:disabled,
-.tm-document-revision-panel__batch-action:disabled {
-    cursor: not-allowed;
-}
-
-.tm-document-suggestion-panel__status,
-.tm-document-revision-panel__status {
-    margin-block-end: var(--tm-space-2);
-    color: var(--tm-color-text-muted);
-    font-size: var(--tm-font-size-sm);
-}
-
 /* ── Show blocks mode ─────────────────────────────────────────────────── */
 
 .tm-wysiwyg--show-blocks .tm-wysiwyg-block {

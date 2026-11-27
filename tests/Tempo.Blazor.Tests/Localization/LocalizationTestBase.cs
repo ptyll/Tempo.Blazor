@@ -103,6 +103,22 @@ public abstract class LocalizationTestBase : BunitContext
         return _regionCycleModule;
     }
 
+    private BunitJSModuleInterop? _sidePanelTabsModule;
+
+    /// <summary>Registers (once) the mock of the inspector's text-tab scroller module (scrolls the active tab into view, publishes the overflow cue).</summary>
+    protected BunitJSModuleInterop SetupSidePanelTabsModule()
+    {
+        if (_sidePanelTabsModule is not null)
+        {
+            return _sidePanelTabsModule;
+        }
+
+        _sidePanelTabsModule = JSInterop.SetupModule("./_content/Tempo.Blazor.DocumentEditor/js/document-editor/interop/side-panel-tabs.mjs");
+        _sidePanelTabsModule.SetupVoid("attachTabScroller", _ => true).SetVoidResult();
+        _sidePanelTabsModule.SetupVoid("syncTabScroller", _ => true).SetVoidResult();
+        return _sidePanelTabsModule;
+    }
+
     /// <summary>Registers the minimal ES module mock used by the canvas-only document editor shell.</summary>
     protected BunitJSModuleInterop SetupDocumentCanvasModule()
     {
@@ -115,6 +131,7 @@ public abstract class LocalizationTestBase : BunitContext
         // the first render; a Strict-mode test would otherwise fail on the unconfigured import.
         SetupLayoutObserverModule();
         SetupRegionCycleModule();
+        SetupSidePanelTabsModule();
         SetupToolbarModule();
         var module = JSInterop.SetupModule(DocumentCanvasInteropModulePath);
         module.Setup<string>("mount", _ => true).SetResult("document-canvas-test-handle");
@@ -4383,6 +4400,30 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmDocumentEditor_CancelColor"] = "Cancel",
         ["TmDocumentEditor_Cancel"] = "Cancel",
         ["TmDocumentEditor_Close"] = "Close",
+        ["TmDocumentEditor_CommentCountVisible_One"] = "{1} of {0} comment",
+        ["TmDocumentEditor_CommentCountVisible_Other"] = "{1} of {0} comments",
+        ["TmDocumentEditor_RevisionsShowMore"] = "Show {0} more",
+        ["TmDocumentEditor_InspectorBack"] = "Back to tabs",
+        ["TmDocumentEditor_TableInspector"] = "Table",
+        ["TmDocumentEditor_FindPanelTitle"] = "Find and replace",
+        ["TmDocumentEditor_ImageAnchorCurrent"] = "Current paragraph",
+        ["TmDocumentEditor_UnitPx"] = "px",
+        ["TmDocumentEditor_UnitDegrees"] = "°",
+        ["TmDocumentEditor_BorderCustom"] = "Custom",
+        ["TmDocumentEditor_NoColor"] = "No color",
+        ["TmDocumentEditor_FindLabel"] = "Find",
+        ["TmDocumentEditor_ReplaceLabel"] = "Replace with",
+        ["TmDocumentEditor_FindClear"] = "Clear search text",
+        ["TmDocumentEditor_ReplaceClear"] = "Clear replacement text",
+        ["TmDocumentEditor_FindReplaceToggle"] = "Replace",
+        ["TmDocumentEditor_FindResultsHeading"] = "Results ({0})",
+        ["TmDocumentEditor_FindOptionsLabel"] = "Search options",
+        ["TmDocumentEditor_RevisionFormatOn"] = "{0}: on",
+        ["TmDocumentEditor_RevisionFormatOff"] = "{0}: off",
+        ["TmDocumentEditor_RevisionFormatGeneric"] = "Text formatting",
+        ["TmDocumentEditor_VersionCurrentPreview"] = "Current preview",
+        ["TmDocumentEditor_ViewingVersion"] = "You are viewing version {0}",
+        ["TmDocumentEditor_VersionPreviewStripLabel"] = "Version preview",
         ["TmDocumentEditor_ClearFormatting"] = "Clear formatting",
         ["TmDocumentEditor_SpellIgnoreOnce"] = "Ignore once",
         ["TmDocumentEditor_SpellIgnoreAll"] = "Ignore all",
@@ -4537,7 +4578,6 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmDocumentEditor_CommentsPlaceholder"] = "No comments yet",
         ["TmDocumentEditor_CommentCount_One"] = "{0} comment",
         ["TmDocumentEditor_CommentCount_Other"] = "{0} comments",
-        ["TmDocumentEditor_CommentCountVisible"] = "{0} of {1} comments",
         ["TmDocumentEditor_NewComment"] = "New comment",
         ["TmDocumentEditor_LoadingComments"] = "Loading comments...",
         ["TmDocumentEditor_NoComments"] = "No comments yet",
@@ -4900,13 +4940,13 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmDocumentEditor_RevisionFilterAllTypes"] = "All types",
         ["TmDocumentEditor_AcceptRevisionAria"] = "Accept revision from {0}",
         ["TmDocumentEditor_RejectRevisionAria"] = "Reject revision from {0}",
-        ["TmDocumentEditor_RevisionTypeInsertion"] = "Insertion",
-        ["TmDocumentEditor_RevisionTypeDeletion"] = "Deletion",
-        ["TmDocumentEditor_RevisionTypeFormatting"] = "Formatting",
-        ["TmDocumentEditor_RevisionTypeMove"] = "Move",
-        ["TmDocumentEditor_RevisionTypeStructure"] = "Structure",
-        ["TmDocumentEditor_RevisionTypeImage"] = "Image",
-        ["TmDocumentEditor_RevisionTypeTable"] = "Table",
+        ["TmDocumentEditor_RevisionTypeInsertion"] = "Inserted text",
+        ["TmDocumentEditor_RevisionTypeDeletion"] = "Deleted text",
+        ["TmDocumentEditor_RevisionTypeFormatting"] = "Formatting change",
+        ["TmDocumentEditor_RevisionTypeMove"] = "Moved content",
+        ["TmDocumentEditor_RevisionTypeStructure"] = "Structure change",
+        ["TmDocumentEditor_RevisionTypeImage"] = "Image change",
+        ["TmDocumentEditor_RevisionTypeTable"] = "Table change",
         ["TmDocumentEditor_RevisionPreviewUnavailable"] = "No preview available",
         ["TmDocumentEditor_RevisionPreviewStructured"] = "Details available in the document",
         ["TmDocumentEditor_TrackChangesOn"] = "Track changes on",
@@ -10398,6 +10438,32 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmDocumentEditor_CancelColor"] = "Storno",
         ["TmDocumentEditor_Cancel"] = "Zrušit",
         ["TmDocumentEditor_Close"] = "Zavřít",
+        ["TmDocumentEditor_CommentCountVisible_One"] = "{1} z {0} komentáře",
+        ["TmDocumentEditor_CommentCountVisible_Few"] = "{1} z {0} komentářů",
+        ["TmDocumentEditor_CommentCountVisible_Many"] = "{1} z {0} komentářů",
+        ["TmDocumentEditor_CommentCountVisible_Other"] = "{1} z {0} komentářů",
+        ["TmDocumentEditor_RevisionsShowMore"] = "Zobrazit dalších {0}",
+        ["TmDocumentEditor_InspectorBack"] = "Zpět na záložky",
+        ["TmDocumentEditor_TableInspector"] = "Tabulka",
+        ["TmDocumentEditor_FindPanelTitle"] = "Najít a nahradit",
+        ["TmDocumentEditor_ImageAnchorCurrent"] = "Aktuální odstavec",
+        ["TmDocumentEditor_UnitPx"] = "px",
+        ["TmDocumentEditor_UnitDegrees"] = "°",
+        ["TmDocumentEditor_BorderCustom"] = "Vlastní",
+        ["TmDocumentEditor_NoColor"] = "Bez barvy",
+        ["TmDocumentEditor_FindLabel"] = "Najít",
+        ["TmDocumentEditor_ReplaceLabel"] = "Nahradit za",
+        ["TmDocumentEditor_FindClear"] = "Vymazat hledaný text",
+        ["TmDocumentEditor_ReplaceClear"] = "Vymazat nahrazující text",
+        ["TmDocumentEditor_FindReplaceToggle"] = "Nahradit",
+        ["TmDocumentEditor_FindResultsHeading"] = "Výsledky ({0})",
+        ["TmDocumentEditor_FindOptionsLabel"] = "Možnosti hledání",
+        ["TmDocumentEditor_RevisionFormatOn"] = "{0}: zapnuto",
+        ["TmDocumentEditor_RevisionFormatOff"] = "{0}: vypnuto",
+        ["TmDocumentEditor_RevisionFormatGeneric"] = "Formátování textu",
+        ["TmDocumentEditor_VersionCurrentPreview"] = "Aktuální náhled",
+        ["TmDocumentEditor_ViewingVersion"] = "Prohlížíte verzi {0}",
+        ["TmDocumentEditor_VersionPreviewStripLabel"] = "Náhled verze",
         ["TmDocumentEditor_ClearFormatting"] = "Vymazat formátování",
         ["TmDocumentEditor_SpellIgnoreOnce"] = "Ignorovat jednou",
         ["TmDocumentEditor_SpellIgnoreAll"] = "Ignorovat všude",
@@ -10554,7 +10620,6 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmDocumentEditor_CommentCount_Few"] = "{0} komentáře",
         ["TmDocumentEditor_CommentCount_Many"] = "{0} komentáře",
         ["TmDocumentEditor_CommentCount_Other"] = "{0} komentářů",
-        ["TmDocumentEditor_CommentCountVisible"] = "Komentáře: {0} z {1}",
         ["TmDocumentEditor_NewComment"] = "Nový komentář",
         ["TmDocumentEditor_LoadingComments"] = "Načítám komentáře...",
         ["TmDocumentEditor_NoComments"] = "Zatím žádné komentáře",
@@ -10955,13 +11020,13 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmDocumentEditor_RevisionFilterAllTypes"] = "Všechny typy",
         ["TmDocumentEditor_AcceptRevisionAria"] = "Přijmout revizi od {0}",
         ["TmDocumentEditor_RejectRevisionAria"] = "Odmítnout revizi od {0}",
-        ["TmDocumentEditor_RevisionTypeInsertion"] = "Vložení",
-        ["TmDocumentEditor_RevisionTypeDeletion"] = "Smazání",
-        ["TmDocumentEditor_RevisionTypeFormatting"] = "Formátování",
-        ["TmDocumentEditor_RevisionTypeMove"] = "Přesun",
-        ["TmDocumentEditor_RevisionTypeStructure"] = "Struktura",
-        ["TmDocumentEditor_RevisionTypeImage"] = "Obrázek",
-        ["TmDocumentEditor_RevisionTypeTable"] = "Tabulka",
+        ["TmDocumentEditor_RevisionTypeInsertion"] = "Vložený text",
+        ["TmDocumentEditor_RevisionTypeDeletion"] = "Odstraněný text",
+        ["TmDocumentEditor_RevisionTypeFormatting"] = "Změna formátování",
+        ["TmDocumentEditor_RevisionTypeMove"] = "Přesunutý obsah",
+        ["TmDocumentEditor_RevisionTypeStructure"] = "Změna struktury",
+        ["TmDocumentEditor_RevisionTypeImage"] = "Změna obrázku",
+        ["TmDocumentEditor_RevisionTypeTable"] = "Změna tabulky",
         ["TmDocumentEditor_RevisionPreviewUnavailable"] = "Náhled není k dispozici",
         ["TmDocumentEditor_RevisionPreviewStructured"] = "Podrobnosti jsou k dispozici v dokumentu",
         ["TmDocumentEditor_TrackChangesOn"] = "Sledování změn zapnuto",

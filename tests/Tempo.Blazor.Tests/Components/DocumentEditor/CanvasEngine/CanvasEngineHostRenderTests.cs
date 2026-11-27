@@ -225,6 +225,59 @@ public sealed class CanvasEngineHostRenderTests : LocalizationTestBase
         }
     }
 
+    private static DocumentEditorDocument DocumentWithText(string text)
+    {
+        var document = DocumentEditorDocument.Empty("canvas-host-preserve");
+        document.Blocks.Add(new DocumentBlock
+        {
+            Id = "p1",
+            Type = DocumentBlockType.Paragraph,
+            Content = new ParagraphBlockContent { Inlines = [new TextRun { Text = text }] }
+        });
+        return document;
+    }
+
+    private static bool? PreserveSelectionOf(Bunit.JSRuntimeInvocation invocation)
+        => invocation.Arguments.Count > 2 && invocation.Arguments[2] is { } options
+            ? (bool?)options.GetType().GetProperty("preserveSelection")!.GetValue(options)
+            : null;
+
+    [Fact]
+    public async Task ModelPush_AsksTheEngineToKeepTheCaret_OnlyForTheMirrorRefreshAfterAPanelEdit()
+    {
+        var module = SetupCanvasModule();
+        module.SetupVoid("replaceModel", _ => true).SetVoidResult();
+        module.SetupVoid("setOptions", _ => true).SetVoidResult();
+        var cut = Render<TmDocumentCanvasEngineHost>(parameters => parameters
+            .Add(p => p.Document, DocumentWithText("one"))
+            .Add(p => p.AriaLabel, "Document editor")
+            .Add(p => p.InputAriaLabel, "Document editor"));
+        cut.WaitForAssertion(() => cut.Instance.IsReady.Should().BeTrue());
+        List<bool?> Pushes() => module.Invocations.Where(i => i.Identifier == "replaceModel").Select(PreserveSelectionOf).ToList();
+        var before = Pushes().Count;
+
+        // An ordinary document swap (accept / reject, a template, a version preview ...): the engine starts from its own selection.
+        cut.Render(parameters => parameters.Add(p => p.Document, DocumentWithText("two")));
+        cut.WaitForAssertion(() => Pushes().Count.Should().Be(before + 1));
+        Pushes().Last().Should().Be(false);
+
+        // The mirror refresh after a panel edit: one push keeps the caret ...
+        cut.Instance.PreserveSelectionOnNextModelPush();
+        cut.Render(parameters => parameters.Add(p => p.Document, DocumentWithText("three")));
+        cut.WaitForAssertion(() => Pushes().Count.Should().Be(before + 2));
+        Pushes().Last().Should().Be(true);
+
+        // ... and the request does not outlive that push.
+        cut.Render(parameters => parameters.Add(p => p.Document, DocumentWithText("four")));
+        cut.WaitForAssertion(() => Pushes().Count.Should().Be(before + 3));
+        Pushes().Last().Should().Be(false);
+
+        // An explicit replacement (import, provider load) never preserves, even with a request pending.
+        cut.Instance.PreserveSelectionOnNextModelPush();
+        await cut.InvokeAsync(() => cut.Instance.ReplaceDocumentAsync(DocumentWithText("five")));
+        Pushes().Last().Should().Be(false);
+    }
+
     private BunitJSModuleInterop SetupCanvasModule()
     {
         var module = JSInterop.SetupModule(InteropModulePath);

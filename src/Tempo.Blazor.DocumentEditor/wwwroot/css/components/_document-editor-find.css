@@ -70,123 +70,263 @@ body.tm-document-editor--fullscreen .tm-document-editor {
     box-shadow: inset 0 -2px 0 var(--tm-color-warning);
 }
 
-/* ── Find / Replace panel ── */
+/* ── Find / Replace panel (phase 6, DE-2.3) ──
+   A panel, no longer a drop-down pinned over the page: the inspector's context on a desktop layout, the body of a floating panel on a
+   tablet or a phone. It flows (no absolute position), the host supplies the frame and the header. */
 .tm-document-find-panel {
-    position: absolute;
-    top: 0;
-    right: 0;
-    z-index: 200;
     display: flex;
     flex-direction: column;
+    min-width: 0;
+    max-width: min(100%, 100vw);
+    color: var(--tm-color-text);
+}
+
+.tm-document-find-panel__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    min-width: 0;
+    padding: var(--tm-space-3) var(--tm-space-4) var(--tm-space-4);
+}
+
+/* Inside a floating panel the frame body already pads. */
+.tm-document-floating-panel__body .tm-document-find-panel__body {
+    padding: 0;
+}
+
+.tm-document-find-panel__group {
+    display: grid;
     gap: var(--tm-space-1);
-    box-sizing: border-box;
-    padding: var(--tm-space-2) var(--tm-space-3);
-    min-width: min(20rem, calc(100vw - (var(--tm-space-2) * 2)));
-    max-width: calc(100vw - (var(--tm-space-2) * 2));
-    color: var(--tm-text-primary);
-    background: var(--tm-bg-surface);
-    border: 1px solid var(--tm-border-color);
-    border-top: none;
-    border-radius: 0 0 var(--tm-radius-card) var(--tm-radius-card);
-    box-shadow: var(--tm-shadow-md);
+    min-width: 0;
 }
 
 .tm-document-find-panel__row {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
+    align-items: stretch;
     gap: var(--tm-space-2);
 }
 
-.tm-document-find-panel__input {
+/* The field: the input, the count INSIDE it and the clear button share one bordered box. */
+.tm-document-find-panel__field {
+    display: flex;
     flex: 1 1 8rem;
+    align-items: center;
+    gap: var(--tm-space-1);
     min-width: 0;
-    padding: var(--tm-space-1) var(--tm-space-2);
-    color: var(--tm-text-primary);
-    background: var(--tm-bg-surface);
-    border: 1px solid var(--tm-border-color);
+    padding-inline: var(--tm-space-2);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-control);
-    font-size: var(--tm-font-size-sm);
-    line-height: 1.4;
-    outline: none;
 }
 
-.tm-document-find-panel__input:focus {
+.tm-document-find-panel__field:focus-within {
     border-color: var(--tm-color-primary);
     box-shadow: var(--tm-focus-ring);
 }
 
+.tm-document-find-panel__field > .tm-document-find-panel__input {
+    flex: 1 1 0;
+    width: 100%;
+    min-width: 0;
+    min-height: 2rem;
+    padding: var(--tm-space-1) 0;
+    color: var(--tm-color-text);
+    background: transparent;
+    border: 0;
+    font: inherit;
+    font-size: var(--tm-font-size-sm);
+    border-radius: 0;
+    box-shadow: none;
+    outline: none;
+    appearance: none;
+}
+
+/* The field has its own clear button: the native cancel button of a search input would be a second one. */
+.tm-document-find-panel__input::-webkit-search-cancel-button {
+    display: none;
+    appearance: none;
+}
+
 .tm-document-find-panel__count {
-    min-width: 4rem;
-    color: var(--tm-text-secondary);
+    flex: 0 0 auto;
+    color: var(--tm-color-text-muted);
     font-size: var(--tm-font-size-xs);
-    text-align: right;
     white-space: nowrap;
 }
 
-/* The find actions are library buttons (tm-btn + a variant); only the flex placement is local. */
+.tm-document-find-panel__clear {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0;
+    color: var(--tm-color-text-muted);
+    background: transparent;
+    border: 0;
+    border-radius: var(--tm-radius-full);
+    cursor: pointer;
+}
+
+.tm-document-find-panel__clear:hover {
+    color: var(--tm-color-text);
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-document-find-panel__clear:focus-visible {
+    outline: none;
+    box-shadow: var(--tm-focus-ring);
+}
+
+@media (pointer: coarse) {
+    .tm-document-find-panel__clear {
+        width: var(--tm-touch-target);
+        height: var(--tm-touch-target);
+    }
+}
+
+/* The previous / next buttons are library buttons (tm-btn + a variant); only the flex placement is local. */
 .tm-document-find-panel__btn {
     flex: 0 0 auto;
 }
 
-.tm-document-find-panel__btn--close {
-    margin-left: auto;
-}
-
+/* The options are a column of checkboxes. */
 .tm-document-find-panel__options {
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: var(--tm-space-2);
-    align-items: center;
-    color: var(--tm-text-secondary);
-    font-size: var(--tm-font-size-xs);
 }
 
-.tm-document-find-panel__options label {
-    display: flex;
-    align-items: center;
-    gap: var(--tm-space-1);
-    cursor: pointer;
-    user-select: none;
+.tm-document-find-panel__scope-field {
+    cursor: default;
 }
 
 .tm-document-find-panel__scope {
-    min-height: 1.625rem;
-    color: var(--tm-text-primary);
-    background: var(--tm-bg-surface);
-    border: 1px solid var(--tm-border-color);
+    width: 100%;
+}
+
+.tm-document-find-panel__divider {
+    margin: 0;
+    border: 0;
+    border-block-start: 1px solid var(--tm-color-border-subtle);
+}
+
+.tm-document-find-panel__replace-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    align-self: flex-start;
+    min-height: 2rem;
+    padding: 0 var(--tm-space-1);
+    color: var(--tm-color-text);
+    background: transparent;
+    border: 0;
     border-radius: var(--tm-radius-control);
     font: inherit;
+    font-weight: var(--tm-font-weight-semibold);
+    cursor: pointer;
+}
+
+.tm-document-find-panel__replace-toggle:hover {
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-document-find-panel__replace-toggle:focus-visible {
+    outline: none;
+    box-shadow: var(--tm-focus-ring);
+}
+
+.tm-document-find-panel__replace-chevron {
+    display: inline-flex;
+    color: var(--tm-color-text-muted);
+    transform: rotate(-90deg);
+    transition: transform var(--tm-transition-fast);
+}
+
+.tm-document-find-panel__replace-toggle[aria-expanded="true"] .tm-document-find-panel__replace-chevron {
+    transform: rotate(0deg);
+}
+
+.tm-document-find-panel__replace {
+    display: grid;
+    gap: var(--tm-space-3);
+    min-width: 0;
+}
+
+.tm-document-find-panel__replace[hidden] {
+    display: none;
+}
+
+.tm-document-find-panel__replace-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--tm-space-2);
+}
+
+.tm-document-find-panel__results-section {
+    display: grid;
+    gap: var(--tm-space-2);
+    min-width: 0;
+}
+
+.tm-document-find-panel__results-heading {
+    margin: 0;
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-semibold);
 }
 
 .tm-document-find-panel__results {
     display: grid;
-    gap: var(--tm-space-1);
-    max-height: 8.25rem;
-    margin: var(--tm-space-2) 0 0;
+    margin: 0;
     padding: 0;
-    overflow: auto;
     list-style: none;
+}
+
+.tm-document-find-panel__more {
+    justify-self: stretch;
+    margin-top: var(--tm-space-2);
 }
 
 .tm-document-find-panel__result {
     display: grid;
     grid-template-columns: 1.5rem minmax(0, 1fr);
+    gap: var(--tm-space-2);
     width: 100%;
-    padding: var(--tm-space-1) var(--tm-space-2);
-    color: var(--tm-text-primary);
+    padding: var(--tm-space-2);
+    color: var(--tm-color-text);
     background: transparent;
     border: 0;
+    border-block-end: 1px solid var(--tm-color-border-subtle);
     border-radius: var(--tm-radius-control);
     font: inherit;
-    text-align: left;
+    font-size: var(--tm-font-size-sm);
+    text-align: start;
     cursor: pointer;
 }
 
-.tm-document-find-panel__result span:last-child {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+.tm-document-find-panel__result-index {
+    color: var(--tm-color-text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.tm-document-find-panel__result-text {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    line-height: var(--tm-line-height-normal);
+}
+
+.tm-document-find-panel__context-before,
+.tm-document-find-panel__context-after {
+    color: var(--tm-color-text-secondary);
+}
+
+.tm-document-find-panel__match {
+    padding-inline: var(--tm-space-1);
+    color: inherit;
+    background: var(--tm-document-highlight-match);
+    border-radius: var(--tm-radius-xs);
 }
 
 .tm-document-find-panel__result:hover,
@@ -194,8 +334,13 @@ body.tm-document-editor--fullscreen .tm-document-editor {
     background: var(--tm-color-primary-subtle);
 }
 
-.tm-document-find-panel__replace-row {
-    display: flex;
-    gap: var(--tm-space-2);
-    align-items: center;
+.tm-document-find-panel__result:focus-visible {
+    outline: none;
+    box-shadow: var(--tm-focus-ring);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tm-document-find-panel__replace-chevron {
+        transition-duration: 0.01ms !important;
+    }
 }

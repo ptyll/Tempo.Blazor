@@ -2,7 +2,7 @@
   "itemName": "TmDocumentFindPanel",
   "kind": "Component",
   "category": "Document Editor",
-  "description": "Find-and-replace panel with a query input, result count, previous/next navigation, and case-sensitive, whole-word, and regex options plus a scope selector. Runs a debounced search, lists results, and offers optional replace-one and replace-all.",
+  "description": "Find and replace panel (redesign 146c7e1b, phase 6, DE-2.3, decision DE2): the inspector's context on a desktop layout and the body of a floating panel on a tablet or a phone. A labelled search field with the count inside it and a clear button, previous / next arrows, the options as a column, the scope on the full width, a Replace toggle (the replace field and a primary Replace / secondary Replace all), and 'Results (N)' as cards with the match marked in its sentence (ContextBefore / ContextAfter of DocumentSearchResult). The search is debounced (200 ms); Enter / Shift+Enter navigate and Escape closes.",
   "packageId": "Tempo.Blazor.DocumentEditor",
   "namespace": "Tempo.Blazor.Components.DocumentEditor",
   "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentFindPanel.razor",
@@ -56,6 +56,12 @@
       "name": "OnSearchRequested",
       "type": "EventCallback<DocumentSearchQuery>",
       "isRequired": false
+    },
+    {
+      "name": "ShowHeader",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the panel renders its own header (the title and the X). The editor passes false because its host already has one."
     }
   ]
 }

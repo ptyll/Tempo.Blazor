@@ -64,6 +64,24 @@
       "type": "string?",
       "isRequired": false,
       "description": "Additional CSS classes on the header root."
+    },
+    {
+      "name": "OnBack",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised by the back arrow, which leads from a contextual inspector back to the tab bar. Rendered only when a handler is bound."
+    },
+    {
+      "name": "BackLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Accessible name of the back arrow. Defaults to the localized 'Back to tabs'."
+    },
+    {
+      "name": "BackTestId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Unprefixed test id of the back arrow."
     }
   ],
   "cssClasses": [

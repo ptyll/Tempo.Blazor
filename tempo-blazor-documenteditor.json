@@ -343,6 +343,82 @@
       ]
     },
     {
+      "itemName": "DocumentBorderPresets",
+      "kind": "Class",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.DocumentEditor",
+      "description": "The border presets of the table and cell inspectors: None, Default, Strong and the display-only Custom. A preset writes exactly the CSS string the border select always wrote; any other stored value (a DOCX border) reads as Custom and is left alone until a preset is picked.",
+      "packageId": "Tempo.Blazor.DocumentEditor",
+      "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/DocumentBorderPresets.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Custom",
+          "kind": "Field",
+          "type": "string",
+          "description": "The display-only preset key of a border that matches no preset (an imported value)."
+        },
+        {
+          "name": "Default",
+          "kind": "Field",
+          "type": "string",
+          "description": "The preset key of the default border."
+        },
+        {
+          "name": "DefaultCss",
+          "kind": "Field",
+          "type": "string",
+          "description": "The CSS string of the default border."
+        },
+        {
+          "name": "None",
+          "kind": "Field",
+          "type": "string",
+          "description": "The preset key of \"no border\" (stored as an empty border string)."
+        },
+        {
+          "name": "Strong",
+          "kind": "Field",
+          "type": "string",
+          "description": "The preset key of the strong border."
+        },
+        {
+          "name": "StrongCss",
+          "kind": "Field",
+          "type": "string",
+          "description": "The CSS string of the strong border."
+        },
+        {
+          "name": "Resolve",
+          "kind": "Method",
+          "type": "string",
+          "description": "The preset a stored border string reads as: empty is None, the two known strings are their presets, anything else is Custom.",
+          "parameters": [
+            {
+              "name": "css",
+              "type": "string?"
+            }
+          ]
+        },
+        {
+          "name": "TryGetCss",
+          "kind": "Method",
+          "type": "bool",
+          "description": "The CSS string a writable preset stores; false for Custom and for an unknown key (nothing to write).",
+          "parameters": [
+            {
+              "name": "preset",
+              "type": "string?"
+            },
+            {
+              "name": "css",
+              "type": "out string"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "itemName": "DocumentClipboardDebugSnapshot",
       "kind": "Class",
       "category": "Components",
@@ -1599,6 +1675,42 @@
       "packageId": "Tempo.Blazor.DocumentEditor",
       "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/Wysiwyg/Model/DocumentModel.cs",
       "documentationStatus": "merged"
+    },
+    {
+      "itemName": "DocumentRevisionPreview",
+      "kind": "Class",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.DocumentEditor",
+      "description": "What a revision card shows of a tracked change: the affected Text and a one-line human Description. Supplied through the PreviewResolver of TmDocumentRevisionPanel; ReadFormatting reads the mark of a formatting revision from its payload.",
+      "packageId": "Tempo.Blazor.DocumentEditor",
+      "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/DocumentRevisionPreview.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Description",
+          "kind": "Property",
+          "type": "string?",
+          "description": "A human description of a change that is not text (a formatting change reads \"Bold: on\"). Plain text, already localized."
+        },
+        {
+          "name": "Empty",
+          "kind": "Property",
+          "type": "static DocumentRevisionPreview",
+          "description": "A preview with nothing to show; the card then falls back to its localized \"details in the document\" / \"no preview\" line."
+        },
+        {
+          "name": "HasContent",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the preview carries anything to show."
+        },
+        {
+          "name": "Text",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The text the revision inserted, deleted or touches. Rendered in an ins / del by the revision type."
+        }
+      ]
     },
     {
       "itemName": "DocumentRevisionRange",
@@ -6974,7 +7086,7 @@
       "kind": "Component",
       "category": "Document Editor",
       "namespace": "Tempo.Blazor.Components.DocumentEditor",
-      "description": "Find-and-replace panel with a query input, result count, previous/next navigation, and case-sensitive, whole-word, and regex options plus a scope selector. Runs a debounced search, lists results, and offers optional replace-one and replace-all.",
+      "description": "Find and replace panel (redesign 146c7e1b, phase 6, DE-2.3, decision DE2): the inspector's context on a desktop layout and the body of a floating panel on a tablet or a phone. A labelled search field with the count inside it and a clear button, previous / next arrows, the options as a column, the scope on the full width, a Replace toggle (the replace field and a primary Replace / secondary Replace all), and 'Results (N)' as cards with the match marked in its sentence (ContextBefore / ContextAfter of DocumentSearchResult). The search is debounced (200 ms); Enter / Shift+Enter navigate and Escape closes.",
       "packageId": "Tempo.Blazor.DocumentEditor",
       "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentFindPanel.razor",
       "documentationStatus": "merged",
@@ -6985,17 +7097,20 @@
         {
           "name": "Document",
           "type": "DocumentEditorDocument?",
-          "isRequired": false
+          "isRequired": false,
+          "description": "The document searched. The panel never changes it; a replace is requested through the replace callbacks."
         },
         {
           "name": "OnActiveResultChanged",
           "type": "EventCallback<DocumentSearchResult>",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Raised with the result that became the active one (a search, next / previous, a click on a result)."
         },
         {
           "name": "OnClose",
           "type": "EventCallback",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Raised when the panel should close (the X, Escape)."
         },
         {
           "name": "OnNavigateRequested",
@@ -7006,17 +7121,20 @@
         {
           "name": "OnReplaceAllRequested",
           "type": "EventCallback<DocumentFindReplaceRequest>",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Raised when every result should be replaced."
         },
         {
           "name": "OnReplaceOneRequested",
           "type": "EventCallback<DocumentFindReplaceRequest>",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Raised when the active result should be replaced."
         },
         {
           "name": "OnResultsChanged",
           "type": "EventCallback<IReadOnlyList<DocumentSearchResult>>",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Raised with the results after every search run."
         },
         {
           "name": "OnSearchRequested",
@@ -7025,9 +7143,17 @@
           "description": "R.4.8 — raised when the query/options change, so a host (e.g. the core engine) can run its own search + highlight. Carries the current query."
         },
         {
+          "name": "ShowHeader",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the panel renders its own header (the title and the X). The editor passes false because its host already has one."
+        },
+        {
           "name": "ShowReplace",
           "type": "bool",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Whether the Replace section is expanded. The reader can also toggle it; a change of this parameter (Ctrl+H) applies again."
         }
       ]
     },
@@ -7231,6 +7357,12 @@
           "description": "Raised when alternative text changes. The control renders only when this callback is bound."
         },
         {
+          "name": "AnchorText",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Text of the paragraph the image is anchored to (its first ~40 characters), resolved by the host. Shown instead of the block id."
+        },
+        {
           "name": "BringForward",
           "type": "EventCallback",
           "isRequired": false,
@@ -7271,6 +7403,13 @@
           "type": "EventCallback",
           "isRequired": false,
           "description": "Raised when the image should move one layer backward. The control renders only when this callback is bound."
+        },
+        {
+          "name": "ShowHeader",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the inspector renders its own header. The desktop inspector hosts it as a contextual surface whose header names it and passes false."
         },
         {
           "name": "SizeChanged",
@@ -7488,6 +7627,18 @@
           "description": "Host actions rendered before the close button (a filter menu, an overflow button)."
         },
         {
+          "name": "BackLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Accessible name of the back arrow. Defaults to the localized 'Back to tabs'."
+        },
+        {
+          "name": "BackTestId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Unprefixed test id of the back arrow."
+        },
+        {
           "name": "Class",
           "type": "string?",
           "isRequired": false,
@@ -7511,6 +7662,12 @@
           "type": "string?",
           "isRequired": false,
           "description": "Optional leading icon name. The icon is decorative and always aria-hidden."
+        },
+        {
+          "name": "OnBack",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised by the back arrow, which leads from a contextual inspector back to the tab bar. Rendered only when a handler is bound."
         },
         {
           "name": "OnClose",
@@ -7569,6 +7726,72 @@
           "title": "Form pattern",
           "code": "<section class=\"tm-document-inspector-form tm-document-inspector-form--embedded\">\n    <div class=\"tm-document-inspector-form__section\">\n        <button type=\"button\" class=\"tm-document-inspector-form__section-toggle\" aria-expanded=\"true\" aria-controls=\"size-body\">\n            <span class=\"tm-document-inspector-form__chevron\" aria-hidden=\"true\"><TmIcon Name=\"chevron-down\" /></span>\n            Size\n        </button>\n        <div id=\"size-body\" class=\"tm-document-inspector-form__section-body\">\n            <label class=\"tm-document-inspector-form__field\">\n                <span class=\"tm-document-inspector-form__label\">Width</span>\n                <span class=\"tm-document-inspector-form__control\">\n                    <input class=\"tm-input\" type=\"number\" />\n                    <span class=\"tm-document-inspector-form__suffix\">mm</span>\n                </span>\n            </label>\n        </div>\n    </div>\n</section>"
         }
+      ]
+    },
+    {
+      "itemName": "TmDocumentInspectorSection",
+      "kind": "Component",
+      "category": "Document Editor",
+      "namespace": "Tempo.Blazor.Components.DocumentEditor",
+      "description": "One collapsible section of an inspector form (redesign 146c7e1b, phase 6): a chevron disclosure button over a body, no frame. The body stays in the DOM while the section is folded (the hidden attribute), so a control inside keeps its state and its test id. The image inspector and the table / cell panels are built from it.",
+      "packageId": "Tempo.Blazor.DocumentEditor",
+      "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentInspectorSection.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.DocumentEditor"
+      ],
+      "parameters": [
+        {
+          "name": "ChildContent",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "The section body."
+        },
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS classes on the section root."
+        },
+        {
+          "name": "DefaultExpanded",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the section starts unfolded. Defaults to true."
+        },
+        {
+          "name": "Icon",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Optional decorative icon between the chevron and the title."
+        },
+        {
+          "name": "OnExpandedChanged",
+          "type": "EventCallback<bool>",
+          "isRequired": false,
+          "description": "Raised when the reader folds or unfolds the section."
+        },
+        {
+          "name": "SectionTestId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Unprefixed test id of the section root; the disclosure button gets the same id plus -toggle."
+        },
+        {
+          "name": "Title",
+          "type": "string",
+          "isRequired": true,
+          "default": "\"\"",
+          "description": "Section title, the label of the disclosure button.",
+          "editorRequired": true
+        }
+      ],
+      "cssClasses": [
+        "tm-document-inspector-form__section",
+        "tm-document-inspector-form__section-toggle",
+        "tm-document-inspector-form__chevron",
+        "tm-document-inspector-form__section-body"
       ]
     },
     {
@@ -7815,11 +8038,168 @@
       ]
     },
     {
+      "itemName": "TmDocumentReviewCard",
+      "kind": "Component",
+      "category": "Document Editor",
+      "namespace": "Tempo.Blazor.Components.DocumentEditor",
+      "description": "The one card of a tracked change, shared by the revision panel and the suggestion panel (redesign 146c7e1b, phase 6, DE-2.4): the author's avatar (initials without a picture), the type of the change as title with an icon and an accent from the success / danger / info tokens, 'author - relative time' through the shared ITmRelativeTimeFormatter, the preview (an ins for an insertion, a del for a deletion, a plain line otherwise) and compact Accept / Reject buttons. The type is always worded, so the accent never carries it alone.",
+      "packageId": "Tempo.Blazor.DocumentEditor",
+      "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentReviewCard.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.DocumentEditor"
+      ],
+      "parameters": [
+        {
+          "name": "AcceptAriaLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Accessible name of the Accept button (it names the author)."
+        },
+        {
+          "name": "AcceptLabel",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"\"",
+          "description": "Visible text of the Accept button."
+        },
+        {
+          "name": "AcceptTestId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Unprefixed test id of the Accept button."
+        },
+        {
+          "name": "ActionsDisabled",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether Accept and Reject are disabled."
+        },
+        {
+          "name": "AuthorAvatarUrl",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Optional avatar picture."
+        },
+        {
+          "name": "AuthorId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Stable author key that picks the avatar colour."
+        },
+        {
+          "name": "AuthorName",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"\"",
+          "description": "The author's display name."
+        },
+        {
+          "name": "ClassPrefix",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"tm-document-revision-panel\"",
+          "description": "BEM block of the host panel; the card keeps wearing its element classes."
+        },
+        {
+          "name": "CreatedAt",
+          "type": "DateTimeOffset?",
+          "isRequired": false,
+          "description": "When the change was made; rendered relative with the absolute time in the tooltip."
+        },
+        {
+          "name": "FallbackText",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"\"",
+          "description": "The localized line shown when the preview has nothing to show."
+        },
+        {
+          "name": "Kind",
+          "type": "DocumentRevisionType",
+          "isRequired": false,
+          "default": "DocumentRevisionType.Insertion",
+          "description": "The type of the change; drives the icon, the accent and the ins / del of the preview."
+        },
+        {
+          "name": "OnAccept",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised by Accept."
+        },
+        {
+          "name": "OnReject",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised by Reject."
+        },
+        {
+          "name": "OnSelect",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised when the card is pressed."
+        },
+        {
+          "name": "Preview",
+          "type": "DocumentRevisionPreview",
+          "isRequired": false,
+          "default": "DocumentRevisionPreview.Empty",
+          "description": "What the card shows of the change."
+        },
+        {
+          "name": "PreviewTestId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Unprefixed test id of the preview line."
+        },
+        {
+          "name": "RejectAriaLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Accessible name of the Reject button (it names the author)."
+        },
+        {
+          "name": "RejectLabel",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"\"",
+          "description": "Visible text of the Reject button."
+        },
+        {
+          "name": "RejectTestId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Unprefixed test id of the Reject button."
+        },
+        {
+          "name": "Selected",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether this is the selected card."
+        },
+        {
+          "name": "Title",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"\"",
+          "description": "The localized type of the change."
+        }
+      ],
+      "cssClasses": [
+        "tm-document-review-card",
+        "tm-document-review-card--insertion",
+        "tm-document-review-card--deletion",
+        "tm-document-review-card__summary",
+        "tm-document-review-card__preview",
+        "tm-document-review-card__actions"
+      ]
+    },
+    {
       "itemName": "TmDocumentReviewSummary",
       "kind": "Component",
       "category": "Document Editor",
       "namespace": "Tempo.Blazor.Components.DocumentEditor",
-      "description": "Compact review banner shown only when there are pending revisions or open comments. Displays their counts and provides buttons to open the revisions or comments panels.",
+      "description": "Compact one-row review strip of the document region, shown only when there are pending revisions or open comments: a warning icon, 'Needs review', the counts as a sentence (plural families: Czech says 1 komentář / 3 komentáře / 5 komentářů) and two icon + text buttons that open the revisions or comments panels.",
       "packageId": "Tempo.Blazor.DocumentEditor",
       "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentReviewSummary.razor",
       "documentationStatus": "merged",
@@ -7915,6 +8295,19 @@
           "description": "Raised when a revision is selected."
         },
         {
+          "name": "PageSize",
+          "type": "int",
+          "isRequired": false,
+          "default": "40",
+          "description": "How many cards render at once; a long list shows the next window on 'Show more'. Defaults to 40."
+        },
+        {
+          "name": "PreviewResolver",
+          "type": "Func<DocumentRevision, DocumentRevisionPreview?>?",
+          "isRequired": false,
+          "description": "Resolves what a card shows of a revision (the inserted or deleted text, a description of a formatting change). Whatever it leaves empty is filled from the revision's own payload; the raw payload is never printed."
+        },
+        {
           "name": "Revisions",
           "type": "IReadOnlyList<DocumentRevision>",
           "isRequired": false,
@@ -7974,6 +8367,36 @@
           "description": "Number of comments shown in the tab badge."
         },
         {
+          "name": "ContextCloseTestId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Unprefixed test id of the contextual X button."
+        },
+        {
+          "name": "ContextContent",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Contextual content (a selected image or table, an open find). While it is bound the tab bar is replaced by a header with the context title, a back arrow and an X, and this fragment is the body. The editor binds it on a desktop layout only."
+        },
+        {
+          "name": "ContextIcon",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Optional leading icon of the contextual header."
+        },
+        {
+          "name": "ContextKind",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Kind of the context (image, table, find), exposed as data-context."
+        },
+        {
+          "name": "ContextTitle",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Title of the contextual header."
+        },
+        {
           "name": "IsOpen",
           "type": "bool",
           "isRequired": false,
@@ -7985,6 +8408,18 @@
           "type": "EventCallback",
           "isRequired": false,
           "description": "Raised when the side panel should close."
+        },
+        {
+          "name": "OnContextBack",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised by the back arrow of the contextual header."
+        },
+        {
+          "name": "OnContextClose",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised by the X of the contextual header."
         },
         {
           "name": "OnOpen",
@@ -8470,6 +8905,13 @@
           "description": "Whether the panel renders its own close button. Defaults to true; the editor passes false while the panel is hosted in the docked side panel, whose own close button already does the same thing (two X in one corner)."
         },
         {
+          "name": "ShowPreviewStrip",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the panel renders the 'You are viewing version X' strip itself. Defaults to true; the editor shows the strip in the document region and passes false."
+        },
+        {
           "name": "StatusMessage",
           "type": "string?",
           "isRequired": false,
@@ -8482,6 +8924,44 @@
           "default": "[]",
           "description": "Versions to render."
         }
+      ]
+    },
+    {
+      "itemName": "TmDocumentVersionPreviewStrip",
+      "kind": "Component",
+      "category": "Document Editor",
+      "namespace": "Tempo.Blazor.Components.DocumentEditor",
+      "description": "The strip of the document region shown while a historical version is previewed (redesign 146c7e1b, phase 6, DE-2.5): 'You are viewing version X' with 'Return to current' and 'Restore'. Restore asks inline - a question and Restore / Cancel replace the two buttons - instead of a dialog. It belongs to the document, so it stays visible with the version panel closed. Renders nothing while PreviewVersion is null.",
+      "packageId": "Tempo.Blazor.DocumentEditor",
+      "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentVersionPreviewStrip.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.DocumentEditor"
+      ],
+      "parameters": [
+        {
+          "name": "OnRestoreVersion",
+          "type": "EventCallback<DocumentVersion>",
+          "isRequired": false,
+          "description": "Raised when the reader confirmed that the previewed version becomes the current draft."
+        },
+        {
+          "name": "OnReturnToCurrent",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised when the preview should return to the current document."
+        },
+        {
+          "name": "PreviewVersion",
+          "type": "DocumentVersion?",
+          "isRequired": false,
+          "description": "The version being previewed; the strip renders nothing while this is null."
+        }
+      ],
+      "cssClasses": [
+        "tm-document-version-preview-strip",
+        "tm-document-version-preview-strip__actions",
+        "tm-document-version-preview-strip__confirm"
       ]
     },
     {
@@ -9423,6 +9903,14 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor-canvas/selection/selection-restore.mjs",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor-canvas/selection/selection-restore.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor-canvas/selection/__tests__/caret-move.test.mjs",
       "kind": "JavaScript"
     },
@@ -10083,6 +10571,10 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor/interop/side-panel-tabs.mjs",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor/interop/__tests__/browser-globals.test.mjs",
       "kind": "JavaScript"
     },
@@ -10092,6 +10584,10 @@
     },
     {
       "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor/interop/__tests__/region-cycle.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor/interop/__tests__/side-panel-tabs.test.mjs",
       "kind": "JavaScript"
     },
     {
@@ -10764,11 +11260,11 @@
     }
   ],
   "summary": {
-    "itemCount": 231,
-    "manualItemCount": 231,
-    "generatedItemCount": 228,
+    "itemCount": 236,
+    "manualItemCount": 236,
+    "generatedItemCount": 233,
     "generatedOnlyItemCount": 0,
-    "componentCount": 43,
-    "publicApiTypeCount": 185
+    "componentCount": 46,
+    "publicApiTypeCount": 187
   }
 }

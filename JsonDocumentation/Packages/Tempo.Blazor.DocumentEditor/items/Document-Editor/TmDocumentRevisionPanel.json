@@ -77,6 +77,18 @@
       "type": "string?",
       "isRequired": false,
       "description": "Optional status message."
+    },
+    {
+      "name": "PreviewResolver",
+      "type": "Func<DocumentRevision, DocumentRevisionPreview?>?",
+      "isRequired": false,
+      "description": "Resolves what a card shows of a revision (the inserted or deleted text, a description of a formatting change). Whatever it leaves empty is filled from the revision's own payload; the raw payload is never printed."
+    },
+    {
+      "name": "PageSize",
+      "type": "int",
+      "isRequired": false,
+      "description": "How many cards render at once; a long list shows the next window on 'Show more'. Defaults to 40."
     }
   ]
 }

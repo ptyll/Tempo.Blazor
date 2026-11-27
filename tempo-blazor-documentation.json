@@ -7938,6 +7938,18 @@
           "description": "Icon name for: AlignVerticalJustifyCenter."
         },
         {
+          "name": "AlignVerticalJustifyEnd",
+          "kind": "Field",
+          "type": "string",
+          "description": "Icon name for: AlignVerticalJustifyEnd."
+        },
+        {
+          "name": "AlignVerticalJustifyStart",
+          "kind": "Field",
+          "type": "string",
+          "description": "Icon name for: AlignVerticalJustifyStart."
+        },
+        {
           "name": "AlignVerticalSpaceAround",
           "kind": "Field",
           "type": "string",
@@ -8338,18 +8350,6 @@
           "kind": "Field",
           "type": "string",
           "description": "Icon name for: FileText, Document."
-        },
-        {
-          "name": "FileType",
-          "kind": "Field",
-          "type": "string",
-          "description": "Icon name for: FileType, export typed file (PDF)."
-        },
-        {
-          "name": "Film",
-          "kind": "Field",
-          "type": "string",
-          "description": "Icon name for: Film, Video."
         }
       ]
     },
@@ -20553,6 +20553,12 @@
           "description": "Additional CSS class."
         },
         {
+          "name": "ClearText",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Text of the clear button (for example \"No color\"). When null the localized \"Clear\" is used."
+        },
+        {
           "name": "ColorNames",
           "type": "IReadOnlyDictionary<string, string>?",
           "isRequired": false,
@@ -20632,6 +20638,12 @@
           "type": "string?",
           "isRequired": false,
           "description": "Additional CSS class."
+        },
+        {
+          "name": "ClearText",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Text of the clear command in the palette (for example \"No color\" for a field whose empty value means \"none\"). When null the localized default is used."
         },
         {
           "name": "Disabled",
@@ -21415,6 +21427,12 @@
           "type": "string?",
           "isRequired": false,
           "description": "Additional CSS class."
+        },
+        {
+          "name": "ClearText",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Text of the palette's clear button. When null the localized default is used."
         },
         {
           "name": "Format",

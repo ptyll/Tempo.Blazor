@@ -173,3 +173,23 @@ test('setCellProperties partial payload and single-step undo', () => {
     assert.equal(undone.handled, true);
     assert.equal(JSON.stringify(state.model.body.blocks), before, 'a single undo must revert all applied cell properties');
 });
+
+// The panel edits a cell the caret may NOT be in (the engine reports an empty / first-block selection after a blur): the command must put the
+// caret back INSIDE the cell it edited, otherwise the host sees "selection left the table" and the table inspector disappears.
+for (const [command, payload] of [
+    ['setTableProperties', { cellId: 'props-table-r2c2', backgroundColor: '#fef9c3' }],
+    ['setCellProperties', { cellId: 'props-table-r2c2', backgroundColor: '#dcfce7' }],
+]) {
+    test(`${command} puts the caret into the edited cell when the incoming selection is outside the table`, () => {
+        const model = createModel();
+        model.body.blocks.unshift(paragraph('before-table', 'Heading'));
+        const { runtime, state } = createRuntime(model);
+        state.selection = { anchor: { blockId: 'before-table', offset: 0 }, focus: { blockId: 'before-table', offset: 0 } };
+
+        const result = runtime.execCommand(command, payload);
+
+        assert.equal(result.result?.changed, true);
+        assert.equal(state.selection.focus.blockId, 'props-table-r2c2-p', 'the caret is in the first block of the edited cell');
+        assert.equal(state.selection.anchor.blockId, 'props-table-r2c2-p');
+    });
+}

@@ -1,6 +1,7 @@
 import { createCanvasDocumentEngine } from './entry.mjs';
 import { isDeliberateSelectionNotification } from './selection-cadence.mjs';
 import { buildFormattingState } from './format-state.mjs';
+import { selectionToRestoreAfterModelRefresh } from './selection/selection-restore.mjs';
 import { extractAnnotations, countModelWords } from './annotations-state.mjs';
 import { clampExportScale, renderDisplayListPageToCanvas } from './render/page-image-export.mjs';
 import { collectRedactedRunIds, translateDisplayListToLayoutSnapshot } from './render/layout-snapshot-export.mjs';
@@ -168,10 +169,23 @@ export function setModel(handle, modelJson) {
     notifyChanged(state);
 }
 
-export function replaceModel(handle, modelJson) {
+// `options.preserveSelection` is sent by the host ONLY for the mirror refresh that follows a panel edit; every other replacement (accept /
+// reject, template, import, version preview / restore, a document switch) starts from the engine's own selection.
+export function replaceModel(handle, modelJson, options = {}) {
     const state = getInstance(handle);
     const model = parseJson(modelJson, {});
+    const previousModel = state.engine.getModel?.() ?? null;
+    const previousSelection = state.engine.selectionController?.getSelection?.() ?? null;
     state.engine.setModel(model).render();
+    // The host pushes the same document back after a panel edit (the C# mirror refresh): the caret must not jump to the start of it.
+    const restore = selectionToRestoreAfterModelRefresh(previousModel, previousSelection, state.engine.getModel?.() ?? model, state.engine.selectionController?.getSelection?.() ?? null, options ?? {});
+    if (restore) {
+        // A just-reset progressive layout would resolve (and re-resolve, on its idle continuation) the restored caret against a partial
+        // layout: finish the layout first, then put the caret back.
+        state.engine.ensurePointerHitLayout?.();
+        state.engine.selectionController.setSelection(restore);
+    }
+
     state.savedVersion = state.engine.getSnapshot().modelVersion;
     state.dirty = false;
 }

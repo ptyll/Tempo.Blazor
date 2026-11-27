@@ -1,0 +1,209 @@
+@namespace Tempo.Blazor.Components.DocumentEditor
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Components.Avatars
+@using Tempo.Blazor.DocumentEditor.Models
+
+@* The one card of a tracked change (redesign 146c7e1b, phase 6, DE-2.4): the revision panel and the suggestion panel render the same
+   fragment. An avatar (initials without a picture), the type as title with its icon, "author . relative time", the preview of the change
+   (an <ins> for an insertion, a <del> for a deletion, a plain line otherwise) and a compact Accept / Reject. The accent - a rule on the
+   leading edge, the icon - comes from the revision type through the success / danger / info tokens; the type is also WORDED, so the
+   accent never carries it alone. *@
+<div class="@RootClass" @attributes="AdditionalAttributes" data-revision-type="@TypeKey">
+    <div class="tm-document-review-card__head">
+    <TmAvatar Name="@AuthorName" Src="@AuthorAvatarUrl" Size="AvatarSize.Sm" Color="@AvatarColorFor(AuthorKey)" />
+    <button type="button"
+            class="tm-document-review-card__summary @(ClassPrefix)__summary"
+            @onclick="() => OnSelect.InvokeAsync()">
+        <span class="tm-document-review-card__text">
+            <span class="tm-document-review-card__title">
+                <span class="tm-document-review-card__type-icon" aria-hidden="true"><TmIcon Name="@TypeIcon" Size="IconSize.Xs" /></span>
+                <span class="tm-document-review-card__type">@Title</span>
+            </span>
+            <span class="tm-document-review-card__meta @(ClassPrefix)__meta">
+                <span class="tm-document-review-card__author">@AuthorName</span>
+                @if (CreatedAt is { } createdAt)
+                {
+                    <span aria-hidden="true"> &middot; </span>
+                    <time class="tm-document-review-card__time" datetime="@createdAt.UtcDateTime.ToString("O")" title="@AbsoluteTime(createdAt)">@RelativeTime(createdAt)</time>
+                }
+            </span>
+            <span class="tm-document-review-card__preview @(ClassPrefix)__preview" data-testid="@(string.IsNullOrEmpty(PreviewTestId) ? null : TestId(PreviewTestId))">
+                @if (Preview.HasContent)
+                {
+                    @if (!string.IsNullOrWhiteSpace(Preview.Text))
+                    {
+                        @if (Kind == DocumentRevisionType.Insertion)
+                        {
+                            <ins class="tm-document-review-card__ins">@Preview.Text</ins>
+                        }
+                        else if (Kind == DocumentRevisionType.Deletion)
+                        {
+                            <del class="tm-document-review-card__del">@Preview.Text</del>
+                        }
+                        else
+                        {
+                            <span class="tm-document-review-card__excerpt">@Preview.Text</span>
+                        }
+                    }
+                    @if (!string.IsNullOrWhiteSpace(Preview.Description))
+                    {
+                        <span class="tm-document-review-card__description">@Preview.Description</span>
+                    }
+                }
+                else
+                {
+                    <span class="tm-document-review-card__description">@FallbackText</span>
+                }
+            </span>
+        </span>
+    </button>
+    </div>
+    <div class="tm-document-review-card__actions @(ClassPrefix)__actions">
+        <button type="button"
+                class="tm-btn tm-btn-sm tm-btn-secondary tm-document-review-card__action tm-document-review-card__action--accept @(ClassPrefix)__action @(ClassPrefix)__action--accept"
+                disabled="@ActionsDisabled"
+                aria-disabled="@(ActionsDisabled ? "true" : "false")"
+                aria-label="@AcceptAriaLabel"
+                data-review-action="accept"
+                data-testid="@(string.IsNullOrEmpty(AcceptTestId) ? null : TestId(AcceptTestId))"
+                @onclick="() => OnAccept.InvokeAsync()"
+                @onclick:stopPropagation="true">
+            <TmIcon Name="check" Size="IconSize.Sm" />
+            @AcceptLabel
+        </button>
+        <button type="button"
+                class="tm-btn tm-btn-sm tm-btn-secondary tm-document-review-card__action tm-document-review-card__action--reject @(ClassPrefix)__action @(ClassPrefix)__action--reject"
+                disabled="@ActionsDisabled"
+                aria-disabled="@(ActionsDisabled ? "true" : "false")"
+                aria-label="@RejectAriaLabel"
+                data-review-action="reject"
+                data-testid="@(string.IsNullOrEmpty(RejectTestId) ? null : TestId(RejectTestId))"
+                @onclick="() => OnReject.InvokeAsync()"
+                @onclick:stopPropagation="true">
+            <TmIcon Name="x" Size="IconSize.Sm" />
+            @RejectLabel
+        </button>
+    </div>
+</div>
+
+@code {
+    [Inject] private IServiceProvider Services { get; set; } = default!;
+
+    private ITmRelativeTimeFormatter? _relativeTime;
+
+    /// <summary>The type of the change; drives the icon, the accent and the <c>ins</c> / <c>del</c> of the preview.</summary>
+    [Parameter] public DocumentRevisionType Kind { get; set; } = DocumentRevisionType.Insertion;
+
+    /// <summary>The title of the card: the localized type of the change.</summary>
+    [Parameter] public string Title { get; set; } = string.Empty;
+
+    /// <summary>The author's display name (avatar initials and the "author . time" line).</summary>
+    [Parameter] public string AuthorName { get; set; } = string.Empty;
+
+    /// <summary>Stable author key (the id) that picks the avatar colour; falls back to the name.</summary>
+    [Parameter] public string? AuthorId { get; set; }
+
+    /// <summary>Optional avatar picture; without it the avatar shows the initials.</summary>
+    [Parameter] public string? AuthorAvatarUrl { get; set; }
+
+    /// <summary>When the change was made. Rendered relative ("5 min ago") through the shared formatter, the absolute time in the tooltip; omitted when null.</summary>
+    [Parameter] public DateTimeOffset? CreatedAt { get; set; }
+
+    /// <summary>What the card shows of the change.</summary>
+    [Parameter] public DocumentRevisionPreview Preview { get; set; } = DocumentRevisionPreview.Empty;
+
+    /// <summary>The localized line shown when <see cref="Preview"/> has nothing to show ("Details available in the document").</summary>
+    [Parameter] public string FallbackText { get; set; } = string.Empty;
+
+    /// <summary>Whether this is the selected card.</summary>
+    [Parameter] public bool Selected { get; set; }
+
+    /// <summary>Whether Accept and Reject are disabled (no review right, or a review action is running).</summary>
+    [Parameter] public bool ActionsDisabled { get; set; }
+
+    /// <summary>Visible text of the Accept button.</summary>
+    [Parameter] public string AcceptLabel { get; set; } = string.Empty;
+
+    /// <summary>Visible text of the Reject button.</summary>
+    [Parameter] public string RejectLabel { get; set; } = string.Empty;
+
+    /// <summary>Accessible name of the Accept button (it names the author).</summary>
+    [Parameter] public string? AcceptAriaLabel { get; set; }
+
+    /// <summary>Accessible name of the Reject button (it names the author).</summary>
+    [Parameter] public string? RejectAriaLabel { get; set; }
+
+    /// <summary>
+    /// BEM block of the host panel (<c>tm-document-revision-panel</c> or <c>tm-document-suggestion-panel</c>). The card keeps wearing its
+    /// element classes (<c>__item</c>, <c>__preview</c>, <c>__action--accept</c>) so a host stylesheet written against the panel still hits it.
+    /// </summary>
+    [Parameter] public string ClassPrefix { get; set; } = "tm-document-revision-panel";
+
+    /// <summary>Unprefixed test id of the preview line (resolved through <c>TestIdPrefix</c>). None when omitted.</summary>
+    [Parameter] public string? PreviewTestId { get; set; }
+
+    /// <summary>Unprefixed test id of the Accept button. None when omitted.</summary>
+    [Parameter] public string? AcceptTestId { get; set; }
+
+    /// <summary>Unprefixed test id of the Reject button. None when omitted.</summary>
+    [Parameter] public string? RejectTestId { get; set; }
+
+    /// <summary>Raised when the card (its summary) is pressed.</summary>
+    [Parameter] public EventCallback OnSelect { get; set; }
+
+    /// <summary>Raised by Accept.</summary>
+    [Parameter] public EventCallback OnAccept { get; set; }
+
+    /// <summary>Raised by Reject.</summary>
+    [Parameter] public EventCallback OnReject { get; set; }
+
+    /// <summary>Attributes splatted on the card root (the host panel puts its test id, <c>data-revision-id</c> and <c>aria-current</c> there).</summary>
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string TypeKey => Kind.ToString().ToLowerInvariant();
+
+    private string AuthorKey => string.IsNullOrWhiteSpace(AuthorId) ? AuthorName : AuthorId!;
+
+    private string RootClass => $"tm-document-review-card tm-document-review-card--{TypeKey} {ClassPrefix}__item"
+        + (Selected ? $" tm-document-review-card--selected {ClassPrefix}__item--selected" : string.Empty);
+
+    private string TypeIcon => Kind switch
+    {
+        DocumentRevisionType.Insertion => "plus",
+        DocumentRevisionType.Deletion => "minus",
+        DocumentRevisionType.Formatting => "type",
+        DocumentRevisionType.Move => "move",
+        DocumentRevisionType.Structure => "layout-template",
+        DocumentRevisionType.Image => "image",
+        DocumentRevisionType.Table => "table",
+        _ => "plus"
+    };
+
+    private static readonly AvatarColor[] AvatarColors =
+    [
+        AvatarColor.Blue, AvatarColor.Pink, AvatarColor.Green, AvatarColor.Purple, AvatarColor.Orange, AvatarColor.Red
+    ];
+
+    // A stable colour per author (an ordinal hash, never string.GetHashCode which is randomised per process).
+    private static AvatarColor AvatarColorFor(string key)
+    {
+        if (string.IsNullOrEmpty(key))
+        {
+            return AvatarColor.Gray;
+        }
+
+        var hash = 17;
+        foreach (var ch in key)
+        {
+            hash = unchecked(hash * 31 + ch);
+        }
+
+        return AvatarColors[(hash & int.MaxValue) % AvatarColors.Length];
+    }
+
+    private string RelativeTime(DateTimeOffset value)
+        => (_relativeTime ??= TmRelativeTime.Resolve(Services, Loc)).Format(value);
+
+    private string AbsoluteTime(DateTimeOffset value)
+        => (_relativeTime ??= TmRelativeTime.Resolve(Services, Loc)).Absolute(value);
+}

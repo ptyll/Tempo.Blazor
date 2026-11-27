@@ -42,6 +42,28 @@ public class TmDocumentCommentRailTests : LocalizationTestBase
         sort.Should().Be(DocumentCommentSortMode.Time);
     }
 
+    [Theory]
+    [InlineData(1, "1 of 1 comment")]
+    [InlineData(3, "3 of 3 comments")]
+    public void Counter_UsesThePluralFamilyOfTheTotal_English(int total, string expected)
+    {
+        var comments = Enumerable.Range(1, total).Select(i => Comment($"c{i}", DocumentCommentStatus.Open, "me")).ToList();
+
+        Render(DocumentCommentFilter.All, comments).Find(".tm-document-panel__meta").TextContent.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData(1, "1 z 1 komentáře")]
+    [InlineData(3, "3 z 3 komentářů")]
+    [InlineData(5, "5 z 5 komentářů")]
+    public void Counter_Czech_DeclinesTheTotalAfterZ(int total, string expected)
+    {
+        UseCzechLocalization();
+        var comments = Enumerable.Range(1, total).Select(i => Comment($"c{i}", DocumentCommentStatus.Open, "me")).ToList();
+
+        Render(DocumentCommentFilter.All, comments).Find(".tm-document-panel__meta").TextContent.Should().Be(expected);
+    }
+
     private IRenderedComponent<TmDocumentCommentRail> Render(DocumentCommentFilter filter, IReadOnlyList<DocumentComment> comments)
         => Render<TmDocumentCommentRail>(parameters => parameters
             .Add(p => p.Comments, comments)

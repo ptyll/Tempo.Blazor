@@ -1,6 +1,9 @@
 using Bunit;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
+using NSubstitute;
 using Tempo.Blazor.Components.DocumentEditor;
+using Tempo.Blazor.Localization;
 using Tempo.Blazor.DocumentEditor.Models;
 using Tempo.Blazor.Tests.Localization;
 
@@ -8,6 +11,24 @@ namespace Tempo.Blazor.Tests.Components.DocumentEditor;
 
 public class TmDocumentCommentThreadTests : LocalizationTestBase
 {
+    [Fact]
+    public void EntryTime_GoesThroughTheSharedRelativeTimeFormatter()
+    {
+        // Redesign 146c7e1b, phase 6 (DE-2.5): no private ToString("g") any more.
+        var formatter = Substitute.For<ITmRelativeTimeFormatter>();
+        formatter.Format(Arg.Any<DateTimeOffset>(), Arg.Any<DateTimeOffset?>(), Arg.Any<TimeZoneInfo?>()).Returns("3 min ago");
+        formatter.Absolute(Arg.Any<DateTimeOffset>(), Arg.Any<TimeZoneInfo?>()).Returns("4 Mar 2026 10:30");
+        Services.AddSingleton(formatter);
+
+        var cut = Render<TmDocumentCommentThread>(parameters => parameters
+            .Add(p => p.Comment, Comment(DocumentCommentStatus.Open)));
+
+        var time = cut.Find(".tm-document-comment-entry__time");
+        time.TextContent.Trim().Should().Be("3 min ago");
+        time.GetAttribute("title").Should().Be("4 Mar 2026 10:30");
+        time.GetAttribute("datetime").Should().NotBeNullOrWhiteSpace();
+    }
+
     [Fact]
     public void Thread_CollapsesResolvedCommentByDefault()
     {

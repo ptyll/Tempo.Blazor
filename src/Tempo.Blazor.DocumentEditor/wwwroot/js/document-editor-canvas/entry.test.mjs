@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { CANVAS_LAYER_KINDS, createCanvasDocumentEngine } from './entry.mjs';
+import { CANVAS_LAYER_KINDS, CanvasDocumentEngine, createCanvasDocumentEngine } from './entry.mjs';
 
 test('createCanvasDocumentEngine mounts a canvas-per-visible-page stack without Blazor', () => {
     const doc = createFakeDocument();
@@ -948,3 +948,38 @@ function findAll(root, predicate) {
         }
     }
 }
+
+test('scrollMatchRectIntoView scrolls a transient probe at the match rectangle into the middle, then removes it', () => {
+    const calls = [];
+    const probes = [];
+    const pageElement = {
+        getAttribute: name => (name === 'data-canvas-page-zoom-scale' ? '2' : null),
+        appendChild: node => { probes.push(node); },
+    };
+    const fake = {
+        document: {
+            createElement: () => {
+                const node = {
+                    style: {},
+                    setAttribute() {},
+                    scrollIntoView: options => calls.push(['scroll', options, node.style.cssText]),
+                    remove: () => calls.push(['remove']),
+                };
+                return node;
+            },
+        },
+        canvasStack: { pages: new Map([['3', { pageElement }]]) },
+    };
+
+    CanvasDocumentEngine.prototype.scrollMatchRectIntoView.call(fake, { pageIndex: 3, x: 10, y: 400, width: 50, height: 20 });
+
+    assert.equal(probes.length, 1, 'a probe was placed inside the page');
+    assert.equal(calls[0][0], 'scroll');
+    assert.deepEqual(calls[0][1], { block: 'center', inline: 'nearest' });
+    assert.match(calls[0][2], /left:20px;top:800px;/, 'layout units are multiplied by the page zoom');
+    assert.equal(calls[1][0], 'remove', 'the probe never stays in the DOM');
+
+    // Nothing to scroll to: no page, no rectangle - and no throw.
+    assert.doesNotThrow(() => CanvasDocumentEngine.prototype.scrollMatchRectIntoView.call(fake, null));
+    assert.doesNotThrow(() => CanvasDocumentEngine.prototype.scrollMatchRectIntoView.call(fake, { pageIndex: 9, x: 0, y: 0, height: 1 }));
+});

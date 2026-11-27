@@ -1,0 +1,133 @@
+@namespace Tempo.Blazor.Components.DocumentEditor
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Microsoft.JSInterop
+@using Tempo.Blazor.DocumentEditor.Models
+
+@* Redesign 146c7e1b, phase 6 (DE-2.5): while a historical version is previewed, ONE strip in the doc region says so - "You are viewing
+   version X" - with "Return to current" and "Restore". Restore asks inline (a question and Restore / Cancel replace the two buttons)
+   instead of a dialog or a second block in the panel. The strip belongs to the document, so it stays visible with the version panel
+   closed. The test ids are the ones the version panel always carried. *@
+@if (PreviewVersion is not null)
+{
+    <section class="tm-document-version-preview-strip"
+             aria-label="@Loc["TmDocumentEditor_VersionPreviewStripLabel"]"
+             data-testid="@TestId("document-version-preview-state")"
+             data-confirming="@(_restoreConfirmOpen ? "true" : "false")">
+        <span class="tm-document-version-preview-strip__icon" aria-hidden="true"><TmIcon Name="history" Size="IconSize.Md" /></span>
+        <strong class="tm-document-version-preview-strip__text">@Loc["TmDocumentEditor_ViewingVersion", DocumentVersionText.Title(Loc, PreviewVersion)]</strong>
+        @if (_restoreConfirmOpen)
+        {
+            <div class="tm-document-version-preview-strip__confirm" role="group" aria-labelledby="@_questionId" data-testid="@TestId("document-version-restore-confirm")">
+                <span class="tm-document-version-preview-strip__question" id="@_questionId">@Loc["TmDocumentEditor_RestoreVersionConfirm"]</span>
+                <button @ref="_confirmButton"
+                        type="button"
+                        class="tm-btn tm-btn-sm tm-btn-primary"
+                        data-testid="@TestId("document-version-restore-confirm-button")"
+                        @onclick="ConfirmRestoreAsync">
+                    @Loc["TmDocumentEditor_RestoreVersion"]
+                </button>
+                <button type="button"
+                        class="tm-btn tm-btn-sm tm-btn-ghost"
+                        data-testid="@TestId("document-version-restore-cancel")"
+                        @onclick="CloseRestoreConfirm">
+                    @Loc["TmDocumentEditor_Cancel"]
+                </button>
+            </div>
+        }
+        else
+        {
+            <div class="tm-document-version-preview-strip__actions">
+                <button type="button"
+                        class="tm-btn tm-btn-sm tm-btn-secondary"
+                        data-testid="@TestId("document-version-current")"
+                        @onclick="() => OnReturnToCurrent.InvokeAsync()">
+                    @Loc["TmDocumentEditor_ReturnToCurrentVersion"]
+                </button>
+                <button @ref="_restoreButton"
+                        type="button"
+                        class="tm-btn tm-btn-sm tm-btn-primary"
+                        data-testid="@TestId("document-version-restore")"
+                        @onclick="OpenRestoreConfirm">
+                    @Loc["TmDocumentEditor_RestoreVersion"]
+                </button>
+            </div>
+        }
+    </section>
+}
+
+@code {
+    private bool _restoreConfirmOpen;
+    private string? _confirmedFor;
+    private readonly string _questionId = $"tm-document-version-restore-question-{Guid.NewGuid():N}";
+    private ElementReference _confirmButton;
+    private ElementReference _restoreButton;
+
+    // The two buttons are swapped for the question and back: the button that was pressed leaves the DOM, so the focus is handed on - to the
+    // confirm button when the question opens, back to Restore when it is cancelled - or the keyboard reader would be dropped on <body>.
+    private enum PendingFocus { None, Confirm, Restore }
+
+    private PendingFocus _pendingFocus;
+
+    /// <summary>The version being previewed; the strip renders nothing while this is null.</summary>
+    [Parameter] public DocumentVersion? PreviewVersion { get; set; }
+
+    /// <summary>Raised when the preview should return to the current document.</summary>
+    [Parameter] public EventCallback OnReturnToCurrent { get; set; }
+
+    /// <summary>Raised when the reader confirmed that the previewed version becomes the current draft.</summary>
+    [Parameter] public EventCallback<DocumentVersion> OnRestoreVersion { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        // A question asked about one version must not survive a switch to another one.
+        if (!string.Equals(_confirmedFor, PreviewVersion?.Id, StringComparison.Ordinal))
+        {
+            _restoreConfirmOpen = false;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        var pending = _pendingFocus;
+        _pendingFocus = PendingFocus.None;
+        try
+        {
+            if (pending == PendingFocus.Confirm && _restoreConfirmOpen)
+            {
+                await _confirmButton.FocusAsync();
+            }
+            else if (pending == PendingFocus.Restore && !_restoreConfirmOpen)
+            {
+                await _restoreButton.FocusAsync();
+            }
+        }
+        catch (Exception ex) when (ex is JSException or InvalidOperationException or TaskCanceledException)
+        {
+            // The button was removed or the circuit is gone: focus is best effort.
+        }
+    }
+
+    private void OpenRestoreConfirm()
+    {
+        _confirmedFor = PreviewVersion?.Id;
+        _restoreConfirmOpen = true;
+        _pendingFocus = PendingFocus.Confirm;
+    }
+
+    private void CloseRestoreConfirm()
+    {
+        _restoreConfirmOpen = false;
+        _pendingFocus = PendingFocus.Restore;
+    }
+
+    private async Task ConfirmRestoreAsync()
+    {
+        if (PreviewVersion is null)
+        {
+            return;
+        }
+
+        _restoreConfirmOpen = false;
+        await OnRestoreVersion.InvokeAsync(PreviewVersion);
+    }
+}

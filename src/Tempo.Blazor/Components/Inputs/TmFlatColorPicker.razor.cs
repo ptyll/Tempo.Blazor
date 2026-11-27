@@ -55,6 +55,9 @@ public partial class TmFlatColorPicker
     /// <summary>Whether to show the clear button in the palette. Default true.</summary>
     [Parameter] public bool ShowClearButton { get; set; } = true;
 
+    /// <summary>Text of the palette's clear button. When null the localized default is used.</summary>
+    [Parameter] public string? ClearText { get; set; }
+
     /// <summary>Additional CSS class.</summary>
     [Parameter] public string? Class { get; set; }
 

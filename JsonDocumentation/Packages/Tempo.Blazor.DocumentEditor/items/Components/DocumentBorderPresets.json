@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.DocumentEditor",
+  "description": "The border presets of the table and cell inspectors: None, Default, Strong and the display-only Custom. A preset writes exactly the CSS string the border select always wrote; any other stored value (a DOCX border) reads as Custom and is left alone until a preset is picked.",
+  "packageId": "Tempo.Blazor.DocumentEditor",
+  "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/DocumentBorderPresets.cs",
+  "documentationStatus": "generated",
+  "itemName": "DocumentBorderPresets"
+}

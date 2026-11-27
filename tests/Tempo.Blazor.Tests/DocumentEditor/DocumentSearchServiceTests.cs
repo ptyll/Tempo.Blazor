@@ -380,4 +380,86 @@ public sealed class DocumentSearchServiceTests
         Assert.Equal(first.Select(r => r.MarkerId), second.Select(r => r.MarkerId));
         Assert.All(first, r => Assert.StartsWith("search-", r.MarkerId));
     }
+    // ─── Context around a match (redesign 146c7e1b, phase 6 / DE-2.3) ─────────
+
+    [Fact]
+    public void Search_Result_CarriesTheTextAroundTheMatch()
+    {
+        var svc = Create();
+
+        var result = Assert.Single(svc.Search(
+            Doc(Para("Project Aurora si klade za cil vybudovat moderni platformu")),
+            new DocumentSearchQuery { Text = "Aurora" }));
+
+        Assert.Equal("Project ", result.ContextBefore);
+        Assert.Equal(" si klade za cil vybudovat mod", result.ContextAfter);
+        Assert.Equal("Aurora", result.Preview);
+    }
+
+    [Fact]
+    public void Search_Result_ContextStopsAtTheBlockBoundaries()
+    {
+        var svc = Create();
+
+        var first = Assert.Single(svc.Search(Doc(Para("alpha beta")), new DocumentSearchQuery { Text = "alpha" }));
+        Assert.Equal(string.Empty, first.ContextBefore);
+        Assert.Equal(" beta", first.ContextAfter);
+
+        var last = Assert.Single(svc.Search(Doc(Para("alpha beta")), new DocumentSearchQuery { Text = "beta" }));
+        Assert.Equal("alpha ", last.ContextBefore);
+        Assert.Equal(string.Empty, last.ContextAfter);
+    }
+
+    [Fact]
+    public void Search_Result_ContextOfOneRunInAParagraphIgnoresTheNeighbouringBlocks()
+    {
+        var svc = Create();
+
+        var results = svc.Search(Doc(Para("one needle"), Para("needle two")), new DocumentSearchQuery { Text = "needle" });
+
+        Assert.Equal(2, results.Count);
+        Assert.Equal("one ", results[0].ContextBefore);
+        Assert.Equal(string.Empty, results[0].ContextAfter);
+        Assert.Equal(string.Empty, results[1].ContextBefore);
+        Assert.Equal(" two", results[1].ContextAfter);
+    }
+
+    [Fact]
+    public void Search_Regex_ResultContextIsTakenAroundTheMatch()
+    {
+        var svc = Create();
+
+        var result = Assert.Single(svc.Search(
+            Doc(Para("order 4711 shipped")),
+            new DocumentSearchQuery { Text = "\\d+", UseRegex = true }));
+
+        Assert.Equal("4711", result.Preview);
+        Assert.Equal("order ", result.ContextBefore);
+        Assert.Equal(" shipped", result.ContextAfter);
+    }
+
+    [Fact]
+    public void Search_WholeWord_SkipsTheWordInsideAnotherWord_AndKeepsContextOfTheRealOne()
+    {
+        var svc = Create();
+
+        var result = Assert.Single(svc.Search(
+            Doc(Para("category cat dog")),
+            new DocumentSearchQuery { Text = "cat", WholeWord = true }));
+
+        Assert.Equal("category ", result.ContextBefore);
+        Assert.Equal(" dog", result.ContextAfter);
+    }
+
+    [Fact]
+    public void Search_Result_ContextIsCappedAtThirtyCharactersEitherSide()
+    {
+        var svc = Create();
+        var text = new string('a', 100) + "NEEDLE" + new string('b', 100);
+
+        var result = Assert.Single(svc.Search(Doc(Para(text)), new DocumentSearchQuery { Text = "NEEDLE" }));
+
+        Assert.Equal(30, result.ContextBefore.Length);
+        Assert.Equal(30, result.ContextAfter.Length);
+    }
 }

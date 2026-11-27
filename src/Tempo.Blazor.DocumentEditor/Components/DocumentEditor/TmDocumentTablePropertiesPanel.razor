@@ -1,67 +1,94 @@
 @namespace Tempo.Blazor.Components.DocumentEditor
 @using System.Globalization
+@using Tempo.Blazor.Abstractions.Models
 @using Tempo.Blazor.DocumentEditor.Models
 
-<section class="tm-document-table-properties tm-document-inspector-form--embedded"
+@* Redesign 146c7e1b, phase 6 (DE-2.2, Q2-5): the table and the cell are ONE inspector ("Table") with two foldable sections; this is the
+   table section. Labels sit above the fields, a number carries its unit as a suffix tied to the input through aria-describedby, the
+   background is the core colour picker in its compact variant (a swatch and a hex, "No color" clears it - the native <input
+   type=color> with its made-up #ffffff is gone) and the border is a preset (None / Default / Strong); a value that came from a DOCX
+   reads "Custom" and stays untouched until the reader picks a preset. *@
+<section class="tm-document-table-properties tm-document-inspector-form tm-document-inspector-form--embedded"
          role="region"
          aria-label="@Loc["TmDocumentEditor_TableProperties"]"
          data-testid="@($"{TestIdRoot}-panel")">
-    <header>
-        <TmIcon Name="table-properties" Size="IconSize.Sm" />
-        <span>@Loc["TmDocumentEditor_TableProperties"]</span>
-    </header>
+    <TmDocumentInspectorSection Title="@Loc["TmDocumentEditor_TableProperties"]"
+                                Icon="table-properties"
+                                SectionTestId="@($"{TestIdRoot}-section")">
+        <label class="tm-document-inspector-form__field tm-document-inspector-form__field--stacked tm-document-inspector-form__field--unit">
+            <span class="tm-document-inspector-form__label">@Loc["TmDocumentEditor_TableWidth"]</span>
+            <input class="tm-input"
+                   type="number"
+                   min="80"
+                   step="10"
+                   value="@WidthValue"
+                   aria-describedby="@_widthUnitId"
+                   data-testid="@($"{TestIdRoot}-width")"
+                   @onchange="HandleWidthChangedAsync" />
+            <span class="tm-document-inspector-form__suffix" id="@_widthUnitId">@Loc["TmDocumentEditor_UnitPx"]</span>
+        </label>
 
-    <label>
-        <span>@Loc["TmDocumentEditor_TableWidth"]</span>
-        <input type="number"
-               min="80"
-               step="10"
-               value="@WidthValue"
-               data-testid="@($"{TestIdRoot}-width")"
-               @onchange="HandleWidthChangedAsync" />
-    </label>
+        <div class="tm-document-inspector-form__field tm-document-inspector-form__field--stacked">
+            <span class="tm-document-inspector-form__label">@Loc["TmDocumentEditor_TableAlignment"]</span>
+            <div class="tm-document-inspector-form__segmented tm-document-table-properties__segmented" role="group" aria-label="@Loc["TmDocumentEditor_TableAlignment"]">
+                @foreach (var alignment in Alignments)
+                {
+                    <button type="button"
+                            class="@SegmentClass(alignment)"
+                            aria-pressed="@AriaPressed(CurrentAlignment == alignment)"
+                            aria-label="@Loc[$"TmDocumentEditor_TableAlign{alignment}"]"
+                            title="@Loc[$"TmDocumentEditor_TableAlign{alignment}"]"
+                            data-testid="@($"{TestIdRoot}-align-{alignment.ToString().ToLowerInvariant()}")"
+                            @onclick="() => HandleAlignmentChangedAsync(alignment)">
+                        <TmIcon Name="@AlignmentIcon(alignment)" Size="IconSize.Sm" />
+                    </button>
+                }
+            </div>
+        </div>
 
-    <div class="tm-document-table-properties__segmented" role="group" aria-label="@Loc["TmDocumentEditor_TableAlignment"]">
-        @foreach (var alignment in Alignments)
-        {
-            <button type="button"
-                    class="@SegmentClass(alignment)"
-                    aria-pressed="@(CurrentAlignment == alignment)"
-                    data-testid="@($"{TestIdRoot}-align-{alignment.ToString().ToLowerInvariant()}")"
-                    @onclick="() => HandleAlignmentChangedAsync(alignment)">
-                @Loc[$"TmDocumentEditor_TableAlign{alignment}"]
-            </button>
-        }
-    </div>
+        <label class="tm-document-inspector-form__field tm-document-inspector-form__field--stacked tm-document-inspector-form__field--unit">
+            <span class="tm-document-inspector-form__label">@Loc["TmDocumentEditor_TableCellPadding"]</span>
+            <input class="tm-input"
+                   type="number"
+                   min="0"
+                   step="1"
+                   value="@PaddingValue"
+                   aria-describedby="@_paddingUnitId"
+                   data-testid="@($"{TestIdRoot}-padding")"
+                   @onchange="HandlePaddingChangedAsync" />
+            <span class="tm-document-inspector-form__suffix" id="@_paddingUnitId">@Loc["TmDocumentEditor_UnitPx"]</span>
+        </label>
 
-    <label>
-        <span>@Loc["TmDocumentEditor_TableCellPadding"]</span>
-        <input type="number"
-               min="0"
-               step="1"
-               value="@PaddingValue"
-               data-testid="@($"{TestIdRoot}-padding")"
-               @onchange="HandlePaddingChangedAsync" />
-    </label>
+        <div class="tm-document-inspector-form__field tm-document-inspector-form__field--stacked">
+            <span class="tm-document-inspector-form__label">@Loc["TmDocumentEditor_TableBackground"]</span>
+            <TmColorPicker Value="@BackgroundValue"
+                           ValueChanged="HandleBackgroundChangedAsync"
+                           Format="ColorFormat.Hex"
+                           ShowAlpha="false"
+                           ShowGradient="false"
+                           ShowHexInput="true"
+                           ShowPalette="true"
+                           ShowClearButton="true"
+                           ClearText="@Loc["TmDocumentEditor_NoColor"]"
+                           Placeholder="@Loc["TmDocumentEditor_NoColor"]"
+                           TriggerAriaLabel="@Loc["TmDocumentEditor_TableBackground"]"
+                           Class="tm-document-inspector-form__color"
+                           data-testid="@($"{TestIdRoot}-background")" />
+        </div>
 
-    <label>
-        <span>@Loc["TmDocumentEditor_TableBackground"]</span>
-        <input type="color"
-               value="@BackgroundValue"
-               data-testid="@($"{TestIdRoot}-background")"
-               @onchange="HandleBackgroundChangedAsync" />
-    </label>
-
-    <label>
-        <span>@Loc["TmDocumentEditor_TableBorder"]</span>
-        <select value="@BorderValue"
+        <label class="tm-document-inspector-form__field tm-document-inspector-form__field--stacked">
+            <span class="tm-document-inspector-form__label">@Loc["TmDocumentEditor_TableBorder"]</span>
+            <select class="tm-input"
+                value="@BorderPreset"
                 data-testid="@($"{TestIdRoot}-border")"
                 @onchange="HandleBorderChangedAsync">
-            <option value="">@Loc["TmDocumentEditor_None"]</option>
-            <option value="1px solid var(--tm-color-border)">@Loc["TmDocumentEditor_TableBorderDefault"]</option>
-            <option value="2px solid var(--tm-color-primary)">@Loc["TmDocumentEditor_TableBorderStrong"]</option>
-        </select>
-    </label>
+            <option value="@DocumentBorderPresets.None">@Loc["TmDocumentEditor_None"]</option>
+            <option value="@DocumentBorderPresets.Default">@Loc["TmDocumentEditor_TableBorderDefault"]</option>
+            <option value="@DocumentBorderPresets.Strong">@Loc["TmDocumentEditor_TableBorderStrong"]</option>
+            <option value="@DocumentBorderPresets.Custom" disabled="@(BorderPreset != DocumentBorderPresets.Custom)">@Loc["TmDocumentEditor_BorderCustom"]</option>
+            </select>
+        </label>
+    </TmDocumentInspectorSection>
 </section>
 
 @code {
@@ -71,6 +98,9 @@
         TableHorizontalAlignment.Center,
         TableHorizontalAlignment.Right
     ];
+
+    private readonly string _widthUnitId = $"tm-document-table-width-unit-{Guid.NewGuid():N}";
+    private readonly string _paddingUnitId = $"tm-document-table-padding-unit-{Guid.NewGuid():N}";
 
     /// <summary>Current table layout.</summary>
     [Parameter] public TableLayoutContent? Layout { get; set; }
@@ -100,12 +130,23 @@
 
     private string PaddingValue => Layout?.CellPadding?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
 
-    private string BackgroundValue => string.IsNullOrWhiteSpace(Layout?.BackgroundColor) ? "#ffffff" : Layout!.BackgroundColor!;
+    // No background is no value - not a made-up white. The picker shows its "No color" placeholder.
+    private string? BackgroundValue => string.IsNullOrWhiteSpace(Layout?.BackgroundColor) ? null : Layout!.BackgroundColor;
 
-    private string BorderValue => Layout?.Borders.Top ?? string.Empty;
+    private string BorderPreset => DocumentBorderPresets.Resolve(Layout?.Borders.Top);
 
     private string SegmentClass(TableHorizontalAlignment alignment) =>
-        "tm-document-table-properties__segment" + (CurrentAlignment == alignment ? " tm-document-table-properties__segment--active" : string.Empty);
+        "tm-document-inspector-form__segmented-option tm-document-table-properties__segment"
+        + (CurrentAlignment == alignment ? " tm-document-inspector-form__segmented-option--active tm-document-table-properties__segment--active" : string.Empty);
+
+    private static string AriaPressed(bool value) => value ? "true" : "false";
+
+    private static string AlignmentIcon(TableHorizontalAlignment alignment) => alignment switch
+    {
+        TableHorizontalAlignment.Center => "align-center",
+        TableHorizontalAlignment.Right => "align-right",
+        _ => "align-left"
+    };
 
     private Task HandleWidthChangedAsync(ChangeEventArgs args)
     {
@@ -128,17 +169,23 @@
         return LayoutChanged.InvokeAsync(next);
     }
 
-    private Task HandleBackgroundChangedAsync(ChangeEventArgs args)
+    private Task HandleBackgroundChangedAsync(string? color)
     {
         var next = CloneLayout();
-        next.BackgroundColor = args.Value?.ToString();
+        next.BackgroundColor = string.IsNullOrWhiteSpace(color) ? null : color;
         return LayoutChanged.InvokeAsync(next);
     }
 
     private Task HandleBorderChangedAsync(ChangeEventArgs args)
     {
+        // A preset writes the same CSS strings the panel always wrote (stored documents are unchanged); "custom" is a display state of an
+        // imported value, never something to write.
+        if (!DocumentBorderPresets.TryGetCss(args.Value?.ToString(), out var border))
+        {
+            return Task.CompletedTask;
+        }
+
         var next = CloneLayout();
-        var border = args.Value?.ToString();
         next.Borders = new TableCellBorders { Top = border, Right = border, Bottom = border, Left = border };
         return LayoutChanged.InvokeAsync(next);
     }

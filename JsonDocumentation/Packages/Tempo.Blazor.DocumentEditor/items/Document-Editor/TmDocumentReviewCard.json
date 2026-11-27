@@ -1,0 +1,149 @@
+{
+  "itemName": "TmDocumentReviewCard",
+  "kind": "Component",
+  "category": "Document Editor",
+  "description": "The one card of a tracked change, shared by the revision panel and the suggestion panel (redesign 146c7e1b, phase 6, DE-2.4): the author's avatar (initials without a picture), the type of the change as title with an icon and an accent from the success / danger / info tokens, 'author - relative time' through the shared ITmRelativeTimeFormatter, the preview (an ins for an insertion, a del for a deletion, a plain line otherwise) and compact Accept / Reject buttons. The type is always worded, so the accent never carries it alone.",
+  "packageId": "Tempo.Blazor.DocumentEditor",
+  "namespace": "Tempo.Blazor.Components.DocumentEditor",
+  "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentReviewCard.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.DocumentEditor"
+  ],
+  "parameters": [
+    {
+      "name": "Kind",
+      "type": "DocumentRevisionType",
+      "isRequired": false,
+      "description": "The type of the change; drives the icon, the accent and the ins / del of the preview."
+    },
+    {
+      "name": "Title",
+      "type": "string",
+      "isRequired": false,
+      "description": "The localized type of the change."
+    },
+    {
+      "name": "AuthorName",
+      "type": "string",
+      "isRequired": false,
+      "description": "The author's display name."
+    },
+    {
+      "name": "AuthorId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Stable author key that picks the avatar colour."
+    },
+    {
+      "name": "AuthorAvatarUrl",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional avatar picture."
+    },
+    {
+      "name": "CreatedAt",
+      "type": "DateTimeOffset?",
+      "isRequired": false,
+      "description": "When the change was made; rendered relative with the absolute time in the tooltip."
+    },
+    {
+      "name": "Preview",
+      "type": "DocumentRevisionPreview",
+      "isRequired": false,
+      "description": "What the card shows of the change."
+    },
+    {
+      "name": "FallbackText",
+      "type": "string",
+      "isRequired": false,
+      "description": "The localized line shown when the preview has nothing to show."
+    },
+    {
+      "name": "Selected",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether this is the selected card."
+    },
+    {
+      "name": "ActionsDisabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether Accept and Reject are disabled."
+    },
+    {
+      "name": "ClassPrefix",
+      "type": "string",
+      "isRequired": false,
+      "description": "BEM block of the host panel; the card keeps wearing its element classes."
+    },
+    {
+      "name": "OnSelect",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when the card is pressed."
+    },
+    {
+      "name": "OnAccept",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised by Accept."
+    },
+    {
+      "name": "OnReject",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised by Reject."
+    },
+    {
+      "name": "AcceptLabel",
+      "type": "string",
+      "isRequired": false,
+      "description": "Visible text of the Accept button."
+    },
+    {
+      "name": "RejectLabel",
+      "type": "string",
+      "isRequired": false,
+      "description": "Visible text of the Reject button."
+    },
+    {
+      "name": "AcceptAriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Accessible name of the Accept button (it names the author)."
+    },
+    {
+      "name": "RejectAriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Accessible name of the Reject button (it names the author)."
+    },
+    {
+      "name": "PreviewTestId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Unprefixed test id of the preview line."
+    },
+    {
+      "name": "AcceptTestId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Unprefixed test id of the Accept button."
+    },
+    {
+      "name": "RejectTestId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Unprefixed test id of the Reject button."
+    }
+  ],
+  "cssClasses": [
+    "tm-document-review-card",
+    "tm-document-review-card--insertion",
+    "tm-document-review-card--deletion",
+    "tm-document-review-card__summary",
+    "tm-document-review-card__preview",
+    "tm-document-review-card__actions"
+  ]
+}

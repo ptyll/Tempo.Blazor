@@ -64,6 +64,12 @@
       "description": "Whether to show the clear button in the palette. Default true."
     },
     {
+      "name": "ClearText",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Text of the palette's clear button. When null the localized default is used."
+    },
+    {
       "name": "ShowGradient",
       "type": "bool",
       "isRequired": false,

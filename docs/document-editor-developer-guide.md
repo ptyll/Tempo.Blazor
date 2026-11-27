@@ -121,6 +121,21 @@ Shared panel building blocks (stylesheet `_document-editor-panels.css`, imported
   viewport; `--stacked` keeps the label above at any width), `__suffix` for units and `__segmented` for icon or
   icon + text choices. `--embedded` drops the frame and the shadow for a panel hosted inside the inspector. Keep the
   label wrapping its control (implicit association) or use `for` / `aria-labelledby`.
+- `TmDocumentInspectorHeader.OnBack` renders a back arrow before the title (the way from a contextual inspector to the tab
+  bar); `TmDocumentInspectorSection` is the foldable section of the form pattern (`aria-expanded` toggle, the body stays in
+  the DOM while folded); `TmDocumentReviewCard` is the one card of a tracked change (revision panel and suggestion panel);
+  `TmDocumentVersionPreviewStrip` is the "You are viewing version X" strip of the doc region.
+- **Contextual inspector (phase 6, decision DE2).** On a desktop layout a selected image or table, and an open find,
+  replace the inspector's tab bar with a header (title, back arrow, X): `TmDocumentSidePanel.ContextContent` /
+  `ContextTitle` / `ContextKind` (`data-context="image|table|find"`) / `OnContextBack` / `OnContextClose` - no new
+  `DocumentSidePanelTab`. The back arrow and the X dismiss an object's context while that object stays selected; for find
+  they close find. Tablet and phone keep the tabs (object inspector in the Properties tab, find as a floating panel).
+  A host panel that supplies its own header passes `ShowHeader="false"` to `TmDocumentImageInspector` /
+  `TmDocumentFindPanel`.
+- **Revision previews.** `TmDocumentRevisionPanel.PreviewResolver` (`Func<DocumentRevision, DocumentRevisionPreview?>`,
+  `DocumentRevisionPreview` is a DocumentEditor-package record): the editor reads the text from the document by the
+  revision's range; the panel fills what the resolver leaves from the payload (plain text of an insertion / deletion,
+  "Bold: on" for a formatting change) - the raw payload is never printed. A long list renders in windows of `PageSize` (default 40, "Show N more"; windowing rather than `Virtualize`, decision `DE-REVISION-PANEL-WINDOWING`: a card has no fixed height). The window always grows to cover `SelectedRevisionId`; the find panel uses the same pattern (100 hits a window, the active hit always rendered, the heading keeps the full count).
 - `TmDocumentDebugModal` + `TmDocumentDebugSection` - the shared frame of the developer debug modals; an empty section
   shows the localized "No data" notice. Panel actions use `tm-btn` (`tm-btn-primary` for the panel's primary action) and
   `tm-input`; the BEM classes stay on the elements as aliases.
@@ -166,7 +181,7 @@ is `data-layout="desktop|tablet|mobile"` on `.tm-document-editor`; the steps are
   page is reachable by scrolling. An automatic fit-width zoom is planned (phase 8), and the sticky ribbon height is published as
   `--tm-document-ribbon-block-size` (observed by `region-cycle.mjs`) so the sticky navigation column parks below it.
 - **Doc region banner slot.** `.tm-document-editor__doc-banners` (`data-testid="document-doc-banners"`) sits above the page
-  inside `[data-region="doc"]`; the review summary lives there and the version preview and diff banners join it later.
+  inside `[data-region="doc"]`; the review summary and the version preview strip (`TmDocumentVersionPreviewStrip`) live there, the diff banner joins later.
 - **F6.** F6 / Shift+F6 cycle the landmarks marked `data-focus-region`: header, ribbon, navigation, document, inspector (a
   region that is absent or hidden is skipped; a modal surface owns the key while it is up). The handler is the small module
   `js/document-editor/interop/region-cycle.mjs` because the browser default of F6 must be cancelled synchronously. The ribbon

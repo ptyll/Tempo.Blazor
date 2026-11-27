@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.DocumentEditor",
+  "description": "What a revision card shows of a tracked change: the affected Text and a one-line human Description. Supplied through the PreviewResolver of TmDocumentRevisionPanel; ReadFormatting reads the mark of a formatting revision from its payload.",
+  "packageId": "Tempo.Blazor.DocumentEditor",
+  "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/DocumentRevisionPreview.cs",
+  "documentationStatus": "generated",
+  "itemName": "DocumentRevisionPreview"
+}

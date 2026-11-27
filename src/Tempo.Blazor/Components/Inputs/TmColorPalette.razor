@@ -28,7 +28,7 @@
     @if (ShowClearButton)
     {
         <button type="button" class="tm-color-palette-clear" @onclick="ClearAsync">
-            @Loc["TmColorPalette_Clear"]
+            @(ClearText ?? Loc["TmColorPalette_Clear"])
         </button>
     }
 </div>

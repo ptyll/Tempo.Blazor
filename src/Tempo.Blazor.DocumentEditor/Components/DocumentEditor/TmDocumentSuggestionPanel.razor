@@ -25,37 +25,30 @@
         <div class="tm-document-suggestion-panel__list" data-testid="@TestId("document-suggestion-list")">
             @foreach (var suggestion in PendingSuggestions)
             {
-                <article class="tm-document-suggestion-panel__item"
-                         tabindex="0"
-                         data-suggestion-id="@suggestion.Id"
-                         data-testid="@TestId("document-suggestion-item")"
-                         @onclick="() => OnSelectSuggestion.InvokeAsync(suggestion)">
-                    <div class="tm-document-suggestion-panel__meta">
-                        <span>@GetTypeLabel(suggestion)</span>
-                        <span>@GetAuthorLabel(suggestion)</span>
-                    </div>
-                    <div class="tm-document-suggestion-panel__preview" data-testid="@TestId("document-suggestion-preview")">
-                        @GetPreview(suggestion)
-                    </div>
-                    <div class="tm-document-suggestion-panel__actions">
-                        <button type="button"
-                                disabled="@(IsBusy || !CanReview)"
-                                aria-label="@Loc["TmDocumentEditor_AcceptSuggestionAria", GetAuthorLabel(suggestion)]"
-                                data-testid="@TestId("document-suggestion-accept")"
-                                @onclick="() => OnAcceptSuggestion.InvokeAsync(suggestion)"
-                                @onclick:stopPropagation="true">
-                            @Loc["TmDocumentEditor_AcceptSuggestion"]
-                        </button>
-                        <button type="button"
-                                disabled="@(IsBusy || !CanReview)"
-                                aria-label="@Loc["TmDocumentEditor_RejectSuggestionAria", GetAuthorLabel(suggestion)]"
-                                data-testid="@TestId("document-suggestion-reject")"
-                                @onclick="() => OnRejectSuggestion.InvokeAsync(suggestion)"
-                                @onclick:stopPropagation="true">
-                            @Loc["TmDocumentEditor_RejectSuggestion"]
-                        </button>
-                    </div>
-                </article>
+                <TmDocumentReviewCard @key="suggestion.Id"
+                                      Kind="MapKind(suggestion.Type)"
+                                      Title="@GetTypeLabel(suggestion)"
+                                      AuthorName="@GetAuthorLabel(suggestion)"
+                                      AuthorId="@suggestion.Author.Id"
+                                      AuthorAvatarUrl="@suggestion.Author.AvatarUrl"
+                                      CreatedAt="suggestion.CreatedAt"
+                                      Preview="@GetPreview(suggestion)"
+                                      FallbackText="@Loc["TmDocumentEditor_RevisionPreviewUnavailable"]"
+                                      ActionsDisabled="@(IsBusy || !CanReview)"
+                                      AcceptLabel="@Loc["TmDocumentEditor_AcceptSuggestion"]"
+                                      RejectLabel="@Loc["TmDocumentEditor_RejectSuggestion"]"
+                                      AcceptAriaLabel="@Loc["TmDocumentEditor_AcceptSuggestionAria", GetAuthorLabel(suggestion)]"
+                                      RejectAriaLabel="@Loc["TmDocumentEditor_RejectSuggestionAria", GetAuthorLabel(suggestion)]"
+                                      ClassPrefix="tm-document-suggestion-panel"
+                                      PreviewTestId="document-suggestion-preview"
+                                      AcceptTestId="document-suggestion-accept"
+                                      RejectTestId="document-suggestion-reject"
+                                      TestIdPrefix="@TestIdPrefix"
+                                      OnSelect="() => OnSelectSuggestion.InvokeAsync(suggestion)"
+                                      OnAccept="() => OnAcceptSuggestion.InvokeAsync(suggestion)"
+                                      OnReject="() => OnRejectSuggestion.InvokeAsync(suggestion)"
+                                      data-suggestion-id="@suggestion.Id"
+                                      data-testid="@TestId("document-suggestion-item")" />
             }
         </div>
     }
@@ -105,8 +98,22 @@
             ? (string.IsNullOrWhiteSpace(suggestion.Author.Id) ? Loc["TmDocumentEditor_UnknownAuthor"] : suggestion.Author.Id)
             : suggestion.Author.DisplayName;
 
-    private static string GetPreview(DocumentSuggestion suggestion)
-        => suggestion.Type == DocumentSuggestionType.DeleteText
-            ? suggestion.OriginalText ?? string.Empty
-            : suggestion.SuggestedText ?? string.Empty;
+    // The suggestion types map onto the revision types the card knows: an insertion / replacement is shown as inserted text, a deletion
+    // as deleted text, so the card paints the ins / del and the accent the revision panel does.
+    private static DocumentRevisionType MapKind(DocumentSuggestionType type)
+        => type switch
+        {
+            DocumentSuggestionType.DeleteText => DocumentRevisionType.Deletion,
+            DocumentSuggestionType.Formatting => DocumentRevisionType.Formatting,
+            DocumentSuggestionType.Move => DocumentRevisionType.Move,
+            _ => DocumentRevisionType.Insertion
+        };
+
+    private static DocumentRevisionPreview GetPreview(DocumentSuggestion suggestion)
+        => new()
+        {
+            Text = suggestion.Type == DocumentSuggestionType.DeleteText
+                ? suggestion.OriginalText
+                : suggestion.SuggestedText
+        };
 }

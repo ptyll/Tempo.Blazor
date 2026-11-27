@@ -475,6 +475,12 @@ public static class IconNames
     public const string AlignHorizontalDistributeCenter = "align-horizontal-distribute-center";
     /// <summary>Icon name for: AlignVerticalDistributeCenter.</summary>
     public const string AlignVerticalDistributeCenter = "align-vertical-distribute-center";
+    /// <summary>Icon name for: SquareDashed.</summary>
+    public const string SquareDashed = "square-dashed";
+    /// <summary>Icon name for: AlignVerticalJustifyStart.</summary>
+    public const string AlignVerticalJustifyStart = "align-vertical-justify-start";
+    /// <summary>Icon name for: AlignVerticalJustifyEnd.</summary>
+    public const string AlignVerticalJustifyEnd = "align-vertical-justify-end";
     /// <summary>Icon name for: AlignVerticalJustifyCenter.</summary>
     public const string AlignVerticalJustifyCenter = "align-vertical-justify-center";
     /// <summary>Icon name for: AlignVerticalSpaceBetween.</summary>

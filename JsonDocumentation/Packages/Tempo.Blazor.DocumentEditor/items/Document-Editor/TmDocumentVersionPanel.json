@@ -77,6 +77,12 @@
       "type": "bool",
       "isRequired": false,
       "description": "Whether the panel renders its own close button. Defaults to true; the editor passes false while the panel is hosted in the docked side panel, whose own close button already does the same thing (two X in one corner)."
+    },
+    {
+      "name": "ShowPreviewStrip",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the panel renders the 'You are viewing version X' strip itself. Defaults to true; the editor shows the strip in the document region and passes false."
     }
   ]
 }

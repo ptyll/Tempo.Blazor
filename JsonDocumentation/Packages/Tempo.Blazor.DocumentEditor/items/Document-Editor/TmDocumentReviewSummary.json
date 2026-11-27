@@ -2,7 +2,7 @@
   "itemName": "TmDocumentReviewSummary",
   "kind": "Component",
   "category": "Document Editor",
-  "description": "Compact review banner shown only when there are pending revisions or open comments. Displays their counts and provides buttons to open the revisions or comments panels.",
+  "description": "Compact one-row review strip of the document region, shown only when there are pending revisions or open comments: a warning icon, 'Needs review', the counts as a sentence (plural families: Czech says 1 komentář / 3 komentáře / 5 komentářů) and two icon + text buttons that open the revisions or comments panels.",
   "packageId": "Tempo.Blazor.DocumentEditor",
   "namespace": "Tempo.Blazor.Components.DocumentEditor",
   "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentReviewSummary.razor",

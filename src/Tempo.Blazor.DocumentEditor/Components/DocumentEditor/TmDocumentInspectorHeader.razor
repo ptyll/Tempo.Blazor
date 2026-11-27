@@ -2,6 +2,18 @@
 @inherits Tempo.Blazor.Components.TmComponentBase
 
 <header class="@RootClass" data-testid="@RootTestId("document-inspector-header")">
+    @if (OnBack.HasDelegate)
+    {
+        @* Phase 6 (DE-2.2): a contextual inspector (an image, a table, find) replaces the tab bar; the arrow leads back to it. *@
+        <button type="button"
+                class="tm-document-inspector-header__back"
+                aria-label="@BackLabelText"
+                title="@BackLabelText"
+                data-testid="@(string.IsNullOrEmpty(BackTestId) ? null : TestId(BackTestId))"
+                @onclick="OnBack">
+            <TmIcon Name="arrow-left" Size="IconSize.Sm" />
+        </button>
+    }
     @if (!string.IsNullOrWhiteSpace(Icon))
     {
         <span class="tm-document-inspector-header__icon" aria-hidden="true">
@@ -61,6 +73,18 @@
     /// <summary>Host actions rendered before the close button (a filter menu, an overflow button).</summary>
     [Parameter] public RenderFragment? Actions { get; set; }
 
+    /// <summary>
+    /// Raised by the back arrow ("&#8592;"), which leads from a contextual inspector (an image, a table, find) back to the tab
+    /// bar. The arrow is rendered only when a handler is bound.
+    /// </summary>
+    [Parameter] public EventCallback OnBack { get; set; }
+
+    /// <summary>Accessible name of the back arrow. Defaults to the localized "Back to tabs".</summary>
+    [Parameter] public string? BackLabel { get; set; }
+
+    /// <summary>Unprefixed test id of the back arrow (resolved through <c>TestIdPrefix</c>). No test id when omitted.</summary>
+    [Parameter] public string? BackTestId { get; set; }
+
     /// <summary>Raised by the close (X) button. The button is rendered only when a handler is bound.</summary>
     [Parameter] public EventCallback OnClose { get; set; }
 
@@ -69,6 +93,8 @@
 
     /// <summary>Additional CSS classes on the header root.</summary>
     [Parameter] public string? Class { get; set; }
+
+    private string BackLabelText => string.IsNullOrWhiteSpace(BackLabel) ? Loc["TmDocumentEditor_InspectorBack"].ToString() : BackLabel!;
 
     /// <summary>The id the title heading renders with: <see cref="TitleId"/> or the generated one.</summary>
     public string ResolvedTitleId => string.IsNullOrWhiteSpace(TitleId) ? _generatedTitleId : TitleId!;

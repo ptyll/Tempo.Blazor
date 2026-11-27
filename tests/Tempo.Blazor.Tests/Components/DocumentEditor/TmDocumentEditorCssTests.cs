@@ -50,6 +50,7 @@ public class TmDocumentEditorCssTests
             File.ReadAllText(Path.Combine(cssRoot, "_document-editor-toolbar.css")),
             File.ReadAllText(Path.Combine(cssRoot, "_document-editor-comments.css")),
             File.ReadAllText(Path.Combine(cssRoot, "_document-editor-canvas-overlays.css")),
+            File.ReadAllText(Path.Combine(cssRoot, "_document-editor-panels.css")),
             File.ReadAllText(Path.Combine(componentRoot, "TmDocumentCanvasEngineHost.razor.css")));
         var rules = CssRules.Parse(css);
 
@@ -69,14 +70,13 @@ public class TmDocumentEditorCssTests
             ".tm-document-canvas-revision-overlay__marker",
             ".tm-document-inline--comment-anchor",
             ".tm-document-comment-thread--selected",
-            ".tm-document-version-panel__preview",
-            ".tm-document-revision-panel__item",
-            ".tm-document-revision-panel__action--accept",
-            ".tm-document-revision-panel__action--reject",
-            ".tm-document-revision-panel__batch-action--accept",
-            ".tm-document-revision-panel__batch-action--reject",
-            ".tm-document-revision-panel__action:disabled",
-            ".tm-document-revision-panel__batch-action:disabled",
+            ".tm-document-version-preview-strip",
+            ".tm-document-review-card",
+            ".tm-document-review-card--deletion",
+            ".tm-document-review-card__action:disabled",
+            ".tm-document-review-summary",
+            ".tm-document-image-inspector__tile",
+            ".tm-document-revision-panel__batch-action",
             ".tm-document-side-panel[data-panel-layout=\"docked-tabs\"]",
             ".tm-document-editor__ribbon-tab--active::after",
             ".tm-document-editor__track-toggle--on",
@@ -193,9 +193,11 @@ public class TmDocumentEditorCssTests
         // Narrow viewports: the panel clamps to the viewport and wraps its rows.
         CssRules.Body(rules, ".tm-document-find-panel").Should().Contain("max-width").And.Contain("100vw");
         CssRules.Body(rules, ".tm-document-find-panel__row").Should().Contain("flex-wrap");
-        CssRules.Body(rules, ".tm-document-find-panel__options").Should().Contain("flex-wrap");
-        var focus = CssRules.Body(rules, ".tm-document-find-panel__input:focus");
+        CssRules.Body(rules, ".tm-document-find-panel__options").Should().Contain("flex-direction: column", "the options are a column of checkboxes");
+        // The count sits INSIDE the field, so the ring is drawn by the field when its input is focused.
+        var focus = CssRules.Body(rules, ".tm-document-find-panel__field:focus-within");
         focus.Should().Contain("var(--tm-focus-ring)").And.NotContain("--tm-shadow-focus", "the focus ring is the shared token, not the glow");
+        CssRules.Body(rules, ".tm-document-find-panel").Should().NotContain("position: absolute", "phase 6: find is a panel of the inspector, not a drop-down pinned over the page");
     }
 
     // Phase 5 (G6): the version, compare and debug dialogs and the command palette are core TmModal instances. The phase-1 interim
@@ -459,7 +461,7 @@ public class TmDocumentEditorCssTests
         CssRules.Body(rules, ".tm-document-inspector-form__label").Should().Contain("flex: 0 1 8rem");
         CssRules.Body(rules, ".tm-document-inspector-form__control").Should().Contain("flex: 1 1 12rem");
         CssRules.Body(rules, ".tm-document-inspector-form__field--stacked").Should().Contain("display: grid");
-        css.Should().NotContain("@container", "the form needs no container query: the wrap is intrinsic");
+        css[..css.IndexOf("/* ── Image inspector", StringComparison.Ordinal)].Should().NotContain("@container", "the form pattern needs no container query: the wrap is intrinsic (only the panels below tune themselves)");
 
         // The embedded modifier drops the card chrome (frame + shadow) for a panel hosted inside the inspector.
         var embedded = CssRules.Body(rules, ".tm-document-inspector-form--embedded");
@@ -808,12 +810,95 @@ public class TmDocumentEditorCssTests
     }
 
     [Fact]
-    public void SidePanelTabs_FocusRingIsInsetAndTextTabsWrap()
+    public void SidePanelTabs_FocusRingIsInset()
     {
         var rules = CssRules.Parse(ReadComponentCss("_document-editor.css"));
 
         CssRules.Body(rules, ".tm-document-side-panel__tab:focus-visible").Should().Contain("outline-offset: -2px");
-        CssRules.Body(rules, ".tm-document-side-panel[data-tab-style=\"text\"] .tm-document-side-panel__tabs").Should().Contain("flex-wrap: wrap");
+    }
+
+    [Fact]
+    public void SidePanelTextTabs_StayOnOneRow_AndScrollInsteadOfWrapping()
+    {
+        var rules = CssRules.Parse(ReadComponentCss("_document-editor.css"));
+
+        var tabs = CssRules.Body(rules, ".tm-document-side-panel[data-tab-style=\"text\"] .tm-document-side-panel__tabs");
+        tabs.Should().Contain("flex-wrap: nowrap").And.Contain("overflow-x: auto").And.Contain("scrollbar-width: none");
+        tabs.Should().NotContain("flex-wrap: wrap;");
+        CssRules.Body(rules, ".tm-document-side-panel[data-tab-style=\"text\"] .tm-document-side-panel__close").Should().Contain("flex: none");
+    }
+
+    [Fact]
+    public void SidePanelTextTabs_FadeTheEdgeThatStillHidesTabs()
+    {
+        var rules = CssRules.Parse(ReadComponentCss("_document-editor.css"));
+        const string tabs = ".tm-document-side-panel[data-tab-style=\"text\"] .tm-document-side-panel__tabs";
+
+        CssRules.Body(rules, tabs + "[data-overflow-end=\"true\"]").Should().Contain("mask-image").And.Contain("to right");
+        CssRules.Body(rules, tabs + "[data-overflow-start=\"true\"]").Should().Contain("mask-image");
+        CssRules.Body(rules, tabs + "[data-overflow-start=\"true\"][data-overflow-end=\"true\"]").Should().Contain("mask-image").And.Contain("transparent");
+    }
+
+    [Fact]
+    public void ReviewSummary_IsOneRow_WithADividerAndTheSentenceHiddenWhenNarrow()
+    {
+        var css = ReadComponentCss("_document-editor-panels.css");
+        var rules = CssRules.Parse(css);
+
+        CssRules.Body(rules, ".tm-document-review-summary").Should().Contain("flex-wrap: nowrap");
+        CssRules.Body(rules, ".tm-document-review-summary__text").Should().Contain("flex-wrap: nowrap").And.Contain("min-width: 0");
+        var sentence = CssRules.Body(rules, ".tm-document-review-summary__text span");
+        sentence.Should().Contain("text-overflow: ellipsis").And.Contain("min-width: 0").And.Contain("border-inline-start");
+        css.Should().Contain("@container tm-doc-editor", "the sentence leaves the row when the doc region is narrow");
+        css.Should().MatchRegex(@"@container[^{]*\{[^@]*\.tm-document-review-summary__text span\s*\{[^}]*clip");
+    }
+
+    [Fact]
+    public void ImageInspector_SizeRow_IsThreeEqualColumns_WithTheUnitInsideTheField()
+    {
+        var rules = CssRules.Parse(ReadComponentCss("_document-editor-panels.css"));
+
+        CssRules.Body(rules, ".tm-document-image-inspector__triple").Should().Contain("repeat(3, minmax(0, 1fr))");
+        CssRules.Body(rules, ".tm-document-inspector-form__adorned").Should().Contain("position: relative");
+        var suffix = CssRules.Body(rules, ".tm-document-inspector-form__adorned > .tm-document-inspector-form__suffix");
+        suffix.Should().Contain("position: absolute").And.Contain("inset-inline-end: var(--tm-space-2)");
+        CssRules.Body(rules, ".tm-document-inspector-form__adorned > input").Should().Contain("padding-inline-end");
+    }
+
+    [Fact]
+    public void ImageInspector_WrapTiles_AreFiveColumns_WithAContainerFallbackToFour()
+    {
+        var css = ReadComponentCss("_document-editor-panels.css");
+        var rules = CssRules.Parse(css);
+
+        var tiles = rules.Where(rule => rule.Selectors.Contains(".tm-document-image-inspector__tiles")).Select(rule => rule.Body).ToList();
+        tiles.Should().Contain(body => body.Contains("repeat(5, minmax(0, 1fr))"));
+        tiles.Should().Contain(body => body.Contains("repeat(4, minmax(0, 1fr))"), "a narrow inspector falls back to four columns");
+        css.Should().Contain("@container tm-doc-image-inspector (width <");
+        CssRules.Body(rules, ".tm-document-image-inspector").Should().Contain("container: tm-doc-image-inspector / inline-size");
+        CssRules.Body(rules, ".tm-document-image-inspector__tiles .tm-document-image-inspector__tile").Should().Contain("hyphens: auto");
+    }
+
+    [Fact]
+    public void InspectorForm_ReadonlyInputs_LookInert_WithExistingTokens()
+    {
+        var css = ReadComponentCss("_document-editor-panels.css");
+        var rules = CssRules.Parse(css);
+
+        var readonlyRule = CssRules.Body(rules, ".tm-document-inspector-form input[readonly]");
+        readonlyRule.Should().Contain("background: var(--tm-color-surface-muted)").And.Contain("color: var(--tm-color-text-secondary)");
+        var tokens = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "Tempo.Blazor", "wwwroot", "css", "tokens.css"));
+        tokens.Should().Contain("--tm-color-surface-muted:").And.Contain("--tm-color-text-secondary:");
+    }
+
+    [Fact]
+    public void ReviewCard_AccentIsDefinedOnTheBaseRule_WithoutAFallbackAtTheUseSites()
+    {
+        var css = ReadComponentCss("_document-editor-panels.css");
+        var rules = CssRules.Parse(css);
+
+        CssRules.Body(rules, ".tm-document-review-card").Should().Contain("--tm-review-accent: var(--tm-color-info)");
+        css.Should().NotContain("var(--tm-review-accent,");
     }
 
     private static string FindRepositoryRoot()

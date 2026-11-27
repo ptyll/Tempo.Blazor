@@ -11,7 +11,7 @@
     <header class="tm-document-comment-rail__header">
         <div>
             <h3>@Loc["TmDocumentEditor_Comments"]</h3>
-            <span class="tm-document-panel__meta">@Loc["TmDocumentEditor_CommentCountVisible", VisibleComments.Count, Comments.Count]</span>
+            <span class="tm-document-panel__meta">@Loc.Plural("TmDocumentEditor_CommentCountVisible", Comments.Count, VisibleComments.Count)</span>
         </div>
         @if (CanComment)
         {

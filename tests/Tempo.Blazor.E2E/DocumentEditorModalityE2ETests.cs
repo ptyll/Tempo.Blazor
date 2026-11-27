@@ -220,8 +220,12 @@ public sealed class DocumentEditorModalityE2ETests : WasmTestBase
             """
             () => {
                 const panel = document.querySelector('[data-testid="document-find-panel"]');
-                const input = document.querySelector('[data-testid="document-find-input"]');
-                return [getComputedStyle(panel).backgroundColor, getComputedStyle(input).borderTopColor];
+                const field = document.querySelector('[data-testid="document-find-input"]').parentElement;
+                // Phase 6: the panel is the body of the inspector (or of a floating frame) and paints nothing itself - the surface it
+                // sits on is the first ancestor that does.
+                let surface = panel;
+                while (surface && getComputedStyle(surface).backgroundColor === 'rgba(0, 0, 0, 0)') surface = surface.parentElement;
+                return [surface ? getComputedStyle(surface).backgroundColor : 'rgba(0, 0, 0, 0)', getComputedStyle(field).borderTopColor];
             }
             """);
         return (values[0], values[1]);

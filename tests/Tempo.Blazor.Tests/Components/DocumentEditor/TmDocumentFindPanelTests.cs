@@ -509,4 +509,230 @@ public sealed class TmDocumentFindPanelTests : LocalizationTestBase
         var nextBtn = cut.Find("[data-testid='document-find-next']");
         nextBtn.HasAttribute("disabled").Should().BeTrue();
     }
+    // ─── Redesign 146c7e1b, phase 6 (DE-2.3) ──────────────────────────────────
+
+    private static DocumentEditorDocument DocumentWith(params string[] paragraphs) => new()
+    {
+        Blocks =
+        [
+            .. paragraphs.Select((text, index) => new DocumentBlock
+            {
+                Id = $"b{index + 1}",
+                Content = new ParagraphBlockContent { Inlines = [new TextRun { Text = text }] }
+            })
+        ]
+    };
+
+    private IRenderedComponent<TmDocumentFindPanel> RenderSearched(string query, DocumentEditorDocument document, Action<ComponentParameterCollectionBuilder<TmDocumentFindPanel>>? configure = null)
+    {
+        var cut = Render<TmDocumentFindPanel>(p =>
+        {
+            p.Add(x => x.Document, document);
+            configure?.Invoke(p);
+        });
+        cut.Find("[data-testid='document-find-input']").Input(query);
+        cut.WaitForAssertion(() => cut.FindAll("[data-testid='document-find-result']").Should().NotBeEmpty());
+        return cut;
+    }
+
+    [Fact]
+    public void Result_RendersTheMatchInAMark_WithItsContext()
+    {
+        var cut = RenderSearched("Aurora", DocumentWith("Project Aurora si klade za cil vybudovat moderni platformu"));
+
+        var result = cut.Find("[data-testid='document-find-result']");
+        var mark = result.QuerySelector("mark")!;
+        mark.TextContent.Should().Be("Aurora");
+        result.QuerySelector(".tm-document-find-panel__context-before")!.TextContent.Should().Be("Project ");
+        result.QuerySelector(".tm-document-find-panel__context-after")!.TextContent.Should().Be(" si klade za cil vybudovat…", "the broken last word of a cut context is dropped");
+    }
+
+    [Fact]
+    public void Result_DropsTheBrokenWordOfACutContext_AndShowsAnEllipsis()
+    {
+        var text = "alpha beta gamma delta epsilon zeta eta theta iota kappa NEEDLE lambda mu nu xi omicron pi rho sigma tau upsilon";
+        var cut = RenderSearched("NEEDLE", DocumentWith(text));
+
+        var before = cut.Find(".tm-document-find-panel__context-before").TextContent;
+        var after = cut.Find(".tm-document-find-panel__context-after").TextContent;
+        before.Should().StartWith("…").And.NotStartWith("… ").And.EndWith(" ");
+        after.Should().EndWith("…");
+        before.TrimStart('…').Split(' ').First().Should().BeOneOf("eta", "theta", "iota", "kappa", "zeta", "epsilon", "delta", "gamma", "beta");
+        text.Should().Contain(before.TrimStart('…').TrimEnd(), "what is shown is a real stretch of the text");
+        cut.Find("[data-testid='document-find-result'] mark").TextContent.Should().Be("NEEDLE");
+    }
+
+    [Fact]
+    public void ThousandHits_RenderAWindowOfOneHundred_TheHeadingKeepsTheFullCount_AndShowMoreGrowsIt()
+    {
+        var cut = RenderSearched("x", DocumentWith(Enumerable.Repeat("x", 1000).ToArray()));
+
+        cut.Find("[data-testid='document-find-results-heading']").TextContent.Should().Be("Results (1000)", "the heading counts every hit");
+        cut.FindAll("[data-testid='document-find-result']").Should().HaveCount(100, "a thousand cards would stall the inspector");
+        var more = cut.Find("[data-testid='document-find-show-more']");
+        more.TextContent.Trim().Should().Be("Show 100 more");
+
+        more.Click();
+
+        cut.WaitForAssertion(() => cut.FindAll("[data-testid='document-find-result']").Should().HaveCount(200));
+    }
+
+    [Fact]
+    public void TheActiveResult_IsAlwaysInTheWindow_EvenWhenItIsPastIt()
+    {
+        var cut = RenderSearched("x", DocumentWith(Enumerable.Repeat("x", 300).ToArray()));
+
+        // Previous from the first hit wraps to the LAST one (300th), far outside the first window.
+        cut.Find("[data-testid='document-find-prev']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var active = cut.FindAll("[data-testid='document-find-result'][aria-current='true']");
+            active.Should().ContainSingle("the hit the reader stands on is rendered, however far down it is");
+            active[0].QuerySelector(".tm-document-find-panel__result-index")!.TextContent.Should().Be("300");
+        });
+        cut.FindAll("[data-testid='document-find-result']").Count.Should().BeLessThanOrEqualTo(101);
+    }
+
+    [Fact]
+    public void ResultsHeading_CountsEveryResult_EvenASingleOne()
+    {
+        var one = RenderSearched("platformu", DocumentWith("moderni platformu"));
+        one.Find("[data-testid='document-find-results-heading']").TextContent.Should().Be("Results (1)");
+        one.FindAll("[data-testid='document-find-result']").Should().ContainSingle("a single result is listed too");
+
+        var three = RenderSearched("a", DocumentWith("a b a", "a"));
+        three.Find("[data-testid='document-find-results-heading']").TextContent.Should().Be("Results (3)");
+    }
+
+    [Fact]
+    public void ReplaceToggle_ShowsTheReplaceField_WithoutCtrlH()
+    {
+        var cut = Render<TmDocumentFindPanel>(p => p.Add(x => x.Document, EmptyDocument()));
+        cut.FindAll("[data-testid='document-replace-input']").Should().BeEmpty();
+
+        var toggle = cut.Find("[data-testid='document-find-replace-toggle']");
+        toggle.GetAttribute("aria-expanded").Should().Be("false");
+
+        toggle.Click();
+
+        cut.Find("[data-testid='document-replace-input']").Should().NotBeNull();
+        cut.Find("[data-testid='document-find-replace-toggle']").GetAttribute("aria-expanded").Should().Be("true");
+
+        cut.Find("[data-testid='document-find-replace-toggle']").Click();
+        cut.FindAll("[data-testid='document-replace-input']").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ReplaceToggle_StartsExpanded_WhenTheHostAsksForReplaceMode()
+    {
+        var cut = Render<TmDocumentFindPanel>(p => p
+            .Add(x => x.Document, EmptyDocument())
+            .Add(x => x.ShowReplace, true));
+
+        cut.Find("[data-testid='document-find-replace-toggle']").GetAttribute("aria-expanded").Should().Be("true");
+        cut.Find("[data-testid='document-replace-input']").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void ReplaceActions_ReplaceIsPrimary_ReplaceAllIsSecondary()
+    {
+        var cut = Render<TmDocumentFindPanel>(p => p
+            .Add(x => x.Document, EmptyDocument())
+            .Add(x => x.ShowReplace, true));
+
+        cut.Find("[data-testid='document-find-replace-one']").ClassList.Should().Contain("tm-btn-primary");
+        cut.Find("[data-testid='document-find-replace-all']").ClassList.Should().Contain("tm-btn-secondary").And.NotContain("tm-btn-primary");
+        cut.Find("[data-testid='document-find-replace-one']").TextContent.Trim().Should().Be("Replace");
+        cut.Find("[data-testid='document-find-replace-all']").TextContent.Trim().Should().Be("Replace all");
+    }
+
+    [Fact]
+    public void PreviousNext_AreIcons_NotTextArrows()
+    {
+        var cut = Render<TmDocumentFindPanel>(p => p.Add(x => x.Document, EmptyDocument()));
+
+        foreach (var testId in new[] { "document-find-prev", "document-find-next" })
+        {
+            var button = cut.Find($"[data-testid='{testId}']");
+            button.QuerySelector(".tm-icon").Should().NotBeNull();
+            button.TextContent.Trim().Should().BeEmpty();
+        }
+    }
+
+    [Fact]
+    public void Layout_FieldsHaveLabels_TheCountSitsInsideTheInput_OptionsAreAColumn()
+    {
+        var cut = Render<TmDocumentFindPanel>(p => p.Add(x => x.Document, EmptyDocument()));
+
+        var field = cut.Find("[data-testid='document-find-input']").ParentElement!;
+        field.ClassList.Should().Contain("tm-document-find-panel__field");
+        field.QuerySelector("[data-testid='document-find-count']").Should().NotBeNull("the count sits inside the field");
+
+        var label = cut.Find("label[for='" + cut.Find("[data-testid='document-find-input']").Id + "']");
+        label.TextContent.Should().Be("Find");
+
+        var options = cut.Find("[data-testid='document-find-options']");
+        options.GetAttribute("role").Should().Be("group");
+        options.QuerySelectorAll("input[type='checkbox']").Should().HaveCount(3);
+        cut.Find("[data-testid='document-find-scope']").ClassList.Should().Contain("tm-document-find-panel__scope");
+        cut.Find("[data-testid='document-find-scope']").ParentElement!.TextContent.Should().Contain("Scope");
+    }
+
+    [Fact]
+    public void ClearButton_AppearsWithText_AndEmptiesTheQuery()
+    {
+        var cut = Render<TmDocumentFindPanel>(p => p.Add(x => x.Document, DocumentWith("alpha beta alpha")));
+        cut.FindAll("[data-testid='document-find-clear']").Should().BeEmpty();
+
+        cut.Find("[data-testid='document-find-input']").Input("alpha");
+        cut.WaitForAssertion(() => cut.FindAll("[data-testid='document-find-result']").Should().HaveCount(2));
+
+        cut.Find("[data-testid='document-find-clear']").Click();
+
+        cut.WaitForAssertion(() => cut.FindAll("[data-testid='document-find-result']").Should().BeEmpty());
+        cut.Find("[data-testid='document-find-input']").GetAttribute("value").Should().BeNullOrEmpty();
+        cut.FindAll("[data-testid='document-find-clear']").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Header_IsTheSharedInspectorHeader_AndCanBeSuppressedByAHostThatHasItsOwn()
+    {
+        var withHeader = Render<TmDocumentFindPanel>(p => p.Add(x => x.Document, EmptyDocument()));
+        withHeader.Find("[data-testid='document-inspector-header'] .tm-document-inspector-header__title").TextContent.Should().Be("Find and replace");
+        withHeader.Find("[data-testid='document-find-close']").ClassList.Should().Contain("tm-document-inspector-header__close");
+
+        var without = Render<TmDocumentFindPanel>(p => p
+            .Add(x => x.Document, EmptyDocument())
+            .Add(x => x.ShowHeader, false));
+        without.FindAll("[data-testid='document-inspector-header']").Should().BeEmpty();
+        without.FindAll("[data-testid='document-find-close']").Should().BeEmpty("the host's own header carries the X");
+    }
+
+    [Fact]
+    public void Escape_StillClosesOnceWithoutAHeader()
+    {
+        var closes = 0;
+        var cut = Render<TmDocumentFindPanel>(p => p
+            .Add(x => x.Document, EmptyDocument())
+            .Add(x => x.ShowHeader, false)
+            .Add(x => x.OnClose, EventCallback.Factory.Create(this, () => closes++)));
+
+        cut.Find("[data-testid='document-find-input']").KeyDown(new KeyboardEventArgs { Key = "Escape" });
+
+        cut.WaitForAssertion(() => closes.Should().Be(1));
+    }
+
+    [Fact]
+    public void ShiftEnter_NavigatesBackwards_AndEnterForwards()
+    {
+        var navigations = new List<int>();
+        var cut = RenderSearched("a", DocumentWith("a a a"), p => p
+            .Add(x => x.OnNavigateRequested, EventCallback.Factory.Create<int>(this, d => navigations.Add(d))));
+
+        cut.Find("[data-testid='document-find-input']").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        cut.Find("[data-testid='document-find-input']").KeyDown(new KeyboardEventArgs { Key = "Enter", ShiftKey = true });
+
+        cut.WaitForAssertion(() => navigations.Should().Equal(1, -1));
+    }
 }
