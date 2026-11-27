@@ -198,7 +198,7 @@
                             <div id="@OptionId(pIdx)"
                                  class="tm-nps__item @(IsPageSelected(pIdx) ? "tm-nps__item--selected" : "")"
                                  role="option"
-                                 aria-selected="@IsPageSelected(pIdx)"
+                                 aria-selected="@BoolText(IsPageSelected(pIdx))"
                                  @onclick="() => NavigateToPageAsync(page)"
                                  @onmouseenter="() => _selectedIndex = pIdx">
 
@@ -238,7 +238,7 @@
                             <div id="@OptionId(_pages.Count + bIdx)"
                                  class="tm-nps__item @(IsBlockSelected(bIdx) ? "tm-nps__item--selected" : "")"
                                  role="option"
-                                 aria-selected="@IsBlockSelected(bIdx)"
+                                 aria-selected="@BoolText(IsBlockSelected(bIdx))"
                                  @onclick="() => NavigateToBlockResultAsync(result)"
                                  @onmouseenter="() => _selectedIndex = _pages.Count + bIdx">
 

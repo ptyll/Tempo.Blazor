@@ -31,7 +31,7 @@
             var user = _users[idx];
             <div class="tm-comment-mention-dropdown__item @(idx == _selectedIndex ? "tm-comment-mention-dropdown__item--selected" : "")"
                  role="option"
-                 aria-selected="@(idx == _selectedIndex)"
+                 aria-selected="@BoolText(idx == _selectedIndex)"
                  @onclick="() => SelectUserAsync(user)"
                  @onpointermove="() => _selectedIndex = idx">
                 <div class="tm-comment-mention-dropdown__avatar" aria-hidden="true">
@@ -64,6 +64,10 @@
     private int _selectedIndex;
     private List<TmUser> _users = new();
     private ElementReference _textareaRef;
+
+    // aria-selected must carry the strings "true"/"false" — a Blazor bool renders the invalid
+    // empty value (true) or drops the attribute (false).
+    private static string BoolText(bool value) => value ? "true" : "false";
 
     [Parameter] public string Value { get; set; } = string.Empty;
     [Parameter] public EventCallback<string> ValueChanged { get; set; }

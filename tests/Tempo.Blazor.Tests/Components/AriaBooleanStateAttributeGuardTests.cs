@@ -38,7 +38,10 @@ namespace Tempo.Blazor.Tests.Components;
 /// menu, watch button, sidebar sections, page tree, comment panel, my tasks and page history)
 /// through a string <c>BoolText</c> helper — except the watch toggle, whose <c>aria-pressed</c>
 /// was removed entirely (its changing name announces the state, APG) — shrinking the frozen
-/// list by 19.
+/// list by 19. Fáze 4j fixed the NotionEditor menu and search surfaces (the mention menu tabs
+/// and option lists, the comment mention input, the emoji picker categories, the token
+/// dropdown, the block type switcher and the page search results) through the same string
+/// <c>BoolText</c> helper — shrinking the frozen list by another 14.
 /// </summary>
 public class AriaBooleanStateAttributeGuardTests
 {
@@ -74,21 +77,9 @@ public class AriaBooleanStateAttributeGuardTests
     private static readonly string[] Frozen =
     [
         // ── bare identifier offenders (known debt, see plan_report_remaining) ────────────────
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionTokenDropdown.razor|aria-selected|@isSelected",
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Lists/TmNotionToggleBlock.razor|aria-expanded|@_isOpen",
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDbTableView.razor|aria-expanded|@isExpanded",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionBlockTypeSwitcher.razor|aria-selected|@isCurrent",
         // ── parenthesised bool-expression offenders ───────────────────────────────────────────
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionMentionMenu.razor|aria-selected|@(_tab == MentionTab.People)",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionMentionMenu.razor|aria-selected|@(_tab == MentionTab.Pages)",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionMentionMenu.razor|aria-selected|@(_tab == MentionTab.Date)",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionMentionMenu.razor|aria-selected|@(pIdx == _selectedIndex)",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionMentionMenu.razor|aria-selected|@(pgIdx == _selectedIndex)",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionMentionMenu.razor|aria-selected|@(0 == _selectedIndex)",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionMentionMenu.razor|aria-selected|@(1 == _selectedIndex)",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionMentionMenu.razor|aria-selected|@(2 == _selectedIndex)",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmCommentMentionInput.razor|aria-selected|@(idx == _selectedIndex)",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionEmojiPicker.razor|aria-selected|@(_activeCategory == capturedTab.Category)",
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDbFieldEditor.razor|aria-pressed|@(o.Color == cc)",
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDatabaseBlock.razor|aria-selected|@(_activeViewId == v.Id)",
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDbTableView.razor|aria-expanded|@(!isCollapsed)",
@@ -96,9 +87,6 @@ public class AriaBooleanStateAttributeGuardTests
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDbImportExport.razor|aria-selected|@(_tab == ActiveTab.Export)",
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDbGroupBar.razor|aria-selected|@(_selectedFieldId is null)",
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDbGroupBar.razor|aria-selected|@(_selectedFieldId == f.Id)",
-        // ── method calls declared bool in the same file ───────────────────────────────────────
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionPageSearch.razor|aria-selected|@IsPageSelected(pIdx)",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionPageSearch.razor|aria-selected|@IsBlockSelected(bIdx)",
         // ── code-behind AddAttribute with a bool expression ───────────────────────────────────
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Embed/TmNotionWorkItemBlock.razor.cs|aria-pressed|mode == CurrentDisplayMode",
     ];

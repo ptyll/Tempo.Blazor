@@ -61,7 +61,7 @@
                     var isSelected = idx == _selectedIndex;
                     <div class="tm-notion-token-dropdown__item @(isSelected ? "tm-notion-token-dropdown__item--selected" : "")"
                          role="option"
-                         aria-selected="@isSelected"
+                         aria-selected="@BoolText(isSelected)"
                          @onclick="() => SelectItemAsync(token)"
                          @onpointermove="() => _selectedIndex = idx">
                         @if (!string.IsNullOrEmpty(token.Icon))

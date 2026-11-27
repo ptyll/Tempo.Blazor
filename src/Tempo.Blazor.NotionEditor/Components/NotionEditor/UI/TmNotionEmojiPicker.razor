@@ -107,7 +107,7 @@ else
                     var capturedTab = tab;
                     <button class="tm-notion-emoji-picker__tab @(_activeCategory == capturedTab.Category ? "tm-notion-emoji-picker__tab--active" : "")"
                             role="tab"
-                            aria-selected="@(_activeCategory == capturedTab.Category)"
+                            aria-selected="@BoolText(_activeCategory == capturedTab.Category)"
                             title="@Loc[capturedTab.NameKey]"
                             @onclick="() => SetCategory(capturedTab.Category)"
                             @onclick:preventDefault="true">
