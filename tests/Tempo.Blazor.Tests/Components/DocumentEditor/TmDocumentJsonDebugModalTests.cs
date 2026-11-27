@@ -38,7 +38,9 @@ public class TmDocumentJsonDebugModalTests : LocalizationTestBase
             .Add(p => p.IsOpen, true)
             .Add(p => p.Json, json));
 
-        cut.Find("[data-testid='document-json-debug-content']").TextContent.Should().Contain(json);
+        // The block is shown indented (readable), the content is the same JSON.
+        System.Text.RegularExpressions.Regex.Replace(cut.Find("[data-testid='document-json-debug-content']").TextContent, @"\s+", string.Empty)
+            .Should().Contain(json);
     }
 
     [Fact]

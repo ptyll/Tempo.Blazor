@@ -52,6 +52,12 @@
       "type": "string?",
       "isRequired": false,
       "description": "Optional JSON with the current runtime debug state."
+    },
+    {
+      "name": "RestoreFocusTargetId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The id of the element focus returns to when the dialog closes - the editor passes its canvas input, so the keyboard lands back in the document whatever opened the dialog. Null keeps the core modal's own restore (the opener)."
     }
   ]
 }

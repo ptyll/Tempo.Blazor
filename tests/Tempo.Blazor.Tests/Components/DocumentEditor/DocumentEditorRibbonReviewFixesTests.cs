@@ -19,12 +19,8 @@ namespace Tempo.Blazor.Tests.Components.DocumentEditor;
 /// </summary>
 public class DocumentEditorRibbonReviewFixesTests : LocalizationTestBase
 {
-    // The popups that move onto TmOverlayPanel in phase 5 and only then get a More form.
-    private static readonly string[] Phase5PinnedTestIds =
-    [
-        "document-toolbar-table", "document-toolbar-equation", "document-toolbar-symbol", "document-page-layout",
-        "document-header-footer-insert-field-menu", "document-header-footer-preset-menu",
-    ];
+    // Phase 5 moved every popup onto the core overlay and gave it a More form: nothing stays pinned.
+    private static readonly string[] Phase5PinnedTestIds = [];
 
     private IRenderedComponent<TmDocumentEditorToolbar> Render(Action<ComponentParameterCollectionBuilder<TmDocumentEditorToolbar>>? configure = null)
         => Render<TmDocumentEditorToolbar>(p =>
@@ -51,7 +47,7 @@ public class DocumentEditorRibbonReviewFixesTests : LocalizationTestBase
     [InlineData("review", false)]
     [InlineData("view", false)]
     [InlineData("header-footer", true)]
-    public void NoRibbonItem_IsPinned_ExceptThePhase5Popups(string tab, bool headerFooter)
+    public void NoRibbonItem_IsPinned(string tab, bool headerFooter)
     {
         var cut = Render(p => p.Add(x => x.ActiveRegion, headerFooter ? "Header" : "Body"));
         cut.Find($"[data-testid='document-ribbon-tab-{tab}']").Click();
@@ -61,7 +57,7 @@ public class DocumentEditorRibbonReviewFixesTests : LocalizationTestBase
         {
             var ids = item.QuerySelectorAll("[data-testid]").Select(e => e.GetAttribute("data-testid")!).ToList();
             ids.Should().Contain(id => Phase5PinnedTestIds.Contains(id),
-                $"a pinned item on the {tab} tab must be one of the phase-5 popups, found [{string.Join(", ", ids)}]");
+                $"no item may stay pinned on the {tab} tab (every popup has a More form since phase 5), found [{string.Join(", ", ids)}]");
         }
     }
 
@@ -227,7 +223,7 @@ public class DocumentEditorRibbonReviewFixesTests : LocalizationTestBase
         {
             var gallery = cut.Find("[data-testid='document-style-gallery']");
             gallery.Closest("[data-testid='document-ribbon-toolbar']").Should().BeNull("the popup is not inside the (collapsible) toolbar, so it opens from More");
-            gallery.Closest("[data-testid='document-ribbon-panel']").Should().NotBeNull();
+            gallery.Closest("[data-testid='document-toolbar']").Should().NotBeNull("it is the ribbon's own floating panel, rendered after the bar");
         });
     }
 
@@ -321,19 +317,21 @@ public class DocumentEditorRibbonReviewFixesTests : LocalizationTestBase
         cut.FindAll("[data-testid='document-ribbon-toolbar'] button[aria-disabled]").Should().BeEmpty();
     }
 
-    // ─── a header action closes an open popup ────────────────────────────────
+    // ─── an outside press closes an open popup (core overlay, no click-away backdrop) ────────────────────
 
     [Fact]
-    public void CloseFloatingUi_ClosesAnOpenRibbonPopup()
+    public async Task OutsidePress_ClosesAnOpenRibbonPopup_AndThereIsNoBackdropToSwallowIt()
     {
         var cut = Render();
         cut.Find("[data-testid='document-ribbon-tab-insert']").Click();
         cut.Find("[data-testid='document-toolbar-equation']").Click();
         cut.FindAll("[data-testid='document-equation-menu']").Should().HaveCount(1);
+        cut.FindAll("[data-testid='document-toolbar-floating-backdrop']").Should().BeEmpty("the popup is a core top-layer panel, not a backdrop");
 
-        cut.InvokeAsync(() => cut.Instance.CloseFloatingUi());
+        // overlay.js reports a pointerdown outside the panel (and not on its trigger) through this JSInvokable.
+        var panel = cut.FindComponents<Tempo.Blazor.Components.Overlay.TmOverlayPanel>().First(p => p.Instance.Id.StartsWith("tm-document-floating-", StringComparison.Ordinal));
+        await cut.InvokeAsync(() => panel.Instance.NotifyDismissedAsync("outside"));
 
         cut.FindAll("[data-testid='document-equation-menu']").Should().BeEmpty();
-        cut.FindAll("[data-testid='document-toolbar-floating-backdrop']").Should().BeEmpty();
     }
 }

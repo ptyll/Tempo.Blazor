@@ -152,10 +152,17 @@ Link / Comment / Image / Table lose their labels before a font select or an alig
 ## Hosts that opt out of the size container
 
 `.tm-toolbar` is `container-type: inline-size` (so `Labels=Auto` and the `@container tm-toolbar` rules follow the toolbar's own width). A size
-container is the containing block of every `position: fixed` descendant, so a host whose toolbar items open fixed popups sets
-`container-type: normal` on its toolbar (the DocumentEditor ribbon does). The opt-out costs `Labels=Auto` and every `@container tm-toolbar`
-rule - such a host must use `Labels=IconsWithText`, `Icons` or `ShrinkBeforeOverflow`. Moving the popups to `TmOverlayPanel` removes the need
-(planned for the ribbon, redesign plan 146c7e1b phase 5).
+container is the containing block of every `position: fixed` descendant, so a host whose toolbar items open **inline fixed** popups can set
+`container-type: normal` on its toolbar. The opt-out costs `Labels=Auto` and every `@container tm-toolbar` rule - such a host must use
+`Labels=IconsWithText`, `Icons` or `ShrinkBeforeOverflow`.
+
+The preferred answer is NOT to opt out: render the popup as a `TmOverlayPanel` (a top-layer `popover`, which no container contains) after the
+toolbar and give its item a More form. The DocumentEditor ribbon did exactly that (redesign plan 146c7e1b, phase 5): its table grid, equation and
+symbol palettes, style gallery, page layout, header/footer menus and link popover are `TmDocumentFloatingPanel`s rendered after the
+`TmToolbar`, anchored to the trigger button (`DocumentRibbonButton.Element`) - or to the ribbon row, aligned to its end, when the request came from
+the More menu because the trigger had collapsed - and the ribbon `TmToolbar` is the default size container again. An item that opens such a
+panel declares `MenuLabel` + `OnMenuInvoke` (it can collapse into More); the panel never lives inside the collapsible item, because a
+collapsed item is invisible and inert.
 
 ## Non-button items (`TmToolbarItem`)
 
@@ -390,10 +397,11 @@ keeps no overflow logic of its own.
   one labelled section per `TmToolbarGroup`, arrow keys and typeahead; the search box of the old menu is gone (groups and
   typeahead replace it, decision Q-C8). A toggle (bold, italic, ...) is a `menuitemcheckbox` there, its `aria-checked` the
   button's `Pressed`.
-* **What stays on the bar.** Items that own a popup (style gallery, table grid, image menu, equation and symbol menus, page
-  layout, header/footer menus) and the colour pickers are `TmToolbarItem`s without a "More" representation: they never leave the
-  bar, because a popup inside a collapsed (invisible, inert) item could not be shown. `OverflowOnly` commands (the less frequent
-  character formatting, paragraph spacing before/after, change case and the debug tools) never render on the bar at all.
+* **What stays on the bar.** Nothing is pinned any more (phase 5): the items that own a popup (style gallery, table grid, image button,
+  equation and symbol palettes, page layout, header/footer menus, link) have a More form (`MenuLabel` + `OnMenuInvoke`; the image item
+  keeps its URL / upload / library entries) and open their panel from there, because the panel is rendered after the toolbar, outside the
+  collapsible item. `OverflowOnly` commands (the style gallery opener, the less frequent character formatting, paragraph spacing
+  before/after, change case and the debug tools) never render on the bar at all.
 
 | DocumentEditor | Core |
 |----------------|------|

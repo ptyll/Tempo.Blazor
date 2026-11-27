@@ -141,6 +141,13 @@
   cursor: not-allowed;
   opacity: 0.65;
 }
+/* A disabled action stays in the list (aria-disabled): the title and the icon step back to the secondary ink, the reason keeps its
+   readable ink (no opacity - a faded reason would fall under 4.5:1) and the pointer says "not here". */
+.tm-command-palette-item-disabled { cursor: not-allowed; }
+/* The reason is the row's description line: it keeps the readable secondary ink and may wrap onto a second line. */
+.tm-command-palette-disabled-reason { color: var(--tm-text-secondary); white-space: normal; margin-top: 0; }
+.tm-command-palette-item-disabled .tm-command-palette-title,
+.tm-command-palette-item-disabled .tm-command-palette-icon { color: var(--tm-text-secondary); }
 .tm-command-palette-item-title,
 .tm-command-palette-title { font-size: var(--tm-font-size-sm); font-weight: var(--tm-font-weight-medium); color: var(--tm-text-primary); }
 .tm-command-palette-item-description,
@@ -216,8 +223,14 @@ span.tm-command-palette-shortcut kbd {
 .tm-command-palette-title { flex: 0 1 auto; }
 .tm-command-palette-description { flex: 0 10 auto; }
 @container tm-command-palette (width < 30rem) {
-  .tm-command-palette-description {
+  /* The description is decoration; a disabled action's REASON is information (why the row does nothing), so it stays and may wrap. */
+  .tm-command-palette-description:not(.tm-command-palette-disabled-reason) {
     display: none;
+  }
+  .tm-command-palette-disabled-reason {
+    flex: 0 1 auto;
+    min-width: 0;
+    white-space: normal;
   }
   .tm-command-palette-title {
     flex: 1 1 auto;

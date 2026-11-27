@@ -44,6 +44,7 @@ namespace Tempo.Blazor.Components.DocumentEditor;
 [JsonSerializable(typeof(TmDocumentCanvasEngineHost.CanvasEngineSelectionState))]
 [JsonSerializable(typeof(TmDocumentCanvasEngineHost.CanvasEngineContentControlState))]
 [JsonSerializable(typeof(TmDocumentCanvasEngineHost.CanvasEngineSigningFieldSelection))]
+[JsonSerializable(typeof(TmDocumentCanvasEngineHost.CanvasEngineViewportRect))]
 [JsonSerializable(typeof(TmDocumentCanvasEngineHost.CanvasEngineDiagnosticsState))]
 [JsonSerializable(typeof(TmDocumentCanvasEngineHost.CanvasEngineRemoteApplyResult))]
 [JsonSerializable(typeof(TmDocumentCanvasEngineHost.CanvasEngineRemoteConflict))]

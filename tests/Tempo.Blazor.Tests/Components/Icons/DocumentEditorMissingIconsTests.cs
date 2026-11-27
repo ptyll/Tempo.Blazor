@@ -28,6 +28,8 @@ public class DocumentEditorMissingIconsTests : LocalizationTestBase
         // rozlišení duplicit + sémantické ikony + doplněné selecty
         "list-ordered", "double-strikethrough", "sigma", "omega",
         "a-large-small", "arrow-up-from-line", "arrow-down-to-line",
+        // Fáze 5 (DE-1.6): meta chips of the form-field popover
+        "asterisk", "refresh-cw",
     };
 
     [Theory]

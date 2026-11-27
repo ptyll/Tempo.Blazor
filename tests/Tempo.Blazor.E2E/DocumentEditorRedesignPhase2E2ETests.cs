@@ -531,7 +531,7 @@ public sealed class DocumentEditorRedesignPhase2E2ETests : WasmTestBase
 
         // A fresh editor has no clipboard capture: at least one section (the normalized blocks) is empty and says so,
         // and an empty section hides its monospace block instead of showing an empty box.
-        var notices = modal.Locator(".tm-document-json-debug-modal__empty");
+        var notices = modal.Locator(".tm-document-debug-modal__empty");
         var noticeCount = await notices.CountAsync();
         Assert.IsTrue(noticeCount >= 1, "an editor without a clipboard capture has an empty debug section");
         for (var i = 0; i < noticeCount; i++)
@@ -759,7 +759,7 @@ public sealed class DocumentEditorRedesignPhase2CaptureE2ETests : BaselineGenera
         await page.Keyboard.PressAsync("Control+Shift+P");
         await Assertions.Expect(page.GetByTestId("document-command-palette")).ToBeVisibleAsync(new() { Timeout = 10_000 });
         await page.GetByTestId("document-command-palette-search").FillAsync(command);
-        var item = page.Locator($"[data-testid='document-command-palette-item'][data-command='{command}'] button");
+        var item = page.Locator($"[data-testid='document-command-palette-item'][data-command='{command}']");
         await Assertions.Expect(item).ToBeEnabledAsync(new() { Timeout = 10_000 });
         await item.ClickAsync();
     }

@@ -181,6 +181,14 @@
     /// <summary>Flip to the opposite side when the preferred side does not have enough room. Default true.</summary>
     [Parameter] public bool Flip { get; set; } = true;
 
+    /// <summary>
+    /// With <see cref="Flip"/>: the minimum room in pixels the preferred side must offer before the panel stays on it. A panel that is
+    /// capped to the room it gets (<see cref="ConstrainHeight"/>) needs a useful height, not its natural one: with 240 it stays below
+    /// its trigger whenever 240 px are free there and flips above only when they are not. 0 (the default) keeps the classic rule - flip
+    /// when the natural size does not fit.
+    /// </summary>
+    [Parameter] public int FlipMinRoom { get; set; }
+
     /// <summary>Slide the panel along the cross axis so it stays inside the viewport. Default true.</summary>
     [Parameter] public bool Shift { get; set; } = true;
 
@@ -593,7 +601,7 @@
     private string OptionsSignature() => string.Join('|',
         Anchor.Id ?? "-",
         Placement.ToString(), Align.ToString(), Offset, ViewportMargin,
-        Flip, Shift, MatchAnchorWidth, ConstrainHeight, CloseOnEscape, CloseOnOutsidePointerDown, TrapFocus);
+        Flip, FlipMinRoom, Shift, MatchAnchorWidth, ConstrainHeight, CloseOnEscape, CloseOnOutsidePointerDown, TrapFocus);
 
     private object BuildOptions() => new
     {
@@ -602,6 +610,7 @@
         offset = Offset,
         margin = ViewportMargin,
         flip = Flip,
+        flipMinRoom = FlipMinRoom,
         shift = Shift,
         matchAnchorWidth = MatchAnchorWidth,
         constrainHeight = ConstrainHeight,

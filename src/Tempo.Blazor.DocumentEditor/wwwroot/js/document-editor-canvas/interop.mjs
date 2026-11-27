@@ -56,6 +56,7 @@ export function mount(hostElement, mountElement, modelJson, optionsJson, dotNetR
         pageSettings: options.pageSettings,
         ariaLabel: options.ariaLabel,
         inputAriaLabel: options.inputAriaLabel,
+        inputId: options.inputId,
         accessibility: options.accessibility,
         contentControlRenderMode: options.contentControlRenderMode,
         signingRoles: options.signingRoles,
@@ -428,6 +429,34 @@ export function getUndoStateJson(handle) {
     return JSON.stringify(readUndoState(state));
 }
 
+/**
+ * The caret (or the selection's bounding rect) in viewport coordinates: the page-local rect the selection controller reports
+ * plus the page element's client rect. Null when the page is not mounted or the selection has no rect.
+ */
+export function selectionViewportRect(engine, selection) {
+    const rect = selection?.boundingRect || selection?.caretRect;
+    const pageIndex = selection?.boundingRect ? selection.boundingRect.pageIndex : selection?.pageIndex;
+    if (!rect) {
+        return null;
+    }
+
+    const page = engine?.canvasStack?.pages?.get?.(String(pageIndex ?? 0));
+    const bounds = page?.pageElement?.getBoundingClientRect?.();
+    if (!bounds) {
+        return null;
+    }
+
+    // The page-local rect is in unscaled page units; the page is painted at data-canvas-page-zoom-scale, so the viewport rect scales it
+    // (the same model the mini toolbar and the presence overlay use) - without it the popover drifts away from the field when zoomed.
+    const scale = Math.max(0.01, Number(page?.pageElement?.getAttribute?.('data-canvas-page-zoom-scale') || 1) || 1);
+    return {
+        left: bounds.left + (Number(rect.x || 0) || 0) * scale,
+        top: bounds.top + (Number(rect.y || 0) || 0) * scale,
+        width: Math.max(1, (Number(rect.width || 0) || 0) * scale),
+        height: Math.max(1, (Number(rect.height || 0) || 0) * scale),
+    };
+}
+
 export function getSelectionStateJson(handle) {
     const state = getInstance(handle);
     // Phase N2: the selection pull runs after every settled edit (debounced toolbar sync), so it must
@@ -448,6 +477,9 @@ export function getSelectionStateJson(handle) {
         signingField: signingField || null,
         contentControlSelected: contentControl != null,
         contentControl: contentControl || null,
+        // Phase 5 (DE-1.6): where the field is in the VIEWPORT, so the Blazor field popover anchors to it (the same
+        // coordinate model the mini toolbar uses). Only computed for a field - the pull stays O(selection).
+        fieldAnchor: (signingField != null || contentControl != null) ? selectionViewportRect(state.engine, selection) : null,
         pageIndex: Number(selection.pageIndex || 0) || 0,
         anchorBlockId: selection.anchor?.blockId || '',
         anchorOffset: Number(selection.anchor?.offset || 0) || 0,

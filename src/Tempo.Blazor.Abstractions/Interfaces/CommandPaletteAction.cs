@@ -15,6 +15,9 @@ namespace Tempo.Blazor.Interfaces;
 /// <param name="Code">Code/identifier shown monospace at the trailing edge; also matched by the local filter.</param>
 /// <param name="BadgeTone">Tone of the trailing badge.</param>
 /// <param name="Execute">The async action to execute when selected; defaults to a no-op.</param>
+/// <param name="IsDisabled">Whether the action is unavailable: it stays listed and reachable, but never runs.</param>
+/// <param name="DisabledReason">Why the action is unavailable; shown instead of the description while disabled.</param>
+/// <param name="SearchTerms">Extra terms the local filter matches (not displayed).</param>
 public sealed record CommandPaletteAction(
     string Id,
     string Title,
@@ -25,7 +28,10 @@ public sealed record CommandPaletteAction(
     string? Badge = null,
     string? Code = null,
     CommandPaletteBadgeTone BadgeTone = CommandPaletteBadgeTone.Neutral,
-    Func<Task>? Execute = null) : ICommandPaletteAction
+    Func<Task>? Execute = null,
+    bool IsDisabled = false,
+    string? DisabledReason = null,
+    IReadOnlyList<string>? SearchTerms = null) : ICommandPaletteAction
 {
     /// <inheritdoc />
     Func<Task> ICommandPaletteAction.Execute => Execute ?? (() => Task.CompletedTask);

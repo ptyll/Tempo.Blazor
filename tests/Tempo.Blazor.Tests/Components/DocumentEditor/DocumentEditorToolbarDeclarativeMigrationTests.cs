@@ -115,8 +115,13 @@ public class DocumentEditorToolbarDeclarativeMigrationTests : LocalizationTestBa
         AssertCommand(cut, "document-toolbar-symbol", "insertSymbol");
         cut.Find("[data-testid='document-toolbar-symbol']").Click();
 
-        cut.Find("[role='group'][aria-label='Special characters']").Should().NotBeNull();
-        cut.Find("[role='group'][aria-label='Emoji']").Should().NotBeNull();
+        // Phase 5: each section has a VISIBLE heading and its group is named by it (aria-labelledby).
+        var headings = cut.FindAll(".tm-document-palette-grid__heading").Select(h => h.TextContent).ToList();
+        headings.Should().Contain(["Special characters", "Emoji"]);
+        foreach (var group in cut.FindAll(".tm-document-palette-grid [role='group']"))
+        {
+            cut.Find($"#{group.GetAttribute("aria-labelledby")}").TextContent.Should().NotBeNullOrWhiteSpace();
+        }
         cut.Find("[data-testid='document-symbol-em-dash']").Click();
 
         insertedPreset.Should().Be("emDash");
@@ -135,8 +140,8 @@ public class DocumentEditorToolbarDeclarativeMigrationTests : LocalizationTestBa
         AssertCommand(cut, "document-toolbar-equation", "insertEquation");
         cut.Find("[data-testid='document-toolbar-equation']").Click();
 
-        cut.Find("[role='group'][aria-label='Structures']").Should().NotBeNull();
-        cut.Find("[role='group'][aria-label='Symbols']").Should().NotBeNull();
+        cut.FindAll(".tm-document-palette-grid__heading").Select(h => h.TextContent).Should().Contain(["Structures", "Symbols"]);
+        cut.FindAll(".tm-document-palette-grid[data-columns='6']").Should().HaveCount(2, "the equation palette is a 6-column grid");
         cut.Find("[data-testid='document-equation-sum']").Click();
 
         insertedPreset.Should().Be("sum");

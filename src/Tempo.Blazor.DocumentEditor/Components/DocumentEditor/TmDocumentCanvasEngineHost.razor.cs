@@ -570,6 +570,28 @@ public partial class TmDocumentCanvasEngineHost
 
         /// <summary>The content control at the caret, when one is selected (perf plan N2).</summary>
         public CanvasEngineContentControlState? ContentControl { get; set; }
+
+        /// <summary>
+        /// Viewport rectangle of the selected field (signing field or content control), so the field popover can anchor to it.
+        /// Null when no field is selected or its page is not mounted.
+        /// </summary>
+        public CanvasEngineViewportRect? FieldAnchor { get; set; }
+    }
+
+    /// <summary>A rectangle in viewport (client) coordinates, in CSS pixels.</summary>
+    public sealed class CanvasEngineViewportRect
+    {
+        /// <summary>Left edge.</summary>
+        public double Left { get; set; }
+
+        /// <summary>Top edge.</summary>
+        public double Top { get; set; }
+
+        /// <summary>Width (at least 1).</summary>
+        public double Width { get; set; }
+
+        /// <summary>Height (at least 1).</summary>
+        public double Height { get; set; }
     }
 
     /// <summary>

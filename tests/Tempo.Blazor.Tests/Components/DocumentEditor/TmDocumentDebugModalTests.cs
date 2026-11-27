@@ -38,11 +38,16 @@ public sealed class TmDocumentDebugModalTests : LocalizationTestBase
             .Add(p => p.Title, "Debug title")
             .Add(p => p.ModalTestId, "debug-modal"));
 
-        var dialog = cut.Find("[data-testid='debug-modal']");
-        dialog.GetAttribute("role").Should().Be("dialog");
+        // Phase 5 (G6): the frame is the core TmModal - the test id rides the overlay (the scrim), the dialog is the focus scope inside it
+        // and is named by the visible title through aria-labelledby.
+        var overlay = cut.Find("[data-testid='debug-modal']");
+        overlay.ClassList.Should().Contain("tm-modal-overlay");
+        var dialog = overlay.QuerySelector("[role='dialog']")!;
         dialog.GetAttribute("aria-modal").Should().Be("true");
-        dialog.GetAttribute("aria-label").Should().Be("Debug title");
-        cut.Find(".tm-document-json-debug-modal__title").TextContent.Should().Be("Debug title");
+        var title = cut.Find($"[id='{dialog.GetAttribute("aria-labelledby")}']");
+        title.TextContent.Should().Be("Debug title");
+        title.ClassList.Should().Contain("tm-modal-title");
+        overlay.ClassList.Should().Contain("tm-document-debug-modal").And.Contain("tm-document-json-debug-modal", "the phase-2 BEM name stays as an alias");
     }
 
     [Fact]
@@ -82,7 +87,7 @@ public sealed class TmDocumentDebugModalTests : LocalizationTestBase
     }
 
     [Fact]
-    public void Close_AndBackdrop_RaiseOnClose()
+    public void Close_FooterClose_AndScrim_RaiseOnClose()
     {
         var closed = 0;
         var cut = Render<TmDocumentDebugModal>(parameters => parameters
@@ -93,9 +98,10 @@ public sealed class TmDocumentDebugModalTests : LocalizationTestBase
             .Add(p => p.OnClose, EventCallback.Factory.Create(this, () => closed++)));
 
         cut.Find("[data-testid='debug-close']").Click();
-        cut.Find(".tm-document-json-debug-modal__backdrop").Click();
+        cut.Find("[data-testid='debug-close-footer']").Click();
+        cut.Find("[data-testid='debug-modal']").Click();
 
-        closed.Should().Be(2);
+        closed.Should().Be(3, "the header X, the footer Close and a click on the scrim all close");
     }
 
     [Fact]
@@ -109,7 +115,7 @@ public sealed class TmDocumentDebugModalTests : LocalizationTestBase
 
         cut.Find("[data-testid='canonical']").Should().NotBeNull();
         cut.Find("[data-testid='canonical-content']").TextContent.Should().Contain("\"a\"");
-        cut.FindAll(".tm-document-json-debug-modal__empty").Should().BeEmpty();
+        cut.FindAll(".tm-document-debug-modal__empty").Should().BeEmpty();
     }
 
     [Theory]
@@ -124,7 +130,7 @@ public sealed class TmDocumentDebugModalTests : LocalizationTestBase
             .Add(p => p.ModalTestId, "debug-modal")
             .Add(p => p.ChildContent, Section("Warnings", "warnings", "warnings-content", content)));
 
-        cut.Find("[data-testid='warnings']").QuerySelector(".tm-document-json-debug-modal__empty")!
+        cut.Find("[data-testid='warnings']").QuerySelector(".tm-document-debug-modal__empty.tm-document-json-debug-modal__empty")!
             .TextContent.Trim().Should().Be("No data");
         cut.Find("[data-testid='warnings-content']").TextContent.Trim().Should().BeEmpty();
     }

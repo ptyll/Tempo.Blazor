@@ -1,0 +1,167 @@
+@namespace Tempo.Blazor.Components.DocumentEditor
+@inherits Tempo.Blazor.Components.TmComponentBase
+@typeparam TItem
+@using Microsoft.AspNetCore.Components.Web
+
+@* A titled grid of equally sized choices (the style gallery, the equation structures and symbols, the symbol palette) -
+   redesign 146c7e1b, phase 5. One section with a VISIBLE heading that names its group (aria-labelledby), a fixed column
+   count carried as a CSS custom property, a roving tab stop (one Tab stop for the whole grid) and the arrow keys that
+   respect the columns: Left/Right step by one, Up/Down by a row, Home/End jump to the ends. Every choice is a native
+   button, so Enter and Space activate it through the browser's own click - no keyboard emulation. A choice applies
+   IMMEDIATELY (G8): there is no confirm footer. *@
+<section class="tm-document-palette-grid @Class"
+         aria-labelledby="@_headingId"
+         data-columns="@EffectiveColumns"
+         data-testid="@(string.IsNullOrEmpty(SectionTestId) ? null : TestId(SectionTestId))">
+    @if (!string.IsNullOrWhiteSpace(Heading))
+    {
+        <h4 id="@_headingId" class="tm-document-palette-grid__heading">@Heading</h4>
+    }
+    <div class="tm-document-palette-grid__grid" role="group" aria-labelledby="@_headingId" style="@GridStyle">
+        @for (var i = 0; i < Items.Count; i++)
+        {
+            var index = i;
+            var item = Items[index];
+            var disabled = IsDisabled?.Invoke(item) ?? false;
+            var selected = IsSelected?.Invoke(item) ?? false;
+            <button type="button"
+                    @ref="_buttons[index]"
+                    class="tm-document-palette-grid__item @(selected ? "tm-document-palette-grid__item--active" : null) @ItemClass"
+                    tabindex="@(index == _active ? 0 : -1)"
+                    title="@ItemTitle?.Invoke(item)"
+                    disabled="@disabled"
+                    aria-pressed="@(IsSelected is null ? null : (selected ? "true" : "false"))"
+                    data-testid="@ItemTestId?.Invoke(item)"
+                    @onclick="() => SelectAsync(item)"
+                    @onfocus="() => _active = index"
+                    @onkeydown="args => HandleKeyDownAsync(args, index)">
+                @ItemContent(item)
+            </button>
+        }
+    </div>
+</section>
+
+@code {
+    private readonly string _headingId = $"tm-document-palette-{Guid.NewGuid():N}";
+    private ElementReference[] _buttons = [];
+    private int _active;
+
+    /// <summary>The choices, in reading order.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<TItem> Items { get; set; } = [];
+
+    /// <summary>The content of one choice (a sample, a glyph, a label).</summary>
+    [Parameter, EditorRequired] public RenderFragment<TItem> ItemContent { get; set; } = default!;
+
+    /// <summary>Visible heading of the section; also the accessible name of the group.</summary>
+    [Parameter] public string? Heading { get; set; }
+
+    /// <summary>Columns of the grid. Defaults to 6.</summary>
+    [Parameter] public int Columns { get; set; } = 6;
+
+    /// <summary>Columns while the grid sits in a bottom sheet (a narrow, mobile layout). Defaults to 4; never more than <see cref="Columns"/>.</summary>
+    [Parameter] public int SheetColumns { get; set; } = 4;
+
+    // True while the surrounding TmDocumentFloatingPanel presents a bottom sheet. The columns come from this state (not a viewport media
+    // query), so the CSS variable and the arrow-key navigation always agree.
+    [CascadingParameter(Name = "TmDocumentFloatingSheet")] private bool InSheet { get; set; }
+
+    /// <summary>The column count in effect: <see cref="Columns"/>, or the narrower <see cref="SheetColumns"/> in a sheet.</summary>
+    internal int EffectiveColumns => Math.Max(1, InSheet ? Math.Min(Columns, SheetColumns) : Columns);
+
+    /// <summary>Unprefixed test id of the section root.</summary>
+    [Parameter] public string? SectionTestId { get; set; }
+
+    /// <summary>The test id of one choice (already resolved by the caller; <c>TestId</c> of the host).</summary>
+    [Parameter] public Func<TItem, string>? ItemTestId { get; set; }
+
+    /// <summary>The tooltip of one choice.</summary>
+    [Parameter] public Func<TItem, string?>? ItemTitle { get; set; }
+
+    /// <summary>Whether one choice is the current one (renders <c>aria-pressed</c> and the active modifier). Null: plain buttons.</summary>
+    [Parameter] public Func<TItem, bool>? IsSelected { get; set; }
+
+    /// <summary>Whether one choice is disabled.</summary>
+    [Parameter] public Func<TItem, bool>? IsDisabled { get; set; }
+
+    /// <summary>Raised when a choice is activated. It applies immediately; the host decides whether the panel closes.</summary>
+    [Parameter] public EventCallback<TItem> OnSelect { get; set; }
+
+    /// <summary>Additional CSS class on the section.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Additional CSS class on every choice.</summary>
+    [Parameter] public string? ItemClass { get; set; }
+
+    private string GridStyle => $"--tm-document-palette-columns: {EffectiveColumns}";
+
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        if (_buttons.Length != Items.Count)
+        {
+            _buttons = new ElementReference[Items.Count];
+        }
+
+        if (_active >= Items.Count)
+        {
+            _active = 0;
+        }
+
+        if (IsSelected is not null && !_activeInitialized)
+        {
+            var selected = Items.ToList().FindIndex(item => IsSelected(item));
+            if (selected >= 0)
+            {
+                _active = selected;
+            }
+
+            _activeInitialized = true;
+        }
+    }
+
+    private bool _activeInitialized;
+
+    private Task SelectAsync(TItem item) => OnSelect.InvokeAsync(item);
+
+    private async Task HandleKeyDownAsync(KeyboardEventArgs args, int index)
+    {
+        var next = NextIndex(index, args.Key, EffectiveColumns, Items.Count);
+        if (next < 0 || next == index)
+        {
+            return;
+        }
+
+        _active = next;
+        try
+        {
+            await _buttons[next].FocusAsync();
+        }
+        catch (Exception ex) when (ex is JSException or InvalidOperationException or TaskCanceledException)
+        {
+            // The grid went away between the key press and the focus move.
+        }
+    }
+
+    /// <summary>
+    /// The index the arrow keys move to inside a grid of <paramref name="columns"/> columns, or -1 when the key is not a grid key.
+    /// Left/Right step by one and stop at the ends, Up/Down move a row and stay put on the first/last row, Home/End jump to the ends.
+    /// </summary>
+    internal static int NextIndex(int index, string key, int columns, int count)
+    {
+        if (count <= 0)
+        {
+            return -1;
+        }
+
+        return key switch
+        {
+            "ArrowRight" => Math.Min(index + 1, count - 1),
+            "ArrowLeft" => Math.Max(index - 1, 0),
+            "ArrowDown" => index + columns < count ? index + columns : index,
+            "ArrowUp" => index - columns >= 0 ? index - columns : index,
+            "Home" => 0,
+            "End" => count - 1,
+            _ => -1,
+        };
+    }
+}

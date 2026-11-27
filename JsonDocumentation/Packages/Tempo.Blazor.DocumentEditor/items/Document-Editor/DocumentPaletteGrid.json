@@ -1,0 +1,93 @@
+{
+  "itemName": "DocumentPaletteGrid",
+  "kind": "Component",
+  "category": "Document Editor",
+  "description": "A titled grid of equally sized choices (style gallery, equation structures and symbols, symbol palette): one section with a visible heading that names its group, a fixed column count, a roving tab stop and arrow keys that respect the columns. Every choice is a native button and applies at once.",
+  "packageId": "Tempo.Blazor.DocumentEditor",
+  "namespace": "Tempo.Blazor.Components.DocumentEditor",
+  "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/DocumentPaletteGrid.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.DocumentEditor"
+  ],
+  "parameters": [
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class on the section."
+    },
+    {
+      "name": "Columns",
+      "type": "int",
+      "isRequired": false,
+      "description": "Columns of the grid. Defaults to 6."
+    },
+    {
+      "name": "Heading",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Visible heading of the section; also the accessible name of the group."
+    },
+    {
+      "name": "IsDisabled",
+      "type": "Func<TItem, bool>?",
+      "isRequired": false,
+      "description": "Whether one choice is disabled."
+    },
+    {
+      "name": "IsSelected",
+      "type": "Func<TItem, bool>?",
+      "isRequired": false,
+      "description": "Whether one choice is the current one (aria-pressed and the active modifier)."
+    },
+    {
+      "name": "ItemClass",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class on every choice."
+    },
+    {
+      "name": "ItemContent",
+      "type": "RenderFragment<TItem>",
+      "isRequired": false,
+      "description": "The content of one choice."
+    },
+    {
+      "name": "ItemTestId",
+      "type": "Func<TItem, string>?",
+      "isRequired": false,
+      "description": "The test id of one choice."
+    },
+    {
+      "name": "ItemTitle",
+      "type": "Func<TItem, string?>?",
+      "isRequired": false,
+      "description": "The tooltip of one choice."
+    },
+    {
+      "name": "Items",
+      "type": "IReadOnlyList<TItem>",
+      "isRequired": false,
+      "description": "The choices, in reading order."
+    },
+    {
+      "name": "OnSelect",
+      "type": "EventCallback<TItem>",
+      "isRequired": false,
+      "description": "Raised when a choice is activated."
+    },
+    {
+      "name": "SectionTestId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Unprefixed test id of the section root."
+    },
+    {
+      "name": "SheetColumns",
+      "type": "int",
+      "isRequired": false,
+      "description": "Columns while the grid sits in a bottom sheet (a narrow, mobile layout). Defaults to 4; never more than Columns."
+    }
+  ]
+}

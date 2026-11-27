@@ -46,6 +46,12 @@
       "type": "string?",
       "isRequired": false,
       "description": "Clipboard pipeline warnings from the last clipboard paste."
+    },
+    {
+      "name": "RestoreFocusTargetId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The id of the element focus returns to when the dialog closes - the editor passes its canvas input, so the keyboard lands back in the document whatever opened the dialog. Null keeps the core modal's own restore (the opener)."
     }
   ]
 }

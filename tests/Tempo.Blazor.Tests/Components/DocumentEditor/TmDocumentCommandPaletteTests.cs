@@ -30,7 +30,7 @@ public class TmDocumentCommandPaletteTests : LocalizationTestBase
         cut.FindAll("[data-testid='document-command-palette-item']")
             .Should()
             .HaveCount(2);
-        cut.FindAll("[data-command='hidden']").Should().BeEmpty();
+        cut.FindAll("[role='option'][data-command='hidden']").Should().BeEmpty();
     }
 
     [Fact]
@@ -48,7 +48,7 @@ public class TmDocumentCommandPaletteTests : LocalizationTestBase
     }
 
     [Fact]
-    public void DisabledCommand_RendersReasonAndDoesNotExecute()
+    public void DisabledCommand_RendersReasonAsTheDescription_IsAriaDisabled_AndDoesNotExecute()
     {
         string? executed = null;
         var cut = Render<TmDocumentCommandPalette>(parameters =>
@@ -56,30 +56,31 @@ public class TmDocumentCommandPaletteTests : LocalizationTestBase
                       .Add(p => p.Commands, MakeCommands())
                       .Add(p => p.OnExecuteCommand, EventCallback.Factory.Create<string>(this, name => executed = name)));
 
-        var disabledButton = cut.Find("[data-command='comment'] button");
+        var option = cut.Find("[role='option'][data-command='comment']");
 
-        disabledButton.HasAttribute("disabled").Should().BeTrue();
-        cut.Find("[data-command='comment'] [data-testid='document-command-palette-disabled-reason']")
-            .TextContent
-            .Should()
-            .Contain("Command is unavailable");
-        disabledButton.Click();
+        option.GetAttribute("aria-disabled").Should().Be("true");
+        option.QuerySelector(".tm-command-palette-disabled-reason")!.TextContent.Should().Contain("Command is unavailable");
+        option.Click();
 
         executed.Should().BeNull();
+        cut.FindAll("[role='option'][data-command='comment']").Should().ContainSingle("the palette stays open so the reason can be read");
     }
 
     [Fact]
-    public void EnabledCommand_ClickExecutesCommand()
+    public void EnabledCommand_ClickExecutesCommand_AndClosesThePalette()
     {
         string? executed = null;
+        var closed = 0;
         var cut = Render<TmDocumentCommandPalette>(parameters =>
             parameters.Add(p => p.IsOpen, true)
                       .Add(p => p.Commands, MakeCommands())
-                      .Add(p => p.OnExecuteCommand, EventCallback.Factory.Create<string>(this, name => executed = name)));
+                      .Add(p => p.OnExecuteCommand, EventCallback.Factory.Create<string>(this, name => executed = name))
+                      .Add(p => p.OnClose, EventCallback.Factory.Create(this, () => closed++)));
 
-        cut.Find("[data-command='bold'] button").Click();
+        cut.Find("[role='option'][data-command='bold']").Click();
 
         executed.Should().Be("bold");
+        closed.Should().Be(1);
     }
 
     [Fact]
@@ -96,95 +97,158 @@ public class TmDocumentCommandPaletteTests : LocalizationTestBase
         closed.Should().BeTrue();
     }
 
-    // ─── Keyboard activation ──────────────────────────────────────────────────
-    // Command items are native <button> elements, so the browser delivers the
-    // activation click itself (Enter on keydown, Space on keyup). Emulating it
-    // in @onkeydown would execute the command TWICE per key press. bUnit does
-    // not synthesize the native click, so tests dispatch the full sequence.
-
     [Fact]
-    public void ItemButton_EnterSequence_ExecutesCommandExactlyOnce()
+    public async Task SearchInput_Enter_ExecutesHighlightedCommand_Once()
     {
+        // Enter on the search <input> produces no native click, so the core palette's keydown handler executes the highlighted action.
         var executed = new List<string>();
         var cut = Render<TmDocumentCommandPalette>(parameters =>
             parameters.Add(p => p.IsOpen, true)
                       .Add(p => p.Commands, MakeCommands())
                       .Add(p => p.OnExecuteCommand, EventCallback.Factory.Create<string>(this, name => executed.Add(name))));
 
-        var button = cut.Find("[data-command='bold'] button");
-        // Real browser sequence for Enter on a focused <button>: keydown -> click.
-        button.KeyDown(new KeyboardEventArgs { Key = "Enter" });
-        button.Click();
+        await cut.Find("[data-testid='document-command-palette-search']")
+            .KeyDownAsync(new KeyboardEventArgs { Key = "Enter" });
+        await Task.Delay(30);
 
         executed.Should().Equal("bold");
     }
 
     [Fact]
-    public void SearchInput_Escape_Closes_Once()
+    public async Task SearchInput_ArrowKeys_MoveTheHighlight_AndReachADisabledCommand()
     {
-        // Escape is handled on keydown; a keyup handler that also closed the
-        // palette would fire OnClose a second time for the same gesture.
-        var closeCalls = 0;
-        var cut = Render<TmDocumentCommandPalette>(parameters =>
-            parameters.Add(p => p.IsOpen, true)
-                      .Add(p => p.Commands, MakeCommands())
-                      .Add(p => p.OnClose, EventCallback.Factory.Create(this, () => closeCalls++)));
-
-        var search = cut.Find("[data-testid='document-command-palette-search']");
-        search.KeyDown(new KeyboardEventArgs { Key = "Escape" });
-
-        closeCalls.Should().Be(1);
-    }
-
-    [Fact]
-    public void ItemButton_SpaceSequence_ExecutesCommandExactlyOnce()
-    {
-        var executed = new List<string>();
-        var cut = Render<TmDocumentCommandPalette>(parameters =>
-            parameters.Add(p => p.IsOpen, true)
-                      .Add(p => p.Commands, MakeCommands())
-                      .Add(p => p.OnExecuteCommand, EventCallback.Factory.Create<string>(this, name => executed.Add(name))));
-
-        var button = cut.Find("[data-command='bold'] button");
-        // Real browser sequence for Space: keydown -> keyup -> click. bUnit
-        // cannot dispatch keyup here (no element on the bubble path has an
-        // onkeyup handler); only the resulting click matters for the count.
-        button.KeyDown(new KeyboardEventArgs { Key = " " });
-        button.Click();
-
-        executed.Should().Equal("bold");
-    }
-
-    [Fact]
-    public void ItemButton_ArrowKeys_StillMoveHighlight()
-    {
-        // Removing the Enter/Space emulation must not break the list keyboard
-        // navigation that shares the same handler.
         var cut = Render<TmDocumentCommandPalette>(parameters =>
             parameters.Add(p => p.IsOpen, true)
                       .Add(p => p.Commands, MakeCommands()));
 
-        var firstButton = cut.Find("[data-command='bold'] button");
-        firstButton.KeyDown(new KeyboardEventArgs { Key = "ArrowDown" });
+        await cut.Find("[data-testid='document-command-palette-search']")
+            .KeyDownAsync(new KeyboardEventArgs { Key = "ArrowDown" });
 
-        cut.Find("[data-command='comment']").GetAttribute("aria-selected").Should().Be("true");
+        cut.Find("[role='option'][data-command='comment']").GetAttribute("aria-selected").Should().Be("true");
+    }
+
+    // ─── Phase 5 review: an adapter over the core TmCommandPalette (decision DE-COMMAND-PALETTE-HOST) ───────────────────
+
+    private static Dictionary<string, DocumentEditorCommandState> GroupedCommands() => new()
+    {
+        ["new"] = new() { Name = "new", IsEnabled = true, IsVisible = true, DescriptionKey = "TmDocumentEditor_Bold", Category = "File", DefaultShortcut = "Ctrl+N" },
+        ["save"] = new() { Name = "save", IsEnabled = true, IsVisible = true, DescriptionKey = "TmDocumentEditor_Save", Category = "File", DefaultShortcut = "Ctrl+S" },
+        ["find"] = new() { Name = "find", IsEnabled = true, IsVisible = true, DescriptionKey = "TmDocumentEditor_Italic", Category = "Edit", DefaultShortcut = "Ctrl+F", Icon = "search" },
+        ["track"] = new() { Name = "track", IsEnabled = true, IsVisible = true, DescriptionKey = "TmDocumentEditor_TrackChanges", Category = "Review", DefaultShortcut = "Ctrl+Shift+E" },
+        ["debug"] = new() { Name = "debug", IsEnabled = true, IsVisible = true, DescriptionKey = "TmDocumentEditor_Bold", Category = "Debug" },
+    };
+
+    [Fact]
+    public void IsTheCoreCommandPalette_WithTheDocumentModifier_AndTheStableTestIds()
+    {
+        var cut = Render<TmDocumentCommandPalette>(parameters => parameters
+            .Add(p => p.IsOpen, true)
+            .Add(p => p.Commands, GroupedCommands()));
+
+        var root = cut.Find("[data-testid='document-command-palette']");
+        root.ClassList.Should().Contain("tm-command-palette-backdrop").And.Contain("tm-document-command-palette");
+        root.GetAttribute("popover").Should().Be("manual", "the core palette promotes itself to the top layer");
+        cut.FindAll(".tm-modal-overlay").Should().BeEmpty("the palette is no TmModal any more");
+        cut.Find("[data-testid='document-command-palette-search']").GetAttribute("role").Should().Be("combobox");
+        cut.Find("[role='listbox']").Should().NotBeNull();
+        cut.FindAll("[role='option']").Should().OnlyContain(o => o.GetAttribute("data-testid") == "document-command-palette-item");
     }
 
     [Fact]
-    public void SearchInput_Enter_ExecutesHighlightedCommand()
+    public void ListIsAValidListbox_NoInteractiveChildInsideAnOption_AndTheComboboxNamesTheActiveOption()
     {
-        // Enter on the search <input> produces no native click, so the
-        // emulation there is required and must keep working.
-        var executed = new List<string>();
-        var cut = Render<TmDocumentCommandPalette>(parameters =>
-            parameters.Add(p => p.IsOpen, true)
-                      .Add(p => p.Commands, MakeCommands())
-                      .Add(p => p.OnExecuteCommand, EventCallback.Factory.Create<string>(this, name => executed.Add(name))));
+        var cut = Render<TmDocumentCommandPalette>(parameters => parameters
+            .Add(p => p.IsOpen, true)
+            .Add(p => p.Commands, GroupedCommands()));
 
-        cut.Find("[data-testid='document-command-palette-search']")
-            .KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        cut.FindAll("[role='option'] button, [role='option'] a, [role='option'] input").Should().BeEmpty();
+        var search = cut.Find("[data-testid='document-command-palette-search']");
+        var active = search.GetAttribute("aria-activedescendant");
+        active.Should().NotBeNullOrWhiteSpace();
+        cut.Find($"[id='{active}']").GetAttribute("aria-selected").Should().Be("true");
+    }
 
-        executed.Should().Equal("bold");
+    [Fact]
+    public void Shortcut_IsRenderedAsOneKbdPerKey()
+    {
+        var cut = Render<TmDocumentCommandPalette>(parameters => parameters
+            .Add(p => p.IsOpen, true)
+            .Add(p => p.Commands, GroupedCommands()));
+
+        cut.FindAll("[role='option'][data-command='track'] kbd").Select(k => k.TextContent).Should().Equal("Ctrl", "Shift", "E");
+        cut.FindAll("[role='option'][data-command='new'] kbd").Should().HaveCount(2);
+    }
+
+    [Fact]
+    public void Categories_AreGroupedInTheEditorsOrder_WithDebugLast_AndLocalized()
+    {
+        var cut = Render<TmDocumentCommandPalette>(parameters => parameters
+            .Add(p => p.IsOpen, true)
+            .Add(p => p.Commands, GroupedCommands()));
+
+        cut.FindAll(".tm-command-palette-group-label").Select(l => l.TextContent)
+            .Should().Equal("File", "Edit", "Review", "Debug");
+        cut.FindAll("[role='option']").Select(o => o.GetAttribute("data-command")).Last().Should().Be("debug");
+    }
+
+    [Fact]
+    public void Search_MatchesTheCommandNameAndTheCategory_NotOnlyTheLabel()
+    {
+        var cut = Render<TmDocumentCommandPalette>(parameters => parameters
+            .Add(p => p.IsOpen, true)
+            .Add(p => p.Commands, GroupedCommands()));
+
+        cut.Find("[data-testid='document-command-palette-search']").Input("track");
+        cut.FindAll("[role='option']").Select(o => o.GetAttribute("data-command")).Should().Equal("track");
+
+        cut.Find("[data-testid='document-command-palette-search']").Input("Review");
+        cut.FindAll("[role='option']").Select(o => o.GetAttribute("data-command")).Should().Equal("track");
+    }
+
+    [Fact]
+    public void Items_ShowTheirIcon_WhenTheCommandHasOne_AndKeepTheColumnOtherwise()
+    {
+        var cut = Render<TmDocumentCommandPalette>(parameters => parameters
+            .Add(p => p.IsOpen, true)
+            .Add(p => p.Commands, GroupedCommands()));
+
+        cut.Find("[role='option'][data-command='find'] .tm-command-palette-icon svg").Should().NotBeNull();
+        cut.Find("[role='option'][data-command='new'] .tm-command-palette-icon").InnerHtml.Trim().Should().BeEmpty("the column stays so the titles line up");
+    }
+
+    [Fact]
+    public void NoMatch_ShowsTheEmptyState_WithItsTestId()
+    {
+        var cut = Render<TmDocumentCommandPalette>(parameters => parameters
+            .Add(p => p.IsOpen, true)
+            .Add(p => p.Commands, GroupedCommands()));
+
+        cut.Find("[data-testid='document-command-palette-search']").Input("zzzz-nothing");
+
+        cut.Find("[data-testid='document-command-palette-empty']").TextContent.Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
+    public void Palette_OwnStylesheet_RestylesNothingOfTheCore()
+    {
+        var css = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "Tempo.Blazor.DocumentEditor", "wwwroot", "css", "components", "_document-editor-floating.css"));
+        var paletteBlock = css[css.IndexOf("Command palette (the core TmCommandPalette", StringComparison.Ordinal)..];
+        paletteBlock = paletteBlock[..paletteBlock.IndexOf("Touch targets", StringComparison.Ordinal)];
+
+        paletteBlock.Should().NotContain("__item", "the list rows are the core's");
+        paletteBlock.Should().NotContain("kbd");
+        paletteBlock.Should().NotContain("::before");
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "TempoBlazor.slnx")))
+        {
+            directory = directory.Parent;
+        }
+
+        return directory?.FullName ?? throw new DirectoryNotFoundException("Repository root not found.");
     }
 
     private static Dictionary<string, DocumentEditorCommandState> MakeCommands() =>
@@ -196,7 +260,7 @@ public class TmDocumentCommandPaletteTests : LocalizationTestBase
                 IsEnabled = true,
                 IsVisible = true,
                 DescriptionKey = "TmDocumentEditor_Bold",
-                Category = "Home",
+                Category = "Formatting",
                 DefaultShortcut = "Ctrl+B",
                 Icon = "bold"
             },

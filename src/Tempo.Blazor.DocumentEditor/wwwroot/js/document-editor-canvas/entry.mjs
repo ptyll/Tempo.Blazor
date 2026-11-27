@@ -130,6 +130,7 @@ export class CanvasDocumentEngine {
         });
         this.inputBridge = createHiddenInputBridge({
             document: doc,
+            id: options.inputId,
             ariaLabel: options.inputAriaLabel || options.ariaLabel || '',
             controlsId: 'document-canvas-a11y-mirror',
             describedById: 'document-canvas-live-region',

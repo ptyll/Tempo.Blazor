@@ -16369,6 +16369,12 @@
           "description": "Optional secondary description."
         },
         {
+          "name": "DisabledReason",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Why the action is unavailable; shown instead of the description while disabled."
+        },
+        {
           "name": "Execute",
           "kind": "Property",
           "type": "Func<Task>?",
@@ -16385,6 +16391,18 @@
           "kind": "Property",
           "type": "string",
           "description": "Unique identifier for the action."
+        },
+        {
+          "name": "IsDisabled",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the action is unavailable: it stays listed and reachable, but never runs."
+        },
+        {
+          "name": "SearchTerms",
+          "kind": "Property",
+          "type": "IReadOnlyList<string>?",
+          "description": "Extra terms the local filter matches (not displayed)."
         },
         {
           "name": "Shortcut",

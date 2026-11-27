@@ -115,10 +115,10 @@ off and stay light.
 
 ## Packages that keep their own trap
 
-`Tempo.Blazor.DocumentEditor` has four copies (`DocumentEditorFocusTrapController`, used by the version
-dialog, the compare dialog, the JSON debug modal and the clipboard debug modal) and
-`Tempo.Blazor.NotionEditor` traps focus through `tmNotionEditor.initFocusTrap` (the block context menu
-and the media upload dialog). Both keep working. To move one onto the shared scope:
+`Tempo.Blazor.DocumentEditor` had four copies (`DocumentEditorFocusTrapController`: the version dialog, the compare dialog, the JSON debug
+modal and the clipboard debug modal) and a fifth in the command palette. The four dialogs moved onto `TmModal` and the palette onto the core `TmCommandPalette` (both on `TmFocusScope`) in the DocumentEditor
+redesign, phase 5; the controller and `focus-management.mjs` are deleted. `Tempo.Blazor.NotionEditor` traps focus through
+`tmNotionEditor.initFocusTrap` (the block context menu and the media upload dialog). It keeps working. To move one onto the shared scope:
 
 1. Replace the controller or the `initFocusTrap` call with a `TmFocusScope` around the dialog content.
 2. Pass the canvas or the block as `RestoreFocusTarget` where the old code restored focus explicitly.

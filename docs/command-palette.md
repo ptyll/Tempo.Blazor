@@ -107,6 +107,16 @@ the retry button unmounts with the alert.
 - `HighlightMatches` marks the query in the title and the code via `TmHighlightedText`.
 - The accessible name of an option is title + description + badge + code; the icon and shortcut
   chips decorate.
+- **Disabled actions** (`ICommandPaletteAction.IsDisabled`, `DisabledReason`; default interface members):
+  the option stays listed, carries `aria-disabled="true"` and `.tm-command-palette-item-disabled`, and the
+  reason replaces the description (`.tm-command-palette-disabled-reason`). Arrow keys reach it; Enter and a
+  click do not run it and the palette stays open, so the reason can be read.
+- **`SearchTerms`** (default interface member, not displayed): extra terms the local filter matches - a
+  command's internal name, its untranslated category.
+- **Host hooks.** `ItemAttributes` (per option), `InputAttributes` (the search input) and
+  `CloseButtonAttributes` take test ids and `data-*` attributes. On the option the component's own `role`,
+  `id`, `class` and `aria-*` win over a clashing key. Used by the document editor's adapter
+  (`TmDocumentCommandPalette`).
 
 ## States and templates
 

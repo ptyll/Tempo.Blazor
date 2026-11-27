@@ -198,51 +198,52 @@ public class TmDocumentEditorCssTests
         focus.Should().Contain("var(--tm-focus-ring)").And.NotContain("--tm-shadow-focus", "the focus ring is the shared token, not the glow");
     }
 
-    // Phase-1 interim contract: the hand-rolled scrim / centering CSS is deleted when phase 5 moves these dialogs
-    // onto TmModal; this test is replaced there together with the rules it pins.
+    // Phase 5 (G6): the version, compare and debug dialogs and the command palette are core TmModal instances. The phase-1 interim
+    // CSS (a hand-rolled scrim, centering and fixed positioning) is deleted - the modal owns all of it.
     [Fact]
-    public void FloatingModals_HaveScrimCenteredContentAndNoFlowImpact()
+    public void FloatingModals_AreCoreTmModal_WithNoHandRolledScrimOrCentering()
     {
-        var root = FindRepositoryRoot();
-        var css = File.ReadAllText(Path.Combine(
-            root, "src", "Tempo.Blazor.DocumentEditor", "wwwroot", "css", "components", "_document-editor.css"));
-        var rules = CssRules.Parse(css);
+        var main = ReadComponentCss("_document-editor.css");
+        var floating = ReadComponentCss("_document-editor-floating.css");
 
-        CssRules.Body(rules, ".tm-document-json-debug-modal").Should().Contain("position: fixed");
-        CssRules.Body(rules, ".tm-document-json-debug-modal__backdrop").Should().Contain("var(--tm-bg-overlay)");
-        var content = CssRules.Body(rules, ".tm-document-json-debug-modal__content");
-        content.Should().Contain("max-height").And.Contain("overflow");
-        CssRules.Body(rules, ".tm-document-json-debug-modal__section").Should().NotBeEmpty();
-        CssRules.Body(rules, ".tm-document-json-debug-modal pre").Should().Contain("var(--tm-font-mono)");
+        foreach (var gone in new[]
+        {
+            ".tm-document-dialog-scrim", ".tm-document-json-debug-modal__backdrop", ".tm-document-json-debug-modal {",
+            ".tm-document-version-dialog {", ".tm-document-compare-dialog {",
+        })
+        {
+            main.Should().NotContain(gone, $"{gone} was the phase-1 interim CSS; TmModal owns the scrim and the centering");
+        }
 
-        // Compare and version dialogs sit on a shared scrim, centered, and never take part in the document flow.
-        var scrim = CssRules.Body(rules, ".tm-document-dialog-scrim");
-        scrim.Should().Contain("position: fixed").And.Contain("var(--tm-bg-overlay)").And.Contain("place-items: center");
-        scrim.Should().Contain("z-index: var(--tm-z-modal);", "the token is defined, so no literal fallback");
-        CssRules.Body(rules, ".tm-document-json-debug-modal").Should().Contain("z-index: var(--tm-z-modal);");
-        // 390 px: the version / compare dialog is not stretched by the generic fixed rule.
-        CssRules.Body(rules, ".tm-document-version-dialog").Should().Contain("align-content: start");
-        CssRules.Body(rules, ".tm-document-dialog-scrim > .tm-document-version-dialog").Should().Contain("position: relative").And.Contain("max-height");
-        CssRules.Body(rules, ".tm-document-version-dialog__actions").Should().Contain("align-items: center");
-        CssRules.Body(rules, ".tm-document-compare-dialog").Should().Contain("max-height").And.Contain("overflow");
+        var rules = CssRules.Parse(floating);
+        rules.Any(rule => rule.Selectors.Any(selector => selector.Contains("scrim", StringComparison.Ordinal))).Should().BeFalse();
+        CssRules.Body(rules, ".tm-document-debug-modal__json").Should().Contain("var(--tm-font-mono)");
         CssRules.Body(rules, ".tm-document-compare-dialog__sources").Should().Contain("grid-template-columns");
+        CssRules.Body(rules, ".tm-document-compare-dialog__ready").Should().Contain("border");
     }
 
     [Fact]
-    public void PageLayoutInspector_RootRuleHasOneSource()
+    public void FloatingPanels_AreTopLayerFrames_PaintedOnlyThroughSemanticTokens_WithNoHexOrGradient()
     {
-        var root = FindRepositoryRoot();
-        var mainCss = File.ReadAllText(Path.Combine(
-            root, "src", "Tempo.Blazor.DocumentEditor", "wwwroot", "css", "components", "_document-editor.css"));
-        var scoped = File.ReadAllText(Path.Combine(
-            root, "src", "Tempo.Blazor.DocumentEditor", "Components", "DocumentEditor", "TmDocumentEditorToolbar.razor.css"));
+        var css = ReadComponentCss("_document-editor-floating.css");
+        var rules = CssRules.Parse(css);
 
-        CssRules.Parse(mainCss)
-            .Count(rule => rule.Selectors.Contains(".tm-document-page-layout-inspector"))
-            .Should().Be(1, "the root rule lives in one place (the shared stylesheet)");
-        CssRules.Parse(scoped)
-            .Any(rule => rule.Selectors.Contains(".tm-document-page-layout-inspector"))
-            .Should().BeFalse("the scoped toolbar stylesheet must not redeclare the root rule");
+        css.Should().NotMatchRegex(@"#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(|linear-gradient|radial-gradient", "tokens only, no decorative gradient");
+        CssRules.Body(rules, ".tm-document-floating-panel").Should().Contain("var(--tm-color-surface-elevated)").And.Contain("var(--tm-shadow-lg)");
+        css.Should().NotContain("position: fixed", "the core overlay positions the panel; the frame never positions itself");
+        css.Should().NotContain("position: absolute;\n    inline-size: min", "no hand-rolled popup anchoring");
+        CssRules.Body(rules, ".tm-document-palette-grid__grid").Should().Contain("var(--tm-document-palette-columns");
+    }
+
+    [Fact]
+    public void PageLayoutForm_IsTwoColumnsFromA40remContainer_AndStyledOnlyInTheSharedFloatingStylesheet()
+    {
+        var floating = ReadComponentCss("_document-editor-floating.css");
+        floating.Should().Contain("container-type: inline-size").And.Contain("@container tm-doc-floating (width >= 640px)");
+        var main = ReadComponentCss("_document-editor.css");
+        main.Should().NotContain("tm-document-page-layout-inspector", "the old popup form CSS is gone");
+        File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "Tempo.Blazor.DocumentEditor", "Components", "DocumentEditor", "TmDocumentEditorToolbar.razor.css"))
+            .Should().NotContain("tm-document-page-layout-inspector");
     }
 
     [Fact]
@@ -298,8 +299,9 @@ public class TmDocumentEditorCssTests
         css.Should().NotContain("content: attr(aria-label)", "a ribbon group prints no caption");
         rules.Any(rule => rule.Selectors.Contains(".tm-document-editor__ribbon-toolbar.tm-toolbar") && rule.Body.Contains("flex-wrap: nowrap", StringComparison.Ordinal))
             .Should().BeTrue("the ribbon is ONE row");
-        rules.Any(rule => rule.Selectors.Contains(".tm-document-editor__ribbon-toolbar.tm-toolbar") && rule.Body.Contains("container-type: normal", StringComparison.Ordinal))
-            .Should().BeTrue("the core bar's size container must not become the containing block of the ribbon's fixed pickers");
+        rules.Any(rule => rule.Selectors.Contains(".tm-document-editor__ribbon-toolbar.tm-toolbar") && rule.Body.Contains("container-type", StringComparison.Ordinal))
+            .Should().BeFalse("phase 5: the ribbon's popups are core top-layer panels, so the bar is the same size container as every TmToolbar (the opt-out is gone)");
+        css.Should().NotContain("toolbar-floating-backdrop", "the click-away backdrop was deleted: an outside press closes a panel without being swallowed");
     }
 
     [Fact]
@@ -723,6 +725,7 @@ public class TmDocumentEditorCssTests
             ("_document-editor.css", ReadComponentCss("_document-editor.css")),
             ("_document-editor-toolbar.css", ReadComponentCss("_document-editor-toolbar.css")),
             ("_document-editor-comments.css", ReadComponentCss("_document-editor-comments.css")),
+            ("_document-editor-floating.css", ReadComponentCss("_document-editor-floating.css")),
             ("TmDocumentEditor.razor.css", ReadScopedCss("TmDocumentEditor.razor.css")),
             ("TmDocumentCanvasEngineHost.razor.css", ReadScopedCss("TmDocumentCanvasEngineHost.razor.css")),
         })
@@ -734,6 +737,7 @@ public class TmDocumentEditorCssTests
                 var body = withoutComments.Substring(start, Math.Min(400, withoutComments.Length - start));
                 var viewportBound = body.Contains(".tm-document-version-dialog", StringComparison.Ordinal)
                     || body.Contains(".tm-document-compare-dialog__sources", StringComparison.Ordinal)
+                    || body.Contains(".tm-document-command-palette", StringComparison.Ordinal)
                     || body.Contains(".tm-document-symbol-menu", StringComparison.Ordinal);
                 if (!viewportBound)
                 {

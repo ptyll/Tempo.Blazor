@@ -71,7 +71,7 @@ public sealed class DocumentEditorCanvasRibbonCssE2ETests : WasmTestBase
         Assert.AreEqual("flex", root.GetProperty("ribbonDisplay").GetString(), "ribbon musí zůstat display:flex.");
         Assert.AreEqual("column", root.GetProperty("ribbonFlexDirection").GetString());
         Assert.AreEqual("nowrap", root.GetProperty("barFlexWrap").GetString(), "jediný řádek");
-        Assert.AreEqual("normal", root.GetProperty("barContainerType").GetString(), "the bar is no size container (fixed popups need the viewport as containing block)");
+        Assert.AreEqual("inline-size", root.GetProperty("barContainerType").GetString(), "phase 5: the popups are top-layer panels, so the bar is the core size container again");
         Assert.AreEqual("center", root.GetProperty("groupAlignItems").GetString());
         Assert.AreEqual("none", root.GetProperty("groupCaption").GetString(), "skupiny netisknou popisek");
         Assert.AreNotEqual("auto", root.GetProperty("panelOverflowX").GetString(), "ribbon se neposouvá horizontálně");

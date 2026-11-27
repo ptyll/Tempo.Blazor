@@ -2,7 +2,7 @@
   "itemName": "TmCommandPalette",
   "kind": "Component",
   "category": "Layout",
-  "description": "Searchable command palette overlay (Cmd+K style) with filterable actions, descriptions, keyboard shortcut hints and item icons. Supports two-way binding on open state; the backdrop dismisses on a click whose press started on it (a drag-select from the input that ends over the backdrop keeps it open). Local Actions filter synchronously (title, description, code); an optional asynchronous SearchProvider extends the list with remote results (local first), with debounce, cancellation of superseded requests, loading skeleton, empty and transient-error-with-retry states and a polite result-count announcement. GroupByCategory adds a heading per category and a divider (CSS border) between groups; SplitShortcuts renders one kbd per key; ShowIcons (default true) renders the action icon with an empty placeholder slot for actions without one; the trailing slot shows a Badge + Code by default; ShowFooter renders the keyboard-hint footer. All new capabilities except ShowIcons are opt-in.",
+  "description": "Searchable command palette overlay (Cmd+K style) with filterable actions, descriptions, keyboard shortcut hints and item icons. Supports two-way binding on open state; the backdrop dismisses on a click whose press started on it (a drag-select from the input that ends over the backdrop keeps it open). Local Actions filter synchronously (title, description, code); an optional asynchronous SearchProvider extends the list with remote results (local first), with debounce, cancellation of superseded requests, loading skeleton, empty and transient-error-with-retry states and a polite result-count announcement. GroupByCategory adds a heading per category and a divider (CSS border) between groups; SplitShortcuts renders one kbd per key; ShowIcons (default true) renders the action icon with an empty placeholder slot for actions without one; the trailing slot shows a Badge + Code by default; ShowFooter renders the keyboard-hint footer. An action can be disabled (ICommandPaletteAction.IsDisabled / DisabledReason): it stays listed and reachable with the arrows with aria-disabled and its reason as the description, but Enter and a click do not run it and the palette stays open; SearchTerms adds hidden terms to the local filter; ItemAttributes / InputAttributes / CloseButtonAttributes are the host hooks for test ids and data-* attributes. All new capabilities except ShowIcons are opt-in.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Layout",
     "@using Tempo.Blazor.Interfaces"
@@ -121,6 +121,24 @@
       "type": "string?",
       "isRequired": false,
       "description": "Additional CSS class for the root element."
+    },
+    {
+      "name": "ItemAttributes",
+      "type": "Func<ICommandPaletteAction, IReadOnlyDictionary<string, object>?>?",
+      "isRequired": false,
+      "description": "Per-item attributes splatted on the option element (a test id, a data-* hook). Evaluated on every render; the component's own role, id, class and aria-* win over a clashing key. Null (the default) adds nothing."
+    },
+    {
+      "name": "InputAttributes",
+      "type": "IReadOnlyDictionary<string, object>?",
+      "isRequired": false,
+      "description": "Additional attributes of the search input (a test id). The component's own role, aria-* and class win."
+    },
+    {
+      "name": "CloseButtonAttributes",
+      "type": "IReadOnlyDictionary<string, object>?",
+      "isRequired": false,
+      "description": "Additional attributes of the close button (a test id)."
     }
   ],
   "cssClasses": [

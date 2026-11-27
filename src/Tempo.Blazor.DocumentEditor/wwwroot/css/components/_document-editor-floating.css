@@ -1,0 +1,922 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   DocumentEditor — the floating surfaces (redesign plan 146c7e1b, phase 5 / DE-1.4 .. DE-1.7).
+
+   One frame for every floating editing surface: the ribbon panels (style gallery, table grid, equation, symbol, page layout,
+   header/footer fields and presets, link), the image panel, the token panel and the form-field popover. The frame is
+   TmDocumentFloatingPanel over the core TmOverlayPanel: a top-layer popover (so no ancestor's overflow, container or stacking
+   context touches it), no scrim, dismissed by an outside press that is not swallowed. On a mobile layout the core presents
+   the same content as a bottom sheet and this stylesheet only drops the popover chrome.
+
+   Semantic --tm-* tokens only: dark mode and the indigo theme ride the token layer, there is no manual dark block here.
+   The dialogs (version, compare, debug) are core TmModal instances and the command palette is the core TmCommandPalette; their
+   bodies / modifier are styled at the end.
+
+     .tm-document-floating-panel        the frame (+ --compact / --medium / --wide)
+     .tm-document-palette-grid          a titled grid of choices (DocumentPaletteGrid)
+     .tm-document-math / __frac ...     HTML/CSS previews of the equation structures
+     .tm-document-page-layout           the two-column page layout form (preview | form)
+     .tm-document-image-panel           tabs, library and preview of the image panel
+     .tm-document-field-popover         chips and fields of the form-field popover
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── The frame ─────────────────────────────────────────────────────────────── */
+.tm-document-floating-panel {
+    z-index: var(--tm-document-z-floating-ui);
+    color: var(--tm-color-text);
+    background: var(--tm-color-surface-elevated);
+    border: 1px solid var(--tm-color-border-subtle);
+    border-radius: var(--tm-radius-card);
+    box-shadow: var(--tm-shadow-lg);
+    /* The core panel (ConstrainHeight) writes the room left on its side as an inline max-height and honours this cap when it is
+       smaller; the frame inherits the result, so only the BODY scrolls and the panel never covers its anchor or the ribbon. */
+    max-block-size: min(40rem, calc(100dvh - var(--tm-space-8)));
+}
+
+.tm-document-floating-panel--compact {
+    inline-size: min(22rem, calc(100vw - var(--tm-space-4)));
+}
+
+.tm-document-floating-panel--medium {
+    inline-size: min(26rem, calc(100vw - var(--tm-space-4)));
+}
+
+.tm-document-floating-panel--wide {
+    inline-size: min(46rem, calc(100vw - var(--tm-space-4)));
+}
+
+.tm-document-floating-panel__frame {
+    display: flex;
+    flex-direction: column;
+    max-block-size: inherit;
+    min-inline-size: 0;
+    border-radius: inherit;
+}
+
+.tm-document-floating-panel__frame:focus-visible {
+    outline: none;
+}
+
+.tm-document-floating-panel__header {
+    flex: 0 0 auto;
+    border-bottom: 1px solid var(--tm-color-border-subtle);
+}
+
+.tm-document-floating-panel__body {
+    container-type: inline-size;
+    container-name: tm-doc-floating;
+    display: grid;
+    flex: 1 1 auto;
+    gap: var(--tm-space-4);
+    min-block-size: 0;
+    padding: var(--tm-space-4);
+    overflow: auto;
+    align-content: start;
+}
+
+.tm-document-floating-panel__footer {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-3) var(--tm-space-4);
+    border-top: 1px solid var(--tm-color-border-subtle);
+}
+
+/* The sheet (a mobile layout) has its own header with the title and Done: the frame fills it and drops the card chrome. */
+.tm-overlay-panel-sheet__content .tm-document-floating-panel__frame {
+    max-block-size: none;
+}
+
+/* The core sheet content already insets its children: the body keeps only the vertical rhythm (no double inset). */
+.tm-overlay-panel-sheet__content .tm-document-floating-panel__body {
+    padding-inline: 0;
+}
+
+/* ── A titled grid of choices ──────────────────────────────────────────────── */
+.tm-document-palette-grid {
+    display: grid;
+    gap: var(--tm-space-2);
+    min-inline-size: 0;
+}
+
+.tm-document-palette-grid__heading {
+    margin: 0;
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-document-palette-grid__grid {
+    display: grid;
+    grid-template-columns: repeat(var(--tm-document-palette-columns, 6), minmax(0, 1fr));
+    gap: var(--tm-space-2);
+}
+
+.tm-document-palette-grid__item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--tm-space-1);
+    min-inline-size: 0;
+    min-block-size: 4rem;
+    padding: var(--tm-space-2);
+    color: var(--tm-color-text);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border-subtle);
+    border-radius: var(--tm-radius-control);
+    font: inherit;
+    text-align: center;
+    cursor: pointer;
+    transition: background-color var(--tm-transition-fast), border-color var(--tm-transition-fast);
+}
+
+.tm-document-palette-grid__item:hover:not(:disabled) {
+    background: var(--tm-color-surface-hover);
+    border-color: var(--tm-color-border);
+}
+
+.tm-document-palette-grid__item:focus-visible {
+    outline: none;
+    box-shadow: var(--tm-focus-ring);
+}
+
+.tm-document-palette-grid__item--active,
+.tm-document-palette-grid__item[aria-pressed="true"] {
+    color: var(--tm-color-primary);
+    background: var(--tm-color-primary-subtle);
+    border-color: var(--tm-color-primary);
+}
+
+.tm-document-palette-grid__item:disabled {
+    cursor: not-allowed;
+}
+
+.tm-document-palette-grid__label {
+    max-inline-size: 100%;
+    overflow-wrap: break-word;
+    hyphens: auto;
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    line-height: var(--tm-line-height-tight);
+    overflow-wrap: anywhere;
+}
+
+.tm-document-palette-grid__glyph {
+    font-size: var(--tm-font-size-xl);
+    line-height: 1;
+}
+
+/* ── Style gallery ─────────────────────────────────────────────────────────── */
+.tm-document-style-gallery__sample {
+    line-height: var(--tm-line-height-tight);
+    white-space: nowrap;
+    max-inline-size: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tm-document-style-gallery__form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--tm-space-3);
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+}
+
+.tm-document-style-gallery__field--wide {
+    grid-column: 1 / -1;
+}
+
+.tm-document-style-gallery__action-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--tm-space-2);
+}
+
+.tm-document-style-gallery__action-row .tm-btn {
+    gap: var(--tm-space-1);
+}
+
+/* ── Equation previews (HTML + CSS; decorative - the button's label names the structure) ── */
+.tm-document-math {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-block-size: 2rem;
+    font-family: serif;
+    font-size: var(--tm-font-size-xl);
+    font-style: italic;
+    line-height: 1;
+}
+
+.tm-document-math--symbol {
+    font-style: normal;
+}
+
+.tm-document-math__frac {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: var(--tm-font-size-md);
+}
+
+.tm-document-math__frac > span:first-child {
+    padding-block-end: 1px;
+    border-block-end: 1px solid currentColor;
+}
+
+.tm-document-math__rad {
+    display: inline-flex;
+    align-items: stretch;
+}
+
+.tm-document-math__rad-body {
+    padding-inline: 0.15em;
+    border-block-start: 1px solid currentColor;
+}
+
+.tm-document-math__limits {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: var(--tm-font-size-xs);
+    font-style: normal;
+}
+
+.tm-document-math__big {
+    font-size: var(--tm-font-size-xl);
+}
+
+.tm-document-math__matrix {
+    display: inline-flex;
+    align-items: center;
+    font-size: var(--tm-font-size-md);
+}
+
+.tm-document-math__bracket {
+    font-size: var(--tm-font-size-xl);
+    font-style: normal;
+    font-weight: var(--tm-font-weight-normal);
+}
+
+.tm-document-math__cells {
+    display: grid;
+    grid-template-columns: repeat(2, auto);
+    gap: 0 var(--tm-space-2);
+}
+
+.tm-document-math__accent {
+    border-block-start: 1px solid currentColor;
+    padding-inline: 0.1em;
+}
+
+.tm-document-math__box {
+    padding: 0 0.3em;
+    border: 1px solid currentColor;
+}
+
+/* ── Symbols ───────────────────────────────────────────────────────────────── */
+.tm-document-palette-grid--symbols .tm-document-palette-grid__item {
+    min-block-size: 3.5rem;
+}
+
+.tm-document-palette-grid__glyph--emoji {
+    font-size: var(--tm-font-size-xl);
+}
+
+/* ── Header/footer menus (fields, presets) ─────────────────────────────────── */
+.tm-document-floating-list {
+    display: grid;
+    gap: var(--tm-space-1);
+}
+
+.tm-document-floating-list button {
+    display: grid;
+    grid-template-columns: 1.25rem minmax(0, 1fr);
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-block-size: 2.25rem;
+    padding: var(--tm-space-1) var(--tm-space-2);
+    color: var(--tm-color-text);
+    background: transparent;
+    border: 0;
+    border-radius: var(--tm-radius-control);
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+}
+
+.tm-document-floating-list button:hover {
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-document-floating-list button:focus-visible {
+    outline: none;
+    box-shadow: inset var(--tm-focus-ring);
+}
+
+.tm-document-header-footer-menu__preview {
+    display: block;
+    inline-size: 1.25rem;
+    block-size: 1.5rem;
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-xs);
+}
+
+.tm-document-header-footer-menu__preview--center {
+    box-shadow: inset 0 -0.25rem 0 var(--tm-color-primary-subtle);
+}
+
+.tm-document-header-footer-menu__preview--right {
+    box-shadow: inset -0.5rem -0.25rem 0 var(--tm-color-primary-subtle);
+}
+
+.tm-document-header-footer-menu__preview--right-wide {
+    box-shadow: inset -0.75rem -0.25rem 0 var(--tm-color-primary-subtle);
+}
+
+.tm-document-header-footer-menu__preview--split {
+    box-shadow: inset 0.5rem 0.25rem 0 var(--tm-color-primary-subtle), inset -0.5rem 0.25rem 0 var(--tm-color-primary-subtle);
+}
+
+/* ── Page layout: preview | form ───────────────────────────────────────────── */
+.tm-document-page-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--tm-space-4);
+}
+
+.tm-document-page-layout__preview-card {
+    display: grid;
+    justify-items: center;
+    align-content: start;
+    gap: var(--tm-space-2);
+    margin: 0;
+    padding: var(--tm-space-3);
+    background: var(--tm-color-surface-muted);
+    border-radius: var(--tm-radius-card);
+}
+
+.tm-document-page-layout__preview {
+    box-sizing: border-box;
+    inline-size: min(100%, 7rem);
+    aspect-ratio: var(--tm-page-preview-ratio, 0.707);
+    padding: var(--tm-page-preview-margin-top, 10%) var(--tm-page-preview-margin-right, 10%) var(--tm-page-preview-margin-bottom, 10%) var(--tm-page-preview-margin-left, 10%);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border);
+    box-shadow: var(--tm-shadow-sm);
+}
+
+.tm-document-page-layout__preview[data-orientation="landscape"] {
+    inline-size: min(100%, 9rem);
+}
+
+.tm-document-page-layout__preview-text {
+    display: grid;
+    grid-template-columns: repeat(var(--tm-page-preview-columns, 1), minmax(0, 1fr));
+    column-gap: var(--tm-page-preview-gap, 4%);
+    block-size: 100%;
+}
+
+.tm-document-page-layout__preview-column {
+    display: block;
+    background: var(--tm-color-border);
+    border-radius: var(--tm-radius-xs);
+    opacity: 0.6;
+}
+
+.tm-document-page-layout__caption {
+    display: grid;
+    justify-items: center;
+    margin: 0;
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    text-align: center;
+}
+
+.tm-document-page-layout__form {
+    display: grid;
+    gap: var(--tm-space-4);
+    min-inline-size: 0;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+}
+
+.tm-document-page-layout__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: var(--tm-space-3);
+}
+
+.tm-document-page-layout__section {
+    display: grid;
+    gap: var(--tm-space-2);
+    padding-block-start: var(--tm-space-3);
+    border-block-start: 1px solid var(--tm-color-border-subtle);
+}
+
+.tm-document-page-layout__grid {
+    display: grid;
+    gap: var(--tm-space-2) var(--tm-space-3);
+}
+
+.tm-document-page-layout__grid--four {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.tm-document-page-layout__grid--two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.tm-document-page-layout__grid--columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: end;
+}
+
+/* The unit ("pt") is an add-on INSIDE the field border: one bordered box, the input borderless within, the focus ring on the box. */
+.tm-document-page-layout__points {
+    inline-size: 100%;
+    gap: 0;
+    padding-inline-end: var(--tm-space-3);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-control);
+}
+
+.tm-document-page-layout__points:focus-within {
+    border-color: var(--tm-color-primary);
+    box-shadow: var(--tm-focus-ring);
+}
+
+.tm-document-page-layout__points .tm-input {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+}
+
+.tm-document-page-layout__points .tm-input:focus,
+.tm-document-page-layout__points .tm-input:focus-visible {
+    outline: none;
+    box-shadow: none;
+}
+
+.tm-document-page-layout__check {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-block-size: 2.25rem;
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-sm);
+}
+
+/* From a 40rem (640px) container the preview takes the left column and the form the right. */
+@container tm-doc-floating (width >= 640px) {
+    .tm-document-page-layout {
+        grid-template-columns: minmax(7rem, 9rem) minmax(0, 1fr);
+        align-items: start;
+    }
+
+    .tm-document-page-layout__grid--four {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .tm-document-page-layout__grid--columns {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    }
+}
+
+/* ── Link popover ──────────────────────────────────────────────────────────── */
+.tm-document-link-form {
+    display: grid;
+    gap: var(--tm-space-3);
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+}
+
+.tm-document-link-form__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--tm-space-2);
+}
+
+.tm-document-editor__link-error {
+    color: var(--tm-color-danger);
+    font-size: var(--tm-font-size-xs);
+}
+
+/* ── Image panel ───────────────────────────────────────────────────────────── */
+.tm-document-image-panel__tabs {
+    display: flex;
+    gap: var(--tm-space-1);
+    margin-block-end: calc(var(--tm-space-2) * -1);
+    border-block-end: 1px solid var(--tm-color-border-subtle);
+}
+
+.tm-document-image-panel__tab {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    min-block-size: 2.25rem;
+    padding: 0 var(--tm-space-3);
+    color: var(--tm-color-text-secondary);
+    background: transparent;
+    border: 0;
+    border-block-end: 2px solid transparent;
+    font: inherit;
+    font-size: var(--tm-font-size-sm);
+    cursor: pointer;
+}
+
+.tm-document-image-panel__tab:hover {
+    color: var(--tm-color-text);
+}
+
+.tm-document-image-panel__tab[aria-selected="true"] {
+    color: var(--tm-color-primary);
+    border-block-end-color: var(--tm-color-primary);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-document-image-panel__tab:focus-visible {
+    outline: none;
+    box-shadow: inset var(--tm-focus-ring);
+}
+
+.tm-document-image-panel__body {
+    display: grid;
+    gap: var(--tm-space-3);
+}
+
+.tm-document-image-panel__body:focus-visible {
+    outline: none;
+}
+
+.tm-document-image-panel__preview {
+    max-inline-size: 100%;
+    max-block-size: 10rem;
+    justify-self: start;
+    object-fit: contain;
+    border-radius: var(--tm-radius-control);
+}
+
+.tm-document-image-panel__library {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--tm-space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tm-document-image-panel__asset {
+    display: grid;
+    justify-items: center;
+    gap: var(--tm-space-1);
+    inline-size: 100%;
+    padding: var(--tm-space-2);
+    color: var(--tm-color-text);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border-subtle);
+    border-radius: var(--tm-radius-control);
+    font: inherit;
+    font-size: var(--tm-font-size-xs);
+    cursor: pointer;
+}
+
+.tm-document-image-panel__asset img {
+    inline-size: 100%;
+    block-size: 4rem;
+    object-fit: cover;
+    border-radius: var(--tm-radius-xs);
+}
+
+.tm-document-image-panel__asset:hover {
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-document-image-panel__asset:focus-visible {
+    outline: none;
+    box-shadow: var(--tm-focus-ring);
+}
+
+.tm-document-editor__field-label {
+    display: grid;
+    gap: var(--tm-space-1);
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+}
+
+/* ── Token panel ───────────────────────────────────────────────────────────── */
+.tm-document-token-panel__filter {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.tm-document-token-panel__filter > .tm-icon {
+    position: absolute;
+    inset-inline-start: var(--tm-space-3);
+    color: var(--tm-color-text-muted);
+    pointer-events: none;
+}
+
+.tm-document-token-panel__filter .tm-input {
+    inline-size: 100%;
+    padding-inline-start: var(--tm-space-8);
+}
+
+/* The core token dropdown is an absolutely positioned popup (an autocomplete under a caret); inside the panel it is the list itself:
+   in flow, as wide as the panel, no second card. Only .tm-document-token-menu scrolls. */
+.tm-document-floating-panel__frame[data-floating-kind="token"] .tm-rte-token-dropdown {
+    position: static;
+    min-inline-size: 0;
+    max-inline-size: none;
+    max-block-size: none;
+    margin: 0;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+}
+
+.tm-document-floating-panel__frame[data-floating-kind="token"] .tm-document-token-menu {
+    max-block-size: 16rem;
+    overflow: auto;
+}
+
+/* ── Form-field popover ────────────────────────────────────────────────────── */
+.tm-document-field-anchor {
+    pointer-events: none;
+    visibility: hidden;
+}
+
+.tm-document-field-popover__title {
+    margin: 0;
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-md);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-document-field-popover__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--tm-space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tm-document-field-popover__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-1) var(--tm-space-3);
+    color: var(--tm-color-text-secondary);
+    background: var(--tm-color-surface-muted);
+    border-radius: var(--tm-radius-full);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-document-field-popover__field {
+    display: grid;
+    gap: var(--tm-space-1);
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-document-field-popover__check {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-block-size: 2.25rem;
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-document-field-popover__field .tm-input:disabled {
+    cursor: not-allowed;
+}
+
+/* ── Dialogs (core TmModal bodies) ─────────────────────────────────────────── */
+.tm-document-version-dialog__form {
+    display: grid;
+    gap: var(--tm-space-3);
+}
+
+.tm-document-version-dialog__field {
+    display: grid;
+    gap: var(--tm-space-1);
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-document-version-dialog__field textarea {
+    min-block-size: 5rem;
+    resize: vertical;
+}
+
+.tm-document-version-dialog__error {
+    color: var(--tm-color-danger);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-document-compare-dialog__intro {
+    margin: 0 0 var(--tm-space-3);
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-document-compare-dialog__sources {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--tm-space-3);
+}
+
+.tm-document-compare-dialog__source {
+    display: grid;
+    gap: var(--tm-space-2);
+    align-content: start;
+    min-inline-size: 0;
+    padding: var(--tm-space-3);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border-subtle);
+    border-radius: var(--tm-radius-card);
+}
+
+.tm-document-compare-dialog__source label {
+    display: grid;
+    gap: var(--tm-space-1);
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+}
+
+/* The controls are the shared tm-input; only the width is the dialog's. */
+.tm-document-compare-dialog__source .tm-input {
+    inline-size: 100%;
+}
+
+.tm-document-compare-dialog__message {
+    margin-block-start: var(--tm-space-3);
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+}
+
+/* The empty result: ONE framed card right under the sources - no blank block above the footer. */
+.tm-document-compare-dialog__ready,
+.tm-document-compare-dialog__state {
+    display: grid;
+    gap: var(--tm-space-2);
+    margin-block-start: var(--tm-space-3);
+    padding: var(--tm-space-3);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border-subtle);
+    border-radius: var(--tm-radius-card);
+}
+
+.tm-document-compare-dialog__ready-title {
+    margin: 0;
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-document-compare-dialog__ready-hint {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-5) var(--tm-space-3);
+    color: var(--tm-color-text-secondary);
+    background: var(--tm-color-surface-muted);
+    border-radius: var(--tm-radius-control);
+    font-size: var(--tm-font-size-sm);
+    text-align: center;
+}
+
+.tm-document-debug-modal__content {
+    display: grid;
+    gap: var(--tm-space-3);
+}
+
+.tm-document-debug-modal__section {
+    display: grid;
+    gap: var(--tm-space-2);
+    min-inline-size: 0;
+    padding: var(--tm-space-3);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border-subtle);
+    border-radius: var(--tm-radius-card);
+}
+
+.tm-document-debug-modal__section-title {
+    margin: 0;
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-document-debug-modal__json {
+    max-block-size: 16rem;
+    margin: 0;
+    padding: var(--tm-space-2);
+    overflow: auto;
+    color: var(--tm-color-text);
+    background: var(--tm-color-surface-secondary);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-card);
+    font-family: var(--tm-font-mono);
+    font-size: var(--tm-font-size-xs);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.tm-document-debug-modal__json:focus-visible {
+    outline: none;
+    box-shadow: var(--tm-focus-ring);
+}
+
+.tm-document-debug-modal__empty {
+    margin: 0;
+    color: var(--tm-color-text-muted);
+    font-size: var(--tm-font-size-sm);
+}
+
+/* ── Command palette (the core TmCommandPalette, modifier only) ──────────────────
+   The list, the groups, the shortcut keys, the disabled rows and the top-layer promotion are the CORE palette's: nothing here
+   restyles .tm-command-palette-*. The modifier only makes the panel fullscreen on a phone (the search input keeps the shared focus ring). */
+@media (max-width: 40rem) {
+    .tm-document-command-palette.tm-command-palette-backdrop {
+        padding-block-start: 0;
+        align-items: stretch;
+    }
+
+    .tm-document-command-palette .tm-command-palette {
+        inline-size: 100vw;
+        block-size: 100dvh;
+        max-inline-size: none;
+        max-block-size: 100dvh;
+        border-radius: 0;
+        border-inline: 0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* The list is the one flexible row of the column: min-block-size 0 lets it shrink and scroll instead of pushing the search row out. */
+    .tm-document-command-palette .tm-command-palette-list {
+        max-block-size: none;
+        min-block-size: 0;
+        flex: 1 1 auto;
+        overflow-y: auto;
+    }
+
+    .tm-document-command-palette .tm-command-palette-header {
+        flex: 0 0 auto;
+    }
+}
+
+/* ── Touch targets (WCAG 2.5.8): a coarse pointer gets the shared touch size on every control of a panel ── */
+@media (pointer: coarse) {
+    .tm-document-floating-list button,
+    .tm-document-image-panel__tab,
+    .tm-document-page-layout__check,
+    .tm-document-floating-panel__frame .tm-btn {
+        min-block-size: var(--tm-touch-target);
+    }
+}
+
+/* ── Narrow widths ─────────────────────────────────────────────────────────── */
+@media (max-width: 40rem) {
+    .tm-document-compare-dialog__sources {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .tm-document-style-gallery__form {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .tm-document-image-panel__library {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tm-document-palette-grid__item {
+        transition: none;
+    }
+}
+
+@media (forced-colors: active) {
+    .tm-document-palette-grid__item--active,
+    .tm-document-palette-grid__item[aria-pressed="true"],
+    .tm-document-image-panel__tab[aria-selected="true"] {
+        outline: 2px solid Highlight;
+    }
+}

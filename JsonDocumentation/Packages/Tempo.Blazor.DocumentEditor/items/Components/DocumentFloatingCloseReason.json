@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.DocumentEditor",
+  "description": "Why a TmDocumentFloatingPanel asked its host to close it: the close button, Escape, an outside press or the bottom sheet's Done action.",
+  "packageId": "Tempo.Blazor.DocumentEditor",
+  "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/DocumentFloatingPanelEnums.cs",
+  "documentationStatus": "generated",
+  "itemName": "DocumentFloatingCloseReason"
+}

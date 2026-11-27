@@ -60,11 +60,12 @@ public sealed class DocumentEditorPhase21AccessibilityTests : LocalizationTestBa
             .Add(p => p.OnExecuteCommand, EventCallback.Factory.Create<string>(this, value => executed = value))
             .Add(p => p.OnClose, EventCallback.Factory.Create(this, () => closed = true)));
 
-        var dialog = cut.Find("[role='dialog']");
-        dialog.GetAttribute("aria-modal").Should().Be("true");
-        dialog.GetAttribute("aria-label").Should().NotBeNullOrWhiteSpace();
-
-        cut.Find("[role='listbox']").GetAttribute("aria-activedescendant").Should().NotBeNullOrWhiteSpace();
+        // The palette is the core TmCommandPalette: a named dialog scope with the WAI-ARIA combobox pattern - the search input is the one
+        // tab stop and names the highlighted option through aria-activedescendant.
+        cut.Find("[role='dialog']").GetAttribute("aria-label").Should().NotBeNullOrWhiteSpace();
+        var combobox = cut.Find("[data-testid='document-command-palette-search']");
+        combobox.GetAttribute("role").Should().Be("combobox");
+        combobox.GetAttribute("aria-activedescendant").Should().NotBeNullOrWhiteSpace();
         var options = cut.FindAll("[role='option']");
         options.Should().HaveCount(2);
         options[0].GetAttribute("aria-selected").Should().Be("true");

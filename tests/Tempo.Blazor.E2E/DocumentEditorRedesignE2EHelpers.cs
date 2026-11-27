@@ -58,6 +58,32 @@ internal static class DocumentEditorRedesignE2EHelpers
         await page.WaitForTimeoutAsync(200);
     }
 
+    /// <summary>
+    /// A ribbon command that opens a floating panel (phase 5): a real click on the bar button when it is on the bar, otherwise the More
+    /// entry of the same name. A popup item's More form is a plain entry labelled <paramref name="menuLabel"/> (it carries no test id).
+    /// </summary>
+    public static async Task ClickPopupItemAsync(IPage page, string testId, string menuLabel)
+    {
+        var onBar = page.Locator($"button[data-testid='{testId}']:visible");
+        if (await onBar.CountAsync() > 0)
+        {
+            // The phone ribbon is the documented horizontally scrolling fallback (a later phase gives it its own command row): the
+            // button is scrolled into view and then pressed with a REAL click, so anything that overlaps it fails the spec (Playwright's
+            // actionability check) instead of being hidden by a dispatched event.
+            await onBar.First.ScrollIntoViewIfNeededAsync();
+            await onBar.First.ClickAsync();
+        }
+        else
+        {
+            await OpenMoreAsync(page);
+            await page.Locator("[role='menu'] [role^='menuitem']")
+                .Filter(new() { HasTextRegex = new System.Text.RegularExpressions.Regex($"^\\s*{System.Text.RegularExpressions.Regex.Escape(menuLabel)}\\s*$") })
+                .First.ClickAsync();
+        }
+
+        await page.WaitForTimeoutAsync(200);
+    }
+
     /// <summary>Opens the ribbon's core "More" menu (a no-op when it is already open).</summary>
     public static async Task OpenMoreAsync(IPage page)
     {
@@ -114,6 +140,22 @@ internal static class DocumentEditorRedesignE2EHelpers
         }
 
         await ChooseMoreOptionAsync(page, "Alignment", char.ToUpperInvariant(alignment[0]) + alignment[1..]);
+    }
+
+    /// <summary>Back to the light theme (the inverse of <see cref="ApplyDarkThemeAsync"/>): a capture that follows a dark shot on the same page must not inherit it.</summary>
+    public static async Task ApplyLightThemeAsync(IPage page)
+    {
+        await page.EvaluateAsync(
+            """
+            () => {
+                const nodes = new Set([document.documentElement, document.body, ...document.querySelectorAll('[data-theme]')]);
+                for (const node of nodes) {
+                    node.setAttribute('data-theme', 'light');
+                    node.classList.remove('tm-dark', 'dark');
+                }
+            }
+            """);
+        await page.WaitForTimeoutAsync(200);
     }
 
     public static async Task ApplyDarkThemeAsync(IPage page)

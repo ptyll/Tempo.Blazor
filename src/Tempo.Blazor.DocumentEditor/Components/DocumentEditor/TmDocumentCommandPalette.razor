@@ -1,151 +1,111 @@
 @namespace Tempo.Blazor.Components.DocumentEditor
 @inherits Tempo.Blazor.Components.TmComponentBase
-@using Microsoft.AspNetCore.Components.Web
-@using Microsoft.JSInterop
+@using Tempo.Blazor.Components.Layout
 @using Tempo.Blazor.Components.DocumentEditor.Registry
-@inject IJSRuntime JSRuntime
-@implements IAsyncDisposable
+@using Tempo.Blazor.Interfaces
 
+@* The editor's command palette is an ADAPTER over the core TmCommandPalette (redesign 146c7e1b, phase 5 review; decision
+   DE-COMMAND-PALETTE-HOST): the editor's registry state (DocumentEditorCommandState) becomes ICommandPaletteAction items and the
+   core component owns everything else - the top-layer promotion, the focus scope (trap, Escape, focus return), the combobox /
+   listbox semantics (the search input is the one tab stop, aria-activedescendant names the option, a disabled command is
+   aria-disabled with its reason as the description), the category groups, the shortcut keys and the mobile layout. What the editor
+   adds is only a modifier class (tm-document-command-palette), the stable document-command-palette* test ids and the order of its
+   categories (Debug last). *@
 @if (IsOpen && VisibleCommands.Count > 0)
 {
-    <div class="tm-command-palette-backdrop tm-document-command-palette" data-testid="@TestId("document-command-palette")">
-        <div @ref="_dialog"
-             class="tm-command-palette"
-             role="dialog"
-             aria-modal="true"
-             aria-label="@Loc["TmCommandPalette_Placeholder"]"
-             data-testid="@TestId("document-command-palette-dialog")">
-            <div class="tm-command-palette-header">
-                <input class="tm-command-palette-input"
-                       @ref="_searchInput"
-                       value="@_query"
-                       @oninput="HandleSearchInput"
-                       @onkeydown="HandleSearchKeyDownAsync"
-                       placeholder="@Loc["TmCommandPalette_Placeholder"]"
-                       aria-label="@Loc["TmCommandPalette_Placeholder"]"
-                       autocomplete="off"
-                       data-testid="@TestId("document-command-palette-search")" />
-                <button class="tm-command-palette-close"
-                        type="button"
-                        aria-label="@Loc["TmDocumentEditor_FindClose"]"
-                        @onclick="CloseAsync"
-                        data-testid="@TestId("document-command-palette-close")">
-                    <TmIcon Name="x" Size="IconSize.Sm" />
-                </button>
-            </div>
-            <ul class="tm-command-palette-list"
-                role="listbox"
-                aria-activedescendant="@ActiveOptionId">
-                @for (var i = 0; i < FilteredCommands.Count; i++)
-                {
-                    var index = i;
-                    var command = FilteredCommands[index];
-                    var selected = index == HighlightedIndex;
-                    <li class="tm-command-palette-item @(command.IsEnabled ? null : "tm-command-palette-item--disabled")"
-                        role="option"
-                        id="@GetOptionId(index)"
-                        aria-selected="@selected.ToString().ToLowerInvariant()"
-                        data-command="@command.Name"
-                        data-testid="@TestId("document-command-palette-item")">
-                        <button type="button"
-                                disabled="@(!command.IsEnabled)"
-                                tabindex="@(selected ? "0" : "-1")"
-                                title="@GetDisabledReason(command)"
-                                @onkeydown="args => HandleItemKeyDownAsync(args, index)"
-                                @onclick="() => ExecuteAsync(command.Name)">
-                            @if (!string.IsNullOrWhiteSpace(command.Icon))
-                            {
-                                <TmIcon Name="@command.Icon" Size="IconSize.Sm" />
-                            }
-                            <span class="tm-command-palette-title">@GetLabel(command)</span>
-                            @if (!string.IsNullOrWhiteSpace(command.Category))
-                            {
-                                <span class="tm-command-palette-description">@command.Category</span>
-                            }
-                            @if (!string.IsNullOrWhiteSpace(command.DefaultShortcut))
-                            {
-                                <kbd class="tm-command-palette-shortcut">@command.DefaultShortcut</kbd>
-                            }
-                            @if (!command.IsEnabled)
-                            {
-                                <span class="tm-command-palette-description" data-testid="@TestId("document-command-palette-disabled-reason")">
-                                    @GetDisabledReason(command)
-                                </span>
-                            }
-                        </button>
-                    </li>
-                }
-            </ul>
-            @if (!FilteredCommands.Any())
-            {
-                <div class="tm-command-palette-empty" data-testid="@TestId("document-command-palette-empty")">
-                    @Loc["TmCommandPalette_NoResults"]
-                </div>
-            }
-        </div>
-    </div>
+    <TmCommandPalette IsOpen="true"
+                      IsOpenChanged="HandleOpenChangedAsync"
+                      Actions="@_actions"
+                      GroupByCategory="true"
+                      SplitShortcuts="true"
+                      ShowIcons="true"
+                      Class="tm-document-command-palette"
+                      ItemAttributes="ItemAttributesFor"
+                      InputAttributes="@_inputAttributes"
+                      CloseButtonAttributes="@_closeAttributes"
+                      data-testid="@TestId("document-command-palette")">
+        <EmptyTemplate>
+            <span data-testid="@TestId("document-command-palette-empty")">@Loc["TmCommandPalette_NoResults"]</span>
+        </EmptyTemplate>
+    </TmCommandPalette>
 }
 
 @code {
-    private string _query = string.Empty;
-    private int _highlightedIndex;
-    private ElementReference _dialog;
-    private ElementReference _searchInput;
-    private DocumentEditorFocusTrapController? _focusTrap;
-    private bool _focusTrapActive;
+    // The categories the registry uses, in the order the palette lists them; an unknown category sorts after them (by name), Debug is
+    // always last. The label is localized through TmDocumentEditor_CommandCategory_{Category}; a category without a key shows as is.
+    private static readonly string[] CategoryOrder =
+    [
+        "File", "Edit", "Formatting", "Paragraph", "Insert", "Image", "Table", "HeaderFooter", "References", "Review", "Signing", "View",
+    ];
+
+    private IReadOnlyList<ICommandPaletteAction> _actions = [];
+    private IReadOnlyDictionary<string, object>? _inputAttributes;
+    private IReadOnlyDictionary<string, object>? _closeAttributes;
+    private IReadOnlyDictionary<string, DocumentEditorCommandState>? _builtFrom;
 
     /// <summary>Whether the command palette is visible.</summary>
     [Parameter] public bool IsOpen { get; set; }
 
-    /// <summary>Raised when the command palette should close.</summary>
+    /// <summary>Raised when the command palette should close (Escape, the X, the backdrop, or a command that was run).</summary>
     [Parameter] public EventCallback OnClose { get; set; }
 
     /// <summary>Current command states.</summary>
     [Parameter] public IReadOnlyDictionary<string, DocumentEditorCommandState>? Commands { get; set; }
 
-    /// <summary>Raised when a command is selected.</summary>
+    /// <summary>Raised when a command is selected. A disabled command is never raised.</summary>
     [Parameter] public EventCallback<string> OnExecuteCommand { get; set; }
 
     private IReadOnlyList<DocumentEditorCommandState> VisibleCommands =>
         (Commands?.Values ?? Array.Empty<DocumentEditorCommandState>())
         .Where(command => command.IsVisible)
-        .OrderBy(command => command.Category)
-        .ThenBy(command => GetLabel(command))
         .ToArray();
 
-    private IReadOnlyList<DocumentEditorCommandState> FilteredCommands =>
-        string.IsNullOrWhiteSpace(_query)
-            ? VisibleCommands
-            : VisibleCommands
-                .Where(command =>
-                    GetLabel(command).Contains(_query, StringComparison.OrdinalIgnoreCase)
-                    || (command.Category?.Contains(_query, StringComparison.OrdinalIgnoreCase) == true)
-                    || command.Name.Contains(_query, StringComparison.OrdinalIgnoreCase))
-                .ToArray();
-
-    private int HighlightedIndex => FilteredCommands.Count == 0
-        ? -1
-        : Math.Clamp(_highlightedIndex, 0, FilteredCommands.Count - 1);
-
-    private string? ActiveOptionId => HighlightedIndex < 0 ? null : GetOptionId(HighlightedIndex);
-
     /// <inheritdoc />
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override void OnParametersSet()
     {
-        if (IsOpen && VisibleCommands.Count > 0)
+        if (!IsOpen)
         {
-            if (!_focusTrapActive)
-            {
-                _focusTrap ??= new DocumentEditorFocusTrapController(JSRuntime);
-                await _focusTrap.ActivateAsync(_dialog, _searchInput);
-                _focusTrapActive = true;
-            }
-
+            _builtFrom = null;
             return;
         }
 
-        await ReleaseFocusTrapAsync(restoreFocus: true);
+        // The items are rebuilt when the registry state is a different snapshot (or the palette just opened), never per keystroke: the
+        // core palette owns the query and the highlight and keeps the highlighted action by id across a rebuild.
+        if (_builtFrom is null || !ReferenceEquals(_builtFrom, Commands))
+        {
+            _actions = BuildActions();
+            _builtFrom = Commands;
+        }
+
+        _inputAttributes ??= new Dictionary<string, object> { ["data-testid"] = TestId("document-command-palette-search") };
+        _closeAttributes ??= new Dictionary<string, object> { ["data-testid"] = TestId("document-command-palette-close") };
     }
+
+    private IReadOnlyList<ICommandPaletteAction> BuildActions()
+        => VisibleCommands
+            .OrderBy(command => CategoryRank(command.Category))
+            .ThenBy(command => command.Category ?? string.Empty, StringComparer.Ordinal)
+            .ThenBy(GetLabel, StringComparer.CurrentCultureIgnoreCase)
+            .Select(command => (ICommandPaletteAction)new CommandPaletteAction(
+                Id: command.Name,
+                Title: GetLabel(command),
+                Icon: HasKnownIcon(command) ? command.Icon : null,
+                Shortcut: command.DefaultShortcut,
+                Category: GetCategoryLabel(command.Category),
+                Execute: () => OnExecuteCommand.InvokeAsync(command.Name),
+                IsDisabled: !command.IsEnabled,
+                DisabledReason: GetDisabledReason(command),
+                SearchTerms: SearchTermsOf(command)))
+            .ToArray();
+
+    private IReadOnlyDictionary<string, object>? ItemAttributesFor(ICommandPaletteAction action)
+        => new Dictionary<string, object>
+        {
+            ["data-command"] = action.Id,
+            ["data-testid"] = TestId("document-command-palette-item"),
+        };
+
+    private Task HandleOpenChangedAsync(bool open) => open ? Task.CompletedTask : OnClose.InvokeAsync();
 
     private string GetLabel(DocumentEditorCommandState command) =>
         string.IsNullOrWhiteSpace(command.DescriptionKey)
@@ -159,95 +119,33 @@
                 ? command.DisabledReason
                 : Loc[command.DisabledReasonKey];
 
-    private async Task ExecuteAsync(string commandName)
+    private string? GetCategoryLabel(string? category)
     {
-        if (Commands?.TryGetValue(commandName, out var command) == true && !command.IsEnabled)
+        if (string.IsNullOrWhiteSpace(category))
         {
-            return;
+            return null;
         }
 
-        await OnExecuteCommand.InvokeAsync(commandName);
+        return Loc.TryGetString("TmDocumentEditor_CommandCategory_" + category, out var label) ? label : category;
     }
 
-    private Task CloseAsync() => OnClose.InvokeAsync();
+    // What the local filter matches besides the label: the command name and the category as the registry knows it, so "review" still
+    // finds the review commands whatever language the label is shown in.
+    private static IReadOnlyList<string> SearchTermsOf(DocumentEditorCommandState command)
+        => string.IsNullOrWhiteSpace(command.Category) ? [command.Name] : [command.Name, command.Category];
 
-    private void HandleSearchInput(ChangeEventArgs args)
+    private static int CategoryRank(string? category)
     {
-        _query = args.Value?.ToString() ?? string.Empty;
-        _highlightedIndex = 0;
-    }
-
-    private Task HandleSearchKeyDownAsync(KeyboardEventArgs args)
-    {
-        return HandleListKeyDownAsync(args, executeOnEnter: true);
-    }
-
-    // Escape closes on keydown (HandleListKeyDownAsync); it deliberately is not
-    // also handled on keyup — that fired OnClose twice for one gesture.
-
-    private Task HandleItemKeyDownAsync(KeyboardEventArgs args, int index)
-    {
-        _highlightedIndex = index;
-
-        // No Enter/Space emulation: items are native <button> elements, so the
-        // browser itself produces the activation click (Enter on keydown,
-        // Space on keyup) which reaches ExecuteAsync via @onclick. Executing
-        // here too ran the command twice per key press.
-        return HandleListKeyDownAsync(args, executeOnEnter: false);
-    }
-
-    private async Task HandleListKeyDownAsync(KeyboardEventArgs args, bool executeOnEnter)
-    {
-        if (args.Key == "Escape")
+        if (string.Equals(category, "Debug", StringComparison.Ordinal))
         {
-            await CloseAsync();
-            return;
+            return int.MaxValue;
         }
 
-        if (FilteredCommands.Count == 0)
-        {
-            return;
-        }
-
-        switch (args.Key)
-        {
-            case "ArrowDown":
-                _highlightedIndex = Math.Min(HighlightedIndex + 1, FilteredCommands.Count - 1);
-                break;
-            case "ArrowUp":
-                _highlightedIndex = Math.Max(HighlightedIndex - 1, 0);
-                break;
-            case "Home":
-                _highlightedIndex = 0;
-                break;
-            case "End":
-                _highlightedIndex = FilteredCommands.Count - 1;
-                break;
-            case "Enter" when executeOnEnter:
-                await ExecuteAsync(FilteredCommands[HighlightedIndex].Name);
-                break;
-        }
+        var index = Array.IndexOf(CategoryOrder, category);
+        return index >= 0 ? index : CategoryOrder.Length;
     }
 
-    private static string GetOptionId(int index) => $"tm-document-command-palette-option-{index}";
-
-    private async ValueTask ReleaseFocusTrapAsync(bool restoreFocus)
-    {
-        if (_focusTrap is not null && _focusTrapActive)
-        {
-            await _focusTrap.ReleaseAsync(restoreFocus);
-        }
-
-        _focusTrapActive = false;
-    }
-
-    /// <inheritdoc />
-    public async ValueTask DisposeAsync()
-    {
-        await ReleaseFocusTrapAsync(restoreFocus: false);
-        if (_focusTrap is not null)
-        {
-            await _focusTrap.DisposeAsync();
-        }
-    }
+    // An icon the glyph set does not know would paint the dashed "unknown" placeholder: the column stays, the placeholder does not.
+    private static bool HasKnownIcon(DocumentEditorCommandState command)
+        => !string.IsNullOrWhiteSpace(command.Icon) && !string.IsNullOrEmpty(TmIcon.GetBuiltInSvg(command.Icon));
 }

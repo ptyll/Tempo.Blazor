@@ -31,10 +31,42 @@ The ribbon is ONE icon row on the core `TmToolbar` (`Overflow=Menu`, `OverflowPr
   tooltip and an accessible name; only Link, Comment, Image and Table show a label (`ToolbarMode.Ribbon`, container wide enough:
   below a desktop container they are icon-only too). `Compact` is icon-only throughout.
 - **Overflow:** which commands fit is measured by `tm-toolbar.js`; `Secondary` leaves before `Primary`, `OverflowOnly` never renders on
-  the bar. The More menu is the core `role="menu"` (groups, arrows, typeahead; toggles are `menuitemcheckbox`). Items that own a
-  popup and the colour pickers never leave the bar. A test or host that needs a command that may be collapsed clicks the bar button
+  the bar. The More menu is the core `role="menu"` (groups, arrows, typeahead; toggles are `menuitemcheckbox`). Every item that owns a
+  popup has a More form too (phase 5), so nothing is pinned. A test or host that needs a command that may be collapsed clicks the bar button
   when it is visible and the More entry otherwise (`DocumentEditorRedesignE2EHelpers.ClickRibbonAsync` is the reference helper).
 - **Phone:** the phone layout keeps a horizontal scroll fallback until its own command row (a later phase).
+
+### Floating UI (DE-1.4 .. DE-1.7)
+
+Every floating editing surface is a `TmDocumentFloatingPanel` - a thin wrapper over the core `TmOverlayPanel` (no sheet and no focus trap of
+its own): the ribbon panels (style gallery, table grid, equation, symbol, page layout, header/footer fields and presets, link), the image
+panel, the token panel and the form-field popover (`TmDocumentFieldPopover`: content controls and signing fields).
+
+- **Anchoring and dismissal.** The panel is a top-layer popover anchored to the trigger. An outside press closes it and is NOT swallowed
+  (a click on the header Undo still undoes; a canvas click still places the caret); Escape closes it and `OnRestoreFocus` gives the focus
+  back to the canvas. There is no scrim for a menu on a desktop layout; a mobile layout presents the same content as the core bottom sheet.
+- **Where it renders.** The ribbon panels render AFTER the toolbar's tabpanel (never inside a `TmToolbarItem`, whose collapsed state is
+  invisible and inert), anchored to the trigger button or - when the request came from the More menu - to the ribbon row. The image,
+  token and field panels render in `document-floating-root`. The modals (version, compare, debug) are core `TmModal`s and
+  render as siblings of the floating root and of the `.tm-document-editor__main` size container; the command palette is the core `TmCommandPalette`
+  (see "Command palette" below). A forced `LayoutMode` is cascaded as the viewport scope to all of them, so a forced Mobile editor presents sheets
+  and fullscreen dialogs.
+- **Selection guard.** Pointer and click inside a panel are fenced (`stopPropagation`) and the triggers `preventDefault` the pointer press, so
+  the canvas selection survives; every choice applies immediately (G8) - the only footers are a "Done" on the page layout, a "Close" on the
+  field popover and Cancel / Insert on the image panel.
+- **Contract for hosts and tests:** panels carry `data-testid` (unchanged from the inline popups) and `data-floating-kind`; choices are
+  `DocumentPaletteGrid` buttons with a roving tab stop (arrow keys follow the columns - `SheetColumns` in a bottom sheet). Select a panel by its
+  test id, never by its position inside the ribbon. `DocumentPaletteGrid<TItem>` is public and generic on purpose: it is a candidate to move
+  into the core package once a second host needs a titled grid of choices.
+- **Close reasons.** `OnClose(DocumentFloatingCloseReason)`: `Button` (X / footer Close), `Escape`, `Outside` (a press elsewhere - the host must NOT take
+  the focus back) and `Done` (the bottom sheet's confirm: a form panel applies what is valid, a panel that applies at once treats it like Button).
+  A host numbers every open of a panel and ignores a report from an earlier open (the core overlay reports an outside press asynchronously).
+- **Field popover** anchors to a VIEWPORT rectangle (`CanvasEngineSelectionState.FieldAnchor`, scaled by the page zoom): it closes when the canvas
+  scrolls, the window resizes or the zoom changes, and the next selection sync reopens it at the new rectangle.
+- **Command palette.** `TmDocumentCommandPalette` is an adapter: `DocumentEditorCommandState` becomes `ICommandPaletteAction` (title = label,
+  `IsDisabled` / `DisabledReason`, `SearchTerms` = name + category, localized category) and the core `TmCommandPalette` renders it
+  (`GroupByCategory`, `SplitShortcuts`, `ItemAttributes` for the `document-command-palette-item` / `data-command` hooks). Do not restyle
+  `.tm-command-palette-*` in the editor - add to the `.tm-document-command-palette` modifier only.
 
 ## Clipboard Pipeline Extension Point
 

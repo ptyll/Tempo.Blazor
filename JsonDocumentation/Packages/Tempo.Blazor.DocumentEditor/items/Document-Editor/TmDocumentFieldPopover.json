@@ -1,0 +1,93 @@
+{
+  "itemName": "TmDocumentFieldPopover",
+  "kind": "Component",
+  "category": "Document Editor",
+  "description": "The popover of a form field under the caret (redesign DE-1.6): a content control (date, drop-down, combo box, picture) or a signing field (label, required, signer role), on the shared floating frame. Title and kind in the header, meta chips with icons (kind, required, locked, repeats on every page) and tm-input editors that are all disabled when the content is locked. Every change applies at once (no OK); the footer holds a visible Close. It anchors to the field through the viewport rectangle the canvas engine reports.",
+  "packageId": "Tempo.Blazor.DocumentEditor",
+  "namespace": "Tempo.Blazor.Components.DocumentEditor",
+  "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentFieldPopover.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.DocumentEditor"
+  ],
+  "parameters": [
+    {
+      "name": "AnchorRect",
+      "type": "TmDocumentCanvasEngineHost.CanvasEngineViewportRect?",
+      "isRequired": false,
+      "description": "Viewport rectangle of the field (CSS pixels) the popover anchors to."
+    },
+    {
+      "name": "ContentControl",
+      "type": "DocumentFieldPopoverControl?",
+      "isRequired": false,
+      "description": "The content control to edit. Set exactly one of ContentControl and SigningField."
+    },
+    {
+      "name": "ImageAssets",
+      "type": "IReadOnlyList<DocumentImageAsset>",
+      "isRequired": false,
+      "description": "The image assets a picture control can choose from."
+    },
+    {
+      "name": "OnChoiceChanged",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Raised with the chosen value of a drop-down or combo box."
+    },
+    {
+      "name": "OnClose",
+      "type": "EventCallback<DocumentFloatingCloseReason>",
+      "isRequired": false,
+      "description": "Raised when the popover asks to close, with the reason: the X and the footer Close are Button, Escape is Escape, a press outside (or a canvas scroll) is Outside, the sheet's Done is Done. The host gives focus back to its canvas only for Button, Escape and Done."
+    },
+    {
+      "name": "OnComboTextChanged",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Raised with the free text of a combo box."
+    },
+    {
+      "name": "OnDateChanged",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Raised with the new ISO date of a date control."
+    },
+    {
+      "name": "OnPictureChanged",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Raised with the chosen asset id of a picture control."
+    },
+    {
+      "name": "OnSigningLabelChanged",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Raised with the new label of a signing field."
+    },
+    {
+      "name": "OnSigningRequiredChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Raised with the new required flag of a signing field."
+    },
+    {
+      "name": "OnSigningRoleChanged",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Raised with the chosen signer role of a signing field."
+    },
+    {
+      "name": "SigningField",
+      "type": "TmDocumentCanvasEngineHost.CanvasEngineSigningFieldSelection?",
+      "isRequired": false,
+      "description": "The signing field to edit."
+    },
+    {
+      "name": "SigningRoles",
+      "type": "IReadOnlyList<SigningSubmitterRole>",
+      "isRequired": false,
+      "description": "The signer roles of a signing field; the role select renders only when there is at least one."
+    }
+  ]
+}

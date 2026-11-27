@@ -78,9 +78,7 @@
 }
 
 .tm-document-editor__ribbon-tab:focus-visible,
-.tm-document-editor__ribbon-button:focus-visible,
-.tm-document-editor__link-dialog button:focus-visible,
-.tm-document-editor__link-dialog input:focus-visible {
+.tm-document-editor__ribbon-button:focus-visible {
     outline: 2px solid var(--tm-color-primary);
     outline-offset: 2px;
 }
@@ -107,10 +105,9 @@
     background: var(--tm-color-surface-elevated);
 }
 
-/* The core bar is a size container (its Labels=Auto follows its own width). The ribbon fixes its labels itself and owns popups
-   that are position:fixed (the table grid and its backdrop) - a container would become their containing block - so it is not one. */
+/* The core bar is a size container (container-type: inline-size) like every other TmToolbar - its popups are core top-layer
+   panels (the "More" menu, the colour picker, the floating panels rendered after the bar), which no container contains. */
 .tm-document-editor__ribbon-toolbar.tm-toolbar {
-    container-type: normal;
     flex-wrap: nowrap;
     gap: var(--tm-space-1);
     min-height: 3rem;
@@ -237,14 +234,6 @@
     overflow-y: auto;
 }
 
-/* The style gallery popup hangs under the ribbon row, outside the (collapsing) toolbar. */
-.tm-document-style-gallery-anchor {
-    position: absolute;
-    z-index: var(--tm-z-dropdown);
-    inset-block-start: 100%;
-    inset-inline-start: var(--tm-space-3);
-}
-
 /* The alignment item: a ribbon-sized trigger showing the current alignment icon. */
 .tm-document-editor__ribbon-alignment .tm-dropdown-trigger {
     min-height: 2.25rem;
@@ -351,12 +340,12 @@
 
 /* The pickers render in the browser top layer (TmOverlayPanel): no ancestor overflow clips them, and the ribbon row has none. */
 .tm-document-editor__ribbon:has(.tm-document-editor__ribbon-tempo-color-picker.tm-color-picker--open) {
-    z-index: calc(var(--tm-document-z-floating-ui, var(--tm-z-popover, 1000)) + 30);
+    z-index: calc(var(--tm-document-z-floating-ui) + 30);
 }
 
 .tm-document-editor__ribbon-tempo-color-picker.tm-color-picker--open {
     position: relative;
-    z-index: calc(var(--tm-document-z-floating-ui, var(--tm-z-popover, 1000)) + 31);
+    z-index: calc(var(--tm-document-z-floating-ui) + 31);
 }
 
 .tm-document-editor__ribbon-tempo-color-picker .tm-color-picker-trigger {
@@ -411,7 +400,7 @@
     bottom: auto;
     right: min(6rem, 18vw);
     left: auto;
-    z-index: calc(var(--tm-document-z-floating-ui, var(--tm-z-popover, 1000)) + 32);
+    z-index: calc(var(--tm-document-z-floating-ui) + 32);
     display: flex;
     flex-direction: column;
     width: 12.5rem;
@@ -516,7 +505,7 @@
     background: var(--tm-color-surface-secondary);
 }
 
-/* A ribbon button OUTSIDE the core bar - the style gallery's action buttons (a popup) and the declarative renderers' buttons
+/* A ribbon button OUTSIDE the core bar - the declarative renderers' buttons
    (DocumentToolbarComponentFactory, hosted on the demo page) - keeps a plain bordered look; inside the bar the core
    .tm-toolbar-btn rules above are the look. */
 .tm-document-editor__ribbon-button:not(.tm-toolbar-btn) {
@@ -557,41 +546,11 @@
     height: 1.125rem;
 }
 
-.tm-document-editor__link-dialog {
-    box-shadow: inset 0 1px 0 var(--tm-color-border);
-}
-
 /* ─── Table grid picker ─────────────────────────────────────────────────────── */
 
-.tm-document-table-grid-picker-wrapper {
-    position: relative;
-    z-index: var(--tm-z-popover, 1000);
-    display: inline-flex;
-}
-
-.tm-document-editor__toolbar-floating-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 0;
-    padding: 0;
-    background: transparent;
-    border: 0;
-    cursor: default;
-}
-
 .tm-document-table-grid-picker {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    translate: -50% -50%;
-    z-index: calc(var(--tm-z-popover, 1000) + 10);
     display: grid;
     gap: var(--tm-space-2);
-    padding: var(--tm-space-2);
-    background: var(--tm-color-surface-elevated);
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-card);
-    box-shadow: var(--tm-shadow-lg);
     user-select: none;
 }
 
@@ -647,14 +606,6 @@
     border-radius: var(--tm-radius-card);
 }
 
-/* The style gallery opener is a narrow chevron-like button next to the style select. */
-.tm-document-style-gallery__toggle {
-    inline-size: 2rem;
-    min-width: 2rem;
-    max-width: 2rem;
-    padding: 0;
-}
-
 @media (prefers-reduced-motion: reduce) {
     .tm-document-editor__ribbon-tab,
     .tm-document-editor__ribbon-toolbar .tm-toolbar-btn,
@@ -663,8 +614,8 @@
     }
 }
 
-/* DE-1.1: the ribbon sits OUTSIDE the editor's size container (its pickers and backdrops are position:fixed and a container
-   would become their containing block), so it follows the resolved layout the editor publishes as data-layout, not the viewport.
+/* DE-1.1: the ribbon sits OUTSIDE the editor's size container (the editor's size container would re-anchor fixed descendants),
+   so it follows the resolved layout the editor publishes as data-layout, not the viewport.
    Desktop and tablet share ONE row; the tablet row is simply shorter (the priority overflow moves more into More). The mobile
    command row of the design is a later phase: until then a phone gets the same row, with more of it in More. */
 :where(.tm-document-editor[data-layout="tablet"]) .tm-document-editor__ribbon-toolbar.tm-toolbar {
@@ -714,8 +665,3 @@
     max-width: 8rem;
 }
 
-:where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__link-dialog {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    align-items: stretch;
-}

@@ -1375,6 +1375,122 @@
       ]
     },
     {
+      "itemName": "DocumentFieldPopoverControl",
+      "kind": "Class",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.DocumentEditor",
+      "description": "The content control under the caret as the form-field popover edits it: kind, title, required / locked flags and the current value, without the document model. The editor maps the engine payload into it; a host or a test builds one directly.",
+      "packageId": "Tempo.Blazor.DocumentEditor",
+      "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/DocumentFieldPopoverControl.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "From",
+          "kind": "Method",
+          "type": "DocumentFieldPopoverControl?",
+          "description": "Maps the engine-computed selection payload. Returns null for a kind that does not open the popover (or an unknown kind from a newer engine), mirroring the old document walk.",
+          "parameters": [
+            {
+              "name": "state",
+              "type": "TmDocumentCanvasEngineHost.CanvasEngineContentControlState?"
+            }
+          ]
+        },
+        {
+          "name": "IsPopoverKind",
+          "kind": "Method",
+          "type": "bool",
+          "description": "Whether the engine opens the popover for this kind (the four kinds that have an editor).",
+          "parameters": [
+            {
+              "name": "kind",
+              "type": "DocumentContentControlKind"
+            }
+          ]
+        },
+        {
+          "name": "AssetId",
+          "kind": "Property",
+          "type": "string",
+          "description": "Selected image asset id (picture control)."
+        },
+        {
+          "name": "ControlId",
+          "kind": "Property",
+          "type": "string",
+          "description": "Stable content control identifier."
+        },
+        {
+          "name": "DateIso",
+          "kind": "Property",
+          "type": "string",
+          "description": "ISO date value (date control)."
+        },
+        {
+          "name": "IsRequired",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether a value is required."
+        },
+        {
+          "name": "Items",
+          "kind": "Property",
+          "type": "IReadOnlyList<DocumentContentControlItem>",
+          "description": "The choices of a drop-down or combo box."
+        },
+        {
+          "name": "Kind",
+          "kind": "Property",
+          "type": "DocumentContentControlKind",
+          "description": "Control kind. Date, ComboBox, DropDown and Picture have an editor; every other kind shows its metadata only."
+        },
+        {
+          "name": "LockContent",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the content is locked against editing (every editor is disabled)."
+        },
+        {
+          "name": "SelectedValue",
+          "kind": "Property",
+          "type": "string",
+          "description": "Selected choice value (drop-down, combo box)."
+        },
+        {
+          "name": "Text",
+          "kind": "Property",
+          "type": "string",
+          "description": "Free-text value (combo box)."
+        },
+        {
+          "name": "Title",
+          "kind": "Property",
+          "type": "string",
+          "description": "Heading of the popover: the alias, falling back to the tag, then the control id."
+        }
+      ]
+    },
+    {
+      "itemName": "DocumentFloatingCloseReason",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.DocumentEditor",
+      "description": "Why a TmDocumentFloatingPanel asked its host to close it: the close button, Escape, an outside press or the bottom sheet's Done action.",
+      "packageId": "Tempo.Blazor.DocumentEditor",
+      "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/DocumentFloatingPanelEnums.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "DocumentFloatingPanelWidth",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.DocumentEditor",
+      "description": "Width class of a TmDocumentFloatingPanel: Compact, Medium or Wide; the panel never exceeds its viewport.",
+      "packageId": "Tempo.Blazor.DocumentEditor",
+      "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/DocumentFloatingPanelEnums.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "DocumentFloatingUiRegistration",
       "kind": "Record",
       "category": "Components",
@@ -1392,6 +1508,16 @@
       "description": "Registry for feature-owned floating UI surfaces.",
       "packageId": "Tempo.Blazor.DocumentEditor",
       "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/Features/DocumentEditorFeatureInfrastructure.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "DocumentImagePanelTab",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.DocumentEditor",
+      "description": "The tabs of the editor's image panel: From URL, Upload (only with an image provider) and Library (only with image assets).",
+      "packageId": "Tempo.Blazor.DocumentEditor",
+      "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/DocumentImagePanelTab.cs",
       "documentationStatus": "merged"
     },
     {
@@ -3338,6 +3464,16 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "TmDocumentCanvasEngineHost.CanvasEngineViewportRect",
+      "kind": "Class",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.DocumentEditor",
+      "description": "A rectangle in viewport (client) coordinates, in CSS pixels; the engine reports the selected form field with one so the field popover can anchor to it.",
+      "packageId": "Tempo.Blazor.DocumentEditor",
+      "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentCanvasEngineHost.razor.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "ToolbarItemPriority",
       "kind": "Enum",
       "category": "Components",
@@ -3590,6 +3726,110 @@
         {
           "title": "Register the services in Program.cs",
           "code": "builder.Services.AddTempoBlazorDocumentEditor();"
+        }
+      ]
+    },
+    {
+      "itemName": "DocumentPaletteGrid",
+      "kind": "Component",
+      "category": "Document Editor",
+      "namespace": "Tempo.Blazor.Components.DocumentEditor",
+      "description": "A titled grid of equally sized choices (style gallery, equation structures and symbols, symbol palette): one section with a visible heading that names its group, a fixed column count, a roving tab stop and arrow keys that respect the columns. Every choice is a native button and applies at once.",
+      "packageId": "Tempo.Blazor.DocumentEditor",
+      "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/DocumentPaletteGrid.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.DocumentEditor"
+      ],
+      "typeParameters": [
+        {
+          "name": "TItem",
+          "description": "Generic type parameter TItem."
+        }
+      ],
+      "parameters": [
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS class on the section."
+        },
+        {
+          "name": "Columns",
+          "type": "int",
+          "isRequired": false,
+          "default": "6",
+          "description": "Columns of the grid. Defaults to 6."
+        },
+        {
+          "name": "Heading",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Visible heading of the section; also the accessible name of the group."
+        },
+        {
+          "name": "IsDisabled",
+          "type": "Func<TItem, bool>?",
+          "isRequired": false,
+          "description": "Whether one choice is disabled."
+        },
+        {
+          "name": "IsSelected",
+          "type": "Func<TItem, bool>?",
+          "isRequired": false,
+          "description": "Whether one choice is the current one (aria-pressed and the active modifier)."
+        },
+        {
+          "name": "ItemClass",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS class on every choice."
+        },
+        {
+          "name": "ItemContent",
+          "type": "RenderFragment<TItem>",
+          "isRequired": true,
+          "description": "The content of one choice.",
+          "editorRequired": true
+        },
+        {
+          "name": "Items",
+          "type": "IReadOnlyList<TItem>",
+          "isRequired": true,
+          "default": "[]",
+          "description": "The choices, in reading order.",
+          "editorRequired": true
+        },
+        {
+          "name": "ItemTestId",
+          "type": "Func<TItem, string>?",
+          "isRequired": false,
+          "description": "The test id of one choice."
+        },
+        {
+          "name": "ItemTitle",
+          "type": "Func<TItem, string?>?",
+          "isRequired": false,
+          "description": "The tooltip of one choice."
+        },
+        {
+          "name": "OnSelect",
+          "type": "EventCallback<TItem>",
+          "isRequired": false,
+          "description": "Raised when a choice is activated."
+        },
+        {
+          "name": "SectionTestId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Unprefixed test id of the section root."
+        },
+        {
+          "name": "SheetColumns",
+          "type": "int",
+          "isRequired": false,
+          "default": "4",
+          "description": "Columns while the grid sits in a bottom sheet (a narrow, mobile layout). Defaults to 4; never more than Columns."
         }
       ]
     },
@@ -4073,6 +4313,12 @@
           "type": "string?",
           "isRequired": false,
           "description": "Raw HTML captured from the last clipboard paste."
+        },
+        {
+          "name": "RestoreFocusTargetId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The id of the element focus returns to when the dialog closes - the editor passes its canvas input, so the keyboard lands back in the document whatever opened the dialog. Null keeps the core modal's own restore (the opener)."
         },
         {
           "name": "WarningsJson",
@@ -4612,6 +4858,12 @@
           "description": "Raised when the user asks to export the current comparison as a redline (tracked-changes) document. The button renders only when the callback is wired and the result has changes."
         },
         {
+          "name": "RestoreFocusTargetId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The id of the element focus returns to when the dialog closes - the editor passes its canvas input, so the keyboard lands back in the document whatever opened the dialog. Null keeps the core modal's own restore (the opener)."
+        },
+        {
           "name": "UseLocalComparisonFallback",
           "type": "bool",
           "isRequired": false,
@@ -4676,6 +4928,12 @@
           "type": "EventCallback",
           "isRequired": false,
           "description": "Raised when the user asks to copy the payload. The copy button is rendered only when a handler is bound."
+        },
+        {
+          "name": "RestoreFocusTargetId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The id of the element focus returns to when the dialog closes - the editor passes its canvas input, so the keyboard lands back in the document whatever opened the dialog. Null keeps the core modal's own restore (the opener)."
         },
         {
           "name": "Title",
@@ -5763,6 +6021,12 @@
           "description": "Whether selected text has mixed highlight colors."
         },
         {
+          "name": "ImagePanelOpen",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the editor's image panel is open; drives the image button's aria-expanded. The editor owns the panel (one panel with the From URL / Upload / Library tabs in the floating root)."
+        },
+        {
           "name": "IsDirty",
           "type": "bool",
           "isRequired": false,
@@ -6207,6 +6471,12 @@
           "description": "Raised when redo is requested."
         },
         {
+          "name": "OnRestoreFocus",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised when a ribbon panel closes through Escape or its X, so the editor gives the focus back to the canvas. An outside press never raises it."
+        },
+        {
           "name": "OnSave",
           "type": "EventCallback",
           "isRequired": false,
@@ -6605,6 +6875,101 @@
       ]
     },
     {
+      "itemName": "TmDocumentFieldPopover",
+      "kind": "Component",
+      "category": "Document Editor",
+      "namespace": "Tempo.Blazor.Components.DocumentEditor",
+      "description": "The popover of a form field under the caret (redesign DE-1.6): a content control (date, drop-down, combo box, picture) or a signing field (label, required, signer role), on the shared floating frame. Title and kind in the header, meta chips with icons (kind, required, locked, repeats on every page) and tm-input editors that are all disabled when the content is locked. Every change applies at once (no OK); the footer holds a visible Close. It anchors to the field through the viewport rectangle the canvas engine reports.",
+      "packageId": "Tempo.Blazor.DocumentEditor",
+      "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentFieldPopover.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.DocumentEditor"
+      ],
+      "parameters": [
+        {
+          "name": "AnchorRect",
+          "type": "TmDocumentCanvasEngineHost.CanvasEngineViewportRect?",
+          "isRequired": false,
+          "description": "Viewport rectangle of the field (CSS pixels) the popover anchors to."
+        },
+        {
+          "name": "ContentControl",
+          "type": "DocumentFieldPopoverControl?",
+          "isRequired": false,
+          "description": "The content control to edit. Set exactly one of ContentControl and SigningField."
+        },
+        {
+          "name": "ImageAssets",
+          "type": "IReadOnlyList<DocumentImageAsset>",
+          "isRequired": false,
+          "default": "[]",
+          "description": "The image assets a picture control can choose from."
+        },
+        {
+          "name": "OnChoiceChanged",
+          "type": "EventCallback<string>",
+          "isRequired": false,
+          "description": "Raised with the chosen value of a drop-down or combo box."
+        },
+        {
+          "name": "OnClose",
+          "type": "EventCallback<DocumentFloatingCloseReason>",
+          "isRequired": false,
+          "description": "Raised when the popover asks to close, with the reason: the X and the footer Close are Button, Escape is Escape, a press outside (or a canvas scroll) is Outside, the sheet's Done is Done. The host gives focus back to its canvas only for Button, Escape and Done."
+        },
+        {
+          "name": "OnComboTextChanged",
+          "type": "EventCallback<string>",
+          "isRequired": false,
+          "description": "Raised with the free text of a combo box."
+        },
+        {
+          "name": "OnDateChanged",
+          "type": "EventCallback<string>",
+          "isRequired": false,
+          "description": "Raised with the new ISO date of a date control."
+        },
+        {
+          "name": "OnPictureChanged",
+          "type": "EventCallback<string>",
+          "isRequired": false,
+          "description": "Raised with the chosen asset id of a picture control."
+        },
+        {
+          "name": "OnSigningLabelChanged",
+          "type": "EventCallback<string>",
+          "isRequired": false,
+          "description": "Raised with the new label of a signing field."
+        },
+        {
+          "name": "OnSigningRequiredChanged",
+          "type": "EventCallback<bool>",
+          "isRequired": false,
+          "description": "Raised with the new required flag of a signing field."
+        },
+        {
+          "name": "OnSigningRoleChanged",
+          "type": "EventCallback<string>",
+          "isRequired": false,
+          "description": "Raised with the chosen signer role of a signing field."
+        },
+        {
+          "name": "SigningField",
+          "type": "TmDocumentCanvasEngineHost.CanvasEngineSigningFieldSelection?",
+          "isRequired": false,
+          "description": "The signing field to edit."
+        },
+        {
+          "name": "SigningRoles",
+          "type": "IReadOnlyList<SigningSubmitterRole>",
+          "isRequired": false,
+          "default": "[]",
+          "description": "The signer roles of a signing field; the role select renders only when there is at least one."
+        }
+      ]
+    },
+    {
       "itemName": "TmDocumentFindPanel",
       "kind": "Component",
       "category": "Document Editor",
@@ -6663,6 +7028,180 @@
           "name": "ShowReplace",
           "type": "bool",
           "isRequired": false
+        }
+      ]
+    },
+    {
+      "itemName": "TmDocumentFloatingPanel",
+      "kind": "Component",
+      "category": "Document Editor",
+      "namespace": "Tempo.Blazor.Components.DocumentEditor",
+      "description": "The one frame of every floating editing surface of the document editor (redesign DE-1.4 .. DE-1.7): a thin wrapper over the core TmOverlayPanel with a header (title, optional kind line and icon, an X with a localized label), a body and an optional footer. A top-layer popover anchored to Anchor with no scrim, closed by Escape and by an outside press that is NOT swallowed (it still reaches its target), presented as the core bottom sheet on a mobile layout; it implements no sheet and no focus trap of its own. Pointer and click inside the frame are fenced so the canvas selection survives. Escape and the X raise OnClose and OnRestoreFocus so the editor can give the focus back to the canvas.",
+      "packageId": "Tempo.Blazor.DocumentEditor",
+      "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentFloatingPanel.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.DocumentEditor"
+      ],
+      "parameters": [
+        {
+          "name": "Align",
+          "type": "OverlayAlign",
+          "isRequired": false,
+          "default": "OverlayAlign.Start",
+          "description": "Cross-axis alignment against Anchor. Defaults to the start edge."
+        },
+        {
+          "name": "Anchor",
+          "type": "ElementReference",
+          "isRequired": true,
+          "description": "The element the panel anchors to; exempt from the outside-press dismissal so a click on it toggles."
+        },
+        {
+          "name": "ChildContent",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "The body."
+        },
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS class on the panel root."
+        },
+        {
+          "name": "CloseOnOutsidePointerDown",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Close on a pointer press outside the panel and its anchor. Defaults to true; the press is not swallowed."
+        },
+        {
+          "name": "CloseTestId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Unprefixed test id of the close (X) button."
+        },
+        {
+          "name": "FocusOnOpen",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Move focus to the panel frame when it opens. Defaults to true."
+        },
+        {
+          "name": "Footer",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Optional footer; immediate-apply panels have none."
+        },
+        {
+          "name": "HideFooterInSheet",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Drop Footer while the panel is a bottom sheet. A footer that only offers a way out (a Close button) duplicates the sheet's Done action; a footer with real actions keeps rendering. Defaults to false."
+        },
+        {
+          "name": "Icon",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Optional leading icon of the header."
+        },
+        {
+          "name": "IsOpen",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the panel is open; the host owns the state."
+        },
+        {
+          "name": "Kind",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Stable kind marker (data-floating-kind), for example style-gallery."
+        },
+        {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "The layout the sheet-versus-popover choice resolves from; Auto follows the viewport."
+        },
+        {
+          "name": "OnClose",
+          "type": "EventCallback<DocumentFloatingCloseReason>",
+          "isRequired": false,
+          "description": "Raised when the panel asks to be closed (X, Escape, an outside press); the host sets IsOpen to false."
+        },
+        {
+          "name": "OnOpened",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised once the panel is displayed and the frame took focus; the host moves focus into a field from here."
+        },
+        {
+          "name": "OnRestoreFocus",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised when the panel closes through Escape or the X so the host can focus its canvas."
+        },
+        {
+          "name": "PanelId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The id of the panel element; generated when omitted."
+        },
+        {
+          "name": "PanelTestId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Unprefixed test id of the panel root."
+        },
+        {
+          "name": "Placement",
+          "type": "OverlayPlacement",
+          "isRequired": false,
+          "default": "OverlayPlacement.Bottom",
+          "description": "Preferred side of Anchor. Defaults to below."
+        },
+        {
+          "name": "RestoreFocusTarget",
+          "type": "ElementReference?",
+          "isRequired": false,
+          "description": "Element focused first when the panel closes through Escape or the X."
+        },
+        {
+          "name": "Role",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"dialog\"",
+          "description": "ARIA role of the panel. Defaults to dialog."
+        },
+        {
+          "name": "Subtitle",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Optional secondary line under the title."
+        },
+        {
+          "name": "Title",
+          "type": "string",
+          "isRequired": true,
+          "default": "\"\"",
+          "description": "The visible heading and the dialog's accessible name.",
+          "editorRequired": true
+        },
+        {
+          "name": "TitleId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The id of the title heading (aria-labelledby of the dialog); generated when omitted."
+        },
+        {
+          "name": "Width",
+          "type": "DocumentFloatingPanelWidth",
+          "isRequired": false,
+          "default": "DocumentFloatingPanelWidth.Medium",
+          "description": "Width class of the panel. Defaults to Medium."
         }
       ]
     },
@@ -7080,6 +7619,12 @@
           "type": "string?",
           "isRequired": false,
           "description": "Optional JSON with the latest runtime recovery detail."
+        },
+        {
+          "name": "RestoreFocusTargetId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The id of the element focus returns to when the dialog closes - the editor passes its canvas input, so the keyboard lands back in the document whatever opened the dialog. Null keeps the core modal's own restore (the opener)."
         },
         {
           "name": "RuntimeDebugJson",
@@ -7847,6 +8392,12 @@
           "type": "bool",
           "isRequired": false,
           "description": "Whether major versions require a non-empty description."
+        },
+        {
+          "name": "RestoreFocusTargetId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The id of the element focus returns to when the dialog closes - the editor passes its canvas input, so the keyboard lands back in the document whatever opened the dialog. Null keeps the core modal's own restore (the opener)."
         }
       ]
     },
@@ -8025,6 +8576,10 @@
     },
     {
       "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/css/components/_document-editor-find.css",
+      "kind": "Css"
+    },
+    {
+      "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/css/components/_document-editor-floating.css",
       "kind": "Css"
     },
     {
@@ -8404,6 +8959,10 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor-canvas/input/__tests__/hidden-input-bridge.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor-canvas/input/__tests__/ime.test.mjs",
       "kind": "JavaScript"
     },
@@ -8421,6 +8980,10 @@
     },
     {
       "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor-canvas/interop-print-preview-poll.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor-canvas/interop-selection-viewport-rect.test.mjs",
       "kind": "JavaScript"
     },
     {
@@ -9332,10 +9895,6 @@
       "kind": "JavaScript"
     },
     {
-      "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor/focus-management.mjs",
-      "kind": "JavaScript"
-    },
-    {
       "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor/history/.gitkeep",
       "kind": "Asset"
     },
@@ -9516,11 +10075,19 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor/interop/field-popover-guard.mjs",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor/interop/region-cycle.mjs",
       "kind": "JavaScript"
     },
     {
       "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor/interop/__tests__/browser-globals.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor/interop/__tests__/field-popover-guard.test.mjs",
       "kind": "JavaScript"
     },
     {
@@ -10197,11 +10764,11 @@
     }
   ],
   "summary": {
-    "itemCount": 223,
-    "manualItemCount": 223,
-    "generatedItemCount": 220,
+    "itemCount": 231,
+    "manualItemCount": 231,
+    "generatedItemCount": 228,
     "generatedOnlyItemCount": 0,
-    "componentCount": 40,
-    "publicApiTypeCount": 180
+    "componentCount": 43,
+    "publicApiTypeCount": 185
   }
 }

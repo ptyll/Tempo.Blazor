@@ -213,6 +213,12 @@
       "type": "string?",
       "isRequired": false,
       "description": "Additional CSS class(es) for the panel element — components pass their own panel class here."
+    },
+    {
+      "name": "FlipMinRoom",
+      "type": "int",
+      "isRequired": false,
+      "description": "With Flip: the minimum room in pixels the preferred side must offer before the panel stays on it. A panel capped to the room it gets (ConstrainHeight) needs a useful height, not its natural one: with 240 it stays below its trigger whenever 240 px are free there and flips above only when they are not. 0 (the default) keeps the classic rule - flip when the natural size does not fit."
     }
   ],
   "cssClasses": [

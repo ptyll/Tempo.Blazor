@@ -70,48 +70,6 @@ body.tm-document-editor--fullscreen .tm-document-editor {
     box-shadow: inset 0 -2px 0 var(--tm-color-warning);
 }
 
-/* ── Token insert panel (phase 9 — Blazor-side token menu) ── */
-.tm-document-editor__token-insert-panel {
-    position: absolute;
-    top: 0;
-    left: 0;
-    z-index: var(--tm-document-z-floating-ui, var(--tm-z-popover, 1000));
-    display: flex;
-    flex-direction: column;
-    gap: var(--tm-space-2);
-    min-width: 18rem;
-    max-width: 24rem;
-    padding: var(--tm-space-3);
-    color: var(--tm-color-text);
-    background: var(--tm-color-surface-elevated);
-    border: 1px solid var(--tm-color-border);
-    border-top: none;
-    border-radius: 0 0 var(--tm-radius-card) var(--tm-radius-card);
-    box-shadow: var(--tm-shadow-lg);
-}
-
-.tm-document-editor__token-insert-panel-title {
-    margin: 0;
-    font-size: var(--tm-font-size-sm);
-    font-weight: var(--tm-font-weight-semibold);
-    color: var(--tm-text-secondary);
-}
-
-.tm-document-editor__token-insert-filter {
-    padding: var(--tm-space-1-5) var(--tm-space-2);
-    font-size: var(--tm-font-size-sm);
-    color: var(--tm-color-text);
-    background: var(--tm-bg-surface);
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-card);
-}
-
-.tm-document-editor__token-insert-filter:focus-visible {
-    outline: none;
-    border-color: var(--tm-border-color-focus);
-    box-shadow: var(--tm-shadow-focus);
-}
-
 /* ── Find / Replace panel ── */
 .tm-document-find-panel {
     position: absolute;

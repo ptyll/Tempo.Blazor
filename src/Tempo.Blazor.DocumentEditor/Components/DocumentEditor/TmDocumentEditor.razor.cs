@@ -299,7 +299,10 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
     private TmDocumentSidePanel? _sidePanel;
     private bool _canvasCanUndo;
     private bool _canvasCanRedo;
+    // DE-1.5: ONE image panel (From URL / Upload / Library tabs) in the floating root. The ribbon button, the "More" entries and the
+    // insertImage command all open it; the toolbar says where its trigger is (ImagePanelAnchor).
     private bool _canvasImageDialogOpen;
+    private DocumentImagePanelTab _imagePanelTab = DocumentImagePanelTab.Url;
     private string _canvasImageUrl = string.Empty;
     private ImageBlockContent? _canvasActiveImage;
     private string _currentBlockStyle = "Normal";
@@ -451,7 +454,8 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
     private WysiwygTableContextMenuRequest? _tableContextMenu;
     private WysiwygMiniToolbarRequest? _miniToolbar;
     private WysiwygMiniToolbarRequest? _lastMiniToolbarRequest;
-    private CanvasContentControlPopoverState? _activeCanvasContentControl;
+    private DocumentFieldPopoverControl? _activeCanvasContentControl;
+    private TmDocumentCanvasEngineHost.CanvasEngineViewportRect? _activeFieldAnchor;
     private bool _miniToolbarColorPickerOpen;
     private DateTimeOffset _keepMiniToolbarVisibleUntil;
     private DateTimeOffset _ignoreFloatingCollapsedSelectionUntil;
@@ -494,6 +498,25 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
     private string? _lastCollapsedSelectionRenderKey;
 
     private int NextBlazorRenderCount => ++_blazorRenderCount;
+
+    // The viewport scope a forced LayoutMode cascades to the surfaces inside the editor (null with Auto: they resolve the viewport
+    // themselves). One instance per mode, so the cascade does not re-render its consumers on every editor render.
+    private TmLayoutContext? _forcedViewport;
+
+    private TmLayoutContext? ForcedViewport
+    {
+        get
+        {
+            if (LayoutMode == TmLayoutMode.Auto)
+            {
+                return null;
+            }
+
+            return _forcedViewport is not null && _forcedViewport.Mode == LayoutMode
+                ? _forcedViewport
+                : _forcedViewport = new TmLayoutContext(LayoutMode, LayoutMode);
+        }
+    }
 
     private string? LiveRegionMessage => _liveRegionMessage;
 
@@ -1437,26 +1460,6 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
         }
     }
 
-    // A header action is a click OUTSIDE an open ribbon popup: it runs, and the popup (style gallery, page layout, table grid, ...)
-    // closes with it - the header sits above the popup's click-away backdrop, so nothing swallows the click.
-    private Task HeaderUndoAsync()
-    {
-        _toolbar?.CloseFloatingUi();
-        return UndoAsync();
-    }
-
-    private Task HeaderRedoAsync()
-    {
-        _toolbar?.CloseFloatingUi();
-        return RedoAsync();
-    }
-
-    private Task HeaderSaveAsync()
-    {
-        _toolbar?.CloseFloatingUi();
-        return SaveAsync();
-    }
-
     private Task SaveAsync()
     {
         return SaveAsync(DocumentEditorSaveTrigger.Explicit);
@@ -1709,6 +1712,7 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
         }
 
         _tokenInsertMenuOpen = true;
+        _tokenPanelOpenSeq++;
         _tokenInsertQuery = string.Empty;
         _tokenInsertHighlight = 0;
         _floatingLayerStack.Push(new DocumentFloatingLayerState
@@ -1767,6 +1771,35 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
         {
             _tokenInsertLoading = false;
         }
+    }
+
+    private ElementReference _tokenFilterInput;
+
+    private async Task FocusTokenFilterAsync()
+    {
+        try
+        {
+            await _tokenFilterInput.FocusAsync(preventScroll: true);
+        }
+        catch (Exception ex) when (ex is JSException or InvalidOperationException or TaskCanceledException)
+        {
+            // The panel closed before the focus move ran.
+        }
+    }
+
+    // Every open of the token / image panel is a new numbered instance. A close report that belongs to an earlier open (an outside press
+    // the core overlay reported late, after the user already re-opened the panel) is ignored instead of closing the new panel.
+    private int _tokenPanelOpenSeq;
+    private int _imagePanelOpenSeq;
+
+    private Task HandleTokenPanelClosedAsync(int openSeq, DocumentFloatingCloseReason reason)
+    {
+        if (openSeq == _tokenPanelOpenSeq)
+        {
+            CloseTokenInsertMenu();
+        }
+
+        return Task.CompletedTask;
     }
 
     private async Task HandleTokenInsertQueryChangedAsync(ChangeEventArgs args)
@@ -2306,7 +2339,17 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
         };
     }
 
-    private async Task OpenImageDialogAsync()
+    private Task OpenImageDialogAsync() => OpenImagePanelAsync(DocumentImagePanelTab.Url);
+
+    private Task OpenImageUploadPanelAsync() => OpenImagePanelAsync(DocumentImagePanelTab.Upload);
+
+    private Task OpenImageLibraryPanelAsync() => OpenImagePanelAsync(DocumentImagePanelTab.Library);
+
+    /// <summary>
+    /// Opens the image panel on <paramref name="tab"/>. A second request for the tab that is already open closes the panel (the
+    /// ribbon button toggles); a request for another tab switches to it.
+    /// </summary>
+    private async Task OpenImagePanelAsync(DocumentImagePanelTab tab)
     {
         if (!IsFeatureEnabled(DocumentEditorFeatureNames.Image))
         {
@@ -2315,12 +2358,164 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
 
         if (UsingCanvasEngine)
         {
-            _canvasImageUrl = string.Empty;
+            if (_canvasImageDialogOpen && _imagePanelTab == tab)
+            {
+                CancelCanvasImageDialog();
+                await InvokeAsync(StateHasChanged);
+                return;
+            }
+
+            if (!_canvasImageDialogOpen)
+            {
+                _canvasImageUrl = string.Empty;
+                _imagePanelOpenSeq++;
+            }
+
+            _imagePanelTab = tab;
             _canvasImageDialogOpen = true;
             await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private Task SelectImagePanelTabAsync(DocumentImagePanelTab tab)
+    {
+        _imagePanelTab = tab;
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleImagePanelClosedAsync(int openSeq, DocumentFloatingCloseReason reason)
+    {
+        if (openSeq != _imagePanelOpenSeq)
+        {
             return;
         }
 
+        // The sheet's Done confirms the URL tab: a non-empty address is inserted, anything else closes like a cancel.
+        if (reason == DocumentFloatingCloseReason.Done && _imagePanelTab == DocumentImagePanelTab.Url && !string.IsNullOrWhiteSpace(_canvasImageUrl))
+        {
+            await InsertCanvasImageFromDialogAsync();
+            return;
+        }
+
+        CancelCanvasImageDialog();
+    }
+
+    private Task FocusCanvasAsync() => _canvasHost?.FocusAsync() ?? Task.CompletedTask;
+
+    // Where focus goes when a dialog closes: the canvas input (null until the canvas host exists, which keeps the core restore).
+    private string? CanvasInputId => _canvasHost?.InputId;
+
+    private bool CanBrowseImageLibrary => ImageAssetOptions.Count > 0;
+
+    private bool CanUploadImagePanel => ImageProvider is not null;
+
+    private ElementReference _imageUrlInput;
+    private string _imagePreviewUrl = string.Empty;
+    private readonly string _imagePanelIdPrefix = $"tm-document-image-panel-{Guid.NewGuid():N}";
+
+    private string ImagePanelBodyId => $"{_imagePanelIdPrefix}-body";
+
+    private string ImageTabId(DocumentImagePanelTab tab) => $"{_imagePanelIdPrefix}-tab-{tab.ToString().ToLowerInvariant()}";
+
+    private IReadOnlyList<DocumentImagePanelTab> ImagePanelTabs
+    {
+        get
+        {
+            var tabs = new List<DocumentImagePanelTab> { DocumentImagePanelTab.Url };
+            if (CanUploadImagePanel)
+            {
+                tabs.Add(DocumentImagePanelTab.Upload);
+            }
+
+            if (CanBrowseImageLibrary)
+            {
+                tabs.Add(DocumentImagePanelTab.Library);
+            }
+
+            return tabs;
+        }
+    }
+
+    /// <summary>Left/Right (wrapping), Home and End move between the image tabs; the focus follows the selection (automatic activation).</summary>
+    private async Task HandleImageTabKeyDownAsync(KeyboardEventArgs args, DocumentImagePanelTab current)
+    {
+        var tabs = ImagePanelTabs;
+        var index = tabs.ToList().IndexOf(current);
+        var next = args.Key switch
+        {
+            "ArrowRight" => (index + 1) % tabs.Count,
+            "ArrowLeft" => (index - 1 + tabs.Count) % tabs.Count,
+            "Home" => 0,
+            "End" => tabs.Count - 1,
+            _ => -1,
+        };
+
+        if (next < 0 || next == index)
+        {
+            return;
+        }
+
+        _imagePanelTab = tabs[next];
+        await InvokeAsync(StateHasChanged);
+        try
+        {
+            await (tabs[next] switch
+            {
+                DocumentImagePanelTab.Upload => _imageTabUpload,
+                DocumentImagePanelTab.Library => _imageTabLibrary,
+                _ => _imageTabUrl,
+            }).FocusAsync(preventScroll: true);
+        }
+        catch (Exception ex) when (ex is JSException or InvalidOperationException or TaskCanceledException)
+        {
+            // The panel closed before the focus move ran.
+        }
+    }
+
+    private ElementReference _imageTabUrl;
+    private ElementReference _imageTabUpload;
+    private ElementReference _imageTabLibrary;
+
+    private async Task FocusImagePanelInputAsync()
+    {
+        if (_imagePanelTab != DocumentImagePanelTab.Url)
+        {
+            return;
+        }
+
+        try
+        {
+            await _imageUrlInput.FocusAsync(preventScroll: true);
+        }
+        catch (Exception ex) when (ex is JSException or InvalidOperationException or TaskCanceledException)
+        {
+            // The panel closed before the focus move ran.
+        }
+    }
+
+    // The preview is requested only when the field is committed (blur / Enter), never per keystroke: typing must not fire a request
+    // for every prefix of the address, and only an http(s) address is previewed at all.
+    private void HandleImageUrlCommitted(ChangeEventArgs args)
+    {
+        var value = args.Value?.ToString()?.Trim() ?? string.Empty;
+        _canvasImageUrl = value;
+        _imagePreviewUrl = Uri.TryCreate(value, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp)
+            ? uri.AbsoluteUri
+            : string.Empty;
+    }
+
+    private async Task HandleImageUrlKeyDownAsync(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter" && !string.IsNullOrWhiteSpace(_canvasImageUrl))
+        {
+            await InsertCanvasImageFromDialogAsync();
+        }
+    }
+
+    private Task CancelImagePanelAsync()
+    {
+        CancelCanvasImageDialog();
+        return FocusCanvasAsync();
     }
 
     private async Task InsertCanvasImageFromDialogAsync()
@@ -2346,6 +2541,7 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
     {
         _canvasImageDialogOpen = false;
         _canvasImageUrl = string.Empty;
+        _imagePreviewUrl = string.Empty;
     }
 
     private async Task HandleCanvasImageFileAsync(InputFileChangeEventArgs e)
@@ -2527,22 +2723,6 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
             "calendar" => ("insertEmoji", new { codePoint = 0x1F4C5 }),
             _ => ("insertEmDash", new { })
         };
-    }
-
-    private async Task InsertImageAssetAsync()
-    {
-        if (!IsFeatureEnabled(DocumentEditorFeatureNames.Image))
-        {
-            return;
-        }
-
-        var asset = ImageAssetOptions.FirstOrDefault();
-        if (asset is null)
-        {
-            return;
-        }
-
-        await InsertCanvasImageAssetAsync(asset);
     }
 
     private async Task ExecuteImageRuntimeCommandAsync(string command, object? payload = null)
@@ -3047,66 +3227,6 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
         if (await RouteToCanvasEngineAsync(command, payload, focus: true))
         {
             return;
-        }
-    }
-
-    private async Task UploadDemoImageAsync()
-    {
-        if (!IsFeatureEnabled(DocumentEditorFeatureNames.Image))
-        {
-            return;
-        }
-
-        if (UsingCanvasEngine && _canvasHost is not null)
-        {
-            await InsertCanvasProviderDemoImageAsync();
-        }
-    }
-
-    private async Task InsertCanvasProviderDemoImageAsync()
-    {
-        if (ImageProvider is null)
-        {
-            _runtimeMessage = Loc["TmDocumentEditor_ImageProviderMissing"];
-            await InvokeAsync(StateHasChanged);
-            return;
-        }
-
-        var bytes = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=");
-        const string contentType = "image/png";
-        await HandleImageUploadStateChangedAsync(true);
-        try
-        {
-            await using var stream = new MemoryStream(bytes);
-            var upload = await ImageProvider.UploadAsync(new DocumentImageUploadRequest
-            {
-                DocumentId = _document?.DocumentId ?? DocumentId,
-                FileName = "demo-image.png",
-                ContentType = contentType,
-                SizeBytes = bytes.Length
-            }, stream);
-
-            if (!upload.Success || string.IsNullOrWhiteSpace(upload.AssetId))
-            {
-                _runtimeMessage = string.IsNullOrWhiteSpace(upload.ErrorMessage)
-                    ? Loc["TmDocumentEditor_ImageUploadFailed"]
-                    : upload.ErrorMessage;
-                await InvokeAsync(StateHasChanged);
-                return;
-            }
-
-            await InsertCanvasImageAsync(new
-            {
-                assetId = upload.AssetId,
-                url = upload.Url,
-                altText = Loc["TmDocumentEditor_ImageCaption"],
-                width = 240,
-                height = 160
-            });
-        }
-        finally
-        {
-            await HandleImageUploadStateChangedAsync(false);
         }
     }
 
@@ -6340,8 +6460,20 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
         await InvokeAsync(StateHasChanged);
     }
 
+    // A zoom moves every field on the page: the field popovers are anchored to a viewport rectangle taken before the zoom, so they close.
+    // The next selection sync reopens the one that is still selected, at the new rectangle (a fresh epoch is a fresh component).
+    private int _fieldPopoverEpoch;
+
+    private void CloseFieldPopoversForViewportChange()
+    {
+        _activeCanvasContentControl = null;
+        _activeCanvasSigningField = null;
+        _fieldPopoverEpoch++;
+    }
+
     private async Task SetZoomPercentAsync(int percent)
     {
+        CloseFieldPopoversForViewportChange();
         _zoomPercent = Math.Clamp(percent, 50, 200);
         _zoomPageWidth = false;
         if (await RouteToCanvasEngineAsync("setZoom", new { percent = _zoomPercent }, focus: true))
@@ -6354,6 +6486,7 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
 
     private async Task SetZoomPageWidthAsync()
     {
+        CloseFieldPopoversForViewportChange();
         _zoomPageWidth = true;
         _zoomPercent = 100;
         if (await RouteToCanvasEngineAsync("fitWidth", null, focus: true))
@@ -8037,7 +8170,11 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
         // Perf plan N2: the engine locates the control over the focused block only and ships it with
         // the selection state — no more RequestDocumentAsync (full marshal) per settled edit.
         _activeCanvasContentControl = selection.ContentControlSelected
-            ? CanvasContentControlPopoverState.From(selection.ContentControl)
+            ? DocumentFieldPopoverControl.From(selection.ContentControl)
+            : null;
+        // Where the field is in the viewport: the popover anchors to it (null leaves the anchor where it was).
+        _activeFieldAnchor = (_activeCanvasContentControl is not null || _activeCanvasSigningField is not null)
+            ? selection.FieldAnchor ?? _activeFieldAnchor
             : null;
     }
 
@@ -8079,47 +8216,49 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
         StateHasChanged();
     }
 
-    private Task CloseSigningFieldPopoverAsync()
+    private Task CloseSigningFieldPopoverAsync(DocumentFloatingCloseReason reason)
     {
         _activeCanvasSigningField = null;
-        return _canvasHost?.FocusAsync() ?? Task.CompletedTask;
+        return reason == DocumentFloatingCloseReason.Outside ? Task.CompletedTask : _canvasHost?.FocusAsync() ?? Task.CompletedTask;
     }
 
-    private async Task CloseCanvasContentControlPopoverAsync()
+    private async Task CloseCanvasContentControlPopoverAsync(DocumentFloatingCloseReason reason)
     {
         _activeCanvasContentControl = null;
-        if (_canvasHost is not null)
+
+        // An outside press means the user clicked somewhere else: that click owns the focus now, the canvas must not take it back.
+        if (reason != DocumentFloatingCloseReason.Outside && _canvasHost is not null)
         {
             await _canvasHost.FocusAsync();
         }
     }
 
-    private Task SetCanvasContentControlDateAsync(ChangeEventArgs args)
+    private Task SetCanvasContentControlDateAsync(string dateIso)
         => RunCanvasContentControlCommandAsync("setContentControlDate", new
         {
             controlId = _activeCanvasContentControl?.ControlId,
-            dateIso = Convert.ToString(args.Value, CultureInfo.InvariantCulture) ?? string.Empty
+            dateIso
         });
 
-    private Task SetCanvasContentControlChoiceAsync(ChangeEventArgs args)
+    private Task SetCanvasContentControlChoiceAsync(string selectedValue)
         => RunCanvasContentControlCommandAsync("selectContentControlOption", new
         {
             controlId = _activeCanvasContentControl?.ControlId,
-            selectedValue = Convert.ToString(args.Value, CultureInfo.InvariantCulture) ?? string.Empty
+            selectedValue
         });
 
-    private Task SetCanvasContentControlComboTextAsync(ChangeEventArgs args)
+    private Task SetCanvasContentControlComboTextAsync(string text)
         => RunCanvasContentControlCommandAsync("setContentControlComboText", new
         {
             controlId = _activeCanvasContentControl?.ControlId,
-            text = Convert.ToString(args.Value, CultureInfo.InvariantCulture) ?? string.Empty
+            text
         });
 
-    private Task SetCanvasContentControlPictureAsync(ChangeEventArgs args)
+    private Task SetCanvasContentControlPictureAsync(string assetId)
         => RunCanvasContentControlCommandAsync("setContentControlPicture", new
         {
             controlId = _activeCanvasContentControl?.ControlId,
-            assetId = Convert.ToString(args.Value, CultureInfo.InvariantCulture) ?? string.Empty
+            assetId
         });
 
     private async Task RunCanvasContentControlCommandAsync(string command, object payload)
@@ -8131,22 +8270,6 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
 
         await RouteToCanvasEngineAsync(command, payload, focus: true);
     }
-
-    private static bool IsPopoverContentControlKind(DocumentContentControlKind kind)
-        => kind is DocumentContentControlKind.Date
-            or DocumentContentControlKind.ComboBox
-            or DocumentContentControlKind.DropDown
-            or DocumentContentControlKind.Picture;
-
-    private string ContentControlKindLabel(DocumentContentControlKind kind)
-        => kind switch
-        {
-            DocumentContentControlKind.Date => Loc["TmDocumentEditor_ContentControlKindDate"],
-            DocumentContentControlKind.ComboBox => Loc["TmDocumentEditor_ContentControlKindCombo"],
-            DocumentContentControlKind.DropDown => Loc["TmDocumentEditor_ContentControlKindDropdown"],
-            DocumentContentControlKind.Picture => Loc["TmDocumentEditor_ContentControlKindPicture"],
-            _ => Loc["TmDocumentEditor_ContentControlKindField"]
-        };
 
     private IReadOnlyList<DocumentImageAsset> CanvasContentControlImageAssetOptions
     {
@@ -8187,58 +8310,6 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
 
     private static string FirstNonEmpty(params string?[] values)
         => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? string.Empty;
-
-    private sealed class CanvasContentControlPopoverState
-    {
-        public string ControlId { get; init; } = string.Empty;
-
-        public DocumentContentControlKind Kind { get; init; }
-
-        public string Title { get; init; } = string.Empty;
-
-        public bool IsRequired { get; init; }
-
-        public bool LockContent { get; init; }
-
-        public string Text { get; init; } = string.Empty;
-
-        public string SelectedValue { get; init; } = string.Empty;
-
-        public string DateIso { get; init; } = string.Empty;
-
-        public string AssetId { get; init; } = string.Empty;
-
-        public IReadOnlyList<DocumentContentControlItem> Items { get; init; } = [];
-
-        /// <summary>
-        /// Maps the engine-computed selection payload (perf plan N2). Returns null for kinds that do
-        /// not open the popover (or unknown kinds from a newer engine), mirroring the old document walk.
-        /// </summary>
-        public static CanvasContentControlPopoverState? From(
-            TmDocumentCanvasEngineHost.CanvasEngineContentControlState? state)
-        {
-            if (state is null
-                || !Enum.TryParse<DocumentContentControlKind>(state.Kind, ignoreCase: true, out var kind)
-                || !IsPopoverContentControlKind(kind))
-            {
-                return null;
-            }
-
-            return new CanvasContentControlPopoverState
-            {
-                ControlId = state.ControlId,
-                Kind = kind,
-                Title = FirstNonEmpty(state.Title, state.ControlId),
-                IsRequired = state.IsRequired,
-                LockContent = state.LockContent,
-                Text = state.Text,
-                SelectedValue = state.SelectedValue,
-                DateIso = FirstNonEmpty(state.DateIso, state.Text),
-                AssetId = state.AssetId,
-                Items = state.Items
-            };
-        }
-    }
 
     private Task HandleCanvasEngineReadyAsync(TmDocumentCanvasEngineHost _)
         => SyncCanvasEngineStateAsync();
@@ -9076,7 +9147,10 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
             RememberBodySelection(selection);
         }
 
+        // The core palette reports its own close (OnClose -> CloseCommandPaletteAsync, which asks for the canvas focus) BEFORE it runs the
+        // chosen command. The command decides where focus goes (a dialog opens and takes it), so the focus request of that close is withdrawn.
         _commandPaletteOpen = false;
+        _focusDocumentOnRender = false;
         await _commandRegistry.ExecuteAsync(commandName, BuildCommandContext());
         await RefreshCommandRegistryAsync();
         await InvokeAsync(StateHasChanged);

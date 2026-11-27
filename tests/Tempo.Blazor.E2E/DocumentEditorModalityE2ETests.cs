@@ -73,14 +73,15 @@ public sealed class DocumentEditorModalityE2ETests : WasmTestBase
             await page.WaitForTimeoutAsync(300);
 
             await DocumentEditorLayoutShiftGuard.AssertWorkspaceUnchangedAsync(page, before, $"compare dialog @{viewport.Name}");
-            await AssertModalAsync(dialog, dialog.Locator("xpath=ancestor::*[contains(@class,'tm-document-dialog-scrim')][1]"), "compare dialog", viewport.Width, viewport.Height);
-            Assert.AreEqual(1, await page.Locator("[data-testid='document-floating-root'] [data-testid='document-compare-dialog']").CountAsync(),
-                "the compare dialog is a child of the floating root");
+            // Phase 5 (G6): the compare dialog is a core TmModal - the overlay is the scrim, .tm-modal-container the card (fullscreen on a phone).
+            await AssertModalAsync(dialog.Locator(".tm-modal-container"), dialog, "compare dialog", viewport.Width, viewport.Height);
+            Assert.AreEqual(0, await page.Locator("[data-testid='document-floating-root'] [data-testid='document-compare-dialog']").CountAsync(),
+                "the compare dialog is a sibling of the floating root, never its child");
             await AssertFooterButtonsAreCompactAsync(dialog, "compare dialog", viewport.Name);
 
-            var lightBackground = await BackgroundOfAsync(dialog);
+            var lightBackground = await BackgroundOfAsync(dialog.Locator("[role='dialog']"));
             await ApplyDarkThemeAsync(page);
-            Assert.AreNotEqual(lightBackground, await BackgroundOfAsync(dialog), $"compare dialog @{viewport.Name} must follow the dark theme");
+            Assert.AreNotEqual(lightBackground, await BackgroundOfAsync(dialog.Locator("[role='dialog']")), $"compare dialog @{viewport.Name} must follow the dark theme");
             await page.Context.CloseAsync();
         }
     }
@@ -100,7 +101,18 @@ public sealed class DocumentEditorModalityE2ETests : WasmTestBase
             var dialog = page.GetByTestId("document-version-dialog");
             await Assertions.Expect(dialog).ToBeVisibleAsync(new() { Timeout = 10_000 });
             await page.WaitForTimeoutAsync(300);
-            await AssertModalAsync(dialog, dialog.Locator("xpath=ancestor::*[contains(@class,'tm-document-dialog-scrim')][1]"), "version dialog", viewport.Width, viewport.Height);
+            if (viewport.Width >= 640)
+            {
+                await AssertModalAsync(dialog.Locator(".tm-modal-container"), dialog, "version dialog", viewport.Width, viewport.Height);
+            }
+            else
+            {
+                // A bottom sheet on a phone: inside the viewport, full width, resting on the bottom edge.
+                var sheet = (await dialog.Locator(".tm-modal-container").BoundingBoxAsync())!;
+                Assert.IsTrue(sheet.X >= -0.5 && sheet.X + sheet.Width <= viewport.Width + 0.5, "the version sheet fits the phone width");
+                Assert.IsTrue(sheet.Y + sheet.Height >= viewport.Height - 2, $"the version sheet rests on the bottom edge ({sheet.Y + sheet.Height} of {viewport.Height})");
+            }
+
             await AssertFooterButtonsAreCompactAsync(dialog, "version dialog", viewport.Name);
 
             await page.GetByTestId("document-version-label").FillAsync("Baseline");
@@ -157,12 +169,12 @@ public sealed class DocumentEditorModalityE2ETests : WasmTestBase
             await Assertions.Expect(json).ToBeVisibleAsync(new() { Timeout = 10_000 });
             await page.WaitForTimeoutAsync(300);
             await DocumentEditorLayoutShiftGuard.AssertWorkspaceUnchangedAsync(page, before, $"JSON debug modal @{viewport.Name}");
-            await AssertModalAsync(json.Locator(".tm-document-json-debug-modal__content"), json.Locator(".tm-document-json-debug-modal__backdrop"), "JSON debug modal", viewport.Width, viewport.Height);
-            Assert.AreEqual(1, await page.Locator("[data-testid='document-floating-root'] [data-testid='document-json-debug-modal']").CountAsync());
+            await AssertModalAsync(json.Locator(".tm-modal-container"), json, "JSON debug modal", viewport.Width, viewport.Height);
+            Assert.AreEqual(0, await page.Locator("[data-testid='document-floating-root'] [data-testid='document-json-debug-modal']").CountAsync(), "the core modal is a sibling of the floating root");
 
-            var lightBackground = await BackgroundOfAsync(json.Locator(".tm-document-json-debug-modal__content"));
+            var lightBackground = await BackgroundOfAsync(json.Locator("[role='dialog']"));
             await ApplyDarkThemeAsync(page);
-            Assert.AreNotEqual(lightBackground, await BackgroundOfAsync(json.Locator(".tm-document-json-debug-modal__content")), $"JSON modal @{viewport.Name} must follow the dark theme");
+            Assert.AreNotEqual(lightBackground, await BackgroundOfAsync(json.Locator("[role='dialog']")), $"JSON modal @{viewport.Name} must follow the dark theme");
             await page.GetByTestId("document-json-debug-close").ClickAsync();
             await Assertions.Expect(json).ToBeHiddenAsync(new() { Timeout = 5_000 });
             await DocumentEditorLayoutShiftGuard.AssertWorkspaceUnchangedAsync(page, before, $"closing the JSON debug modal @{viewport.Name}");
@@ -172,8 +184,8 @@ public sealed class DocumentEditorModalityE2ETests : WasmTestBase
             await Assertions.Expect(clipboard).ToBeVisibleAsync(new() { Timeout = 10_000 });
             await page.WaitForTimeoutAsync(300);
             await DocumentEditorLayoutShiftGuard.AssertWorkspaceUnchangedAsync(page, before, $"clipboard debug modal @{viewport.Name}");
-            await AssertModalAsync(clipboard.Locator(".tm-document-json-debug-modal__content"), clipboard.Locator(".tm-document-json-debug-modal__backdrop"), "clipboard HTML debug modal", viewport.Width, viewport.Height);
-            Assert.AreEqual(1, await page.Locator("[data-testid='document-floating-root'] [data-testid='document-clipboard-html-debug-modal']").CountAsync());
+            await AssertModalAsync(clipboard.Locator(".tm-modal-container"), clipboard, "clipboard HTML debug modal", viewport.Width, viewport.Height);
+            Assert.AreEqual(0, await page.Locator("[data-testid='document-floating-root'] [data-testid='document-clipboard-html-debug-modal']").CountAsync(), "the core modal is a sibling of the floating root");
             await page.Context.CloseAsync();
         }
     }
@@ -181,7 +193,7 @@ public sealed class DocumentEditorModalityE2ETests : WasmTestBase
     /// <summary>The footer buttons of a dialog keep their natural height (a phone dialog stretched them to ~250 px).</summary>
     private static async Task AssertFooterButtonsAreCompactAsync(ILocator dialog, string name, string viewportName)
     {
-        var buttons = dialog.Locator(".tm-document-version-dialog__actions button");
+        var buttons = dialog.Locator(".tm-modal-footer button");
         var count = await buttons.CountAsync();
         Assert.IsTrue(count > 0, $"{name} must have footer buttons");
         for (var i = 0; i < count; i++)

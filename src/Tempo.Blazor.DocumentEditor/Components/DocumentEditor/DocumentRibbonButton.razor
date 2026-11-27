@@ -7,7 +7,8 @@
    the enclosing TmToolbar (Overflow=Menu), which measures it and offers it in "More" when it does not fit; a toggle
    (Pressed) is a menuitemcheckbox there. The label is always supplied: it is the accessible name, the tooltip and the
    "More" entry, and is visible only on a Large (primary call to action) button. *@
-<TmToolbarButton Icon="@Icon"
+<TmToolbarButton @ref="_button"
+                 Icon="@Icon"
                  Text="@Text"
                  Tooltip="@(Tooltip ?? Text)"
                  Disabled="@Disabled"
@@ -27,6 +28,14 @@
                  @attributes="AdditionalAttributes" />
 
 @code {
+    private TmToolbarButton? _button;
+
+    /// <summary>
+    /// The rendered button element, or a default reference while the button is not on the bar (an OverflowOnly command, which exists
+    /// only as a "More" entry). A floating panel anchors to it; a default reference tells the host to anchor to the ribbon row.
+    /// </summary>
+    public ElementReference Element => _button?.Element ?? default;
+
     /// <summary>The ribbon command name (<c>data-command</c>); also the key of the declared priority in <see cref="DocumentEditorBuiltInToolbar"/>.</summary>
     [Parameter] public string? Command { get; set; }
 

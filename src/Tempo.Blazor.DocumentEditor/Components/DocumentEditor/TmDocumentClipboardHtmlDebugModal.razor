@@ -6,6 +6,7 @@
                       Title="@Loc["TmDocumentEditor_DebugClipboardHtmlTitle"]"
                       ModalTestId="document-clipboard-html-debug-modal"
                       CloseTestId="document-clipboard-html-debug-close"
+                      RestoreFocusTargetId="@RestoreFocusTargetId"
                       OnClose="OnClose">
     <TmDocumentDebugSection TestIdPrefix="@TestIdPrefix"
                             Title="@Loc["TmDocumentEditor_DebugClipboardRawHtml"]"
@@ -25,6 +26,12 @@
 </TmDocumentDebugModal>
 
 @code {
+    /// <summary>
+    /// The id of the element focus returns to when the dialog closes - the editor passes its canvas input, so the keyboard lands back in
+    /// the document whatever opened the dialog (the command palette is gone by then). Null keeps the core modal's own restore (the opener).
+    /// </summary>
+    [Parameter] public string? RestoreFocusTargetId { get; set; }
+
     /// <summary>Whether the modal is open.</summary>
     [Parameter] public bool IsOpen { get; set; }
 

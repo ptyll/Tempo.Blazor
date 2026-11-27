@@ -413,6 +413,7 @@ public class TmOverlayPanelTests : LocalizationTestBase
             .Add(x => x.Shift, false)
             .Add(x => x.MatchAnchorWidth, true)
             .Add(x => x.ConstrainHeight, true)
+            .Add(x => x.FlipMinRoom, 240)
             .Add(x => x.CloseOnEscape, false)
             .Add(x => x.CloseOnOutsidePointerDown, false)
             .AddChildContent("<p>panel</p>"));
@@ -428,6 +429,7 @@ public class TmOverlayPanelTests : LocalizationTestBase
         options.GetProperty("shift").Should().Be(false);
         options.GetProperty("matchAnchorWidth").Should().Be(true);
         options.GetProperty("constrainHeight").Should().Be(true);
+        options.GetProperty("flipMinRoom").Should().Be(240);
         options.GetProperty("closeOnEscape").Should().Be(false);
         options.GetProperty("closeOnOutsidePointerDown").Should().Be(false);
     }

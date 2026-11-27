@@ -1,6 +1,7 @@
 /* Tempo.Blazor.DocumentEditor component styles. */
 @import "components/_document-editor.css";
 @import "components/_document-editor-toolbar.css";
+@import "components/_document-editor-floating.css";
 @import "components/_document-editor-comments.css";
 @import "components/_document-editor-find.css";
 @import "components/_document-editor-panels.css";

@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.DocumentEditor",
+  "description": "The content control under the caret as the form-field popover edits it: kind, title, required / locked flags and the current value, without the document model. The editor maps the engine payload into it; a host or a test builds one directly.",
+  "packageId": "Tempo.Blazor.DocumentEditor",
+  "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/DocumentFieldPopoverControl.cs",
+  "documentationStatus": "generated",
+  "itemName": "DocumentFieldPopoverControl"
+}

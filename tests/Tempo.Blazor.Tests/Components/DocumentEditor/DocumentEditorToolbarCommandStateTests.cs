@@ -260,64 +260,38 @@ public class DocumentEditorToolbarCommandStateTests : LocalizationTestBase
         cut.Find("[data-testid='document-toolbar-image']").HasAttribute("disabled").Should().BeFalse();
     }
 
+    // Phase 5 (DE-1.5): the image menu and the URL dialog are ONE panel with tabs, owned by the editor (floating root). The ribbon
+    // button only asks for it: it renders no menu of its own.
     [Fact]
-    public void InsertTab_ImageSplitMenu_ShowsUrlUploadAndAssetChoices()
+    public void InsertTab_ImageButton_RaisesOnInsertImage_AndRendersNoMenuOfItsOwn()
     {
         var registry = BuildRegistry(("insertImage", enabled: true, value: null));
+        var raised = 0;
 
         var cut = Render<TmDocumentEditorToolbar>(p => p
             .Add(x => x.CommandRegistry, registry)
-            .Add(x => x.CanBrowseImageAssets, true));
+            .Add(x => x.CanUploadImages, true)
+            .Add(x => x.CanBrowseImageAssets, true)
+            .Add(x => x.OnInsertImage, () => raised++));
         cut.Find("[data-testid='document-ribbon-tab-insert']").Click();
         cut.Find("[data-testid='document-toolbar-image']").Click();
 
-        cut.Find("[data-testid='document-image-insert-url']").Should().NotBeNull();
-        cut.Find("[data-testid='document-image-insert-upload']").Should().NotBeNull();
-        cut.Find("[data-testid='document-image-insert-asset']").Should().NotBeNull();
+        raised.Should().Be(1);
+        cut.FindAll("[data-testid='document-image-insert-menu']").Should().BeEmpty();
+        cut.Find("[data-testid='document-toolbar-image']").GetAttribute("aria-haspopup").Should().Be("dialog");
     }
 
     [Fact]
-    public void InsertTab_ImageUploadChoice_DisabledWithoutProvider()
+    public void InsertTab_ImageButton_ReflectsTheEditorsPanelState_InAriaExpanded()
     {
         var registry = BuildRegistry(("insertImage", enabled: true, value: null));
 
         var cut = Render<TmDocumentEditorToolbar>(p => p
             .Add(x => x.CommandRegistry, registry)
-            .Add(x => x.CanUploadImages, false));
+            .Add(x => x.ImagePanelOpen, true));
         cut.Find("[data-testid='document-ribbon-tab-insert']").Click();
-        cut.Find("[data-testid='document-toolbar-image']").Click();
 
-        cut.Find("[data-testid='document-image-insert-upload']").HasAttribute("disabled").Should().BeTrue();
-    }
-
-    [Fact]
-    public void InsertTab_ImageAssetChoice_HiddenWithoutAssetCapability()
-    {
-        var registry = BuildRegistry(("insertImage", enabled: true, value: null));
-
-        var cut = Render<TmDocumentEditorToolbar>(p => p
-            .Add(x => x.CommandRegistry, registry)
-            .Add(x => x.CanBrowseImageAssets, false));
-        cut.Find("[data-testid='document-ribbon-tab-insert']").Click();
-        cut.Find("[data-testid='document-toolbar-image']").Click();
-
-        cut.FindAll("[data-testid='document-image-insert-asset']").Should().BeEmpty();
-    }
-
-    [Fact]
-    public void InsertTab_ImageUrlChoice_FiresUrlCallback()
-    {
-        var registry = BuildRegistry(("insertImage", enabled: true, value: null));
-        var called = false;
-
-        var cut = Render<TmDocumentEditorToolbar>(p => p
-            .Add(x => x.CommandRegistry, registry)
-            .Add(x => x.OnInsertImageUrl, () => called = true));
-        cut.Find("[data-testid='document-ribbon-tab-insert']").Click();
-        cut.Find("[data-testid='document-toolbar-image']").Click();
-        cut.Find("[data-testid='document-image-insert-url']").Click();
-
-        called.Should().BeTrue();
+        cut.Find("[data-testid='document-toolbar-image']").GetAttribute("aria-expanded").Should().Be("true");
     }
 
     // ─── 3.5 Review tab – TrackChanges registry-driven ───────────────────────

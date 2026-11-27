@@ -1,0 +1,292 @@
+@namespace Tempo.Blazor.Components.DocumentEditor
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Abstractions.Layout
+@using Tempo.Blazor.Components.Layout
+@using Tempo.Blazor.Components.Overlay
+
+@* The one frame of every floating surface of the editor (redesign 146c7e1b, phase 5, DE-1.4..DE-1.7): the ribbon popups, the
+   image / link / token panels and the field popovers. It is a THIN wrapper over the core TmOverlayPanel - no sheet, no focus
+   trap and no positioning of its own: the core panel anchors the popover (top layer, so no ancestor's overflow, container or
+   stacking context clips it), dismisses it on Escape and on an outside press WITHOUT swallowing that press (a click on the
+   header Undo still runs), and presents it as the core bottom sheet on a mobile layout (MobilePresentation=Auto). The frame adds
+   the editor's chrome: a header with the title and an X, a body, an optional footer, and the selection guard - presses and clicks
+   inside the frame never reach the editor root, so the canvas selection survives. *@
+<TmOverlayPanel Id="@ResolvedPanelId"
+                Anchor="@Anchor"
+                Placement="@Placement"
+                Align="@Align"
+                IsOpen="@IsOpen"
+                IsOpenChanged="HandleOpenChangedAsync"
+                Role="@Role"
+                AriaLabelledBy="@(_sheet ? null : ResolvedTitleId)"
+                AriaLabel="@(_sheet ? Title : null)"
+                Title="@Title"
+                SheetTitle="@Title"
+                CloseOnEscape="true"
+                CloseOnOutsidePointerDown="@CloseOnOutsidePointerDown"
+                OnDismissed="HandleDismissedAsync"
+                OnOpened="HandleOpenedAsync"
+                OnSheetDone="HandleSheetDoneAsync"
+                ConstrainHeight="true"
+                FlipMinRoom="240"
+                MobilePresentation="PanelPresentation.Auto"
+                LayoutMode="@LayoutMode"
+                ResolvedLayoutChanged="HandleResolvedLayoutChanged"
+                Class="@PanelClass"
+                data-testid="@(string.IsNullOrEmpty(PanelTestId) ? null : TestId(PanelTestId))"
+                data-floating-kind="@Kind"
+                @attributes="AdditionalAttributes">
+    <CascadingValue Name="TmDocumentFloatingSheet" Value="_sheet" IsFixed="false">
+    @* The panel root carries the kind in popover mode only: in sheet mode the core renders its own drawer and the root class is not applied.
+       The frame is the DE-owned element in BOTH modes, so the kind (and every rule keyed off the frame) is repeated here. *@
+    <div @ref="_frame"
+         class="tm-document-floating-panel__frame"
+         data-floating-kind="@Kind"
+         tabindex="-1"
+         @onclick:stopPropagation="true"
+         @onpointerdown:stopPropagation="true"
+         @onkeydown:stopPropagation="true">
+        @if (!_sheet)
+        {
+            <TmDocumentInspectorHeader Class="tm-document-floating-panel__header"
+                                       Title="@Title"
+                                       TitleId="@ResolvedTitleId"
+                                       Subtitle="@Subtitle"
+                                       Icon="@Icon"
+                                       HeadingLevel="3"
+                                       CloseTestId="@CloseTestId"
+                                       TestIdPrefix="@TestIdPrefix"
+                                       OnClose="CloseFromButtonAsync" />
+        }
+        <div class="tm-document-floating-panel__body">
+            @ChildContent
+        </div>
+        @if (Footer is not null && !(_sheet && HideFooterInSheet))
+        {
+            <footer class="tm-document-floating-panel__footer">
+                @Footer
+            </footer>
+        }
+    </div>
+    </CascadingValue>
+</TmOverlayPanel>
+
+@code {
+    private readonly string _generatedPanelId = $"tm-document-floating-{Guid.NewGuid():N}";
+    private readonly string _generatedTitleId = $"tm-document-floating-title-{Guid.NewGuid():N}";
+    private ElementReference _frame;
+    private TmLayoutMode _resolved = TmLayoutMode.Desktop;
+    private bool _wasOpen;
+    // One close per open: the core panel reports a sheet's Escape through BOTH IsOpenChanged and OnDismissed.
+    private bool _closeRaised;
+
+    /// <summary>Whether the panel is open. The host owns the state and closes the panel from <see cref="OnClose"/>.</summary>
+    [Parameter] public bool IsOpen { get; set; }
+
+    /// <summary>The element the panel anchors to (the ribbon button that opened it, the selection's field). It is exempt from the outside-press dismissal, so a click on it toggles.</summary>
+    [Parameter] public ElementReference Anchor { get; set; }
+
+    /// <summary>Preferred side of <see cref="Anchor"/>. Defaults to below.</summary>
+    [Parameter] public OverlayPlacement Placement { get; set; } = OverlayPlacement.Bottom;
+
+    /// <summary>Cross-axis alignment against <see cref="Anchor"/>. Defaults to the start edge.</summary>
+    [Parameter] public OverlayAlign Align { get; set; } = OverlayAlign.Start;
+
+    /// <summary>The visible heading and the dialog's accessible name. Rendered by the header (and by the core sheet header on a mobile layout).</summary>
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+
+    /// <summary>Optional secondary line under the title (the kind of a form field, a unit hint).</summary>
+    [Parameter] public string? Subtitle { get; set; }
+
+    /// <summary>Optional leading icon of the header.</summary>
+    [Parameter] public string? Icon { get; set; }
+
+    /// <summary>The id of the title heading (<c>aria-labelledby</c> of the dialog). Generated when omitted.</summary>
+    [Parameter] public string? TitleId { get; set; }
+
+    /// <summary>The id of the panel element; generated when omitted. Set it when the trigger declares <c>aria-controls</c>.</summary>
+    [Parameter] public string? PanelId { get; set; }
+
+    /// <summary>ARIA role of the panel. Defaults to <c>dialog</c>.</summary>
+    [Parameter] public string Role { get; set; } = "dialog";
+
+    /// <summary>Width class of the panel. Defaults to <see cref="DocumentFloatingPanelWidth.Medium"/>.</summary>
+    [Parameter] public DocumentFloatingPanelWidth Width { get; set; } = DocumentFloatingPanelWidth.Medium;
+
+    /// <summary>Stable kind marker (<c>data-floating-kind</c>) the E2E specs and the host CSS key off, for example <c>style-gallery</c>.</summary>
+    [Parameter] public string? Kind { get; set; }
+
+    /// <summary>Unprefixed test id of the panel root (resolved through <c>TestIdPrefix</c>).</summary>
+    [Parameter] public string? PanelTestId { get; set; }
+
+    /// <summary>Unprefixed test id of the close (X) button.</summary>
+    [Parameter] public string? CloseTestId { get; set; }
+
+    /// <summary>
+    /// Where focus goes when the panel closes through Escape or the X button - normally the editor's canvas, so typing continues
+    /// where the selection is. Null leaves the core panel's own restore (the anchor). A close through an outside press never
+    /// restores focus: the user clicked somewhere else.
+    /// </summary>
+    [Parameter] public ElementReference? RestoreFocusTarget { get; set; }
+
+    /// <summary>
+    /// Close on a pointer press outside the panel and its anchor. Defaults to true. The press is NOT swallowed - it still
+    /// reaches its target, so a click on the header Undo closes the panel and undoes.
+    /// </summary>
+    [Parameter] public bool CloseOnOutsidePointerDown { get; set; } = true;
+
+    /// <summary>
+    /// Move focus to the panel frame when it opens (so the keyboard lands inside and Tab walks the panel). Defaults to true; a host
+    /// that focuses a field itself from <see cref="OnOpened"/> still gets the frame first.
+    /// </summary>
+    [Parameter] public bool FocusOnOpen { get; set; } = true;
+
+    /// <summary>The layout the sheet-versus-popover choice resolves from; <see cref="TmLayoutMode.Auto"/> follows the viewport. A forced value never measures.</summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>Additional CSS class on the panel root.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>The body.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Optional footer. Immediate-apply panels (G8) have none; a panel that only needs a way out renders a single close action.</summary>
+    [Parameter] public RenderFragment? Footer { get; set; }
+
+    /// <summary>
+    /// Drop <see cref="Footer"/> while the panel is a bottom sheet. A footer that only offers a way out (a Close button) duplicates the
+    /// sheet's own Done action; a footer with real actions (Apply, Insert) keeps rendering. Defaults to false.
+    /// </summary>
+    [Parameter] public bool HideFooterInSheet { get; set; }
+
+    /// <summary>Raised when the panel asks to be closed (X, Escape, an outside press, the sheet's Done). The host sets <see cref="IsOpen"/> to false.</summary>
+    [Parameter] public EventCallback<DocumentFloatingCloseReason> OnClose { get; set; }
+
+    /// <summary>
+    /// Raised when the panel closes through Escape or the X button, so the host can give focus back to its canvas (the editor's
+    /// canvas is not an element the wrapper can focus itself). Runs after <see cref="RestoreFocusTarget"/>.
+    /// </summary>
+    [Parameter] public EventCallback OnRestoreFocus { get; set; }
+
+    /// <summary>Raised once the panel is displayed (after the frame took focus). The host moves focus into a field from here.</summary>
+    [Parameter] public EventCallback OnOpened { get; set; }
+
+    /// <summary>Additional attributes of the panel root.</summary>
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string ResolvedPanelId => string.IsNullOrWhiteSpace(PanelId) ? _generatedPanelId : PanelId!;
+
+    private string ResolvedTitleId => string.IsNullOrWhiteSpace(TitleId) ? _generatedTitleId : TitleId!;
+
+    private string PanelClass => string.Join(' ', new[]
+    {
+        "tm-document-floating-panel",
+        $"tm-document-floating-panel--{Width.ToString().ToLowerInvariant()}",
+        Class,
+    }.Where(static c => !string.IsNullOrWhiteSpace(c)));
+
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        if (IsOpen && !_wasOpen)
+        {
+            _closeRaised = false;
+        }
+
+        _wasOpen = IsOpen;
+    }
+
+    // The core panel presents a sheet when the layout it resolves is Mobile: a forced LayoutMode says so at once, Auto reports it here.
+    // With a viewport scope in the page the core resolves the layout on its FIRST render, which it does not report - read the scope as well.
+    [CascadingParameter(Name = TmLayoutScopes.Viewport)] private TmLayoutContext? Viewport { get; set; }
+
+    private bool _sheet => LayoutMode == TmLayoutMode.Mobile
+        || (LayoutMode == TmLayoutMode.Auto && (Viewport?.IsMobile ?? _resolved == TmLayoutMode.Mobile));
+
+    private void HandleResolvedLayoutChanged(TmLayoutMode mode)
+    {
+        if (mode != _resolved)
+        {
+            _resolved = mode;
+            StateHasChanged();
+        }
+    }
+
+    // A popover closes only through OnDismissed (Escape, an outside press): its IsOpenChanged echo is ignored. A sheet also closes through
+    // IsOpenChanged alone (the backdrop, the swipe), which carries no reason.
+    private async Task HandleOpenChangedAsync(bool open)
+    {
+        if (!open && _sheet)
+        {
+            await RaiseCloseOnceAsync(DocumentFloatingCloseReason.Outside);
+        }
+    }
+
+    private async Task HandleDismissedAsync(string reason)
+    {
+        var mapped = reason == "escape" ? DocumentFloatingCloseReason.Escape : DocumentFloatingCloseReason.Outside;
+        await RaiseCloseOnceAsync(mapped);
+        if (mapped == DocumentFloatingCloseReason.Escape)
+        {
+            await RestoreFocusAsync();
+        }
+    }
+
+    // The core runs OnSheetDone BEFORE it closes the sheet, so Done is the first (and only) close report of the open.
+    private async Task HandleSheetDoneAsync()
+    {
+        await RaiseCloseOnceAsync(DocumentFloatingCloseReason.Done);
+        await RestoreFocusAsync();
+    }
+
+    private async Task CloseFromButtonAsync()
+    {
+        await RaiseCloseOnceAsync(DocumentFloatingCloseReason.Button);
+        await RestoreFocusAsync();
+    }
+
+    private async Task RaiseCloseOnceAsync(DocumentFloatingCloseReason reason)
+    {
+        if (_closeRaised)
+        {
+            return;
+        }
+
+        _closeRaised = true;
+        await OnClose.InvokeAsync(reason);
+    }
+
+    private async Task HandleOpenedAsync()
+    {
+        if (FocusOnOpen)
+        {
+            try
+            {
+                await _frame.FocusAsync(preventScroll: true);
+            }
+            catch (Exception ex) when (ex is JSException or InvalidOperationException or TaskCanceledException)
+            {
+                // The panel closed (or the circuit went away) between the open report and this focus move.
+            }
+        }
+
+        await OnOpened.InvokeAsync();
+    }
+
+    private async Task RestoreFocusAsync()
+    {
+        if (RestoreFocusTarget is { } target)
+        {
+            try
+            {
+                await target.FocusAsync(preventScroll: true);
+            }
+            catch (Exception ex) when (ex is JSException or InvalidOperationException or TaskCanceledException)
+            {
+                // The target is gone (the editor was torn down); there is nothing to focus.
+            }
+        }
+
+        await OnRestoreFocus.InvokeAsync();
+    }
+}

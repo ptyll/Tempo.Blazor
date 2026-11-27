@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.DocumentEditor",
+  "description": "Width class of a TmDocumentFloatingPanel: Compact, Medium or Wide; the panel never exceeds its viewport.",
+  "packageId": "Tempo.Blazor.DocumentEditor",
+  "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/DocumentFloatingPanelEnums.cs",
+  "documentationStatus": "generated",
+  "itemName": "DocumentFloatingPanelWidth"
+}

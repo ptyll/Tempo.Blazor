@@ -7,64 +7,58 @@
 @using Tempo.Blazor.DocumentEditor.Interfaces
 @using Tempo.Blazor.DocumentEditor.Models
 @using Tempo.Blazor.DocumentEditor.Services
-@inject IJSRuntime JSRuntime
-@implements IAsyncDisposable
 
-<section @ref="_dialog"
-         class="tm-document-version-dialog tm-document-compare-dialog"
-         role="dialog"
-         aria-modal="true"
-         aria-label="@Loc["TmDocumentEditor_CompareDialogTitle"]"
+@* Redesign 146c7e1b, phase 5 (G6): the compare dialog is the core TmModal - top layer, core focus scope and a fullscreen panel on a
+   mobile layout (the diff is a tall surface). The editor renders it as a SIBLING of the floating root. The test id rides the overlay. *@
+<TmModal Show="true"
+         Title="@Loc["TmDocumentEditor_CompareDialogTitle"]"
+         Size="ModalSize.Large"
+         MobilePresentation="MobilePresentation.AutoFullscreen"
+         FooterLayout="FooterLayout.Inline"
+         Class="tm-document-compare-dialog"
+         CloseButtonAdditionalAttributes="@CloseButtonAttributes"
+         RestoreFocusTargetId="@RestoreFocusTargetId"
+         OnClose="OnClose"
          data-testid="@TestId("document-compare-dialog")">
-    <header class="tm-document-version-dialog__header">
-        <h3>@Loc["TmDocumentEditor_CompareDialogTitle"]</h3>
-        <button type="button"
-                @ref="_closeButton"
-                class="tm-document-version-dialog__icon-button"
-                aria-label="@Loc["TmDocumentEditor_Close"]"
-                @onclick="OnClose"
-                data-testid="@TestId("document-compare-close")">
-            <TmIcon Name="x" Size="IconSize.Sm" />
-        </button>
-    </header>
+    <ChildContent>
+        <p class="tm-document-compare-dialog__intro">@Loc["TmDocumentEditor_CompareEmpty"]</p>
 
-    <div class="tm-document-compare-dialog__sources">
-        @RenderSourceEditor(true)
-        @RenderSourceEditor(false)
-    </div>
-
-    @if (!string.IsNullOrWhiteSpace(_message))
-    {
-        <div class="tm-document-version-dialog__error" role="status" data-testid="@TestId("document-compare-message")">@_message</div>
-    }
-
-    @if (_isComparing)
-    {
-        <div class="tm-document-editor__state" aria-busy="true" data-testid="@TestId("document-compare-loading")">
-            @Loc["TmDocumentEditor_CompareLoading"]
+        <div class="tm-document-compare-dialog__sources">
+            @RenderSourceEditor(true)
+            @RenderSourceEditor(false)
         </div>
-    }
-    else if (_result is not null)
-    {
-        <TmDocumentDiffViewer ComparisonResult="@_result"
-                              OldTitle="@GetSourceTitle(true)"
-                              NewTitle="@GetSourceTitle(false)" />
-    }
-    else
-    {
-        <div class="tm-document-editor__state" data-testid="@TestId("document-compare-empty")">
-            @Loc["TmDocumentEditor_CompareEmpty"]
-        </div>
-    }
 
-    <footer class="tm-document-version-dialog__actions">
-        <button type="button"
-                class="tm-btn tm-btn-sm tm-btn-primary"
-                disabled="@_isComparing"
-                @onclick="RunCompareAsync"
-                data-testid="@TestId("document-compare-run")">
-            @Loc["TmDocumentEditor_CompareRun"]
-        </button>
+        @if (!string.IsNullOrWhiteSpace(_message))
+        {
+            <div class="tm-document-compare-dialog__message" role="status" data-testid="@TestId("document-compare-message")">@_message</div>
+        }
+
+        @if (_isComparing)
+        {
+            <div class="tm-document-compare-dialog__state" aria-busy="true" data-testid="@TestId("document-compare-loading")">
+                @Loc["TmDocumentEditor_CompareLoading"]
+            </div>
+        }
+        else if (_result is not null)
+        {
+            <TmDocumentDiffViewer ComparisonResult="@_result"
+                                  OldTitle="@GetSourceTitle(true)"
+                                  NewTitle="@GetSourceTitle(false)" />
+        }
+        else
+        {
+            @* The empty result is one card with a title and a framed hint - no stray blank block between the sources and the footer. *@
+            <section class="tm-document-compare-dialog__ready" aria-labelledby="@_readyTitleId" data-testid="@TestId("document-compare-empty")">
+                <h4 id="@_readyTitleId" class="tm-document-compare-dialog__ready-title">@Loc["TmDocumentEditor_CompareReadyTitle"]</h4>
+                <div class="tm-document-compare-dialog__ready-hint">
+                    <TmIcon Name="git-compare" Size="IconSize.Lg" />
+                    <span>@Loc["TmDocumentEditor_CompareReadyHint"]</span>
+                </div>
+            </section>
+        }
+    </ChildContent>
+    <Footer>
+        <button type="button" class="tm-btn tm-btn-sm tm-btn-secondary" @onclick="OnClose" data-testid="@TestId("document-compare-cancel")">@Loc["TmDocumentEditor_Cancel"]</button>
         @if (_result is not null && _result.Summary.HasChanges && OnExportRedline.HasDelegate)
         {
             <button type="button"
@@ -76,11 +70,24 @@
                 @Loc["TmDocumentEditor_CompareExportRedline"]
             </button>
         }
-        <button type="button" class="tm-btn tm-btn-sm tm-btn-ghost" @onclick="OnClose">@Loc["TmDocumentEditor_Cancel"]</button>
-    </footer>
-</section>
+        @* The primary action is the LAST one (the dialog's footer is end-aligned: Cancel, the secondary action, then the primary). *@
+        <button type="button"
+                class="tm-btn tm-btn-sm tm-btn-primary"
+                disabled="@_isComparing"
+                @onclick="RunCompareAsync"
+                data-testid="@TestId("document-compare-run")">
+            @Loc["TmDocumentEditor_CompareRun"]
+        </button>
+    </Footer>
+</TmModal>
 
 @code {
+    /// <summary>
+    /// The id of the element focus returns to when the dialog closes - the editor passes its canvas input, so the keyboard lands back in
+    /// the document whatever opened the dialog (the command palette is gone by then). Null keeps the core modal's own restore (the opener).
+    /// </summary>
+    [Parameter] public string? RestoreFocusTargetId { get; set; }
+
     private const long MaxCompareUploadSize = 20 * 1024 * 1024;
     private readonly DocumentComparisonService _localComparison = new();
     private DocumentCompareSourceKind _baseKind = DocumentCompareSourceKind.Current;
@@ -94,10 +101,12 @@
     private bool _isComparing;
     private string? _message;
     private DocumentCompareResult? _result;
-    private ElementReference _dialog;
-    private ElementReference _closeButton;
-    private DocumentEditorFocusTrapController? _focusTrap;
-    private bool _focusTrapActive;
+    private readonly string _readyTitleId = $"tm-document-compare-ready-{Guid.NewGuid():N}";
+
+    private Dictionary<string, object> CloseButtonAttributes => new()
+    {
+        ["data-testid"] = TestId("document-compare-close"),
+    };
 
     /// <summary>Current editor document snapshot.</summary>
     [Parameter] public DocumentEditorDocument? CurrentDocument { get; set; }
@@ -132,19 +141,6 @@
     /// </summary>
     [Parameter] public EventCallback<DocumentCompareResult> OnExportRedline { get; set; }
 
-    /// <inheritdoc />
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (_focusTrapActive)
-        {
-            return;
-        }
-
-        _focusTrap ??= new DocumentEditorFocusTrapController(JSRuntime);
-        await _focusTrap.ActivateAsync(_dialog, _closeButton);
-        _focusTrapActive = true;
-    }
-
     private RenderFragment RenderSourceEditor(bool isBase) => builder =>
     {
         var sequence = 0;
@@ -161,6 +157,7 @@
         builder.AddContent(sequence++, Loc[titleKey]);
         builder.CloseElement();
         builder.OpenElement(sequence++, "select");
+        builder.AddAttribute(sequence++, "class", "tm-input");
         builder.AddAttribute(sequence++, "value", kind.ToString());
         builder.AddAttribute(sequence++, "aria-label", Loc[isBase ? "TmDocumentEditor_CompareBaseSourceAria" : "TmDocumentEditor_CompareTargetSourceAria"]);
         builder.AddAttribute(sequence++, "data-testid", selectTestId);
@@ -178,6 +175,7 @@
             builder.AddContent(sequence++, Loc["TmDocumentEditor_CompareDocumentId"]);
             builder.CloseElement();
             builder.OpenElement(sequence++, "input");
+            builder.AddAttribute(sequence++, "class", "tm-input");
             builder.AddAttribute(sequence++, "value", isBase ? _baseDocumentId : _compareDocumentId);
             builder.AddAttribute(sequence++, "aria-label", Loc[isBase ? "TmDocumentEditor_CompareBaseDocumentIdAria" : "TmDocumentEditor_CompareTargetDocumentIdAria"]);
             builder.AddAttribute(sequence++, "data-testid", idTestId);
@@ -446,15 +444,5 @@
     {
         var json = System.Text.Json.JsonSerializer.Serialize(value, DocumentEditorJson.Options);
         return System.Text.Json.JsonSerializer.Deserialize<T>(json, DocumentEditorJson.Options)!;
-    }
-
-    /// <inheritdoc />
-    public async ValueTask DisposeAsync()
-    {
-        if (_focusTrap is not null)
-        {
-            await _focusTrap.ReleaseAsync(restoreFocus: true);
-            await _focusTrap.DisposeAsync();
-        }
     }
 }

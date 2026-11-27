@@ -71,6 +71,12 @@
       "type": "EventCallback<DocumentCompareResult>",
       "isRequired": false,
       "description": "Raised when the user asks to export the current comparison as a redline (tracked-changes) document. The button renders only when the callback is wired and the result has changes."
+    },
+    {
+      "name": "RestoreFocusTargetId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The id of the element focus returns to when the dialog closes - the editor passes its canvas input, so the keyboard lands back in the document whatever opened the dialog. Null keeps the core modal's own restore (the opener)."
     }
   ]
 }

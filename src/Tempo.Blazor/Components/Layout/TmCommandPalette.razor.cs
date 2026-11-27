@@ -169,6 +169,18 @@ public partial class TmCommandPalette : IAsyncDisposable
     /// <summary>Overrides the footer content; renders even without <see cref="ShowFooter"/>.</summary>
     [Parameter] public RenderFragment? FooterTemplate { get; set; }
 
+    /// <summary>
+    /// Per-item attributes splatted on the option element (a test id, a <c>data-*</c> hook). Evaluated on every render. The component's
+    /// own <c>role</c>, <c>id</c>, <c>class</c> and <c>aria-*</c> win over a clashing key. Null (the default) adds nothing.
+    /// </summary>
+    [Parameter] public Func<ICommandPaletteAction, IReadOnlyDictionary<string, object>?>? ItemAttributes { get; set; }
+
+    /// <summary>Additional attributes of the search input (a test id). The component's own <c>role</c>, <c>aria-*</c> and <c>class</c> win.</summary>
+    [Parameter] public IReadOnlyDictionary<string, object>? InputAttributes { get; set; }
+
+    /// <summary>Additional attributes of the close button (a test id).</summary>
+    [Parameter] public IReadOnlyDictionary<string, object>? CloseButtonAttributes { get; set; }
+
     /// <summary>Additional CSS class for the root element.</summary>
     [Parameter] public string? Class { get; set; }
 
@@ -432,7 +444,8 @@ public partial class TmCommandPalette : IAsyncDisposable
             ? source
             : source.Where(a => a.Title.Contains(_query, StringComparison.OrdinalIgnoreCase)
                              || (a.Description?.Contains(_query, StringComparison.OrdinalIgnoreCase) == true)
-                             || (a.Code?.Contains(_query, StringComparison.OrdinalIgnoreCase) == true));
+                             || (a.Code?.Contains(_query, StringComparison.OrdinalIgnoreCase) == true)
+                             || (a.SearchTerms?.Any(t => t.Contains(_query, StringComparison.OrdinalIgnoreCase)) == true));
 
         // Local matches always come first; the async results are appended after them (O3).
         // Grouping keeps the caller's order and only pulls a category's items together, so a list
@@ -509,6 +522,12 @@ public partial class TmCommandPalette : IAsyncDisposable
 
     private async Task ExecuteAsync(ICommandPaletteAction action)
     {
+        // A disabled action stays reachable (arrows, hover) but never runs, and the palette stays open so the reason can be read.
+        if (action.IsDisabled)
+        {
+            return;
+        }
+
         // Close through the same path as Escape/backdrop: it cancels a possibly in-flight search
         // before the host unmounts us.
         await CloseAsync();

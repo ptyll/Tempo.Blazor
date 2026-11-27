@@ -6,6 +6,10 @@ export function createHiddenInputBridge(options = {}) {
 
     const input = doc.createElement('textarea');
     input.className = 'tm-document-canvas-hidden-input';
+    if (options.id) {
+        // A stable id lets a host name the input as the restore target of a dialog (TmModal RestoreFocusTargetId).
+        input.id = options.id;
+    }
     input.setAttribute('data-testid', 'document-canvas-hidden-input');
     input.setAttribute('role', 'textbox');
     input.setAttribute('aria-multiline', 'true');

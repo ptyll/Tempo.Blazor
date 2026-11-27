@@ -12,12 +12,6 @@
   ],
   "parameters": [
     {
-      "name": "CommandRegistry",
-      "type": "DocumentEditorCommandRegistry?",
-      "isRequired": false,
-      "description": "Whether toolbar commands should be disabled for read-only mode."
-    },
-    {
       "name": "ActiveHeaderFooterScopeLabel",
       "type": "string?",
       "isRequired": false,
@@ -115,6 +109,12 @@
       "type": "bool",
       "isRequired": false,
       "description": "Whether provider-backed image uploads are available."
+    },
+    {
+      "name": "CommandRegistry",
+      "type": "DocumentEditorCommandRegistry?",
+      "isRequired": false,
+      "description": "Whether toolbar commands should be disabled for read-only mode."
     },
     {
       "name": "CurrentBlockStyle",
@@ -227,6 +227,12 @@
       "description": "Whether selected text has mixed highlight colors."
     },
     {
+      "name": "ImagePanelOpen",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the editor's image panel is open; drives the image button's aria-expanded. The editor owns the panel (one panel with the From URL / Upload / Library tabs in the floating root)."
+    },
+    {
       "name": "IsDirty",
       "type": "bool",
       "isRequired": false,
@@ -320,12 +326,6 @@
       "type": "bool",
       "isRequired": false,
       "description": "Whether the current paragraph is a numbered list item."
-    },
-    {
-      "name": "OnInsertImageUrl",
-      "type": "EventCallback",
-      "isRequired": false,
-      "description": "Raised when URL image insertion is requested from the split menu."
     },
     {
       "name": "OnAddComment",
@@ -526,6 +526,12 @@
       "description": "Raised when upload image insertion is requested from the split menu."
     },
     {
+      "name": "OnInsertImageUrl",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when URL image insertion is requested from the split menu."
+    },
+    {
       "name": "OnInsertPageBreak",
       "type": "EventCallback",
       "isRequired": false,
@@ -668,6 +674,12 @@
       "type": "EventCallback",
       "isRequired": false,
       "description": "Raised when redo is requested."
+    },
+    {
+      "name": "OnRestoreFocus",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when a ribbon panel closes through Escape or its X, so the editor gives the focus back to the canvas. An outside press never raises it."
     },
     {
       "name": "OnSave",
@@ -906,16 +918,16 @@
       "description": "Whether advanced canvas field and cross-reference controls are visible."
     },
     {
-      "name": "ShowBlocks",
-      "type": "bool",
-      "isRequired": false,
-      "description": "Whether block boundaries are shown in the WYSIWYG view."
-    },
-    {
       "name": "ShowBlockStyle",
       "type": "bool",
       "isRequired": false,
       "description": "R.4.8 — show the paragraph (block) style picker (core engine preview)."
+    },
+    {
+      "name": "ShowBlocks",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether block boundaries are shown in the WYSIWYG view."
     },
     {
       "name": "ShowDebugTools",
@@ -940,6 +952,12 @@
       "type": "bool",
       "isRequired": false,
       "description": "Whether canvas print preview actions should be displayed in the View tab."
+    },
+    {
+      "name": "ShowQuickAccess",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the Save / Undo / Redo quick-access group is rendered in the ribbon. Defaults to true (a standalone toolbar and TmDocumentEditor with ShowHeader=false); the editor passes false while its header owns those three commands, so each of them renders exactly once."
     },
     {
       "name": "ShowRuler",
@@ -1057,12 +1075,6 @@
       "type": "EventCallback<int>",
       "isRequired": false,
       "description": "Raised when zoom percent changes."
-    },
-    {
-      "name": "ShowQuickAccess",
-      "type": "bool",
-      "isRequired": false,
-      "description": "Whether the Save / Undo / Redo quick-access group is rendered in the ribbon. Defaults to true (a standalone toolbar and TmDocumentEditor with ShowHeader=false); the editor passes false while its header owns those three commands, so each of them renders exactly once."
     }
   ]
 }

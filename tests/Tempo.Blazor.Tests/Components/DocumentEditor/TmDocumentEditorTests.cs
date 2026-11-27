@@ -1659,10 +1659,8 @@ public class TmDocumentEditorTests : LocalizationTestBase
     [Fact]
     public async Task VersionCreate_SavesJsRuntimeDocumentBeforeProviderVersionSnapshot()
     {
-        JSInterop.Mode = JSRuntimeMode.Strict;
-        var focusModule = JSInterop.SetupModule("./_content/Tempo.Blazor.DocumentEditor/js/document-editor/focus-management.mjs");
-        focusModule.SetupVoid("trapFocus", _ => true).SetVoidResult();
-        focusModule.SetupVoid("releaseFocusTrap", _ => true).SetVoidResult();
+        // Phase 5: the version dialog is the core TmModal (its own focus scope) - no DocumentEditorFocusTrapController module any more.
+        JSInterop.Mode = JSRuntimeMode.Loose;
 
         var provider = new InMemoryDocumentEditorProvider();
         var seeded = provider.SeedContractDocument("doc-1");
@@ -2073,10 +2071,10 @@ public class TmDocumentEditorTests : LocalizationTestBase
         cut.WaitForAssertion(() =>
             cut.Find("[data-testid='document-command-palette']").Should().NotBeNull());
         cut.Find("[data-testid='document-command-palette-search']").Input("Bold");
-        cut.Find("[data-command='bold'] button").Click();
+        cut.Find("[role='option'][data-command='bold']").Click();
 
         HasCanvasCommand("bold").Should().BeTrue();
-        cut.FindAll("[data-testid='document-command-palette']").Should().BeEmpty();
+        cut.WaitForAssertion(() => cut.FindAll("[data-testid='document-command-palette']").Should().BeEmpty());
     }
 
     [Fact]
@@ -4506,12 +4504,10 @@ public class TmDocumentEditorTests : LocalizationTestBase
     }
 
     [Fact]
-    public async Task CompareDialog_And_DebugModals_AreChildrenOfFloatingRoot()
+    public async Task CompareDialog_And_DebugModals_AreCoreTmModals_RenderedAsSiblingsOfTheFloatingRoot()
     {
-        // Phase 1 / DE-2.0 (modality), INTERIM: the dialogs used to render in the document flow between the toolbar and
-        // the workspace and pushed the canvas down; they now live in the fixed floating root, where a scrim covers the
-        // page without shifting any layout. Phase 5 moves them onto TmModal (rendered as SIBLINGS of the floating root)
-        // and replaces this ancestry assertion with the TmModal contract.
+        // Phase 5 (G6): the version, compare and debug dialogs are core TmModal instances. They are SIBLINGS of the floating root (and
+        // of every container-type region): a container or a fixed ancestor is the containing block of fixed descendants.
         SetDocumentCanvasRuntimeDebugSnapshotJson("""{"runtime":"canvas","state":"ready"}""");
         var provider = new InMemoryDocumentEditorProvider();
         var seeded = provider.SeedContractDocument("doc-1");
@@ -4523,19 +4519,25 @@ public class TmDocumentEditorTests : LocalizationTestBase
             .Add(p => p.ShowDebugTools, true));
         await MarkCanvasReadyAsync(cut);
 
+        void AssertCoreModalOutsideTheFloatingRoot(string testId)
+        {
+            var overlay = cut.Find($"[data-testid='{testId}']");
+            overlay.ClassList.Should().Contain("tm-modal-overlay", "the dialog is the core TmModal");
+            overlay.QuerySelector("[role='dialog'][aria-modal='true']").Should().NotBeNull();
+            overlay.Closest("[data-testid='document-floating-root']").Should().BeNull("a modal is a sibling of the floating root");
+            overlay.Closest(".tm-document-editor__main").Should().BeNull("a modal is a sibling of every container region");
+        }
+
         cut.Find("[data-testid='document-ribbon-tab-view']").Click();
         FindDebugTool(cut, "document-view-json").Click();
-        cut.WaitForAssertion(() => cut.Find("[data-testid='document-json-debug-modal']").Should().NotBeNull());
-        cut.Find("[data-testid='document-floating-root'] [data-testid='document-json-debug-modal']").Should().NotBeNull();
+        cut.WaitForAssertion(() => AssertCoreModalOutsideTheFloatingRoot("document-json-debug-modal"));
 
         FindDebugTool(cut, "document-view-clipboard-html").Click();
-        cut.WaitForAssertion(() => cut.Find("[data-testid='document-clipboard-html-debug-modal']").Should().NotBeNull());
-        cut.Find("[data-testid='document-floating-root'] [data-testid='document-clipboard-html-debug-modal']").Should().NotBeNull();
+        cut.WaitForAssertion(() => AssertCoreModalOutsideTheFloatingRoot("document-clipboard-html-debug-modal"));
 
         cut.Find("[data-testid='document-ribbon-tab-review']").Click();
         cut.Find("[data-testid='document-compare-open']").Click();
-        cut.WaitForAssertion(() => cut.Find("[data-testid='document-compare-dialog']").Should().NotBeNull());
-        cut.Find("[data-testid='document-floating-root'] [data-testid='document-compare-dialog']").Should().NotBeNull();
+        cut.WaitForAssertion(() => AssertCoreModalOutsideTheFloatingRoot("document-compare-dialog"));
     }
 
     [Fact]
@@ -4731,6 +4733,240 @@ public class TmDocumentEditorTests : LocalizationTestBase
             && invocation.Arguments.Count >= 3
             && string.Equals(invocation.Arguments[1]?.ToString(), commandId, StringComparison.Ordinal)
             && invocation.Arguments[2]?.ToString()?.Contains(expected, StringComparison.Ordinal) == true);
+
+    // ─── Phase 5 (DE-1.5 / DE-1.6): the image panel, the token panel and the field popover live in the floating root ───
+
+    private async Task<IRenderedComponent<TmDocumentEditor>> RenderEditorAsync(Action<ComponentParameterCollectionBuilder<TmDocumentEditor>>? configure = null)
+    {
+        var provider = new InMemoryDocumentEditorProvider();
+        provider.SeedContractDocument("doc-1");
+        var cut = RenderDocumentEditor(parameters =>
+        {
+            parameters.Add(p => p.DocumentId, "doc-1").Add(p => p.Provider, provider);
+            configure?.Invoke(parameters);
+        });
+        await MarkCanvasReadyAsync(cut);
+        return cut;
+    }
+
+    [Fact]
+    public async Task ImagePanel_IsOnePanelWithTabs_RenderedInTheFloatingRoot_NotInThePageSurface()
+    {
+        var cut = await RenderEditorAsync(p => p.Add(x => x.ImageProvider, new InMemoryDocumentImageProvider(new DocumentImageProviderOptions())));
+        cut.Find("[data-testid='document-ribbon-tab-insert']").Click();
+
+        cut.Find("[data-testid='document-toolbar-image']").Click();
+
+        var panel = cut.Find("[data-testid='document-canvas-image-dialog']");
+        panel.Closest("[data-testid='document-floating-root']").Should().NotBeNull();
+        panel.Closest(".tm-document-editor__page-surface").Should().BeNull("a panel inside the page surface would be clipped by it");
+        cut.FindAll("[data-testid='document-image-insert-menu'] [role='tab']").Select(t => t.GetAttribute("data-testid"))
+            .Should().Equal("document-image-insert-url", "document-image-insert-upload");
+        cut.FindAll("[data-testid='document-image-insert-menu']").Should().ContainSingle("the old ribbon menu and the dialog are one panel");
+    }
+
+    [Fact]
+    public async Task ImagePanel_UploadTabNeedsAnImageProvider_AndLibraryNeedsAssets()
+    {
+        var plain = await RenderEditorAsync();
+        plain.Find("[data-testid='document-ribbon-tab-insert']").Click();
+        plain.Find("[data-testid='document-toolbar-image']").Click();
+        plain.FindAll("[data-testid='document-image-insert-menu'] [role='tab']").Select(t => t.GetAttribute("data-testid")).Should().Equal("document-image-insert-url");
+
+        var full = await RenderEditorAsync(p => p
+            .Add(x => x.ImageProvider, new InMemoryDocumentImageProvider(new DocumentImageProviderOptions()))
+            .Add(x => x.ImageAssetOptions, [new DocumentImageAsset { Id = "a1", FileName = "logo.png", Url = "https://example.test/logo.png" }]));
+        full.Find("[data-testid='document-ribbon-tab-insert']").Click();
+        full.Find("[data-testid='document-toolbar-image']").Click();
+        full.FindAll("[data-testid='document-image-insert-menu'] [role='tab']").Select(t => t.GetAttribute("data-testid")).Should().Equal("document-image-insert-url", "document-image-insert-upload", "document-image-insert-asset");
+    }
+
+    [Fact]
+    public async Task ImagePanel_InsertIsDisabledWithoutAUrl_AndInsertsThroughTheEngine()
+    {
+        var cut = await RenderEditorAsync();
+        cut.Find("[data-testid='document-ribbon-tab-insert']").Click();
+        cut.Find("[data-testid='document-toolbar-image']").Click();
+
+        cut.Find("[data-testid='document-canvas-insert-image-url']").HasAttribute("disabled").Should().BeTrue();
+
+        cut.Find("[data-testid='document-canvas-image-url-input']").Input("https://example.test/a.png");
+        cut.Find("[data-testid='document-canvas-insert-image-url']").HasAttribute("disabled").Should().BeFalse();
+        cut.Find("[data-testid='document-canvas-insert-image-url']").Click();
+
+        cut.WaitForAssertion(() => HasCanvasCommandArgument("insertImage", "https://example.test/a.png").Should().BeTrue());
+        cut.FindAll("[data-testid='document-canvas-image-dialog']").Should().BeEmpty("the panel closes after the insert");
+    }
+
+    [Fact]
+    public async Task ImagePanel_ArrowKeysSwitchTabs_AndALibraryAssetInsertsAtOnce()
+    {
+        var cut = await RenderEditorAsync(p => p
+            .Add(x => x.ImageProvider, new InMemoryDocumentImageProvider(new DocumentImageProviderOptions()))
+            .Add(x => x.ImageAssetOptions, [new DocumentImageAsset { Id = "a1", FileName = "logo.png", Url = "https://example.test/logo.png" }]));
+        cut.Find("[data-testid='document-ribbon-tab-insert']").Click();
+        cut.Find("[data-testid='document-toolbar-image']").Click();
+
+        cut.Find("[data-testid='document-image-insert-url']").KeyDown(new KeyboardEventArgs { Key = "ArrowRight" });
+        cut.Find("[data-testid='document-image-insert-upload']").GetAttribute("aria-selected").Should().Be("true");
+        cut.Find("[data-testid='document-canvas-image-upload']").Should().NotBeNull("InputFile lives inside the panel's tab body");
+
+        cut.Find("[data-testid='document-image-insert-upload']").KeyDown(new KeyboardEventArgs { Key = "End" });
+        cut.Find("[data-testid='document-image-insert-asset']").GetAttribute("aria-selected").Should().Be("true");
+        cut.Find("[data-testid='document-image-asset-a1']").Click();
+
+        cut.WaitForAssertion(() => HasCanvasCommandArgument("insertImage", "\"assetId\":\"a1\"").Should().BeTrue());
+    }
+
+    [Fact]
+    public async Task ImagePanel_Cancel_AndTheRibbonButtonToggle_Close()
+    {
+        var cut = await RenderEditorAsync();
+        cut.Find("[data-testid='document-ribbon-tab-insert']").Click();
+        cut.Find("[data-testid='document-toolbar-image']").Click();
+        cut.Find("[data-testid='document-toolbar-image']").GetAttribute("aria-expanded").Should().Be("true");
+
+        cut.Find("[data-testid='document-toolbar-image']").Click();
+        cut.FindAll("[data-testid='document-canvas-image-dialog']").Should().BeEmpty("a second press on the trigger toggles");
+
+        cut.Find("[data-testid='document-toolbar-image']").Click();
+        cut.Find("[data-testid='document-canvas-image-cancel']").Click();
+        cut.FindAll("[data-testid='document-canvas-image-dialog']").Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task TokenPanel_HasAHeaderWithClose_AMagnifierFilter_AndLivesInTheFloatingRoot()
+    {
+        var cut = await RenderEditorAsync(p => p.Add(x => x.TokenProvider, new StaticTokenProvider(
+            new StaticToken("user.email", "User e-mail", "Recipient address", "User"))));
+        cut.Find("[data-testid='document-ribbon-tab-insert']").Click();
+        cut.Find("[data-testid='document-insert-menu']").Click();
+
+        var panel = cut.WaitForElement("[data-testid='document-token-insert-panel']");
+        panel.Closest("[data-testid='document-floating-root']").Should().NotBeNull();
+        panel.QuerySelector(".tm-document-floating-panel__header")!.TextContent.Should().Contain("Insert token");
+        panel.QuerySelector(".tm-document-token-panel__filter svg").Should().NotBeNull("the filter has a magnifier icon");
+        panel.QuerySelector("[data-testid='document-token-insert-filter']")!.GetAttribute("aria-label").Should().NotBeNullOrWhiteSpace();
+
+        cut.Find("[data-testid='document-token-insert-close']").Click();
+        cut.FindAll("[data-testid='document-token-insert-panel']").Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task TokenPanel_ClickingATokenInsertsAtOnce_AndClosesThePanel()
+    {
+        var cut = await RenderEditorAsync(p => p.Add(x => x.TokenProvider, new StaticTokenProvider(
+            new StaticToken("user.email", "User e-mail", "Recipient address", "User"))));
+        cut.Find("[data-testid='document-ribbon-tab-insert']").Click();
+        cut.Find("[data-testid='document-insert-menu']").Click();
+        cut.WaitForElement("[data-testid='document-token-insert-panel']");
+
+        var menu = cut.FindComponent<TmDocumentTokenMenu>();
+        await cut.InvokeAsync(() => menu.Instance.OnTokenSelected.InvokeAsync(new Tempo.Blazor.Components.Activity.TokenItem { Key = "user.email", DisplayName = "User e-mail" }));
+
+        HasCanvasCommand("insertToken").Should().BeTrue();
+        cut.FindAll("[data-testid='document-token-insert-panel']").Should().BeEmpty();
+    }
+
+    // ─── Phase 5 review fixes ────────────────────────────────────────────────
+
+    private static Task InvokePrivateAsync(object target, string method, params object[] args)
+    {
+        var info = target.GetType().GetMethod(method, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+        return (Task)info.Invoke(target, args)!;
+    }
+
+    [Fact]
+    public async Task ImagePanel_AStaleCloseReport_FromAnEarlierOpen_DoesNotCloseTheReopenedPanel()
+    {
+        var cut = await RenderEditorAsync();
+        cut.Find("[data-testid='document-ribbon-tab-insert']").Click();
+        cut.Find("[data-testid='document-toolbar-image']").Click();
+        cut.Find("[data-testid='document-canvas-image-cancel']").Click();
+        cut.Find("[data-testid='document-toolbar-image']").Click();
+        cut.FindAll("[data-testid='document-canvas-image-dialog']").Should().ContainSingle();
+
+        // The first open was numbered 1, this one is 2: a report from open 1 arrives late (the overlay reports an outside press asynchronously).
+        await cut.InvokeAsync(() => InvokePrivateAsync(cut.Instance, "HandleImagePanelClosedAsync", 1, DocumentFloatingCloseReason.Outside));
+        cut.FindAll("[data-testid='document-canvas-image-dialog']").Should().ContainSingle("a stale report is ignored");
+
+        await cut.InvokeAsync(() => InvokePrivateAsync(cut.Instance, "HandleImagePanelClosedAsync", 2, DocumentFloatingCloseReason.Outside));
+        cut.Render();
+        cut.FindAll("[data-testid='document-canvas-image-dialog']").Should().BeEmpty("the current report still closes it");
+    }
+
+    [Fact]
+    public async Task TokenPanel_AStaleCloseReport_FromAnEarlierOpen_DoesNotCloseTheReopenedPanel()
+    {
+        var cut = await RenderEditorAsync(p => p.Add(x => x.TokenProvider, new StaticTokenProvider(new StaticToken("user.email", "User e-mail", "Recipient address", "User"))));
+        cut.Find("[data-testid='document-ribbon-tab-insert']").Click();
+        cut.Find("[data-testid='document-insert-menu']").Click();
+        cut.WaitForElement("[data-testid='document-token-insert-panel']");
+        cut.Find("[data-testid='document-token-insert-close']").Click();
+        cut.FindAll("[data-testid='document-token-insert-panel']").Should().BeEmpty();
+        cut.Find("[data-testid='document-insert-menu']").Click();
+        cut.WaitForElement("[data-testid='document-token-insert-panel']");
+
+        await cut.InvokeAsync(() => InvokePrivateAsync(cut.Instance, "HandleTokenPanelClosedAsync", 1, DocumentFloatingCloseReason.Outside));
+        cut.FindAll("[data-testid='document-token-insert-panel']").Should().ContainSingle("a stale report is ignored");
+    }
+
+    [Fact]
+    public async Task ImagePanel_SheetDone_InsertsANonEmptyUrl_AndOtherwiseJustCloses()
+    {
+        var cut = await RenderEditorAsync(p => p.Add(x => x.LayoutMode, Tempo.Blazor.Abstractions.Layout.TmLayoutMode.Mobile));
+
+        await cut.InvokeAsync(() => InvokePrivateAsync(cut.Instance, "OpenImagePanelAsync", DocumentImagePanelTab.Url));
+        cut.Find(".tm-overlay-panel-sheet[role='dialog']").Should().NotBeNull("a forced mobile layout presents the panel as the core sheet");
+        cut.Find("[data-testid='document-canvas-image-url-input']").Input("https://example.test/done.png");
+        cut.Find(".tm-overlay-panel-sheet__done").Click();
+
+        cut.WaitForAssertion(() => HasCanvasCommandArgument("insertImage", "https://example.test/done.png").Should().BeTrue());
+        cut.FindAll("[data-testid='document-canvas-image-dialog']").Should().BeEmpty();
+
+        var before = CountCanvasCommand("insertImage");
+        await cut.InvokeAsync(() => InvokePrivateAsync(cut.Instance, "OpenImagePanelAsync", DocumentImagePanelTab.Url));
+        cut.Find(".tm-overlay-panel-sheet__done").Click();
+        CountCanvasCommand("insertImage").Should().Be(before, "an empty URL is a cancel");
+        cut.FindAll("[data-testid='document-canvas-image-dialog']").Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ForcedMobileLayoutMode_PresentsTheDialogsAsMobileSurfaces_NotTheDesktopOnes()
+    {
+        SetDocumentCanvasRuntimeDebugSnapshotJson("""{"runtime":"canvas","state":"ready"}""");
+        var cut = await RenderEditorAsync(p => p
+            .Add(x => x.LayoutMode, Tempo.Blazor.Abstractions.Layout.TmLayoutMode.Mobile)
+            .Add(x => x.ShowDebugTools, true));
+
+        var field = cut.Instance.GetType().GetField("_jsonDebugModalOpen", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+        await cut.InvokeAsync(() =>
+        {
+            field.SetValue(cut.Instance, true);
+            return Task.CompletedTask;
+        });
+        cut.Render();
+
+        cut.WaitForAssertion(() =>
+        {
+            var overlay = cut.Find("[data-testid='document-json-debug-modal']");
+            overlay.ClassList.Should().Contain("tm-modal--fullscreen-presentation", "a forced mobile LayoutMode reaches the viewport-level dialogs through the viewport scope");
+            overlay.GetAttribute("data-layout").Should().Be("mobile");
+        });
+    }
+
+    [Fact]
+    public async Task Dialogs_ReceiveTheCanvasInputIdAsTheirRestoreFocusTarget()
+    {
+        var cut = await RenderEditorAsync();
+        cut.Find("[data-testid='document-ribbon-tab-review']").Click();
+        cut.Find("[data-testid='document-compare-open']").Click();
+
+        cut.WaitForElement("[data-testid='document-compare-dialog']");
+        var id = cut.FindComponent<Tempo.Blazor.Components.Feedback.TmModal>().Instance.RestoreFocusTargetId;
+        id.Should().StartWith("tm-document-canvas-input-", "closing the dialog puts the keyboard back in the document");
+        id.Should().Be(cut.FindComponent<TmDocumentCanvasEngineHost>().Instance.InputId);
+    }
 
     private int CountCanvasCommand(string commandId) =>
         SetupDocumentCanvasModule().Invocations.Count(invocation =>

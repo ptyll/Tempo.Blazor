@@ -34,6 +34,12 @@
       "type": "bool",
       "isRequired": false,
       "description": "Whether major versions require a non-empty description."
+    },
+    {
+      "name": "RestoreFocusTargetId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The id of the element focus returns to when the dialog closes - the editor passes its canvas input, so the keyboard lands back in the document whatever opened the dialog. Null keeps the core modal's own restore (the opener)."
     }
   ]
 }

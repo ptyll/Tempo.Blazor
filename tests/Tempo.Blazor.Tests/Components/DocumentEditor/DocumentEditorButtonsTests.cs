@@ -50,7 +50,7 @@ public sealed class DocumentEditorButtonsTests : LocalizationTestBase
 
         var compare = Render<TmDocumentCompareDialog>(parameters => parameters
             .Add(p => p.CurrentDocument, DocumentEditorDocument.Empty()));
-        compare.FindAll(".tm-document-version-dialog__actions button")
+        compare.FindAll(".tm-modal-footer button")
             .Where(button => button.GetAttribute("data-testid") != "document-compare-run")
             .Should().OnlyContain(button => button.ClassList.Contains("tm-btn") && !button.ClassList.Contains("tm-btn-primary"));
     }
@@ -97,7 +97,7 @@ public sealed class DocumentEditorButtonsTests : LocalizationTestBase
         var root = FindRepositoryRoot();
         var toolbar = File.ReadAllText(Path.Combine(root, "src", "Tempo.Blazor.DocumentEditor", "Components", "DocumentEditor", "TmDocumentEditorToolbar.razor"));
         var start = toolbar.IndexOf("document-link-dialog", StringComparison.Ordinal);
-        var end = toolbar.IndexOf("</section>", start, StringComparison.Ordinal);
+        var end = toolbar.IndexOf("</TmDocumentFloatingPanel>", start, StringComparison.Ordinal);
         var dialog = toolbar[start..end];
 
         System.Text.RegularExpressions.Regex.Matches(dialog, "<button ").Count.Should().BeGreaterThan(0);

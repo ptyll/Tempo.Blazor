@@ -1,22 +1,68 @@
 @namespace Tempo.Blazor.Components.DocumentEditor
 @inherits Tempo.Blazor.Components.TmComponentBase
+@using System.Text.Json
 
+@* The JSON block is a labelled, focusable region: a long block scrolls, and a keyboard user must be able to reach it to scroll it
+   (WCAG 2.1.1) - it is one tab stop with a visible focus ring, named by the section heading. *@
 @{
     var isEmpty = string.IsNullOrWhiteSpace(Content);
 }
-<section class="tm-document-json-debug-modal__section"
+<section class="tm-document-debug-modal__section tm-document-json-debug-modal__section"
          data-testid="@TestId(SectionTestId)">
-    <h3 class="tm-document-json-debug-modal__section-title">@Title</h3>
-    <pre class="tm-document-json-debug-modal__json"
+    <h4 id="@_titleId" class="tm-document-debug-modal__section-title tm-document-json-debug-modal__section-title">@Title</h4>
+    <pre class="tm-document-debug-modal__json tm-document-json-debug-modal__json"
          hidden="@isEmpty"
-         data-testid="@TestId(ContentTestId)">@Content</pre>
+         tabindex="@(isEmpty ? null : "0")"
+         role="region"
+         aria-labelledby="@_titleId"
+         data-testid="@TestId(ContentTestId)">@_display</pre>
     @if (isEmpty)
     {
-        <p class="tm-document-json-debug-modal__empty">@Loc["TmDocumentEditor_DebugNoData"]</p>
+        <p class="tm-document-debug-modal__empty tm-document-json-debug-modal__empty">@Loc["TmDocumentEditor_DebugNoData"]</p>
     }
 </section>
 
 @code {
+    // Display only (the text is HTML-encoded by Blazor), so the relaxed encoder keeps "<", "&" and non-ASCII letters readable.
+    private static readonly JsonSerializerOptions IndentedOptions = new()
+    {
+        WriteIndented = true,
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+    };
+
+    private readonly string _titleId = $"tm-document-debug-title-{Guid.NewGuid():N}";
+    private string? _displayFor;
+    private string? _display;
+
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        // Valid JSON is shown indented (the runtime state arrives as one long line); anything else is shown as received.
+        if (!ReferenceEquals(_displayFor, Content) || _display is null && Content is not null)
+        {
+            _displayFor = Content;
+            _display = Indent(Content);
+        }
+    }
+
+    private static string? Indent(string? content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return content;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(content);
+            return JsonSerializer.Serialize(document.RootElement, IndentedOptions);
+        }
+        catch (JsonException)
+        {
+            return content;
+        }
+    }
+
     /// <summary>Section heading.</summary>
     [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
 

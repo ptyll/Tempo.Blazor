@@ -145,7 +145,7 @@ public sealed class DocumentEditorCanvasCommandRegistryE2ETests : WasmTestBase
         await page.Keyboard.PressAsync("Control+Shift+P");
         await Assertions.Expect(page.GetByTestId("document-command-palette")).ToBeVisibleAsync(new() { Timeout = 10_000 });
         await page.GetByTestId("document-command-palette-search").FillAsync("tableProperties");
-        var tablePropertiesItem = page.Locator("[data-testid='document-command-palette-item'][data-command='tableProperties'] button");
+        var tablePropertiesItem = page.Locator("[data-testid='document-command-palette-item'][data-command='tableProperties']");
         await Assertions.Expect(tablePropertiesItem).ToBeEnabledAsync(new() { Timeout = 10_000 });
         await tablePropertiesItem.ClickAsync();
 
@@ -186,7 +186,7 @@ public sealed class DocumentEditorCanvasCommandRegistryE2ETests : WasmTestBase
         await page.Keyboard.PressAsync("Control+Shift+P");
         await Assertions.Expect(page.GetByTestId("document-command-palette")).ToBeVisibleAsync(new() { Timeout = 10_000 });
         await page.GetByTestId("document-command-palette-search").FillAsync("replaceImage");
-        var replaceImageItem = page.Locator("[data-testid='document-command-palette-item'][data-command='replaceImage'] button");
+        var replaceImageItem = page.Locator("[data-testid='document-command-palette-item'][data-command='replaceImage']");
         await Assertions.Expect(replaceImageItem).ToBeEnabledAsync(new() { Timeout = 10_000 });
         await replaceImageItem.ClickAsync();
 

@@ -1,71 +1,72 @@
 @namespace Tempo.Blazor.Components.DocumentEditor
 @inherits Tempo.Blazor.Components.TmComponentBase
-@using Microsoft.JSInterop
 @using Tempo.Blazor.DocumentEditor.Models
-@inject IJSRuntime JSRuntime
-@implements IAsyncDisposable
 
-<section @ref="_dialog"
-         class="tm-document-version-dialog"
-         role="dialog"
-         aria-modal="true"
-         aria-label="@Loc["TmDocumentEditor_CreateVersion"]"
+@* Redesign 146c7e1b, phase 5 (G6): the version dialog is the core TmModal - top layer, the core focus scope (trap, Escape,
+   focus return) and, on a mobile layout, a bottom sheet. The editor renders it as a SIBLING of the floating root (a fixed or
+   container ancestor would be the modal's containing block). The test id rides the overlay, so it is the scrim; the card is
+   .tm-modal-container. *@
+<TmModal Show="true"
+         Title="@Loc["TmDocumentEditor_CreateVersion"]"
+         Size="ModalSize.Small"
+         MobilePresentation="MobilePresentation.Auto"
+         FooterLayout="FooterLayout.Inline"
+         InitialFocusTargetId="@_kindSelectId"
+         CloseButtonAdditionalAttributes="@CloseButtonAttributes"
+         Class="tm-document-version-dialog"
+         RestoreFocusTargetId="@RestoreFocusTargetId"
+         OnClose="OnCancel"
          data-testid="@TestId("document-version-dialog")">
-    <header class="tm-document-version-dialog__header">
-        <h3>@Loc["TmDocumentEditor_CreateVersion"]</h3>
-        <button type="button"
-                class="tm-document-version-dialog__icon-button"
-                title="@Loc["TmDocumentEditor_CloseVersionDialog"]"
-                aria-label="@Loc["TmDocumentEditor_CloseVersionDialog"]"
-                @onclick="OnCancel"
-                data-testid="@TestId("document-version-dialog-close")">
-            <TmIcon Name="x" Size="IconSize.Sm" />
-        </button>
-    </header>
+    <ChildContent>
+        <div class="tm-document-version-dialog__form">
+            <label class="tm-document-version-dialog__field">
+                <span>@Loc["TmDocumentEditor_VersionKind"]</span>
+                <select id="@_kindSelectId"
+                        class="tm-input"
+                        value="@_kind"
+                        @onchange="ChangeKind"
+                        data-testid="@TestId("document-version-kind")">
+                    <option value="@DocumentVersionKind.Minor">@Loc["TmDocumentEditor_VersionKindMinor"]</option>
+                    <option value="@DocumentVersionKind.Major">@Loc["TmDocumentEditor_VersionKindMajor"]</option>
+                </select>
+            </label>
 
-    <label>
-        <span>@Loc["TmDocumentEditor_VersionKind"]</span>
-        <select @ref="_kindSelect"
-                value="@_kind"
-                @onchange="ChangeKind"
-                data-testid="@TestId("document-version-kind")">
-            <option value="@DocumentVersionKind.Minor">@Loc["TmDocumentEditor_VersionKindMinor"]</option>
-            <option value="@DocumentVersionKind.Major">@Loc["TmDocumentEditor_VersionKindMajor"]</option>
-        </select>
-    </label>
+            <label class="tm-document-version-dialog__field">
+                <span>@Loc["TmDocumentEditor_VersionLabel"]</span>
+                <input class="tm-input" value="@_label" @oninput="args => _label = args.Value?.ToString()" data-testid="@TestId("document-version-label")" />
+            </label>
 
-    <label>
-        <span>@Loc["TmDocumentEditor_VersionLabel"]</span>
-        <input class="tm-input" value="@_label" @oninput="args => _label = args.Value?.ToString()" data-testid="@TestId("document-version-label")" />
-    </label>
+            <label class="tm-document-version-dialog__field">
+                <span>@Loc["TmDocumentEditor_VersionDescription"]</span>
+                <textarea class="tm-input" value="@_description" @oninput="args => _description = args.Value?.ToString()" data-testid="@TestId("document-version-description")"></textarea>
+            </label>
 
-    <label>
-        <span>@Loc["TmDocumentEditor_VersionDescription"]</span>
-        <textarea value="@_description" @oninput="args => _description = args.Value?.ToString()" data-testid="@TestId("document-version-description")"></textarea>
-    </label>
-
-    @if (!string.IsNullOrWhiteSpace(_validationMessage))
-    {
-        <div class="tm-document-version-dialog__error" role="alert" data-testid="@TestId("document-version-error")">@_validationMessage</div>
-    }
-
-    <footer class="tm-document-version-dialog__actions">
+            @if (!string.IsNullOrWhiteSpace(_validationMessage))
+            {
+                <div class="tm-document-version-dialog__error" role="alert" data-testid="@TestId("document-version-error")">@_validationMessage</div>
+            }
+        </div>
+    </ChildContent>
+    <Footer>
         <button type="button" class="tm-btn tm-btn-sm tm-btn-ghost" @onclick="OnCancel" data-testid="@TestId("document-version-cancel")">@Loc["TmDocumentEditor_Cancel"]</button>
         <button type="button" class="tm-btn tm-btn-sm tm-btn-primary" @onclick="SubmitAsync" disabled="@IsBusy" data-testid="@TestId("document-version-create-submit")">
             @Loc["TmDocumentEditor_CreateVersion"]
         </button>
-    </footer>
-</section>
+    </Footer>
+</TmModal>
 
 @code {
+    /// <summary>
+    /// The id of the element focus returns to when the dialog closes - the editor passes its canvas input, so the keyboard lands back in
+    /// the document whatever opened the dialog (the command palette is gone by then). Null keeps the core modal's own restore (the opener).
+    /// </summary>
+    [Parameter] public string? RestoreFocusTargetId { get; set; }
+
+    private readonly string _kindSelectId = $"tm-document-version-kind-{Guid.NewGuid():N}";
     private DocumentVersionKind _kind = DocumentVersionKind.Minor;
     private string? _label;
     private string? _description;
     private string? _validationMessage;
-    private ElementReference _dialog;
-    private ElementReference _kindSelect;
-    private DocumentEditorFocusTrapController? _focusTrap;
-    private bool _focusTrapActive;
 
     /// <summary>Whether create action is currently running.</summary>
     [Parameter] public bool IsBusy { get; set; }
@@ -79,18 +80,10 @@
     /// <summary>Raised when the dialog should close without creating a version.</summary>
     [Parameter] public EventCallback OnCancel { get; set; }
 
-    /// <inheritdoc />
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    private Dictionary<string, object> CloseButtonAttributes => new()
     {
-        if (_focusTrapActive)
-        {
-            return;
-        }
-
-        _focusTrap ??= new DocumentEditorFocusTrapController(JSRuntime);
-        await _focusTrap.ActivateAsync(_dialog, _kindSelect);
-        _focusTrapActive = true;
-    }
+        ["data-testid"] = TestId("document-version-dialog-close"),
+    };
 
     private void ChangeKind(ChangeEventArgs args)
     {
@@ -117,15 +110,5 @@
             Label = string.IsNullOrWhiteSpace(_label) ? null : _label.Trim(),
             Description = string.IsNullOrWhiteSpace(_description) ? null : _description.Trim()
         });
-    }
-
-    /// <inheritdoc />
-    public async ValueTask DisposeAsync()
-    {
-        if (_focusTrap is not null)
-        {
-            await _focusTrap.ReleaseAsync(restoreFocus: true);
-            await _focusTrap.DisposeAsync();
-        }
     }
 }

@@ -24,18 +24,6 @@
         data-active-ribbon-tab="@ActiveRibbonTabDataValue"
         data-track-changes-state="@TrackChangesState"
         @onkeydown="HandleToolbarKeyDown">
-    @if (HasToolbarFloatingUi)
-    {
-        <button type="button"
-                class="tm-document-editor__toolbar-floating-backdrop"
-                aria-label="@Loc["TmDocumentEditor_Close"]"
-                data-testid="@TestId("document-toolbar-floating-backdrop")"
-                @onclick="CloseToolbarFloatingUi"
-                @oncontextmenu:preventDefault="true"
-                @oncontextmenu="CloseToolbarFloatingUi">
-        </button>
-    }
-
     <div class="tm-document-editor__ribbon-tabs" role="tablist" aria-label="@Loc["TmDocumentEditor_ToolbarTabsLabel"]">
         <button type="button"
                 @ref="_homeTab"
@@ -172,6 +160,7 @@
 
     <div class="tm-document-editor__ribbon-commands-wrapper">
     <div id="@RibbonPanelId"
+         @ref="_ribbonPanel"
          class="tm-document-editor__ribbon-groups"
          role="tabpanel"
          aria-labelledby="@GetRibbonTabId(_activeRibbonTab)"
@@ -253,17 +242,17 @@
                     </TmToolbarItem>
                     @if (ShowStyleManagement)
                     {
-                        @* OverflowOnly (a More entry, never on the bar): its popup is NOT inside the toolbar (it renders under the ribbon row, below), so the
-                           gallery opens the same way from the bar and from More. *@
+                        @* OverflowOnly (a More entry, never on the bar): the gallery is a floating panel rendered after the toolbar (see
+                           FloatingPanels), anchored to the ribbon row, so it opens the same way whatever the width. *@
                         <DocumentRibbonButton Icon="gallery-horizontal-end"
                                               Text="@Loc["TmDocumentEditor_StyleGallery"]"
                                               Disabled="@ReadOnly"
                                               Tooltip="@(GetEditingCommandTitle(Loc["TmDocumentEditor_StyleGallery"]))"
                                               OnClick="ToggleStyleGallery"
-                                              KeepMenuOpen="true"
                                               Command="styleGallery"
                                               TestId="@TestId("document-style-gallery-toggle")"
                                               aria-haspopup="dialog"
+                                              aria-controls="@(_styleGalleryOpen ? FloatingPanelId("style-gallery") : null)"
                                               aria-expanded="@_styleGalleryOpen.ToString().ToLowerInvariant()" />
                     }
                 }
@@ -511,14 +500,25 @@
             </TmToolbarGroup>
             <TmToolbarDivider />
             <TmToolbarGroup Class="tm-document-editor__ribbon-group tm-document-editor__ribbon-group--actions" Label="@Loc["TmDocumentEditor_GroupInsert"]">
-                <DocumentRibbonButton Icon="link"
-                                      Text="@Loc["TmDocumentEditor_Link"]"
-                                      Large="@LargeActions"
-                                      Disabled="@(!IsCommandEnabled("link"))"
-                                      Tooltip="@(GetEditingCommandTitle(Loc["TmDocumentEditor_Link"]))"
-                                      OnClick='() => ExecuteToolbarCommandAsync("link", ToggleLinkDialogAsync)'
-                                      Command="link"
-                                      TestId="@TestId("document-link")" />
+                <TmToolbarItem Class="tm-document-editor__ribbon-item tm-document-editor__ribbon-item--popup"
+                               Priority="@CorePriority("link")"
+                               Disabled="@(!IsCommandEnabled("link"))"
+                               MenuLabel="@Loc["TmDocumentEditor_Link"]"
+                               MenuIcon="link"
+                               OnMenuInvoke="OpenLinkFromMenuAsync">
+                    <DocumentRibbonButton @ref="_linkButton"
+                                          Icon="link"
+                                          Text="@Loc["TmDocumentEditor_Link"]"
+                                          Large="@LargeActions"
+                                          Disabled="@(!IsCommandEnabled("link"))"
+                                          Tooltip="@(GetEditingCommandTitle(Loc["TmDocumentEditor_Link"]))"
+                                          OnClick='() => ExecuteToolbarCommandAsync("link", ToggleLinkDialogAsync)'
+                                          Command="link"
+                                          TestId="@TestId("document-link")"
+                                          aria-haspopup="dialog"
+                                          aria-controls="@(_linkDialogOpen ? FloatingPanelId("link") : null)"
+                                          aria-expanded="@_linkDialogOpen.ToString().ToLowerInvariant()" />
+                </TmToolbarItem>
                 <DocumentRibbonButton Icon="message-square-plus"
                                       Text="@Loc["TmDocumentEditor_AddComment"]"
                                       Large="@LargeActions"
@@ -625,13 +625,22 @@
             <TmToolbarGroup Class="tm-document-editor__ribbon-group" Label="@(_activeRibbonTab == DocumentRibbonTab.Math ? Loc["TmDocumentEditor_GroupMath"] : Loc["TmDocumentEditor_GroupInsert"])">
                 @if (_activeRibbonTab == DocumentRibbonTab.Insert)
                 {
-                    <DocumentRibbonButton Icon="plus"
-                                          Text="@Loc["TmDocumentEditor_Insert"]"
-                                          Disabled="@(!IsCommandEnabled("insertMenu"))"
-                                          Tooltip="@(GetEditingCommandTitle(Loc["TmDocumentEditor_Insert"]))"
-                                          OnClick='() => ExecuteToolbarCommandAsync("insertMenu", OnToggleInsert)'
-                                          Command="insertMenu"
-                                          TestId="@TestId("document-insert-menu")" />
+                    <TmToolbarItem Class="tm-document-editor__ribbon-item tm-document-editor__ribbon-item--popup"
+                                   Priority="@CorePriority("insertMenu")"
+                                   Disabled="@(!IsCommandEnabled("insertMenu"))"
+                                   MenuLabel="@Loc["TmDocumentEditor_Insert"]"
+                                   MenuIcon="plus"
+                                   OnMenuInvoke="InsertMenuFromMenuAsync">
+                        <DocumentRibbonButton @ref="_insertMenuButton"
+                                              Icon="plus"
+                                              Text="@Loc["TmDocumentEditor_Insert"]"
+                                              Disabled="@(!IsCommandEnabled("insertMenu"))"
+                                              Tooltip="@(GetEditingCommandTitle(Loc["TmDocumentEditor_Insert"]))"
+                                              OnClick="InsertMenuFromBarAsync"
+                                              Command="insertMenu"
+                                              TestId="@TestId("document-insert-menu")"
+                                              aria-haspopup="dialog" />
+                    </TmToolbarItem>
                     @if (IsFeatureEnabled(DocumentEditorFeatureNames.Table))
                     {
                         @TableInsertItem
@@ -643,10 +652,14 @@
                 }
                 @if (ShowEquationTools)
                 {
-                    <TmToolbarItem Class="tm-document-editor__ribbon-item tm-document-editor__ribbon-item--popup"><div class="tm-document-equation-menu-wrapper"
-                         @onclick:stopPropagation="true"
-                         @onpointerdown:stopPropagation="true">
-                        <DocumentRibbonButton Icon="sigma"
+                    <TmToolbarItem Class="tm-document-editor__ribbon-item tm-document-editor__ribbon-item--popup"
+                                   Priority="@CorePriority("insertEquation")"
+                                   Disabled="@(!IsCommandEnabled("insertEquation"))"
+                                   MenuLabel="@Loc["TmDocumentEditor_InsertEquation"]"
+                                   MenuIcon="sigma"
+                                   OnMenuInvoke="OpenEquationFromMenu">
+                        <DocumentRibbonButton @ref="_equationButton"
+                                              Icon="sigma"
                                               Text="@Loc["TmDocumentEditor_InsertEquation"]"
                                               Disabled="@(!IsCommandEnabled("insertEquation"))"
                                               Tooltip="@(GetEditingCommandTitle(Loc["TmDocumentEditor_InsertEquation"]))"
@@ -655,52 +668,20 @@
                                               Command="insertEquation"
                                               TestId="@TestId("document-toolbar-equation")"
                                               aria-haspopup="dialog"
+                                              aria-controls="@(_equationMenuOpen ? FloatingPanelId("equation") : null)"
                                               aria-expanded="@_equationMenuOpen.ToString().ToLowerInvariant()" />
-                        @if (_equationMenuOpen)
-                        {
-                            <section class="tm-document-equation-menu"
-                                     role="dialog"
-                                     aria-label="@Loc["TmDocumentEditor_EquationMenu"]"
-                                     tabindex="-1"
-                                     @ref="_equationMenu"
-                                     @onkeydown="HandleEquationMenuKeyDown"
-                                     @onkeydown:stopPropagation="true"
-                                     data-testid="@TestId("document-equation-menu")">
-                                <div class="tm-document-equation-menu__group" role="group" aria-label="@Loc["TmDocumentEditor_EquationStructures"]">
-                                    @foreach (var item in EquationStructurePaletteItems)
-                                    {
-                                        <button type="button" @onclick="() => InsertEquationPresetAsync(item.Preset)" data-testid="@($"document-equation-{item.TestId}")">
-                                            @if (!string.IsNullOrWhiteSpace(item.IconName))
-                                            {
-                                                <TmIcon Name="@item.IconName" Size="IconSize.Sm" />
-                                            }
-                                            else if (!string.IsNullOrWhiteSpace(item.SymbolKey))
-                                            {
-                                                <span class="tm-document-equation-menu__symbol" aria-hidden="true">@Loc[item.SymbolKey]</span>
-                                            }
-                                            <span>@Loc[item.LabelKey]</span>
-                                        </button>
-                                    }
-                                </div>
-                                <div class="tm-document-equation-menu__group tm-document-equation-menu__group--symbols" role="group" aria-label="@Loc["TmDocumentEditor_EquationSymbols"]">
-                                    @foreach (var item in EquationSymbolPaletteItems)
-                                    {
-                                        <button type="button" @onclick="() => InsertEquationPresetAsync(item.Preset)" data-testid="@($"document-equation-{item.TestId}")">
-                                            <span class="tm-document-equation-menu__symbol" aria-hidden="true">@Loc[item.SymbolKey!]</span>
-                                            <span>@Loc[item.LabelKey]</span>
-                                        </button>
-                                    }
-                                </div>
-                            </section>
-                        }
-                    </div></TmToolbarItem>
+                    </TmToolbarItem>
                 }
                 @if (_activeRibbonTab == DocumentRibbonTab.Insert && ShowSymbolTools)
                 {
-                    <TmToolbarItem Class="tm-document-editor__ribbon-item tm-document-editor__ribbon-item--popup"><div class="tm-document-symbol-menu-wrapper"
-                         @onclick:stopPropagation="true"
-                         @onpointerdown:stopPropagation="true">
-                        <DocumentRibbonButton Icon="omega"
+                    <TmToolbarItem Class="tm-document-editor__ribbon-item tm-document-editor__ribbon-item--popup"
+                                   Priority="@CorePriority("insertSymbol")"
+                                   Disabled="@(!IsCommandEnabled("insertSymbol"))"
+                                   MenuLabel="@Loc["TmDocumentEditor_InsertSymbol"]"
+                                   MenuIcon="omega"
+                                   OnMenuInvoke="OpenSymbolFromMenu">
+                        <DocumentRibbonButton @ref="_symbolButton"
+                                              Icon="omega"
                                               Text="@Loc["TmDocumentEditor_InsertSymbol"]"
                                               Disabled="@(!IsCommandEnabled("insertSymbol"))"
                                               Tooltip="@(GetEditingCommandTitle(Loc["TmDocumentEditor_InsertSymbol"]))"
@@ -709,44 +690,9 @@
                                               Command="insertSymbol"
                                               TestId="@TestId("document-toolbar-symbol")"
                                               aria-haspopup="dialog"
+                                              aria-controls="@(_symbolMenuOpen ? FloatingPanelId("symbol") : null)"
                                               aria-expanded="@_symbolMenuOpen.ToString().ToLowerInvariant()" />
-                        @if (_symbolMenuOpen)
-                        {
-                            <section class="tm-document-symbol-menu"
-                                     role="dialog"
-                                     aria-label="@Loc["TmDocumentEditor_SymbolMenu"]"
-                                     tabindex="-1"
-                                     @ref="_symbolMenu"
-                                     @onkeydown="HandleSymbolMenuKeyDown"
-                                     @onkeydown:stopPropagation="true"
-                                     data-testid="@TestId("document-symbol-menu")">
-                                <div class="tm-document-symbol-menu__group" role="group" aria-label="@Loc["TmDocumentEditor_SymbolCharacters"]">
-                                    @foreach (var item in SymbolPaletteItems)
-                                    {
-                                        <button type="button"
-                                                title="@Loc[item.LabelKey]"
-                                                @onclick="() => InsertSymbolPresetAsync(item.Preset)"
-                                                data-testid="@($"document-symbol-{item.TestId}")">
-                                            <span class="tm-document-symbol-menu__glyph" aria-hidden="true">@Loc[item.GlyphKey]</span>
-                                            <span>@Loc[item.LabelKey]</span>
-                                        </button>
-                                    }
-                                </div>
-                                <div class="tm-document-symbol-menu__group tm-document-symbol-menu__group--emoji" role="group" aria-label="@Loc["TmDocumentEditor_EmojiPicker"]">
-                                    @foreach (var item in EmojiPaletteItems)
-                                    {
-                                        <button type="button"
-                                                title="@Loc[item.LabelKey]"
-                                                @onclick="() => InsertSymbolPresetAsync(item.Preset)"
-                                                data-testid="@($"document-emoji-{item.TestId}")">
-                                            <span class="tm-document-symbol-menu__glyph tm-document-symbol-menu__glyph--emoji" aria-hidden="true">@Loc[item.GlyphKey]</span>
-                                            <span>@Loc[item.LabelKey]</span>
-                                        </button>
-                                    }
-                                </div>
-                            </section>
-                        }
-                    </div></TmToolbarItem>
+                    </TmToolbarItem>
                 }
                 @if (_activeRibbonTab == DocumentRibbonTab.Insert && (CommandRegistry?.GetState("insertPageBreak")?.IsVisible ?? true))
                 {
@@ -775,8 +721,14 @@
         else if (_activeRibbonTab == DocumentRibbonTab.Layout)
         {
             <TmToolbarGroup Class="tm-document-editor__ribbon-group" Label="@Loc["TmDocumentEditor_GroupLayout"]">
-                <TmToolbarItem Class="tm-document-editor__ribbon-item tm-document-editor__ribbon-item--popup"><div class="tm-document-page-layout-menu-wrapper">
-                    <DocumentRibbonButton Icon="panel-top"
+                <TmToolbarItem Class="tm-document-editor__ribbon-item tm-document-editor__ribbon-item--popup"
+                               Priority="@CorePriority("pageLayout")"
+                               Disabled="@ReadOnly"
+                               MenuLabel="@Loc["TmDocumentEditor_PageLayout"]"
+                               MenuIcon="panel-top"
+                               OnMenuInvoke="OpenPageLayoutFromMenu">
+                    <DocumentRibbonButton @ref="_pageLayoutButton"
+                                          Icon="panel-top"
                                           Text="@Loc["TmDocumentEditor_PageLayout"]"
                                           Disabled="@ReadOnly"
                                           Tooltip="@(GetEditingCommandTitle(Loc["TmDocumentEditor_PageLayout"]))"
@@ -784,152 +736,9 @@
                                           Command="pageLayout"
                                           TestId="@TestId("document-page-layout")"
                                           aria-haspopup="dialog"
+                                          aria-controls="@(_pageLayoutInspectorOpen ? FloatingPanelId("page-layout") : null)"
                                           aria-expanded="@_pageLayoutInspectorOpen.ToString().ToLowerInvariant()" />
-                    @if (_pageLayoutInspectorOpen)
-                    {
-                        <section class="tm-document-page-layout-inspector"
-                                 role="dialog"
-                                 aria-label="@Loc["TmDocumentEditor_PageLayout"]"
-                                 data-testid="@TestId("document-page-layout-inspector")"
-                                 tabindex="-1"
-                                 @ref="_pageLayoutInspector"
-                                 @onkeydown="HandlePageLayoutInspectorKeyDown"
-                                 @onkeydown:stopPropagation="true"
-                                 @onclick:stopPropagation="true">
-                            <div class="tm-document-page-layout-inspector__preview"
-                                 data-testid="@TestId("document-page-layout-preview")"
-                                 data-orientation="@(EffectivePageSettings.Landscape ? "landscape" : "portrait")">
-                                <span></span>
-                            </div>
-                            <label>
-                                <span>@Loc["TmDocumentEditor_PageSize"]</span>
-                                <select value="@EffectivePageSettings.Size.Name"
-                                        @oninput="HandlePageSizeChangedAsync"
-                                        data-testid="@TestId("document-page-size")">
-                                    <option value="A4">A4</option>
-                                    <option value="Letter">Letter</option>
-                                </select>
-                            </label>
-                            <label>
-                                <span>@Loc["TmDocumentEditor_Orientation"]</span>
-                                @* Fáze 18: duplicitní <select> orientace odstraněn — segmentová tlačítka jsou jediné ovládání. *@
-                                <span class="tm-document-page-layout-inspector__segmented" role="group" aria-label="@Loc["TmDocumentEditor_Orientation"]">
-                                    <button type="button"
-                                            class="@GetPageOrientationButtonClass(false)"
-                                            aria-pressed="@((!EffectivePageSettings.Landscape).ToString().ToLowerInvariant())"
-                                            @onclick="() => SetPageOrientationAsync(false)"
-                                            data-testid="@TestId("document-page-orientation-portrait")">
-                                        @Loc["TmDocumentEditor_OrientationPortrait"]
-                                    </button>
-                                    <button type="button"
-                                            class="@GetPageOrientationButtonClass(true)"
-                                            aria-pressed="@(EffectivePageSettings.Landscape.ToString().ToLowerInvariant())"
-                                            @onclick="() => SetPageOrientationAsync(true)"
-                                            data-testid="@TestId("document-page-orientation-landscape")">
-                                        @Loc["TmDocumentEditor_OrientationLandscape"]
-                                    </button>
-                                </span>
-                            </label>
-                            <label>
-                                <span>@Loc["TmDocumentEditor_MarginsPreset"]</span>
-                                <select value="@CurrentMarginPreset"
-                                        @oninput="HandleMarginPresetChangedAsync"
-                                        data-testid="@TestId("document-margin-preset")">
-                                    <option value="Normal">@Loc["TmDocumentEditor_MarginsNormal"]</option>
-                                    <option value="Narrow">@Loc["TmDocumentEditor_MarginsNarrow"]</option>
-                                    <option value="Wide">@Loc["TmDocumentEditor_MarginsWide"]</option>
-                                    <option value="Custom">@Loc["TmDocumentEditor_MarginsCustom"]</option>
-                                </select>
-                            </label>
-                            <div class="tm-document-page-layout-inspector__grid">
-                                <label>
-                                    <span>@Loc["TmDocumentEditor_MarginTop"]</span>
-                                    <input type="number" min="0" max="144" step="6" value="@FormatPoints(EffectivePageSettings.Margins.Top)" @oninput='args => HandleMarginChangedAsync("Top", args)' data-testid="@TestId("document-margin-top")" />
-                                </label>
-                                <label>
-                                    <span>@Loc["TmDocumentEditor_MarginRight"]</span>
-                                    <input type="number" min="0" max="144" step="6" value="@FormatPoints(EffectivePageSettings.Margins.Right)" @oninput='args => HandleMarginChangedAsync("Right", args)' data-testid="@TestId("document-margin-right")" />
-                                </label>
-                                <label>
-                                    <span>@Loc["TmDocumentEditor_MarginBottom"]</span>
-                                    <input type="number" min="0" max="144" step="6" value="@FormatPoints(EffectivePageSettings.Margins.Bottom)" @oninput='args => HandleMarginChangedAsync("Bottom", args)' data-testid="@TestId("document-margin-bottom")" />
-                                </label>
-                                <label>
-                                    <span>@Loc["TmDocumentEditor_MarginLeft"]</span>
-                                    <input type="number" min="0" max="144" step="6" value="@FormatPoints(EffectivePageSettings.Margins.Left)" @oninput='args => HandleMarginChangedAsync("Left", args)' data-testid="@TestId("document-margin-left")" />
-                                </label>
-                                <label>
-                                    <span>@Loc["TmDocumentEditor_HeaderDistance"]</span>
-                                    <input type="number" min="0" max="144" step="6" value="@FormatPoints(EffectivePageSettings.HeaderDistanceFromTop)" @oninput="HandleHeaderDistanceChangedAsync" data-testid="@TestId("document-header-distance")" />
-                                </label>
-                                <label>
-                                    <span>@Loc["TmDocumentEditor_FooterDistance"]</span>
-                                    <input type="number" min="0" max="144" step="6" value="@FormatPoints(EffectivePageSettings.FooterDistanceFromBottom)" @oninput="HandleFooterDistanceChangedAsync" data-testid="@TestId("document-footer-distance")" />
-                                </label>
-                            </div>
-                            <fieldset class="tm-document-page-layout-inspector__section">
-                                <legend>@Loc["TmDocumentEditor_Columns"]</legend>
-                                <div class="tm-document-page-layout-inspector__grid">
-                                    <label>
-                                        <span>@Loc["TmDocumentEditor_ColumnCount"]</span>
-                                        <select value="@EffectiveSectionColumns.Count.ToString(CultureInfo.InvariantCulture)"
-                                                @oninput="HandleColumnCountChangedAsync"
-                                                data-testid="@TestId("document-column-count")">
-                                            <option value="1">@Loc["TmDocumentEditor_ColumnsOne"]</option>
-                                            <option value="2">@Loc["TmDocumentEditor_ColumnsTwo"]</option>
-                                            <option value="3">@Loc["TmDocumentEditor_ColumnsThree"]</option>
-                                        </select>
-                                    </label>
-                                    <label>
-                                        <span>@Loc["TmDocumentEditor_ColumnSpacing"]</span>
-                                        <input type="number" min="0" max="144" step="6" value="@FormatPoints(EffectiveSectionColumns.Spacing)" @oninput="HandleColumnSpacingChangedAsync" data-testid="@TestId("document-column-spacing")" />
-                                    </label>
-                                    <label class="tm-document-page-layout-inspector__check">
-                                        <input type="checkbox"
-                                               checked="@EffectiveSectionColumns.SeparatorLine"
-                                               @onchange="HandleColumnSeparatorChangedAsync"
-                                               data-testid="@TestId("document-column-separator")" />
-                                        <span>@Loc["TmDocumentEditor_ColumnSeparator"]</span>
-                                    </label>
-                                </div>
-                            </fieldset>
-                            <fieldset class="tm-document-page-layout-inspector__section">
-                                <legend>@Loc["TmDocumentEditor_LineNumbers"]</legend>
-                                <label class="tm-document-page-layout-inspector__check tm-document-page-layout-inspector__check--wide">
-                                    <input type="checkbox"
-                                           checked="@EffectiveLineNumbering.Enabled"
-                                           @onchange="HandleLineNumberingEnabledChangedAsync"
-                                           data-testid="@TestId("document-line-numbering-enabled")" />
-                                    <span>@Loc["TmDocumentEditor_LineNumbersEnabled"]</span>
-                                </label>
-                                <div class="tm-document-page-layout-inspector__grid">
-                                    <label>
-                                        <span>@Loc["TmDocumentEditor_LineNumbersStartAt"]</span>
-                                        <input type="number" min="1" max="9999" step="1" value="@EffectiveLineNumbering.StartAt.ToString(CultureInfo.InvariantCulture)" @oninput="HandleLineNumberingStartChangedAsync" data-testid="@TestId("document-line-numbering-start")" />
-                                    </label>
-                                    <label>
-                                        <span>@Loc["TmDocumentEditor_LineNumbersIncrement"]</span>
-                                        <input type="number" min="1" max="100" step="1" value="@EffectiveLineNumbering.Increment.ToString(CultureInfo.InvariantCulture)" @oninput="HandleLineNumberingIncrementChangedAsync" data-testid="@TestId("document-line-numbering-increment")" />
-                                    </label>
-                                    <label>
-                                        <span>@Loc["TmDocumentEditor_LineNumbersDistance"]</span>
-                                        <input type="number" min="0" max="72" step="3" value="@FormatPoints(EffectiveLineNumbering.DistanceFromText)" @oninput="HandleLineNumberingDistanceChangedAsync" data-testid="@TestId("document-line-numbering-distance")" />
-                                    </label>
-                                    <label>
-                                        <span>@Loc["TmDocumentEditor_LineNumbersRestart"]</span>
-                                        <select value="@EffectiveLineNumbering.Restart.ToString()"
-                                                @oninput="HandleLineNumberingRestartChangedAsync"
-                                                data-testid="@TestId("document-line-numbering-restart")">
-                                            <option value="@DocumentLineNumberingRestart.Continuous.ToString()">@Loc["TmDocumentEditor_LineNumbersRestartContinuous"]</option>
-                                            <option value="@DocumentLineNumberingRestart.Page.ToString()">@Loc["TmDocumentEditor_LineNumbersRestartPage"]</option>
-                                            <option value="@DocumentLineNumberingRestart.Section.ToString()">@Loc["TmDocumentEditor_LineNumbersRestartSection"]</option>
-                                        </select>
-                                    </label>
-                                </div>
-                            </fieldset>
-                        </section>
-                    }
-                </div></TmToolbarItem>
+                </TmToolbarItem>
                 <DocumentRibbonButton Icon="panel-top"
                                       Text="@Loc["TmDocumentEditor_DifferentFirstPage"]"
                                       Disabled="@ReadOnly"
@@ -1282,94 +1091,42 @@
                                       TestId="@TestId("document-header-footer-different-odd-even")" />
             </TmToolbarGroup>
             <TmToolbarGroup Class="tm-document-editor__ribbon-group" Label="@Loc["TmDocumentEditor_HeaderFooterFields"]">
-                <TmToolbarItem Class="tm-document-editor__ribbon-item tm-document-editor__ribbon-item--popup"><div class="tm-document-header-footer-menu-wrapper">
-                    <DocumentRibbonButton Icon="braces"
+                <TmToolbarItem Class="tm-document-editor__ribbon-item tm-document-editor__ribbon-item--popup"
+                               Priority="@CorePriority("insertField")"
+                               Disabled="@ReadOnly"
+                               MenuLabel="@Loc["TmDocumentEditor_InsertField"]"
+                               MenuIcon="braces"
+                               OnMenuInvoke="OpenHeaderFooterFieldsFromMenu">
+                    <DocumentRibbonButton @ref="_headerFooterFieldsButton"
+                                          Icon="braces"
                                           Text="@Loc["TmDocumentEditor_InsertField"]"
                                           Disabled="@ReadOnly"
                                           Tooltip="@Loc["TmDocumentEditor_InsertField"]"
                                           OnClick="ToggleHeaderFooterFieldMenu"
                                           Command="insertField"
                                           TestId="@TestId("document-header-footer-insert-field-menu")"
-                                          aria-haspopup="menu"
+                                          aria-haspopup="dialog"
+                                          aria-controls="@(_headerFooterFieldMenuOpen ? FloatingPanelId("header-footer-fields") : null)"
                                           aria-expanded="@_headerFooterFieldMenuOpen.ToString().ToLowerInvariant()" />
-                    @if (_headerFooterFieldMenuOpen)
-                    {
-                        <div class="tm-document-header-footer-menu"
-                             role="menu"
-                             aria-label="@Loc["TmDocumentEditor_InsertField"]"
-                             data-testid="@TestId("document-header-footer-field-menu")"
-                             tabindex="-1"
-                             @ref="_headerFooterFieldMenu"
-                             @onkeydown="HandleHeaderFooterMenuKeyDown"
-                             @onkeydown:stopPropagation="true"
-                             @onclick:stopPropagation="true">
-                            <button type="button" role="menuitem" data-testid="@TestId("document-header-footer-menu-page-number")" @onclick="() => InsertHeaderFooterFieldFromMenuAsync(OnInsertPageNumber)">
-                                <TmIcon Name="hash" Size="IconSize.Sm" />
-                                <span>@Loc["TmDocumentEditor_PageNumber"]</span>
-                            </button>
-                            <button type="button" role="menuitem" data-testid="@TestId("document-header-footer-menu-page-count")" @onclick="() => InsertHeaderFooterFieldFromMenuAsync(OnInsertPageCount)">
-                                <TmIcon Name="files" Size="IconSize.Sm" />
-                                <span>@Loc["TmDocumentEditor_TotalPages"]</span>
-                            </button>
-                            <button type="button" role="menuitem" data-testid="@TestId("document-header-footer-menu-page-x-of-y")" @onclick="() => InsertHeaderFooterFieldFromMenuAsync(OnInsertPageXOfY)">
-                                <TmIcon Name="file-stack" Size="IconSize.Sm" />
-                                <span>@Loc["TmDocumentEditor_PageXOfY"]</span>
-                            </button>
-                            <button type="button" role="menuitem" data-testid="@TestId("document-header-footer-menu-date")" @onclick="() => InsertHeaderFooterFieldFromMenuAsync(OnInsertDateField)">
-                                <TmIcon Name="calendar-days" Size="IconSize.Sm" />
-                                <span>@Loc["TmDocumentEditor_FieldDate"]</span>
-                            </button>
-                            <button type="button" role="menuitem" data-testid="@TestId("document-header-footer-menu-title")" @onclick="() => InsertHeaderFooterFieldFromMenuAsync(OnInsertDocumentTitleField)">
-                                <TmIcon Name="file-text" Size="IconSize.Sm" />
-                                <span>@Loc["TmDocumentEditor_DocumentTitle"]</span>
-                            </button>
-                            <button type="button" role="menuitem" data-testid="@TestId("document-header-footer-menu-author")" @onclick="() => InsertHeaderFooterFieldFromMenuAsync(OnInsertAuthorField)">
-                                <TmIcon Name="user" Size="IconSize.Sm" />
-                                <span>@Loc["TmDocumentEditor_Author"]</span>
-                            </button>
-                        </div>
-                    }
-                </div></TmToolbarItem>
-                <TmToolbarItem Class="tm-document-editor__ribbon-item tm-document-editor__ribbon-item--popup"><div class="tm-document-header-footer-menu-wrapper">
-                    <DocumentRibbonButton Icon="layout-template"
+                </TmToolbarItem>
+                <TmToolbarItem Class="tm-document-editor__ribbon-item tm-document-editor__ribbon-item--popup"
+                               Priority="@CorePriority("headerFooterPresets")"
+                               Disabled="@ReadOnly"
+                               MenuLabel="@Loc["TmDocumentEditor_HeaderFooterPresets"]"
+                               MenuIcon="layout-template"
+                               OnMenuInvoke="OpenHeaderFooterPresetsFromMenu">
+                    <DocumentRibbonButton @ref="_headerFooterPresetsButton"
+                                          Icon="layout-template"
                                           Text="@Loc["TmDocumentEditor_HeaderFooterPresets"]"
                                           Disabled="@ReadOnly"
                                           Tooltip="@Loc["TmDocumentEditor_HeaderFooterPresets"]"
                                           OnClick="ToggleHeaderFooterPresetMenu"
                                           Command="headerFooterPresets"
                                           TestId="@TestId("document-header-footer-preset-menu")"
-                                          aria-haspopup="menu"
+                                          aria-haspopup="dialog"
+                                          aria-controls="@(_headerFooterPresetMenuOpen ? FloatingPanelId("header-footer-presets") : null)"
                                           aria-expanded="@_headerFooterPresetMenuOpen.ToString().ToLowerInvariant()" />
-                    @if (_headerFooterPresetMenuOpen)
-                    {
-                        <div class="tm-document-header-footer-menu tm-document-header-footer-menu--presets"
-                             role="menu"
-                             aria-label="@Loc["TmDocumentEditor_HeaderFooterPresets"]"
-                             data-testid="@TestId("document-header-footer-presets-menu")"
-                             tabindex="-1"
-                             @ref="_headerFooterPresetMenu"
-                             @onkeydown="HandleHeaderFooterMenuKeyDown"
-                             @onkeydown:stopPropagation="true"
-                             @onclick:stopPropagation="true">
-                            <button type="button" role="menuitem" data-testid="@TestId("document-header-footer-preset-page-number-right-footer")" @onclick='() => ApplyHeaderFooterPresetFromMenuAsync("footer-page-number-right")'>
-                                <span class="tm-document-header-footer-menu__preview tm-document-header-footer-menu__preview--right"></span>
-                                <span>@Loc["TmDocumentEditor_PresetPageNumberRightFooter"]</span>
-                            </button>
-                            <button type="button" role="menuitem" data-testid="@TestId("document-header-footer-preset-page-number-center-footer")" @onclick='() => ApplyHeaderFooterPresetFromMenuAsync("footer-page-number-center")'>
-                                <span class="tm-document-header-footer-menu__preview tm-document-header-footer-menu__preview--center"></span>
-                                <span>@Loc["TmDocumentEditor_PresetPageNumberCenterFooter"]</span>
-                            </button>
-                            <button type="button" role="menuitem" data-testid="@TestId("document-header-footer-preset-title-page-header")" @onclick='() => ApplyHeaderFooterPresetFromMenuAsync("header-title-page-number")'>
-                                <span class="tm-document-header-footer-menu__preview tm-document-header-footer-menu__preview--split"></span>
-                                <span>@Loc["TmDocumentEditor_PresetTitlePageHeader"]</span>
-                            </button>
-                            <button type="button" role="menuitem" data-testid="@TestId("document-header-footer-preset-page-x-of-y-right-footer")" @onclick='() => ApplyHeaderFooterPresetFromMenuAsync("footer-page-x-of-y-right")'>
-                                <span class="tm-document-header-footer-menu__preview tm-document-header-footer-menu__preview--right"></span>
-                                <span>@Loc["TmDocumentEditor_PresetPageXOfYRightFooter"]</span>
-                            </button>
-                        </div>
-                    }
-                </div></TmToolbarItem>
+                </TmToolbarItem>
                 <DocumentRibbonButton Icon="hash"
                                       Text="@Loc["TmDocumentEditor_PageNumber"]"
                                       Disabled="@ReadOnly"
@@ -1416,146 +1173,11 @@
             </TmToolbarGroup>
         }
         </TmToolbar>
-        @if (_activeRibbonTab == DocumentRibbonTab.Home && ShowBlockStyle && ShowStyleManagement && _styleGalleryOpen)
-        {
-            @* Outside the toolbar on purpose: the toolbar collapses items (invisible, inert), the popup must open from the bar button and
-               from its More entry alike. It hangs under the ribbon row. *@
-            <div class="tm-document-style-gallery-anchor">
-                <section class="tm-document-style-gallery"
-                         role="dialog"
-                         aria-label="@Loc["TmDocumentEditor_StyleGallery"]"
-                         data-testid="@TestId("document-style-gallery")"
-                         tabindex="-1"
-                         @ref="_styleGallery"
-                         @onkeydown="HandleStyleGalleryKeyDown"
-                         @onkeydown:stopPropagation="true"
-                         @onclick:stopPropagation="true">
-                    <div class="tm-document-style-gallery__quick" role="group" aria-label="@Loc["TmDocumentEditor_QuickStyles"]">
-                        @foreach (var style in QuickStyleButtons)
-                        {
-                            <button type="button"
-                                    class="@GetQuickStyleButtonClass(style.Value)"
-                                    disabled="@ReadOnly"
-                                    aria-pressed="@IsCurrentQuickStyle(style.Value).ToString().ToLowerInvariant()"
-                                    @onclick="() => ApplyQuickStyleAsync(style.Value)"
-                                    data-testid="@($"document-style-quick-{style.TestId}")">
-                                <span class="tm-document-style-gallery__sample">@style.Label</span>
-                                <span>@style.Label</span>
-                            </button>
-                        }
-                    </div>
-                    <label class="tm-document-style-gallery__field">
-                        <span>@Loc["TmDocumentEditor_StyleFontSize"]</span>
-                        <input type="number"
-                               min="8"
-                               max="96"
-                               step="1"
-                               value="@_styleFontSizeValue"
-                               @oninput="HandleStyleFontSizeInput"
-                               data-testid="@TestId("document-style-font-size")" />
-                    </label>
-                    <label class="tm-document-style-gallery__field">
-                        <span>@Loc["TmDocumentEditor_StyleName"]</span>
-                        <input type="text"
-                               value="@_styleNameValue"
-                               @oninput="HandleStyleNameInput"
-                               aria-label="@Loc["TmDocumentEditor_StyleName"]"
-                               data-testid="@TestId("document-style-name")" />
-                    </label>
-                    <label class="tm-document-style-gallery__field">
-                        <span>@Loc["TmDocumentEditor_StyleRenameName"]</span>
-                        <input type="text"
-                               value="@_styleRenameValue"
-                               @oninput="HandleStyleRenameInput"
-                               aria-label="@Loc["TmDocumentEditor_StyleRenameName"]"
-                               data-testid="@TestId("document-style-rename-name")" />
-                    </label>
-                    <div class="tm-document-style-gallery__actions" role="group" aria-label="@Loc["TmDocumentEditor_StyleActions"]">
-                        <button type="button"
-                                class="tm-document-editor__ribbon-button tm-document-style-gallery__primary"
-                                disabled="@ReadOnly"
-                                @onclick="ModifyCurrentStyleAsync"
-                                data-command="modifyStyle"
-                                data-testid="@TestId("document-style-modify")">
-                            <TmIcon Name="wand-sparkles" Size="IconSize.Sm" />
-                            <span>@Loc["TmDocumentEditor_ModifyStyle"]</span>
-                        </button>
-                        <button type="button"
-                                class="tm-document-editor__ribbon-button"
-                                disabled="@(ReadOnly || string.IsNullOrWhiteSpace(_styleNameValue))"
-                                @onclick="CreateStyleFromSelectionAsync"
-                                data-command="createStyleFromSelection"
-                                data-testid="@TestId("document-style-create")">
-                            <TmIcon Name="plus" Size="IconSize.Sm" />
-                            <span>@Loc["TmDocumentEditor_CreateStyle"]</span>
-                        </button>
-                        <button type="button"
-                                class="tm-document-editor__ribbon-button"
-                                disabled="@(ReadOnly || string.IsNullOrWhiteSpace(_styleRenameValue))"
-                                @onclick="RenameCurrentStyleAsync"
-                                data-command="renameStyle"
-                                data-testid="@TestId("document-style-rename")">
-                            <TmIcon Name="pencil" Size="IconSize.Sm" />
-                            <span>@Loc["TmDocumentEditor_RenameStyle"]</span>
-                        </button>
-                        <button type="button"
-                                class="tm-document-editor__ribbon-button"
-                                disabled="@(ReadOnly || IsCurrentStyleBuiltIn)"
-                                @onclick="DeleteCurrentStyleAsync"
-                                data-command="deleteStyle"
-                                data-testid="@TestId("document-style-delete")">
-                            <TmIcon Name="trash-2" Size="IconSize.Sm" />
-                            <span>@Loc["TmDocumentEditor_DeleteStyle"]</span>
-                        </button>
-                        <button type="button"
-                                class="tm-document-editor__ribbon-button"
-                                disabled="@ReadOnly"
-                                @onclick="ResetStyleFormattingAsync"
-                                data-command="resetStyleFormatting"
-                                data-testid="@TestId("document-style-reset-formatting")">
-                            <TmIcon Name="eraser" Size="IconSize.Sm" />
-                            <span>@Loc["TmDocumentEditor_ResetStyleFormatting"]</span>
-                        </button>
-                    </div>
-                </section>
-            </div>
-        }
     </div>
     </div>
 
-    @if (_linkDialogOpen && !ReadOnly)
-    {
-        <section class="tm-document-editor__link-dialog"
-                 role="dialog"
-                 aria-modal="false"
-                 aria-label="@Loc["TmDocumentEditor_Link"]"
-                 data-testid="@TestId("document-link-dialog")"
-                 @onkeydown="HandleLinkDialogKeyDown"
-                 @onkeydown:stopPropagation="true">
-            <label>
-                <span>@Loc["TmDocumentEditor_LinkUrl"]</span>
-                <input class="tm-input"
-                       @ref="_linkUrlInput"
-                       value="@_pendingLinkUrl"
-                       @oninput="args => _pendingLinkUrl = args.Value?.ToString()"
-                       data-testid="@TestId("document-link-url")" />
-            </label>
-            <label>
-                <span>@Loc["TmDocumentEditor_LinkTitle"]</span>
-                <input class="tm-input" value="@_pendingLinkTitle" @oninput="args => _pendingLinkTitle = args.Value?.ToString()" data-testid="@TestId("document-link-title")" />
-            </label>
-            @if (!string.IsNullOrWhiteSpace(_linkError))
-            {
-                <span class="tm-document-editor__link-error" role="alert" data-testid="@TestId("document-link-error")">@_linkError</span>
-            }
-            <button type="button" class="tm-btn tm-btn-sm tm-btn-primary" @onclick="ApplyLinkAsync" data-testid="@TestId("document-apply-link")">@Loc["TmDocumentEditor_ApplyLink"]</button>
-            @if (!string.IsNullOrWhiteSpace(_pendingLinkUrl) && OnLinkRemoved.HasDelegate)
-            {
-                <button type="button" class="tm-btn tm-btn-sm tm-btn-secondary" @onclick="RemoveLinkAsync" data-testid="@TestId("document-remove-link")">@Loc["TmDocumentEditor_RemoveLink"]</button>
-            }
-            <button type="button" class="tm-btn tm-btn-sm tm-btn-ghost" @onclick="CloseLinkDialog">@Loc["TmDocumentEditor_Cancel"]</button>
-        </section>
-    }
+    @FloatingPanels
+
     @if (_docxImportOpen && CanImportDocx)
     {
         <section class="tm-document-editor__format-import-panel"
@@ -1589,19 +1211,23 @@
     private ElementReference _reviewTab;
     private ElementReference _viewTab;
     private ElementReference _headerFooterTab;
-    private bool _linkDialogOpen;
-    private bool _focusLinkUrlOnRender;
     private bool _docxImportOpen;
     private string? _pendingLinkUrl;
     private string? _pendingLinkTitle;
     private string? _linkError;
     private ElementReference _linkUrlInput;
-    private ElementReference _headerFooterFieldMenu;
-    private ElementReference _headerFooterPresetMenu;
-    private ElementReference _pageLayoutInspector;
-    private ElementReference _styleGallery;
-    private ElementReference _equationMenu;
-    private ElementReference _symbolMenu;
+    private bool _linkHadExistingHref;
+    private ElementReference _ribbonPanel;
+    private DocumentRibbonButton? _tableButton;
+    private DocumentRibbonButton? _imageButton;
+    private DocumentRibbonButton? _equationButton;
+    private DocumentRibbonButton? _symbolButton;
+    private DocumentRibbonButton? _pageLayoutButton;
+    private DocumentRibbonButton? _headerFooterFieldsButton;
+    private DocumentRibbonButton? _headerFooterPresetsButton;
+    private DocumentRibbonButton? _linkButton;
+    private DocumentRibbonButton? _insertMenuButton;
+    private bool _insertFromMenu;
     private bool _wasHeaderFooterMode;
     private bool _keyboardMode;
 
@@ -1612,20 +1238,19 @@
     private bool? _optimisticBulletListActive;
     private bool? _optimisticNumberedListActive;
     private DateTimeOffset _optimisticListExpiresAt;
-    private bool _tableGridPickerOpen;
-    private bool _imageInsertMenuOpen;
-    private bool _equationMenuOpen;
-    private bool _symbolMenuOpen;
-    private bool _headerFooterFieldMenuOpen;
-    private bool _headerFooterPresetMenuOpen;
-    private bool _pageLayoutInspectorOpen;
-    private bool _styleGalleryOpen;
-    private bool _focusHeaderFooterFieldMenuOnRender;
-    private bool _focusHeaderFooterPresetMenuOnRender;
-    private bool _focusPageLayoutInspectorOnRender;
-    private bool _focusStyleGalleryOnRender;
-    private bool _focusEquationMenuOnRender;
-    private bool _focusSymbolMenuOnRender;
+    private readonly string _floatingIdPrefix = $"tm-document-floating-{Guid.NewGuid():N}";
+    private ToolbarFloating _floating;
+    // True when the open panel was requested from the core "More" menu (its item had collapsed): the trigger is hidden then,
+    // so the panel anchors to the ribbon row instead.
+    private bool _floatingFromMenu;
+    private bool _tableGridPickerOpen => _floating == ToolbarFloating.Table;
+    private bool _equationMenuOpen => _floating == ToolbarFloating.Equation;
+    private bool _symbolMenuOpen => _floating == ToolbarFloating.Symbol;
+    private bool _headerFooterFieldMenuOpen => _floating == ToolbarFloating.HeaderFooterFields;
+    private bool _headerFooterPresetMenuOpen => _floating == ToolbarFloating.HeaderFooterPresets;
+    private bool _pageLayoutInspectorOpen => _floating == ToolbarFloating.PageLayout;
+    private bool _styleGalleryOpen => _floating == ToolbarFloating.StyleGallery;
+    private bool _linkDialogOpen => _floating == ToolbarFloating.Link;
     private string _styleFontSizeValue = "20";
     private string? _styleNameValue;
     private string? _styleRenameValue;
@@ -1743,26 +1368,27 @@
     /// <summary>The primary calls to action (Link, Comment, Image, Table) show their label in the full ribbon; Compact is icon-only.</summary>
     private bool LargeActions => ToolbarMode == DocumentToolbarMode.Ribbon;
 
-    // The table and the image openers are ribbon items in two places (the Home actions and the Insert tab). Each owns a popup,
-    // so it is an item with no "More" representation: it stays on the bar while its popup can be open.
-    private RenderFragment TableInsertItem => @<TmToolbarItem Class="tm-document-editor__ribbon-item tm-document-editor__ribbon-item--popup">
-<div class="tm-document-table-grid-picker-wrapper">
-                            <DocumentRibbonButton Icon="table"
-                                                  Text="@Loc["TmDocumentEditor_InsertTable"]"
-                                                  Disabled="@(!IsCommandEnabled("insertTable"))"
-                                                  Tooltip="@(GetEditingCommandTitle(Loc["TmDocumentEditor_InsertTable"]))"
-                                                  OnClick="ToggleTableGridPicker"
-                                                  Command="insertTable"
-                                      Large="@LargeActions"
-                                                  TestId="@TestId("document-toolbar-table")"
-                                                  aria-haspopup="grid"
-                                                  aria-expanded="@_tableGridPickerOpen.ToString().ToLowerInvariant()" />
-                            @if (_tableGridPickerOpen)
-                            {
-                                <TmDocumentTableGridPicker OnInsert="HandleGridPickerInsertAsync"
-                                                           OnClose="CloseTableGridPicker" />
-                            }
-                        </div>
+    // The table and the image openers are ribbon items in two places (the Home actions and the Insert tab). Each opens a floating panel
+    // (the table grid here, the image panel in the editor's floating root): the panel is rendered OUTSIDE the toolbar, so the item can
+    // collapse into "More" like any other and still open its panel (anchored to the ribbon row then).
+    private RenderFragment TableInsertItem => @<TmToolbarItem Class="tm-document-editor__ribbon-item tm-document-editor__ribbon-item--popup"
+                   Priority="@CorePriority("insertTable")"
+                   Disabled="@(!IsCommandEnabled("insertTable"))"
+                   MenuLabel="@Loc["TmDocumentEditor_InsertTable"]"
+                   MenuIcon="table"
+                   OnMenuInvoke="OpenTableFromMenu">
+        <DocumentRibbonButton @ref="_tableButton"
+                              Icon="table"
+                              Text="@Loc["TmDocumentEditor_InsertTable"]"
+                              Disabled="@(!IsCommandEnabled("insertTable"))"
+                              Tooltip="@(GetEditingCommandTitle(Loc["TmDocumentEditor_InsertTable"]))"
+                              OnClick="ToggleTableGridPicker"
+                              Command="insertTable"
+                              Large="@LargeActions"
+                              TestId="@TestId("document-toolbar-table")"
+                              aria-haspopup="dialog"
+                              aria-controls="@(_tableGridPickerOpen ? FloatingPanelId("table") : null)"
+                              aria-expanded="@_tableGridPickerOpen.ToString().ToLowerInvariant()" />
     </TmToolbarItem>;
 
     private RenderFragment ImageInsertItem => @<TmToolbarItem Class="tm-document-editor__ribbon-item tm-document-editor__ribbon-item--popup"
@@ -1770,57 +1396,17 @@
                    Disabled="@(!IsCommandEnabled("insertImage"))"
                    MenuLabel="@Loc["TmDocumentEditor_InsertImage"]"
                    MenuItems="@ImageMenuItems()">
-<div class="tm-document-image-insert-menu-wrapper"
-                             @onclick:stopPropagation="true"
-                             @onpointerdown:stopPropagation="true">
-                            <DocumentRibbonButton Icon="image"
-                                                  Text="@Loc["TmDocumentEditor_InsertImage"]"
-                                                  Disabled="@(!IsCommandEnabled("insertImage"))"
-                                                  Tooltip="@(GetEditingCommandTitle(Loc["TmDocumentEditor_InsertImage"]))"
-                                                  OnClick="ToggleImageInsertMenu"
-                                                  Command="insertImage"
-                                      Large="@LargeActions"
-                                                  TestId="@TestId("document-toolbar-image")"
-                                                  aria-haspopup="menu"
-                                                  aria-expanded="@_imageInsertMenuOpen.ToString().ToLowerInvariant()" />
-                            @if (_imageInsertMenuOpen)
-                            {
-                                <div class="tm-document-image-insert-menu"
-                                     role="menu"
-                                     aria-label="@Loc["TmDocumentEditor_ImageInsertMenu"]"
-                                     @onclick:stopPropagation="true"
-                                     @onpointerdown:stopPropagation="true"
-                                     data-testid="@TestId("document-image-insert-menu")">
-                                    <button type="button"
-                                            role="menuitem"
-                                            data-testid="@TestId("document-image-insert-url")"
-                                            @onclick="InsertImageFromUrlAsync">
-                                        <TmIcon Name="link" Size="IconSize.Sm" />
-                                        <span>@Loc["TmDocumentEditor_ImageInsertUrl"]</span>
-                                    </button>
-                                    <button type="button"
-                                            role="menuitem"
-                                            disabled="@(!CanUploadImages)"
-                                            title="@(CanUploadImages ? Loc["TmDocumentEditor_UploadImage"] : Loc["TmDocumentEditor_ImageProviderMissing"])"
-                                            data-testid="@TestId("document-image-insert-upload")"
-                                            @onclick="InsertImageFromUploadAsync">
-                                        <TmIcon Name="upload" Size="IconSize.Sm" />
-                                        <span>@Loc["TmDocumentEditor_UploadImage"]</span>
-                                    </button>
-                                    @if (CanBrowseImageAssets)
-                                    {
-                                        <button type="button"
-                                                role="menuitem"
-                                                title="@Loc["TmDocumentEditor_ImageInsertAsset"]"
-                                                data-testid="@TestId("document-image-insert-asset")"
-                                                @onclick="InsertImageFromAssetAsync">
-                                            <TmIcon Name="images" Size="IconSize.Sm" />
-                                            <span>@Loc["TmDocumentEditor_ImageInsertAsset"]</span>
-                                        </button>
-                                    }
-                                </div>
-                            }
-                        </div>
+        <DocumentRibbonButton @ref="_imageButton"
+                              Icon="image"
+                              Text="@Loc["TmDocumentEditor_InsertImage"]"
+                              Disabled="@(!IsCommandEnabled("insertImage"))"
+                              Tooltip="@(GetEditingCommandTitle(Loc["TmDocumentEditor_InsertImage"]))"
+                              OnClick="InsertImageFromBarAsync"
+                              Command="insertImage"
+                              Large="@LargeActions"
+                              TestId="@TestId("document-toolbar-image")"
+                              aria-haspopup="dialog"
+                              aria-expanded="@ImageIsOpen.ToString().ToLowerInvariant()" />
     </TmToolbarItem>;
 
     // A select that can leave the bar offers its options in "More" as one check-marked section: the same handler the native
@@ -2158,71 +1744,6 @@
         await GetActiveTabReference().FocusAsync();
     }
 
-    /// <inheritdoc />
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (_focusLinkUrlOnRender)
-        {
-            _focusLinkUrlOnRender = false;
-            try
-            {
-                await _linkUrlInput.FocusAsync(preventScroll: true);
-            }
-            catch
-            {
-                // Element focus can fail during prerender or if the dialog closed before render.
-            }
-        }
-
-        if (_focusHeaderFooterFieldMenuOnRender)
-        {
-            _focusHeaderFooterFieldMenuOnRender = false;
-            await FocusToolbarFloatingElementAsync(_headerFooterFieldMenu);
-        }
-
-        if (_focusHeaderFooterPresetMenuOnRender)
-        {
-            _focusHeaderFooterPresetMenuOnRender = false;
-            await FocusToolbarFloatingElementAsync(_headerFooterPresetMenu);
-        }
-
-        if (_focusPageLayoutInspectorOnRender)
-        {
-            _focusPageLayoutInspectorOnRender = false;
-            await FocusToolbarFloatingElementAsync(_pageLayoutInspector);
-        }
-
-        if (_focusStyleGalleryOnRender)
-        {
-            _focusStyleGalleryOnRender = false;
-            await FocusToolbarFloatingElementAsync(_styleGallery);
-        }
-
-        if (_focusEquationMenuOnRender)
-        {
-            _focusEquationMenuOnRender = false;
-            await FocusToolbarFloatingElementAsync(_equationMenu);
-        }
-
-        if (_focusSymbolMenuOnRender)
-        {
-            _focusSymbolMenuOnRender = false;
-            await FocusToolbarFloatingElementAsync(_symbolMenu);
-        }
-    }
-
-    private static async Task FocusToolbarFloatingElementAsync(ElementReference element)
-    {
-        try
-        {
-            await element.FocusAsync(preventScroll: true);
-        }
-        catch
-        {
-            // The floating element may have been closed by a rapid user action before focus runs.
-        }
-    }
-
     private void HandleToolbarKeyDown(KeyboardEventArgs args)
     {
         if (args.Key != "Escape")
@@ -2289,9 +1810,7 @@
         // Internal UI state (menus, dialogs, overflow, optimistic formatting).
         hash.Add((int)_activeRibbonTab);
         hash.Add(_linkDialogOpen); hash.Add(_pendingLinkUrl); hash.Add(_pendingLinkTitle); hash.Add(_linkError);
-        hash.Add(_styleGalleryOpen); hash.Add(_symbolMenuOpen); hash.Add(_equationMenuOpen);
-        hash.Add(_headerFooterFieldMenuOpen); hash.Add(_headerFooterPresetMenuOpen); hash.Add(_imageInsertMenuOpen);
-        hash.Add(_pageLayoutInspectorOpen); hash.Add(_tableGridPickerOpen); hash.Add(_docxImportOpen);
+        hash.Add((int)_floating); hash.Add(_floatingFromMenu); hash.Add(ImagePanelOpen); hash.Add(_docxImportOpen);
         hash.Add(_keyboardMode); hash.Add(_wasHeaderFooterMode);
         hash.Add(_styleFontSizeValue); hash.Add(_styleNameValue); hash.Add(_styleRenameSourceId); hash.Add(_styleRenameValue);
         hash.Add(_optimisticParagraphAlignment.HasValue ? (int)_optimisticParagraphAlignment.Value : -1);
@@ -2674,8 +2193,17 @@
     /// <summary>Raised when the grid picker selects dimensions for table insertion.</summary>
     [Parameter] public EventCallback<(int Rows, int Columns)> OnInsertTableWithDimensions { get; set; }
 
-    /// <summary>Raised when the image insert flow should open.</summary>
+    /// <summary>Raised when the image panel should open on its default tab (From URL), or close when it is already open. The editor owns the panel.</summary>
     [Parameter] public EventCallback OnInsertImage { get; set; }
+
+    /// <summary>Whether the editor's image panel is open: the image button's <c>aria-expanded</c>.</summary>
+    [Parameter] public bool ImagePanelOpen { get; set; }
+
+    /// <summary>
+    /// Raised when a ribbon panel closes through Escape or its X: the editor gives focus back to the canvas, so typing continues at
+    /// the selection. A close through an outside press never raises it (the user clicked somewhere else).
+    /// </summary>
+    [Parameter] public EventCallback OnRestoreFocus { get; set; }
 
     /// <summary>Whether provider-backed image uploads are available.</summary>
     [Parameter] public bool CanUploadImages { get; set; }
@@ -2747,28 +2275,11 @@
         _styleRenameValue = args.Value?.ToString();
     }
 
-    private void ToggleStyleGallery()
-    {
-        _styleGalleryOpen = !_styleGalleryOpen;
-        _focusStyleGalleryOnRender = _styleGalleryOpen;
-        _focusHeaderFooterFieldMenuOnRender = false;
-        _focusHeaderFooterPresetMenuOnRender = false;
-        _focusPageLayoutInspectorOnRender = false;
-        _focusEquationMenuOnRender = false;
-        _focusSymbolMenuOnRender = false;
-        _headerFooterFieldMenuOpen = false;
-        _headerFooterPresetMenuOpen = false;
-        _pageLayoutInspectorOpen = false;
-        _tableGridPickerOpen = false;
-        _imageInsertMenuOpen = false;
-        _equationMenuOpen = false;
-        _symbolMenuOpen = false;
-    }
+    private void ToggleStyleGallery() => ToggleFloating(ToolbarFloating.StyleGallery, fromMenu: true);
 
     private async Task ApplyQuickStyleAsync(string style)
     {
-        _styleGalleryOpen = false;
-        _focusStyleGalleryOnRender = false;
+        CloseToolbarFloatingUi();
         await OnBlockStyleChanged.InvokeAsync(style);
     }
 
@@ -2880,24 +2391,660 @@
         return style;
     }
 
-    private Task HandleStyleGalleryKeyDown(KeyboardEventArgs args)
-    {
-        if (args.Key == "Escape")
-        {
-            _styleGalleryOpen = false;
-            _focusStyleGalleryOnRender = false;
-        }
-
-        return Task.CompletedTask;
-    }
-
-    private string GetQuickStyleButtonClass(string style)
-        => IsCurrentQuickStyle(style)
-            ? "tm-document-style-gallery__quick-style tm-document-style-gallery__quick-style--active"
-            : "tm-document-style-gallery__quick-style";
-
     private bool IsCurrentQuickStyle(string style)
         => string.Equals(NormalizeStyleKey(CurrentBlockStyle), NormalizeStyleKey(style), StringComparison.Ordinal);
+
+    // ─── the floating panels (rendered after the toolbar; see "floating panels" above) ──────────────────────────────────
+
+    private RenderFragment FloatingPanels => @<text>
+        @if (_activeRibbonTab == DocumentRibbonTab.Home && ShowBlockStyle && ShowStyleManagement && _styleGalleryOpen)
+        {
+            <TmDocumentFloatingPanel IsOpen="true"
+                                     Kind="style-gallery"
+                                     Title="@Loc["TmDocumentEditor_StyleGallery"]"
+                                     Icon="gallery-horizontal-end"
+                                     Width="DocumentFloatingPanelWidth.Wide"
+                                     PanelId="@FloatingPanelId("style-gallery")"
+                                     PanelTestId="document-style-gallery"
+                                     CloseTestId="document-style-gallery-close"
+                                     TestIdPrefix="@TestIdPrefix"
+                                     Anchor="@_ribbonPanel"
+                                     Align="@FloatingAlign"
+                                     OnClose="@(reason => HandleFloatingClosedAsync(ToolbarFloating.StyleGallery, reason))"
+                                     OnRestoreFocus="OnRestoreFocus">
+                <DocumentPaletteGrid TItem="StyleGalleryButton"
+                                     Heading="@Loc["TmDocumentEditor_QuickStyles"]"
+                                     Columns="6"
+                                     SheetColumns="3"
+                                     Items="QuickStyleButtons"
+                                     SectionTestId="document-style-gallery-quick"
+                                     TestIdPrefix="@TestIdPrefix"
+                                     Class="tm-document-palette-grid--styles"
+                                     ItemTestId="@(style => $"document-style-quick-{style.TestId}")"
+                                     IsSelected="@(style => IsCurrentQuickStyle(style.Value))"
+                                     IsDisabled="@(_ => ReadOnly)"
+                                     OnSelect="@(style => ApplyQuickStyleAsync(style.Value))">
+                    <ItemContent Context="style">
+                        <span class="tm-document-style-gallery__sample" style="@StyleSampleStyle(style.Value)" aria-hidden="true">AaBbCc</span>
+                        <span class="tm-document-palette-grid__label">@style.Label</span>
+                    </ItemContent>
+                </DocumentPaletteGrid>
+                <div class="tm-document-inspector-form tm-document-inspector-form--embedded tm-document-style-gallery__form">
+                    <label class="tm-document-inspector-form__field tm-document-inspector-form__field--stacked">
+                        <span class="tm-document-inspector-form__label">@Loc["TmDocumentEditor_StyleFontSize"]</span>
+                        <input type="number"
+                               class="tm-input"
+                               min="8"
+                               max="96"
+                               step="1"
+                               value="@_styleFontSizeValue"
+                               @oninput="HandleStyleFontSizeInput"
+                               data-testid="@TestId("document-style-font-size")" />
+                    </label>
+                    <label class="tm-document-inspector-form__field tm-document-inspector-form__field--stacked">
+                        <span class="tm-document-inspector-form__label">@Loc["TmDocumentEditor_StyleName"]</span>
+                        <input type="text"
+                               class="tm-input"
+                               value="@_styleNameValue"
+                               @oninput="HandleStyleNameInput"
+                               data-testid="@TestId("document-style-name")" />
+                    </label>
+                    <label class="tm-document-inspector-form__field tm-document-inspector-form__field--stacked tm-document-style-gallery__field--wide">
+                        <span class="tm-document-inspector-form__label">@Loc["TmDocumentEditor_StyleRenameName"]</span>
+                        <input type="text"
+                               class="tm-input"
+                               value="@_styleRenameValue"
+                               @oninput="HandleStyleRenameInput"
+                               data-testid="@TestId("document-style-rename-name")" />
+                    </label>
+                </div>
+                <section class="tm-document-palette-grid tm-document-style-gallery__actions" aria-labelledby="@(_floatingIdPrefix + "-style-actions")">
+                    <h4 id="@(_floatingIdPrefix + "-style-actions")" class="tm-document-palette-grid__heading">@Loc["TmDocumentEditor_StyleActions"]</h4>
+                    <div class="tm-document-style-gallery__action-row" role="group" aria-labelledby="@(_floatingIdPrefix + "-style-actions")">
+                        <button type="button"
+                                class="tm-btn tm-btn-sm tm-btn-primary"
+                                disabled="@ReadOnly"
+                                @onclick="ModifyCurrentStyleAsync"
+                                data-command="modifyStyle"
+                                data-testid="@TestId("document-style-modify")">
+                            <TmIcon Name="wand-sparkles" Size="IconSize.Sm" />
+                            <span>@Loc["TmDocumentEditor_ModifyStyle"]</span>
+                        </button>
+                        <button type="button"
+                                class="tm-btn tm-btn-sm tm-btn-secondary"
+                                disabled="@(ReadOnly || string.IsNullOrWhiteSpace(_styleNameValue))"
+                                @onclick="CreateStyleFromSelectionAsync"
+                                data-command="createStyleFromSelection"
+                                data-testid="@TestId("document-style-create")">
+                            <TmIcon Name="plus" Size="IconSize.Sm" />
+                            <span>@Loc["TmDocumentEditor_CreateStyle"]</span>
+                        </button>
+                        <button type="button"
+                                class="tm-btn tm-btn-sm tm-btn-secondary"
+                                disabled="@(ReadOnly || string.IsNullOrWhiteSpace(_styleRenameValue))"
+                                @onclick="RenameCurrentStyleAsync"
+                                data-command="renameStyle"
+                                data-testid="@TestId("document-style-rename")">
+                            <TmIcon Name="pencil" Size="IconSize.Sm" />
+                            <span>@Loc["TmDocumentEditor_RenameStyle"]</span>
+                        </button>
+                        <button type="button"
+                                class="tm-btn tm-btn-sm tm-btn-secondary"
+                                disabled="@(ReadOnly || IsCurrentStyleBuiltIn)"
+                                @onclick="DeleteCurrentStyleAsync"
+                                data-command="deleteStyle"
+                                data-testid="@TestId("document-style-delete")">
+                            <TmIcon Name="trash-2" Size="IconSize.Sm" />
+                            <span>@Loc["TmDocumentEditor_DeleteStyle"]</span>
+                        </button>
+                        <button type="button"
+                                class="tm-btn tm-btn-sm tm-btn-secondary"
+                                disabled="@ReadOnly"
+                                @onclick="ResetStyleFormattingAsync"
+                                data-command="resetStyleFormatting"
+                                data-testid="@TestId("document-style-reset-formatting")">
+                            <TmIcon Name="eraser" Size="IconSize.Sm" />
+                            <span>@Loc["TmDocumentEditor_ResetStyleFormatting"]</span>
+                        </button>
+                    </div>
+                </section>
+            </TmDocumentFloatingPanel>
+        }
+
+        @if (_tableGridPickerOpen)
+        {
+            <TmDocumentFloatingPanel IsOpen="true"
+                                     Kind="table"
+                                     Title="@Loc["TmDocumentEditor_InsertTable"]"
+                                     Icon="table"
+                                     Width="DocumentFloatingPanelWidth.Compact"
+                                     PanelId="@FloatingPanelId("table")"
+                                     PanelTestId="document-table-grid-panel"
+                                     CloseTestId="document-table-grid-close"
+                                     TestIdPrefix="@TestIdPrefix"
+                                     Anchor="@FloatingAnchor(_tableButton)"
+                                     Align="@FloatingAlign"
+                                     OnClose="@(reason => HandleFloatingClosedAsync(ToolbarFloating.Table, reason))"
+                                     OnRestoreFocus="OnRestoreFocus">
+                <TmDocumentTableGridPicker OnInsert="HandleGridPickerInsertAsync"
+                                           OnClose="CloseToolbarFloatingUi"
+                                           TestIdPrefix="@TestIdPrefix" />
+            </TmDocumentFloatingPanel>
+        }
+
+        @if (_equationMenuOpen)
+        {
+            <TmDocumentFloatingPanel IsOpen="true"
+                                     Kind="equation"
+                                     Title="@Loc["TmDocumentEditor_EquationMenu"]"
+                                     Icon="sigma"
+                                     Width="DocumentFloatingPanelWidth.Wide"
+                                     PanelId="@FloatingPanelId("equation")"
+                                     PanelTestId="document-equation-menu"
+                                     CloseTestId="document-equation-menu-close"
+                                     TestIdPrefix="@TestIdPrefix"
+                                     Anchor="@FloatingAnchor(_equationButton)"
+                                     Align="@FloatingAlign"
+                                     OnClose="@(reason => HandleFloatingClosedAsync(ToolbarFloating.Equation, reason))"
+                                     OnRestoreFocus="OnRestoreFocus">
+                <DocumentPaletteGrid TItem="DocumentEquationPaletteItem"
+                                     Heading="@Loc["TmDocumentEditor_EquationStructures"]"
+                                     Columns="6"
+                                     Items="EquationStructurePaletteItems"
+                                     SectionTestId="document-equation-structures"
+                                     TestIdPrefix="@TestIdPrefix"
+                                     Class="tm-document-palette-grid--math"
+                                     ItemTestId="@(item => $"document-equation-{item.TestId}")"
+                                     ItemTitle="@(item => Loc[item.LabelKey])"
+                                     OnSelect="@(item => InsertEquationPresetAsync(item.Preset))">
+                    <ItemContent Context="item">
+                        <span class="tm-document-math" data-math="@item.Preset" aria-hidden="true">@EquationPreview(item)</span>
+                        <span class="tm-document-palette-grid__label">@Loc[item.LabelKey]</span>
+                    </ItemContent>
+                </DocumentPaletteGrid>
+                <DocumentPaletteGrid TItem="DocumentEquationPaletteItem"
+                                     Heading="@Loc["TmDocumentEditor_EquationSymbols"]"
+                                     Columns="6"
+                                     Items="EquationSymbolPaletteItems"
+                                     SectionTestId="document-equation-symbols"
+                                     TestIdPrefix="@TestIdPrefix"
+                                     Class="tm-document-palette-grid--math"
+                                     ItemTestId="@(item => $"document-equation-{item.TestId}")"
+                                     ItemTitle="@(item => Loc[item.LabelKey])"
+                                     OnSelect="@(item => InsertEquationPresetAsync(item.Preset))">
+                    <ItemContent Context="item">
+                        <span class="tm-document-math tm-document-math--symbol" aria-hidden="true">@Loc[item.SymbolKey!]</span>
+                        <span class="tm-document-palette-grid__label">@Loc[item.LabelKey]</span>
+                    </ItemContent>
+                </DocumentPaletteGrid>
+            </TmDocumentFloatingPanel>
+        }
+
+        @if (_symbolMenuOpen)
+        {
+            <TmDocumentFloatingPanel IsOpen="true"
+                                     Kind="symbol"
+                                     Title="@Loc["TmDocumentEditor_SymbolMenu"]"
+                                     Icon="omega"
+                                     Width="DocumentFloatingPanelWidth.Wide"
+                                     PanelId="@FloatingPanelId("symbol")"
+                                     PanelTestId="document-symbol-menu"
+                                     CloseTestId="document-symbol-menu-close"
+                                     TestIdPrefix="@TestIdPrefix"
+                                     Anchor="@FloatingAnchor(_symbolButton)"
+                                     Align="@FloatingAlign"
+                                     OnClose="@(reason => HandleFloatingClosedAsync(ToolbarFloating.Symbol, reason))"
+                                     OnRestoreFocus="OnRestoreFocus">
+                <DocumentPaletteGrid TItem="DocumentSymbolPaletteItem"
+                                     Heading="@Loc["TmDocumentEditor_SymbolCharacters"]"
+                                     Columns="8"
+                                     Items="SymbolPaletteItems"
+                                     SectionTestId="document-symbol-characters"
+                                     TestIdPrefix="@TestIdPrefix"
+                                     Class="tm-document-palette-grid--symbols"
+                                     ItemTestId="@(item => $"document-symbol-{item.TestId}")"
+                                     ItemTitle="@(item => Loc[item.LabelKey])"
+                                     OnSelect="@(item => InsertSymbolPresetAsync(item.Preset))">
+                    <ItemContent Context="item">
+                        <span class="tm-document-palette-grid__glyph" aria-hidden="true">@Loc[item.GlyphKey]</span>
+                        <span class="tm-document-palette-grid__label">@Loc[item.LabelKey]</span>
+                    </ItemContent>
+                </DocumentPaletteGrid>
+                <DocumentPaletteGrid TItem="DocumentSymbolPaletteItem"
+                                     Heading="@Loc["TmDocumentEditor_EmojiPicker"]"
+                                     Columns="8"
+                                     Items="EmojiPaletteItems"
+                                     SectionTestId="document-symbol-emoji"
+                                     TestIdPrefix="@TestIdPrefix"
+                                     Class="tm-document-palette-grid--symbols"
+                                     ItemTestId="@(item => $"document-emoji-{item.TestId}")"
+                                     ItemTitle="@(item => Loc[item.LabelKey])"
+                                     OnSelect="@(item => InsertSymbolPresetAsync(item.Preset))">
+                    <ItemContent Context="item">
+                        <span class="tm-document-palette-grid__glyph tm-document-palette-grid__glyph--emoji" aria-hidden="true">@Loc[item.GlyphKey]</span>
+                        <span class="tm-document-palette-grid__label">@Loc[item.LabelKey]</span>
+                    </ItemContent>
+                </DocumentPaletteGrid>
+            </TmDocumentFloatingPanel>
+        }
+
+        @if (_pageLayoutInspectorOpen)
+        {
+            <TmDocumentFloatingPanel IsOpen="true"
+                                     Kind="page-layout"
+                                     Title="@Loc["TmDocumentEditor_PageLayout"]"
+                                     Icon="panel-top"
+                                     Width="DocumentFloatingPanelWidth.Wide"
+                                     PanelId="@FloatingPanelId("page-layout")"
+                                     PanelTestId="document-page-layout-inspector"
+                                     CloseTestId="document-page-layout-close"
+                                     TestIdPrefix="@TestIdPrefix"
+                                     Anchor="@FloatingAnchor(_pageLayoutButton)"
+                                     Align="@FloatingAlign"
+                                     OnClose="@(reason => HandleFloatingClosedAsync(ToolbarFloating.PageLayout, reason))"
+                                     OnRestoreFocus="OnRestoreFocus">
+                <ChildContent>
+                <div class="tm-document-page-layout">
+                    <figure class="tm-document-page-layout__preview-card">
+                        <div class="tm-document-page-layout__preview"
+                             style="@PagePreviewStyle"
+                             data-testid="@TestId("document-page-layout-preview")"
+                             data-orientation="@(EffectivePageSettings.Landscape ? "landscape" : "portrait")"
+                             data-columns="@EffectiveSectionColumns.Count.ToString(CultureInfo.InvariantCulture)"
+                             aria-hidden="true">
+                            <div class="tm-document-page-layout__preview-text">
+                                @for (var column = 0; column < Math.Clamp(EffectiveSectionColumns.Count, 1, 3); column++)
+                                {
+                                    <span class="tm-document-page-layout__preview-column"></span>
+                                }
+                            </div>
+                        </div>
+                        <figcaption class="tm-document-page-layout__caption" data-testid="@TestId("document-page-layout-caption")"><span>@PageDimensionsLabel</span><span class="tm-document-page-layout__orientation">@PageOrientationLabel</span></figcaption>
+                    </figure>
+                    <div class="tm-document-page-layout__form tm-document-inspector-form tm-document-inspector-form--embedded">
+                        <div class="tm-document-page-layout__row">
+                            <label class="tm-document-inspector-form__field tm-document-inspector-form__field--stacked">
+                                <span class="tm-document-inspector-form__label">@Loc["TmDocumentEditor_PageSize"]</span>
+                                <select class="tm-input"
+                                        value="@EffectivePageSettings.Size.Name"
+                                        @oninput="HandlePageSizeChangedAsync"
+                                        data-testid="@TestId("document-page-size")">
+                                    <option value="A4">A4</option>
+                                    <option value="Letter">Letter</option>
+                                </select>
+                            </label>
+                            <div class="tm-document-inspector-form__field tm-document-inspector-form__field--stacked">
+                                <span class="tm-document-inspector-form__label" id="@(_floatingIdPrefix + "-orientation")">@Loc["TmDocumentEditor_Orientation"]</span>
+                                @* Fáze 18: duplicitní <select> orientace odstraněn — segmentová tlačítka jsou jediné ovládání. *@
+                                <span class="tm-document-inspector-form__segmented" role="group" aria-labelledby="@(_floatingIdPrefix + "-orientation")">
+                                    <button type="button"
+                                            class="@GetPageOrientationButtonClass(false)"
+                                            aria-pressed="@((!EffectivePageSettings.Landscape).ToString().ToLowerInvariant())"
+                                            @onclick="() => SetPageOrientationAsync(false)"
+                                            data-testid="@TestId("document-page-orientation-portrait")">
+                                        @Loc["TmDocumentEditor_OrientationPortrait"]
+                                    </button>
+                                    <button type="button"
+                                            class="@GetPageOrientationButtonClass(true)"
+                                            aria-pressed="@(EffectivePageSettings.Landscape.ToString().ToLowerInvariant())"
+                                            @onclick="() => SetPageOrientationAsync(true)"
+                                            data-testid="@TestId("document-page-orientation-landscape")">
+                                        @Loc["TmDocumentEditor_OrientationLandscape"]
+                                    </button>
+                                </span>
+                            </div>
+                        </div>
+                        <section class="tm-document-page-layout__section" aria-labelledby="@(_floatingIdPrefix + "-margins")">
+                            <h4 id="@(_floatingIdPrefix + "-margins")" class="tm-document-palette-grid__heading">@Loc["TmDocumentEditor_MarginsPreset"]</h4>
+                            <label class="tm-document-inspector-form__field tm-document-inspector-form__field--stacked">
+                                <span class="tm-sr-only">@Loc["TmDocumentEditor_MarginsPreset"]</span>
+                                <select class="tm-input"
+                                        value="@CurrentMarginPreset"
+                                        @oninput="HandleMarginPresetChangedAsync"
+                                        data-testid="@TestId("document-margin-preset")">
+                                    <option value="Normal">@Loc["TmDocumentEditor_MarginsNormal"]</option>
+                                    <option value="Narrow">@Loc["TmDocumentEditor_MarginsNarrow"]</option>
+                                    <option value="Wide">@Loc["TmDocumentEditor_MarginsWide"]</option>
+                                    <option value="Custom">@Loc["TmDocumentEditor_MarginsCustom"]</option>
+                                </select>
+                            </label>
+                            <div class="tm-document-page-layout__grid tm-document-page-layout__grid--four">
+                                @PointsField("margin-top", Loc["TmDocumentEditor_MarginTop"], FormatPoints(EffectivePageSettings.Margins.Top), args => HandleMarginChangedAsync("Top", args))
+                                @PointsField("margin-right", Loc["TmDocumentEditor_MarginRight"], FormatPoints(EffectivePageSettings.Margins.Right), args => HandleMarginChangedAsync("Right", args))
+                                @PointsField("margin-bottom", Loc["TmDocumentEditor_MarginBottom"], FormatPoints(EffectivePageSettings.Margins.Bottom), args => HandleMarginChangedAsync("Bottom", args))
+                                @PointsField("margin-left", Loc["TmDocumentEditor_MarginLeft"], FormatPoints(EffectivePageSettings.Margins.Left), args => HandleMarginChangedAsync("Left", args))
+                            </div>
+                            <div class="tm-document-page-layout__grid tm-document-page-layout__grid--two">
+                                @PointsField("header-distance", Loc["TmDocumentEditor_HeaderDistance"], FormatPoints(EffectivePageSettings.HeaderDistanceFromTop), HandleHeaderDistanceChangedAsync)
+                                @PointsField("footer-distance", Loc["TmDocumentEditor_FooterDistance"], FormatPoints(EffectivePageSettings.FooterDistanceFromBottom), HandleFooterDistanceChangedAsync)
+                            </div>
+                        </section>
+                        <section class="tm-document-page-layout__section" aria-labelledby="@(_floatingIdPrefix + "-columns")">
+                            <h4 id="@(_floatingIdPrefix + "-columns")" class="tm-document-palette-grid__heading">@Loc["TmDocumentEditor_Columns"]</h4>
+                            <div class="tm-document-page-layout__grid tm-document-page-layout__grid--columns">
+                                <label class="tm-document-inspector-form__field tm-document-inspector-form__field--stacked">
+                                    <span class="tm-document-inspector-form__label">@Loc["TmDocumentEditor_ColumnCount"]</span>
+                                    <select class="tm-input"
+                                            value="@EffectiveSectionColumns.Count.ToString(CultureInfo.InvariantCulture)"
+                                            @oninput="HandleColumnCountChangedAsync"
+                                            data-testid="@TestId("document-column-count")">
+                                        <option value="1">@Loc["TmDocumentEditor_ColumnsOne"]</option>
+                                        <option value="2">@Loc["TmDocumentEditor_ColumnsTwo"]</option>
+                                        <option value="3">@Loc["TmDocumentEditor_ColumnsThree"]</option>
+                                    </select>
+                                </label>
+                                @PointsField("column-spacing", Loc["TmDocumentEditor_ColumnSpacing"], FormatPoints(EffectiveSectionColumns.Spacing), HandleColumnSpacingChangedAsync)
+                                <label class="tm-document-page-layout__check">
+                                    <input type="checkbox"
+                                           checked="@EffectiveSectionColumns.SeparatorLine"
+                                           @onchange="HandleColumnSeparatorChangedAsync"
+                                           data-testid="@TestId("document-column-separator")" />
+                                    <span>@Loc["TmDocumentEditor_ColumnSeparator"]</span>
+                                </label>
+                            </div>
+                        </section>
+                        <section class="tm-document-page-layout__section" aria-labelledby="@(_floatingIdPrefix + "-line-numbers")">
+                            <h4 id="@(_floatingIdPrefix + "-line-numbers")" class="tm-document-palette-grid__heading">@Loc["TmDocumentEditor_LineNumbers"]</h4>
+                            <label class="tm-document-page-layout__check">
+                                <input type="checkbox"
+                                       checked="@EffectiveLineNumbering.Enabled"
+                                       @onchange="HandleLineNumberingEnabledChangedAsync"
+                                       data-testid="@TestId("document-line-numbering-enabled")" />
+                                <span>@Loc["TmDocumentEditor_LineNumbersEnabled"]</span>
+                            </label>
+                            <div class="tm-document-page-layout__grid tm-document-page-layout__grid--four">
+                                <label class="tm-document-inspector-form__field tm-document-inspector-form__field--stacked">
+                                    <span class="tm-document-inspector-form__label">@Loc["TmDocumentEditor_LineNumbersStartAt"]</span>
+                                    <input type="number" class="tm-input" min="1" max="9999" step="1" value="@EffectiveLineNumbering.StartAt.ToString(CultureInfo.InvariantCulture)" @oninput="HandleLineNumberingStartChangedAsync" data-testid="@TestId("document-line-numbering-start")" />
+                                </label>
+                                <label class="tm-document-inspector-form__field tm-document-inspector-form__field--stacked">
+                                    <span class="tm-document-inspector-form__label">@Loc["TmDocumentEditor_LineNumbersIncrement"]</span>
+                                    <input type="number" class="tm-input" min="1" max="100" step="1" value="@EffectiveLineNumbering.Increment.ToString(CultureInfo.InvariantCulture)" @oninput="HandleLineNumberingIncrementChangedAsync" data-testid="@TestId("document-line-numbering-increment")" />
+                                </label>
+                                @PointsField("line-numbering-distance", Loc["TmDocumentEditor_LineNumbersDistance"], FormatPoints(EffectiveLineNumbering.DistanceFromText), HandleLineNumberingDistanceChangedAsync, max: 72, step: 3)
+                                <label class="tm-document-inspector-form__field tm-document-inspector-form__field--stacked">
+                                    <span class="tm-document-inspector-form__label">@Loc["TmDocumentEditor_LineNumbersRestart"]</span>
+                                    <select class="tm-input"
+                                            value="@EffectiveLineNumbering.Restart.ToString()"
+                                            @oninput="HandleLineNumberingRestartChangedAsync"
+                                            data-testid="@TestId("document-line-numbering-restart")">
+                                        <option value="@DocumentLineNumberingRestart.Continuous.ToString()">@Loc["TmDocumentEditor_LineNumbersRestartContinuous"]</option>
+                                        <option value="@DocumentLineNumberingRestart.Page.ToString()">@Loc["TmDocumentEditor_LineNumbersRestartPage"]</option>
+                                        <option value="@DocumentLineNumberingRestart.Section.ToString()">@Loc["TmDocumentEditor_LineNumbersRestartSection"]</option>
+                                    </select>
+                                </label>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+                </ChildContent>
+                <Footer>
+                    @* The only footer of the phase: not a confirm (every field applies at once, G8) - the way out of a long form. *@
+                    <button type="button"
+                            class="tm-btn tm-btn-sm tm-btn-primary"
+                            @onclick="ClosePageLayoutAsync"
+                            data-testid="@TestId("document-page-layout-done")">@Loc["Tm_Done"]</button>
+                </Footer>
+            </TmDocumentFloatingPanel>
+        }
+
+        @if (_headerFooterFieldMenuOpen)
+        {
+            <TmDocumentFloatingPanel IsOpen="true"
+                                     Kind="header-footer-fields"
+                                     Title="@Loc["TmDocumentEditor_InsertField"]"
+                                     Icon="braces"
+                                     Width="DocumentFloatingPanelWidth.Compact"
+                                     PanelId="@FloatingPanelId("header-footer-fields")"
+                                     PanelTestId="document-header-footer-field-menu"
+                                     CloseTestId="document-header-footer-field-close"
+                                     TestIdPrefix="@TestIdPrefix"
+                                     Anchor="@FloatingAnchor(_headerFooterFieldsButton)"
+                                     Align="@FloatingAlign"
+                                     OnClose="@(reason => HandleFloatingClosedAsync(ToolbarFloating.HeaderFooterFields, reason))"
+                                     OnRestoreFocus="OnRestoreFocus">
+                <div class="tm-document-floating-list">
+                    <button type="button" data-testid="@TestId("document-header-footer-menu-page-number")" @onclick="() => InsertHeaderFooterFieldFromMenuAsync(OnInsertPageNumber)">
+                        <TmIcon Name="hash" Size="IconSize.Sm" />
+                        <span>@Loc["TmDocumentEditor_PageNumber"]</span>
+                    </button>
+                    <button type="button" data-testid="@TestId("document-header-footer-menu-page-count")" @onclick="() => InsertHeaderFooterFieldFromMenuAsync(OnInsertPageCount)">
+                        <TmIcon Name="files" Size="IconSize.Sm" />
+                        <span>@Loc["TmDocumentEditor_TotalPages"]</span>
+                    </button>
+                    <button type="button" data-testid="@TestId("document-header-footer-menu-page-x-of-y")" @onclick="() => InsertHeaderFooterFieldFromMenuAsync(OnInsertPageXOfY)">
+                        <TmIcon Name="file-stack" Size="IconSize.Sm" />
+                        <span>@Loc["TmDocumentEditor_PageXOfY"]</span>
+                    </button>
+                    <button type="button" data-testid="@TestId("document-header-footer-menu-date")" @onclick="() => InsertHeaderFooterFieldFromMenuAsync(OnInsertDateField)">
+                        <TmIcon Name="calendar-days" Size="IconSize.Sm" />
+                        <span>@Loc["TmDocumentEditor_FieldDate"]</span>
+                    </button>
+                    <button type="button" data-testid="@TestId("document-header-footer-menu-title")" @onclick="() => InsertHeaderFooterFieldFromMenuAsync(OnInsertDocumentTitleField)">
+                        <TmIcon Name="file-text" Size="IconSize.Sm" />
+                        <span>@Loc["TmDocumentEditor_DocumentTitle"]</span>
+                    </button>
+                    <button type="button" data-testid="@TestId("document-header-footer-menu-author")" @onclick="() => InsertHeaderFooterFieldFromMenuAsync(OnInsertAuthorField)">
+                        <TmIcon Name="user" Size="IconSize.Sm" />
+                        <span>@Loc["TmDocumentEditor_Author"]</span>
+                    </button>
+                </div>
+            </TmDocumentFloatingPanel>
+        }
+
+        @if (_headerFooterPresetMenuOpen)
+        {
+            <TmDocumentFloatingPanel IsOpen="true"
+                                     Kind="header-footer-presets"
+                                     Title="@Loc["TmDocumentEditor_HeaderFooterPresets"]"
+                                     Icon="layout-template"
+                                     Width="DocumentFloatingPanelWidth.Compact"
+                                     PanelId="@FloatingPanelId("header-footer-presets")"
+                                     PanelTestId="document-header-footer-presets-menu"
+                                     CloseTestId="document-header-footer-presets-close"
+                                     TestIdPrefix="@TestIdPrefix"
+                                     Anchor="@FloatingAnchor(_headerFooterPresetsButton)"
+                                     Align="@FloatingAlign"
+                                     OnClose="@(reason => HandleFloatingClosedAsync(ToolbarFloating.HeaderFooterPresets, reason))"
+                                     OnRestoreFocus="OnRestoreFocus">
+                <div class="tm-document-floating-list">
+                    <button type="button" data-testid="@TestId("document-header-footer-preset-page-number-right-footer")" @onclick='() => ApplyHeaderFooterPresetFromMenuAsync("footer-page-number-right")'>
+                        <span class="tm-document-header-footer-menu__preview tm-document-header-footer-menu__preview--right" aria-hidden="true"></span>
+                        <span>@Loc["TmDocumentEditor_PresetPageNumberRightFooter"]</span>
+                    </button>
+                    <button type="button" data-testid="@TestId("document-header-footer-preset-page-number-center-footer")" @onclick='() => ApplyHeaderFooterPresetFromMenuAsync("footer-page-number-center")'>
+                        <span class="tm-document-header-footer-menu__preview tm-document-header-footer-menu__preview--center" aria-hidden="true"></span>
+                        <span>@Loc["TmDocumentEditor_PresetPageNumberCenterFooter"]</span>
+                    </button>
+                    <button type="button" data-testid="@TestId("document-header-footer-preset-title-page-header")" @onclick='() => ApplyHeaderFooterPresetFromMenuAsync("header-title-page-number")'>
+                        <span class="tm-document-header-footer-menu__preview tm-document-header-footer-menu__preview--split" aria-hidden="true"></span>
+                        <span>@Loc["TmDocumentEditor_PresetTitlePageHeader"]</span>
+                    </button>
+                    <button type="button" data-testid="@TestId("document-header-footer-preset-page-x-of-y-right-footer")" @onclick='() => ApplyHeaderFooterPresetFromMenuAsync("footer-page-x-of-y-right")'>
+                        <span class="tm-document-header-footer-menu__preview tm-document-header-footer-menu__preview--right-wide" aria-hidden="true"></span>
+                        <span>@Loc["TmDocumentEditor_PresetPageXOfYRightFooter"]</span>
+                    </button>
+                </div>
+            </TmDocumentFloatingPanel>
+        }
+
+        @if (_linkDialogOpen && !ReadOnly)
+        {
+            <TmDocumentFloatingPanel IsOpen="true"
+                                     Kind="link"
+                                     Title="@Loc["TmDocumentEditor_Link"]"
+                                     Icon="link"
+                                     Width="DocumentFloatingPanelWidth.Medium"
+                                     PanelId="@FloatingPanelId("link")"
+                                     PanelTestId="document-link-dialog"
+                                     CloseTestId="document-link-close"
+                                     TestIdPrefix="@TestIdPrefix"
+                                     Anchor="@FloatingAnchor(_linkButton)"
+                                     Align="@FloatingAlign"
+                                     OnClose="@(reason => HandleFloatingClosedAsync(ToolbarFloating.Link, reason))"
+                                     OnOpened="FocusLinkUrlAsync"
+                                     OnRestoreFocus="OnRestoreFocus">
+                <div class="tm-document-link-form tm-document-inspector-form tm-document-inspector-form--embedded">
+                    <label class="tm-document-inspector-form__field tm-document-inspector-form__field--stacked">
+                        <span class="tm-document-inspector-form__label">@Loc["TmDocumentEditor_LinkUrl"]</span>
+                        <input class="tm-input"
+                               @ref="_linkUrlInput"
+                               type="url"
+                               inputmode="url"
+                               enterkeyhint="done"
+                               autocomplete="off"
+                               spellcheck="false"
+                               value="@_pendingLinkUrl"
+                               aria-invalid="@(string.IsNullOrWhiteSpace(_linkError) ? null : "true")"
+                               aria-describedby="@(string.IsNullOrWhiteSpace(_linkError) ? null : FloatingPanelId("link-error"))"
+                               @oninput="HandleLinkUrlInput"
+                               @onkeydown="HandleLinkInputKeyDownAsync"
+                               data-testid="@TestId("document-link-url")" />
+                    </label>
+                    <label class="tm-document-inspector-form__field tm-document-inspector-form__field--stacked">
+                        <span class="tm-document-inspector-form__label">@Loc["TmDocumentEditor_LinkTitle"]</span>
+                        <input class="tm-input"
+                               enterkeyhint="done"
+                               autocomplete="off"
+                               value="@_pendingLinkTitle"
+                               @oninput="args => _pendingLinkTitle = args.Value?.ToString()"
+                               @onkeydown="HandleLinkInputKeyDownAsync"
+                               data-testid="@TestId("document-link-title")" />
+                    </label>
+                    @if (!string.IsNullOrWhiteSpace(_linkError))
+                    {
+                        <span id="@FloatingPanelId("link-error")" class="tm-document-editor__link-error" role="alert" data-testid="@TestId("document-link-error")">@_linkError</span>
+                    }
+                    <div class="tm-document-link-form__actions">
+                        <button type="button" class="tm-btn tm-btn-sm tm-btn-primary" @onclick="ApplyLinkAsync" data-testid="@TestId("document-apply-link")">@Loc["TmDocumentEditor_ApplyLink"]</button>
+                        @if (_linkHadExistingHref && OnLinkRemoved.HasDelegate)
+                        {
+                            <button type="button" class="tm-btn tm-btn-sm tm-btn-secondary" @onclick="RemoveLinkAsync" data-testid="@TestId("document-remove-link")">@Loc["TmDocumentEditor_RemoveLink"]</button>
+                        }
+                        <button type="button" class="tm-btn tm-btn-sm tm-btn-ghost" @onclick="CloseLinkDialog" data-testid="@TestId("document-link-cancel")">@Loc["TmDocumentEditor_Cancel"]</button>
+                    </div>
+                </div>
+            </TmDocumentFloatingPanel>
+        }
+    </text>;
+
+    private Task ClosePageLayoutAsync()
+    {
+        CloseToolbarFloatingUi();
+        return OnRestoreFocus.InvokeAsync();
+    }
+
+    // A numeric field of the page layout: the value, the unit suffix (pt) and the id the input is described by, so a screen reader
+    // reads "Top, 24, pt". Every field keeps its live @oninput (the editor relayouts as the value is typed - the same cost as before).
+    private RenderFragment PointsField(string testId, string label, string value, Func<ChangeEventArgs, Task> onInput, int max = 144, int step = 6) => @<label class="tm-document-inspector-form__field tm-document-inspector-form__field--stacked">
+        <span class="tm-document-inspector-form__label">@label</span>
+        <span class="tm-document-inspector-form__control tm-document-page-layout__points">
+            <input type="number"
+                   class="tm-input"
+                   min="0"
+                   max="@max"
+                   step="@step"
+                   value="@value"
+                   aria-describedby="@(_floatingIdPrefix + "-unit-" + testId)"
+                   @oninput="onInput"
+                   data-testid="@TestId("document-" + testId)" />
+            <span id="@(_floatingIdPrefix + "-unit-" + testId)" class="tm-document-inspector-form__suffix">@Loc["TmDocumentEditor_UnitPoints"]</span>
+        </span>
+    </label>;
+
+    // HTML/CSS previews of the equation structures (no MathML, no canvas): decorative, the button's label names the structure.
+    private RenderFragment EquationPreview(DocumentEquationPaletteItem item)
+    {
+        switch (item.Preset)
+        {
+            case "fraction":
+                return @<span class="tm-document-math__frac"><span>a</span><span>b</span></span>;
+            case "radical":
+                return @<span class="tm-document-math__rad"><span>&#x221A;</span><span class="tm-document-math__rad-body">a</span></span>;
+            case "superscript":
+                return @<span>a<sup>b</sup></span>;
+            case "subscript":
+                return @<span>a<sub>b</sub></span>;
+            case "sum":
+                return @<span class="tm-document-math__limits"><span>n</span><span class="tm-document-math__big">&#x2211;</span><span>i</span></span>;
+            case "product":
+                return @<span class="tm-document-math__limits"><span>n</span><span class="tm-document-math__big">&#x220F;</span><span>i</span></span>;
+            case "matrix":
+                return @<span class="tm-document-math__matrix"><span class="tm-document-math__bracket">[</span><span class="tm-document-math__cells"><span>a</span><span>b</span><span>c</span><span>d</span></span><span class="tm-document-math__bracket">]</span></span>;
+            case "limit":
+                return @<span class="tm-document-math__limits"><span>lim</span><span>x&#x2192;0</span></span>;
+            case "accent":
+                return @<span class="tm-document-math__accent">a</span>;
+            case "borderBox":
+                return @<span class="tm-document-math__box">a</span>;
+            default:
+                return @<span>@Loc[item.SymbolKey ?? "TmDocumentEditor_EquationSymbolQuadratic"]</span>;
+        }
+    }
+
+    /// <summary>
+    /// The inline sample style of a quick-style tile: the size, weight and colour the style shows in the document, taken from the same
+    /// descriptor the ribbon resolves the current style with. Tokens only - the sample follows the theme.
+    /// </summary>
+    private static string StyleSampleStyle(string? style)
+    {
+        var descriptor = ResolveStyleDescriptor(style);
+        if (descriptor.Id == "title")
+        {
+            return "font-size: var(--tm-font-size-xl); font-weight: var(--tm-font-weight-bold); color: var(--tm-color-text);";
+        }
+
+        return descriptor.HeadingLevel switch
+        {
+            1 => "font-size: var(--tm-font-size-lg); font-weight: var(--tm-font-weight-bold); color: var(--tm-color-primary);",
+            2 => "font-size: var(--tm-font-size-md); font-weight: var(--tm-font-weight-semibold); color: var(--tm-color-text);",
+            3 => "font-size: var(--tm-font-size-base); font-weight: var(--tm-font-weight-semibold); color: var(--tm-color-text-secondary); font-style: italic;",
+            _ => descriptor.Id == "quote"
+                ? "font-size: var(--tm-font-size-base); font-weight: var(--tm-font-weight-normal); color: var(--tm-color-text-secondary); font-style: italic;"
+                : "font-size: var(--tm-font-size-base); font-weight: var(--tm-font-weight-normal); color: var(--tm-color-text);",
+        };
+    }
+
+    /// <summary>"Portrait" / "Landscape": the second line of the page layout caption.</summary>
+    private string PageOrientationLabel => EffectivePageSettings.Landscape
+        ? Loc["TmDocumentEditor_OrientationLandscape"]
+        : Loc["TmDocumentEditor_OrientationPortrait"];
+
+    /// <summary>"A4 (210 × 297 mm)": the page size the page layout preview is captioned with.</summary>
+    private string PageDimensionsLabel
+    {
+        get
+        {
+            var page = EffectivePageSettings;
+            var width = Math.Min(page.Size.Width, page.Size.Height);
+            var height = Math.Max(page.Size.Width, page.Size.Height);
+            var name = string.IsNullOrWhiteSpace(page.Size.Name) ? Loc["TmDocumentEditor_PageSizeCustom"] : page.Size.Name!;
+            return string.Format(
+                CultureInfo.CurrentCulture,
+                Loc["TmDocumentEditor_PageDimensions"],
+                name,
+                (width * 25.4 / 72).ToString("0", CultureInfo.CurrentCulture),
+                (height * 25.4 / 72).ToString("0", CultureInfo.CurrentCulture));
+        }
+    }
+
+    /// <summary>
+    /// The page layout preview as CSS custom properties: the page aspect ratio, each margin as a share of the page, and the column
+    /// count / gap. Plain properties on the preview root - a live <c>oninput</c> only restyles it, nothing relayouts.
+    /// </summary>
+    private string PagePreviewStyle
+    {
+        get
+        {
+            var page = EffectivePageSettings;
+            var width = Math.Max(1, page.Landscape ? Math.Max(page.Size.Width, page.Size.Height) : Math.Min(page.Size.Width, page.Size.Height));
+            var height = Math.Max(1, page.Landscape ? Math.Min(page.Size.Width, page.Size.Height) : Math.Max(page.Size.Width, page.Size.Height));
+            var columns = EffectiveSectionColumns;
+            string Pct(double value, double total) => (Math.Clamp(value / total, 0, 0.45) * 100).ToString("0.##", CultureInfo.InvariantCulture) + "%";
+            return string.Create(CultureInfo.InvariantCulture,
+                $"--tm-page-preview-ratio: {width / height:0.####}; --tm-page-preview-margin-top: {Pct(page.Margins.Top, height)}; --tm-page-preview-margin-right: {Pct(page.Margins.Right, width)}; --tm-page-preview-margin-bottom: {Pct(page.Margins.Bottom, height)}; --tm-page-preview-margin-left: {Pct(page.Margins.Left, width)}; --tm-page-preview-columns: {Math.Clamp(columns.Count, 1, 3)}; --tm-page-preview-gap: {Pct(columns.Spacing, width)};");
+        }
+    }
 
     private static StyleDescriptor ResolveStyleDescriptor(string? value)
     {
@@ -3119,16 +3266,6 @@
         => string.Equals(ActiveRegion, "Header", StringComparison.OrdinalIgnoreCase)
             || string.Equals(ActiveRegion, "Footer", StringComparison.OrdinalIgnoreCase);
 
-    private bool HasToolbarFloatingUi =>
-        _imageInsertMenuOpen
-        || _tableGridPickerOpen
-        || _equationMenuOpen
-        || _symbolMenuOpen
-        || _headerFooterFieldMenuOpen
-        || _headerFooterPresetMenuOpen
-        || _pageLayoutInspectorOpen
-        || _styleGalleryOpen;
-
     private DocumentPageSettings EffectivePageSettings => ClonePageSettings(PageSettings);
 
     private DocumentSectionColumns EffectiveSectionColumns => CloneSectionColumns(SectionColumns);
@@ -3137,12 +3274,9 @@
 
 
     private string GetPageOrientationButtonClass(bool landscape)
-    {
-        var active = EffectivePageSettings.Landscape == landscape;
-        return active
-            ? "tm-document-page-layout-inspector__segment tm-document-page-layout-inspector__segment--active"
-            : "tm-document-page-layout-inspector__segment";
-    }
+        => EffectivePageSettings.Landscape == landscape
+            ? "tm-document-inspector-form__segmented-option tm-document-inspector-form__segmented-option--active"
+            : "tm-document-inspector-form__segmented-option";
 
     private string CurrentMarginPreset
     {
@@ -3791,6 +3925,84 @@
     private Task ZoomToPageWidthAsync()
         => OnZoomPageWidth.InvokeAsync();
 
+    // ─── floating panels (redesign 146c7e1b, phase 5) ───────────────────────────────────────────────────────────────────
+    // ONE panel is open at a time. The panels are TmDocumentFloatingPanel (core TmOverlayPanel in the top layer) rendered AFTER the
+    // toolbar, so a trigger that collapsed into "More" can still open its panel. An outside press closes the panel and is NOT
+    // swallowed (the header Undo, a canvas click and another ribbon button all still run); Escape closes it and gives focus back
+    // to the canvas through OnRestoreFocus.
+
+    private enum ToolbarFloating
+    {
+        None,
+        StyleGallery,
+        Table,
+        Equation,
+        Symbol,
+        PageLayout,
+        HeaderFooterFields,
+        HeaderFooterPresets,
+        Link,
+    }
+
+    private string FloatingPanelId(string kind) => $"{_floatingIdPrefix}-{kind}";
+
+    private ElementReference FloatingAnchor(DocumentRibbonButton? trigger)
+        => _floatingFromMenu || trigger is null || trigger.Element.Id is null ? _ribbonPanel : trigger.Element;
+
+    private OverlayAlign FloatingAlign => _floatingFromMenu ? OverlayAlign.End : OverlayAlign.Start;
+
+    private void OpenFloating(ToolbarFloating kind, bool fromMenu)
+    {
+        _floating = kind;
+        _floatingFromMenu = fromMenu;
+    }
+
+    private void ToggleFloating(ToolbarFloating kind, bool fromMenu = false)
+    {
+        if (_floating == kind)
+        {
+            CloseToolbarFloatingUi();
+            return;
+        }
+
+        OpenFloating(kind, fromMenu);
+    }
+
+    /// <summary>Closes the open ribbon panel. Raised by the panel's own X / Escape / outside press and after a choice applied.</summary>
+    private void CloseToolbarFloatingUi()
+    {
+        _floating = ToolbarFloating.None;
+        _floatingFromMenu = false;
+    }
+
+    // The close report of a panel arrives asynchronously (overlay.js -> .NET): when the press that dismissed it was on ANOTHER ribbon
+    // trigger, that trigger's click may already have opened the next panel. A report only closes the panel it came from.
+    private async Task HandleFloatingClosedAsync(ToolbarFloating kind, DocumentFloatingCloseReason reason)
+    {
+        if (_floating != kind)
+        {
+            return;
+        }
+
+        // The sheet's Done is the form's confirm: a link panel applies the URL when there is a valid one, then closes (an empty or unsafe
+        // draft is discarded like a cancel - the sheet has no Apply button to leave open).
+        if (kind == ToolbarFloating.Link && reason == DocumentFloatingCloseReason.Done
+            && !string.IsNullOrWhiteSpace(_pendingLinkUrl)
+            && DocumentLinkUtility.IsSafeHref(DocumentLinkUtility.NormalizeHref(_pendingLinkUrl)))
+        {
+            await ApplyLinkAsync();
+            return;
+        }
+
+        // The link panel keeps its draft only while it is open; every other panel is stateless.
+        if (kind == ToolbarFloating.Link)
+        {
+            ResetLinkDraft();
+        }
+
+        CloseToolbarFloatingUi();
+    }
+
     private void ToggleTableGridPicker()
     {
         if (!IsCommandEnabled("insertTable"))
@@ -3798,55 +4010,20 @@
             return;
         }
 
-        _tableGridPickerOpen = !_tableGridPickerOpen;
-        _imageInsertMenuOpen = false;
-        _equationMenuOpen = false;
-        _symbolMenuOpen = false;
-        _focusSymbolMenuOnRender = false;
-        _headerFooterFieldMenuOpen = false;
-        _headerFooterPresetMenuOpen = false;
-        _pageLayoutInspectorOpen = false;
-        _styleGalleryOpen = false;
+        ToggleFloating(ToolbarFloating.Table);
     }
 
-    private void CloseTableGridPicker()
+    private void OpenTableFromMenu()
     {
-        _tableGridPickerOpen = false;
-    }
-
-    /// <summary>Closes every ribbon popup (style gallery, page layout, table grid, menus). Called by the editor when a header action runs.</summary>
-    public void CloseFloatingUi()
-    {
-        if (!HasToolbarFloatingUi)
+        if (IsCommandEnabled("insertTable"))
         {
-            return;
+            OpenFloating(ToolbarFloating.Table, fromMenu: true);
         }
-
-        CloseToolbarFloatingUi();
-        StateHasChanged();
-    }
-
-    private void CloseToolbarFloatingUi()
-    {
-        _tableGridPickerOpen = false;
-        _imageInsertMenuOpen = false;
-        _equationMenuOpen = false;
-        _symbolMenuOpen = false;
-        _headerFooterFieldMenuOpen = false;
-        _headerFooterPresetMenuOpen = false;
-        _pageLayoutInspectorOpen = false;
-        _styleGalleryOpen = false;
-        _focusHeaderFooterFieldMenuOnRender = false;
-        _focusHeaderFooterPresetMenuOnRender = false;
-        _focusPageLayoutInspectorOnRender = false;
-        _focusStyleGalleryOnRender = false;
-        _focusEquationMenuOnRender = false;
-        _focusSymbolMenuOnRender = false;
     }
 
     private async Task HandleGridPickerInsertAsync((int Rows, int Columns) dims)
     {
-        _tableGridPickerOpen = false;
+        CloseToolbarFloatingUi();
         if (OnInsertTableWithDimensions.HasDelegate)
         {
             await OnInsertTableWithDimensions.InvokeAsync(dims);
@@ -3857,190 +4034,121 @@
         }
     }
 
-    private void ToggleImageInsertMenu()
+    private void ToggleEquationMenu()
+    {
+        if (IsCommandEnabled("insertEquation"))
+        {
+            ToggleFloating(ToolbarFloating.Equation);
+        }
+    }
+
+    private void OpenEquationFromMenu()
+    {
+        if (IsCommandEnabled("insertEquation"))
+        {
+            OpenFloating(ToolbarFloating.Equation, fromMenu: true);
+        }
+    }
+
+    private async Task InsertEquationPresetAsync(string preset)
+    {
+        CloseToolbarFloatingUi();
+        await OnInsertEquation.InvokeAsync(preset);
+    }
+
+    private void ToggleSymbolMenu()
+    {
+        if (IsCommandEnabled("insertSymbol"))
+        {
+            ToggleFloating(ToolbarFloating.Symbol);
+        }
+    }
+
+    private void OpenSymbolFromMenu()
+    {
+        if (IsCommandEnabled("insertSymbol"))
+        {
+            OpenFloating(ToolbarFloating.Symbol, fromMenu: true);
+        }
+    }
+
+    private async Task InsertSymbolPresetAsync(string preset)
+    {
+        CloseToolbarFloatingUi();
+        await OnInsertSymbol.InvokeAsync(preset);
+    }
+
+    private void ToggleHeaderFooterFieldMenu() => ToggleFloating(ToolbarFloating.HeaderFooterFields);
+
+    private void OpenHeaderFooterFieldsFromMenu() => OpenFloating(ToolbarFloating.HeaderFooterFields, fromMenu: true);
+
+    private void ToggleHeaderFooterPresetMenu() => ToggleFloating(ToolbarFloating.HeaderFooterPresets);
+
+    private void OpenHeaderFooterPresetsFromMenu() => OpenFloating(ToolbarFloating.HeaderFooterPresets, fromMenu: true);
+
+    private void TogglePageLayoutInspector() => ToggleFloating(ToolbarFloating.PageLayout);
+
+    private void OpenPageLayoutFromMenu() => OpenFloating(ToolbarFloating.PageLayout, fromMenu: true);
+
+    private async Task InsertHeaderFooterFieldFromMenuAsync(EventCallback callback)
+    {
+        CloseToolbarFloatingUi();
+        await callback.InvokeAsync();
+    }
+
+    private async Task ApplyHeaderFooterPresetFromMenuAsync(string preset)
+    {
+        CloseToolbarFloatingUi();
+        await OnApplyHeaderFooterPreset.InvokeAsync(preset);
+    }
+
+    // The image panel is the editor's (it renders in the floating root, one panel with the From URL / Upload / Library tabs). The
+    // toolbar only says WHICH tab and where the request came from, so the editor can anchor the panel to the right element.
+    private bool _imageFromMenu;
+
+    /// <summary>The element the image panel anchors to: the ribbon's image button, or the ribbon row when the request came from "More".</summary>
+    public ElementReference ImagePanelAnchor
+        => _imageFromMenu || _imageButton is null || _imageButton.Element.Id is null ? _ribbonPanel : _imageButton.Element;
+
+    /// <summary>Cross-axis alignment of the image panel against <see cref="ImagePanelAnchor"/>.</summary>
+    public OverlayAlign ImagePanelAlign => _imageFromMenu ? OverlayAlign.End : OverlayAlign.Start;
+
+    private bool ImageIsOpen => ImagePanelOpen;
+
+    /// <summary>The element the editor's token panel anchors to: the ribbon's Insert button, or the ribbon row when the request came from "More".</summary>
+    public ElementReference InsertMenuAnchor
+        => _insertFromMenu || _insertMenuButton is null || _insertMenuButton.Element.Id is null ? _ribbonPanel : _insertMenuButton.Element;
+
+    /// <summary>Cross-axis alignment of the token panel against <see cref="InsertMenuAnchor"/>.</summary>
+    public OverlayAlign InsertMenuAlign => _insertFromMenu ? OverlayAlign.End : OverlayAlign.Start;
+
+    private Task InsertMenuFromBarAsync()
+    {
+        _insertFromMenu = false;
+        return ExecuteToolbarCommandAsync("insertMenu", OnToggleInsert);
+    }
+
+    private Task InsertMenuFromMenuAsync()
+    {
+        _insertFromMenu = true;
+        return ExecuteToolbarCommandAsync("insertMenu", OnToggleInsert);
+    }
+
+    private async Task InsertImageFromBarAsync()
     {
         if (!IsCommandEnabled("insertImage"))
         {
             return;
         }
 
-        _imageInsertMenuOpen = !_imageInsertMenuOpen;
-        _tableGridPickerOpen = false;
-        _equationMenuOpen = false;
-        _symbolMenuOpen = false;
-        _focusSymbolMenuOnRender = false;
-        _headerFooterFieldMenuOpen = false;
-        _headerFooterPresetMenuOpen = false;
-        _pageLayoutInspectorOpen = false;
-        _styleGalleryOpen = false;
-    }
-
-    private void ToggleEquationMenu()
-    {
-        if (!IsCommandEnabled("insertEquation"))
-        {
-            return;
-        }
-
-        _equationMenuOpen = !_equationMenuOpen;
-        _focusEquationMenuOnRender = _equationMenuOpen;
-        _tableGridPickerOpen = false;
-        _imageInsertMenuOpen = false;
-        _headerFooterFieldMenuOpen = false;
-        _headerFooterPresetMenuOpen = false;
-        _pageLayoutInspectorOpen = false;
-        _styleGalleryOpen = false;
-        _symbolMenuOpen = false;
-        _focusHeaderFooterFieldMenuOnRender = false;
-        _focusHeaderFooterPresetMenuOnRender = false;
-        _focusPageLayoutInspectorOnRender = false;
-        _focusStyleGalleryOnRender = false;
-        _focusSymbolMenuOnRender = false;
-    }
-
-    private async Task InsertEquationPresetAsync(string preset)
-    {
-        _equationMenuOpen = false;
-        _focusEquationMenuOnRender = false;
-        await OnInsertEquation.InvokeAsync(preset);
-    }
-
-    private void HandleEquationMenuKeyDown(KeyboardEventArgs args)
-    {
-        if (args.Key == "Escape")
-        {
-            _equationMenuOpen = false;
-            _focusEquationMenuOnRender = false;
-        }
-    }
-
-    private void ToggleSymbolMenu()
-    {
-        if (!IsCommandEnabled("insertSymbol"))
-        {
-            return;
-        }
-
-        _symbolMenuOpen = !_symbolMenuOpen;
-        _focusSymbolMenuOnRender = _symbolMenuOpen;
-        _tableGridPickerOpen = false;
-        _imageInsertMenuOpen = false;
-        _equationMenuOpen = false;
-        _headerFooterFieldMenuOpen = false;
-        _headerFooterPresetMenuOpen = false;
-        _pageLayoutInspectorOpen = false;
-        _styleGalleryOpen = false;
-        _focusHeaderFooterFieldMenuOnRender = false;
-        _focusHeaderFooterPresetMenuOnRender = false;
-        _focusPageLayoutInspectorOnRender = false;
-        _focusStyleGalleryOnRender = false;
-        _focusEquationMenuOnRender = false;
-    }
-
-    private async Task InsertSymbolPresetAsync(string preset)
-    {
-        _symbolMenuOpen = false;
-        _focusSymbolMenuOnRender = false;
-        await OnInsertSymbol.InvokeAsync(preset);
-    }
-
-    private void HandleSymbolMenuKeyDown(KeyboardEventArgs args)
-    {
-        if (args.Key == "Escape")
-        {
-            _symbolMenuOpen = false;
-            _focusSymbolMenuOnRender = false;
-        }
-    }
-
-    private void ToggleHeaderFooterFieldMenu()
-    {
-        _headerFooterFieldMenuOpen = !_headerFooterFieldMenuOpen;
-        _focusHeaderFooterFieldMenuOnRender = _headerFooterFieldMenuOpen;
-        _focusHeaderFooterPresetMenuOnRender = false;
-        _focusPageLayoutInspectorOnRender = false;
-        _focusEquationMenuOnRender = false;
-        _focusSymbolMenuOnRender = false;
-        _headerFooterPresetMenuOpen = false;
-        _pageLayoutInspectorOpen = false;
-        _styleGalleryOpen = false;
-        _tableGridPickerOpen = false;
-        _imageInsertMenuOpen = false;
-        _equationMenuOpen = false;
-        _symbolMenuOpen = false;
-    }
-
-    private void ToggleHeaderFooterPresetMenu()
-    {
-        _headerFooterPresetMenuOpen = !_headerFooterPresetMenuOpen;
-        _focusHeaderFooterPresetMenuOnRender = _headerFooterPresetMenuOpen;
-        _focusHeaderFooterFieldMenuOnRender = false;
-        _focusPageLayoutInspectorOnRender = false;
-        _focusEquationMenuOnRender = false;
-        _focusSymbolMenuOnRender = false;
-        _headerFooterFieldMenuOpen = false;
-        _pageLayoutInspectorOpen = false;
-        _styleGalleryOpen = false;
-        _tableGridPickerOpen = false;
-        _imageInsertMenuOpen = false;
-        _equationMenuOpen = false;
-        _symbolMenuOpen = false;
-    }
-
-    private void TogglePageLayoutInspector()
-    {
-        _pageLayoutInspectorOpen = !_pageLayoutInspectorOpen;
-        _focusPageLayoutInspectorOnRender = _pageLayoutInspectorOpen;
-        _focusHeaderFooterFieldMenuOnRender = false;
-        _focusHeaderFooterPresetMenuOnRender = false;
-        _focusEquationMenuOnRender = false;
-        _focusSymbolMenuOnRender = false;
-        _headerFooterFieldMenuOpen = false;
-        _headerFooterPresetMenuOpen = false;
-        _tableGridPickerOpen = false;
-        _imageInsertMenuOpen = false;
-        _equationMenuOpen = false;
-        _symbolMenuOpen = false;
-        _styleGalleryOpen = false;
-    }
-
-    private async Task InsertHeaderFooterFieldFromMenuAsync(EventCallback callback)
-    {
-        _headerFooterFieldMenuOpen = false;
-        _focusHeaderFooterFieldMenuOnRender = false;
-        await callback.InvokeAsync();
-    }
-
-    private async Task ApplyHeaderFooterPresetFromMenuAsync(string preset)
-    {
-        _headerFooterPresetMenuOpen = false;
-        _focusHeaderFooterPresetMenuOnRender = false;
-        await OnApplyHeaderFooterPreset.InvokeAsync(preset);
-    }
-
-    private void HandleHeaderFooterMenuKeyDown(KeyboardEventArgs args)
-    {
-        if (args.Key == "Escape")
-        {
-            _headerFooterFieldMenuOpen = false;
-            _headerFooterPresetMenuOpen = false;
-            _focusHeaderFooterFieldMenuOnRender = false;
-            _focusHeaderFooterPresetMenuOnRender = false;
-        }
-    }
-
-    private void HandlePageLayoutInspectorKeyDown(KeyboardEventArgs args)
-    {
-        if (args.Key == "Escape")
-        {
-            _pageLayoutInspectorOpen = false;
-            _focusPageLayoutInspectorOnRender = false;
-        }
+        CloseToolbarFloatingUi();
+        _imageFromMenu = false;
+        await OnInsertImage.InvokeAsync();
     }
 
     private async Task InsertImageFromUrlAsync()
     {
-        _imageInsertMenuOpen = false;
+        _imageFromMenu = true;
         if (OnInsertImageUrl.HasDelegate)
         {
             await OnInsertImageUrl.InvokeAsync();
@@ -4057,7 +4165,7 @@
             return;
         }
 
-        _imageInsertMenuOpen = false;
+        _imageFromMenu = true;
         if (OnInsertImageUpload.HasDelegate)
         {
             await OnInsertImageUpload.InvokeAsync();
@@ -4074,7 +4182,7 @@
             return;
         }
 
-        _imageInsertMenuOpen = false;
+        _imageFromMenu = true;
         if (OnInsertImageAsset.HasDelegate)
         {
             await OnInsertImageAsset.InvokeAsync();
@@ -4088,15 +4196,23 @@
     {
         if (_linkDialogOpen)
         {
-            CloseLinkDialog();
+            ResetLinkDraft();
+            CloseToolbarFloatingUi();
             return;
         }
 
-        await OpenLinkDialogAsync();
+        await OpenLinkAsync(fromMenu: false);
     }
 
-    /// <summary>Opens the link dialog and focuses its URL field on the next render.</summary>
-    public async Task OpenLinkDialogAsync()
+    private Task OpenLinkFromMenuAsync() => IsCommandEnabled("link") ? OpenLinkAsync(fromMenu: true) : Task.CompletedTask;
+
+    /// <summary>
+    /// Opens the link popover (prefilled from the link under the selection) and focuses its URL field once it is displayed.
+    /// Used by the Ctrl+K command; the popover anchors to the ribbon row because the shortcut has no trigger.
+    /// </summary>
+    public Task OpenLinkDialogAsync() => OpenLinkAsync(fromMenu: true);
+
+    private async Task OpenLinkAsync(bool fromMenu)
     {
         if (ReadOnly)
         {
@@ -4107,8 +4223,30 @@
         var info = LinkInfoProvider is null ? null : await LinkInfoProvider.Invoke();
         _pendingLinkUrl = info?.Href;
         _pendingLinkTitle = info?.Title;
-        _linkDialogOpen = true;
-        _focusLinkUrlOnRender = true;
+        // "Remove link" is offered only when the selection already carries a link; typing a URL into a fresh popover must not offer it.
+        _linkHadExistingHref = !string.IsNullOrWhiteSpace(info?.Href);
+        OpenFloating(ToolbarFloating.Link, fromMenu);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task FocusLinkUrlAsync()
+    {
+        try
+        {
+            await _linkUrlInput.FocusAsync(preventScroll: true);
+        }
+        catch (Exception ex) when (ex is JSException or InvalidOperationException or TaskCanceledException)
+        {
+            // The popover closed before the focus move ran.
+        }
+    }
+
+    private void ResetLinkDraft()
+    {
+        _linkHadExistingHref = false;
+        _pendingLinkUrl = null;
+        _pendingLinkTitle = null;
+        _linkError = null;
     }
 
     private void ToggleDocxImportPanel()
@@ -4129,16 +4267,26 @@
 
     private void CloseLinkDialog()
     {
-        _linkDialogOpen = false;
-        _focusLinkUrlOnRender = false;
-        _linkError = null;
+        ResetLinkDraft();
+        CloseToolbarFloatingUi();
     }
 
-    private void HandleLinkDialogKeyDown(KeyboardEventArgs args)
+    private void HandleLinkUrlInput(ChangeEventArgs args)
     {
-        if (args.Key == "Escape")
+        _pendingLinkUrl = args.Value?.ToString();
+        // Inline validation while typing: an empty field is not an error yet (Apply stays the gate); an unsafe value says so at once.
+        var href = DocumentLinkUtility.NormalizeHref(_pendingLinkUrl);
+        _linkError = string.IsNullOrWhiteSpace(_pendingLinkUrl) || DocumentLinkUtility.IsSafeHref(href)
+            ? null
+            : Loc["TmDocumentEditor_LinkInvalidUrl"];
+    }
+
+    private async Task HandleLinkInputKeyDownAsync(KeyboardEventArgs args)
+    {
+        // Enter in a text field submits (a field has no native activation); Escape is the core panel's (window capture).
+        if (args.Key == "Enter")
         {
-            CloseLinkDialog();
+            await ApplyLinkAsync();
         }
     }
 
@@ -4157,6 +4305,8 @@
             Title = string.IsNullOrWhiteSpace(_pendingLinkTitle) ? null : _pendingLinkTitle.Trim()
         };
 
+        ResetLinkDraft();
+        CloseToolbarFloatingUi();
         if (OnLinkApplied.HasDelegate)
         {
             await OnLinkApplied.InvokeAsync(payload);
@@ -4165,11 +4315,6 @@
         {
             await OnLink.InvokeAsync(payload.Href);
         }
-
-        _pendingLinkUrl = null;
-        _pendingLinkTitle = null;
-        _linkError = null;
-        _linkDialogOpen = false;
     }
 
     private async Task RemoveLinkAsync()
@@ -4179,11 +4324,9 @@
             return;
         }
 
+        ResetLinkDraft();
+        CloseToolbarFloatingUi();
         await OnLinkRemoved.InvokeAsync();
-        _pendingLinkUrl = null;
-        _pendingLinkTitle = null;
-        _linkError = null;
-        _linkDialogOpen = false;
     }
 
     private async Task HandleDocxImportSelectedAsync(InputFileChangeEventArgs args)

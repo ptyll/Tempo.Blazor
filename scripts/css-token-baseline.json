@@ -1,5 +1,5 @@
 {
-  "count": 1161,
+  "count": 1159,
   "violations": {
     "color-literal|src/Tempo.Blazor.Demo.InteractiveAuto/Tempo.Blazor.Demo.InteractiveAuto/Components/Layout/ReconnectModal.razor.css|background-color: #3b6ea2;": 1,
     "color-literal|src/Tempo.Blazor.Demo.InteractiveAuto/Tempo.Blazor.Demo.InteractiveAuto/Components/Layout/ReconnectModal.razor.css|background-color: #6b9ed2;": 2,
@@ -746,7 +746,6 @@
     "component-dark|src/Tempo.Blazor/wwwroot/css/components/_workflow-designer.css|[data-theme=\"dark\"] .tm-wf-properties__save,": 1,
     "undefined-token|src/Tempo.Blazor.Demo.SharedUI/Pages/NotionEditorPage.razor.css|--tm-color-bg-subtle": 2,
     "undefined-token|src/Tempo.Blazor.Demo.SharedUI/Pages/NotionEditorPage.razor.css|--tm-font-family-mono": 1,
-    "undefined-token|src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentEditorToolbar.razor.css|--tm-font-serif": 2,
     "undefined-token|src/Tempo.Blazor.DocumentEditor/wwwroot/css/components/_document-editor.css|--tm-document-body-font-family": 1,
     "undefined-token|src/Tempo.Blazor.DocumentEditor/wwwroot/css/components/_document-editor.css|--tm-document-body-font-size": 1,
     "undefined-token|src/Tempo.Blazor.DocumentEditor/wwwroot/css/components/_document-editor.css|--tm-document-body-line-height": 1,

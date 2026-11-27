@@ -160,21 +160,22 @@ public sealed class DocumentEditorCanvasAccessibilityE2ETests : WasmTestBase
         await page.Keyboard.PressAsync("Control+Shift+P");
         await Assertions.Expect(page.GetByTestId("document-command-palette"))
             .ToBeVisibleAsync(new() { Timeout = 10_000 });
-        await Assertions.Expect(page.GetByTestId("document-command-palette-dialog"))
-            .ToHaveAttributeAsync("data-focus-trap-active", "true", new() { Timeout = 10_000 });
+        // Phase 5: the palette is a core TmModal - the trap is the core focus scope (the dialog element inside the overlay).
+        await Assertions.Expect(page.Locator("[data-testid='document-command-palette'] [role='dialog']"))
+            .ToHaveAttributeAsync("data-tm-focus-trap-active", "true", new() { Timeout = 10_000 });
         await Assertions.Expect(page.GetByTestId("document-command-palette-search"))
             .ToBeFocusedAsync(new() { Timeout = 10_000 });
 
         await page.Keyboard.PressAsync("Shift+Tab");
-        Assert.IsTrue(await ActiveElementIsInsideAsync(page, "document-command-palette-dialog"), await ActiveElementDebugAsync(page));
+        Assert.IsTrue(await ActiveElementIsInsideAsync(page, "document-command-palette"), await ActiveElementDebugAsync(page));
         await page.EvaluateAsync(
             """
             () => document.querySelector('[data-testid="document-canvas-hidden-input"]')?.focus()
             """);
         await WaitForPredicateAsync(page, """
-            () => document.querySelector('[data-testid="document-command-palette-dialog"]')?.contains(document.activeElement) === true
+            () => document.querySelector('[data-testid="document-command-palette"]')?.contains(document.activeElement) === true
             """, 10_000);
-        Assert.IsTrue(await ActiveElementIsInsideAsync(page, "document-command-palette-dialog"), await ActiveElementDebugAsync(page));
+        Assert.IsTrue(await ActiveElementIsInsideAsync(page, "document-command-palette"), await ActiveElementDebugAsync(page));
 
         var output = CreateOutputDirectory(nameof(Phase21_CanvasFocusManagementAndDialogTrap_AreKeyboardReady));
         var screenshotPath = Path.Combine(output, "phase21-focus-management-command-palette.png");
@@ -339,7 +340,7 @@ public sealed class DocumentEditorCanvasAccessibilityE2ETests : WasmTestBase
         """
         () => ({
             toolbarKeyboardMode: document.querySelector('[data-testid="document-toolbar"]')?.getAttribute('data-keyboard-mode') || '',
-            commandPaletteTrap: document.querySelector('[data-testid="document-command-palette-dialog"]')?.getAttribute('data-focus-trap-active') || '',
+            commandPaletteTrap: document.querySelector('[data-testid="document-command-palette"] [role="dialog"]')?.getAttribute('data-tm-focus-trap-active') || '',
             canvasShortcutLast: document.querySelector('[data-testid="document-canvas-engine-root"]')?.getAttribute('data-canvas-shortcut-last') || '',
             activeSidePanelTab: document.querySelector('[data-testid="document-side-panel"]')?.getAttribute('data-active-tab') || '',
             activeElementTestId: document.activeElement?.getAttribute('data-testid') || '',

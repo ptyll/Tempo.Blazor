@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.DocumentEditor",
+  "description": "The tabs of the editor's image panel: From URL, Upload (only with an image provider) and Library (only with image assets).",
+  "packageId": "Tempo.Blazor.DocumentEditor",
+  "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/DocumentImagePanelTab.cs",
+  "documentationStatus": "generated",
+  "itemName": "DocumentImagePanelTab"
+}

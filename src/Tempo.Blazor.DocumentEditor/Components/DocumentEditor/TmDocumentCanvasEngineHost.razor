@@ -77,6 +77,13 @@
         "diagnostics"
     ];
 
+    /// <summary>
+    /// The id of the engine's hidden input - the element that receives the typing and the caret. A host hands it to a dialog as
+    /// <c>RestoreFocusTargetId</c> so closing the dialog puts the keyboard back in the document (not on whatever opened the dialog).
+    /// Unique per host instance.
+    /// </summary>
+    public string InputId { get; } = $"tm-document-canvas-input-{Guid.NewGuid():N}";
+
     private const string InteropModulePath = "./_content/Tempo.Blazor.DocumentEditor/js/document-editor-canvas/interop.mjs";
     private const double PointsToCssPixels = 96d / 72d;
     // Resolves through the source-generated CanvasEngineJsonContext first (perf plan N10.3);
@@ -1212,6 +1219,7 @@
         {
             ariaLabel = EffectiveAriaLabel,
             inputAriaLabel = EffectiveInputAriaLabel,
+            inputId = InputId,
             readOnly = ReadOnly,
             canEdit = EffectiveCanEdit,
             contentControlRenderMode = EffectiveContentControlRenderMode,

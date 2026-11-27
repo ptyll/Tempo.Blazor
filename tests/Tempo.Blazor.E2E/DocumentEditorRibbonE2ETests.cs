@@ -200,22 +200,103 @@ public sealed class DocumentEditorRibbonE2ETests : WasmTestBase
     }
 
     [TestMethod]
-    [Description("A header action works while a ribbon popup is open and closes the popup (Undo with the page layout inspector open)")]
-    public async Task HeaderActions_WorkWhileAPopupIsOpen_AndCloseIt()
+    [Description("Phase 5: with the table grid open, a click on the header Undo closes the panel AND undoes - the outside press is not swallowed")]
+    public async Task HeaderUndo_WithTheTableGridOpen_ClosesThePanel_AndUndoes()
     {
         var (page, errors) = await OpenAsync(1440, 900, touch: false);
+        await TypeInTheCanvasAsync(page, "Q");
+        await Assertions.Expect(page.GetByTestId("document-undo")).ToBeEnabledAsync(new() { Timeout = 10_000 });
+
+        await page.GetByTestId("document-ribbon-tab-insert").ClickAsync();
+        await page.GetByTestId("document-toolbar-table").ClickAsync();
+        await Assertions.Expect(page.GetByTestId("document-table-grid-picker")).ToBeVisibleAsync(new() { Timeout = 10_000 });
+        Assert.AreEqual(0, await page.Locator(".tm-document-editor__toolbar-floating-backdrop, [data-testid='document-toolbar-floating-backdrop']").CountAsync(), "no click-away backdrop exists");
+
+        // A REAL click: Playwright's actionability check would time out on anything that intercepts the pointer.
+        await page.GetByTestId("document-undo").ClickAsync();
+
+        await Assertions.Expect(page.GetByTestId("document-table-grid-picker")).ToBeHiddenAsync(new() { Timeout = 5_000 });
+        await Assertions.Expect(page.GetByTestId("document-redo")).ToBeEnabledAsync(new() { Timeout = 10_000 });
+        await Assertions.Expect(page.GetByTestId("document-undo")).ToBeDisabledAsync(new() { Timeout = 10_000 });
+        AssertNoClientErrors(errors, "header undo while the table grid is open");
+        await page.Context.CloseAsync();
+    }
+
+    [TestMethod]
+    [Description("Phase 5: with the page layout panel open, a click on the canvas closes the panel and still places the caret")]
+    public async Task CanvasClick_WithThePageLayoutOpen_ClosesThePanel_AndTheClickReachesTheCanvas()
+    {
+        var (page, errors) = await OpenAsync(1440, 1500, touch: false);
         await page.GetByTestId("document-ribbon-tab-layout").ClickAsync();
         await page.GetByTestId("document-page-layout").ClickAsync();
         await Assertions.Expect(page.GetByTestId("document-page-layout-inspector")).ToBeVisibleAsync(new() { Timeout = 10_000 });
 
-        // The header (Save here: the document is unchanged, so the click itself is the proof) is not covered by the popup's backdrop:
-        // Playwright's actionability check would time out on an intercepting backdrop.
-        var save = page.GetByTestId("document-save");
-        await save.ClickAsync();
+        await TypeInTheCanvasAsync(page, "Z", avoidTestId: "document-page-layout-inspector");
+
         await Assertions.Expect(page.GetByTestId("document-page-layout-inspector")).ToBeHiddenAsync(new() { Timeout = 5_000 });
-        Assert.AreEqual(0, await page.GetByTestId("document-toolbar-floating-backdrop").CountAsync(), "the popup (and its backdrop) closed with the header action");
-        AssertNoClientErrors(errors, "header while popup");
+        await Assertions.Expect(page.GetByTestId("document-undo")).ToBeEnabledAsync(new() { Timeout = 10_000 });
+        AssertNoClientErrors(errors, "canvas click while the page layout is open");
         await page.Context.CloseAsync();
+    }
+
+    [TestMethod]
+    [Description("Phase 5: every ribbon popup closes on Escape and gives the focus back to the canvas")]
+    public async Task EscapeClosesARibbonPopup_AndFocusReturnsToTheCanvas()
+    {
+        var (page, errors) = await OpenAsync(1440, 900, touch: false);
+        await page.GetByTestId("document-ribbon-tab-insert").ClickAsync();
+        await page.GetByTestId("document-toolbar-symbol").ClickAsync();
+        await Assertions.Expect(page.GetByTestId("document-symbol-menu")).ToBeVisibleAsync(new() { Timeout = 10_000 });
+
+        await page.Keyboard.PressAsync("Escape");
+
+        await Assertions.Expect(page.GetByTestId("document-symbol-menu")).ToBeHiddenAsync(new() { Timeout = 5_000 });
+        await Assertions.Expect(page.GetByTestId("document-canvas-hidden-input")).ToBeFocusedAsync(new() { Timeout = 10_000 });
+        AssertNoClientErrors(errors, "escape from a ribbon popup");
+        await page.Context.CloseAsync();
+    }
+
+    [TestMethod]
+    [Description("Phase 5: a popup whose trigger left the bar still opens from the More menu, anchored to the ribbon row")]
+    public async Task MorePopups_OpenFromMore_WhenTheTriggerCollapsed()
+    {
+        var (page, errors) = await OpenAsync(1024, 768, touch: true);
+        await page.GetByTestId("document-ribbon-tab-insert").ClickAsync();
+        await page.WaitForTimeoutAsync(400);
+
+        // At 1024 the Insert row keeps its popups on the bar or in More; either way the equation palette must open.
+        await ClickPopupItemAsync(page, "document-toolbar-equation", "Equation");
+        await Assertions.Expect(page.GetByTestId("document-equation-menu")).ToBeVisibleAsync(new() { Timeout = 10_000 });
+        var box = (await page.GetByTestId("document-equation-menu").BoundingBoxAsync())!;
+        Assert.IsTrue(box.X >= 0 && box.X + box.Width <= 1024 && box.Y >= 0 && box.Y + box.Height <= 768, $"the panel stays inside the viewport ({box.X},{box.Y},{box.Width},{box.Height})");
+        AssertNoClientErrors(errors, "popup from More");
+        await page.Context.CloseAsync();
+    }
+
+    private static async Task TypeInTheCanvasAsync(IPage page, string text, string? avoidTestId = null)
+    {
+        // The canvas layers sit over the text rects, so the caret is placed with a real mouse click at the first rect's end. A panel that
+        // is open (avoidTestId) sits over part of the page: the click goes to the first rect that is NOT under it, like a user's would.
+        var point = await page.EvaluateAsync<double[]>(
+            """
+            avoid => {
+                // A point is usable when the TOP element there belongs to the canvas host (not to an open panel or a docked side panel).
+                const onCanvas = (x, y) => !!document.elementFromPoint(x, y)?.closest('[data-testid="document-canvas-engine-host"]');
+                for (const item of document.querySelectorAll('[data-canvas-text-rect]')) {
+                    const rect = item.getBoundingClientRect();
+                    if (rect.width <= 8 || rect.top <= 0 || rect.bottom >= innerHeight) continue;
+                    const y = rect.top + rect.height / 2;
+                    for (const x of [rect.left + rect.width - 2, rect.left + 2]) {
+                        if (onCanvas(x, y)) return [x, y];
+                    }
+                }
+                throw new Error('no canvas text rect');
+            }
+            """, avoidTestId);
+        await page.Mouse.ClickAsync((float)point[0], (float)point[1]);
+        await page.Keyboard.PressAsync("End");
+        await page.Keyboard.TypeAsync(text);
+        await page.WaitForTimeoutAsync(700);
     }
 
     [TestMethod]
@@ -395,7 +476,7 @@ public sealed class DocumentEditorRibbonE2ETests : WasmTestBase
         await page.Keyboard.PressAsync("Escape");
 
         await page.GetByTestId("document-toolbar-image").ClickAsync();
-        await Assertions.Expect(page.GetByTestId("document-image-insert-menu")).ToBeVisibleAsync(new() { Timeout = 10_000 });
+        await Assertions.Expect(page.GetByTestId("document-canvas-image-dialog")).ToBeVisibleAsync(new() { Timeout = 10_000 });
         await page.Keyboard.PressAsync("Escape");
         AssertNoClientErrors(errors, "popups");
         await page.Context.CloseAsync();

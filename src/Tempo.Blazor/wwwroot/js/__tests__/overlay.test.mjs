@@ -341,3 +341,46 @@ test('promoteOpenPanel re-raises a pinned toast above the panel it just promoted
 
     assert.deepEqual(log, ['panel:show', 'toast:hide', 'toast:show']);
 });
+
+// Phase 5 review (document editor floating panels): a tall panel with constrainHeight must stay on its side of the anchor. The cap is
+// applied after placement, so the position has to be computed for the CAPPED height - with the natural height the main-axis safety
+// clamp pulled the panel up over its own trigger.
+test('constrainHeight: a tall panel below the anchor starts below it (not clamped up over the anchor)', () => {
+    const tall = { width: 200, height: 700 };
+    const a = anchor({ top: 470, bottom: 514 });
+    const free = resolvePlacement(a, tall, opts({ flip: false }));
+    assert.ok(free.y < a.bottom, 'without constrainHeight the safety clamp pulls the panel over the anchor');
+
+    const capped = resolvePlacement(a, tall, opts({ flip: false, constrainHeight: true }));
+    assert.equal(capped.side, 'bottom');
+    assert.equal(capped.y, a.bottom + 4, 'the panel starts right below the anchor');
+});
+
+test('constrainHeight: a panel that fits keeps its natural position', () => {
+    const r = resolvePlacement(anchor(), PANEL, opts({ constrainHeight: true }));
+    assert.equal(r.y, 144);
+});
+
+test('constrainHeight: a tall panel on the top side ends at the anchor', () => {
+    const tall = { width: 200, height: 700 };
+    const a = anchor({ top: 600, bottom: 640 });
+    const r = resolvePlacement(a, tall, opts({ placement: 'top', flip: false, constrainHeight: true }));
+    assert.equal(r.side, 'top');
+    // room above = anchor.top - margin - offset = 588; the capped panel (588 high) ends offset above the anchor.
+    assert.equal(r.y + 588, a.top - 4);
+});
+
+test('flipMinRoom: the preferred side is kept while it offers a useful amount of room', () => {
+    const tall = { width: 200, height: 700 };
+    // anchor bottom 514 in an 800 view: 800 - 514 - 8 - 4 = 274 below, 470 - 12 = 458 above.
+    const a = anchor({ top: 470, bottom: 514 });
+    const classic = resolvePlacement(a, tall, opts({ constrainHeight: true }));
+    assert.equal(classic.side, 'top', 'the classic rule flips: the natural height does not fit below');
+
+    const useful = resolvePlacement(a, tall, opts({ constrainHeight: true, flipMinRoom: 240 }));
+    assert.equal(useful.side, 'bottom', '274 px >= 240: stays below');
+    assert.equal(useful.y, a.bottom + 4);
+
+    const cramped = resolvePlacement(a, tall, opts({ constrainHeight: true, flipMinRoom: 300 }));
+    assert.equal(cramped.side, 'top', '274 px < 300 and the other side is better: flips');
+});

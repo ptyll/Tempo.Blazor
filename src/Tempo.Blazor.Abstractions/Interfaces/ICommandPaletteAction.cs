@@ -41,6 +41,26 @@ public interface ICommandPaletteAction
     /// </summary>
     CommandPaletteBadgeTone BadgeTone => CommandPaletteBadgeTone.Neutral;
 
+    /// <summary>
+    /// Extra terms the palette's local filter matches besides the title, description and code (a command's internal name, its
+    /// untranslated category). Not displayed. Default interface member: null.
+    /// </summary>
+    IReadOnlyList<string>? SearchTerms => null;
+
+    /// <summary>
+    /// Whether the action is currently unavailable. Default interface member: false. A disabled
+    /// action stays in the list and reachable with the arrow keys (it carries
+    /// <c>aria-disabled="true"</c>), but Enter and a click do not execute it and the palette stays open.
+    /// </summary>
+    bool IsDisabled => false;
+
+    /// <summary>
+    /// Why the action is unavailable. Default interface member: null. Shown instead of
+    /// <see cref="Description"/> while <see cref="IsDisabled"/> is true, so the reason is part of the option's
+    /// accessible description.
+    /// </summary>
+    string? DisabledReason => null;
+
     /// <summary>The async action to execute when selected.</summary>
     Func<Task> Execute { get; }
 }

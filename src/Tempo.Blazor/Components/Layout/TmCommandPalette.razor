@@ -37,7 +37,8 @@
                           OnEscape="CloseAsync"
                           AriaLabel="@Loc["TmCommandPalette_Aria"]">
             <div class="tm-command-palette-header">
-                <input class="tm-command-palette-input"
+                <input @attributes="InputAttributes"
+                       class="tm-command-palette-input"
                        @ref="_input"
                        value="@_query"
                        @oninput="HandleInputAsync"
@@ -50,7 +51,7 @@
                        aria-autocomplete="list"
                        aria-activedescendant="@(_filtered.Count > 0 ? OptionId(_highlightedIndex) : null)"
                        autocomplete="off" />
-                <button class="tm-command-palette-close" aria-label="@Loc["TmCommandPalette_Close"]" @onclick="CloseAsync">×</button>
+                <button @attributes="CloseButtonAttributes" class="tm-command-palette-close" aria-label="@Loc["TmCommandPalette_Close"]" @onclick="CloseAsync">×</button>
             </div>
             @if (_fetchState == CommandPaletteFetchState.Transient)
             {
@@ -180,14 +181,25 @@
 @code {
     // The item template stays in the razor file (it IS markup); all state, parameters and the
     // async search pipeline live in TmCommandPalette.razor.cs.
-    private string ItemClass(int index) => index == _highlightedIndex
-        ? "tm-command-palette-item tm-command-palette-item-focused"
-        : "tm-command-palette-item";
+    private string ItemClass(int index)
+    {
+        var cls = index == _highlightedIndex
+            ? "tm-command-palette-item tm-command-palette-item-focused"
+            : "tm-command-palette-item";
+        return _filtered[index].IsDisabled ? cls + " tm-command-palette-item-disabled" : cls;
+    }
 
-    private RenderFragment RenderItem(int index) => @<li class="@ItemClass(index)"
+    // The host's per-item attributes (a test id, a data-* hook). They are splatted FIRST, so the component's own role, id, class and
+    // aria-* always win.
+    private IReadOnlyDictionary<string, object>? ItemAttributeValues(int index)
+        => ItemAttributes?.Invoke(_filtered[index]);
+
+    private RenderFragment RenderItem(int index) => @<li @attributes="ItemAttributeValues(index)"
+                                                         class="@ItemClass(index)"
                                                          id="@OptionId(index)"
                                                          role="option"
                                                          aria-selected="@(index == _highlightedIndex ? "true" : "false")"
+                                                         aria-disabled="@(_filtered[index].IsDisabled ? "true" : null)"
                                                          @onclick="() => ExecuteAsync(_filtered[index])">
         @{
             var action = _filtered[index];
@@ -224,7 +236,13 @@
                     @action.Title
                 }
             </span>
-            @if (!string.IsNullOrEmpty(action.Description))
+            @if (action.IsDisabled && !string.IsNullOrEmpty(action.DisabledReason))
+            {
+                @* The reason replaces the description while the action is unavailable (an option's description is its
+                   accessible name's second part - the reason is read with the title). *@
+                <span class="tm-command-palette-description tm-command-palette-disabled-reason">@action.DisabledReason</span>
+            }
+            else if (!string.IsNullOrEmpty(action.Description))
             {
                 <span class="tm-command-palette-description">@action.Description</span>
             }

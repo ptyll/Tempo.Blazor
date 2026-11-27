@@ -18,6 +18,10 @@
                   Class="tm-document-editor-host">
 <LayoutContent Context="lay">
 @{ ApplyLayout(lay.Resolved); }
+@* A forced LayoutMode is a decision about the whole editor, so the viewport-level surfaces inside it (the floating root, the ribbon
+   panels, the dialogs) follow it too: they read the viewport scope, which a forced mode fills. With Auto nothing is cascaded and
+   they resolve the real viewport themselves. *@
+<CascadingValue TValue="TmLayoutContext" Name="@TmLayoutScopes.Viewport" Value="ForcedViewport" IsFixed="false">
 <div @ref="_rootElement"
      class="@RootClass"
      role="application"
@@ -99,9 +103,9 @@
                                     HeaderStart="@HeaderStart"
                                     HeaderActions="@HeaderActions"
                                     OnSearch="OpenFindFromChromeAsync"
-                                    OnUndo="HeaderUndoAsync"
-                                    OnRedo="HeaderRedoAsync"
-                                    OnSave="HeaderSaveAsync"
+                                    OnUndo="UndoAsync"
+                                    OnRedo="RedoAsync"
+                                    OnSave="SaveAsync"
                                     OnOpenPrintPreview="OpenCanvasPrintPreviewAsync"
                                     OnExportPdf="ExportPdfAsync" />
         }
@@ -224,11 +228,13 @@
                                      OnStyleDeleted="DeleteDocumentStyleAsync"
                                      OnStyleFormattingReset="ResetDocumentStyleFormattingAsync"
                                      OnInsertImage="OpenImageDialogAsync"
+                                     ImagePanelOpen="@_canvasImageDialogOpen"
+                                     OnRestoreFocus="FocusCanvasAsync"
                                      CanUploadImages="@(ImageProvider is not null)"
                                      CanBrowseImageAssets="@(ImageAssetOptions.Count > 0)"
                                      OnInsertImageUrl="OpenImageDialogAsync"
-                                     OnInsertImageUpload="UploadDemoImageAsync"
-                                     OnInsertImageAsset="InsertImageAssetAsync"
+                                     OnInsertImageUpload="OpenImageUploadPanelAsync"
+                                     OnInsertImageAsset="OpenImageLibraryPanelAsync"
                                      ShowEquationTools="true"
                                      OnInsertEquation="InsertEquationAsync"
                                      ShowSymbolTools="true"
@@ -408,30 +414,6 @@
              data-side-panel-state="@(_sidePanelOpen ? "open" : "closed")"
              data-side-panel-layout="docked-tabs"
              data-active-side-panel-tab="@ActiveSidePanelDataValue">
-            @* The workspace is the nearest positioned ancestor — the panel drops in below the
-               toolbar at the left edge, next to the ribbon Insert button that opened it. *@
-            @if (_tokenInsertMenuOpen)
-            {
-                <section class="tm-document-editor__token-insert-panel"
-                         role="dialog"
-                         aria-label="@Loc["TmDocumentEditor_InsertTokenPanelLabel"]"
-                         data-testid="@TestId("document-token-insert-panel")">
-                    <h3 class="tm-document-editor__token-insert-panel-title">@Loc["TmDocumentEditor_InsertTokenPanelLabel"]</h3>
-                    <input type="text"
-                           class="tm-input tm-document-editor__token-insert-filter"
-                           placeholder="@Loc["TmDocumentEditor_InsertTokenFilterPlaceholder"]"
-                           value="@_tokenInsertQuery"
-                           @oninput="HandleTokenInsertQueryChangedAsync"
-                           data-testid="@TestId("document-token-insert-filter")" />
-                    <TmDocumentTokenMenu IsVisible="true"
-                                         Tokens="@_tokenInsertItems"
-                                         Query="@_tokenInsertQuery"
-                                         HighlightedIndex="@_tokenInsertHighlight"
-                                         IsLoading="@_tokenInsertLoading"
-                                         OnTokenSelected="InsertTokenFromMenuAsync"
-                                         OnHighlightedIndexChanged="SetTokenInsertHighlight" />
-                </section>
-            }
             @if (IsDesktopLayout)
             {
                 <nav class="tm-document-editor__navigation"
@@ -489,229 +471,6 @@
                                                     OnCommandPaletteRequested="OpenCommandPaletteAsync"
                                                     OnRibbonFocusRequested="ActivateRibbonKeyboardModeAsync"
                                                     OnVersionsPanelRequested="OpenVersionsPanelAsync" />
-                        @if (_canvasImageDialogOpen)
-                        {
-                            <section class="tm-document-image-dialog tm-document-editor__image-dialog"
-                                     role="dialog"
-                                     aria-modal="true"
-                                     aria-label="@Loc["TmDocumentEditor_ImageInsertMenu"]"
-                                     data-testid="@TestId("document-canvas-image-dialog")">
-                                <header class="tm-document-editor__image-dialog-header">
-                                    <h3>@Loc["TmDocumentEditor_ImageInsertUrl"]</h3>
-                                    <button type="button"
-                                            class="tm-document-editor__image-dialog-close"
-                                            title="@Loc["Tm_Close"]"
-                                            aria-label="@Loc["Tm_Close"]"
-                                            @onclick="CancelCanvasImageDialog">
-                                        <TmIcon Name="x" Size="IconSize.Sm" />
-                                    </button>
-                                </header>
-                                <label class="tm-document-editor__field-label">
-                                    <span>@Loc["TmDocumentEditor_ImageUrl"]</span>
-                                    <input type="url"
-                                           class="tm-input"
-                                           placeholder="@Loc["TmDocumentEditor_ImageUrlPlaceholder"]"
-                                           @bind="_canvasImageUrl"
-                                           data-testid="@TestId("document-canvas-image-url-input")" />
-                                </label>
-                                @if (ImageProvider is not null)
-                                {
-                                    <label class="tm-document-editor__field-label">
-                                        <span>@Loc["TmDocumentEditor_UploadImage"]</span>
-                                        <InputFile OnChange="HandleCanvasImageFileAsync"
-                                                   data-testid="@TestId("document-canvas-image-upload")" />
-                                    </label>
-                                }
-                                <div class="tm-document-editor__image-dialog-actions">
-                                    <button type="button"
-                                            class="tm-btn tm-btn-sm tm-btn-secondary"
-                                            @onclick="CancelCanvasImageDialog">
-                                        @Loc["Tm_Cancel"]
-                                    </button>
-                                    <button type="button"
-                                            class="tm-btn tm-btn-sm tm-btn-primary"
-                                            disabled="@string.IsNullOrWhiteSpace(_canvasImageUrl)"
-                                            @onclick="InsertCanvasImageFromDialogAsync"
-                                            data-testid="@TestId("document-canvas-insert-image-url")">
-                                        @Loc["TmDocumentEditor_InsertImage"]
-                                    </button>
-                                </div>
-                            </section>
-                        }
-                        @if (CanvasSigningFieldPopoverVisible)
-                        {
-                            <section class="tm-document-editor__content-control-popover"
-                                     role="dialog"
-                                     aria-label="@Loc["TmDocumentEditor_GroupSigning"]"
-                                     data-testid="@TestId("document-canvas-signing-popover")"
-                                     data-signing-field-id="@_activeCanvasSigningField!.Uuid"
-                                     @onclick:stopPropagation="true"
-                                     @onpointerdown:stopPropagation="true">
-                                <header class="tm-document-editor__content-control-popover-header">
-                                    <div>
-                                        <span class="tm-document-editor__content-control-kicker">@Loc["TmDocumentEditor_GroupSigning"]</span>
-                                        <h3>@(string.IsNullOrWhiteSpace(_activeCanvasSigningField.Label) ? _activeCanvasSigningField.FieldType : _activeCanvasSigningField.Label)</h3>
-                                    </div>
-                                    <button type="button"
-                                            class="tm-document-editor__content-control-close"
-                                            aria-label="@Loc["TmDocumentEditor_ContentControlClose"]"
-                                            @onclick="CloseSigningFieldPopoverAsync">
-                                        <TmIcon Name="x" Size="IconSize.Sm" />
-                                    </button>
-                                </header>
-                                <div class="tm-document-editor__content-control-popover-body">
-                                    @if (_activeCanvasSigningField.Repeats)
-                                    {
-                                        <span class="tm-badge" data-testid="@TestId("document-signing-repeats-badge")">
-                                            @Loc["TmDocumentEditor_SigningRepeatsEveryPage"]
-                                        </span>
-                                    }
-                                    <label class="tm-document-editor__field-label">
-                                        @Loc["TmDocumentEditor_SigningFieldLabel"]
-                                        <input type="text"
-                                               class="tm-input"
-                                               data-testid="@TestId("document-signing-field-label")"
-                                               value="@_activeCanvasSigningField.Label"
-                                               @onchange="@(args => UpdateActiveSigningFieldAsync(label: args.Value?.ToString() ?? string.Empty))" />
-                                    </label>
-                                    <label class="tm-document-editor__field-checkbox">
-                                        <input type="checkbox"
-                                               data-testid="@TestId("document-signing-field-required")"
-                                               checked="@_activeCanvasSigningField.Required"
-                                               @onchange="@(args => UpdateActiveSigningFieldAsync(required: args.Value is bool b && b))" />
-                                        @Loc["TmDocumentEditor_SigningFieldRequired"]
-                                    </label>
-                                    @if (SigningRoles.Count > 0)
-                                    {
-                                        <label class="tm-document-editor__field-label">
-                                            @Loc["TmDocumentEditor_SigningFieldRole"]
-                                            <select class="tm-input"
-                                                    data-testid="@TestId("document-signing-field-role")"
-                                                    value="@_activeCanvasSigningField.SubmitterUuid"
-                                                    @onchange="@(args => UpdateActiveSigningFieldAsync(submitterUuid: args.Value?.ToString() ?? string.Empty))">
-                                                @foreach (var role in SigningRoles)
-                                                {
-                                                    <option value="@role.Uuid">@role.Name</option>
-                                                }
-                                            </select>
-                                        </label>
-                                    }
-                                </div>
-                            </section>
-                        }
-                        @if (CanvasContentControlPopoverVisible)
-                        {
-                            <section class="tm-document-editor__content-control-popover"
-                                     role="dialog"
-                                     aria-label="@Loc["TmDocumentEditor_ContentControlPopoverLabel"]"
-                                     data-testid="@TestId("document-canvas-content-control-popover")"
-                                     data-control-id="@_activeCanvasContentControl.ControlId"
-                                     data-control-kind="@_activeCanvasContentControl.Kind.ToString()"
-                                     @onclick:stopPropagation="true"
-                                     @onpointerdown:stopPropagation="true">
-                                <header class="tm-document-editor__content-control-popover-header">
-                                    <div>
-                                        <span class="tm-document-editor__content-control-kicker">@Loc["TmDocumentEditor_ContentControlPopoverKicker"]</span>
-                                        <h3>@_activeCanvasContentControl.Title</h3>
-                                    </div>
-                                    <button type="button"
-                                            class="tm-document-editor__content-control-close"
-                                            title="@Loc["TmDocumentEditor_ContentControlClose"]"
-                                            aria-label="@Loc["TmDocumentEditor_ContentControlClose"]"
-                                            @onclick="CloseCanvasContentControlPopoverAsync"
-                                            data-testid="@TestId("document-canvas-content-control-popover-close")">
-                                        <TmIcon Name="x" Size="IconSize.Sm" />
-                                    </button>
-                                </header>
-
-                                <div class="tm-document-editor__content-control-meta">
-                                    <span>@ContentControlKindLabel(_activeCanvasContentControl.Kind)</span>
-                                    @if (_activeCanvasContentControl.IsRequired)
-                                    {
-                                        <span>@Loc["TmDocumentEditor_ContentControlRequired"]</span>
-                                    }
-                                    @if (_activeCanvasContentControl.LockContent)
-                                    {
-                                        <span>@Loc["TmDocumentEditor_ContentControlLocked"]</span>
-                                    }
-                                </div>
-
-                                @if (_activeCanvasContentControl.Kind == DocumentContentControlKind.Date)
-                                {
-                                    <label class="tm-document-editor__content-control-field">
-                                        <span>@Loc["TmDocumentEditor_ContentControlDateLabel"]</span>
-                                        <input type="date"
-                                               class="tm-input"
-                                               value="@_activeCanvasContentControl.DateIso"
-                                               disabled="@_activeCanvasContentControl.LockContent"
-                                               @onchange="SetCanvasContentControlDateAsync"
-                                               data-testid="@TestId("document-canvas-content-control-date")" />
-                                    </label>
-                                }
-                                else if (_activeCanvasContentControl.Kind == DocumentContentControlKind.DropDown
-                                         || _activeCanvasContentControl.Kind == DocumentContentControlKind.ComboBox)
-                                {
-                                    <label class="tm-document-editor__content-control-field">
-                                        <span>@Loc["TmDocumentEditor_ContentControlChoiceLabel"]</span>
-                                        <select class="tm-input"
-                                                value="@_activeCanvasContentControl.SelectedValue"
-                                                disabled="@(_activeCanvasContentControl.LockContent || _activeCanvasContentControl.Items.Count == 0)"
-                                                @onchange="SetCanvasContentControlChoiceAsync"
-                                                data-testid="@TestId("document-canvas-content-control-choice")">
-                                            @if (_activeCanvasContentControl.Items.Count == 0)
-                                            {
-                                                <option value="">@Loc["TmDocumentEditor_ContentControlNoChoices"]</option>
-                                            }
-                                            else
-                                            {
-                                                @foreach (var item in _activeCanvasContentControl.Items)
-                                                {
-                                                    <option value="@item.Value">@item.DisplayText</option>
-                                                }
-                                            }
-                                        </select>
-                                    </label>
-
-                                    @if (_activeCanvasContentControl.Kind == DocumentContentControlKind.ComboBox)
-                                    {
-                                        <label class="tm-document-editor__content-control-field">
-                                            <span>@Loc["TmDocumentEditor_ContentControlComboTextLabel"]</span>
-                                            <input type="text"
-                                                   class="tm-input"
-                                                   value="@_activeCanvasContentControl.Text"
-                                                   disabled="@_activeCanvasContentControl.LockContent"
-                                                   @onchange="SetCanvasContentControlComboTextAsync"
-                                                   data-testid="@TestId("document-canvas-content-control-combo-text")" />
-                                        </label>
-                                    }
-                                }
-                                else if (_activeCanvasContentControl.Kind == DocumentContentControlKind.Picture)
-                                {
-                                    var pictureAssetOptions = CanvasContentControlImageAssetOptions;
-                                    <label class="tm-document-editor__content-control-field">
-                                        <span>@Loc["TmDocumentEditor_ContentControlPictureLabel"]</span>
-                                        <select class="tm-input"
-                                                value="@_activeCanvasContentControl.AssetId"
-                                                disabled="@(_activeCanvasContentControl.LockContent || pictureAssetOptions.Count == 0)"
-                                                @onchange="SetCanvasContentControlPictureAsync"
-                                                data-testid="@TestId("document-canvas-content-control-picture")">
-                                            @if (pictureAssetOptions.Count == 0)
-                                            {
-                                                <option value="">@Loc["TmDocumentEditor_ContentControlNoAssets"]</option>
-                                            }
-                                            else
-                                            {
-                                                <option value="">@Loc["TmDocumentEditor_ContentControlPicturePlaceholder"]</option>
-                                                @foreach (var asset in pictureAssetOptions)
-                                                {
-                                                    <option value="@asset.Id">@ContentControlAssetLabel(asset)</option>
-                                                }
-                                            }
-                                        </select>
-                                    </label>
-                                }
-                            </section>
-                        }
                     <TmDocumentCollaborationCursorOverlay Cursors="@_remoteCursors" />
                 </article>
             </section>
@@ -912,6 +671,211 @@
         <div class="tm-document-editor__floating-root"
              data-testid="@TestId("document-floating-root")"
              @onclick:stopPropagation="true">
+            @* Phase 5 (DE-1.4 .. DE-1.6): every floating editing surface lives HERE, in the floating root - never inside the page
+               surface (an overflow / containment ancestor would clip or re-anchor it). They are core top-layer popovers anyway. *@
+            @if (_canvasImageDialogOpen)
+            {
+                var imagePanelSeq = _imagePanelOpenSeq;
+                <TmDocumentFloatingPanel IsOpen="true"
+                                         Kind="image"
+                                         Title="@Loc["TmDocumentEditor_ImageInsertMenu"]"
+                                         Icon="image"
+                                         Width="DocumentFloatingPanelWidth.Medium"
+                                         PanelTestId="document-canvas-image-dialog"
+                                         CloseTestId="document-canvas-image-close"
+                                         TestIdPrefix="@TestIdPrefix"
+                                         Anchor="@(_toolbar?.ImagePanelAnchor ?? default)"
+                                         Align="@(_toolbar?.ImagePanelAlign ?? Tempo.Blazor.Components.Overlay.OverlayAlign.Start)"
+                                         OnClose="@(reason => HandleImagePanelClosedAsync(imagePanelSeq, reason))"
+                                         OnOpened="FocusImagePanelInputAsync"
+                                         OnRestoreFocus="FocusCanvasAsync">
+                    <ChildContent>
+                        <div class="tm-document-image-panel__tabs" role="tablist" aria-label="@Loc["TmDocumentEditor_ImageInsertMenu"]" data-testid="@TestId("document-image-insert-menu")">
+                            <button type="button" role="tab" @ref="_imageTabUrl" id="@ImageTabId(DocumentImagePanelTab.Url)"
+                                    class="tm-document-image-panel__tab"
+                                    aria-selected="@(_imagePanelTab == DocumentImagePanelTab.Url ? "true" : "false")"
+                                    aria-controls="@ImagePanelBodyId"
+                                    tabindex="@(_imagePanelTab == DocumentImagePanelTab.Url ? 0 : -1)"
+                                    @onclick="() => SelectImagePanelTabAsync(DocumentImagePanelTab.Url)"
+                                    @onkeydown="args => HandleImageTabKeyDownAsync(args, DocumentImagePanelTab.Url)"
+                                    data-testid="@TestId("document-image-insert-url")">
+                                <TmIcon Name="link" Size="IconSize.Sm" />
+                                <span>@Loc["TmDocumentEditor_ImageInsertUrl"]</span>
+                            </button>
+                            @if (CanUploadImagePanel)
+                            {
+                                <button type="button" role="tab" @ref="_imageTabUpload" id="@ImageTabId(DocumentImagePanelTab.Upload)"
+                                        class="tm-document-image-panel__tab"
+                                        aria-selected="@(_imagePanelTab == DocumentImagePanelTab.Upload ? "true" : "false")"
+                                        aria-controls="@ImagePanelBodyId"
+                                        tabindex="@(_imagePanelTab == DocumentImagePanelTab.Upload ? 0 : -1)"
+                                        @onclick="() => SelectImagePanelTabAsync(DocumentImagePanelTab.Upload)"
+                                        @onkeydown="args => HandleImageTabKeyDownAsync(args, DocumentImagePanelTab.Upload)"
+                                        data-testid="@TestId("document-image-insert-upload")">
+                                    <TmIcon Name="upload" Size="IconSize.Sm" />
+                                    <span>@Loc["TmDocumentEditor_UploadImage"]</span>
+                                </button>
+                            }
+                            @if (CanBrowseImageLibrary)
+                            {
+                                <button type="button" role="tab" @ref="_imageTabLibrary" id="@ImageTabId(DocumentImagePanelTab.Library)"
+                                        class="tm-document-image-panel__tab"
+                                        aria-selected="@(_imagePanelTab == DocumentImagePanelTab.Library ? "true" : "false")"
+                                        aria-controls="@ImagePanelBodyId"
+                                        tabindex="@(_imagePanelTab == DocumentImagePanelTab.Library ? 0 : -1)"
+                                        @onclick="() => SelectImagePanelTabAsync(DocumentImagePanelTab.Library)"
+                                        @onkeydown="args => HandleImageTabKeyDownAsync(args, DocumentImagePanelTab.Library)"
+                                        data-testid="@TestId("document-image-insert-asset")">
+                                    <TmIcon Name="images" Size="IconSize.Sm" />
+                                    <span>@Loc["TmDocumentEditor_ImageInsertAsset"]</span>
+                                </button>
+                            }
+                        </div>
+                        <div id="@ImagePanelBodyId" class="tm-document-image-panel__body" role="tabpanel" aria-labelledby="@ImageTabId(_imagePanelTab)" tabindex="-1">
+                            @if (_imagePanelTab == DocumentImagePanelTab.Upload && CanUploadImagePanel)
+                            {
+                                <label class="tm-document-editor__field-label">
+                                    <span>@Loc["TmDocumentEditor_UploadImage"]</span>
+                                    <InputFile OnChange="HandleCanvasImageFileAsync"
+                                               accept="image/*"
+                                               data-testid="@TestId("document-canvas-image-upload")" />
+                                </label>
+                            }
+                            else if (_imagePanelTab == DocumentImagePanelTab.Library && CanBrowseImageLibrary)
+                            {
+                                <ul class="tm-document-image-panel__library" aria-label="@Loc["TmDocumentEditor_ImageInsertAsset"]" data-testid="@TestId("document-image-library")">
+                                    @foreach (var asset in ImageAssetOptions)
+                                    {
+                                        <li>
+                                            <button type="button"
+                                                    class="tm-document-image-panel__asset"
+                                                    title="@ContentControlAssetLabel(asset)"
+                                                    @onclick="() => InsertCanvasImageAssetAsync(asset)"
+                                                    data-testid="@TestId("document-image-asset-" + asset.Id)">
+                                                @if (!string.IsNullOrWhiteSpace(asset.Url))
+                                                {
+                                                    <img src="@asset.Url" alt="" loading="lazy" />
+                                                }
+                                                else
+                                                {
+                                                    <TmIcon Name="image" Size="IconSize.Md" />
+                                                }
+                                                <span>@ContentControlAssetLabel(asset)</span>
+                                            </button>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                            else
+                            {
+                                <label class="tm-document-editor__field-label">
+                                    <span>@Loc["TmDocumentEditor_ImageUrl"]</span>
+                                    <input type="url"
+                                           class="tm-input"
+                                           @ref="_imageUrlInput"
+                                           inputmode="url"
+                                           enterkeyhint="done"
+                                           autocomplete="off"
+                                           placeholder="@Loc["TmDocumentEditor_ImageUrlPlaceholder"]"
+                                           value="@_canvasImageUrl"
+                                           @oninput="args => _canvasImageUrl = args.Value?.ToString() ?? string.Empty"
+                                           @onchange="HandleImageUrlCommitted"
+                                           @onkeydown="HandleImageUrlKeyDownAsync"
+                                           data-testid="@TestId("document-canvas-image-url-input")" />
+                                </label>
+                                @if (!string.IsNullOrEmpty(_imagePreviewUrl))
+                                {
+                                    <img class="tm-document-image-panel__preview" src="@_imagePreviewUrl" alt="" data-testid="@TestId("document-canvas-image-preview")" />
+                                }
+                            }
+                        </div>
+                    </ChildContent>
+                    <Footer>
+                        <button type="button"
+                                class="tm-btn tm-btn-sm tm-btn-secondary"
+                                @onclick="CancelImagePanelAsync"
+                                data-testid="@TestId("document-canvas-image-cancel")">
+                            @Loc["Tm_Cancel"]
+                        </button>
+                        @if (_imagePanelTab == DocumentImagePanelTab.Url)
+                        {
+                            <button type="button"
+                                    class="tm-btn tm-btn-sm tm-btn-primary"
+                                    disabled="@string.IsNullOrWhiteSpace(_canvasImageUrl)"
+                                    @onclick="InsertCanvasImageFromDialogAsync"
+                                    data-testid="@TestId("document-canvas-insert-image-url")">
+                                @Loc["TmDocumentEditor_ImageInsertAction"]
+                            </button>
+                        }
+                    </Footer>
+                </TmDocumentFloatingPanel>
+            }
+
+            @if (CanvasSigningFieldPopoverVisible)
+            {
+                <TmDocumentFieldPopover @key='"signing-" + _activeCanvasSigningField!.Uuid + "-" + _fieldPopoverEpoch'
+                                        SigningField="@_activeCanvasSigningField"
+                                        AnchorRect="@_activeFieldAnchor"
+                                        SigningRoles="@SigningRoles"
+                                        TestIdPrefix="@TestIdPrefix"
+                                        OnSigningLabelChanged="label => UpdateActiveSigningFieldAsync(label: label)"
+                                        OnSigningRequiredChanged="required => UpdateActiveSigningFieldAsync(required: required)"
+                                        OnSigningRoleChanged="role => UpdateActiveSigningFieldAsync(submitterUuid: role)"
+                                        OnClose="CloseSigningFieldPopoverAsync" />
+            }
+
+            @if (CanvasContentControlPopoverVisible)
+            {
+                <TmDocumentFieldPopover @key='"content-control-" + _activeCanvasContentControl!.ControlId + "-" + _fieldPopoverEpoch'
+                                        ContentControl="@_activeCanvasContentControl"
+                                        AnchorRect="@_activeFieldAnchor"
+                                        ImageAssets="@CanvasContentControlImageAssetOptions"
+                                        TestIdPrefix="@TestIdPrefix"
+                                        OnDateChanged="SetCanvasContentControlDateAsync"
+                                        OnChoiceChanged="SetCanvasContentControlChoiceAsync"
+                                        OnComboTextChanged="SetCanvasContentControlComboTextAsync"
+                                        OnPictureChanged="SetCanvasContentControlPictureAsync"
+                                        OnClose="CloseCanvasContentControlPopoverAsync" />
+            }
+
+            @if (_tokenInsertMenuOpen)
+            {
+                var tokenPanelSeq = _tokenPanelOpenSeq;
+                <TmDocumentFloatingPanel IsOpen="true"
+                                         Kind="token"
+                                         Title="@Loc["TmDocumentEditor_InsertTokenPanelLabel"]"
+                                         Icon="braces"
+                                         Width="DocumentFloatingPanelWidth.Medium"
+                                         PanelTestId="document-token-insert-panel"
+                                         CloseTestId="document-token-insert-close"
+                                         TestIdPrefix="@TestIdPrefix"
+                                         Anchor="@(_toolbar?.InsertMenuAnchor ?? default)"
+                                         Align="@(_toolbar?.InsertMenuAlign ?? Tempo.Blazor.Components.Overlay.OverlayAlign.Start)"
+                                         OnClose="@(reason => HandleTokenPanelClosedAsync(tokenPanelSeq, reason))"
+                                         OnRestoreFocus="FocusCanvasAsync"
+                                         OnOpened="FocusTokenFilterAsync">
+                    <div class="tm-document-token-panel__filter">
+                        <TmIcon Name="search" Size="IconSize.Sm" />
+                        <input type="search"
+                               @ref="_tokenFilterInput"
+                               class="tm-input tm-document-editor__token-insert-filter"
+                               placeholder="@Loc["TmDocumentEditor_InsertTokenFilterPlaceholder"]"
+                               aria-label="@Loc["TmDocumentEditor_InsertTokenFilterPlaceholder"]"
+                               autocomplete="off"
+                               value="@_tokenInsertQuery"
+                               @oninput="HandleTokenInsertQueryChangedAsync"
+                               data-testid="@TestId("document-token-insert-filter")" />
+                    </div>
+                    <TmDocumentTokenMenu IsVisible="true"
+                                         Tokens="@_tokenInsertItems"
+                                         Query="@_tokenInsertQuery"
+                                         HighlightedIndex="@_tokenInsertHighlight"
+                                         IsLoading="@_tokenInsertLoading"
+                                         OnTokenSelected="InsertTokenFromMenuAsync"
+                                         OnHighlightedIndexChanged="SetTokenInsertHighlight" />
+                </TmDocumentFloatingPanel>
+            }
+
             @if (_miniToolbar is { IsVisible: true } && IsObjectMiniToolbar && _canvasActiveImage is { } objectImage)
             {
                 @* B3: floating image toolbar (Word/GDocs parity) anchored above the selected object. *@
@@ -1391,52 +1355,60 @@
                     </button>
                 </section>
             }
-
-            @if (_versionDialogOpen)
-            {
-                <div class="tm-document-dialog-scrim" data-testid="@TestId("document-version-scrim")">
-                    <TmDocumentVersionDialog IsBusy="@_isCreatingVersion"
-                                             RequireMajorDescription="@RequireMajorVersionDescription"
-                                             OnCreate="CreateVersionAsync"
-                                             OnCancel="CloseVersionDialog" />
-                </div>
-            }
-
-            @if (ShowDebugTools)
-            {
-                <TmDocumentJsonDebugModal IsOpen="@_jsonDebugModalOpen"
-                                          Json="@_jsonDebugDocumentJson"
-                                          RuntimeDebugJson="@_runtimeDebugJson"
-                                          DocxDrawingMetadataJson="@_jsonDebugDocxDrawingMetadataJson"
-                                          RecoveryDetailJson="@GetRuntimeRecoveryDetailJson()"
-                                          OnCopyJson="CopyDocumentDebugJsonAsync"
-                                          OnClose="CloseJsonDebugModalAsync" />
-                <TmDocumentClipboardHtmlDebugModal IsOpen="@_clipboardHtmlModalOpen"
-                                                   Html="@_clipboardHtmlSnapshot"
-                                                   RawHtml="@_clipboardDebugRawHtml"
-                                                   NormalizedJson="@_clipboardDebugNormalizedJson"
-                                                   WarningsJson="@_clipboardDebugWarningsJson"
-                                                   OnClose="CloseClipboardHtmlModalAsync" />
-            }
-
-            @if (_compareDialogOpen && _compareDocumentSnapshot is not null)
-            {
-                <div class="tm-document-dialog-scrim" data-testid="@TestId("document-compare-scrim")">
-                    <TmDocumentCompareDialog CurrentDocument="@_compareDocumentSnapshot"
-                                             DocumentProvider="@Provider"
-                                             FormatProvider="@FormatProvider"
-                                             ComparisonProvider="@ComparisonProvider"
-                                             UseLocalComparisonFallback="@UseLocalComparisonFallback"
-                                             Author="@Author"
-                                             OnCompared="HandleDocumentComparedAsync"
-                                             OnCompareFailed="HandleDocumentCompareFailedAsync"
-                                             OnExportRedline="ExportRedlineDocxAsync"
-                                             OnClose="CloseCompareDialog" />
-                </div>
-            }
         </div>
+
+        @* Phase 5 (G6): the dialogs are core TmModal instances (top layer). They are SIBLINGS of the floating root and of every
+           container-type region: a container or a fixed ancestor is the containing block of fixed descendants, and the modal would
+           be clipped and wrapped inside it. *@
+        @if (_versionDialogOpen)
+        {
+            <TmDocumentVersionDialog IsBusy="@_isCreatingVersion"
+                                     RestoreFocusTargetId="@CanvasInputId"
+                                     RequireMajorDescription="@RequireMajorVersionDescription"
+                                     TestIdPrefix="@TestIdPrefix"
+                                     OnCreate="CreateVersionAsync"
+                                     OnCancel="CloseVersionDialog" />
+        }
+
+        @if (ShowDebugTools)
+        {
+            <TmDocumentJsonDebugModal IsOpen="@_jsonDebugModalOpen"
+                                      RestoreFocusTargetId="@CanvasInputId"
+                                      TestIdPrefix="@TestIdPrefix"
+                                      Json="@_jsonDebugDocumentJson"
+                                      RuntimeDebugJson="@_runtimeDebugJson"
+                                      DocxDrawingMetadataJson="@_jsonDebugDocxDrawingMetadataJson"
+                                      RecoveryDetailJson="@GetRuntimeRecoveryDetailJson()"
+                                      OnCopyJson="CopyDocumentDebugJsonAsync"
+                                      OnClose="CloseJsonDebugModalAsync" />
+            <TmDocumentClipboardHtmlDebugModal IsOpen="@_clipboardHtmlModalOpen"
+                                               RestoreFocusTargetId="@CanvasInputId"
+                                               TestIdPrefix="@TestIdPrefix"
+                                               Html="@_clipboardHtmlSnapshot"
+                                               RawHtml="@_clipboardDebugRawHtml"
+                                               NormalizedJson="@_clipboardDebugNormalizedJson"
+                                               WarningsJson="@_clipboardDebugWarningsJson"
+                                               OnClose="CloseClipboardHtmlModalAsync" />
+        }
+
+        @if (_compareDialogOpen && _compareDocumentSnapshot is not null)
+        {
+            <TmDocumentCompareDialog CurrentDocument="@_compareDocumentSnapshot"
+                                     RestoreFocusTargetId="@CanvasInputId"
+                                     TestIdPrefix="@TestIdPrefix"
+                                     DocumentProvider="@Provider"
+                                     FormatProvider="@FormatProvider"
+                                     ComparisonProvider="@ComparisonProvider"
+                                     UseLocalComparisonFallback="@UseLocalComparisonFallback"
+                                     Author="@Author"
+                                     OnCompared="HandleDocumentComparedAsync"
+                                     OnCompareFailed="HandleDocumentCompareFailedAsync"
+                                     OnExportRedline="ExportRedlineDocxAsync"
+                                     OnClose="CloseCompareDialog" />
+        }
     }
 </div>
+</CascadingValue>
 </LayoutContent>
 </TmLayoutObserver>
 

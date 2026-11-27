@@ -1,65 +1,66 @@
 @namespace Tempo.Blazor.Components.DocumentEditor
 @inherits Tempo.Blazor.Components.TmComponentBase
-@using Microsoft.JSInterop
-@inject IJSRuntime JSRuntime
-@implements IAsyncDisposable
 
-@if (IsOpen)
-{
-    <div @ref="_dialog"
-         class="tm-document-json-debug-modal"
-         data-testid="@TestId(ModalTestId)"
-         role="dialog"
-         aria-modal="true"
-         aria-label="@Title">
-        <div class="tm-document-json-debug-modal__backdrop" @onclick="OnClose"></div>
-        <div class="tm-document-json-debug-modal__content">
-            <header class="tm-document-json-debug-modal__header">
-                <span class="tm-document-json-debug-modal__title">@Title</span>
-                @if (OnCopy.HasDelegate)
-                {
-                    <button type="button"
-                            @ref="_copyButton"
-                            class="tm-document-json-debug-modal__copy"
-                            data-testid="@(string.IsNullOrEmpty(CopyTestId) ? null : TestId(CopyTestId))"
-                            title="@Loc["TmDocumentEditor_Copy"]"
-                            aria-label="@Loc["TmDocumentEditor_Copy"]"
-                            @onclick="OnCopy">
-                        <TmIcon Name="copy" Size="IconSize.Sm" />
-                    </button>
-                }
-                <button type="button"
-                        @ref="_closeButton"
-                        class="tm-document-json-debug-modal__close"
-                        data-testid="@(string.IsNullOrEmpty(CloseTestId) ? null : TestId(CloseTestId))"
-                        title="@Loc["TmDocumentEditor_Close"]"
-                        aria-label="@Loc["TmDocumentEditor_Close"]"
-                        @onclick="OnClose">
-                    <TmIcon Name="x" Size="IconSize.Sm" />
-                </button>
-            </header>
+@* The shared frame of the two debug modals (JSON, clipboard HTML). Redesign 146c7e1b, phase 5 (G6): it is the core TmModal - top
+   layer, the core focus scope (trap, Escape, focus return, aria-labelledby on the title) and a fullscreen panel on a mobile layout
+   (the sections are tall). The editor renders it as a SIBLING of the floating root. Classes are tm-document-debug-modal*; the
+   tm-document-json-debug-modal* names (the phase-2 BEM) stay as aliases. *@
+<TmModal Show="IsOpen"
+         Title="@Title"
+         Size="ModalSize.Large"
+         MobilePresentation="MobilePresentation.AutoFullscreen"
+         FooterLayout="FooterLayout.Inline"
+         Class="tm-document-debug-modal tm-document-json-debug-modal"
+         CloseButtonAdditionalAttributes="@CloseButtonAttributes"
+         RestoreFocusTargetId="@RestoreFocusTargetId"
+         OnClose="OnClose"
+         data-testid="@TestId(ModalTestId)">
+    <HeaderActions>
+        @if (OnCopy.HasDelegate)
+        {
+            <button type="button"
+                    class="tm-btn tm-btn-sm tm-btn-secondary tm-document-debug-modal__copy tm-document-json-debug-modal__copy"
+                    data-testid="@(string.IsNullOrEmpty(CopyTestId) ? null : TestId(CopyTestId))"
+                    title="@Loc["TmDocumentEditor_Copy"]"
+                    aria-label="@Loc["TmDocumentEditor_Copy"]"
+                    @onclick="OnCopy">
+                <TmIcon Name="copy" Size="IconSize.Sm" />
+                <span>@Loc["TmDocumentEditor_Copy"]</span>
+            </button>
+        }
+    </HeaderActions>
+    <ChildContent>
+        <div class="tm-document-debug-modal__content tm-document-json-debug-modal__content">
             @ChildContent
         </div>
-    </div>
-}
+    </ChildContent>
+    <Footer>
+        <button type="button"
+                class="tm-btn tm-btn-sm tm-btn-primary"
+                @onclick="OnClose"
+                data-testid="@(string.IsNullOrEmpty(CloseTestId) ? null : TestId(CloseTestId + "-footer"))">
+            @Loc["TmDocumentEditor_Close"]
+        </button>
+    </Footer>
+</TmModal>
 
 @code {
-    private ElementReference _dialog;
-    private ElementReference _copyButton;
-    private ElementReference _closeButton;
-    private DocumentEditorFocusTrapController? _focusTrap;
-    private bool _focusTrapActive;
+    /// <summary>
+    /// The id of the element focus returns to when the dialog closes - the editor passes its canvas input, so the keyboard lands back in
+    /// the document whatever opened the dialog (the command palette is gone by then). Null keeps the core modal's own restore (the opener).
+    /// </summary>
+    [Parameter] public string? RestoreFocusTargetId { get; set; }
 
     /// <summary>Whether the modal is open.</summary>
     [Parameter] public bool IsOpen { get; set; }
 
-    /// <summary>Modal title; it is the visible heading and the dialog's accessible name.</summary>
+    /// <summary>Modal title; it is the visible heading and the dialog's accessible name (<c>aria-labelledby</c>).</summary>
     [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
 
-    /// <summary>Unprefixed test id of the dialog root (resolved through <c>TestIdPrefix</c>).</summary>
+    /// <summary>Unprefixed test id of the modal root (resolved through <c>TestIdPrefix</c>); it rides the overlay (the scrim).</summary>
     [Parameter, EditorRequired] public string ModalTestId { get; set; } = string.Empty;
 
-    /// <summary>Unprefixed test id of the close button. No test id when omitted.</summary>
+    /// <summary>Unprefixed test id of the header close (X) button. No test id when omitted. The footer "Close" gets the same id plus <c>-footer</c>.</summary>
     [Parameter] public string? CloseTestId { get; set; }
 
     /// <summary>Unprefixed test id of the copy button. No test id when omitted.</summary>
@@ -68,47 +69,13 @@
     /// <summary>Raised when the user asks to copy the payload. The copy button is rendered only when a handler is bound.</summary>
     [Parameter] public EventCallback OnCopy { get; set; }
 
-    /// <summary>Raised when the modal should close (close button or backdrop).</summary>
+    /// <summary>Raised when the modal should close (close buttons, the scrim, Escape).</summary>
     [Parameter] public EventCallback OnClose { get; set; }
 
     /// <summary>The sections, normally <see cref="TmDocumentDebugSection"/> elements.</summary>
     [Parameter] public RenderFragment? ChildContent { get; set; }
 
-    /// <inheritdoc />
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (IsOpen)
-        {
-            if (!_focusTrapActive)
-            {
-                _focusTrap ??= new DocumentEditorFocusTrapController(JSRuntime);
-                await _focusTrap.ActivateAsync(_dialog, OnCopy.HasDelegate ? _copyButton : _closeButton);
-                _focusTrapActive = true;
-            }
-
-            return;
-        }
-
-        await ReleaseFocusTrapAsync(restoreFocus: true);
-    }
-
-    private async ValueTask ReleaseFocusTrapAsync(bool restoreFocus)
-    {
-        if (_focusTrap is not null && _focusTrapActive)
-        {
-            await _focusTrap.ReleaseAsync(restoreFocus);
-        }
-
-        _focusTrapActive = false;
-    }
-
-    /// <inheritdoc />
-    public async ValueTask DisposeAsync()
-    {
-        await ReleaseFocusTrapAsync(restoreFocus: false);
-        if (_focusTrap is not null)
-        {
-            await _focusTrap.DisposeAsync();
-        }
-    }
+    private Dictionary<string, object>? CloseButtonAttributes => string.IsNullOrEmpty(CloseTestId)
+        ? null
+        : new Dictionary<string, object> { ["data-testid"] = TestId(CloseTestId) };
 }

@@ -8,6 +8,7 @@
                       CopyTestId="document-json-debug-copy"
                       CloseTestId="document-json-debug-close"
                       OnCopy="OnCopyJson"
+                      RestoreFocusTargetId="@RestoreFocusTargetId"
                       OnClose="OnClose">
     <TmDocumentDebugSection TestIdPrefix="@TestIdPrefix"
                             Title="@Loc["TmDocumentEditor_DebugCanonicalDocument"]"
@@ -41,6 +42,12 @@
 </TmDocumentDebugModal>
 
 @code {
+    /// <summary>
+    /// The id of the element focus returns to when the dialog closes - the editor passes its canvas input, so the keyboard lands back in
+    /// the document whatever opened the dialog (the command palette is gone by then). Null keeps the core modal's own restore (the opener).
+    /// </summary>
+    [Parameter] public string? RestoreFocusTargetId { get; set; }
+
     /// <summary>Whether the modal is open.</summary>
     [Parameter] public bool IsOpen { get; set; }
 

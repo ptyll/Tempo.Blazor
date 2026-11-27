@@ -118,7 +118,12 @@ export function resolvePlacement(anchor, size, options) {
 
     let side = placement;
     if (flip) {
-        const needMain = (side === 'top' || side === 'bottom') ? size.height : size.width;
+        let needMain = (side === 'top' || side === 'bottom') ? size.height : size.width;
+        // flipMinRoom: a panel that is capped to the room it gets (constrainHeight) only needs a USEFUL amount of room, not its natural
+        // height - it keeps the preferred side as long as that side offers at least flipMinRoom pixels, and flips only below that.
+        if (options.flipMinRoom > 0) {
+            needMain = Math.min(needMain, options.flipMinRoom);
+        }
         const opposite = OPPOSITE[side];
         // Flip only when the preferred side lacks room AND the opposite side is strictly better:
         // an equally cramped opposite side must not flip the panel away from where the anchor is.
@@ -130,7 +135,12 @@ export function resolvePlacement(anchor, size, options) {
     let x;
     let y;
     if (side === 'bottom' || side === 'top') {
-        y = side === 'bottom' ? anchor.bottom + offset : anchor.top - offset - size.height;
+        // constrainHeight caps the panel to the room on its side AFTER placement (place()), so the position must be computed for the
+        // CAPPED height: with the natural height the main-axis safety clamp below would pull a tall panel back over its own anchor.
+        const height = options.constrainHeight === true
+            ? Math.min(size.height, Math.max(room[side], 0))
+            : size.height;
+        y = side === 'bottom' ? anchor.bottom + offset : anchor.top - offset - height;
         x = align === 'end' ? anchor.right - size.width
             : align === 'center' ? anchor.left + (anchor.width - size.width) / 2
                 : anchor.left;
@@ -138,7 +148,7 @@ export function resolvePlacement(anchor, size, options) {
             x = clamp(x, margin, viewW - margin - size.width);
             // Safety clamp on the main axis too: a panel taller than the viewport must not escape
             // at the top. When the panel fits, this is a no-op (the resolved y already lies inside).
-            y = clamp(y, margin, viewH - margin - size.height);
+            y = clamp(y, margin, viewH - margin - height);
         }
     } else {
         x = side === 'right' ? anchor.right + offset : anchor.left - offset - size.width;
@@ -280,6 +290,8 @@ export function positionFloating(panel, options = {}, win) {
         margin: options.margin,
         flip: options.flip,
         shift: options.shift,
+        constrainHeight: options.constrainHeight,
+        flipMinRoom: options.flipMinRoom,
         viewWidth: view.width,
         viewHeight: view.height,
     });
@@ -322,6 +334,8 @@ function place(entry) {
         margin: options.margin,
         flip: options.flip,
         shift: options.shift,
+        constrainHeight: options.constrainHeight,
+        flipMinRoom: options.flipMinRoom,
         matchAnchorWidth: options.matchAnchorWidth,
         originLeft: block ? block.left : 0,
         originTop: block ? block.top : 0,
@@ -645,6 +659,7 @@ function normalizeOptions(options) {
         shift: options?.shift !== false,
         matchAnchorWidth: options?.matchAnchorWidth === true,
         constrainHeight: options?.constrainHeight === true,
+        flipMinRoom: Number(options?.flipMinRoom) > 0 ? Number(options.flipMinRoom) : 0,
         closeOnEscape: options?.closeOnEscape !== false,
         closeOnOutsidePointerDown: options?.closeOnOutsidePointerDown !== false,
         trapFocus: options?.trapFocus === true,

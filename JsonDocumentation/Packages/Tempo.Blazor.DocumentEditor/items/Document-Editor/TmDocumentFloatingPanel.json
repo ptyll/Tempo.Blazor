@@ -1,0 +1,165 @@
+{
+  "itemName": "TmDocumentFloatingPanel",
+  "kind": "Component",
+  "category": "Document Editor",
+  "description": "The one frame of every floating editing surface of the document editor (redesign DE-1.4 .. DE-1.7): a thin wrapper over the core TmOverlayPanel with a header (title, optional kind line and icon, an X with a localized label), a body and an optional footer. A top-layer popover anchored to Anchor with no scrim, closed by Escape and by an outside press that is NOT swallowed (it still reaches its target), presented as the core bottom sheet on a mobile layout; it implements no sheet and no focus trap of its own. Pointer and click inside the frame are fenced so the canvas selection survives. Escape and the X raise OnClose and OnRestoreFocus so the editor can give the focus back to the canvas.",
+  "packageId": "Tempo.Blazor.DocumentEditor",
+  "namespace": "Tempo.Blazor.Components.DocumentEditor",
+  "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentFloatingPanel.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.DocumentEditor"
+  ],
+  "parameters": [
+    {
+      "name": "Anchor",
+      "type": "ElementReference",
+      "isRequired": false,
+      "description": "The element the panel anchors to; exempt from the outside-press dismissal so a click on it toggles."
+    },
+    {
+      "name": "Align",
+      "type": "OverlayAlign",
+      "isRequired": false,
+      "description": "Cross-axis alignment against Anchor. Defaults to the start edge."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class on the panel root."
+    },
+    {
+      "name": "CloseOnOutsidePointerDown",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Close on a pointer press outside the panel and its anchor. Defaults to true; the press is not swallowed."
+    },
+    {
+      "name": "CloseTestId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Unprefixed test id of the close (X) button."
+    },
+    {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "The body."
+    },
+    {
+      "name": "FocusOnOpen",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Move focus to the panel frame when it opens. Defaults to true."
+    },
+    {
+      "name": "Footer",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Optional footer; immediate-apply panels have none."
+    },
+    {
+      "name": "Icon",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional leading icon of the header."
+    },
+    {
+      "name": "Kind",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Stable kind marker (data-floating-kind), for example style-gallery."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "description": "The layout the sheet-versus-popover choice resolves from; Auto follows the viewport."
+    },
+    {
+      "name": "OnClose",
+      "type": "EventCallback<DocumentFloatingCloseReason>",
+      "isRequired": false,
+      "description": "Raised when the panel asks to be closed (X, Escape, an outside press); the host sets IsOpen to false."
+    },
+    {
+      "name": "OnOpened",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised once the panel is displayed and the frame took focus; the host moves focus into a field from here."
+    },
+    {
+      "name": "OnRestoreFocus",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when the panel closes through Escape or the X so the host can focus its canvas."
+    },
+    {
+      "name": "IsOpen",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the panel is open; the host owns the state."
+    },
+    {
+      "name": "PanelId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The id of the panel element; generated when omitted."
+    },
+    {
+      "name": "PanelTestId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Unprefixed test id of the panel root."
+    },
+    {
+      "name": "Placement",
+      "type": "OverlayPlacement",
+      "isRequired": false,
+      "description": "Preferred side of Anchor. Defaults to below."
+    },
+    {
+      "name": "RestoreFocusTarget",
+      "type": "ElementReference?",
+      "isRequired": false,
+      "description": "Element focused first when the panel closes through Escape or the X."
+    },
+    {
+      "name": "Role",
+      "type": "string",
+      "isRequired": false,
+      "description": "ARIA role of the panel. Defaults to dialog."
+    },
+    {
+      "name": "Subtitle",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional secondary line under the title."
+    },
+    {
+      "name": "Title",
+      "type": "string",
+      "isRequired": false,
+      "description": "The visible heading and the dialog's accessible name."
+    },
+    {
+      "name": "TitleId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The id of the title heading (aria-labelledby of the dialog); generated when omitted."
+    },
+    {
+      "name": "Width",
+      "type": "DocumentFloatingPanelWidth",
+      "isRequired": false,
+      "description": "Width class of the panel. Defaults to Medium."
+    },
+    {
+      "name": "HideFooterInSheet",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Drop Footer while the panel is a bottom sheet. A footer that only offers a way out (a Close button) duplicates the sheet's Done action; a footer with real actions keeps rendering. Defaults to false."
+    }
+  ]
+}

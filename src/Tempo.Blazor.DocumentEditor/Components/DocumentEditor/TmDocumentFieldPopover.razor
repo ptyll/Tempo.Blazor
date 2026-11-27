@@ -1,0 +1,338 @@
+@namespace Tempo.Blazor.Components.DocumentEditor
+@inherits Tempo.Blazor.Components.TmComponentBase
+@implements IAsyncDisposable
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
+@using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Components.Overlay
+@using Tempo.Blazor.DocumentEditor.Models
+
+@* (The anchor is passed explicitly: the core panel's fallback anchor, its previous element sibling, is the viewport probe when the panel
+   is not inside a layout scope, so the span's own reference is the only reliable one. The panel renders from the second render on, once
+   the reference exists.) *@
+@* The popover of a form field under the caret (redesign 146c7e1b, phase 5, DE-1.6): a content control (date, drop-down, combo box,
+   picture) or a signing field. It replaces the two inline sections of TmDocumentEditor.razor with ONE component on the shared
+   floating frame: the title and the kind in the header, the metadata as chips with an icon (kind, required, locked, repeats on
+   every page) and an editor made of tm-input controls. Every change applies at once (G8) - there is no OK footer; the footer holds
+   the visible "Close". The popover anchors to the field through the viewport rectangle the canvas engine reports (the same coordinate
+   model as the mini toolbar): a fixed, invisible anchor span at that rectangle is the panel's previous sibling, which is what the core
+   overlay anchors to when no anchor is given. *@
+@if (ContentControl is not null || SigningField is not null)
+{
+    <span @ref="_anchor"
+          class="tm-document-field-anchor"
+          style="@AnchorStyle"
+          aria-hidden="true"
+          data-testid="@TestId("document-field-popover-anchor")"></span>
+    @if (_anchorReady)
+    {
+    <TmDocumentFloatingPanel IsOpen="true"
+                             Anchor="@_anchor"
+                             Kind="@(ContentControl is not null ? "content-control" : "signing-field")"
+                             Title="@PopoverTitle"
+                             Subtitle="@PopoverKicker"
+                             Width="DocumentFloatingPanelWidth.Medium"
+                             PanelTestId="@(ContentControl is not null ? "document-canvas-content-control-popover" : "document-canvas-signing-popover")"
+                             CloseTestId="@(ContentControl is not null ? "document-canvas-content-control-popover-close" : "document-canvas-signing-popover-close")"
+                             TestIdPrefix="@TestIdPrefix"
+                             Placement="OverlayPlacement.Bottom"
+                             Align="OverlayAlign.Start"
+                             FocusOnOpen="false"
+                             HideFooterInSheet="true"
+                             OnClose="HandleCloseAsync"
+                             data-control-id="@ContentControl?.ControlId"
+                             data-control-kind="@ContentControl?.Kind.ToString()"
+                             data-signing-field-id="@SigningField?.Uuid">
+        <ChildContent>
+            <ul class="tm-document-field-popover__meta" aria-label="@Loc["TmDocumentEditor_FieldPopoverMeta"]" data-testid="@TestId("document-field-popover-meta")">
+                @if (ContentControl is not null)
+                {
+                    <li class="tm-document-field-popover__chip" data-chip="kind"><TmIcon Name="file-text" Size="IconSize.Sm" /><span>@KindLabel(ContentControl.Kind)</span></li>
+                    @if (ContentControl.IsRequired)
+                    {
+                        <li class="tm-document-field-popover__chip" data-chip="required"><TmIcon Name="asterisk" Size="IconSize.Sm" /><span>@Loc["TmDocumentEditor_ContentControlRequired"]</span></li>
+                    }
+                    @if (ContentControl.LockContent)
+                    {
+                        <li class="tm-document-field-popover__chip" data-chip="locked"><TmIcon Name="lock" Size="IconSize.Sm" /><span>@Loc["TmDocumentEditor_ContentControlLocked"]</span></li>
+                    }
+                }
+                else if (SigningField is not null)
+                {
+                    <li class="tm-document-field-popover__chip" data-chip="kind"><TmIcon Name="file-text" Size="IconSize.Sm" /><span>@Loc["TmDocumentEditor_GroupSigning"]</span></li>
+                    @if (SigningField.Required)
+                    {
+                        <li class="tm-document-field-popover__chip" data-chip="required"><TmIcon Name="asterisk" Size="IconSize.Sm" /><span>@Loc["TmDocumentEditor_ContentControlRequired"]</span></li>
+                    }
+                    @if (SigningField.Repeats)
+                    {
+                        <li class="tm-document-field-popover__chip" data-chip="repeats" data-testid="@TestId("document-signing-repeats-badge")"><TmIcon Name="refresh-cw" Size="IconSize.Sm" /><span>@Loc["TmDocumentEditor_SigningRepeatsEveryPage"]</span></li>
+                    }
+                }
+            </ul>
+
+            @if (ContentControl is { Kind: DocumentContentControlKind.Date } date)
+            {
+                <label class="tm-document-field-popover__field">
+                    <span>@Loc["TmDocumentEditor_ContentControlDateLabel"]</span>
+                    <input type="date"
+                           class="tm-input"
+                           value="@date.DateIso"
+                           disabled="@date.LockContent"
+                           @onchange="args => OnDateChanged.InvokeAsync(Convert.ToString(args.Value, System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty)"
+                           data-testid="@TestId("document-canvas-content-control-date")" />
+                </label>
+            }
+            else if (ContentControl is { Kind: DocumentContentControlKind.DropDown or DocumentContentControlKind.ComboBox } choice)
+            {
+                <label class="tm-document-field-popover__field">
+                    <span>@Loc["TmDocumentEditor_ContentControlChoiceLabel"]</span>
+                    <select class="tm-input"
+                            value="@choice.SelectedValue"
+                            disabled="@(choice.LockContent || choice.Items.Count == 0)"
+                            @onchange="args => OnChoiceChanged.InvokeAsync(Convert.ToString(args.Value, System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty)"
+                            data-testid="@TestId("document-canvas-content-control-choice")">
+                        @if (choice.Items.Count == 0)
+                        {
+                            <option value="">@Loc["TmDocumentEditor_ContentControlNoChoices"]</option>
+                        }
+                        else
+                        {
+                            @foreach (var item in choice.Items)
+                            {
+                                <option value="@item.Value">@item.DisplayText</option>
+                            }
+                        }
+                    </select>
+                </label>
+                @if (choice.Kind == DocumentContentControlKind.ComboBox)
+                {
+                    <label class="tm-document-field-popover__field">
+                        <span>@Loc["TmDocumentEditor_ContentControlComboTextLabel"]</span>
+                        <input type="text"
+                               class="tm-input"
+                               value="@choice.Text"
+                               disabled="@choice.LockContent"
+                               @onchange="args => OnComboTextChanged.InvokeAsync(Convert.ToString(args.Value, System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty)"
+                               data-testid="@TestId("document-canvas-content-control-combo-text")" />
+                    </label>
+                }
+            }
+            else if (ContentControl is { Kind: DocumentContentControlKind.Picture } picture)
+            {
+                <label class="tm-document-field-popover__field">
+                    <span>@Loc["TmDocumentEditor_ContentControlPictureLabel"]</span>
+                    <select class="tm-input"
+                            value="@picture.AssetId"
+                            disabled="@(picture.LockContent || ImageAssets.Count == 0)"
+                            @onchange="args => OnPictureChanged.InvokeAsync(Convert.ToString(args.Value, System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty)"
+                            data-testid="@TestId("document-canvas-content-control-picture")">
+                        @if (ImageAssets.Count == 0)
+                        {
+                            <option value="">@Loc["TmDocumentEditor_ContentControlNoAssets"]</option>
+                        }
+                        else
+                        {
+                            <option value="">@Loc["TmDocumentEditor_ContentControlPicturePlaceholder"]</option>
+                            @foreach (var asset in ImageAssets)
+                            {
+                                <option value="@asset.Id">@AssetLabel(asset)</option>
+                            }
+                        }
+                    </select>
+                </label>
+            }
+            else if (SigningField is not null)
+            {
+                <label class="tm-document-field-popover__field">
+                    <span>@Loc["TmDocumentEditor_SigningFieldLabel"]</span>
+                    <input type="text"
+                           class="tm-input"
+                           data-testid="@TestId("document-signing-field-label")"
+                           value="@SigningField.Label"
+                           @onchange="args => OnSigningLabelChanged.InvokeAsync(args.Value?.ToString() ?? string.Empty)" />
+                </label>
+                <label class="tm-document-field-popover__check">
+                    <input type="checkbox"
+                           data-testid="@TestId("document-signing-field-required")"
+                           checked="@SigningField.Required"
+                           @onchange="args => OnSigningRequiredChanged.InvokeAsync(args.Value is bool b && b)" />
+                    <span>@Loc["TmDocumentEditor_SigningFieldRequired"]</span>
+                </label>
+                @if (SigningRoles.Count > 0)
+                {
+                    <label class="tm-document-field-popover__field">
+                        <span>@Loc["TmDocumentEditor_SigningFieldRole"]</span>
+                        <select class="tm-input"
+                                data-testid="@TestId("document-signing-field-role")"
+                                value="@SigningField.SubmitterUuid"
+                                @onchange="args => OnSigningRoleChanged.InvokeAsync(args.Value?.ToString() ?? string.Empty)">
+                            @foreach (var role in SigningRoles)
+                            {
+                                <option value="@role.Uuid">@role.Name</option>
+                            }
+                        </select>
+                    </label>
+                }
+            }
+        </ChildContent>
+        <Footer>
+            <button type="button"
+                    class="tm-btn tm-btn-sm tm-btn-secondary"
+                    @onclick="() => HandleCloseAsync(DocumentFloatingCloseReason.Button)"
+                    data-testid="@TestId("document-field-popover-close")">@Loc["TmDocumentEditor_Close"]</button>
+        </Footer>
+    </TmDocumentFloatingPanel>
+    }
+}
+
+@code {
+    private const string GuardModulePath = "./_content/Tempo.Blazor.DocumentEditor/js/document-editor/interop/field-popover-guard.mjs";
+
+    private ElementReference _anchor;
+    private bool _anchorReady;
+    private readonly string _guardKey = $"tm-document-field-popover-{Guid.NewGuid():N}";
+    private IJSObjectReference? _guardModule;
+    private DotNetObjectReference<TmDocumentFieldPopover>? _selfRef;
+    private bool _guardAttached;
+    private bool _disposed;
+
+    /// <summary>The content control to edit. Set exactly one of <see cref="ContentControl"/> and <see cref="SigningField"/>.</summary>
+    [Parameter] public DocumentFieldPopoverControl? ContentControl { get; set; }
+
+    /// <summary>The signing field to edit (label, required, signer role).</summary>
+    [Parameter] public TmDocumentCanvasEngineHost.CanvasEngineSigningFieldSelection? SigningField { get; set; }
+
+    /// <summary>Viewport rectangle of the field (CSS pixels) the popover anchors to. Null anchors to the top-left of the viewport.</summary>
+    [Parameter] public TmDocumentCanvasEngineHost.CanvasEngineViewportRect? AnchorRect { get; set; }
+
+    /// <summary>The image assets a picture control can choose from.</summary>
+    [Parameter] public IReadOnlyList<DocumentImageAsset> ImageAssets { get; set; } = [];
+
+    /// <summary>The signer roles of a signing field. The role select renders only when there is at least one.</summary>
+    [Parameter] public IReadOnlyList<SigningSubmitterRole> SigningRoles { get; set; } = [];
+
+    /// <summary>Raised with the new ISO date of a date control.</summary>
+    [Parameter] public EventCallback<string> OnDateChanged { get; set; }
+
+    /// <summary>Raised with the chosen value of a drop-down or combo box.</summary>
+    [Parameter] public EventCallback<string> OnChoiceChanged { get; set; }
+
+    /// <summary>Raised with the free text of a combo box.</summary>
+    [Parameter] public EventCallback<string> OnComboTextChanged { get; set; }
+
+    /// <summary>Raised with the chosen asset id of a picture control.</summary>
+    [Parameter] public EventCallback<string> OnPictureChanged { get; set; }
+
+    /// <summary>Raised with the new label of a signing field.</summary>
+    [Parameter] public EventCallback<string> OnSigningLabelChanged { get; set; }
+
+    /// <summary>Raised with the new required flag of a signing field.</summary>
+    [Parameter] public EventCallback<bool> OnSigningRequiredChanged { get; set; }
+
+    /// <summary>Raised with the chosen signer role of a signing field.</summary>
+    [Parameter] public EventCallback<string> OnSigningRoleChanged { get; set; }
+
+    /// <summary>
+    /// Raised when the popover asks to close, with the reason: the X and the footer Close are <see cref="DocumentFloatingCloseReason.Button"/>,
+    /// Escape is <see cref="DocumentFloatingCloseReason.Escape"/>, a press outside is <see cref="DocumentFloatingCloseReason.Outside"/>.
+    /// The host gives focus back to its canvas only for a button or Escape, never for an outside press (the user clicked elsewhere).
+    /// </summary>
+    [Parameter] public EventCallback<DocumentFloatingCloseReason> OnClose { get; set; }
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_anchorReady && (ContentControl is not null || SigningField is not null))
+        {
+            _anchorReady = true;
+            StateHasChanged();
+            return;
+        }
+
+        // The popover is anchored to a viewport rectangle: once the canvas scrolls (or the window resizes) the rectangle no longer sits on
+        // the field, so the popover closes (the module throttles to one report per frame and ignores the engine's own caret scroll).
+        if (_anchorReady && !_guardAttached && !_disposed)
+        {
+            _guardAttached = true;
+            try
+            {
+                _guardModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", GuardModulePath);
+                if (_guardModule is not null)
+                {
+                    _selfRef = DotNetObjectReference.Create(this);
+                    await _guardModule.InvokeVoidAsync("watchViewport", _guardKey, _selfRef, nameof(HandleViewportMovedAsync));
+                }
+            }
+            catch (Exception exception) when (exception is JSException or InvalidOperationException or JSDisconnectedException
+                                                    or TaskCanceledException or ObjectDisposedException)
+            {
+                // Best effort: without the module the popover simply stays until it is closed by hand.
+            }
+        }
+    }
+
+    /// <summary>Called by the viewport guard when the canvas scrolled or the window resized: the anchor is stale, so the popover closes.</summary>
+    [JSInvokable]
+    public Task HandleViewportMovedAsync()
+        => _disposed ? Task.CompletedTask : InvokeAsync(() => OnClose.InvokeAsync(DocumentFloatingCloseReason.Outside));
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        _disposed = true;
+        var module = _guardModule;
+        _guardModule = null;
+        _selfRef?.Dispose();
+        _selfRef = null;
+        if (module is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await module.InvokeVoidAsync("unwatch", _guardKey);
+            await module.DisposeAsync();
+        }
+        catch
+        {
+            // The JS runtime may already be disconnected during teardown.
+        }
+    }
+
+    private string PopoverTitle => ContentControl?.Title
+        ?? (string.IsNullOrWhiteSpace(SigningField?.Label) ? SigningField?.FieldType : SigningField!.Label)
+        ?? string.Empty;
+
+    private string PopoverKicker => ContentControl is not null
+        ? Loc["TmDocumentEditor_ContentControlPopoverKicker"]
+        : Loc["TmDocumentEditor_GroupSigning"];
+
+    private string AnchorStyle
+    {
+        get
+        {
+            var rect = AnchorRect;
+            return rect is null
+                ? "position: fixed; inset-inline-start: 0; inset-block-start: 0; inline-size: 1px; block-size: 1px;"
+                : string.Create(
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    $"position: fixed; left: {rect.Left:0.##}px; top: {rect.Top:0.##}px; width: {rect.Width:0.##}px; height: {rect.Height:0.##}px;");
+        }
+    }
+
+    private string KindLabel(DocumentContentControlKind kind) => kind switch
+    {
+        DocumentContentControlKind.Date => Loc["TmDocumentEditor_ContentControlKindDate"],
+        DocumentContentControlKind.ComboBox => Loc["TmDocumentEditor_ContentControlKindCombo"],
+        DocumentContentControlKind.DropDown => Loc["TmDocumentEditor_ContentControlKindDropdown"],
+        DocumentContentControlKind.Picture => Loc["TmDocumentEditor_ContentControlKindPicture"],
+        _ => Loc["TmDocumentEditor_ContentControlKindField"],
+    };
+
+    private static string AssetLabel(DocumentImageAsset asset)
+        => new[] { asset.Caption, asset.AltText, asset.FileName, asset.Id }.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? string.Empty;
+
+    private Task HandleCloseAsync(DocumentFloatingCloseReason reason) => OnClose.InvokeAsync(reason);
+}
