@@ -2,7 +2,7 @@
   "itemName": "TmAccordionItem",
   "kind": "Component",
   "category": "Data Display",
-  "description": "Individual expandable panel within a TmAccordion, with a clickable header showing title, optional subtitle, icon, and chevron indicator. Supports keyboard navigation and disabled state.",
+  "description": "Individual expandable panel within a TmAccordion, with a clickable header showing title, optional subtitle, icon, and chevron indicator. Supports keyboard navigation and disabled state. The expansion state is two-way bindable (@bind-IsExpanded); inside an accordion with ExpandedKeys the item is group-controlled through its Key.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.DataDisplay"
   ],
@@ -30,7 +30,19 @@
       "name": "IsExpanded",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether this item is expanded."
+      "description": "Whether this item is expanded. Never assigned inside the component: uncontrolled (no IsExpandedChanged) it seeds the internal state and is re-applied only when the host changes the value; controlled (@bind-IsExpanded) the parameter is the single source of truth. Ignored while the parent accordion's ExpandedKeys owns the item."
+    },
+    {
+      "name": "IsExpandedChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Raised when the user requests an expansion change (click / Enter / Space) — add it (or @bind-IsExpanded) to take control of the state. Not raised for a disabled item or under group control (ExpandedKeysChanged reports those changes)."
+    },
+    {
+      "name": "Key",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Stable identity of the item for group control and URL sync. When the parent TmAccordion has a non-null ExpandedKeys, every keyed item's expansion is owned by the accordion host. Keys compare ordinally (case-sensitive); duplicate Keys share one state. Null (default) leaves the item self-managed."
     },
     {
       "name": "Disabled",
@@ -67,6 +79,10 @@
     {
       "title": "Accordion item with icon and subtitle",
       "code": "<TmAccordionItem Title=\"Account Settings\"\n                 Subtitle=\"Manage your account preferences\"\n                 Icon=\"settings\"\n                 IsExpanded=\"false\">\n    <p>Account settings content here.</p>\n</TmAccordionItem>"
+    },
+    {
+      "title": "Two-way bound expansion (@bind-IsExpanded)",
+      "code": "<TmAccordionItem Title=\"Details\" @bind-IsExpanded=\"_detailsOpen\">\n    <p>The host owns the state — a checkbox or a URL can drive it too.</p>\n</TmAccordionItem>\n\n@code {\n    private bool _detailsOpen;\n}"
     }
   ]
 }

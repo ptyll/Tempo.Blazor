@@ -290,6 +290,14 @@ Related sub-components: `TmPagination`, `TmColumnFilter`, `TmColumnPicker`, `TmV
     <TmAccordionItem Title="Section 1">Content 1</TmAccordionItem>
     <TmAccordionItem Title="Section 2" Subtitle="Optional subtitle">Content 2</TmAccordionItem>
 </TmAccordion>
+
+@* Two-way expansion: @bind-IsExpanded on one item; @bind-ExpandedKeys on the group (items carry Key) *@
+<TmAccordion @bind-ExpandedKeys="_expandedKeys">
+    <TmAccordionItem Key="install" Title="Install">Content</TmAccordionItem>
+</TmAccordion>
+<TmAccordion>
+    <TmAccordionItem Title="Details" @bind-IsExpanded="_detailsOpen">Content</TmAccordionItem>
+</TmAccordion>
 ```
 
 **TmChip**

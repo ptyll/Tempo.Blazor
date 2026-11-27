@@ -1,0 +1,31 @@
+{
+  "kind": "Class",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.DataDisplay",
+  "description": "Describes one user-driven expansion change of a TmAccordionItem inside a TmAccordion — raised through TmAccordion.OnItemToggled for the clicked item and for every sibling the single mode closes implicitly (close notifications come first).",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/AccordionItemToggleEventArgs.cs",
+  "documentationStatus": "documented",
+  "itemName": "AccordionItemToggleEventArgs",
+  "members": [
+    {
+      "name": "Key",
+      "kind": "Property",
+      "type": "string?",
+      "description": "The item's TmAccordionItem.Key, or null for a keyless (self-managed) item."
+    },
+    {
+      "name": "Expanded",
+      "kind": "Property",
+      "type": "bool",
+      "description": "The requested expansion state — false for an implicit sibling close in single mode."
+    },
+    {
+      "name": "Index",
+      "kind": "Property",
+      "type": "int",
+      "description": "The item's index within the accordion (registration order — DOM order for a static item list; an item inserted conditionally later is appended)."
+    }
+  ],
+  "usageExample": "<TmAccordion OnItemToggled=\"OnToggled\">\n    <TmAccordionItem Key=\"install\" Title=\"Install\">...</TmAccordionItem>\n</TmAccordion>\n\n@code {\n    private void OnToggled(AccordionItemToggleEventArgs args)\n    {\n        // args.Key = \"install\", args.Expanded = true, args.Index = 0\n    }\n}"
+}

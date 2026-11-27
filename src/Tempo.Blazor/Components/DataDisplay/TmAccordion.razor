@@ -8,9 +8,40 @@
 
 @code {
     private readonly List<TmAccordionItem> _items = [];
+    private HashSet<string>? _expandedKeySet;
+    private bool _wasControllingKeys;
 
     /// <summary>Allow multiple items open at once.</summary>
     [Parameter] public bool Multiple { get; set; }
+
+    /// <summary>
+    /// Group control of the expansion state by item key (<c>@bind-ExpandedKeys</c>). While the
+    /// value is non-null, every <see cref="TmAccordionItem"/> with a
+    /// <see cref="TmAccordionItem.Key"/> is owned by this parameter (the item's own
+    /// <c>IsExpanded</c> is ignored); items without a key stay self-managed. Keys compare
+    /// ordinally (case-sensitive) and duplicate <see cref="TmAccordionItem.Key"/> values share
+    /// one state. In single mode (<see cref="Multiple"/> = false) at most one RENDERED item is
+    /// expanded — a seed with several keys keeps the first item in registration order (DOM order
+    /// for a static item list; an item inserted conditionally later is appended). Keys without a
+    /// matching registered item survive every snapshot untouched (they ride at its end), so a
+    /// single-mode snapshot may carry more than one key — the "at most one" cap applies to the
+    /// keys of rendered items only.
+    /// </summary>
+    [Parameter] public IReadOnlyCollection<string>? ExpandedKeys { get; set; }
+
+    /// <summary>
+    /// Raised once per user toggle with the new immutable key snapshot (registration order of the
+    /// items — DOM order for a static item list; an item inserted conditionally later is
+    /// appended). A host that does not adopt the snapshot rejects the toggle.
+    /// </summary>
+    [Parameter] public EventCallback<IReadOnlyCollection<string>> ExpandedKeysChanged { get; set; }
+
+    /// <summary>
+    /// Raised for every user-driven expansion change — the clicked item and, in single mode,
+    /// each sibling closed implicitly (close notifications come first). Keyless items report a
+    /// <c>null</c> <see cref="AccordionItemToggleEventArgs.Key"/>.
+    /// </summary>
+    [Parameter] public EventCallback<AccordionItemToggleEventArgs> OnItemToggled { get; set; }
 
     /// <summary>Accordion items.</summary>
     [Parameter] public RenderFragment? ChildContent { get; set; }
@@ -20,6 +51,32 @@
 
     /// <summary>Additional HTML attributes to apply to the root element.</summary>
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    /// <summary>Whether the accordion owns the expansion state of keyed items.</summary>
+    internal bool ControlsKeys => ExpandedKeys is not null;
+
+    protected override void OnParametersSet()
+    {
+        // One ordinal snapshot of the keys per parameter pass — IsKeyExpanded and
+        // BuildKeySnapshot share it, so the comparison is consistent everywhere.
+        _expandedKeySet = ExpandedKeys is null
+            ? null
+            : new HashSet<string>(ExpandedKeys, StringComparer.Ordinal);
+
+        // Push the group state into the registered items directly: an item without body content
+        // is not guaranteed a fresh OnParametersSet when only ExpandedKeys changes, so the owner
+        // of the state syncs every keyed item itself. Runs also on the controlled → uncontrolled
+        // edge (the last-seen flag), where SyncFromGroup is a no-op and the items fall back to
+        // their own IsExpanded handling on their next parameter pass.
+        if (ControlsKeys || _wasControllingKeys)
+        {
+            foreach (var item in _items.ToArray())
+            {
+                item.SyncFromGroup();
+            }
+        }
+        _wasControllingKeys = ControlsKeys;
+    }
 
     internal void RegisterItem(TmAccordionItem item)
     {
@@ -35,18 +92,125 @@
         _items.Remove(item);
     }
 
-    internal void OnItemToggled(TmAccordionItem expandedItem)
+    /// <summary>
+    /// Whether the keyed item is expanded under group control. Single mode keeps only the first
+    /// keyed item (in registration order) whose key is present in <see cref="ExpandedKeys"/>.
+    /// </summary>
+    internal bool IsKeyExpanded(string key)
     {
-        if (!Multiple && expandedItem.IsExpanded)
+        if (_expandedKeySet is null || !_expandedKeySet.Contains(key)) return false;
+        if (Multiple) return true;
+        foreach (var item in _items)
         {
-            foreach (var item in _items)
+            if (item.Key is null) continue;
+            if (_expandedKeySet.Contains(item.Key))
             {
-                if (item != expandedItem && item.IsExpanded)
+                return string.Equals(item.Key, key, StringComparison.Ordinal);
+            }
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Handles a user toggle of <paramref name="item"/>: single mode closes the expanded
+    /// siblings first (each reports through its own channel — a group-controlled sibling only
+    /// through the emitted key snapshot, which is why the snapshot is emitted even when the
+    /// CLICKED item is keyless), then the clicked item changes — through the group snapshot when
+    /// the accordion controls keys, otherwise through the item. The item list is snapshotted
+    /// because a host callback may remove an item mid-toggle.
+    /// </summary>
+    internal async Task RequestToggleAsync(TmAccordionItem item)
+    {
+        var expand = !item.CurrentExpanded;
+        var groupSiblingClosed = false;
+
+        if (!Multiple && expand)
+        {
+            foreach (var sibling in _items.ToArray())
+            {
+                if (sibling == item || !sibling.CurrentExpanded) continue;
+                if (sibling.IsGroupControlled)
                 {
-                    item.Collapse();
+                    // Owned by the key snapshot emitted below — RequestCollapseAsync would no-op.
+                    groupSiblingClosed = true;
+                }
+                else
+                {
+                    await sibling.RequestCollapseAsync();
+                }
+                await RaiseItemToggledAsync(sibling, false);
+            }
+        }
+
+        if (item.IsGroupControlled || groupSiblingClosed)
+        {
+            await ExpandedKeysChanged.InvokeAsync(BuildKeySnapshot(item, expand));
+        }
+        if (!item.IsGroupControlled)
+        {
+            await item.ApplyExpansionAsync(expand);
+        }
+
+        await RaiseItemToggledAsync(item, expand);
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Builds the immutable key snapshot for a toggle: the current keys plus/minus the clicked
+    /// one. In single mode every REGISTERED item's key is dropped first — in BOTH directions, so
+    /// closing the only rendered item cannot resurrect the key of a never-rendered sibling —
+    /// leaving at most one rendered key; keys without a matching item survive in their original
+    /// order at the end. The add/remove applies only to a group-controlled keyed item: a keyless
+    /// click that merely closed a group-controlled sibling emits the sibling's removal only.
+    /// </summary>
+    private IReadOnlyCollection<string> BuildKeySnapshot(TmAccordionItem item, bool expand)
+    {
+        var current = ExpandedKeys ?? (IReadOnlyCollection<string>)[];
+        var set = _expandedKeySet is null
+            ? new HashSet<string>(StringComparer.Ordinal)
+            : new HashSet<string>(_expandedKeySet, StringComparer.Ordinal);
+
+        if (!Multiple)
+        {
+            foreach (var child in _items)
+            {
+                if (child.Key is not null)
+                {
+                    set.Remove(child.Key);
                 }
             }
         }
-        StateHasChanged();
+
+        if (item.Key is not null && item.IsGroupControlled)
+        {
+            if (expand)
+            {
+                set.Add(item.Key);
+            }
+            else
+            {
+                set.Remove(item.Key);
+            }
+        }
+
+        var snapshot = new List<string>();
+        foreach (var child in _items)
+        {
+            if (child.Key is not null && set.Contains(child.Key) && !snapshot.Contains(child.Key))
+            {
+                snapshot.Add(child.Key);
+            }
+        }
+        foreach (var key in current)
+        {
+            if (set.Contains(key) && !snapshot.Contains(key))
+            {
+                snapshot.Add(key);
+            }
+        }
+        return snapshot.ToArray();
     }
+
+    private Task RaiseItemToggledAsync(TmAccordionItem item, bool expanded)
+        => OnItemToggled.InvokeAsync(new AccordionItemToggleEventArgs(item.Key, expanded, _items.IndexOf(item)));
 }

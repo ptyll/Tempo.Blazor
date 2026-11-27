@@ -5995,6 +5995,37 @@
           ]
         },
         {
+          "itemName": "AccordionItemToggleEventArgs",
+          "kind": "Record",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.DataDisplay",
+          "description": "Describes one user-driven expansion change of a TmAccordionItem inside a TmAccordion — raised through TmAccordion.OnItemToggled for the clicked item and for every sibling the single mode closes implicitly (close notifications come first).",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/AccordionItemToggleEventArgs.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Expanded",
+              "kind": "Property",
+              "type": "bool",
+              "description": "The requested expansion state — false for an implicit sibling close in single mode."
+            },
+            {
+              "name": "Index",
+              "kind": "Property",
+              "type": "int",
+              "description": "The item's index within the accordion (registration order — DOM order for a static item list; an item inserted conditionally later is appended)."
+            },
+            {
+              "name": "Key",
+              "kind": "Property",
+              "type": "string?",
+              "description": "The item's TmAccordionItem.Key, or null for a keyless (self-managed) item."
+            }
+          ],
+          "usageExample": "<TmAccordion OnItemToggled=\"OnToggled\">\n    <TmAccordionItem Key=\"install\" Title=\"Install\">...</TmAccordionItem>\n</TmAccordion>\n\n@code {\n    private void OnToggled(AccordionItemToggleEventArgs args)\n    {\n        // args.Key = \"install\", args.Expanded = true, args.Index = 0\n    }\n}"
+        },
+        {
           "itemName": "ActionBarPlacement",
           "kind": "Enum",
           "category": "Components",
@@ -11107,7 +11138,7 @@
           "kind": "Component",
           "category": "Data Display",
           "namespace": "Tempo.Blazor.Components.DataDisplay",
-          "description": "Expandable content panel container that manages child TmAccordionItem components, supporting single or multiple simultaneous expansion.",
+          "description": "Expandable content panel container that manages child TmAccordionItem components, supporting single or multiple simultaneous expansion. The expansion state can be group-controlled through ExpandedKeys (@bind-ExpandedKeys) keyed by the items' Key parameter — the foundation for URL-synced accordions.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/TmAccordion.razor",
           "documentationStatus": "merged",
@@ -11128,10 +11159,28 @@
               "description": "Additional CSS class."
             },
             {
+              "name": "ExpandedKeys",
+              "type": "IReadOnlyCollection<string>?",
+              "isRequired": false,
+              "description": "Group control of the expansion state by item key (@bind-ExpandedKeys). While non-null, every keyed item is owned by this parameter (its own IsExpanded is ignored); items without a key stay self-managed. Keys compare ordinally (case-sensitive) and duplicate Keys share one state. Single mode keeps at most one RENDERED item expanded — a seed with several keys keeps the first item in registration order — while keys without a matching item survive every snapshot untouched at its end."
+            },
+            {
+              "name": "ExpandedKeysChanged",
+              "type": "EventCallback<IReadOnlyCollection<string>>",
+              "isRequired": false,
+              "description": "Raised once per user toggle with the new immutable key snapshot (registration order — DOM order for a static item list; an item inserted conditionally later is appended). A host that does not adopt the snapshot rejects the toggle."
+            },
+            {
               "name": "Multiple",
               "type": "bool",
               "isRequired": false,
               "description": "Allow multiple items open at once."
+            },
+            {
+              "name": "OnItemToggled",
+              "type": "EventCallback<AccordionItemToggleEventArgs>",
+              "isRequired": false,
+              "description": "Raised for every user-driven expansion change — the clicked item and, in single mode, each sibling closed implicitly (close notifications come first). Carries Key (null for keyless items), Expanded and the registration Index."
             }
           ],
           "cssClasses": [
@@ -11141,6 +11190,10 @@
             {
               "title": "Accordion with multiple items",
               "code": "<TmAccordion Multiple=\"false\">\n    <TmAccordionItem Title=\"Section 1\" IsExpanded=\"true\">\n        <p>Content for section 1</p>\n    </TmAccordionItem>\n    <TmAccordionItem Title=\"Section 2\" Subtitle=\"Optional subtitle\" Icon=\"settings\">\n        <p>Content for section 2</p>\n    </TmAccordionItem>\n    <TmAccordionItem Title=\"Disabled Section\" Disabled=\"true\">\n        <p>This section cannot be toggled</p>\n    </TmAccordionItem>\n</TmAccordion>"
+            },
+            {
+              "title": "URL-synced group control (@bind-ExpandedKeys)",
+              "code": "<TmAccordion ExpandedKeys=\"_expanded\" ExpandedKeysChanged=\"OnExpandedChanged\">\n    <TmAccordionItem Key=\"install\" Title=\"Install\">...</TmAccordionItem>\n    <TmAccordionItem Key=\"dark-mode\" Title=\"Dark mode\">...</TmAccordionItem>\n</TmAccordion>\n\n@code {\n    private IReadOnlyCollection<string> _expanded = Array.Empty<string>();\n\n    private void OnExpandedChanged(IReadOnlyCollection<string> keys)\n    {\n        _expanded = keys;\n        // e.g. sync the URL: Nav.NavigateTo(Nav.GetUriWithQueryParameter(\"expanded\",\n        //     keys.Count == 0 ? null : string.Join(',', keys)), replace: true);\n    }\n}"
             }
           ]
         },
@@ -11149,7 +11202,7 @@
           "kind": "Component",
           "category": "Data Display",
           "namespace": "Tempo.Blazor.Components.DataDisplay",
-          "description": "Individual expandable panel within a TmAccordion, with a clickable header showing title, optional subtitle, icon, and chevron indicator. Supports keyboard navigation and disabled state.",
+          "description": "Individual expandable panel within a TmAccordion, with a clickable header showing title, optional subtitle, icon, and chevron indicator. Supports keyboard navigation and disabled state. The expansion state is two-way bindable (@bind-IsExpanded); inside an accordion with ExpandedKeys the item is group-controlled through its Key.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/TmAccordionItem.razor",
           "documentationStatus": "merged",
@@ -11185,7 +11238,19 @@
               "name": "IsExpanded",
               "type": "bool",
               "isRequired": false,
-              "description": "Whether this item is expanded."
+              "description": "Whether this item is expanded. Never assigned inside the component: uncontrolled (no IsExpandedChanged) it seeds the internal state and is re-applied only when the host changes the value; controlled (@bind-IsExpanded) the parameter is the single source of truth. Ignored while the parent accordion's ExpandedKeys owns the item."
+            },
+            {
+              "name": "IsExpandedChanged",
+              "type": "EventCallback<bool>",
+              "isRequired": false,
+              "description": "Raised when the user requests an expansion change (click / Enter / Space) — add it (or @bind-IsExpanded) to take control of the state. Not raised for a disabled item or under group control (ExpandedKeysChanged reports those changes)."
+            },
+            {
+              "name": "Key",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Stable identity of the item for group control and URL sync. When the parent TmAccordion has a non-null ExpandedKeys, every keyed item's expansion is owned by the accordion host. Keys compare ordinally (case-sensitive); duplicate Keys share one state. Null (default) leaves the item self-managed."
             },
             {
               "name": "Subtitle",
@@ -11217,6 +11282,10 @@
             {
               "title": "Accordion item with icon and subtitle",
               "code": "<TmAccordionItem Title=\"Account Settings\"\n                 Subtitle=\"Manage your account preferences\"\n                 Icon=\"settings\"\n                 IsExpanded=\"false\">\n    <p>Account settings content here.</p>\n</TmAccordionItem>"
+            },
+            {
+              "title": "Two-way bound expansion (@bind-IsExpanded)",
+              "code": "<TmAccordionItem Title=\"Details\" @bind-IsExpanded=\"_detailsOpen\">\n    <p>The host owns the state — a checkbox or a URL can drive it too.</p>\n</TmAccordionItem>\n\n@code {\n    private bool _detailsOpen;\n}"
             }
           ]
         },
@@ -38270,12 +38339,12 @@
         }
       ],
       "summary": {
-        "itemCount": 470,
-        "manualItemCount": 470,
-        "generatedItemCount": 462,
+        "itemCount": 471,
+        "manualItemCount": 471,
+        "generatedItemCount": 463,
         "generatedOnlyItemCount": 0,
         "componentCount": 239,
-        "publicApiTypeCount": 223
+        "publicApiTypeCount": 224
       }
     },
     {
@@ -149646,10 +149715,10 @@
   ],
   "summary": {
     "packageCount": 29,
-    "itemCount": 3767,
-    "manualItemCount": 3767,
+    "itemCount": 3768,
+    "manualItemCount": 3768,
     "generatedOnlyItemCount": 0,
     "componentCount": 567,
-    "publicApiTypeCount": 3148
+    "publicApiTypeCount": 3149
   }
 }

@@ -2,6 +2,33 @@
 
 ## Unreleased
 
+### Added — TmAccordion two-way expansion (Tempo.Blazor)
+
+- **`TmAccordionItem` is two-way bindable and the accordion group can be driven by item keys** (reported by EmusCz against 2.13.0: `TmAccordionItem` has no `IsExpandedChanged`, so `IsExpanded` could only seed the expansion on first render and a user click could not be two-way-synced into the URL). The API is additive — a host that passes none of the new parameters gets a byte-identical DOM and behavior (pinned by a markup test):
+  - `TmAccordionItem.IsExpandedChanged` (`@bind-IsExpanded`) — the `IsExpanded` parameter is never assigned inside the component anymore; the rendered state lives in an internal field. Controlled (the callback is present): a click only raises `IsExpandedChanged(!current)` and a host that does not update the value rejects the toggle. Uncontrolled: the parameter seeds the state and is re-applied only when its value actually changes.
+  - `TmAccordionItem.Key` (`string?`) — stable item identity for group control and URL sync. Keys compare ordinally (case-sensitive); duplicate `Key` values share one state.
+  - `TmAccordion.ExpandedKeys` / `ExpandedKeysChanged` (`@bind-ExpandedKeys`) — group control: while non-null, every keyed item's state is owned by the parameter (its own `IsExpanded` is ignored); keyless items stay self-managed. One click emits exactly one immutable snapshot in registration order (DOM order for a static item list; an item inserted conditionally later is appended). Single mode carries at most one RENDERED key — keys without a matching item survive at the end of every snapshot.
+  - `TmAccordion.OnItemToggled` (`EventCallback<AccordionItemToggleEventArgs>` with `Key`/`Expanded`/`Index`) — notification of every user-driven change, including the implicit sibling close in single mode (close events come first).
+  - Demo: `/feedback` card `accordion-url-sync-card` deep-links the expansion through `?expanded=…` (`NavigateTo(…, replace: true)`, a `#accordion-url-sync` fragment scrolls the opened section into view) and shows a two-way `@bind-IsExpanded` sample.
+- **Migration for the EmusCz workaround:** the `@key` remount EmusCz used to re-seed `IsExpanded` (their `InitiallyExpanded` wrapper) can be deleted — bind the state instead:
+
+  ```razor
+  @* before: remount to re-seed, no way to observe a user click *@
+  <TmAccordionItem @key="_remount" Title="Filters" IsExpanded="_seedOpen">…</TmAccordionItem>
+
+  @* after: two-way bound, the URL can follow every click *@
+  <TmAccordionItem Title="Filters" @bind-IsExpanded="_filtersOpen">…</TmAccordionItem>
+
+  @* or the whole group through the URL *@
+  <TmAccordion ExpandedKeys="_expanded" ExpandedKeysChanged="OnExpandedChanged">
+      <TmAccordionItem Key="install" Title="Install">…</TmAccordionItem>
+  </TmAccordion>
+  ```
+
+### Fixed — TmAccordionItem no longer loses the user toggle on a parent re-render (`Tempo.Blazor`)
+
+- **An uncontrolled `TmAccordionItem` kept overwriting the user-driven state with the parameter value on every parent re-render** (the parameter was the only state and the component assigned it directly). The internal state now re-applies the parameter only when its VALUE actually changes, so a parent re-render with an unchanged `IsExpanded` leaves the user's toggle alone, while a host that flips the value still drives the item declaratively. The same last-seen sync means a sibling that single mode closed implicitly no longer re-opens on the next render while the host keeps passing `IsExpanded=true`. This is the one intentional behavior change of the two-way-expansion work — a host that RELIED on the reset-on-rerender must switch to `@bind-IsExpanded` and set the value itself. Not a breaking change: no public member was removed and the DOM is unchanged.
+
 ### Fixed — a locked date picker trigger announces the lock, not a popup (`Tempo.Blazor`)
 
 - **The `ReadOnly` trigger of `TmDatePicker` and `TmDateTimePicker` no longer advertises a popup it can never open.** It used to stay `<button aria-haspopup="true" …>` with `aria-readonly="true"` — an attribute ARIA does not support on `role=button`, so a screen reader announced an expandable button and never mentioned the lock (measured in the EmusCz 2.13.0 upgrade). With `ReadOnly` the trigger now renders `aria-haspopup="false"`, no `aria-expanded` and `aria-disabled="true"`, and stays focusable with its natural tab stop. Click, Enter, Space and Alt+Down still open nothing and the clear button stays hidden. Consumer `aria-*` attributes passed through `AdditionalAttributes` keep winning over the component defaults, so the EmusCz workaround (`aria-haspopup="false"` + `aria-disabled="true"` from the consumer side) produces the identical DOM and can be dropped at the next upgrade. The editable trigger is unchanged apart from one correctness fix: a closed picker now renders `aria-expanded="false"` instead of omitting the attribute, and an open one `aria-expanded="true"` instead of the invalid empty value. `AriaDescribedBy` (and the `TmFormField` help/error cascade) still reach the locked trigger, so a host can describe WHY the field is locked. Contract pinned in bUnit (attributes in both states, activation guards, consumer precedence) and in WASM E2E `TmDatePickerReadOnlyE2ETests` with a scoped axe scan (aria-allowed-attr) in both themes; demo cards on `/pickers` (`date-picker-readonly-card`, `datetime-picker-readonly-card`).
