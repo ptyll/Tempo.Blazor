@@ -1057,6 +1057,12 @@
       "type": "EventCallback<int>",
       "isRequired": false,
       "description": "Raised when zoom percent changes."
+    },
+    {
+      "name": "ShowQuickAccess",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the Save / Undo / Redo quick-access group is rendered in the ribbon. Defaults to true (a standalone toolbar and TmDocumentEditor with ShowHeader=false); the editor passes false while its header owns those three commands, so each of them renders exactly once."
     }
   ]
 }

@@ -55,8 +55,15 @@ public sealed class DocumentEditorCanvasSearchOutlineTocE2ETests : WasmTestBase
 
         var outline = await ReadOutlineAsync(page);
         var deliveryScope = outline.First(item => item.Level == 2 && item.Text == "Delivery Scope");
-        await page.GetByTestId("document-side-panel-tab-outline").ClickAsync();
-        await Assertions.Expect(page.GetByTestId("document-outline-panel")).ToBeVisibleAsync(new() { Timeout = 10_000 });
+        // DE-1.1: the outline lives in the desktop left column (no Outline tab to click). A 1440 px viewport leaves the editor a
+        // container below the wide step, so the column starts folded into its rail: unfold it.
+        var expandNavigation = page.GetByTestId("document-navigation-expand");
+        if (await expandNavigation.CountAsync() > 0)
+        {
+            await expandNavigation.ClickAsync();
+        }
+
+        await Assertions.Expect(page.Locator("[data-region='nav'] [data-testid='document-outline-panel']")).ToBeVisibleAsync(new() { Timeout = 10_000 });
         await page.Locator($"[data-testid='document-outline-item'][data-block-id='{deliveryScope.BlockId}']").ClickAsync();
         await WaitForSelectionBlockAsync(page, deliveryScope.BlockId);
         var outlineScreenshotPath = Path.Combine(output, "outline-panel-navigation.png");

@@ -257,7 +257,7 @@ public class TmDocumentEditorCssTests
         css.Should().Contain(".tm-document-canvas-object-selection");
         css.Should().Contain(".tm-document-canvas-object-resize-handle");
         css.Should().Contain(".tm-document-canvas-table-resize-preview");
-        css.Should().Contain("@media (max-width: 40rem)");
+        css.Should().Contain("@container tm-doc-editor (width < 640px)");
         css.Should().NotContain(".tm-wysiwyg-image--wrap-square");
         css.Should().NotContain(".tm-wysiwyg-image-sidecar-text");
         css.Should().NotContain("data-wrap-sidecar-for");
@@ -402,10 +402,14 @@ public class TmDocumentEditorCssTests
                 .Should().BeTrue($"{selector} must keep a rule");
         }
 
-        // Label above the field by default, label beside it once the panel body is wide enough: a container query
-        // on the panel body, never the viewport.
-        css.Should().Contain("@container");
-        System.Text.RegularExpressions.Regex.IsMatch(css, @"container-type\s*:\s*inline-size").Should().BeTrue();
+        // Label beside the control while the panel body is wide enough, above it when not: an intrinsic flex-wrap decided by
+        // the body's own width - never the viewport, and no 24rem container query (that width is outside TmBreakpoints).
+        var field = CssRules.Body(rules, ".tm-document-inspector-form__field");
+        field.Should().Contain("display: flex").And.Contain("flex-wrap: wrap");
+        CssRules.Body(rules, ".tm-document-inspector-form__label").Should().Contain("flex: 0 1 8rem");
+        CssRules.Body(rules, ".tm-document-inspector-form__control").Should().Contain("flex: 1 1 12rem");
+        CssRules.Body(rules, ".tm-document-inspector-form__field--stacked").Should().Contain("display: grid");
+        css.Should().NotContain("@container", "the form needs no container query: the wrap is intrinsic");
 
         // The embedded modifier drops the card chrome (frame + shadow) for a panel hosted inside the inspector.
         var embedded = CssRules.Body(rules, ".tm-document-inspector-form--embedded");
@@ -576,6 +580,188 @@ public class TmDocumentEditorCssTests
         File.ReadAllText(Path.Combine(dir, "TmDocumentCellPropertiesPanel.razor")).Should().Contain("tm-document-inspector-form--embedded");
         var panels = CssRules.Parse(ReadComponentCss("_document-editor-panels.css"));
         CssRules.Body(panels, ".tm-document-inspector-form--embedded").Should().Contain("max-inline-size: 100%").And.Contain("min-inline-size: 0");
+    }
+
+    // ── Phase 3 / DE-1.1: the editor lays itself out from its own container ───────────────────────────────
+
+    private static string[] EditorStylesheets() =>
+    [
+        ReadComponentCss("_document-editor.css"),
+        ReadComponentCss("_document-editor-toolbar.css"),
+        ReadComponentCss("_document-editor-comments.css"),
+        ReadComponentCss("_document-editor-panels.css"),
+        ReadComponentCss("_document-editor-find.css"),
+        ReadComponentCss("_document-editor-canvas-overlays.css"),
+        ReadScopedCss("TmDocumentEditor.razor.css"),
+        ReadScopedCss("TmDocumentEditorToolbar.razor.css"),
+        ReadScopedCss("TmDocumentCanvasEngineHost.razor.css"),
+    ];
+
+    private static string ReadScopedCss(string fileName)
+        => File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "Tempo.Blazor.DocumentEditor", "Components", "DocumentEditor", fileName));
+
+    [Fact]
+    public void EditorSizeContainer_IsTheMainRegion_NeverTheRootOrTheRibbon()
+    {
+        // A size container is the containing block of every position:fixed descendant. The ribbon pickers/backdrops, the
+        // dialogs and the floating root position against the viewport, so none of them may sit inside the container.
+        var rules = CssRules.Parse(string.Concat(EditorStylesheets()));
+
+        CssRules.Body(rules, ".tm-document-editor__main").Should().Contain("container: tm-doc-editor / inline-size");
+        foreach (var selector in new[] { ".tm-document-editor", ".tm-layout.tm-document-editor-host", ".tm-document-editor__ribbon", ".tm-document-editor__floating-root" })
+        {
+            CssRules.Body(rules, selector).Should().NotContain("container", $"{selector} must not become the containing block of fixed descendants");
+        }
+
+        var razor = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "Tempo.Blazor.DocumentEditor", "Components", "DocumentEditor", "TmDocumentEditor.razor"));
+        var mainStart = razor.IndexOf("class=\"tm-document-editor__main\"", StringComparison.Ordinal);
+        var floatingStart = razor.IndexOf("class=\"tm-document-editor__floating-root\"", StringComparison.Ordinal);
+        var toolbarStart = razor.IndexOf("<TmDocumentEditorToolbar", StringComparison.Ordinal);
+        mainStart.Should().BeGreaterThan(toolbarStart, "the ribbon renders before (outside) the size container");
+        floatingStart.Should().BeGreaterThan(mainStart);
+        razor[mainStart..floatingStart].Should().NotContain("position: fixed");
+    }
+
+    [Fact]
+    public void WorkspaceRegions_AreNamedGridAreas_KeyedOnDataLayout_NotOnTheContainerWidth()
+    {
+        // data-layout is the ONE source of the arrangement (the markup, a forced LayoutMode and the CSS cannot disagree); the
+        // size container only tunes density and the first-frame guard of an unmeasured Auto editor.
+        var css = ReadComponentCss("_document-editor.css");
+        var rules = CssRules.Parse(css);
+
+        CssRules.Body(rules, ".tm-document-editor[data-layout=\"desktop\"] .tm-document-editor__workspace").Should().Contain("grid-template-areas: \"nav doc inspector\"");
+        CssRules.Body(rules, ".tm-document-editor[data-layout=\"tablet\"] .tm-document-editor__workspace").Should().Contain("grid-template-areas: \"doc inspector\"");
+        css.Should().NotContain("@container tm-doc-editor (width >= 640px)", "the arrangement does not answer to the container");
+        css.Should().NotContain("@container tm-doc-editor (width >= 1024px)");
+        css.Should().Contain(".tm-document-editor:not([data-layout-forced])[data-layout=\"desktop\"]", "the first-frame guard never overrides a forced mode");
+        CssRules.Body(rules, ".tm-document-editor__workspace > [data-region=\"nav\"]").Should().NotContain("display: none",
+            "the column is hidden only by the first-frame guard, never by default");
+        css.Should().Contain("grid-template-areas: \"doc inspector\"");
+        foreach (var region in new[] { "nav", "doc", "inspector" })
+        {
+            CssRules.Body(rules, $".tm-document-editor__workspace > [data-region=\"{region}\"]").Should().Contain($"grid-area: {region}");
+        }
+
+    }
+
+    [Fact]
+    public void EditorContainerQueries_UseRangeSyntax_AndOnlyTheBreakpointConstants()
+    {
+        var allowed = new[] { 640, 768, 1024, 1280 };
+        foreach (var css in EditorStylesheets())
+        {
+            var withoutComments = System.Text.RegularExpressions.Regex.Replace(css, @"/\*.*?\*/", " ", System.Text.RegularExpressions.RegexOptions.Singleline);
+            foreach (System.Text.RegularExpressions.Match container in System.Text.RegularExpressions.Regex.Matches(withoutComments, @"@container\b(?<condition>[^{]*)\{"))
+            {
+                var condition = container.Groups["condition"].Value;
+                condition.Should().NotContain("max-width").And.NotContain("min-width");
+                foreach (System.Text.RegularExpressions.Match width in System.Text.RegularExpressions.Regex.Matches(condition, @"\b(\d+)px\b"))
+                {
+                    allowed.Should().Contain(int.Parse(width.Groups[1].Value), $"'{condition.Trim()}' must use a TmBreakpoints width");
+                }
+            }
+        }
+    }
+
+    [Fact]
+    public void LayoutMediaQueries_AreGone_ExceptTheViewportBoundOverlays()
+    {
+        // Every rule that lays the editor out answers to the editor's container; the only viewport queries left are the
+        // fixed surfaces of the floating root (dialogs) and the ribbon's popup menus, which are sized by the viewport.
+        var offenders = new List<string>();
+        foreach (var (name, css) in new[]
+        {
+            ("_document-editor.css", ReadComponentCss("_document-editor.css")),
+            ("_document-editor-toolbar.css", ReadComponentCss("_document-editor-toolbar.css")),
+            ("_document-editor-comments.css", ReadComponentCss("_document-editor-comments.css")),
+            ("TmDocumentEditor.razor.css", ReadScopedCss("TmDocumentEditor.razor.css")),
+            ("TmDocumentCanvasEngineHost.razor.css", ReadScopedCss("TmDocumentCanvasEngineHost.razor.css")),
+        })
+        {
+            var withoutComments = System.Text.RegularExpressions.Regex.Replace(css, @"/\*.*?\*/", " ", System.Text.RegularExpressions.RegexOptions.Singleline);
+            foreach (System.Text.RegularExpressions.Match media in System.Text.RegularExpressions.Regex.Matches(withoutComments, @"@media\s*\((?:max|min)-width[^{]*\{"))
+            {
+                var start = media.Index + media.Length;
+                var body = withoutComments.Substring(start, Math.Min(400, withoutComments.Length - start));
+                var viewportBound = body.Contains(".tm-document-version-dialog", StringComparison.Ordinal)
+                    || body.Contains(".tm-document-compare-dialog__sources", StringComparison.Ordinal)
+                    || body.Contains(".tm-document-symbol-menu", StringComparison.Ordinal);
+                if (!viewportBound)
+                {
+                    offenders.Add($"{name}: {media.Value.Trim()}");
+                }
+            }
+        }
+
+        offenders.Should().BeEmpty("layout rules must be @container (or data-layout) rules, never viewport width queries");
+    }
+
+    [Fact]
+    public void HeaderAndNavigation_PaintOnlyThroughSemanticTokens()
+    {
+        var css = ReadComponentCss("_document-editor.css");
+        var rules = CssRules.Parse(css);
+        foreach (var selector in new[]
+        {
+            ".tm-document-editor__header",
+            ".tm-document-editor__header-status-dot",
+            ".tm-document-editor__header-mode",
+            ".tm-document-navigation",
+            ".tm-document-navigation__search",
+        })
+        {
+            var body = CssRules.Body(rules, selector);
+            body.Should().NotBeEmpty($"{selector} must keep a rule");
+            body.Should().NotMatchRegex(@"#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(|linear-gradient|radial-gradient");
+        }
+
+        rules.Any(rule => rule.Selectors.Contains(".tm-document-navigation__toggle:focus-visible")).Should().BeTrue("the collapse toggle keeps a focus ring");
+        CssRules.Body(rules, ".tm-document-side-panel[data-tab-style=\"text\"] .tm-document-side-panel__tabs").Should().Contain("display: flex");
+    }
+
+    [Fact]
+    public void Header_IsNotAContainer_AndFollowsDataLayout()
+    {
+        var css = ReadComponentCss("_document-editor.css");
+        var rules = CssRules.Parse(css);
+
+        CssRules.Body(rules, ".tm-document-editor__header").Should().NotContain("container", "a second container would be a second source of truth for the mode");
+        css.Should().NotContain("tm-doc-editor-header");
+        CssRules.Body(rules, ".tm-document-editor:not([data-layout=\"desktop\"]) .tm-document-editor__header-button--labelled").Should().Contain("aspect-ratio: 1");
+        CssRules.Body(rules, ".tm-document-editor[data-layout=\"mobile\"] .tm-document-editor__header-row").Should().Contain("flex-wrap: wrap");
+        css.Should().Contain("@media (pointer: coarse)");
+        css.Should().Contain("min-inline-size: var(--tm-touch-target)");
+    }
+
+    [Fact]
+    public void StickyNavigation_ParksBelowTheRibbon_AndTheF6RingIsStyled()
+    {
+        var rules = CssRules.Parse(ReadComponentCss("_document-editor.css"));
+
+        CssRules.Body(rules, ".tm-document-navigation").Should().Contain("top: calc(var(--tm-document-ribbon-block-size) + var(--tm-space-2))")
+            .And.Contain("--tm-document-ribbon-block-size");
+        CssRules.Body(rules, ".tm-document-editor").Should().Contain("--tm-document-ribbon-block-size");
+        var ring = CssRules.Body(rules, "[data-focus-region][data-region-focus]");
+        ring.Should().Contain("outline: 2px solid var(--tm-border-color-focus)").And.Contain("outline-offset: -2px");
+    }
+
+    [Fact]
+    public void PageSurfaces_DoNotClip_SoAWiderPageStaysReachable()
+    {
+        var rules = CssRules.Parse(ReadComponentCss("_document-editor.css"));
+
+        CssRules.Body(rules, ".tm-document-editor__surface").Should().NotContain("overflow: hidden");
+        CssRules.Body(rules, ".tm-document-editor__page-surface").Should().NotContain("overflow: hidden");
+    }
+
+    [Fact]
+    public void SidePanelTabs_FocusRingIsInsetAndTextTabsWrap()
+    {
+        var rules = CssRules.Parse(ReadComponentCss("_document-editor.css"));
+
+        CssRules.Body(rules, ".tm-document-side-panel__tab:focus-visible").Should().Contain("outline-offset: -2px");
+        CssRules.Body(rules, ".tm-document-side-panel[data-tab-style=\"text\"] .tm-document-side-panel__tabs").Should().Contain("flex-wrap: wrap");
     }
 
     private static string FindRepositoryRoot()

@@ -68,13 +68,61 @@ Shared panel building blocks (stylesheet `_document-editor-panels.css`, imported
 - `TmDocumentInspectorHeader` - icon, title heading (its id is what the panel region labels itself by through
   `aria-labelledby`), subtitle, host actions slot and a close button that appears only when `OnClose` is bound.
 - `.tm-document-inspector-form` - the form pattern: `__section` + `__section-toggle` (`aria-expanded`) with a
-  `chevron-down` `__chevron` icon, `__section-body`, `__field` (label above the control, beside it once the panel body is
-  at least 24 rem wide - a container query on the form, not the viewport), `__suffix` for units and `__segmented` for icon or
+  `chevron-down` `__chevron` icon, `__section-body`, `__field` (label beside the control while the panel body is wide
+  enough, wrapping above it when it is not - an intrinsic flex-wrap on the body's own width, no container query, not the
+  viewport; `--stacked` keeps the label above at any width), `__suffix` for units and `__segmented` for icon or
   icon + text choices. `--embedded` drops the frame and the shadow for a panel hosted inside the inspector. Keep the
   label wrapping its control (implicit association) or use `for` / `aria-labelledby`.
 - `TmDocumentDebugModal` + `TmDocumentDebugSection` - the shared frame of the developer debug modals; an empty section
   shows the localized "No data" notice. Panel actions use `tm-btn` (`tm-btn-primary` for the panel's primary action) and
   `tm-input`; the BEM classes stay on the elements as aliases.
+
+## Layout Modes
+
+`TmDocumentEditor` lays itself out from its **own container**, never the viewport: a 390 px host on a 1440 px screen is a phone
+layout. `LayoutMode` (`TmLayoutMode`, default `Auto`) measures the editor through the shared `TmLayoutObserver` (first frame
+Desktop); `Desktop` / `Tablet` / `Mobile` pin the layout and never import the observer (tests, fixed hosts). The resolved mode
+is `data-layout="desktop|tablet|mobile"` on `.tm-document-editor`; the steps are the `TmBreakpoints` constants (640 and 1024 px).
+
+| Container | Regions (`[data-region]`) | Outline and Pages |
+|-----------|---------------------------|-------------------|
+| Desktop, 1024 px and more | `nav` \| `doc` \| `inspector` under the header and the ribbon | the left column (`TmDocumentNavigationPanel`, foldable - it starts folded into its rail while the container is narrower than navigation + A4 page + inspector + gutters, 1546 px for A4, the reader's choice wins); the inspector has the text tabs Properties, Comments, Revisions, Versions |
+| Tablet, 640 - 1023 px | `doc` \| `inspector` | tabs of the inspector (`DocumentSidePanelTab.Outline` / `Pages`) |
+| Mobile, below 640 px | one column, the inspector under the document | tabs of the inspector (sheets and the action bar arrive with the phone phase) |
+
+- **Header.** `ShowHeader` (default `true`) renders `TmDocumentEditorHeader`: the title (`Title`, else the document metadata
+  title), `Subtitle`, the save state, Search (opens the find panel), Undo, Redo, Print preview, Print to PDF (only when a
+  `PdfExportProvider` exists and the user may export) and the primary Save. `HeaderStart` and `HeaderActions` are the host
+  slots (Back, Share - the editor has neither). Undo / Redo / Save render exactly once: in the header, or - with
+  `ShowHeader="false"` - in the ribbon quick-access group. The test ids `document-save`, `document-undo`, `document-redo` and
+  `document-editor-workspace` are unchanged.
+- **`data-layout` is the one source of the structure.** The grid templates / areas of the workspace are
+  `.tm-document-editor[data-layout="desktop|tablet|mobile"] .tm-document-editor__workspace` rules, so a forced `LayoutMode`
+  (`data-layout-forced="true"`), the markup and the CSS can never disagree. The only container query that touches structure is the
+  first-frame guard of an unmeasured Auto editor (`:not([data-layout-forced])`). The header is not a container either: its labels
+  and wrapping follow `data-layout` like the ribbon's.
+- **Size container.** `@container tm-doc-editor (width ...)` rules answer to
+  `.tm-document-editor__main` (the workspace and the status bar) and only tune density (gaps, paddings, the phone panel height) and
+  the `cqw` track widths. The root, the ribbon and the floating root are NOT size
+  containers on purpose: a container is the containing block of every `position: fixed` descendant, and the ribbon pickers and
+  backdrops, the dialogs and the floating root position against the viewport. Anything that needs the layout but must stay
+  outside the container (the ribbon, the loading / error states, the root's flat corners) reads `data-layout` instead - keep
+  new fixed overlays OUT of `.tm-document-editor__main`.
+- **Breakpoints and sheets.** The editor's 640 / 1024 px steps are the `TmBreakpoints` constants and intentionally differ from the 768 /
+  1200 px of `TmEditorShell` (an editor-shell decision, not a convention) - do not "align" them. The phase-8 sheets render OUTSIDE
+  `.tm-document-editor__main` (siblings of the workspace), for the fixed-descendant reason above.
+- **Width reporting is deliberate.** The editor binds `TmLayoutObserver.ContainerWidthChanged`, so the observer reports every
+  rounded width change. The handler only acts on crossing the fold width (a report that changes nothing suppresses the implicit
+  render); `DocumentEditorCanvasPerfBudgetE2ETests` and the host-resize specs cover it.
+- **A page wider than the doc region.** Nothing clips the surface: the canvas host is the horizontal scroller, so a clipped A4
+  page is reachable by scrolling. An automatic fit-width zoom is planned (phase 8), and the sticky ribbon height is published as
+  `--tm-document-ribbon-block-size` (observed by `region-cycle.mjs`) so the sticky navigation column parks below it.
+- **Doc region banner slot.** `.tm-document-editor__doc-banners` (`data-testid="document-doc-banners"`) sits above the page
+  inside `[data-region="doc"]`; the review summary lives there and the version preview and diff banners join it later.
+- **F6.** F6 / Shift+F6 cycle the landmarks marked `data-focus-region`: header, ribbon, navigation, document, inspector (a
+  region that is absent or hidden is skipped; a modal surface owns the key while it is up). The handler is the small module
+  `js/document-editor/interop/region-cycle.mjs` because the browser default of F6 must be cancelled synchronously. The ribbon
+  keyboard mode (Alt / F10, `data-ribbon-keyboard-mode`) is separate Blazor state and is not touched.
 
 ## Accessibility Expectations
 

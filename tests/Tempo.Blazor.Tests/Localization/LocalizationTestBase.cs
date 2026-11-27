@@ -55,6 +55,38 @@ public abstract class LocalizationTestBase : BunitContext
         });
     }
 
+    private BunitJSModuleInterop? _layoutObserverModule;
+
+    /// <summary>Registers (once) the mock of the shared <c>layout-observer.js</c> module a TmLayoutObserver-hosted component imports.</summary>
+    protected BunitJSModuleInterop SetupLayoutObserverModule()
+    {
+        if (_layoutObserverModule is not null)
+        {
+            return _layoutObserverModule;
+        }
+
+        _layoutObserverModule = JSInterop.SetupModule("./_content/Tempo.Blazor/js/layout-observer.js");
+        _layoutObserverModule.SetupVoid("observe", _ => true).SetVoidResult();
+        _layoutObserverModule.SetupVoid("disconnect", _ => true).SetVoidResult();
+        return _layoutObserverModule;
+    }
+
+    private BunitJSModuleInterop? _regionCycleModule;
+
+    /// <summary>Registers (once) the mock of the editor's F6 region-cycle module (attached to the root on the first render).</summary>
+    protected BunitJSModuleInterop SetupRegionCycleModule()
+    {
+        if (_regionCycleModule is not null)
+        {
+            return _regionCycleModule;
+        }
+
+        _regionCycleModule = JSInterop.SetupModule("./_content/Tempo.Blazor.DocumentEditor/js/document-editor/interop/region-cycle.mjs");
+        _regionCycleModule.SetupVoid("attachRegionCycle", _ => true).SetVoidResult();
+        _regionCycleModule.SetupVoid("detachRegionCycle", _ => true).SetVoidResult();
+        return _regionCycleModule;
+    }
+
     /// <summary>Registers the minimal ES module mock used by the canvas-only document editor shell.</summary>
     protected BunitJSModuleInterop SetupDocumentCanvasModule()
     {
@@ -63,6 +95,10 @@ public abstract class LocalizationTestBase : BunitContext
             return _documentCanvasModule;
         }
 
+        // The editor measures its own container through the shared TmLayoutObserver (Auto), which imports this module on
+        // the first render; a Strict-mode test would otherwise fail on the unconfigured import.
+        SetupLayoutObserverModule();
+        SetupRegionCycleModule();
         var module = JSInterop.SetupModule(DocumentCanvasInteropModulePath);
         module.Setup<string>("mount", _ => true).SetResult("document-canvas-test-handle");
         _documentCanvasGetModelJson = module.Setup<string?>("getModelJson", _ => true);
@@ -4810,6 +4846,14 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmDocumentEditor_FloatingImage"] = "Floating",
         ["TmDocumentEditor_DeleteImage"] = "Delete image",
         ["TmDocumentEditor_Header"] = "Header",
+        ["TmDocumentEditor_HeaderActionsLabel"] = "Document actions",
+        ["TmDocumentEditor_HeaderLabel"] = "Document header",
+        ["TmDocumentEditor_HeaderSearch"] = "Search in document",
+        ["TmDocumentEditor_NavigationCollapse"] = "Hide navigation",
+        ["TmDocumentEditor_NavigationExpand"] = "Show navigation",
+        ["TmDocumentEditor_NavigationLabel"] = "Document navigation",
+        ["TmDocumentEditor_NavigationSearch"] = "Search in document…",
+        ["TmDocumentEditor_NavigationTitle"] = "Document structure",
         ["TmDocumentEditor_Footer"] = "Footer",
         ["TmDocumentEditor_Notes"] = "Notes",
         ["TmDocumentEditor_InsertFootnote"] = "Footnote",
@@ -10774,6 +10818,14 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmDocumentEditor_FloatingImage"] = "Plovoucí",
         ["TmDocumentEditor_DeleteImage"] = "Smazat obrázek",
         ["TmDocumentEditor_Header"] = "Záhlaví",
+        ["TmDocumentEditor_HeaderActionsLabel"] = "Akce dokumentu",
+        ["TmDocumentEditor_HeaderLabel"] = "Záhlaví dokumentu",
+        ["TmDocumentEditor_HeaderSearch"] = "Hledat v dokumentu",
+        ["TmDocumentEditor_NavigationCollapse"] = "Skrýt navigaci",
+        ["TmDocumentEditor_NavigationExpand"] = "Zobrazit navigaci",
+        ["TmDocumentEditor_NavigationLabel"] = "Navigace v dokumentu",
+        ["TmDocumentEditor_NavigationSearch"] = "Hledat v dokumentu…",
+        ["TmDocumentEditor_NavigationTitle"] = "Struktura dokumentu",
         ["TmDocumentEditor_Footer"] = "Zápatí",
         ["TmDocumentEditor_Notes"] = "Poznámky",
         ["TmDocumentEditor_InsertFootnote"] = "Poznámka pod čarou",

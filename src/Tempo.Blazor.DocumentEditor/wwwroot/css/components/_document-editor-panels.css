@@ -95,11 +95,10 @@
 }
 
 /* ── Form pattern ─────────────────────────────────────────────────────────── */
-/* The panel body is the size container: the label sits ABOVE its control by default and moves BESIDE it once
-   the body is wide enough, whatever the viewport or the layout mode says. */
+/* The label sits BESIDE its control while the panel body is wide enough and wraps ABOVE it when it is not - decided by
+   the body's own width (an intrinsic flex-wrap, see __field), whatever the viewport or the layout mode says. It needs no
+   container query: a 24rem threshold would be a width outside the TmBreakpoints convention. */
 .tm-document-inspector-form {
-    container-type: inline-size;
-    container-name: tm-document-inspector-form;
     display: grid;
     min-width: 0;
     color: var(--tm-color-text);
@@ -190,18 +189,30 @@
 }
 
 .tm-document-inspector-form__field {
-    display: grid;
-    gap: var(--tm-space-1);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-1) var(--tm-space-3);
     min-width: 0;
 }
 
+/* Stacked fields keep the label above the control at any width. */
+.tm-document-inspector-form__field--stacked {
+    display: grid;
+    align-items: stretch;
+    gap: var(--tm-space-1);
+}
+
 .tm-document-inspector-form__label {
+    flex: 0 1 8rem;
+    min-width: 0;
     color: var(--tm-color-text-secondary);
     font-size: var(--tm-font-size-sm);
 }
 
 .tm-document-inspector-form__control {
     display: flex;
+    flex: 1 1 12rem;
     align-items: center;
     gap: var(--tm-space-2);
     min-width: 0;
@@ -280,20 +291,6 @@
     flex: 0 0 auto;
     padding: 0;
     aspect-ratio: 1;
-}
-
-@container tm-document-inspector-form (min-width: 24rem) {
-    .tm-document-inspector-form__field {
-        grid-template-columns: minmax(6rem, 0.4fr) minmax(0, 1fr);
-        align-items: center;
-        gap: var(--tm-space-3);
-    }
-
-    .tm-document-inspector-form__field--stacked {
-        grid-template-columns: minmax(0, 1fr);
-        align-items: stretch;
-        gap: var(--tm-space-1);
-    }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -9,6 +9,8 @@
     --tm-document-z-selection: 40;
     --tm-document-z-object-overlay: 50;
     --tm-document-z-floating-ui: var(--tm-z-popover, 1000);
+    /* Height of the sticky ribbon (+ header), published by region-cycle.mjs; 0 until it has measured. */
+    --tm-document-ribbon-block-size: 0px;
 
     display: flex;
     flex-direction: column;
@@ -29,6 +31,34 @@
     border-radius: var(--tm-radius-card);
     overflow: visible;
     box-shadow: var(--tm-shadow-card);
+}
+
+/* DE-1.1. The TmLayoutObserver root around the editor is a plain block that only reports a width (IsContainer=false); it
+   keeps the editor filling a host that gives it a height. */
+/* Compounded with .tm-layout so the flex column wins over the observer's block display whatever the stylesheet order. */
+.tm-layout.tm-document-editor-host {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    min-width: 0;
+}
+
+.tm-document-editor-host > .tm-document-editor {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* The editor's CSS size container. NOT the root and NOT the ribbon: a size container is the containing block of every
+   position:fixed descendant, and the ribbon pickers, the dialogs and the floating root position against the viewport. The
+   container holds the workspace and the status bar only; the @container rules answer to ITS inline size, which is the
+   editor's own width. */
+.tm-document-editor__main {
+    container: tm-doc-editor / inline-size;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
 }
 
 .tm-document-editor--readonly .tm-document-editor__page-surface {
@@ -102,12 +132,23 @@
 /* Ribbon styly žijí v _document-editor-toolbar.css (Fáze 15: legacy blok odstraněn —
    prosakoval width:100% na ribbon-groups a min-width na tlačítka do nowrap+scroll modelu). */
 
+/* The workspace is a grid of NAMED regions (nav | doc | inspector). The STRUCTURE - which regions exist and how they are
+   arranged - is decided by data-layout on the root (the one value the editor, a forced LayoutMode and the tests share), so a
+   pinned LayoutMode and the markup can never disagree with the CSS. The size container (@container tm-doc-editor) only tunes
+   density and the cqw track widths. Mobile first: one column, the inspector under the document. */
 .tm-document-editor__workspace {
+    --tm-document-nav-width: clamp(14rem, 18cqw, 17rem);
+    --tm-document-inspector-width: clamp(18rem, 26cqw, 24rem);
+
     position: relative;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(18rem, clamp(20rem, 25vw, 24rem));
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+        "doc"
+        "inspector";
     align-items: start;
-    gap: var(--tm-space-4);
+    gap: var(--tm-space-3);
+    flex: 1 1 auto;
     min-height: 34rem;
     padding: var(--tm-space-4) var(--tm-space-4) var(--tm-space-3);
     overflow: hidden;
@@ -118,15 +159,95 @@
     min-width: 0;
 }
 
-.tm-document-editor__workspace--side-panel-closed {
+.tm-document-editor__workspace > [data-region="nav"] {
+    grid-area: nav;
+}
+
+.tm-document-editor__workspace > [data-region="doc"] {
+    grid-area: doc;
+}
+
+.tm-document-editor__workspace > [data-region="inspector"] {
+    grid-area: inspector;
+}
+
+/* Regions that carry a sticky panel stretch to the row, so the panel can stick inside its own column. */
+.tm-document-editor__navigation,
+.tm-document-editor__inspector {
+    align-self: stretch;
+    min-width: 0;
+}
+
+/* Tablet: document | inspector. */
+.tm-document-editor[data-layout="tablet"] .tm-document-editor__workspace {
+    grid-template-columns: minmax(0, 1fr) minmax(16rem, var(--tm-document-inspector-width));
+    grid-template-areas: "doc inspector";
+    gap: var(--tm-space-4);
+}
+
+.tm-document-editor[data-layout="tablet"] .tm-document-editor__workspace--side-panel-closed {
     grid-template-columns: minmax(0, 1fr) auto;
 }
 
+/* Desktop: navigation | document | inspector. */
+.tm-document-editor[data-layout="desktop"] .tm-document-editor__workspace {
+    grid-template-columns: var(--tm-document-nav-width) minmax(0, 1fr) minmax(16rem, var(--tm-document-inspector-width));
+    grid-template-areas: "nav doc inspector";
+    gap: var(--tm-space-4);
+}
+
+.tm-document-editor[data-layout="desktop"] .tm-document-editor__workspace--side-panel-closed {
+    grid-template-columns: var(--tm-document-nav-width) minmax(0, 1fr) auto;
+}
+
+.tm-document-editor[data-layout="desktop"] .tm-document-editor__workspace--nav-collapsed {
+    grid-template-columns: var(--tm-touch-target) minmax(0, 1fr) minmax(16rem, var(--tm-document-inspector-width));
+}
+
+.tm-document-editor[data-layout="desktop"] .tm-document-editor__workspace--nav-collapsed.tm-document-editor__workspace--side-panel-closed {
+    grid-template-columns: var(--tm-touch-target) minmax(0, 1fr) auto;
+}
+
+/* First-frame guard (Auto only): before the observer has measured, the markup default is Desktop even in a narrow host. Until
+   it reports, a container below the desktop step renders the tablet arrangement without the column. A forced LayoutMode is the
+   host's decision and is never second-guessed. */
+@container tm-doc-editor (width < 1024px) {
+    .tm-document-editor:not([data-layout-forced])[data-layout="desktop"] .tm-document-editor__workspace {
+        grid-template-columns: minmax(0, 1fr) minmax(16rem, var(--tm-document-inspector-width));
+        grid-template-areas: "doc inspector";
+    }
+
+    .tm-document-editor:not([data-layout-forced])[data-layout="desktop"] .tm-document-editor__workspace > [data-region="nav"] {
+        display: none;
+    }
+}
+
+/* Density (size container): tighter gaps on a narrow container whatever the arrangement. */
+@container tm-doc-editor (width < 768px) {
+    .tm-document-editor__workspace {
+        gap: var(--tm-space-3);
+    }
+}
+
+/* The surface does not clip: the canvas host inside it is the horizontal scroller, so a page wider than the doc region stays
+   reachable instead of being cut off. */
 .tm-document-editor__surface {
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    gap: var(--tm-space-3);
     min-width: 0;
-    overflow: hidden;
+}
+
+/* The internal banner slot of the doc region (the review summary today; the version preview and the diff later). It takes
+   no room while empty. */
+.tm-document-editor__doc-banners {
+    display: grid;
+    gap: var(--tm-space-2);
+    min-width: 0;
+}
+
+.tm-document-editor__doc-banners:empty {
+    display: none;
 }
 
 .tm-document-editor__page-surface {
@@ -134,33 +255,191 @@
     min-width: 0;
     min-height: 44rem;
     padding: 0;
-    overflow: hidden;
     background: transparent;
     border: 0;
     box-shadow: none;
 }
 
-.tm-document-editor__page-header {
+/* ── Header (DE-1.1) ──────────────────────────────────────────────────────────────────────────────────
+   The document title and the save state on the left, the document actions on the right. The header is a sibling of the
+   ribbon, OUTSIDE the main size container (its host slots may open fixed overlays) and NOT a container itself (a second
+   container would be a second source of truth for the mode): its density follows data-layout like the ribbon does. */
+.tm-document-editor__header {
+    min-width: 0;
+    background: var(--tm-color-surface);
+    border-bottom: 1px solid var(--tm-color-border-subtle);
+    border-radius: var(--tm-radius-card) var(--tm-radius-card) 0 0;
+}
+
+.tm-document-editor__header-row {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: var(--tm-space-3);
-    padding-bottom: var(--tm-space-4);
-    border-bottom: 1px solid var(--tm-color-border);
+    min-width: 0;
+    padding: var(--tm-space-2) var(--tm-space-4);
+}
+
+.tm-document-editor__header-main {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-3);
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.tm-document-editor__header-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    color: var(--tm-color-primary);
+}
+
+.tm-document-editor__header-start {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    flex: 0 0 auto;
+}
+
+.tm-document-editor__header-titles {
+    display: flex;
+    align-items: baseline;
+    gap: var(--tm-space-3);
+    min-width: 0;
 }
 
 .tm-document-editor__document-title {
     margin: 0;
+    min-width: 0;
+    overflow: hidden;
     color: var(--tm-color-text);
-    font-size: var(--tm-font-size-xl);
+    font-size: var(--tm-font-size-lg);
     font-weight: var(--tm-font-weight-semibold);
     line-height: var(--tm-line-height-tight);
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.tm-document-editor__status {
-    flex: 0 0 auto;
+.tm-document-editor__header-subtitle {
+    min-width: 0;
+    overflow: hidden;
     color: var(--tm-color-text-muted);
     font-size: var(--tm-font-size-sm);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-document-editor__header-mode {
+    flex: 0 0 auto;
+    padding: 0 var(--tm-space-2);
+    color: var(--tm-color-info-text);
+    background: var(--tm-color-info-subtle);
+    border-radius: var(--tm-radius-pill);
+    font-size: var(--tm-font-size-xs);
+    line-height: var(--tm-line-height-tight);
+    white-space: nowrap;
+}
+
+.tm-document-editor__header-status {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-width: 0;
+    flex: 0 1 auto;
+    color: var(--tm-color-text-muted);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-document-editor__header-status[data-state="none"] {
+    display: none;
+}
+
+.tm-document-editor__header-status-dot {
+    flex: 0 0 auto;
+    width: var(--tm-space-2);
+    height: var(--tm-space-2);
+    background: var(--tm-color-success);
+    border-radius: var(--tm-radius-pill);
+}
+
+.tm-document-editor__header-status[data-state="dirty"] .tm-document-editor__header-status-dot {
+    background: var(--tm-color-warning);
+}
+
+.tm-document-editor__header-status[data-state="saving"] .tm-document-editor__header-status-dot {
+    background: var(--tm-color-primary);
+}
+
+.tm-document-editor__header-status-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-document-editor__header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    flex: 0 0 auto;
+}
+
+.tm-document-editor__header-divider {
+    align-self: stretch;
+    width: 1px;
+    margin-block: var(--tm-space-1);
+    background: var(--tm-color-border-subtle);
+}
+
+.tm-document-editor__header-host-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+}
+
+.tm-document-editor__header-button {
+    flex: 0 0 auto;
+    gap: var(--tm-space-2);
+}
+
+/* A header outside the desktop layout keeps the icons and drops the text of the labelled actions (their accessible name stays
+   on the button): the subtitle goes first, then the labels. */
+.tm-document-editor:not([data-layout="desktop"]) .tm-document-editor__header-subtitle,
+.tm-document-editor:not([data-layout="desktop"]) .tm-document-editor__header-button--labelled > .tm-document-editor__header-button-label {
+    display: none;
+}
+
+.tm-document-editor:not([data-layout="desktop"]) .tm-document-editor__header-button--labelled {
+    width: auto;
+    padding: 0;
+    aspect-ratio: 1;
+}
+
+/* A phone header wraps: title and state on the first line, the actions on the second - never a horizontal overflow. */
+.tm-document-editor[data-layout="mobile"] .tm-document-editor__header-row {
+    flex-wrap: wrap;
+    padding-inline: var(--tm-space-3);
+    row-gap: var(--tm-space-2);
+}
+
+.tm-document-editor[data-layout="mobile"] .tm-document-editor__header-main {
+    flex: 1 1 100%;
+}
+
+.tm-document-editor[data-layout="mobile"] .tm-document-editor__header-actions {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--tm-space-1);
+}
+
+/* Finger-sized header actions on a coarse pointer. */
+@media (pointer: coarse) {
+    .tm-document-editor[data-layout="mobile"] .tm-document-editor__header-button,
+    .tm-document-editor[data-layout="tablet"] .tm-document-editor__header-button {
+        min-inline-size: var(--tm-touch-target);
+        min-block-size: var(--tm-touch-target);
+    }
 }
 
 .tm-document-editor__empty,
@@ -607,7 +886,8 @@
     grid-template-columns: repeat(auto-fit, minmax(2.75rem, 1fr));
     gap: var(--tm-space-1);
     min-width: 0;
-    padding: 0;
+    /* room for the focus ring of a tab that sits on the edge of the row */
+    padding: 2px 0;
     background: transparent;
     border: 0;
     border-bottom: 1px solid var(--tm-color-border-subtle);
@@ -633,6 +913,72 @@
     padding: var(--tm-space-1);
     font-size: var(--tm-font-size-xs);
     border-radius: 0;
+}
+
+/* The desktop inspector: text-only tabs in a left-aligned row (Properties, Comments, Revisions, Versions). */
+.tm-document-side-panel[data-tab-style="text"] .tm-document-side-panel__tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--tm-space-1) var(--tm-space-2);
+    min-width: 0;
+}
+
+.tm-document-side-panel[data-tab-style="text"] .tm-document-side-panel__tab {
+    flex: 0 0 auto;
+    padding-inline: var(--tm-space-1);
+    font-size: var(--tm-font-size-sm);
+}
+
+/* Icon tabs sit in ONE row, whatever the panel width: equal columns that never shrink below the tab size, the close button
+   on its own line under them (it would otherwise take 2rem from a row that has ~230 px for six 44 px tabs), and a scroll as the
+   last resort for a very narrow panel. */
+.tm-document-side-panel[data-tab-style="icon"] .tm-document-side-panel__header {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.tm-document-side-panel[data-tab-style="icon"] .tm-document-side-panel__tabs {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(2.25rem, 1fr);
+    gap: 0;
+    overflow-x: auto;
+    scrollbar-width: thin;
+}
+
+.tm-document-side-panel[data-tab-style="icon"] .tm-document-side-panel__close {
+    justify-self: end;
+}
+
+@media (pointer: coarse) {
+    .tm-document-side-panel[data-tab-style="icon"] .tm-document-side-panel__tabs {
+        grid-auto-columns: minmax(var(--tm-touch-target), 1fr);
+    }
+}
+
+/* Icon tabs (tablet / phone): the label stays as the accessible name (visually hidden, a title tooltip shows it), the badge
+   rides the icon, and a coarse pointer gets finger-sized tabs. */
+.tm-document-side-panel[data-tab-style="icon"] .tm-document-side-panel__tab {
+    position: relative;
+}
+
+.tm-document-side-panel[data-tab-style="icon"] .tm-document-side-panel__badge {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-end: 0;
+    min-width: 1rem;
+    height: 1rem;
+}
+
+@media (pointer: coarse) {
+    .tm-document-side-panel[data-tab-style="icon"] .tm-document-side-panel__tab {
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
+    }
+}
+
+.tm-document-side-panel__tab:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: -2px;
 }
 
 .tm-document-side-panel__tab span:not(.tm-document-side-panel__badge) {
@@ -2476,15 +2822,14 @@
     border-radius: var(--tm-radius-xs);
 }
 
-@media (max-width: 36rem) {
+/* Phone container: the inspector sits under the document with a bounded height (the sheets arrive with phase 8). */
+@container tm-doc-editor (width < 640px) {
     .tm-document-editor__workspace {
-        grid-template-columns: minmax(0, 1fr);
         gap: var(--tm-space-3);
         overflow: hidden;
     }
 
     .tm-document-side-panel {
-        order: 2;
         height: auto;
         max-height: min(24rem, 42vh);
     }
@@ -2495,11 +2840,13 @@
     }
 }
 
-@media (max-width: 40rem) {
-    .tm-document-editor {
-        border-radius: 0;
-    }
+/* The root's flat corners are the one rule the root itself needs: it is outside the size container, so it follows the
+   resolved layout (data-layout). Everything below answers to the container. */
+.tm-document-editor[data-layout="mobile"] {
+    border-radius: 0;
+}
 
+@container tm-doc-editor (width < 640px) {
     .tm-document-editor__workspace {
         gap: var(--tm-space-2);
         padding: var(--tm-space-2);
@@ -2536,11 +2883,6 @@
         gap: var(--tm-space-2);
     }
 
-    .tm-document-editor__page-header {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr);
-    }
-
     .tm-document-heading--h1 {
         font-size: var(--tm-font-size-xl);
     }
@@ -2558,21 +2900,6 @@
         grid-template-columns: minmax(0, 1fr);
     }
 
-    .tm-document-version-dialog {
-        position: fixed;
-        inset: var(--tm-space-2);
-        z-index: var(--tm-z-modal);
-        width: auto;
-        max-width: none;
-        max-height: none;
-        margin: 0;
-    }
-
-    .tm-document-editor__comment-rail,
-    .tm-document-editor__version-panel {
-        max-height: none;
-    }
-
     .tm-document-side-panel {
         position: relative;
         inset: auto;
@@ -2585,7 +2912,130 @@
     .tm-document-side-panel__tabs {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+}
 
+/* The version dialog is a fixed viewport-level surface in the floating root (outside the size container), so its phone
+   fill-the-screen rule stays a viewport query. */
+@media (max-width: 40rem) {
+    .tm-document-version-dialog {
+        position: fixed;
+        inset: var(--tm-space-2);
+        z-index: var(--tm-z-modal);
+        width: auto;
+        max-width: none;
+        max-height: none;
+        margin: 0;
+    }
+}
+
+/* The region F6 just entered shows a ring for a moment (region-cycle.mjs sets data-region-focus; a pointer action clears it), so
+   the keyboard user sees where the cycle landed even when the focused control itself is small. */
+[data-focus-region][data-region-focus] {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: -2px;
+}
+
+/* ── Navigation column (DE-1.1, desktop only) ────────────────────────────────────────────────────────── */
+.tm-document-navigation {
+    position: sticky;
+    /* The ribbon is sticky at the top of the viewport: the column parks below it, not under it. The editor publishes the
+       ribbon height as --tm-document-ribbon-block-size (region-cycle.mjs observes it). */
+    top: calc(var(--tm-document-ribbon-block-size) + var(--tm-space-2));
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    max-height: calc(100dvh - var(--tm-document-ribbon-block-size) - var(--tm-space-6));
+    padding: var(--tm-space-3);
+    overflow: auto;
+    background: var(--tm-color-surface-elevated);
+    border: 1px solid var(--tm-color-border-subtle);
+    border-radius: var(--tm-radius-card);
+}
+
+.tm-document-navigation--collapsed {
+    align-items: center;
+    padding: var(--tm-space-1);
+}
+
+.tm-document-navigation__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tm-space-2);
+}
+
+.tm-document-navigation__title {
+    margin: 0;
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-md);
+    font-weight: var(--tm-font-weight-semibold);
+    line-height: var(--tm-line-height-tight);
+}
+
+.tm-document-navigation__toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    min-height: 2rem;
+    padding: 0;
+    color: var(--tm-color-text-muted);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--tm-radius-control);
+    cursor: pointer;
+}
+
+.tm-document-navigation__toggle:hover {
+    color: var(--tm-color-text);
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-document-navigation__toggle:focus-visible,
+.tm-document-navigation__search:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
+}
+
+/* The search entry looks like a field but is a button: it only opens the editor's find panel. */
+.tm-document-navigation__search {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    width: 100%;
+    min-height: var(--tm-input-height-sm);
+    padding: 0 var(--tm-space-3);
+    color: var(--tm-color-text-muted);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-control);
+    font: inherit;
+    font-size: var(--tm-font-size-sm);
+    text-align: start;
+    cursor: text;
+}
+
+.tm-document-navigation__search:hover {
+    border-color: var(--tm-color-primary);
+}
+
+.tm-document-navigation__section {
+    min-width: 0;
+}
+
+/* The column shows the plain structure list of the reference; the outline panel's own minimap strip belongs to the
+   narrow inspector tab. */
+.tm-document-navigation .tm-document-outline-panel {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.tm-document-navigation .tm-document-outline-panel__minimap {
+    display: none;
+}
+
+.tm-document-navigation__section--pages {
+    padding-top: var(--tm-space-3);
+    border-top: 1px solid var(--tm-color-border-subtle);
 }
 
 /* ── WYSIWYG JS Engine Surface ─────────────────────────────────────────── */
@@ -2665,7 +3115,6 @@
     background: var(--tm-bg-workspace);
     border: 1px solid var(--tm-color-border-subtle);
     box-shadow: inset 0 1px 0 var(--tm-color-surface);
-    container-type: inline-size;
 }
 
 .tm-wysiwyg-page {
@@ -3908,7 +4357,7 @@
     background: color-mix(in srgb, var(--tm-color-success) 7%, transparent);
 }
 
-@media (max-width: 40rem) {
+@container tm-doc-editor (width < 640px) {
     .tm-wysiwyg-page__body--layout {
         overflow-x: auto;
     }
@@ -3917,7 +4366,6 @@
         top: -2rem;
         left: 0;
     }
-
 }
 
 .tm-wysiwyg-image__resize-handle {
@@ -4045,45 +4493,8 @@
     pointer-events: none;
 }
 
-.tm-document-editor__floating-root--wysiwyg {
-    top: var(--tm-space-6);
-    right: calc(clamp(20rem, 25vw, 24rem) + var(--tm-space-16) + var(--tm-space-16));
-    bottom: auto;
-    left: auto;
-    display: grid;
-    justify-items: end;
-    max-width: min(20rem, calc(100vw - var(--tm-space-6)));
-    max-height: calc(100vh - var(--tm-space-8));
-}
-
-.tm-document-editor__floating-root--wysiwyg.tm-document-editor__floating-root--object-anchored {
-    right: auto;
-    bottom: auto;
-    left: var(--tm-space-4);
-    max-width: min(20rem, calc(100vw - var(--tm-space-6)));
-}
-
 .tm-document-editor__floating-root > * {
     pointer-events: auto;
-}
-
-.tm-document-editor__floating-root--wysiwyg > * {
-    max-height: inherit;
-    overflow: auto;
-}
-
-@media (max-width: 80rem) {
-    .tm-document-editor__floating-root--wysiwyg {
-        right: calc(20rem + var(--tm-space-16));
-    }
-}
-
-@media (max-width: 36rem) {
-    .tm-document-editor__floating-root--wysiwyg {
-        right: var(--tm-space-4);
-        left: var(--tm-space-4);
-        max-width: calc(100vw - var(--tm-space-8));
-    }
 }
 
 .tm-document-token-popover {

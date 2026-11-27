@@ -68230,7 +68230,7 @@
           "kind": "Component",
           "category": "Document Editor",
           "namespace": "Tempo.Blazor.Components.DocumentEditor",
-          "description": "Word-like document editor shell backed by the document editor JSON provider contracts.",
+          "description": "Word-like document editor shell backed by the document editor JSON provider contracts. Since the redesign (plan 146c7e1b, DE-1.1) it lays itself out from its OWN container: LayoutMode=Auto measures the editor through the shared TmLayoutObserver (first frame Desktop) and publishes the resolved mode as data-layout on the root. Desktop (container of 1024 px and more) renders three named regions - [data-region=nav] | [data-region=doc] | [data-region=inspector] - under a header (title, save state, actions; ShowHeader, Title, Subtitle, HeaderStart, HeaderActions) and the ribbon; Tablet (640-1023 px) renders document | inspector with Outline and Pages as inspector tabs; Mobile (below 640 px) renders one column. The size container is .tm-document-editor__main (the workspace and the status bar), NOT the root or the ribbon: a size container is the containing block of fixed descendants and the ribbon pickers, dialogs and the floating root position against the viewport. F6 / Shift+F6 cycle the landmarks header, ribbon, navigation, document, inspector (data-focus-region).",
           "packageId": "Tempo.Blazor.DocumentEditor",
           "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentEditor.razor",
           "documentationStatus": "merged",
@@ -68347,6 +68347,18 @@
               "description": "Optional host provider used to import and export external document formats."
             },
             {
+              "name": "HeaderActions",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Host actions rendered at the end of the header, after Save (Share and similar). The editor itself offers no Share."
+            },
+            {
+              "name": "HeaderStart",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Host content rendered at the start of the header, before the title (a back link, a logo)."
+            },
+            {
               "name": "ImageAssetOptions",
               "type": "IReadOnlyList<DocumentImageAsset>",
               "isRequired": false,
@@ -68370,6 +68382,13 @@
               "type": "DocumentImageValidationOptions",
               "isRequired": true,
               "description": "Image validation options used by upload and clipboard image flows."
+            },
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "How the editor chooses its layout. Auto (default) measures the editor's own container - a narrow host on a wide screen is a phone layout; the first frame is Desktop. A forced Desktop / Tablet / Mobile pins the layout and never imports the observer. Desktop (container of 1024 px and more): navigation | document | inspector; Tablet (640-1023 px): document | inspector with Outline and Pages as inspector tabs; Mobile (below 640 px): one column."
             },
             {
               "name": "MentionProvider",
@@ -68516,6 +68535,13 @@
               "description": "Whether debug tools (View JSON etc.) are shown in the toolbar. Intended for development only."
             },
             {
+              "name": "ShowHeader",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the editor renders its header (title, save state, search, undo, redo, print preview, print to PDF when an export provider exists, save). Defaults to true. With false there is no header and Save / Undo / Redo stay in the ribbon quick-access group (the pre-redesign look, minus the in-surface page header)."
+            },
+            {
               "name": "ShowToolbar",
               "type": "bool",
               "isRequired": false,
@@ -68543,6 +68569,12 @@
               "description": "Signer roles used to colour inline signing fields and to attribute placed fields (plan S2)."
             },
             {
+              "name": "Subtitle",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Optional second line of the header (a document type, a project name). Hidden when empty."
+            },
+            {
               "name": "SuggestionProvider",
               "type": "IDocumentSuggestionProvider?",
               "isRequired": false,
@@ -68559,6 +68591,12 @@
               "type": "IDocumentSyncProvider?",
               "isRequired": false,
               "description": "Optional provider used to submit an offline draft back to the authoritative store."
+            },
+            {
+              "name": "Title",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Header title. Defaults to the title stored in the document metadata (a localized 'Untitled document' when empty)."
             },
             {
               "name": "TokenProvider",
@@ -68591,6 +68629,191 @@
               "isRequired": false,
               "default": "true",
               "description": "Whether local comparison should be used if the comparison provider fails."
+            }
+          ]
+        },
+        {
+          "itemName": "TmDocumentEditorHeader",
+          "kind": "Component",
+          "category": "Document Editor",
+          "namespace": "Tempo.Blazor.Components.DocumentEditor",
+          "description": "The document header of TmDocumentEditor (redesign DE-1.1): a document icon, a HeaderStart host slot, the title (and an optional subtitle), a version / template preview chip, the save state (Saving... / Unsaved changes / Last saved HH:mm:ss, one dot colour per state) and, on the right, the document actions: Search (opens the editor's find panel), Undo, Redo, Print preview, Print to PDF (rendered only when an export provider exists - G9: a built-in action exists only with the capability behind it) and the primary Save, followed by the HeaderActions host slot (Share and similar - the editor offers no Share of its own). Undo / Redo / Save keep the test ids document-undo / document-redo / document-save and the data-command values they had in the ribbon quick-access group, and render exactly once: here, or in the ribbon when TmDocumentEditor.ShowHeader is false. The header is its own inline-size container (tm-doc-editor-header): below 1024 px it drops the subtitle and the button labels (the accessible names stay), below 640 px it also drops the icon and the status text. It sits outside the editor's main size container because host slots may open fixed overlays.",
+          "packageId": "Tempo.Blazor.DocumentEditor",
+          "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentEditorHeader.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.DocumentEditor"
+          ],
+          "parameters": [
+            {
+              "name": "CanExportPdf",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether Print to PDF is available (an export provider exists and the user may export). The button is not rendered otherwise."
+            },
+            {
+              "name": "CanRedo",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the redo stack has an entry."
+            },
+            {
+              "name": "CanUndo",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the undo stack has an entry."
+            },
+            {
+              "name": "CommandRegistry",
+              "type": "DocumentEditorCommandRegistry?",
+              "isRequired": false,
+              "description": "The editor command registry; its state wins over the plain flags exactly like in the ribbon."
+            },
+            {
+              "name": "HeaderActions",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Host actions after the built-in ones (Share)."
+            },
+            {
+              "name": "HeaderStart",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Host content before the title block (a back link, a logo)."
+            },
+            {
+              "name": "IsDirty",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the document has unsaved changes."
+            },
+            {
+              "name": "IsExportingPdf",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether a PDF export is in flight."
+            },
+            {
+              "name": "IsSaving",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether a save is in flight."
+            },
+            {
+              "name": "LastSavedAt",
+              "type": "DateTimeOffset?",
+              "isRequired": false,
+              "description": "Timestamp of the latest successful save."
+            },
+            {
+              "name": "ModeLabel",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Optional mode chip (version preview, template preview). Hidden when empty."
+            },
+            {
+              "name": "NextRedoDescription",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Description of the next redo step, shown in the tooltip."
+            },
+            {
+              "name": "NextUndoDescription",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Description of the next undo step, shown in the tooltip."
+            },
+            {
+              "name": "OnExportPdf",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Raised by the Print to PDF button."
+            },
+            {
+              "name": "OnOpenPrintPreview",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Raised by the Print preview button."
+            },
+            {
+              "name": "OnRedo",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Raised by the Redo button."
+            },
+            {
+              "name": "OnSave",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Raised by the Save button."
+            },
+            {
+              "name": "OnSearch",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Raised by the Search button; the editor opens its find panel."
+            },
+            {
+              "name": "OnUndo",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Raised by the Undo button."
+            },
+            {
+              "name": "PrintPreviewActive",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the print preview is currently active."
+            },
+            {
+              "name": "ReadOnly",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the editor is read-only; Save, Undo and Redo are disabled."
+            },
+            {
+              "name": "ShowPrintPreview",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the Print preview action is offered."
+            },
+            {
+              "name": "Subtitle",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Optional second line next to the title. Hidden when empty."
+            },
+            {
+              "name": "Title",
+              "type": "string",
+              "isRequired": false,
+              "default": "\"\"",
+              "description": "Document title shown in the header (the editor passes its Title parameter or the document metadata title)."
+            }
+          ],
+          "cssClasses": [
+            "tm-document-editor__header",
+            "tm-document-editor__header-main",
+            "tm-document-editor__header-icon",
+            "tm-document-editor__header-start",
+            "tm-document-editor__header-titles",
+            "tm-document-editor__document-title",
+            "tm-document-editor__header-subtitle",
+            "tm-document-editor__header-mode",
+            "tm-document-editor__header-status",
+            "tm-document-editor__header-status-dot",
+            "tm-document-editor__header-status-text",
+            "tm-document-editor__header-actions",
+            "tm-document-editor__header-divider",
+            "tm-document-editor__header-host-actions",
+            "tm-document-editor__header-button",
+            "tm-document-editor__header-button--labelled",
+            "tm-document-editor__header-button-label"
+          ],
+          "examples": [
+            {
+              "title": "Host slots through TmDocumentEditor",
+              "code": "<TmDocumentEditor DocumentId=\"@id\" Provider=\"@provider\"\n                  Title=\"Project Aurora\" Subtitle=\"Draft proposal\"\n                  PdfExportProvider=\"@pdf\">\n    <!-- RenderFragment parameters are passed as attributes -->\n</TmDocumentEditor>\n\n@code {\n    RenderFragment ShareAction => @<button class=\"tm-btn tm-btn-sm tm-btn-primary\">Share</button>;\n}"
             }
           ]
         },
@@ -68702,6 +68925,13 @@
               "type": "string?",
               "isRequired": false,
               "description": "Optional save status message."
+            },
+            {
+              "name": "ShowLastSaved",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the last-saved text is shown here. Defaults to true; the editor passes false while its header is visible, because the header owns the save state then and the same text must not render twice."
             },
             {
               "name": "WordCount",
@@ -69663,6 +69893,13 @@
               "description": "Whether canvas print preview actions should be displayed in the View tab."
             },
             {
+              "name": "ShowQuickAccess",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the Save / Undo / Redo quick-access group is rendered in the ribbon. Defaults to true (a standalone toolbar and TmDocumentEditor with ShowHeader=false); the editor passes false while its header owns those three commands, so each of them renders exactly once."
+            },
+            {
               "name": "ShowRuler",
               "type": "bool",
               "isRequired": false,
@@ -70111,7 +70348,7 @@
           "kind": "Component",
           "category": "Document Editor",
           "namespace": "Tempo.Blazor.Components.DocumentEditor",
-          "description": "Shared header of a DocumentEditor inspector panel (redesign DE-2.1): an optional decorative icon, the title as a heading whose id the panel region labels itself by (aria-labelledby), an optional subtitle, a host actions slot and a close (X) button that appears only when OnClose is bound. The close button is named by the localized TmDocumentEditor_Close string. Panels of phases 5-7 adopt it; the form pattern it sits above is the .tm-document-inspector-form CSS pattern. The companion form pattern is CSS-only (_document-editor-panels.css): .tm-document-inspector-form with __section / __section-toggle (aria-expanded) / __chevron (TmIcon chevron-down, rotates), __section-body, __field (label above the control, beside it in a wide panel body through a container query), __label, __control, __suffix (units) and __segmented / __segmented-option (icon or icon + text); --embedded drops the frame and the shadow for a panel hosted inside the inspector. A field keeps the implicit label-wraps-control association.",
+          "description": "Shared header of a DocumentEditor inspector panel (redesign DE-2.1): an optional decorative icon, the title as a heading whose id the panel region labels itself by (aria-labelledby), an optional subtitle, a host actions slot and a close (X) button that appears only when OnClose is bound. The close button is named by the localized TmDocumentEditor_Close string. Panels of phases 5-7 adopt it; the form pattern it sits above is the .tm-document-inspector-form CSS pattern. The companion form pattern is CSS-only (_document-editor-panels.css): .tm-document-inspector-form with __section / __section-toggle (aria-expanded) / __chevron (TmIcon chevron-down, rotates), __section-body, __field (the label sits beside the control while the panel body is wide enough and wraps above it when it is not - an intrinsic flex-wrap, no container query; --stacked keeps it above at any width), __label, __control, __suffix (units) and __segmented / __segmented-option (icon or icon + text); --embedded drops the frame and the shadow for a panel hosted inside the inspector. A field keeps the implicit label-wraps-control association.",
           "packageId": "Tempo.Blazor.DocumentEditor",
           "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentInspectorHeader.razor",
           "documentationStatus": "merged",
@@ -70263,6 +70500,92 @@
               "type": "string?",
               "isRequired": false,
               "description": "Optional JSON with the current runtime debug state."
+            }
+          ]
+        },
+        {
+          "itemName": "TmDocumentNavigationPanel",
+          "kind": "Component",
+          "category": "Document Editor",
+          "namespace": "Tempo.Blazor.Components.DocumentEditor",
+          "description": "The left region of a desktop TmDocumentEditor (redesign DE-1.1, decision DE1): the document structure (heading outline, TmDocumentOutlinePanel) above the page thumbnails (TmDocumentPageNavigator), a collapse button and a 'Search in document' entry. The entry is a button styled as a field: it raises OnSearch and the editor opens its find panel - the panel owns no search logic. The column folds into a rail (Collapsed / CollapsedChanged, aria-expanded on the toggle); the editor starts it folded while a desktop container is narrower than 1280 px (TmBreakpoints.Xl) so the page keeps its room, and the reader's choice wins over the width. A tablet or phone container does not render this component: there Outline and Pages stay tabs of the inspector panel (DocumentSidePanelTab.Outline / Pages, kept for compatibility; on a desktop container they lead to this column).",
+          "packageId": "Tempo.Blazor.DocumentEditor",
+          "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentNavigationPanel.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.DocumentEditor"
+          ],
+          "parameters": [
+            {
+              "name": "ActiveBlockId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Heading block that is currently active in the document."
+            },
+            {
+              "name": "ActivePageIndex",
+              "type": "int",
+              "isRequired": false,
+              "description": "Zero-based active page index."
+            },
+            {
+              "name": "Collapsed",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the column is folded into its rail. Two-way with CollapsedChanged."
+            },
+            {
+              "name": "CollapsedChanged",
+              "type": "EventCallback<bool>",
+              "isRequired": false,
+              "description": "Raised when the user folds or unfolds the column."
+            },
+            {
+              "name": "Metrics",
+              "type": "WysiwygPageMetrics?",
+              "isRequired": false,
+              "description": "Runtime page metrics reported by the canvas engine."
+            },
+            {
+              "name": "OnNavigateToBlock",
+              "type": "EventCallback<string>",
+              "isRequired": false,
+              "description": "Raised when a heading is chosen."
+            },
+            {
+              "name": "OnNavigateToPage",
+              "type": "EventCallback<int>",
+              "isRequired": false,
+              "description": "Raised when a page thumbnail is chosen."
+            },
+            {
+              "name": "OnSearch",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Raised by the 'Search in document' entry; the editor opens its find panel."
+            },
+            {
+              "name": "Outline",
+              "type": "IReadOnlyList<DocumentOutlineItem>?",
+              "isRequired": false,
+              "description": "Document heading outline."
+            }
+          ],
+          "cssClasses": [
+            "tm-document-navigation",
+            "tm-document-navigation--collapsed",
+            "tm-document-navigation__header",
+            "tm-document-navigation__title",
+            "tm-document-navigation__toggle",
+            "tm-document-navigation__search",
+            "tm-document-navigation__section",
+            "tm-document-navigation__section--outline",
+            "tm-document-navigation__section--pages"
+          ],
+          "examples": [
+            {
+              "title": "Inside the editor (desktop container only)",
+              "code": "<nav data-region=\"nav\" data-focus-region=\"nav\" aria-label=\"@Loc[\"TmDocumentEditor_NavigationLabel\"]\">\n    <TmDocumentNavigationPanel Outline=\"@outline\"\n                               Metrics=\"@pageMetrics\"\n                               @bind-Collapsed=\"navCollapsed\"\n                               OnNavigateToBlock=\"NavigateToBlockAsync\"\n                               OnNavigateToPage=\"NavigateToPageAsync\"\n                               OnSearch=\"OpenFindAsync\" />\n</nav>"
             }
           ]
         },
@@ -70614,6 +70937,12 @@
               "isRequired": false,
               "default": "true",
               "description": "Whether the versions tab is available."
+            },
+            {
+              "name": "TextTabs",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Text-only tabs in the reference order (Properties, Comments, Revisions, Versions) instead of the icon + text tabs. The desktop editor sets it: its inspector is a text-tab surface and Outline / Pages live in the left column."
             },
             {
               "name": "VersionsContent",
@@ -71099,6 +71428,13 @@
               "type": "bool",
               "isRequired": false,
               "description": "Whether create actions should be disabled."
+            },
+            {
+              "name": "ShowClose",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the panel renders its own close button. Defaults to true; the editor passes false while the panel is hosted in the docked side panel, whose own close button already does the same thing (two X in one corner)."
             },
             {
               "name": "StatusMessage",
@@ -72698,7 +73034,15 @@
           "kind": "JavaScript"
         },
         {
+          "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor/interop/region-cycle.mjs",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor/interop/__tests__/browser-globals.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor/interop/__tests__/region-cycle.test.mjs",
           "kind": "JavaScript"
         },
         {
@@ -73379,11 +73723,11 @@
         }
       ],
       "summary": {
-        "itemCount": 222,
-        "manualItemCount": 222,
-        "generatedItemCount": 219,
+        "itemCount": 224,
+        "manualItemCount": 224,
+        "generatedItemCount": 221,
         "generatedOnlyItemCount": 0,
-        "componentCount": 38,
+        "componentCount": 40,
         "publicApiTypeCount": 181
       }
     },
@@ -149904,10 +150248,10 @@
   ],
   "summary": {
     "packageCount": 29,
-    "itemCount": 3770,
-    "manualItemCount": 3770,
+    "itemCount": 3772,
+    "manualItemCount": 3772,
     "generatedOnlyItemCount": 0,
-    "componentCount": 570,
+    "componentCount": 572,
     "publicApiTypeCount": 3148
   }
 }

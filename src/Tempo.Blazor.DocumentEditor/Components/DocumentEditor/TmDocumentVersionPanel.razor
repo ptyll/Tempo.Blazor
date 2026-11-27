@@ -5,13 +5,16 @@
 <aside class="tm-document-editor__version-panel" aria-label="@Loc["TmDocumentEditor_VersionsLabel"]" data-testid="@TestId("document-version-panel")">
     <header class="tm-document-version-panel__header">
         <h3>@Loc["TmDocumentEditor_Versions"]</h3>
-        <button type="button"
-                class="tm-document-version-panel__icon-button"
-                title="@Loc["TmDocumentEditor_CloseVersionPanel"]"
-                @onclick="OnClose"
-                data-testid="@TestId("document-version-panel-close")">
-            <TmIcon Name="x" Size="IconSize.Sm" />
-        </button>
+        @if (ShowClose)
+        {
+            <button type="button"
+                    class="tm-document-version-panel__icon-button"
+                    title="@Loc["TmDocumentEditor_CloseVersionPanel"]"
+                    @onclick="OnClose"
+                    data-testid="@TestId("document-version-panel-close")">
+                <TmIcon Name="x" Size="IconSize.Sm" />
+            </button>
+        }
     </header>
 
     <button type="button"
@@ -140,6 +143,12 @@
 
     /// <summary>Raised when the panel should close.</summary>
     [Parameter] public EventCallback OnClose { get; set; }
+
+    /// <summary>
+    /// Whether the panel renders its own close button. Defaults to <c>true</c>; the editor passes <c>false</c> while the panel is
+    /// hosted in the docked side panel, whose own close button already does the same thing (two X in one corner).
+    /// </summary>
+    [Parameter] public bool ShowClose { get; set; } = true;
 
     private IReadOnlyList<DocumentVersion> OrderedVersions => Versions
         .OrderByDescending(version => version.CreatedAt)

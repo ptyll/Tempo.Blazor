@@ -5,6 +5,7 @@ using Tempo.Blazor.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Abstractions.Shared;
 using Tempo.Blazor.Components.DocumentEditor.Clipboard;
 using Tempo.Blazor.Components.DocumentEditor.Commands;
@@ -66,6 +67,35 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
 
     /// <summary>Whether the Word-like toolbar/ribbon is displayed.</summary>
     [Parameter] public bool ShowToolbar { get; set; } = true;
+
+    /// <summary>
+    /// How the editor chooses its layout. <see cref="TmLayoutMode.Auto"/> (default) measures the editor's own container through
+    /// the shared <c>TmLayoutObserver</c> - a narrow host on a wide screen is a phone layout; the first frame is Desktop. A forced
+    /// value pins the layout and never imports the observer. Desktop (container of 1024 px and more) renders the regions
+    /// navigation | document | inspector; Tablet (640-1023 px) renders document | inspector with Outline and Pages as inspector
+    /// tabs; Mobile (below 640 px) renders a single column. The resolved mode is the <c>data-layout</c> attribute on the root.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>
+    /// Whether the editor renders its header: the document title, the save state and the document actions (search, undo, redo,
+    /// print preview, print to PDF when an export provider exists, save) plus the <see cref="HeaderStart"/> and
+    /// <see cref="HeaderActions"/> host slots. Defaults to <c>true</c>. With <c>false</c> there is no header and Save / Undo / Redo
+    /// stay in the ribbon quick-access group (the pre-redesign look, minus the in-surface page header).
+    /// </summary>
+    [Parameter] public bool ShowHeader { get; set; } = true;
+
+    /// <summary>Header title. Defaults to the title stored in the document metadata (a localized "Untitled document" when empty).</summary>
+    [Parameter] public string? Title { get; set; }
+
+    /// <summary>Optional second line of the header (a document type, a project name). Hidden when empty.</summary>
+    [Parameter] public string? Subtitle { get; set; }
+
+    /// <summary>Host content rendered at the start of the header, before the title (a back link, a logo).</summary>
+    [Parameter] public RenderFragment? HeaderStart { get; set; }
+
+    /// <summary>Host actions rendered at the end of the header, after Save (Share and similar). The editor itself offers no Share.</summary>
+    [Parameter] public RenderFragment? HeaderActions { get; set; }
 
     /// <summary>Visual mode used by the document editor toolbar.</summary>
     [Parameter] public DocumentToolbarMode ToolbarMode { get; set; } = DocumentToolbarMode.Ribbon;
@@ -339,6 +369,26 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
     private bool _versionDialogOpen;
     private bool _compareDialogOpen;
     private bool _sidePanelOpen = true;
+    // The layout the markup currently renders. Desktop until the observer measures; a forced LayoutMode wins from the first
+    // parameter pass. Written by ApplyLayout while the observer renders its content and by OnResolvedLayoutChangedAsync.
+    private TmLayoutMode _layout = TmLayoutMode.Desktop;
+    // F6 / Shift+F6 cycle header -> ribbon -> navigation -> document -> inspector. The browser default of F6 must be cancelled
+    // synchronously, so the handler lives in a small ES module registered on the root element.
+    private const string RegionCycleModulePath = "./_content/Tempo.Blazor.DocumentEditor/js/document-editor/interop/region-cycle.mjs";
+    private ElementReference _rootElement;
+    private IJSObjectReference? _regionCycleModule;
+    // The left navigation column (desktop). The reader's own fold / unfold wins; until then the column follows the container:
+    // a desktop container too narrow to give the page its room (see NavigationFoldWidth) folds it into its rail.
+    // Session state, never persisted by the editor.
+    private bool? _navUserCollapsed;
+    private double _containerWidth;
+    private TmDocumentNavigationPanel? _navigationPanel;
+    private bool _focusNavigationOnRender;
+    // The widest the side columns get (the clamp ceilings of the workspace tracks) and the workspace paddings / gaps, in CSS px.
+    private const double NavigationMaxWidth = 272;
+    private const double InspectorMaxWidth = 384;
+    private const double WorkspaceGutters = 96;
+    private const double DefaultPagePixelWidth = 794;
     private DocumentSidePanelTab _activeSidePanelTab = DocumentSidePanelTab.Versions;
     private bool _sidePanelTabManuallySelected;
     private bool _commentComposerOpen;
@@ -465,6 +515,41 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
         return true;
     }
 
+    private async Task AttachRegionCycleAsync()
+    {
+        try
+        {
+            _regionCycleModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", RegionCycleModulePath);
+            await _regionCycleModule.InvokeVoidAsync("attachRegionCycle", _rootElement);
+        }
+        catch (Exception exception) when (exception is JSException or InvalidOperationException or JSDisconnectedException
+                                                or TaskCanceledException or ObjectDisposedException)
+        {
+            // Best effort: without JS (a disconnected circuit, a failed import) F6 simply keeps the browser default.
+            _regionCycleModule = null;
+        }
+    }
+
+    private async Task DetachRegionCycleAsync()
+    {
+        var module = _regionCycleModule;
+        _regionCycleModule = null;
+        if (module is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await module.InvokeVoidAsync("detachRegionCycle", _rootElement);
+            await module.DisposeAsync();
+        }
+        catch
+        {
+            // The JS runtime may already be disconnected during teardown.
+        }
+    }
+
     /// <summary>
     /// Installs the window.tmDocumentEditor browser global by importing the interop module.
     /// Safe to await from any interop call site; the import happens once and is cached.
@@ -489,6 +574,14 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
                 // Prerender/static rendering has no JS runtime; the guard/download call sites retry the import.
                 _browserGlobalsModule = null;
             }
+
+            await AttachRegionCycleAsync();
+        }
+
+        if (_focusNavigationOnRender && IsDesktopLayout && _navigationPanel is not null)
+        {
+            _focusNavigationOnRender = false;
+            await _navigationPanel.FocusAsync();
         }
 
         if (_focusSidePanelOnRender && _sidePanelOpen && _sidePanel is not null)
@@ -562,6 +655,82 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
             return string.Join(" ", classes);
         }
     }
+
+    private bool IsDesktopLayout => _layout == TmLayoutMode.Desktop;
+
+    private bool NavCollapsed => _navUserCollapsed ?? AutoCollapsed;
+
+    // Before the first width report (and with a forced LayoutMode that never measures) the column is open.
+    private bool AutoCollapsed => _containerWidth > 0 && _containerWidth < NavigationFoldWidth;
+
+    // The container width at which the open column still leaves the page its whole width: navigation + inspector at their widest,
+    // the page of the active section (A4 = 794 px when unknown) and the gutters. Narrower: the column starts as a rail.
+    private double NavigationFoldWidth
+    {
+        get
+        {
+            var size = ActivePageSettings.Size;
+            var pagePx = size is { Width: > 0 } ? size.Width * 96d / 72d : DefaultPagePixelWidth;
+            return NavigationMaxWidth + InspectorMaxWidth + pagePx + WorkspaceGutters;
+        }
+    }
+
+    // The header replaces the quick-access group of the ribbon and the in-surface page header. Reading mode is chrome-less.
+    private bool HeaderVisible => ShowHeader && !CanvasReadingMode;
+
+    private string HeaderTitle => string.IsNullOrWhiteSpace(Title) ? DocumentTitle : Title!;
+
+    // A version / template preview is a state the reader must not miss: it rides the header as a chip.
+    private string? HeaderModeLabel => IsVersionPreview || IsTemplatePreview ? DocumentStatus : null;
+
+    private void ApplyLayout(TmLayoutMode resolved) => _layout = resolved;
+
+    private async Task OnResolvedLayoutChangedAsync(TmLayoutMode resolved)
+    {
+        _layout = resolved;
+        // The observer re-renders its content (with the new mode) right after this callback; the implicit render of the editor
+        // itself would rebuild the same chrome a second time.
+        _suppressNextChromeRender = true;
+
+        // The left column mounts with a desktop container: its outline and page thumbnails are pulled lazily, so a
+        // fresh mount asks the engine for them (a no-op before the canvas is ready).
+        if (resolved == TmLayoutMode.Desktop && _canvasHost is not null)
+        {
+            await SyncCanvasPageMetricsAsync();
+            await SyncCanvasNavigationAsync();
+        }
+    }
+
+    // The observer reports every rounded width change; only the crossing of the wide step matters, and a render per resize step
+    // would rebuild the whole editor for nothing - so a report that changes nothing suppresses its implicit render.
+    private async Task OnContainerWidthChangedAsync(double width)
+    {
+        var before = AutoCollapsed;
+        _containerWidth = width;
+        if (AutoCollapsed == before)
+        {
+            _suppressNextChromeRender = true;
+            return;
+        }
+
+        if (!NavCollapsed && IsDesktopLayout)
+        {
+            await SyncCanvasPageMetricsAsync();
+            await SyncCanvasNavigationAsync();
+        }
+    }
+
+    private async Task SetNavigationCollapsedAsync(bool collapsed)
+    {
+        _navUserCollapsed = collapsed;
+        if (!collapsed)
+        {
+            await SyncCanvasPageMetricsAsync();
+            await SyncCanvasNavigationAsync();
+        }
+    }
+
+    private Task OpenFindFromChromeAsync() => OpenFindPanelAsync(replaceMode: false);
 
     private string DocumentTitle => string.IsNullOrWhiteSpace(_document?.Metadata.Title)
         ? Loc["TmDocumentEditor_UntitledDocument"]
@@ -734,9 +903,18 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
 
     private int OpenCommentCount => _comments.Count(comment => comment.Status == DocumentCommentStatus.Open);
 
-    private string WorkspaceClass => _sidePanelOpen
-        ? "tm-document-editor__workspace tm-document-editor__workspace--side-panel-open"
-        : "tm-document-editor__workspace tm-document-editor__workspace--side-panel-closed";
+    private string WorkspaceClass
+    {
+        get
+        {
+            var classes = _sidePanelOpen
+                ? "tm-document-editor__workspace tm-document-editor__workspace--side-panel-open"
+                : "tm-document-editor__workspace tm-document-editor__workspace--side-panel-closed";
+            return IsDesktopLayout && NavCollapsed
+                ? classes + " tm-document-editor__workspace--nav-collapsed"
+                : classes;
+        }
+    }
 
     private DocumentSidePanelTab ActiveSidePanelTab => NormalizeSidePanelTab(_activeSidePanelTab);
 
@@ -951,6 +1129,11 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
     /// <inheritdoc />
     protected override async Task OnParametersSetAsync()
     {
+        if (LayoutMode != TmLayoutMode.Auto)
+        {
+            _layout = LayoutMode;
+        }
+
         _trackChangesEnabled = TrackChangesEnabled || _trackChangesEnabled || RequiresTrackedEditing;
         _suggestionsEnabled = SuggestionProvider is not null && (SuggestionsEnabled || _suggestionsEnabled);
         if (SuggestionProvider is null)
@@ -6200,6 +6383,14 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
 
     private void OpenSidePanel(DocumentSidePanelTab tab, bool preserveManualChoice = true, bool manual = false)
     {
+        if (IsDesktopLayout && tab is DocumentSidePanelTab.Outline or DocumentSidePanelTab.Pages)
+        {
+            // The compatibility tabs lead to the left column; the inspector keeps whatever it showed, and the focus follows the reader there.
+            _navUserCollapsed = false;
+            _focusNavigationOnRender = true;
+            return;
+        }
+
         _activeSidePanelTab = NormalizeSidePanelTab(tab);
         _sidePanelOpen = true;
         if (manual)
@@ -6227,6 +6418,9 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
             DocumentSidePanelTab.Revisions => DocumentSidePanelTab.Revisions,
             DocumentSidePanelTab.Versions when ShowVersionHistory => DocumentSidePanelTab.Versions,
             DocumentSidePanelTab.Properties => DocumentSidePanelTab.Properties,
+            // DE1: on a desktop container Outline and Pages live in the left column, not in the inspector. The enum values stay
+            // for compatibility; opening one expands the column (OpenSidePanel) and the inspector keeps a real tab.
+            DocumentSidePanelTab.Outline or DocumentSidePanelTab.Pages when IsDesktopLayout => DocumentSidePanelTab.Properties,
             DocumentSidePanelTab.Outline => DocumentSidePanelTab.Outline,
             DocumentSidePanelTab.Pages => DocumentSidePanelTab.Pages,
             _ when ShowVersionHistory => DocumentSidePanelTab.Versions,
@@ -7640,7 +7834,7 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
     /// </summary>
     private async Task SyncCanvasNavigationAsync()
     {
-        if (_canvasHost is null || ActiveSidePanelTab != DocumentSidePanelTab.Outline)
+        if (_canvasHost is null || !(ActiveSidePanelTab == DocumentSidePanelTab.Outline || (IsDesktopLayout && !NavCollapsed)))
         {
             return;
         }
@@ -11885,6 +12079,7 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
         }
 
         await DisableBeforeUnloadGuardAsync();
+        await DetachRegionCycleAsync();
         await ExitFullscreenOnDisposeAsync();
         if (collaborationSync is not null)
         {

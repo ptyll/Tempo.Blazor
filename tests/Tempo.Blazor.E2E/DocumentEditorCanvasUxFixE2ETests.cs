@@ -279,9 +279,16 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
         var enginePageCount = await ReadIntAttrAsync(page, "data-canvas-page-count");
         Assert.IsTrue(enginePageCount >= 2, $"B9 needs a multi-page document; engine reported {enginePageCount} page(s).");
 
-        // The side panel is docked open on the contract demo; switch it to the Pages tab.
+        // DE-1.1: on a desktop container the page navigator is a permanent part of the left column (no Pages tab to click).
         await page.GetByTestId("document-side-panel").WaitForAsync(new LocatorWaitForOptions { Timeout = 20_000 });
-        await page.GetByTestId("document-side-panel-tab-pages").ClickAsync();
+        // A 1440 px viewport leaves the editor a container below the wide step, so the column starts folded into its rail.
+        var expandNavigation = page.GetByTestId("document-navigation-expand");
+        if (await expandNavigation.CountAsync() > 0)
+        {
+            await expandNavigation.ClickAsync();
+        }
+
+        await page.Locator("[data-region='nav'] [data-testid='document-page-navigator']").WaitForAsync(new LocatorWaitForOptions { Timeout = 20_000 });
         await page.WaitForTimeoutAsync(400);
         await ScreenshotAsync(page, Path.Combine(output, "00-pages-tab.png"));
 

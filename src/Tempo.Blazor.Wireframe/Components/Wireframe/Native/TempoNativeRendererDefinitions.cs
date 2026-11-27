@@ -1053,30 +1053,61 @@ internal static partial class TempoNativeRendererDefinitions
     {
         var title = el.Props.GetString("title", "Document");
         var showRuler = el.Props.GetBool("showRuler", true);
+        var showHeader = el.Props.GetBool("showHeader", false);
+        var showNavigation = el.Props.GetBool("showNavigation", false);
         var sb = new StringBuilder();
         sb.Append(Rect(0, 0, el.W, el.H, FillDark, Border, 4));
-        sb.Append(Rect(0, 0, el.W, 36, Fill, Border, 4));
-        sb.Append(HLine(0, el.W, 36));
+
+        // The header (title + save state on the left, the document actions on the right) sits above the toolbar.
+        var top = 0.0;
+        if (showHeader)
+        {
+            top = 28.0;
+            sb.Append(Rect(0, 0, el.W, top, Fill, Border, 4));
+            sb.Append(HLine(0, el.W, top));
+            sb.Append(Rect(8, 8, 10, 12, "none", ColorMuted, 1));
+            sb.Append(Text(Ellipsize(title, Math.Max(0, el.W * 0.4), 11), 26, 18, 11, ColorText, "start", "600"));
+            sb.Append($"<circle cx='{F(26 + Math.Min(el.W * 0.4, 90) + 12)}' cy='14' r='3' fill='{ColorMuted}'></circle>");
+            for (var a = 0; a < 3; a++)
+                sb.Append(Rect(el.W - 14 - a * 22 - (a == 0 ? 8 : 0), 7, a == 0 ? 30 : 14, 14, "none", Border, 3));
+        }
+
+        sb.Append(Rect(0, top, el.W, 36, Fill, Border, 4));
+        sb.Append(HLine(0, el.W, top + 36));
         foreach (var (tool, tx) in new[] { ("B", 10.0), ("I", 28.0), ("U", 46.0), ("|", 60.0), ("H1", 68.0), ("H2", 82.0), ("|", 96.0), ("≡", 104.0), ("⋮≡", 116.0) })
         {
             if (tool == "|")
-                sb.Append(VLine(tx, 6, 30));
+                sb.Append(VLine(tx, top + 6, top + 30));
             else
-                sb.Append(Text(tool, tx, 18, 10, ColorMuted, "middle", "500"));
+                sb.Append(Text(tool, tx, top + 18, 10, ColorMuted, "middle", "500"));
         }
 
-        var contentY = 36.0;
+        var contentY = top + 36.0;
         if (showRuler)
         {
-            sb.Append(Rect(0, 36, el.W, 16, FillDark, "none", 0));
-            sb.Append(HLine(0, el.W, 52));
+            sb.Append(Rect(0, contentY, el.W, 16, FillDark, "none", 0));
+            sb.Append(HLine(0, el.W, contentY + 16));
             for (var r = 0; r < 8; r++)
-                sb.Append($"<line x1='{F(r * el.W / 8)}' y1='36' x2='{F(r * el.W / 8)}' y2='44' stroke='{Border}' stroke-width='1'></line>");
-            contentY = 52;
+                sb.Append($"<line x1='{F(r * el.W / 8)}' y1='{F(contentY)}' x2='{F(r * el.W / 8)}' y2='{F(contentY + 8)}' stroke='{Border}' stroke-width='1'></line>");
+            contentY += 16;
         }
 
-        var pageW = el.W * 0.75;
-        var pageX = (el.W - pageW) / 2;
+        // The left column of a desktop layout: the document structure (heading lines) above the page thumbnails.
+        var navW = 0.0;
+        if (showNavigation && el.W >= 240)
+        {
+            navW = Math.Min(el.W * 0.22, 120);
+            sb.Append(Rect(0, contentY, navW, el.H - contentY, Fill, Border, 0));
+            sb.Append(Text("Structure", 8, contentY + 16, 9, ColorText, "start", "600"));
+            for (var n = 0; n < 4; n++)
+                sb.Append(Rect(8 + (n % 2) * 6, contentY + 26 + n * 12, navW - 24 - (n % 2) * 6, 5, FillDark, "none", 2));
+            var thumbY = contentY + 26 + 4 * 12 + 8;
+            if (thumbY + 28 < el.H)
+                sb.Append(Rect(8, thumbY, Math.Min(navW - 16, 36), 28, "white", Border, 2));
+        }
+
+        var pageW = (el.W - navW) * 0.75;
+        var pageX = navW + ((el.W - navW) - pageW) / 2;
         sb.Append(Rect(pageX, contentY + 8, pageW, el.H - contentY - 16, "white", Border, 2));
         sb.Append(Text(title, pageX + 10, contentY + 28, 13, ColorText, "start", "600"));
         for (var r = 0; r < 6; r++)

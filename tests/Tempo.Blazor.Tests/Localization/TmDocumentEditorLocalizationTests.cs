@@ -122,7 +122,9 @@ public class TmDocumentEditorLocalizationTests : LocalizationTestBase
             .Add(p => p.ShowVersionHistory, false));
         empty.WaitForAssertion(() => empty.Find("[data-testid='document-canvas-engine-host']").Should().NotBeNull());
         empty.Markup.Should().Contain("LOC page");
-        empty.Markup.Should().Contain("LOC loaded");
+        // DE-1.1: the in-surface page header ("Loaded" status) is gone; the region keeps its localized label.
+        empty.Markup.Should().Contain("LOC surface");
+        empty.Markup.Should().NotContain("LOC loaded");
         empty.Markup.Should().NotContain("This document is empty");
 
         var failed = RenderDocumentEditor(parameters => parameters

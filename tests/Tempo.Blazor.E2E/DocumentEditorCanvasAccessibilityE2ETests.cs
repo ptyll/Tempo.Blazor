@@ -221,6 +221,10 @@ public sealed class DocumentEditorCanvasAccessibilityE2ETests : WasmTestBase
 
     private static async Task ExecuteCanvasCommandAsync(IPage page, string commandId, object argument)
     {
+        // The demo page can still be settling a late navigation (the previous document's before-unload / the new one's first
+        // reconcile) when the first evaluate lands: wait for the load to settle and re-open the engine handle before running it.
+        await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await page.WaitForSelectorAsync("[data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']", new PageWaitForSelectorOptions { Timeout = 30_000 });
         await page.EvaluateAsync(
             """
             async ([commandId, argument]) => {

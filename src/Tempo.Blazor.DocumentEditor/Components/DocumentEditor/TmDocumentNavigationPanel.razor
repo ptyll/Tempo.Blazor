@@ -1,0 +1,105 @@
+@namespace Tempo.Blazor.Components.DocumentEditor
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.DocumentEditor.Models
+@using Tempo.Blazor.DocumentEditor.Services
+
+@* The left region of a desktop editor (redesign 146c7e1b, DE-1.1 / DE1): the document structure (heading outline)
+   above the page thumbnails. It composes the two existing panels - TmDocumentOutlinePanel and
+   TmDocumentPageNavigator - and adds only the collapse affordance and a "search in document" entry that opens the
+   editor's find panel (no search logic of its own). A tablet or phone container does not render this component:
+   there Outline and Pages stay tabs of the inspector panel. *@
+@if (Collapsed)
+{
+    <div class="tm-document-navigation tm-document-navigation--collapsed"
+         data-collapsed="true"
+         data-testid="@TestId("document-navigation-panel")">
+        <button type="button"
+                class="tm-document-navigation__toggle"
+                title="@Loc["TmDocumentEditor_NavigationExpand"]"
+                aria-label="@Loc["TmDocumentEditor_NavigationExpand"]"
+                aria-expanded="false"
+                @ref="_toggle"
+                @onclick="() => SetCollapsedAsync(false)"
+                data-testid="@TestId("document-navigation-expand")">
+            <TmIcon Name="panel-left" Size="IconSize.Sm" />
+        </button>
+    </div>
+}
+else
+{
+    <div class="tm-document-navigation"
+         data-collapsed="false"
+         data-testid="@TestId("document-navigation-panel")">
+        <header class="tm-document-navigation__header">
+            <h2 class="tm-document-navigation__title">@Loc["TmDocumentEditor_NavigationTitle"]</h2>
+            <button type="button"
+                    class="tm-document-navigation__toggle"
+                    title="@Loc["TmDocumentEditor_NavigationCollapse"]"
+                    aria-label="@Loc["TmDocumentEditor_NavigationCollapse"]"
+                    aria-expanded="true"
+                    @ref="_toggle"
+                    @onclick="() => SetCollapsedAsync(true)"
+                    data-testid="@TestId("document-navigation-collapse")">
+                <TmIcon Name="panel-left-close" Size="IconSize.Sm" />
+            </button>
+        </header>
+        <button type="button"
+                class="tm-document-navigation__search"
+                aria-label="@Loc["TmDocumentEditor_HeaderSearch"]"
+                @onclick="OnSearch"
+                data-testid="@TestId("document-navigation-search")">
+            <TmIcon Name="search" Size="IconSize.Sm" />
+            <span>@Loc["TmDocumentEditor_NavigationSearch"]</span>
+        </button>
+        <div class="tm-document-navigation__section tm-document-navigation__section--outline">
+            <TmDocumentOutlinePanel Outline="@Outline"
+                                    ActiveBlockId="@ActiveBlockId"
+                                    OnNavigateToBlock="OnNavigateToBlock" />
+        </div>
+        <div class="tm-document-navigation__section tm-document-navigation__section--pages">
+            <TmDocumentPageNavigator Metrics="@Metrics"
+                                     ActivePageIndex="@ActivePageIndex"
+                                     OnNavigateToPage="OnNavigateToPage" />
+        </div>
+    </div>
+}
+
+@code {
+    /// <summary>Document heading outline.</summary>
+    [Parameter] public IReadOnlyList<DocumentOutlineItem>? Outline { get; set; }
+
+    /// <summary>Heading block that is currently active in the document.</summary>
+    [Parameter] public string? ActiveBlockId { get; set; }
+
+    /// <summary>Runtime page metrics reported by the canvas engine.</summary>
+    [Parameter] public WysiwygPageMetrics? Metrics { get; set; }
+
+    /// <summary>Zero-based active page index.</summary>
+    [Parameter] public int ActivePageIndex { get; set; }
+
+    /// <summary>Whether the column is folded into its rail. Two-way with <see cref="CollapsedChanged"/>.</summary>
+    [Parameter] public bool Collapsed { get; set; }
+
+    /// <summary>Raised when the user folds or unfolds the column.</summary>
+    [Parameter] public EventCallback<bool> CollapsedChanged { get; set; }
+
+    /// <summary>Raised when a heading is chosen.</summary>
+    [Parameter] public EventCallback<string> OnNavigateToBlock { get; set; }
+
+    /// <summary>Raised when a page thumbnail is chosen.</summary>
+    [Parameter] public EventCallback<int> OnNavigateToPage { get; set; }
+
+    /// <summary>Raised by the "Search in document" entry; the editor opens its find panel.</summary>
+    [Parameter] public EventCallback OnSearch { get; set; }
+
+    private ElementReference _toggle;
+
+    /// <summary>Moves keyboard focus to the column's first control (the fold / unfold toggle). Used when a compatibility tab leads here.</summary>
+    public ValueTask FocusAsync() => _toggle.FocusAsync();
+
+    private Task SetCollapsedAsync(bool collapsed)
+    {
+        Collapsed = collapsed;
+        return CollapsedChanged.InvokeAsync(collapsed);
+    }
+}

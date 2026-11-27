@@ -235,8 +235,46 @@ public sealed class DocumentEditorRedesignPhase2E2ETests : WasmTestBase
                 Assert.AreEqual("13", paint[1], "the search layer sits above the selection layer");
             }
 
+            // Follow-up (phase 3): while a search is up the active match IS the selection, so the blue selection rectangle is
+            // hidden and the amber match is not muddied by a blue wash beneath it. The engine host carries the flag, a rectangle
+            // painted by the engine gets the rule (a probe stands in for it: a collapsed caret has none), and closing the
+            // find panel releases both.
+            var flagged = await page.EvaluateAsync<string[]>(
+                """
+                () => {
+                    const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
+                    const layer = document.querySelector('[data-testid="document-canvas-search-layer"]').parentElement;
+                    const probe = document.createElement('div');
+                    probe.className = 'tm-document-canvas-selection-rect';
+                    probe.style.cssText = 'position:absolute;left:0;top:0;width:10px;height:10px;';
+                    layer.appendChild(probe);
+                    const result = [host.getAttribute('data-canvas-search-active') ?? 'null', getComputedStyle(probe).visibility];
+                    probe.remove();
+                    return result;
+                }
+                """);
+            Assert.AreEqual("true", flagged[0], $"zoom {probe[5]}%: the engine host is flagged while matches exist");
+            Assert.AreEqual("hidden", flagged[1], $"zoom {probe[5]}%: the selection rectangle is hidden while a search is up");
+
             await ApplyThemeAsync(page, false, false);
             await page.GetByTestId("document-find-close").ClickAsync();
+            await WaitForPredicateAsync(page, """
+                () => !document.querySelector('[data-testid="document-canvas-engine-host"]').hasAttribute('data-canvas-search-active')
+                """, 10_000);
+            var released = await page.EvaluateAsync<string>(
+                """
+                () => {
+                    const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
+                    const probe = document.createElement('div');
+                    probe.className = 'tm-document-canvas-selection-rect';
+                    probe.style.cssText = 'position:absolute;left:0;top:0;width:10px;height:10px;';
+                    host.appendChild(probe);
+                    const visibility = getComputedStyle(probe).visibility;
+                    probe.remove();
+                    return visibility;
+                }
+                """);
+            Assert.AreEqual("visible", released, $"zoom {probe[5]}%: the selection rectangle returns once the search is cleared");
         }
 
         await page.Context.CloseAsync();

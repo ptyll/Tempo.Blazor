@@ -110,14 +110,14 @@
     overflow-wrap: anywhere;
 }
 
-@media (max-width: 64rem) {
+@container tm-doc-editor (width < 1024px) {
     .tm-document-editor__comment-rail {
         max-height: 22rem;
         overflow: auto;
     }
 }
 
-@media (max-width: 40rem) {
+@container tm-doc-editor (width < 640px) {
     .tm-document-editor__comment-rail {
         max-height: 70vh;
     }

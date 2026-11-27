@@ -94,6 +94,14 @@
     outline-offset: 1px;
 }
 
+/* While a search is stepping through matches the active match IS the selection. The blue selection wash stacked
+   beneath the amber match highlight made it read muddy, so the rectangle is hidden for the duration - only its
+   paint: the selection state stays intact and the rectangle returns when the search is cleared.
+   search-overlay.mjs owns the data-canvas-search-active flag on the engine host. */
+.tm-document-canvas-engine-host[data-canvas-search-active] .tm-document-canvas-selection-rect {
+    visibility: hidden;
+}
+
 @media (forced-colors: active) {
     .tm-document-canvas-engine-host .tm-document-canvas-comment-overlay__marker,
     .tm-document-canvas-engine-host .tm-document-canvas-revision-overlay__marker {

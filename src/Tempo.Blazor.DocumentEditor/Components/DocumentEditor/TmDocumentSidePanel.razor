@@ -9,113 +9,30 @@
            data-panel-layout="docked-tabs"
            data-active-tab="@GetTabDataValue(EffectiveActiveTab)"
            data-visible-panel-count="1"
+           data-tab-style="@(TextTabs ? "text" : "icon")"
            role="complementary"
            aria-label="@Loc["TmDocumentEditor_SidePanelLabel"]">
         <header class="tm-document-side-panel__header">
             <div class="tm-document-side-panel__tabs"
                  role="tablist"
                  aria-label="@Loc["TmDocumentEditor_SidePanelTabsLabel"]">
-                @if (ShowComments)
+                @if (TextTabs)
                 {
-                    <button type="button"
-                            @ref="_commentsTab"
-                            id="@GetTabId(DocumentSidePanelTab.Comments)"
-                            class="@GetTabClass(DocumentSidePanelTab.Comments)"
-                            role="tab"
-                            aria-selected="@GetTabSelected(DocumentSidePanelTab.Comments)"
-                            aria-controls="@PanelId"
-                            data-testid="@TestId("document-side-panel-tab-comments")"
-                            @onclick="() => SelectTabAsync(DocumentSidePanelTab.Comments)">
-                        <TmIcon Name="message-square" Size="IconSize.Sm" />
-                        <span>@Loc["TmDocumentEditor_Comments"]</span>
-                        @if (CommentsCount > 0)
-                        {
-                            <span class="tm-document-side-panel__badge">@CommentsCount</span>
-                        }
-                    </button>
+                    @PropertiesTab
+                    @CommentsTab
+                    @RevisionsTab
+                    @VersionsTab
+                    @OutlineTab
+                    @PagesTab
                 }
-                @if (ShowRevisions)
+                else
                 {
-                    <button type="button"
-                            @ref="_revisionsTab"
-                            id="@GetTabId(DocumentSidePanelTab.Revisions)"
-                            class="@GetTabClass(DocumentSidePanelTab.Revisions)"
-                            role="tab"
-                            aria-selected="@GetTabSelected(DocumentSidePanelTab.Revisions)"
-                            aria-controls="@PanelId"
-                            data-testid="@TestId("document-side-panel-tab-revisions")"
-                            @onclick="() => SelectTabAsync(DocumentSidePanelTab.Revisions)">
-                        <TmIcon Name="file-diff" Size="IconSize.Sm" />
-                        <span>@Loc["TmDocumentEditor_Revisions"]</span>
-                        @if (RevisionsCount > 0)
-                        {
-                            <span class="tm-document-side-panel__badge">@RevisionsCount</span>
-                        }
-                    </button>
-                }
-                @if (ShowVersions)
-                {
-                    <button type="button"
-                            @ref="_versionsTab"
-                            id="@GetTabId(DocumentSidePanelTab.Versions)"
-                            class="@GetTabClass(DocumentSidePanelTab.Versions)"
-                            role="tab"
-                            aria-selected="@GetTabSelected(DocumentSidePanelTab.Versions)"
-                            aria-controls="@PanelId"
-                            data-testid="@TestId("document-side-panel-tab-versions")"
-                            @onclick="() => SelectTabAsync(DocumentSidePanelTab.Versions)">
-                        <TmIcon Name="clock" Size="IconSize.Sm" />
-                        <span>@Loc["TmDocumentEditor_Versions"]</span>
-                        @if (VersionsCount > 0)
-                        {
-                            <span class="tm-document-side-panel__badge">@VersionsCount</span>
-                        }
-                    </button>
-                }
-                @if (ShowProperties)
-                {
-                    <button type="button"
-                            @ref="_propertiesTab"
-                            id="@GetTabId(DocumentSidePanelTab.Properties)"
-                            class="@GetTabClass(DocumentSidePanelTab.Properties)"
-                            role="tab"
-                            aria-selected="@GetTabSelected(DocumentSidePanelTab.Properties)"
-                            aria-controls="@PanelId"
-                            data-testid="@TestId("document-side-panel-tab-properties")"
-                            @onclick="() => SelectTabAsync(DocumentSidePanelTab.Properties)">
-                        <TmIcon Name="settings" Size="IconSize.Sm" />
-                        <span>@Loc["TmDocumentEditor_Properties"]</span>
-                    </button>
-                }
-                @if (ShowOutline)
-                {
-                    <button type="button"
-                            @ref="_outlineTab"
-                            id="@GetTabId(DocumentSidePanelTab.Outline)"
-                            class="@GetTabClass(DocumentSidePanelTab.Outline)"
-                            role="tab"
-                            aria-selected="@GetTabSelected(DocumentSidePanelTab.Outline)"
-                            aria-controls="@PanelId"
-                            data-testid="@TestId("document-side-panel-tab-outline")"
-                            @onclick="() => SelectTabAsync(DocumentSidePanelTab.Outline)">
-                        <TmIcon Name="list" Size="IconSize.Sm" />
-                        <span>@Loc["TmDocumentEditor_Outline"]</span>
-                    </button>
-                }
-                @if (ShowPages)
-                {
-                    <button type="button"
-                            @ref="_pagesTab"
-                            id="@GetTabId(DocumentSidePanelTab.Pages)"
-                            class="@GetTabClass(DocumentSidePanelTab.Pages)"
-                            role="tab"
-                            aria-selected="@GetTabSelected(DocumentSidePanelTab.Pages)"
-                            aria-controls="@PanelId"
-                            data-testid="@TestId("document-side-panel-tab-pages")"
-                            @onclick="() => SelectTabAsync(DocumentSidePanelTab.Pages)">
-                        <TmIcon Name="files" Size="IconSize.Sm" />
-                        <span>@Loc["TmDocumentEditor_Pages"]</span>
-                    </button>
+                    @CommentsTab
+                    @RevisionsTab
+                    @VersionsTab
+                    @PropertiesTab
+                    @OutlineTab
+                    @PagesTab
                 }
             </div>
             <button type="button"
@@ -152,6 +69,152 @@ else if (ShowEdgeToggle)
 }
 
 @code {
+
+    // The tab buttons are templates so the tablist can render them in two orders (see TextTabs) without a second copy of each.
+    private RenderFragment CommentsTab => @<text>
+        @if (ShowComments)
+        {
+            <button type="button"
+                    @ref="_commentsTab"
+                    title="@(TextTabs ? null : Loc["TmDocumentEditor_Comments"].ToString())"
+                    id="@GetTabId(DocumentSidePanelTab.Comments)"
+                    class="@GetTabClass(DocumentSidePanelTab.Comments)"
+                    role="tab"
+                    aria-selected="@GetTabSelected(DocumentSidePanelTab.Comments)"
+                    aria-controls="@PanelId"
+                    data-testid="@TestId("document-side-panel-tab-comments")"
+                    @onclick="() => SelectTabAsync(DocumentSidePanelTab.Comments)">
+                @if (!TextTabs)
+                {
+                    <TmIcon Name="message-square" Size="IconSize.Sm" />
+                }
+                <span class="@TabLabelClass">@Loc["TmDocumentEditor_Comments"]</span>
+                @if (CommentsCount > 0)
+                {
+                    <span class="tm-document-side-panel__badge">@CommentsCount</span>
+                }
+            </button>
+        }
+    </text>;
+
+    private RenderFragment RevisionsTab => @<text>
+        @if (ShowRevisions)
+        {
+            <button type="button"
+                    @ref="_revisionsTab"
+                    title="@(TextTabs ? null : Loc["TmDocumentEditor_Revisions"].ToString())"
+                    id="@GetTabId(DocumentSidePanelTab.Revisions)"
+                    class="@GetTabClass(DocumentSidePanelTab.Revisions)"
+                    role="tab"
+                    aria-selected="@GetTabSelected(DocumentSidePanelTab.Revisions)"
+                    aria-controls="@PanelId"
+                    data-testid="@TestId("document-side-panel-tab-revisions")"
+                    @onclick="() => SelectTabAsync(DocumentSidePanelTab.Revisions)">
+                @if (!TextTabs)
+                {
+                    <TmIcon Name="file-diff" Size="IconSize.Sm" />
+                }
+                <span class="@TabLabelClass">@Loc["TmDocumentEditor_Revisions"]</span>
+                @if (RevisionsCount > 0)
+                {
+                    <span class="tm-document-side-panel__badge">@RevisionsCount</span>
+                }
+            </button>
+        }
+    </text>;
+
+    private RenderFragment VersionsTab => @<text>
+        @if (ShowVersions)
+        {
+            <button type="button"
+                    @ref="_versionsTab"
+                    title="@(TextTabs ? null : Loc["TmDocumentEditor_Versions"].ToString())"
+                    id="@GetTabId(DocumentSidePanelTab.Versions)"
+                    class="@GetTabClass(DocumentSidePanelTab.Versions)"
+                    role="tab"
+                    aria-selected="@GetTabSelected(DocumentSidePanelTab.Versions)"
+                    aria-controls="@PanelId"
+                    data-testid="@TestId("document-side-panel-tab-versions")"
+                    @onclick="() => SelectTabAsync(DocumentSidePanelTab.Versions)">
+                @if (!TextTabs)
+                {
+                    <TmIcon Name="clock" Size="IconSize.Sm" />
+                }
+                <span class="@TabLabelClass">@Loc["TmDocumentEditor_Versions"]</span>
+                @if (VersionsCount > 0)
+                {
+                    <span class="tm-document-side-panel__badge">@VersionsCount</span>
+                }
+            </button>
+        }
+    </text>;
+
+    private RenderFragment PropertiesTab => @<text>
+        @if (ShowProperties)
+        {
+            <button type="button"
+                    @ref="_propertiesTab"
+                    title="@(TextTabs ? null : Loc["TmDocumentEditor_Properties"].ToString())"
+                    id="@GetTabId(DocumentSidePanelTab.Properties)"
+                    class="@GetTabClass(DocumentSidePanelTab.Properties)"
+                    role="tab"
+                    aria-selected="@GetTabSelected(DocumentSidePanelTab.Properties)"
+                    aria-controls="@PanelId"
+                    data-testid="@TestId("document-side-panel-tab-properties")"
+                    @onclick="() => SelectTabAsync(DocumentSidePanelTab.Properties)">
+                @if (!TextTabs)
+                {
+                    <TmIcon Name="settings" Size="IconSize.Sm" />
+                }
+                <span class="@TabLabelClass">@Loc["TmDocumentEditor_Properties"]</span>
+            </button>
+        }
+    </text>;
+
+    private RenderFragment OutlineTab => @<text>
+        @if (ShowOutline)
+        {
+            <button type="button"
+                    @ref="_outlineTab"
+                    title="@(TextTabs ? null : Loc["TmDocumentEditor_Outline"].ToString())"
+                    id="@GetTabId(DocumentSidePanelTab.Outline)"
+                    class="@GetTabClass(DocumentSidePanelTab.Outline)"
+                    role="tab"
+                    aria-selected="@GetTabSelected(DocumentSidePanelTab.Outline)"
+                    aria-controls="@PanelId"
+                    data-testid="@TestId("document-side-panel-tab-outline")"
+                    @onclick="() => SelectTabAsync(DocumentSidePanelTab.Outline)">
+                @if (!TextTabs)
+                {
+                    <TmIcon Name="list" Size="IconSize.Sm" />
+                }
+                <span class="@TabLabelClass">@Loc["TmDocumentEditor_Outline"]</span>
+            </button>
+        }
+    </text>;
+
+    private RenderFragment PagesTab => @<text>
+        @if (ShowPages)
+        {
+            <button type="button"
+                    @ref="_pagesTab"
+                    title="@(TextTabs ? null : Loc["TmDocumentEditor_Pages"].ToString())"
+                    id="@GetTabId(DocumentSidePanelTab.Pages)"
+                    class="@GetTabClass(DocumentSidePanelTab.Pages)"
+                    role="tab"
+                    aria-selected="@GetTabSelected(DocumentSidePanelTab.Pages)"
+                    aria-controls="@PanelId"
+                    data-testid="@TestId("document-side-panel-tab-pages")"
+                    @onclick="() => SelectTabAsync(DocumentSidePanelTab.Pages)">
+                @if (!TextTabs)
+                {
+                    <TmIcon Name="files" Size="IconSize.Sm" />
+                }
+                <span class="@TabLabelClass">@Loc["TmDocumentEditor_Pages"]</span>
+            </button>
+        }
+    </text>;
+
     private const string PanelId = "document-side-panel-content";
     private ElementReference _commentsTab;
     private ElementReference _revisionsTab;
@@ -186,6 +249,12 @@ else if (ShowEdgeToggle)
 
     /// <summary>Whether the page navigator tab is available.</summary>
     [Parameter] public bool ShowPages { get; set; }
+
+    /// <summary>
+    /// Text-only tabs in the reference order (Properties, Comments, Revisions, Versions) instead of the icon + text
+    /// tabs. The desktop editor sets it: its inspector is a text-tab surface and Outline/Pages live in the left column.
+    /// </summary>
+    [Parameter] public bool TextTabs { get; set; }
 
     /// <summary>Whether to show the right-edge reopen button when closed.</summary>
     [Parameter] public bool ShowEdgeToggle { get; set; } = true;
@@ -222,6 +291,9 @@ else if (ShowEdgeToggle)
 
     /// <summary>Raised when the side panel should reopen.</summary>
     [Parameter] public EventCallback OnOpen { get; set; }
+
+    // Icon tabs keep their label as the accessible name (and a title tooltip); the visible text is the text-tab style's.
+    private string? TabLabelClass => TextTabs ? null : "tm-document-editor__sr-only";
 
     private DocumentSidePanelTab EffectiveActiveTab =>
         IsTabAvailable(ActiveTab)

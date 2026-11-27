@@ -1,0 +1,266 @@
+@namespace Tempo.Blazor.Components.DocumentEditor
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Components.DocumentEditor.Registry
+
+@* The document header (redesign 146c7e1b, DE-1.1): the title and the save state on the left, the document actions on
+   the right and two host slots. Undo / Redo / Save carry the test ids and data-command values they had in the ribbon
+   quick-access group: the editor renders each of them in exactly ONE place (this header, or the ribbon when
+   ShowHeader is false). Built-in actions exist only with the capability behind them (Print to PDF needs an export
+   provider); anything else - Share, Back - is a host slot. *@
+<header class="tm-document-editor__header"
+        role="group"
+        aria-label="@Loc["TmDocumentEditor_HeaderLabel"]"
+        data-focus-region="header"
+        data-testid="@TestId("document-header")">
+    @* The header element is the size container, so the rules that adapt the row answer to ITS width and style the row inside it. *@
+    <div class="tm-document-editor__header-row">
+    <div class="tm-document-editor__header-main">
+        <span class="tm-document-editor__header-icon" aria-hidden="true">
+            <TmIcon Name="file-text" Size="IconSize.Md" />
+        </span>
+        @if (HeaderStart is not null)
+        {
+            <div class="tm-document-editor__header-start" data-testid="@TestId("document-header-start")">@HeaderStart</div>
+        }
+        <div class="tm-document-editor__header-titles">
+            <h2 class="tm-document-editor__document-title" data-testid="@TestId("document-title")">@Title</h2>
+            @if (!string.IsNullOrWhiteSpace(Subtitle))
+            {
+                <span class="tm-document-editor__header-subtitle" data-testid="@TestId("document-header-subtitle")">@Subtitle</span>
+            }
+        </div>
+        @if (!string.IsNullOrWhiteSpace(ModeLabel))
+        {
+            <span class="tm-document-editor__header-mode" data-testid="@TestId("document-header-mode")">@ModeLabel</span>
+        }
+        <span class="tm-document-editor__header-status"
+              data-testid="@TestId("document-header-status")"
+              data-state="@StatusState">
+            @if (StatusState != "none")
+            {
+                <span class="tm-document-editor__header-status-dot" aria-hidden="true"></span>
+                @if (StatusState == "saved")
+                {
+                    <span class="tm-document-editor__header-status-text" data-testid="@TestId("document-last-saved")">@StatusText</span>
+                }
+                else
+                {
+                    <span class="tm-document-editor__header-status-text">@StatusText</span>
+                }
+            }
+        </span>
+    </div>
+
+    <div class="tm-document-editor__header-actions"
+         role="group"
+         aria-label="@Loc["TmDocumentEditor_HeaderActionsLabel"]"
+         data-testid="@TestId("document-header-actions")">
+        <button type="button"
+                class="tm-btn tm-btn-sm tm-btn-ghost tm-btn-icon tm-document-editor__header-button"
+                title="@Loc["TmDocumentEditor_HeaderSearch"]"
+                aria-label="@Loc["TmDocumentEditor_HeaderSearch"]"
+                @onclick="OnSearch"
+                data-testid="@TestId("document-header-search")">
+            <TmIcon Name="search" Size="IconSize.Sm" />
+        </button>
+        <span class="tm-document-editor__header-divider" aria-hidden="true"></span>
+        <button type="button"
+                class="tm-btn tm-btn-sm tm-btn-ghost tm-btn-icon tm-document-editor__header-button"
+                disabled="@(!CanExecuteUndo)"
+                title="@UndoTitle"
+                aria-label="@UndoTitle"
+                aria-keyshortcuts="Control+Z"
+                @onclick='() => ExecuteAsync("undo", OnUndo, !ReadOnly && CanUndo)'
+                data-command="undo"
+                data-testid="@TestId("document-undo")">
+            <TmIcon Name="undo-2" Size="IconSize.Sm" />
+        </button>
+        <button type="button"
+                class="tm-btn tm-btn-sm tm-btn-ghost tm-btn-icon tm-document-editor__header-button"
+                disabled="@(!CanExecuteRedo)"
+                title="@RedoTitle"
+                aria-label="@RedoTitle"
+                aria-keyshortcuts="Control+Y Control+Shift+Z"
+                @onclick='() => ExecuteAsync("redo", OnRedo, !ReadOnly && CanRedo)'
+                data-command="redo"
+                data-testid="@TestId("document-redo")">
+            <TmIcon Name="redo-2" Size="IconSize.Sm" />
+        </button>
+        @if (ShowPrintPreview)
+        {
+            <button type="button"
+                    class="tm-btn tm-btn-sm tm-btn-secondary tm-document-editor__header-button tm-document-editor__header-button--labelled"
+                    disabled="@(!IsCommandEnabled("openPrintPreview", true))"
+                    title="@Loc["TmDocumentEditor_PrintPreview"]"
+                    aria-label="@Loc["TmDocumentEditor_PrintPreview"]"
+                    aria-pressed="@(PrintPreviewActive ? "true" : "false")"
+                    @onclick='() => ExecuteAsync("openPrintPreview", OnOpenPrintPreview, true)'
+                    data-command="openPrintPreview"
+                    data-testid="@TestId("document-header-print-preview")">
+                <TmIcon Name="printer" Size="IconSize.Sm" />
+                <span class="tm-document-editor__header-button-label">@Loc["TmDocumentEditor_PrintPreview"]</span>
+            </button>
+        }
+        @if (CanExportPdf)
+        {
+            <button type="button"
+                    class="tm-btn tm-btn-sm tm-btn-secondary tm-document-editor__header-button tm-document-editor__header-button--labelled"
+                    disabled="@(!IsCommandEnabled("exportPdf", !IsExportingPdf))"
+                    title="@Loc["TmDocumentEditor_PrintToPdf"]"
+                    aria-label="@Loc["TmDocumentEditor_PrintToPdf"]"
+                    aria-busy="@(IsExportingPdf ? "true" : "false")"
+                    @onclick='() => ExecuteAsync("exportPdf", OnExportPdf, !IsExportingPdf)'
+                    data-command="exportPdf"
+                    data-testid="@TestId("document-header-export-pdf")">
+                <TmIcon Name="file-down" Size="IconSize.Sm" />
+                <span class="tm-document-editor__header-button-label">@Loc["TmDocumentEditor_PrintToPdf"]</span>
+            </button>
+        }
+        <button type="button"
+                class="tm-btn tm-btn-sm tm-btn-primary tm-document-editor__header-button tm-document-editor__header-button--labelled"
+                disabled="@(!CanExecuteSave)"
+                title="@SaveTitle"
+                aria-label="@SaveTitle"
+                aria-keyshortcuts="Control+S"
+                @onclick='() => ExecuteAsync("save", OnSave, !ReadOnly && !IsSaving)'
+                data-command="save"
+                data-testid="@TestId("document-save")">
+            <TmIcon Name="save" Size="IconSize.Sm" />
+            <span class="tm-document-editor__header-button-label">@Loc["TmDocumentEditor_Save"]</span>
+        </button>
+        @if (HeaderActions is not null)
+        {
+            <div class="tm-document-editor__header-host-actions" data-testid="@TestId("document-header-host-actions")">@HeaderActions</div>
+        }
+    </div>
+    </div>
+</header>
+
+@code {
+    /// <summary>Document title shown in the header (the editor passes the host's <c>Title</c> or the document metadata title).</summary>
+    [Parameter] public string Title { get; set; } = string.Empty;
+
+    /// <summary>Optional second line / chip next to the title. Hidden when empty.</summary>
+    [Parameter] public string? Subtitle { get; set; }
+
+    /// <summary>Optional mode chip (version preview, template preview). Hidden when empty.</summary>
+    [Parameter] public string? ModeLabel { get; set; }
+
+    /// <summary>Whether the editor is read-only; Save, Undo and Redo are disabled.</summary>
+    [Parameter] public bool ReadOnly { get; set; }
+
+    /// <summary>Whether a save is in flight.</summary>
+    [Parameter] public bool IsSaving { get; set; }
+
+    /// <summary>Whether the document has unsaved changes.</summary>
+    [Parameter] public bool IsDirty { get; set; }
+
+    /// <summary>Timestamp of the latest successful save.</summary>
+    [Parameter] public DateTimeOffset? LastSavedAt { get; set; }
+
+    /// <summary>Whether the undo stack has an entry.</summary>
+    [Parameter] public bool CanUndo { get; set; }
+
+    /// <summary>Whether the redo stack has an entry.</summary>
+    [Parameter] public bool CanRedo { get; set; }
+
+    /// <summary>Description of the next undo step, shown in the tooltip.</summary>
+    [Parameter] public string? NextUndoDescription { get; set; }
+
+    /// <summary>Description of the next redo step, shown in the tooltip.</summary>
+    [Parameter] public string? NextRedoDescription { get; set; }
+
+    /// <summary>The editor command registry; its state wins over the plain flags exactly like in the ribbon.</summary>
+    [Parameter] public DocumentEditorCommandRegistry? CommandRegistry { get; set; }
+
+    /// <summary>Whether the Print preview action is offered.</summary>
+    [Parameter] public bool ShowPrintPreview { get; set; }
+
+    /// <summary>Whether the print preview is currently active.</summary>
+    [Parameter] public bool PrintPreviewActive { get; set; }
+
+    /// <summary>Whether Print to PDF is available (an export provider exists and the user may export). The button is not rendered otherwise.</summary>
+    [Parameter] public bool CanExportPdf { get; set; }
+
+    /// <summary>Whether a PDF export is in flight.</summary>
+    [Parameter] public bool IsExportingPdf { get; set; }
+
+    /// <summary>Host content before the title block (a back link, a logo).</summary>
+    [Parameter] public RenderFragment? HeaderStart { get; set; }
+
+    /// <summary>Host actions after the built-in ones (Share).</summary>
+    [Parameter] public RenderFragment? HeaderActions { get; set; }
+
+    /// <summary>Raised by the Search button; the editor opens its find panel.</summary>
+    [Parameter] public EventCallback OnSearch { get; set; }
+
+    /// <summary>Raised by the Undo button.</summary>
+    [Parameter] public EventCallback OnUndo { get; set; }
+
+    /// <summary>Raised by the Redo button.</summary>
+    [Parameter] public EventCallback OnRedo { get; set; }
+
+    /// <summary>Raised by the Save button.</summary>
+    [Parameter] public EventCallback OnSave { get; set; }
+
+    /// <summary>Raised by the Print preview button.</summary>
+    [Parameter] public EventCallback OnOpenPrintPreview { get; set; }
+
+    /// <summary>Raised by the Print to PDF button.</summary>
+    [Parameter] public EventCallback OnExportPdf { get; set; }
+
+    private string StatusState => IsSaving
+        ? "saving"
+        : IsDirty
+            ? "dirty"
+            : LastSavedAt is not null
+                ? "saved"
+                : "none";
+
+    private string StatusText => StatusState switch
+    {
+        "saving" => Loc["TmDocumentEditor_Saving"],
+        "dirty" => Loc["TmDocumentEditor_UnsavedChanges"],
+        "saved" => Loc["TmDocumentEditor_LastSavedAt", LastSavedAt!.Value.ToLocalTime().ToString("HH:mm:ss", System.Globalization.CultureInfo.CurrentCulture)],
+        _ => string.Empty
+    };
+
+    private bool CanExecuteSave => CommandRegistry?.GetState("save")?.IsEnabled ?? (!ReadOnly && !IsSaving);
+
+    private bool CanExecuteUndo => !ReadOnly && (CanUndo || (CommandRegistry?.GetState("undo")?.IsEnabled ?? false));
+
+    private bool CanExecuteRedo => !ReadOnly && (CanRedo || (CommandRegistry?.GetState("redo")?.IsEnabled ?? false));
+
+    private bool IsCommandEnabled(string commandName, bool fallback)
+        => CommandRegistry is null ? fallback : CommandRegistry.GetState(commandName)?.IsEnabled ?? false;
+
+    private Task ExecuteAsync(string commandName, EventCallback callback, bool fallback)
+        => IsCommandEnabled(commandName, fallback) ? callback.InvokeAsync() : Task.CompletedTask;
+
+    private string SaveTitle => ReadOnly
+        ? DisabledTitle(Loc["TmDocumentEditor_Save"], Loc["TmDocumentEditor_CommandDisabledReadOnly"])
+        : IsSaving
+            ? DisabledTitle(Loc["TmDocumentEditor_Save"], Loc["TmDocumentEditor_CommandDisabledBusy"])
+            : Loc["TmDocumentEditor_Save"];
+
+    private string UndoTitle => UndoRedoTitle(Loc["TmDocumentEditor_Undo"], CanUndo, NextUndoDescription);
+
+    private string RedoTitle => UndoRedoTitle(Loc["TmDocumentEditor_Redo"], CanRedo, NextRedoDescription);
+
+    private string UndoRedoTitle(string label, bool canExecute, string? description)
+    {
+        if (ReadOnly)
+        {
+            return DisabledTitle(label, Loc["TmDocumentEditor_CommandDisabledReadOnly"]);
+        }
+
+        if (!canExecute)
+        {
+            return DisabledTitle(label, Loc["TmDocumentEditor_CommandDisabledUnavailable"]);
+        }
+
+        return string.IsNullOrWhiteSpace(description) ? label : $"{label}: {description}";
+    }
+
+    private static string DisabledTitle(string label, string reason) => $"{label}: {reason}";
+}

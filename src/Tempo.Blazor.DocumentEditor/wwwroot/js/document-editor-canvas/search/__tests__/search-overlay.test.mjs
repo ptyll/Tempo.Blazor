@@ -14,6 +14,8 @@ function fakeElement(tag) {
         getAttribute(name) { return this.attributes.has(name) ? this.attributes.get(name) : null; },
         appendChild(child) { this.children.push(child); child.parent = this; return child; },
         replaceChildren() { this.children.length = 0; },
+        removeAttribute(name) { this.attributes.delete(name); },
+        closest(selector) { return this.host && selector === '.tm-document-canvas-engine-host' ? this.host : null; },
         remove() { if (this.parent) { this.parent.children = this.parent.children.filter(c => c !== this); } },
         querySelector(selector) {
             const testId = /data-testid="([^"]+)"/.exec(selector)?.[1];
@@ -29,8 +31,10 @@ function setup(zoomScale = null) {
         pageElement.setAttribute('data-canvas-page-zoom-scale', zoomScale);
     }
     const root = fakeElement('div');
+    const host = fakeElement('div');
+    root.host = host;
     const canvasStack = { root, pages: new Map([['0', { pageElement }]]) };
-    return { overlay: createCanvasSearchOverlay({ document: doc, canvasStack }), pageElement, root };
+    return { overlay: createCanvasSearchOverlay({ document: doc, canvasStack }), pageElement, root, host };
 }
 
 // REAL shapes. The display-list textRun commands carry flat geometry AND start/end offsets (this is what the
@@ -115,4 +119,41 @@ test('search layer sits above the selection layer (z-index 12)', () => {
     overlay.update({ activeIndex: 0, matches: [{ index: 0, blockId: 'p1', start: 0, end: 4 }] }, displayListRender);
 
     assert.equal(Number(pageElement.children[0].style.zIndex) > 12, true);
+});
+
+test('the engine host carries data-canvas-search-active while matches exist, and loses it on clear and destroy', () => {
+    const { overlay, host } = setup();
+    assert.equal(host.getAttribute('data-canvas-search-active'), null);
+
+    overlay.update({ activeIndex: 0, matches: [{ index: 0, blockId: 'p1', start: 0, end: 4 }] }, displayListRender);
+    assert.equal(host.getAttribute('data-canvas-search-active'), 'true');
+
+    overlay.update({ activeIndex: 0, matches: [] }, displayListRender);
+    assert.equal(host.getAttribute('data-canvas-search-active'), null, 'a search without matches releases the flag');
+
+    overlay.update({ activeIndex: 0, matches: [{ index: 0, blockId: 'p1', start: 0, end: 4 }] }, displayListRender);
+    overlay.clear();
+    assert.equal(host.getAttribute('data-canvas-search-active'), null);
+
+    overlay.update({ activeIndex: 0, matches: [{ index: 0, blockId: 'p1', start: 0, end: 4 }] }, displayListRender);
+    overlay.destroy();
+    assert.equal(host.getAttribute('data-canvas-search-active'), null);
+});
+
+test('the flag falls back to the root when no engine host ancestor exists (detached stack)', () => {
+    const { overlay, root } = setup();
+    root.host = null;
+    overlay.update({ activeIndex: 0, matches: [{ index: 0, blockId: 'p1', start: 0, end: 4 }] }, displayListRender);
+    assert.equal(root.getAttribute('data-canvas-search-active'), 'true');
+    overlay.clear();
+    assert.equal(root.getAttribute('data-canvas-search-active'), null);
+});
+
+test('the flag is raised only while a highlight is really painted (matches without geometry keep the selection visible)', () => {
+    const { overlay, host } = setup();
+    overlay.update({ activeIndex: 0, matches: [{ index: 0, blockId: 'p1', start: 0, end: 5 }] }, {
+        selectionLayout: { textRects: [{ id: 'r1', blockId: 'p1', pageIndex: 0, rect: { x: 1, y: 2, width: 3, height: 4 } }] },
+    });
+
+    assert.equal(host.getAttribute('data-canvas-search-active'), null, 'no painted highlight: the selection stays the only cue');
 });

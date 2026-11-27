@@ -91,6 +91,12 @@
       "isRequired": false,
       "default": "\"100%\"",
       "description": "Current zoom label."
+    },
+    {
+      "name": "ShowLastSaved",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the last-saved text is shown here. Defaults to true; the editor passes false while its header is visible, because the header owns the save state then and the same text must not render twice."
     }
   ]
 }

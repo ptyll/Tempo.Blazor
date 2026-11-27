@@ -1,0 +1,184 @@
+{
+  "itemName": "TmDocumentEditorHeader",
+  "kind": "Component",
+  "category": "Document Editor",
+  "description": "The document header of TmDocumentEditor (redesign DE-1.1): a document icon, a HeaderStart host slot, the title (and an optional subtitle), a version / template preview chip, the save state (Saving... / Unsaved changes / Last saved HH:mm:ss, one dot colour per state) and, on the right, the document actions: Search (opens the editor's find panel), Undo, Redo, Print preview, Print to PDF (rendered only when an export provider exists - G9: a built-in action exists only with the capability behind it) and the primary Save, followed by the HeaderActions host slot (Share and similar - the editor offers no Share of its own). Undo / Redo / Save keep the test ids document-undo / document-redo / document-save and the data-command values they had in the ribbon quick-access group, and render exactly once: here, or in the ribbon when TmDocumentEditor.ShowHeader is false. The header is its own inline-size container (tm-doc-editor-header): below 1024 px it drops the subtitle and the button labels (the accessible names stay), below 640 px it also drops the icon and the status text. It sits outside the editor's main size container because host slots may open fixed overlays.",
+  "packageId": "Tempo.Blazor.DocumentEditor",
+  "namespace": "Tempo.Blazor.Components.DocumentEditor",
+  "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentEditorHeader.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.DocumentEditor"
+  ],
+  "parameters": [
+    {
+      "name": "Title",
+      "type": "string",
+      "isRequired": false,
+      "description": "Document title shown in the header (the editor passes its Title parameter or the document metadata title)."
+    },
+    {
+      "name": "Subtitle",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional second line next to the title. Hidden when empty."
+    },
+    {
+      "name": "ModeLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional mode chip (version preview, template preview). Hidden when empty."
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the editor is read-only; Save, Undo and Redo are disabled."
+    },
+    {
+      "name": "IsSaving",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether a save is in flight."
+    },
+    {
+      "name": "IsDirty",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the document has unsaved changes."
+    },
+    {
+      "name": "LastSavedAt",
+      "type": "DateTimeOffset?",
+      "isRequired": false,
+      "description": "Timestamp of the latest successful save."
+    },
+    {
+      "name": "CanUndo",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the undo stack has an entry."
+    },
+    {
+      "name": "CanRedo",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the redo stack has an entry."
+    },
+    {
+      "name": "NextUndoDescription",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Description of the next undo step, shown in the tooltip."
+    },
+    {
+      "name": "NextRedoDescription",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Description of the next redo step, shown in the tooltip."
+    },
+    {
+      "name": "CommandRegistry",
+      "type": "DocumentEditorCommandRegistry?",
+      "isRequired": false,
+      "description": "The editor command registry; its state wins over the plain flags exactly like in the ribbon."
+    },
+    {
+      "name": "ShowPrintPreview",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the Print preview action is offered."
+    },
+    {
+      "name": "PrintPreviewActive",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the print preview is currently active."
+    },
+    {
+      "name": "CanExportPdf",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether Print to PDF is available (an export provider exists and the user may export). The button is not rendered otherwise."
+    },
+    {
+      "name": "IsExportingPdf",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether a PDF export is in flight."
+    },
+    {
+      "name": "HeaderStart",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Host content before the title block (a back link, a logo)."
+    },
+    {
+      "name": "HeaderActions",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Host actions after the built-in ones (Share)."
+    },
+    {
+      "name": "OnSearch",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised by the Search button; the editor opens its find panel."
+    },
+    {
+      "name": "OnUndo",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised by the Undo button."
+    },
+    {
+      "name": "OnRedo",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised by the Redo button."
+    },
+    {
+      "name": "OnSave",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised by the Save button."
+    },
+    {
+      "name": "OnOpenPrintPreview",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised by the Print preview button."
+    },
+    {
+      "name": "OnExportPdf",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised by the Print to PDF button."
+    }
+  ],
+  "cssClasses": [
+    "tm-document-editor__header",
+    "tm-document-editor__header-main",
+    "tm-document-editor__header-icon",
+    "tm-document-editor__header-start",
+    "tm-document-editor__header-titles",
+    "tm-document-editor__document-title",
+    "tm-document-editor__header-subtitle",
+    "tm-document-editor__header-mode",
+    "tm-document-editor__header-status",
+    "tm-document-editor__header-status-dot",
+    "tm-document-editor__header-status-text",
+    "tm-document-editor__header-actions",
+    "tm-document-editor__header-divider",
+    "tm-document-editor__header-host-actions",
+    "tm-document-editor__header-button",
+    "tm-document-editor__header-button--labelled",
+    "tm-document-editor__header-button-label"
+  ],
+  "examples": [
+    {
+      "title": "Host slots through TmDocumentEditor",
+      "code": "<TmDocumentEditor DocumentId=\"@id\" Provider=\"@provider\"\n                  Title=\"Project Aurora\" Subtitle=\"Draft proposal\"\n                  PdfExportProvider=\"@pdf\">\n    <!-- RenderFragment parameters are passed as attributes -->\n</TmDocumentEditor>\n\n@code {\n    RenderFragment ShareAction => @<button class=\"tm-btn tm-btn-sm tm-btn-primary\">Share</button>;\n}"
+    }
+  ]
+}

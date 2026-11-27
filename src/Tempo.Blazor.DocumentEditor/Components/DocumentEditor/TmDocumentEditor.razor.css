@@ -256,37 +256,39 @@
     opacity: 0.66;
 }
 
-@media (max-width: 48rem) {
-    .tm-document-editor__state {
-        min-block-size: min(34rem, calc(100vh - 6rem));
-        padding: var(--tm-space-4);
-    }
+/* The loading / error states and the print-preview bar sit outside the size container (they replace or precede the
+   workspace), so they follow the resolved layout the root publishes. */
+.tm-document-editor[data-layout="mobile"] .tm-document-editor__state {
+    min-block-size: min(34rem, calc(100vh - 6rem));
+    padding: var(--tm-space-4);
+}
 
-    .tm-document-editor__empty {
-        min-block-size: 16rem;
-        margin: var(--tm-space-2) auto;
-        padding: var(--tm-space-4);
-    }
+.tm-document-editor[data-layout="mobile"] .tm-document-editor__empty {
+    min-block-size: 16rem;
+    margin: var(--tm-space-2) auto;
+    padding: var(--tm-space-4);
+}
 
-    .tm-document-editor__print-preview-actions {
-        align-items: stretch;
-        flex-direction: column;
-        margin-inline: var(--tm-space-2);
-    }
+.tm-document-editor[data-layout="mobile"] .tm-document-editor__print-preview-actions {
+    align-items: stretch;
+    flex-direction: column;
+    margin-inline: var(--tm-space-2);
+}
 
-    .tm-document-editor__print-preview-title,
-    .tm-document-editor__print-preview-buttons {
-        inline-size: 100%;
-    }
+.tm-document-editor[data-layout="mobile"] .tm-document-editor__print-preview-title,
+.tm-document-editor[data-layout="mobile"] .tm-document-editor__print-preview-buttons {
+    inline-size: 100%;
+}
 
-    .tm-document-editor__print-preview-buttons {
-        justify-content: stretch;
-    }
+.tm-document-editor[data-layout="mobile"] .tm-document-editor__print-preview-buttons {
+    justify-content: stretch;
+}
 
-    .tm-document-editor__print-preview-button {
-        flex: 1 1 10rem;
-    }
+.tm-document-editor[data-layout="mobile"] .tm-document-editor__print-preview-button {
+    flex: 1 1 10rem;
+}
 
+@container tm-doc-editor (width < 768px) {
     .tm-document-editor__content-control-popover {
         inset-block-start: var(--tm-space-3);
         inset-inline: var(--tm-space-3);

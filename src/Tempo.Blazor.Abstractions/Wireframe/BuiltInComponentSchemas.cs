@@ -3339,6 +3339,11 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             [
                 P("title",     "Title",      PropType.String, "Document", cat: "Content"),
                 P("showRuler", "Show Ruler", PropType.Bool,   true,       cat: "Appearance"),
+                // Maps to TmDocumentEditor.ShowHeader (title, save state and document actions above the ribbon). Opt-in in the
+                // wireframe so existing documents keep their look; the live editor defaults to a visible header.
+                P("showHeader",     "Show Header",     PropType.Bool, false, cat: "Appearance"),
+                // The desktop layout's left column (document structure + pages). A tablet / phone container has none.
+                P("showNavigation", "Show Navigation", PropType.Bool, false, cat: "Appearance"),
             ]
         };
 

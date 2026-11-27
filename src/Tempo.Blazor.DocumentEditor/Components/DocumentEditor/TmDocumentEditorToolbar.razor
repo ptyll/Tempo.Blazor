@@ -17,6 +17,7 @@
         aria-label="@Loc["TmDocumentEditor_ToolbarLabel"]"
         hidden="@(ToolbarMode == DocumentToolbarMode.DistractionFree)"
         data-testid="@TestId("document-toolbar")"
+        data-focus-region="ribbon"
         data-keyboard-mode="@_keyboardMode.ToString().ToLowerInvariant()"
         data-toolbar-mode="@ToolbarMode.ToString()"
         data-active-ribbon-tab="@ActiveRibbonTabDataValue"
@@ -169,45 +170,48 @@
     </div>
 
     <div class="tm-document-editor__ribbon-commands-wrapper">
-    <section class="tm-document-editor__ribbon-group tm-document-editor__ribbon-group--quick-access"
-             aria-label="@Loc["TmDocumentEditor_GroupClipboard"]">
-        <button class="tm-document-editor__ribbon-button"
-                type="button"
-                disabled="@(!CanExecuteSave)"
-                title="@SaveTitle"
-                aria-label="@SaveTitle"
-                aria-disabled="@AriaDisabled(!CanExecuteSave)"
-                @onclick='() => ExecuteToolbarCommandAsync("save", OnSave, !ReadOnly && !IsSaving)'
-                data-command="save"
-                data-testid="@TestId("document-save")">
-            <TmIcon Name="save" Size="IconSize.Sm" />
-            <span>@Loc["TmDocumentEditor_Save"]</span>
-        </button>
-        <button class="tm-document-editor__ribbon-button"
-                type="button"
-                disabled="@(!CanExecuteUndo)"
-                title="@UndoTitle"
-                aria-label="@UndoTitle"
-                aria-disabled="@AriaDisabled(!CanExecuteUndo)"
-                @onclick='() => ExecuteToolbarCommandAsync("undo", OnUndo, !ReadOnly && CanUndo)'
-                data-command="undo"
-                data-testid="@TestId("document-undo")">
-            <TmIcon Name="undo-2" Size="IconSize.Sm" />
-            <span>@Loc["TmDocumentEditor_Undo"]</span>
-        </button>
-        <button class="tm-document-editor__ribbon-button"
-                type="button"
-                disabled="@(!CanExecuteRedo)"
-                title="@RedoTitle"
-                aria-label="@RedoTitle"
-                aria-disabled="@AriaDisabled(!CanExecuteRedo)"
-                @onclick='() => ExecuteToolbarCommandAsync("redo", OnRedo, !ReadOnly && CanRedo)'
-                data-command="redo"
-                data-testid="@TestId("document-redo")">
-            <TmIcon Name="redo-2" Size="IconSize.Sm" />
-            <span>@Loc["TmDocumentEditor_Redo"]</span>
-        </button>
-    </section>
+    @if (ShowQuickAccess)
+    {
+        <section class="tm-document-editor__ribbon-group tm-document-editor__ribbon-group--quick-access"
+                 aria-label="@Loc["TmDocumentEditor_GroupClipboard"]">
+            <button class="tm-document-editor__ribbon-button"
+                    type="button"
+                    disabled="@(!CanExecuteSave)"
+                    title="@SaveTitle"
+                    aria-label="@SaveTitle"
+                    aria-disabled="@AriaDisabled(!CanExecuteSave)"
+                    @onclick='() => ExecuteToolbarCommandAsync("save", OnSave, !ReadOnly && !IsSaving)'
+                    data-command="save"
+                    data-testid="@TestId("document-save")">
+                <TmIcon Name="save" Size="IconSize.Sm" />
+                <span>@Loc["TmDocumentEditor_Save"]</span>
+            </button>
+            <button class="tm-document-editor__ribbon-button"
+                    type="button"
+                    disabled="@(!CanExecuteUndo)"
+                    title="@UndoTitle"
+                    aria-label="@UndoTitle"
+                    aria-disabled="@AriaDisabled(!CanExecuteUndo)"
+                    @onclick='() => ExecuteToolbarCommandAsync("undo", OnUndo, !ReadOnly && CanUndo)'
+                    data-command="undo"
+                    data-testid="@TestId("document-undo")">
+                <TmIcon Name="undo-2" Size="IconSize.Sm" />
+                <span>@Loc["TmDocumentEditor_Undo"]</span>
+            </button>
+            <button class="tm-document-editor__ribbon-button"
+                    type="button"
+                    disabled="@(!CanExecuteRedo)"
+                    title="@RedoTitle"
+                    aria-label="@RedoTitle"
+                    aria-disabled="@AriaDisabled(!CanExecuteRedo)"
+                    @onclick='() => ExecuteToolbarCommandAsync("redo", OnRedo, !ReadOnly && CanRedo)'
+                    data-command="redo"
+                    data-testid="@TestId("document-redo")">
+                <TmIcon Name="redo-2" Size="IconSize.Sm" />
+                <span>@Loc["TmDocumentEditor_Redo"]</span>
+            </button>
+        </section>
+    }
     <div id="@RibbonPanelId"
          class="tm-document-editor__ribbon-groups"
          role="tabpanel"
@@ -2358,7 +2362,7 @@
     {
         var hash = new HashCode();
         // Value parameters.
-        hash.Add((int)ToolbarMode); hash.Add(ReadOnly); hash.Add(IsSaving); hash.Add(IsDirty);
+        hash.Add((int)ToolbarMode); hash.Add(ShowQuickAccess); hash.Add(ReadOnly); hash.Add(IsSaving); hash.Add(IsDirty);
         hash.Add(SaveMessage); hash.Add(LastSavedAt); hash.Add(CanUndo); hash.Add(CanRedo);
         hash.Add(NextUndoDescription); hash.Add(NextRedoDescription); hash.Add(TrackChangesEnabled);
         hash.Add(CanTrackChanges); hash.Add(IsDocumentProtected); hash.Add(ShowBlocks);
@@ -2601,6 +2605,13 @@
 
     /// <summary>Whether the editor is currently saving.</summary>
     [Parameter] public bool IsSaving { get; set; }
+
+    /// <summary>
+    /// Whether the Save / Undo / Redo quick-access group is rendered in the ribbon. Defaults to <c>true</c> (a standalone toolbar and
+    /// <c>TmDocumentEditor</c> with <c>ShowHeader=false</c>); the editor passes <c>false</c> while its header owns those three
+    /// commands, so each of them renders exactly once.
+    /// </summary>
+    [Parameter] public bool ShowQuickAccess { get; set; } = true;
 
     /// <summary>Whether the document has local unsaved changes.</summary>
     [Parameter] public bool IsDirty { get; set; }

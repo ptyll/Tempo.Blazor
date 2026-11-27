@@ -23,6 +23,14 @@ export function createCanvasSearchOverlay(options = {}) {
             }
         }
 
+        // The active match IS the selection while the user steps through results: the engine host carries a flag so the
+        // stylesheet can hide the blue selection rectangle (selection state itself stays untouched) and the amber match is
+        // not muddied by the blue wash stacked beneath it. Only while a highlight is really painted - hiding the selection
+        // with nothing to replace it would make the match invisible.
+        if (rectCount > 0) {
+            engineHost()?.setAttribute?.('data-canvas-search-active', 'true');
+        }
+
         canvasStack.root?.setAttribute?.('data-canvas-search-match-count', String(matches.length));
         canvasStack.root?.setAttribute?.('data-canvas-search-highlight-count', String(rectCount));
         canvasStack.root?.setAttribute?.('data-canvas-search-active-index', String(activeIndex));
@@ -46,6 +54,13 @@ export function createCanvasSearchOverlay(options = {}) {
 
         canvasStack.root?.setAttribute?.('data-canvas-search-match-count', '0');
         canvasStack.root?.setAttribute?.('data-canvas-search-highlight-count', '0');
+        engineHost()?.removeAttribute?.('data-canvas-search-active');
+    }
+
+    /** The element carrying .tm-document-canvas-engine-host (the root's ancestor); the root itself when it is detached. */
+    function engineHost() {
+        const root = canvasStack?.root;
+        return root?.closest?.('.tm-document-canvas-engine-host') || root || null;
     }
 
     function appendHighlight(fragment, active) {

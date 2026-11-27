@@ -71,6 +71,12 @@
       "type": "string?",
       "isRequired": false,
       "description": "Optional version status message."
+    },
+    {
+      "name": "ShowClose",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the panel renders its own close button. Defaults to true; the editor passes false while the panel is hosted in the docked side panel, whose own close button already does the same thing (two X in one corner)."
     }
   ]
 }

@@ -403,7 +403,7 @@
     }
 }
 
-@media (max-width: 48rem) {
+@container tm-doc-editor (width < 768px) {
     .tm-document-canvas-engine-host {
         --tm-document-canvas-touch-target: 2.75rem;
     }

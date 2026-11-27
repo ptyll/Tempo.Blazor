@@ -1,13 +1,30 @@
 @namespace Tempo.Blazor.Components.DocumentEditor
 @inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Abstractions.Layout
 @using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Components.Layout
 @using Tempo.Blazor.Components.DocumentEditor.Features
 @using Tempo.Blazor.DocumentEditor.Models
 
-<div class="@RootClass"
+@* DE-1.1: the editor measures ITS OWN container (LayoutMode=Auto) through the shared TmLayoutObserver, never the
+   viewport - a 390 px host on a wide screen is a phone layout. The observer root is a plain block that only reports a
+   width (IsContainer=false); the CSS size container is .tm-document-editor__main INSIDE the root, deliberately NOT the
+   root: a container is the containing block of every fixed descendant, and the ribbon pickers, the dialogs and the
+   floating root all position against the viewport. The resolved mode is data-layout on the root. *@
+<TmLayoutObserver LayoutMode="LayoutMode"
+                  ResolvedLayoutChanged="OnResolvedLayoutChangedAsync"
+                  ContainerWidthChanged="OnContainerWidthChangedAsync"
+                  IsContainer="false"
+                  Class="tm-document-editor-host">
+<LayoutContent Context="lay">
+@{ ApplyLayout(lay.Resolved); }
+<div @ref="_rootElement"
+     class="@RootClass"
      role="application"
      aria-label="@Loc["TmDocumentEditor_EditorLabel"]"
      tabindex="0"
+     data-layout="@lay.CssModifier"
+     data-layout-forced="@(LayoutMode != TmLayoutMode.Auto ? "true" : null)"
      data-can-view-audit="@CanViewAudit.ToString()"
      data-ribbon-keyboard-mode="@_ribbonKeyboardMode.ToString().ToLowerInvariant()"
      data-blazor-render-count="@NextBlazorRenderCount"
@@ -61,12 +78,41 @@
     }
     else
     {
+        @if (HeaderVisible)
+        {
+            <TmDocumentEditorHeader Title="@HeaderTitle"
+                                    Subtitle="@Subtitle"
+                                    ModeLabel="@HeaderModeLabel"
+                                    ReadOnly="@EffectiveReadOnly"
+                                    IsSaving="@_isSaving"
+                                    IsDirty="@_isDirty"
+                                    LastSavedAt="@_lastSavedAt"
+                                    CanUndo="@EffectiveUndoState.CanUndo"
+                                    CanRedo="@EffectiveUndoState.CanRedo"
+                                    NextUndoDescription="@EffectiveUndoState.NextUndoDescription"
+                                    NextRedoDescription="@EffectiveUndoState.NextRedoDescription"
+                                    CommandRegistry="@_commandRegistry"
+                                    ShowPrintPreview="true"
+                                    PrintPreviewActive="@CanvasPrintPreviewActive"
+                                    CanExportPdf="@CanExportPdf"
+                                    IsExportingPdf="@_isExportingPdf"
+                                    HeaderStart="@HeaderStart"
+                                    HeaderActions="@HeaderActions"
+                                    OnSearch="OpenFindFromChromeAsync"
+                                    OnUndo="UndoAsync"
+                                    OnRedo="RedoAsync"
+                                    OnSave="SaveAsync"
+                                    OnOpenPrintPreview="OpenCanvasPrintPreviewAsync"
+                                    OnExportPdf="ExportPdfAsync" />
+        }
+
         @if (ShowToolbar && !CanvasReadingMode)
         {
             <TmDocumentEditorToolbar @ref="_toolbar"
                                      CommandRegistry="@_commandRegistry"
                                      ToolbarMode="@ToolbarMode"
                                      ReadOnly="@EffectiveReadOnly"
+                                     ShowQuickAccess="@(!HeaderVisible)"
                                      IsSaving="@_isSaving"
                                      IsDirty="@_isDirty"
                                      SaveMessage="@_saveMessage"
@@ -315,11 +361,6 @@
                                   OnExecuteCommand="ExecuteCommandPaletteCommandAsync"
                                   OnClose="CloseCommandPaletteAsync" />
 
-        <TmDocumentReviewSummary PendingRevisionCount="@PendingRevisionCount"
-                                 OpenCommentCount="@OpenCommentCount"
-                                 OpenComments="OpenCommentsPanelAsync"
-                                 OpenRevisions="OpenRevisionsPanelAsync" />
-
         @if (CanvasPrintPreviewActive)
         {
             <section class="tm-document-editor__print-preview-actions"
@@ -361,6 +402,7 @@
             </section>
         }
 
+        <div class="tm-document-editor__main" data-testid="@TestId("document-editor-main")">
         <div class="@WorkspaceClass"
              data-testid="@TestId("document-editor-workspace")"
              data-side-panel-state="@(_sidePanelOpen ? "open" : "closed")"
@@ -390,12 +432,38 @@
                                          OnHighlightedIndexChanged="SetTokenInsertHighlight" />
                 </section>
             }
-            <section class="tm-document-editor__surface" aria-label="@Loc["TmDocumentEditor_DocumentSurfaceLabel"]">
+            @if (IsDesktopLayout)
+            {
+                <nav class="tm-document-editor__navigation"
+                     data-region="nav"
+                     data-focus-region="nav"
+                     data-collapsed="@(NavCollapsed ? "true" : "false")"
+                     aria-label="@Loc["TmDocumentEditor_NavigationLabel"]">
+                    <TmDocumentNavigationPanel @ref="_navigationPanel"
+                                               Outline="@_documentOutline"
+                                               ActiveBlockId="@_activeHeadingBlockId"
+                                               Metrics="@_pageMetrics"
+                                               ActivePageIndex="@_activePageIndex"
+                                               Collapsed="@NavCollapsed"
+                                               CollapsedChanged="SetNavigationCollapsedAsync"
+                                               OnNavigateToBlock="NavigateToBlockAsync"
+                                               OnNavigateToPage="NavigateToPageAsync"
+                                               OnSearch="OpenFindFromChromeAsync" />
+                </nav>
+            }
+            <section class="tm-document-editor__surface"
+                     data-region="doc"
+                     data-focus-region="doc"
+                     aria-label="@Loc["TmDocumentEditor_DocumentSurfaceLabel"]">
+                @* Internal slot of the doc region (DE-1.1): banners that belong to the document, not to the whole
+                   editor - today the review summary; the version preview and the diff land here in later phases. *@
+                <div class="tm-document-editor__doc-banners" data-testid="@TestId("document-doc-banners")">
+                    <TmDocumentReviewSummary PendingRevisionCount="@PendingRevisionCount"
+                                             OpenCommentCount="@OpenCommentCount"
+                                             OpenComments="OpenCommentsPanelAsync"
+                                             OpenRevisions="OpenRevisionsPanelAsync" />
+                </div>
                 <article class="tm-document-editor__page-surface" aria-label="@Loc["TmDocumentEditor_PageLabel"]">
-                    <header class="tm-document-editor__page-header">
-                        <h2 class="tm-document-editor__document-title">@DocumentTitle</h2>
-                        <span class="tm-document-editor__status">@DocumentStatus</span>
-                    </header>
 
                         <TmDocumentCanvasEngineHost @ref="_canvasHost"
                                                     Document="@DisplayedDocument"
@@ -648,16 +716,18 @@
                 </article>
             </section>
 
+            <div class="tm-document-editor__inspector" data-region="inspector" data-focus-region="inspector">
             <TmDocumentSidePanel @ref="_sidePanel"
                                  IsOpen="@_sidePanelOpen"
+                                 TextTabs="@IsDesktopLayout"
                                  ActiveTab="@ActiveSidePanelTab"
                                  ActiveTabChanged="SetSidePanelTabAsync"
                                  ShowComments="@IsFeatureEnabled(DocumentEditorFeatureNames.Comments)"
                                  ShowRevisions="@(IsFeatureEnabled(DocumentEditorFeatureNames.TrackChanges) || IsCanvasSuggestionMode)"
                                  ShowVersions="@ShowVersionHistory"
                                  ShowProperties="true"
-                                 ShowOutline="true"
-                                 ShowPages="true"
+                                 ShowOutline="@(!IsDesktopLayout)"
+                                 ShowPages="@(!IsDesktopLayout)"
                                  CommentsCount="@_comments.Count"
                                  RevisionsCount="@PendingRevisionCount"
                                  VersionsCount="@_versions.Count"
@@ -720,7 +790,8 @@
                     }
                 </RevisionsContent>
                 <VersionsContent>
-                    <TmDocumentVersionPanel Versions="@_versions"
+                    <TmDocumentVersionPanel ShowClose="false"
+                                            Versions="@_versions"
                                             IsLoading="@_isLoadingVersions"
                                             ReadOnly="@(!CanCreateVersion)"
                                             StatusMessage="@_versionMessage"
@@ -819,9 +890,11 @@
                                              OnNavigateToPage="NavigateToPageAsync" />
                 </PagesContent>
             </TmDocumentSidePanel>
+            </div>
         </div>
 
         <TmDocumentEditorStatusBar IsDirty="@_isDirty"
+                                   ShowLastSaved="@(!HeaderVisible)"
                                    PendingCount="@_pendingActions.Count"
                                    PendingMessage="@PendingStatusMessage"
                                    SaveMessage="@_saveMessage"
@@ -834,6 +907,7 @@
                                    ZoomLabel="@ZoomStatusLabel"
                                    RuntimeMessage="@_runtimeMessage"
                                    RuntimeFailed="@_runtimeFailed" />
+        </div>
 
         <div class="tm-document-editor__floating-root"
              data-testid="@TestId("document-floating-root")"
@@ -1363,6 +1437,8 @@
         </div>
     }
 </div>
+</LayoutContent>
+</TmLayoutObserver>
 
 @code {
     private RenderFragment RetryAction => @<button type="button"

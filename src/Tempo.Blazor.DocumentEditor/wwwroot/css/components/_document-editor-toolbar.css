@@ -726,77 +726,75 @@
     }
 }
 
-@media (max-width: 64rem) {
-    .tm-document-editor__ribbon-groups {
-        flex-wrap: nowrap;
-        overflow-x: auto;
-        overflow-y: hidden;
-        padding-bottom: var(--tm-space-1);
-        scrollbar-width: thin;
-    }
-
-    .tm-document-editor__ribbon-group {
-        border-right: 1px solid var(--tm-color-border);
-    }
+/* DE-1.1: the ribbon sits OUTSIDE the editor's size container (its pickers and backdrops are position:fixed and a container
+   would become their containing block), so it follows the resolved layout the editor publishes as data-layout, not the viewport. */
+:where(.tm-document-editor:not([data-layout="desktop"])) .tm-document-editor__ribbon-groups {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: var(--tm-space-1);
+    scrollbar-width: thin;
 }
 
-@media (max-width: 40rem) {
-    .tm-document-editor__ribbon {
-        gap: var(--tm-space-1);
-        padding: var(--tm-space-1);
-    }
+:where(.tm-document-editor:not([data-layout="desktop"])) .tm-document-editor__ribbon-group {
+    border-right: 1px solid var(--tm-color-border);
+}
 
-    .tm-document-editor__ribbon-tab {
-        min-width: 3.25rem;
-        padding: 0 var(--tm-space-2);
-        font-size: var(--tm-font-size-xs);
-    }
+:where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__ribbon {
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-1);
+}
 
-    .tm-document-editor__ribbon-group {
-        gap: 0;
-        min-height: 2.75rem;
-        padding: 0 var(--tm-space-1);
-    }
+:where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__ribbon-tab {
+    min-width: 3.25rem;
+    padding: 0 var(--tm-space-2);
+    font-size: var(--tm-font-size-xs);
+}
 
-    .tm-document-editor__ribbon-group::after {
-        display: none;
-    }
+:where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__ribbon-group {
+    gap: 0;
+    min-height: 2.75rem;
+    padding: 0 var(--tm-space-1);
+}
 
-    .tm-document-editor__ribbon-button {
-        inline-size: 2.5rem;
-        min-width: 2.5rem;
-        min-height: 2.5rem;
-        padding: 0;
-    }
+:where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__ribbon-group::after {
+    display: none;
+}
 
-    .tm-document-editor__ribbon-select,
-    .tm-document-editor__ribbon-color {
-        flex: 0 1 auto;
-        max-width: 100%;
-        min-height: 2.5rem;
-        max-height: 2.5rem;
-    }
+:where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__ribbon-button {
+    inline-size: 2.5rem;
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+    padding: 0;
+}
 
-    .tm-document-editor__ribbon-color-picker,
-    .tm-document-editor__ribbon-tempo-color-picker .tm-color-picker-trigger {
-        min-height: 2.5rem;
-        max-height: 2.5rem;
-    }
+:where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__ribbon-select,
+:where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__ribbon-color {
+    flex: 0 1 auto;
+    max-width: 100%;
+    min-height: 2.5rem;
+    max-height: 2.5rem;
+}
 
-    .tm-document-editor__ribbon-button span {
-        display: none;
-    }
+:where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__ribbon-color-picker,
+:where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__ribbon-tempo-color-picker .tm-color-picker-trigger {
+    min-height: 2.5rem;
+    max-height: 2.5rem;
+}
 
-    .tm-document-editor__dirty,
-    .tm-document-editor__save-message,
-    .tm-document-editor__last-saved {
-        max-width: 8rem;
-    }
+:where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__ribbon-button span {
+    display: none;
+}
 
-    .tm-document-editor__link-dialog {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr);
-        align-items: stretch;
-    }
+:where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__dirty,
+:where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__save-message,
+:where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__last-saved {
+    max-width: 8rem;
+}
+
+:where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__link-dialog {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
 }
 

@@ -3,6 +3,7 @@
 @using System.Net.Http.Json
 @using System.Text.Json
 @using Microsoft.AspNetCore.Components.Forms
+@using Tempo.Blazor.Abstractions.Layout
 @using Tempo.Blazor.Components.DocumentEditor
 @using Tempo.Blazor.Components.DocumentEditor.Features
 @using Tempo.Blazor.DocumentEditor.Interfaces
@@ -84,6 +85,42 @@
                 <option value="@DocumentToolbarMode.Compact">Compact</option>
                 <option value="@DocumentToolbarMode.DistractionFree">Distraction-free</option>
             </select>
+        </label>
+        <label class="inline-flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+            Layout
+            <select class="rounded-md border-slate-300 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                    @bind="_layoutMode"
+                    data-testid="document-editor-layout-mode">
+                <option value="@TmLayoutMode.Auto">Auto (own container)</option>
+                <option value="@TmLayoutMode.Desktop">Desktop</option>
+                <option value="@TmLayoutMode.Tablet">Tablet</option>
+                <option value="@TmLayoutMode.Mobile">Mobile</option>
+            </select>
+        </label>
+        <label class="inline-flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+            Host width
+            <select class="rounded-md border-slate-300 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                    @bind="_hostWidth"
+                    data-testid="document-editor-host-width">
+                <option value="">Fill the page</option>
+                <option value="420px">420 px (phone)</option>
+                <option value="800px">800 px (tablet)</option>
+                <option value="1280px">1280 px (desktop)</option>
+            </select>
+        </label>
+        <label class="inline-flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+            <input class="rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                   type="checkbox"
+                   @bind="_showHeader"
+                   data-testid="document-editor-show-header" />
+            Header
+        </label>
+        <label class="inline-flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+            <input class="rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                   type="checkbox"
+                   @bind="_headerSlots"
+                   data-testid="document-editor-header-slots" />
+            Header slots (Back, Share)
         </label>
         <span class="text-sm text-slate-500 dark:text-slate-400" data-testid="document-editor-loaded">
             @_loadedTitle
@@ -191,7 +228,13 @@
     </div>
 </div>
 
+<div style="@HostStyle" data-testid="document-editor-host">
 <TmDocumentEditor DocumentId="@_documentId"
+                  LayoutMode="@_layoutMode"
+                  ShowHeader="@_showHeader"
+                  Subtitle="@(_headerSlots ? "Demo document" : null)"
+                  HeaderStart="@(_headerSlots ? DemoHeaderStart : null)"
+                  HeaderActions="@(_headerSlots ? DemoHeaderActions : null)"
                   Provider="@DemoProvider"
                   CollaborationProvider="@CollaborationProvider"
                   SuggestionProvider="@SuggestionProvider"
@@ -215,11 +258,22 @@
                   DisabledFeatures="@DemoDisabledFeatures"
                   OnDocumentLoaded="HandleDocumentLoaded"
                   data-testid="document-editor-demo" />
+</div>
 
 <DocumentInspectorBuildingBlocksCard />
 
 @code {
     private string _documentId = "contract-demo";
+    private TmLayoutMode _layoutMode = TmLayoutMode.Auto;
+    private string _hostWidth = string.Empty;
+    private bool _showHeader = true;
+    private bool _headerSlots;
+    private string HostStyle => string.IsNullOrEmpty(_hostWidth) ? "min-width: 0" : $"width: {_hostWidth}; max-width: 100%";
+
+    // The host slots of the editor header: the editor itself offers no Share and no Back (the host owns them).
+    private RenderFragment DemoHeaderStart => @<a class="tm-btn tm-btn-sm tm-btn-ghost" href="/" data-testid="document-editor-demo-back">Back</a>;
+
+    private RenderFragment DemoHeaderActions => @<button type="button" class="tm-btn tm-btn-sm tm-btn-primary" data-testid="document-editor-demo-share">Share</button>;
     private bool _readOnly;
     private bool _disableExport;
     private bool _disableImagesFeature;

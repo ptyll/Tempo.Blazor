@@ -47,6 +47,7 @@
                           SuggestionProvider="@(SuggestionMode ? SuggestionProviderInstance : null)"
                           SuggestionsEnabled="@SuggestionMode"
 	                      ShowToolbar="@ShowToolbar"
+                          ShowHeader="@(ShowHeader ?? true)"
                           PdfForensicWatermark="@(ForensicPdf ? new DocumentPdfForensicWatermarkOptions() : null)"
                           TokenProvider="@TokenProvider"
                           TokenValueProvider="@TokenProvider"
@@ -79,6 +80,11 @@
     [Parameter]
     [SupplyParameterFromQuery(Name = "showToolbar")]
     public bool ShowToolbar { get; set; }
+
+    /// <summary>Whether the editor renders its header (title, save state, document actions). Defaults to true.</summary>
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "showHeader")]
+    public bool? ShowHeader { get; set; }
 
     /// <summary>Enables canvas suggestion mode (B4): edits become engine revisions surfaced as suggestions.</summary>
     [Parameter]

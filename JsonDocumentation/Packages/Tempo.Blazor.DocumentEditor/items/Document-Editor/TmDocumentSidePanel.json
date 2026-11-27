@@ -143,6 +143,12 @@
       "type": "int",
       "isRequired": false,
       "description": "Number of versions shown in the tab badge."
+    },
+    {
+      "name": "TextTabs",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Text-only tabs in the reference order (Properties, Comments, Revisions, Versions) instead of the icon + text tabs. The desktop editor sets it: its inspector is a text-tab surface and Outline / Pages live in the left column."
     }
   ]
 }

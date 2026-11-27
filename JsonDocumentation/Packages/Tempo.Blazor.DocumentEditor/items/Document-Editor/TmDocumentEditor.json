@@ -2,7 +2,7 @@
   "itemName": "TmDocumentEditor",
   "kind": "Component",
   "category": "Document Editor",
-  "description": "Word-like document editor shell backed by the document editor JSON provider contracts.",
+  "description": "Word-like document editor shell backed by the document editor JSON provider contracts. Since the redesign (plan 146c7e1b, DE-1.1) it lays itself out from its OWN container: LayoutMode=Auto measures the editor through the shared TmLayoutObserver (first frame Desktop) and publishes the resolved mode as data-layout on the root. Desktop (container of 1024 px and more) renders three named regions - [data-region=nav] | [data-region=doc] | [data-region=inspector] - under a header (title, save state, actions; ShowHeader, Title, Subtitle, HeaderStart, HeaderActions) and the ribbon; Tablet (640-1023 px) renders document | inspector with Outline and Pages as inspector tabs; Mobile (below 640 px) renders one column. The size container is .tm-document-editor__main (the workspace and the status bar), NOT the root or the ribbon: a size container is the containing block of fixed descendants and the ribbon pickers, dialogs and the floating root position against the viewport. F6 / Shift+F6 cycle the landmarks header, ribbon, navigation, document, inspector (data-focus-region).",
   "packageId": "Tempo.Blazor.DocumentEditor",
   "namespace": "Tempo.Blazor.Components.DocumentEditor",
   "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentEditor.razor",
@@ -364,6 +364,42 @@
       "isRequired": false,
       "default": "true",
       "description": "Whether local comparison should be used if the comparison provider fails."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "description": "How the editor chooses its layout. Auto (default) measures the editor's own container - a narrow host on a wide screen is a phone layout; the first frame is Desktop. A forced Desktop / Tablet / Mobile pins the layout and never imports the observer. Desktop (container of 1024 px and more): navigation | document | inspector; Tablet (640-1023 px): document | inspector with Outline and Pages as inspector tabs; Mobile (below 640 px): one column."
+    },
+    {
+      "name": "ShowHeader",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the editor renders its header (title, save state, search, undo, redo, print preview, print to PDF when an export provider exists, save). Defaults to true. With false there is no header and Save / Undo / Redo stay in the ribbon quick-access group (the pre-redesign look, minus the in-surface page header)."
+    },
+    {
+      "name": "Title",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Header title. Defaults to the title stored in the document metadata (a localized 'Untitled document' when empty)."
+    },
+    {
+      "name": "Subtitle",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional second line of the header (a document type, a project name). Hidden when empty."
+    },
+    {
+      "name": "HeaderStart",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Host content rendered at the start of the header, before the title (a back link, a logo)."
+    },
+    {
+      "name": "HeaderActions",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Host actions rendered at the end of the header, after Save (Share and similar). The editor itself offers no Share."
     }
   ]
 }

@@ -1,0 +1,86 @@
+{
+  "itemName": "TmDocumentNavigationPanel",
+  "kind": "Component",
+  "category": "Document Editor",
+  "description": "The left region of a desktop TmDocumentEditor (redesign DE-1.1, decision DE1): the document structure (heading outline, TmDocumentOutlinePanel) above the page thumbnails (TmDocumentPageNavigator), a collapse button and a 'Search in document' entry. The entry is a button styled as a field: it raises OnSearch and the editor opens its find panel - the panel owns no search logic. The column folds into a rail (Collapsed / CollapsedChanged, aria-expanded on the toggle); the editor starts it folded while a desktop container is narrower than 1280 px (TmBreakpoints.Xl) so the page keeps its room, and the reader's choice wins over the width. A tablet or phone container does not render this component: there Outline and Pages stay tabs of the inspector panel (DocumentSidePanelTab.Outline / Pages, kept for compatibility; on a desktop container they lead to this column).",
+  "packageId": "Tempo.Blazor.DocumentEditor",
+  "namespace": "Tempo.Blazor.Components.DocumentEditor",
+  "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentNavigationPanel.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.DocumentEditor"
+  ],
+  "parameters": [
+    {
+      "name": "Outline",
+      "type": "IReadOnlyList<DocumentOutlineItem>?",
+      "isRequired": false,
+      "description": "Document heading outline."
+    },
+    {
+      "name": "ActiveBlockId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Heading block that is currently active in the document."
+    },
+    {
+      "name": "Metrics",
+      "type": "WysiwygPageMetrics?",
+      "isRequired": false,
+      "description": "Runtime page metrics reported by the canvas engine."
+    },
+    {
+      "name": "ActivePageIndex",
+      "type": "int",
+      "isRequired": false,
+      "description": "Zero-based active page index."
+    },
+    {
+      "name": "Collapsed",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the column is folded into its rail. Two-way with CollapsedChanged."
+    },
+    {
+      "name": "CollapsedChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Raised when the user folds or unfolds the column."
+    },
+    {
+      "name": "OnNavigateToBlock",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Raised when a heading is chosen."
+    },
+    {
+      "name": "OnNavigateToPage",
+      "type": "EventCallback<int>",
+      "isRequired": false,
+      "description": "Raised when a page thumbnail is chosen."
+    },
+    {
+      "name": "OnSearch",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised by the 'Search in document' entry; the editor opens its find panel."
+    }
+  ],
+  "cssClasses": [
+    "tm-document-navigation",
+    "tm-document-navigation--collapsed",
+    "tm-document-navigation__header",
+    "tm-document-navigation__title",
+    "tm-document-navigation__toggle",
+    "tm-document-navigation__search",
+    "tm-document-navigation__section",
+    "tm-document-navigation__section--outline",
+    "tm-document-navigation__section--pages"
+  ],
+  "examples": [
+    {
+      "title": "Inside the editor (desktop container only)",
+      "code": "<nav data-region=\"nav\" data-focus-region=\"nav\" aria-label=\"@Loc[\"TmDocumentEditor_NavigationLabel\"]\">\n    <TmDocumentNavigationPanel Outline=\"@outline\"\n                               Metrics=\"@pageMetrics\"\n                               @bind-Collapsed=\"navCollapsed\"\n                               OnNavigateToBlock=\"NavigateToBlockAsync\"\n                               OnNavigateToPage=\"NavigateToPageAsync\"\n                               OnSearch=\"OpenFindAsync\" />\n</nav>"
+    }
+  ]
+}
