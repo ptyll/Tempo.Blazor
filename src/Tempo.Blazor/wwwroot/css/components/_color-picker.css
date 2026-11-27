@@ -45,6 +45,26 @@
     height: 100%;
 }
 
+/* TriggerIcon: a glyph with the current color as a bar under it (no checkerboard swatch). */
+.tm-color-picker-trigger-glyph {
+    position: relative;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--tm-space-1);
+    flex-shrink: 0;
+}
+
+.tm-color-picker-trigger-bar {
+    inline-size: 1.125rem;
+    block-size: 3px;
+    border-radius: var(--tm-radius-xs);
+}
+
+.tm-color-picker-trigger-bar--empty {
+    background: var(--tm-color-text);
+}
+
 .tm-color-picker-trigger-text {
     font-size: 14px;
     color: var(--tm-text-primary);

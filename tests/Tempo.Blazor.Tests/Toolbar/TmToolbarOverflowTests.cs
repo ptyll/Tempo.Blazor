@@ -325,6 +325,30 @@ public class TmToolbarOverflowTests : LocalizationTestBase
     }
 
     [Fact]
+    public void ShrinkBeforeOverflow_AsksTheModuleToDropLabelsFirst_AndKeepsTheLabelsInTheMarkup()
+    {
+        var module = SetupModule();
+        var cut = Render<TmToolbar>(p => p
+            .Add(c => c.Overflow, ToolbarOverflow.Menu)
+            .Add(c => c.Labels, ToolbarLabels.ShrinkBeforeOverflow)
+            .AddChildContent("<span></span>"));
+
+        cut.WaitForAssertion(() => module.Invocations["attach"].Should().ContainSingle());
+        System.Text.Json.JsonSerializer.Serialize(module.Invocations["attach"].Single().Arguments[2])
+            .Should().Contain("\"labelsFirst\":true");
+    }
+
+    [Fact]
+    public void DefaultLabels_DoNotAskForLabelsFirst()
+    {
+        var module = SetupModule();
+        RenderToolbar(Buttons(new Spec("Alpha")));
+
+        System.Text.Json.JsonSerializer.Serialize(module.Invocations["attach"].Single().Arguments[2])
+            .Should().Contain("\"labelsFirst\":false");
+    }
+
+    [Fact]
     public void OverflowNone_StillAttaches_ForTheRovingTabindex_ButDoesNotMeasure()
     {
         var module = SetupModule();

@@ -265,6 +265,9 @@
    ribbon, OUTSIDE the main size container (its host slots may open fixed overlays) and NOT a container itself (a second
    container would be a second source of truth for the mode): its density follows data-layout like the ribbon does. */
 .tm-document-editor__header {
+    /* Above the ribbon (z-index 40) and the click-away backdrop of its popups: a header action is never swallowed by the backdrop. */
+    position: relative;
+    z-index: 45;
     min-width: 0;
     background: var(--tm-color-surface);
     border-bottom: 1px solid var(--tm-color-border-subtle);

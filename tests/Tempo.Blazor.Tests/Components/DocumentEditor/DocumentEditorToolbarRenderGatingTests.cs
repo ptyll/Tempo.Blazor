@@ -1,6 +1,7 @@
 using Bunit;
 using FluentAssertions;
 using Tempo.Blazor.Components.DocumentEditor;
+using Tempo.Blazor.Components.Toolbar;
 using Tempo.Blazor.Components.Icons;
 using Tempo.Blazor.Tests.Localization;
 
@@ -72,10 +73,14 @@ public sealed class DocumentEditorToolbarRenderGatingTests : LocalizationTestBas
     public async Task Toolbar_OverflowStateChange_StillRenders()
     {
         var cut = Render<TmDocumentEditorToolbar>();
-        await cut.InvokeAsync(() => cut.Instance.SetOverflowingAsync(true, ["bold"]));
+        // The Layout tab has no OverflowOnly command: nothing is in More until the core toolbar reports that something does not fit.
+        cut.Find("[data-testid='document-ribbon-tab-layout']").Click();
+        cut.FindAll("[data-testid='document-ribbon-toolbar'] .tm-toolbar-more").Should().BeEmpty("everything fits until the core toolbar reports otherwise");
 
-        cut.Find("[data-testid='document-toolbar-more']").HasAttribute("hidden")
-            .Should().BeFalse("the JS overflow callback must still surface the More button");
+        await cut.InvokeAsync(() => cut.FindComponent<TmToolbar>().Instance.OnFitChanged(1));
+
+        cut.FindAll("[data-testid='document-ribbon-toolbar'] .tm-toolbar-more").Should().HaveCount(1,
+            "the core measurement callback must still surface the More button");
     }
 
     [Fact]

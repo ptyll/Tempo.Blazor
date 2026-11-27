@@ -1,87 +1,69 @@
 using Bunit;
 using FluentAssertions;
 using Tempo.Blazor.Components.DocumentEditor;
+using Tempo.Blazor.Components.Toolbar;
 using Tempo.Blazor.Tests.Localization;
 
 namespace Tempo.Blazor.Tests.Components.DocumentEditor;
 
 /// <summary>
-/// Overflow measurement controller: C# strana kontraktu SetOverflowingAsync historicky volala
-/// window global `tmDocumentEditorToolbar.*`, který nikde neexistoval (výjimka se tiše spolkla)
-/// — More/overflow menu se tak v aplikaci nikdy neukázalo. Nově toolbar importuje ES modul
-/// toolbar-overflow.mjs (stejný vzor jako TmDocumentCanvasEngineHost) a controller v něm
-/// vytváří/likviduje. Tyto testy drží interop kontrakt komponenty.
+/// Overflow measurement contract (redesign 146c7e1b, DE-1.2). The ribbon used to ship its own ES module
+/// (<c>toolbar-overflow.mjs</c>) that measured a scrolling strip and reported the clipped commands. Measuring now belongs to
+/// the core <c>tm-toolbar.js</c> behind <see cref="TmToolbar"/>: the ribbon only hands it a bar of registered items, so these
+/// tests pin that the ribbon is wired to the CORE mechanism and carries no module of its own.
 /// </summary>
 public class DocumentEditorToolbarOverflowControllerTests : LocalizationTestBase
 {
-    private const string OverflowModulePath =
-        "./_content/Tempo.Blazor.DocumentEditor/js/document-editor/toolbar/toolbar-overflow.mjs";
+    private const string CoreToolbarModule = "./_content/Tempo.Blazor/js/tm-toolbar.js";
 
     [Fact]
-    public void Toolbar_ImportsOverflowModule_AndCreatesControllerOnFirstRender()
+    public void Ribbon_AttachesTheCoreToolbarMeasurement_OnFirstRender()
     {
-        var module = JSInterop.SetupModule(OverflowModulePath);
-        module.SetupVoid("createOverflowController", _ => true).SetVoidResult();
+        var module = JSInterop.SetupModule(CoreToolbarModule);
+        module.SetupVoid("attach", _ => true).SetVoidResult();
 
         Render<TmDocumentEditorToolbar>();
 
-        var invocation = module.Invocations.Should()
-            .ContainSingle(item => item.Identifier == "createOverflowController",
-                "toolbar musí po prvním renderu vytvořit overflow controller v ES modulu")
-            .Subject;
-        invocation.Arguments.Should().HaveCount(2, "controller dostává ribbon-groups element a DotNetObjectReference");
-        invocation.Arguments[1].Should().BeAssignableTo<Microsoft.JSInterop.DotNetObjectReference<TmDocumentEditorToolbar>>();
+        module.Invocations.Should().ContainSingle(invocation => invocation.Identifier == "attach",
+            "the ribbon's TmToolbar attaches tm-toolbar.js once; that module measures the fit");
+        var options = module.Invocations.Single(invocation => invocation.Identifier == "attach").Arguments[2];
+        options!.ToString().Should().Contain("overflow = True", "the ribbon asks the core toolbar to collapse into More (Overflow=Menu)");
     }
 
     [Fact]
-    public async Task OverflowSearchBox_StartsEmpty_NotWithLiteralFieldName()
+    public void Ribbon_ImportsNoModuleOfItsOwn_ForOverflow()
     {
-        // Nalezeno E2E screenshotem: SearchQuery="_overflowSearchQuery" (bez @) předávalo název
-        // fieldu jako string literál — search box se otevíral s předvyplněným „_overflowSearchQuery".
-        var module = JSInterop.SetupModule(OverflowModulePath);
-        module.SetupVoid("createOverflowController", _ => true).SetVoidResult();
+        Render<TmDocumentEditorToolbar>();
 
-        var cut = Render<TmDocumentEditorToolbar>();
-        await cut.InvokeAsync(() => cut.Instance.SetOverflowingAsync(
-            true, ["bold", "italic", "underline", "strikethrough", "link", "clearFormatting", "alignLeft", "alignCenter"]));
-        cut.Find("[data-testid='document-toolbar-more']").Click();
-
-        var search = cut.Find("[data-testid='document-toolbar-more-search']");
-        (search.GetAttribute("value") ?? string.Empty).Should().BeEmpty(
-            "search box se musí otevřít prázdný — hodnota je stav komponenty, ne literál názvu fieldu");
+        JSInterop.Invocations.Select(invocation => invocation.Identifier).Should().NotContain("createOverflowController");
+        JSInterop.Invocations
+            .SelectMany(invocation => invocation.Arguments)
+            .Select(argument => argument?.ToString() ?? string.Empty)
+            .Should().NotContain(argument => argument.Contains("toolbar-overflow.mjs"),
+                "DE-local collapse was removed: the core TmToolbar measures");
     }
 
     [Fact]
-    public async Task Toolbar_DisposesOverflowController_AndModuleOnDispose()
+    public void RibbonComponent_NoLongerExposesTheOverflowReportingContract()
     {
-        var module = JSInterop.SetupModule(OverflowModulePath);
-        module.SetupVoid("createOverflowController", _ => true).SetVoidResult();
-        module.SetupVoid("disposeOverflowController", _ => true).SetVoidResult();
-
-        var cut = Render<TmDocumentEditorToolbar>();
-        await cut.Instance.DisposeAsync();
-
-        module.Invocations.Should().Contain(item => item.Identifier == "disposeOverflowController",
-            "dispose komponenty musí odpojit observery v JS controlleru");
+        typeof(TmDocumentEditorToolbar).GetMethod("SetOverflowingAsync").Should().BeNull(
+            "the JS controller that called it is gone; the core TmToolbar.OnFitChanged is the report");
     }
 
     [Fact]
-    public async Task SetOverflowingAsync_FromJsController_ShowsMoreButtonWithReportedCommands()
+    public async Task CoreFitReport_ShowsTheMoreButton_AndWidening_RemovesItAgain()
     {
-        var module = JSInterop.SetupModule(OverflowModulePath);
-        module.SetupVoid("createOverflowController", _ => true).SetVoidResult();
-
         var cut = Render<TmDocumentEditorToolbar>();
-        cut.Find("[data-testid='document-toolbar-more']").HasAttribute("hidden").Should().BeTrue(
-            "bez hlášení z JS controlleru se More tlačítko nesmí ukázat");
+        cut.Find("[data-testid='document-ribbon-tab-layout']").Click();
+        cut.FindAll("[data-testid='document-ribbon-toolbar'] .tm-toolbar-more").Should().BeEmpty(
+            "without a report that something does not fit, nothing is in More (the Layout tab has no OverflowOnly command)");
 
-        await cut.InvokeAsync(() => cut.Instance.SetOverflowingAsync(true, ["bold", "italic"]));
+        var toolbar = cut.FindComponent<TmToolbar>().Instance;
+        await cut.InvokeAsync(() => toolbar.OnFitChanged(2));
+        cut.FindAll("[data-testid='document-ribbon-toolbar'] .tm-toolbar-more").Should().HaveCount(1);
 
-        cut.Find("[data-testid='document-toolbar-more']").HasAttribute("hidden").Should().BeFalse(
-            "hlášený overflow musí More tlačítko odkrýt");
-
-        await cut.InvokeAsync(() => cut.Instance.SetOverflowingAsync(false, []));
-        cut.Find("[data-testid='document-toolbar-more']").HasAttribute("hidden").Should().BeTrue(
-            "když se okno zvětší a nic nepřetéká, More tlačítko zmizí");
+        await cut.InvokeAsync(() => toolbar.OnFitChanged(500));
+        cut.FindAll("[data-testid='document-ribbon-toolbar'] .tm-toolbar-more").Should().BeEmpty(
+            "when the window grows and everything fits, the More button disappears");
     }
 }

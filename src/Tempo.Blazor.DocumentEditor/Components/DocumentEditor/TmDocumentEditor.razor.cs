@@ -1437,6 +1437,26 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
         }
     }
 
+    // A header action is a click OUTSIDE an open ribbon popup: it runs, and the popup (style gallery, page layout, table grid, ...)
+    // closes with it - the header sits above the popup's click-away backdrop, so nothing swallows the click.
+    private Task HeaderUndoAsync()
+    {
+        _toolbar?.CloseFloatingUi();
+        return UndoAsync();
+    }
+
+    private Task HeaderRedoAsync()
+    {
+        _toolbar?.CloseFloatingUi();
+        return RedoAsync();
+    }
+
+    private Task HeaderSaveAsync()
+    {
+        _toolbar?.CloseFloatingUi();
+        return SaveAsync();
+    }
+
     private Task SaveAsync()
     {
         return SaveAsync(DocumentEditorSaveTrigger.Explicit);

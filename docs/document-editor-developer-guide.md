@@ -20,6 +20,22 @@ Nový command má mít stabilní název, lokalizované texty v resources, guard 
 
 Demo route obsahuje `document-editor-toolbar-mode`, aby host aplikace viděl runtime přepnutí bez reloadu dokumentu.
 
+### The ribbon row (DE-1.2)
+
+The ribbon is ONE icon row on the core `TmToolbar` (`Overflow=Menu`, `OverflowPresentation=Popover`); see [toolbar.md](toolbar.md#migrating-from-the-documenteditor-toolbar-de-12).
+
+- **Contract for hosts and tests:** every ribbon command keeps `data-command` and `data-testid` and publishes `data-priority`
+  (`primary` / `secondary` / `overflowonly`) - the rank declared in `DocumentEditorBuiltInToolbar` (`DefaultItems` for the
+  registered commands, `RibbonLocalCommands` for the popup/toolbar-local ones). Hosts never key off the group DOM.
+- **Labels:** groups have no printed caption (their name is the `aria-label` and the section header in More). Icon buttons carry a
+  tooltip and an accessible name; only Link, Comment, Image and Table show a label (`ToolbarMode.Ribbon`, container wide enough:
+  below a desktop container they are icon-only too). `Compact` is icon-only throughout.
+- **Overflow:** which commands fit is measured by `tm-toolbar.js`; `Secondary` leaves before `Primary`, `OverflowOnly` never renders on
+  the bar. The More menu is the core `role="menu"` (groups, arrows, typeahead; toggles are `menuitemcheckbox`). Items that own a
+  popup and the colour pickers never leave the bar. A test or host that needs a command that may be collapsed clicks the bar button
+  when it is visible and the More entry otherwise (`DocumentEditorRedesignE2EHelpers.ClickRibbonAsync` is the reference helper).
+- **Phone:** the phone layout keeps a horizontal scroll fallback until its own command row (a later phase).
+
 ## Clipboard Pipeline Extension Point
 
 Paste flow prochází přes `DocumentClipboardPipeline` a normalizéry pro Word, Google Docs, Google Sheets, raw HTML a URL. Normalizér vrací bloky, warnings a debug snapshot. Warnings se uživateli zobrazují přes `TmDocumentPasteReport`.

@@ -208,7 +208,7 @@ public class DocumentEditorFullBaselineScreenshots : BaselineGeneratorTestBase
         });
         await TryCaptureAsync(page, "ribbon-alignment-active", async () => {
             await SelectFirstInlineRangeAsync(page, 0, 5);
-            await page.Locator("[data-testid='document-align-center']").ClickAsync();
+            await DocumentEditorRedesignE2EHelpers.ChooseAlignmentAsync(page, "center");
             await page.WaitForTimeoutAsync(400);
         });
 
@@ -405,16 +405,14 @@ public class DocumentEditorFullBaselineScreenshots : BaselineGeneratorTestBase
             await page.Keyboard.PressAsync("Escape");
             await page.WaitForTimeoutAsync(200);
             await ClickTabAsync(page, "document-ribbon-tab-view");
-            var btn = page.Locator("[data-testid='document-view-json']");
-            if (await btn.IsVisibleAsync()) await btn.ClickAsync();
+            await DocumentEditorRedesignE2EHelpers.ClickRibbonAsync(page, "document-view-json");
             await page.WaitForTimeoutAsync(800);
         });
         await TryCaptureAsync(page, "clipboard-html-debug-modal", async () => {
             await page.Keyboard.PressAsync("Escape");
             await page.WaitForTimeoutAsync(200);
             await ClickTabAsync(page, "document-ribbon-tab-view");
-            var btn = page.Locator("[data-testid='document-view-clipboard-html']");
-            if (await btn.IsVisibleAsync()) await btn.ClickAsync();
+            await DocumentEditorRedesignE2EHelpers.ClickRibbonAsync(page, "document-view-clipboard-html");
             await page.WaitForTimeoutAsync(800);
         });
         await TryCaptureAsync(page, "import-docx-panel", async () => {

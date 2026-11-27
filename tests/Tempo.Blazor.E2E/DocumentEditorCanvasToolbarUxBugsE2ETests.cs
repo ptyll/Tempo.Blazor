@@ -36,27 +36,65 @@ public sealed class DocumentEditorCanvasToolbarUxBugsE2ETests : WasmTestBase
         var output = CreateOutputDirectory("phase18-change-case");
         await SelectCanvasTextRangeAsync(page, AgreementBlockId, 0, 12);
 
-        var select = page.GetByTestId("document-change-case");
-        await select.SelectOptionAsync("uppercase");
+        // DE-1.2: change case is a "More formatting" option list in the core More menu. An entry has no sticky "selected" state, so the
+        // old select-reset contract becomes: every choice fires, the SAME choice twice included.
+        await DocumentEditorRedesignE2EHelpers.ChooseMoreOptionAsync(page, "Change case", "UPPERCASE");
         await WaitForPredicateAsync(page, $"""
             () => (document.querySelector('[data-testid="document-canvas-a11y-mirror"] [data-block-id="{AgreementBlockId}"]')
                 ?.textContent || '').startsWith('THE PROVIDER')
             """, 10_000);
         await ViewportScreenshotAsync(page, Path.Combine(output, "00-uppercase-applied.png"));
+        Assert.AreEqual(0, await page.GetByTestId("document-change-case").CountAsync(), "no native change-case select remains on the bar");
 
-        // Kontrakt fixe: select se po výběru resetuje na placeholder (dřív zůstal na "uppercase").
-        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-change-case\"]')?.value === ''", 10_000);
-
-        // Edge case: TÁŽ volba podruhé — se zamrzlým selectem nešla vybrat (onchange nevystřelí).
         await SelectCanvasTextRangeAsync(page, AgreementBlockId, 0, 12);
-        await select.SelectOptionAsync("lowercase");
+        await DocumentEditorRedesignE2EHelpers.ChooseMoreOptionAsync(page, "Change case", "lowercase");
         await WaitForPredicateAsync(page, $"""
             () => (document.querySelector('[data-testid="document-canvas-a11y-mirror"] [data-block-id="{AgreementBlockId}"]')
                 ?.textContent || '').startsWith('the provider')
             """, 10_000);
-        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-change-case\"]')?.value === ''", 10_000);
+
+        // Edge case: the same choice again (lowercase on already lower-case text is a no-op, so go back to UPPERCASE twice).
+        await SelectCanvasTextRangeAsync(page, AgreementBlockId, 0, 12);
+        await DocumentEditorRedesignE2EHelpers.ChooseMoreOptionAsync(page, "Change case", "UPPERCASE");
+        await WaitForPredicateAsync(page, $"""
+            () => (document.querySelector('[data-testid="document-canvas-a11y-mirror"] [data-block-id="{AgreementBlockId}"]')
+                ?.textContent || '').startsWith('THE PROVIDER')
+            """, 10_000);
         await ViewportScreenshotAsync(page, Path.Combine(output, "01-lowercase-applied-select-reset.png"));
     }
+
+    /// <summary>
+    /// Review fix (phase 4): the change-case option list lives in More and the formatting round trip stays whole - the selection is
+    /// still visible after the menu closed, the text changed, and Undo (the header's) reverts it.
+    /// </summary>
+    [TestMethod]
+    public async Task Phase4_ChangeCaseFromMore_KeepsTheSelection_AndUndoReverts()
+    {
+        var context = await CreateContextAsync();
+        var page = await context.NewPageAsync();
+        await page.SetViewportSizeAsync(1920, 1000);
+        await OpenDocumentAsync(page);
+
+        await SelectCanvasTextRangeAsync(page, AgreementBlockId, 0, 12);
+        var before = await ReadBlockTextAsync(page);
+        await DocumentEditorRedesignE2EHelpers.ChooseMoreOptionAsync(page, "Change case", "UPPERCASE");
+        await WaitForPredicateAsync(page, $"""
+            () => (document.querySelector('[data-testid="document-canvas-a11y-mirror"] [data-block-id="{AgreementBlockId}"]')
+                ?.textContent || '').startsWith('THE PROVIDER')
+            """, 10_000);
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-canvas-engine-root\"]')?.getAttribute('data-canvas-selection-collapsed') === 'false'", 10_000);
+
+        await page.GetByTestId("document-undo").ClickAsync();
+        await WaitForPredicateAsync(page, $"""
+            () => (document.querySelector('[data-testid="document-canvas-a11y-mirror"] [data-block-id="{AgreementBlockId}"]')
+                ?.textContent || '') === {System.Text.Json.JsonSerializer.Serialize(before)}
+            """, 10_000);
+    }
+
+    private static Task<string> ReadBlockTextAsync(IPage page)
+        => page.EvaluateAsync<string>(
+            "id => document.querySelector(`[data-testid=\"document-canvas-a11y-mirror\"] [data-block-id=\"${id}\"]`)?.textContent || ''",
+            AgreementBlockId);
 
     /// <summary>
     /// Edge case: Layout tab — orientace má jediné ovládání (segmentová tlačítka; duplicitní select
@@ -74,7 +112,7 @@ public sealed class DocumentEditorCanvasToolbarUxBugsE2ETests : WasmTestBase
 
         var output = CreateOutputDirectory("phase18-orientation");
         await page.GetByTestId("document-ribbon-tab-layout").ClickAsync();
-        await page.GetByTestId("document-page-layout").ClickAsync();
+        await DocumentEditorRedesignE2EHelpers.ClickRibbonAsync(page, "document-page-layout");
         await Assertions.Expect(page.GetByTestId("document-page-layout-inspector")).ToBeVisibleAsync(new() { Timeout = 10_000 });
 
         Assert.AreEqual(0, await page.GetByTestId("document-page-orientation").CountAsync(),

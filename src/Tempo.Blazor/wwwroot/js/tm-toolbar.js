@@ -1,9 +1,8 @@
-// Tempo.Blazor toolbar module (ES module) - the generalised toolbar overflow mechanism of the core
-// TmToolbar (F4). It generalises the DocumentEditor's toolbar-overflow.mjs (which measures which
-// ribbon commands are scrolled out of view): the core toolbar measures how many of its buttons FIT
-// and reports that single number; C# (ToolbarOverflowLayout, over the shared ActionOverflowLayout
-// partition) decides WHICH buttons leave, so the ordering rule exists once. The DocumentEditor
-// migrates onto this module in its own plan (DE-1.2).
+// Tempo.Blazor toolbar module (ES module) - the toolbar overflow mechanism of the core TmToolbar (F4). The
+// core toolbar measures how many of its buttons FIT and reports that single number; C# (ToolbarOverflowLayout,
+// over the shared ActionOverflowLayout partition) decides WHICH buttons leave, so the ordering rule exists once.
+// It is the mechanism the DocumentEditor ribbon runs on (its own scroll-measuring module was deleted in the
+// DE-1.2 migration, redesign plan 146c7e1b phase 4) and the DiagramEditor, Wireframe and Spreadsheet toolbars.
 //
 // This file holds the pure maths (testable without a DOM), the bar measurement and the DOM wiring:
 //   - fit/collapse: ResizeObserver + MutationObserver, rAF-coalesced, signature dedup - .NET is
@@ -234,7 +233,33 @@ export function computeFit(bar) {
 
     const available = bar.clientWidth - padding - fixed;
     const maxVisible = chooseVisibleCount(items, available, gap, triggerWidth, hasPinned);
-    return { maxVisible, hasPinned, signature: `${maxVisible}|${items.length}|${hasPinned}|${ids.join(',')}`, ids, unmeasured: false };
+    return {
+        maxVisible,
+        hasPinned,
+        collapsing: maxVisible < items.length,
+        signature: `${maxVisible}|${items.length}|${hasPinned}|${bar.hasAttribute?.(LABELS_COLLAPSED) === true}|${ids.join(',')}`,
+        ids,
+        unmeasured: false,
+    };
+}
+
+const LABELS_COLLAPSED = 'data-tm-labels-collapsed';
+
+/**
+ * ToolbarLabels.ShrinkBeforeOverflow: measures the bar with its labels first; when a button would have to leave, the labels
+ * of the icon+text buttons go first (the root carries data-tm-labels-collapsed, which the stylesheet turns into icon-only) and the
+ * bar is measured again. The marker is re-evaluated on EVERY pass, so a widened bar takes its labels back - there is no sticky state.
+ * @param {HTMLElement} bar the toolbar row
+ */
+export function computeFitLabelsFirst(bar) {
+    bar.removeAttribute?.(LABELS_COLLAPSED);
+    let fit = computeFit(bar);
+    if (!fit.unmeasured && fit.collapsing) {
+        bar.setAttribute?.(LABELS_COLLAPSED, 'true');
+        fit = computeFit(bar);
+    }
+
+    return fit;
 }
 
 function outerWidth(element) {
@@ -312,7 +337,7 @@ function measure(state) {
     if (state.disposed || !state.options.overflow) return;
     // The root IS the measured row; the selector exists so a host can point at an inner row.
     const bar = state.root.querySelector('[data-tm-toolbar-row]') ?? state.root;
-    const fit = computeFit(bar);
+    const fit = state.options.labelsFirst ? computeFitLabelsFirst(bar) : computeFit(bar);
     if (fit.unmeasured) return;
     markRedundantDividers(bar);
     if (fit.signature === state.lastSignature) return;
@@ -369,7 +394,7 @@ function schedule(state) {
  * measurement when options.overflow is set. Idempotent: attaching again replaces the registration.
  * @param {HTMLElement} root the .tm-toolbar element
  * @param {{invokeMethodAsync:Function}|null} dotNetRef receives OnFitChanged(maxVisible)
- * @param {{overflow?:boolean}} [options]
+ * @param {{overflow?:boolean, labelsFirst?:boolean}} [options] labelsFirst: icon+text buttons drop their text before any button leaves
  */
 export function attach(root, dotNetRef, options) {
     if (!root) return;
@@ -378,7 +403,7 @@ export function attach(root, dotNetRef, options) {
     const state = {
         root,
         dotNetRef,
-        options: { overflow: Boolean(options?.overflow) },
+        options: { overflow: Boolean(options?.overflow), labelsFirst: Boolean(options?.labelsFirst) },
         lastSignature: null,
         frame: 0,
         disposed: false,

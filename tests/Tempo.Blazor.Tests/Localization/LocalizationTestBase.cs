@@ -71,6 +71,22 @@ public abstract class LocalizationTestBase : BunitContext
         return _layoutObserverModule;
     }
 
+    private BunitJSModuleInterop? _toolbarModule;
+
+    /// <summary>Registers (once) the mock of the core <c>tm-toolbar.js</c> module the ribbon's TmToolbar imports to measure its fit.</summary>
+    protected BunitJSModuleInterop SetupToolbarModule()
+    {
+        if (_toolbarModule is not null)
+        {
+            return _toolbarModule;
+        }
+
+        _toolbarModule = JSInterop.SetupModule("./_content/Tempo.Blazor/js/tm-toolbar.js");
+        _toolbarModule.SetupVoid("attach", _ => true).SetVoidResult();
+        _toolbarModule.SetupVoid("detach", _ => true).SetVoidResult();
+        return _toolbarModule;
+    }
+
     private BunitJSModuleInterop? _regionCycleModule;
 
     /// <summary>Registers (once) the mock of the editor's F6 region-cycle module (attached to the root on the first render).</summary>
@@ -99,6 +115,7 @@ public abstract class LocalizationTestBase : BunitContext
         // the first render; a Strict-mode test would otherwise fail on the unconfigured import.
         SetupLayoutObserverModule();
         SetupRegionCycleModule();
+        SetupToolbarModule();
         var module = JSInterop.SetupModule(DocumentCanvasInteropModulePath);
         module.Setup<string>("mount", _ => true).SetResult("document-canvas-test-handle");
         _documentCanvasGetModelJson = module.Setup<string?>("getModelJson", _ => true);
@@ -4737,9 +4754,7 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmDocumentEditor_TrackChanges"] = "Track changes",
         ["TmDocumentEditor_ProtectDocument"] = "Protect document",
         ["TmDocumentEditor_MarkEditableRegion"] = "Mark editable region",
-        ["TmDocumentEditor_More"] = "More",
         ["TmDocumentEditor_MoreCommands"] = "More commands",
-        ["TmDocumentEditor_OverflowNoResults"] = "No matching commands",
         ["TmDocumentEditor_ShowMarkup"] = "Show markup",
         ["TmDocumentEditor_ReviewModeAllMarkup"] = "All markup",
         ["TmDocumentEditor_ReviewModeSimpleMarkup"] = "Simple markup",
@@ -5027,6 +5042,38 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmDocumentEditor_ImageResetSize"] = "Reset size",
         ["TmDocumentEditor_PageBreak"] = "Page break",
         ["TmDocumentEditor_GroupSigning"] = "Signing fields",
+        ["TmDocumentEditor_GroupMoreFormatting"] = "More formatting",
+        ["TmDocumentEditor_GroupStyle"] = "Style",
+        ["TmDocumentEditor_GroupCharacter"] = "Character",
+        ["TmDocumentEditor_GroupAlignment"] = "Alignment",
+        ["TmDocumentEditor_CommandTitleFormat"] = "{0}: {1}",
+        ["TmDocumentEditor_ColorTriggerLabel"] = "{0}: {1}",
+        ["TmDocumentEditor_ColorNotSet"] = "not set",
+        ["TmDocumentEditor_NoHighlight"] = "No highlight",
+        ["TmDocumentEditor_Color_111827"] = "Near black",
+        ["TmDocumentEditor_Color_374151"] = "Dark gray",
+        ["TmDocumentEditor_Color_6b7280"] = "Gray",
+        ["TmDocumentEditor_Color_000000"] = "Black",
+        ["TmDocumentEditor_Color_ffffff"] = "White",
+        ["TmDocumentEditor_Color_dc2626"] = "Red",
+        ["TmDocumentEditor_Color_ea580c"] = "Orange",
+        ["TmDocumentEditor_Color_d97706"] = "Amber",
+        ["TmDocumentEditor_Color_059669"] = "Green",
+        ["TmDocumentEditor_Color_2563eb"] = "Blue",
+        ["TmDocumentEditor_Color_4f46e5"] = "Indigo",
+        ["TmDocumentEditor_Color_7c3aed"] = "Violet",
+        ["TmDocumentEditor_Color_fef3c7"] = "Pale yellow",
+        ["TmDocumentEditor_Color_fde68a"] = "Yellow",
+        ["TmDocumentEditor_Color_fee2e2"] = "Pale red",
+        ["TmDocumentEditor_Color_ffedd5"] = "Pale orange",
+        ["TmDocumentEditor_Color_dcfce7"] = "Pale green",
+        ["TmDocumentEditor_Color_dbeafe"] = "Pale blue",
+        ["TmDocumentEditor_Color_e0e7ff"] = "Pale indigo",
+        ["TmDocumentEditor_Color_f3e8ff"] = "Pale violet",
+        ["TmDocumentEditor_Color_f3f4f6"] = "Light gray",
+        ["TmDocumentEditor_Color_d1d5db"] = "Silver",
+        ["TmDocumentEditor_Color_9ca3af"] = "Medium gray",
+        ["TmDocumentEditor_RibbonCommandsLabel"] = "Ribbon commands",
         ["TmDocumentEditor_InsertSigningField"] = "Signature field",
         ["TmDocumentEditor_SigningRepeatsEveryPage"] = "Repeats on every page",
         ["TmDocumentEditor_SigningFieldLabel"] = "Label",
@@ -10704,7 +10751,6 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmDocumentEditor_TrackChanges"] = "Sledovat změny",
         ["TmDocumentEditor_ProtectDocument"] = "Zamknout dokument",
         ["TmDocumentEditor_MarkEditableRegion"] = "Označit upravitelnou oblast",
-        ["TmDocumentEditor_More"] = "Více",
         ["TmDocumentEditor_MoreCommands"] = "Více příkazů",
         ["TmDocumentEditor_ShowMarkup"] = "Zobrazit značky",
         ["TmDocumentEditor_ReviewModeAllMarkup"] = "Všechny značky",
@@ -10808,6 +10854,38 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmDocumentEditor_ImageWidth"] = "Šířka",
         ["TmDocumentEditor_ImageTools"] = "Nástroje obrázku",
         ["TmDocumentEditor_GroupParagraph"] = "Odstavec",
+        ["TmDocumentEditor_GroupMoreFormatting"] = "Další formátování",
+        ["TmDocumentEditor_GroupStyle"] = "Styl",
+        ["TmDocumentEditor_GroupCharacter"] = "Znak",
+        ["TmDocumentEditor_GroupAlignment"] = "Zarovnání",
+        ["TmDocumentEditor_CommandTitleFormat"] = "{0}: {1}",
+        ["TmDocumentEditor_ColorTriggerLabel"] = "{0}: {1}",
+        ["TmDocumentEditor_ColorNotSet"] = "nenastaveno",
+        ["TmDocumentEditor_NoHighlight"] = "Bez zvýraznění",
+        ["TmDocumentEditor_Color_111827"] = "Téměř černá",
+        ["TmDocumentEditor_Color_374151"] = "Tmavě šedá",
+        ["TmDocumentEditor_Color_6b7280"] = "Šedá",
+        ["TmDocumentEditor_Color_000000"] = "Černá",
+        ["TmDocumentEditor_Color_ffffff"] = "Bílá",
+        ["TmDocumentEditor_Color_dc2626"] = "Červená",
+        ["TmDocumentEditor_Color_ea580c"] = "Oranžová",
+        ["TmDocumentEditor_Color_d97706"] = "Jantarová",
+        ["TmDocumentEditor_Color_059669"] = "Zelená",
+        ["TmDocumentEditor_Color_2563eb"] = "Modrá",
+        ["TmDocumentEditor_Color_4f46e5"] = "Indigová",
+        ["TmDocumentEditor_Color_7c3aed"] = "Fialová",
+        ["TmDocumentEditor_Color_fef3c7"] = "Světle žlutá",
+        ["TmDocumentEditor_Color_fde68a"] = "Žlutá",
+        ["TmDocumentEditor_Color_fee2e2"] = "Světle červená",
+        ["TmDocumentEditor_Color_ffedd5"] = "Světle oranžová",
+        ["TmDocumentEditor_Color_dcfce7"] = "Světle zelená",
+        ["TmDocumentEditor_Color_dbeafe"] = "Světle modrá",
+        ["TmDocumentEditor_Color_e0e7ff"] = "Světle indigová",
+        ["TmDocumentEditor_Color_f3e8ff"] = "Světle fialová",
+        ["TmDocumentEditor_Color_f3f4f6"] = "Světle šedá",
+        ["TmDocumentEditor_Color_d1d5db"] = "Stříbrná",
+        ["TmDocumentEditor_Color_9ca3af"] = "Středně šedá",
+        ["TmDocumentEditor_RibbonCommandsLabel"] = "Příkazy pásu karet",
         ["TmDocumentEditor_AlignLeft"] = "Vlevo",
         ["TmDocumentEditor_AlignCenter"] = "Na střed",
         ["TmDocumentEditor_AlignRight"] = "Vpravo",

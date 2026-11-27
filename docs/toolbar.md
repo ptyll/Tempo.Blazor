@@ -21,7 +21,7 @@ buttons can show their text next to or under the icon.
 | Component | Parameter | Values | Default |
 |-----------|-----------|--------|---------|
 | `TmToolbar` | `Overflow` | `None` · `Menu` | `None` (nothing changes for existing toolbars) |
-| `TmToolbar` | `Labels` | `Auto` · `Icons` · `IconsWithText` | `Auto` |
+| `TmToolbar` | `Labels` | `Auto` · `Icons` · `IconsWithText` · `ShrinkBeforeOverflow` | `Auto` |
 | `TmToolbar` | `OverflowLabel` | accessible name + tooltip of the More trigger | localized "More" |
 | `TmToolbar` | `AriaLabel` | accessible name of the toolbar | `Title`, then a localized "Toolbar" |
 | `TmToolbar` | `OverflowPresentation` | `PanelPresentation` of the More menu | `Auto` (sheet on phones) |
@@ -139,6 +139,23 @@ buttons can show their text next to or under the icon.
   arrow keys, Home/End and typeahead cross the sections and never stop on a header or a divider
   (`tm-menu-nav.js` roves menu items only), and the initial focus is still the first **enabled**
   menu item.
+
+## Labels that give way first (`ToolbarLabels.ShrinkBeforeOverflow`)
+
+With `Overflow=Menu`, `Labels="ToolbarLabels.ShrinkBeforeOverflow"` shows the labels like `IconsWithText` and, when the bar runs out of room,
+drops the TEXT of the icon+text buttons first (they become icon buttons; the text stays the accessible name and tooltip). Only when that is not
+enough do buttons move into More. `tm-toolbar.js` decides on every layout pass: it measures with labels, and when a button would leave it sets
+`data-tm-labels-collapsed` on the root (the stylesheet hides `.tm-toolbar-btn-text` of buttons that have an icon) and measures again. The marker
+is recomputed from scratch each pass, so there is no sticky state and a widened bar takes its labels back. The DocumentEditor ribbon uses it so
+Link / Comment / Image / Table lose their labels before a font select or an alignment button leaves.
+
+## Hosts that opt out of the size container
+
+`.tm-toolbar` is `container-type: inline-size` (so `Labels=Auto` and the `@container tm-toolbar` rules follow the toolbar's own width). A size
+container is the containing block of every `position: fixed` descendant, so a host whose toolbar items open fixed popups sets
+`container-type: normal` on its toolbar (the DocumentEditor ribbon does). The opt-out costs `Labels=Auto` and every `@container tm-toolbar`
+rule - such a host must use `Labels=IconsWithText`, `Icons` or `ShrinkBeforeOverflow`. Moving the popups to `TmOverlayPanel` removes the need
+(planned for the ribbon, redesign plan 146c7e1b phase 5).
 
 ## Non-button items (`TmToolbarItem`)
 
@@ -360,11 +377,23 @@ arrow stops, one Tab stop. Mark other custom focusables yourself or wrap them in
 
 ## Migrating from the DocumentEditor toolbar (DE-1.2)
 
-The DocumentEditor keeps its own `ToolbarItemPriority` and `toolbar-overflow.mjs` (it measures which
-ribbon commands are scrolled out of view). The core generalises that mechanism — `ToolbarButtonPriority`
-and `tm-toolbar.js` (fit count + DOM order, signature dedup, rAF coalescing,
-`ResizeObserver`/`MutationObserver`). The DocumentEditor migrates onto it in its own plan; nothing in the
-DocumentEditor changed here.
+**Done** (DocumentEditor redesign, phase 4). The DocumentEditor ribbon used to carry its own overflow machinery:
+`ToolbarItemPriority`, `toolbar-overflow.mjs` (which measured which ribbon commands were scrolled out of view of a
+horizontally scrolling strip) and `TmDocumentToolbarOverflowMenu` (a "More" button with a search box). The ribbon now runs on
+`TmToolbar` (`Overflow=Menu`, `OverflowPresentation=Popover`): the module and the menu component are deleted, and the ribbon
+keeps no overflow logic of its own.
+
+* **Priority.** `ToolbarItemPriority` stays as the ribbon's *declared metadata* (`DocumentEditorBuiltInToolbar`), published on every
+  ribbon command as `data-priority` (`primary` / `secondary` / `overflowonly`) and mapped onto `ToolbarButtonPriority` by
+  `ToCorePriority()`. `data-priority`, `data-command` and `data-testid` are the stable contract for E2E and hosts.
+* **Measuring** is `tm-toolbar.js` (fit count + DOM order); **the menu** is the core `ActionOverflowMenu` - a `role="menu"` with
+  one labelled section per `TmToolbarGroup`, arrow keys and typeahead; the search box of the old menu is gone (groups and
+  typeahead replace it, decision Q-C8). A toggle (bold, italic, ...) is a `menuitemcheckbox` there, its `aria-checked` the
+  button's `Pressed`.
+* **What stays on the bar.** Items that own a popup (style gallery, table grid, image menu, equation and symbol menus, page
+  layout, header/footer menus) and the colour pickers are `TmToolbarItem`s without a "More" representation: they never leave the
+  bar, because a popup inside a collapsed (invisible, inert) item could not be shown. `OverflowOnly` commands (the less frequent
+  character formatting, paragraph spacing before/after, change case and the debug tools) never render on the bar at all.
 
 | DocumentEditor | Core |
 |----------------|------|

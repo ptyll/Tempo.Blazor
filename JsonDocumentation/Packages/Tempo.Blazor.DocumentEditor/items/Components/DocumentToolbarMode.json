@@ -2,7 +2,7 @@
   "kind": "Enum",
   "category": "Components",
   "namespace": "Tempo.Blazor.Components.DocumentEditor",
-  "description": "Visual density and visibility mode for the document editor toolbar.",
+  "description": "Visual density and visibility mode for the document editor toolbar. Ribbon is the single icon row with the primary calls to action labelled; Compact is the same row, icon-only and denser; DistractionFree hides it.",
   "packageId": "Tempo.Blazor.DocumentEditor",
   "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/DocumentToolbarMode.cs",
   "documentationStatus": "generated",

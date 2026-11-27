@@ -76,6 +76,18 @@ public partial class TmColorPicker
     /// <summary>Placeholder text shown when no color is selected.</summary>
     [Parameter] public string? Placeholder { get; set; }
 
+    /// <summary>
+    /// Accessible name of the trigger button (e.g. "Font color: #dc2626"). Without it the trigger is named by its visually hidden text
+    /// (the value, or the placeholder while nothing is selected).
+    /// </summary>
+    [Parameter] public string? TriggerAriaLabel { get; set; }
+
+    /// <summary>
+    /// An icon name that replaces the checkerboard swatch of the trigger with a glyph and the current color as a bar under it
+    /// (the text / highlight color triggers of an editor toolbar). <see langword="null"/> (default) keeps the swatch.
+    /// </summary>
+    [Parameter] public string? TriggerIcon { get; set; }
+
     /// <summary>Additional CSS class.</summary>
     [Parameter] public string? Class { get; set; }
 

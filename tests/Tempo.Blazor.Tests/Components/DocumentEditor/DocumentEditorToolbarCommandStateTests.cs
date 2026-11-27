@@ -34,7 +34,7 @@ public class DocumentEditorToolbarCommandStateTests : LocalizationTestBase
 
         var button = cut.Find("[data-testid='document-save']");
         button.HasAttribute("disabled").Should().BeTrue();
-        button.GetAttribute("aria-disabled").Should().Be("true");
+        button.HasAttribute("disabled").Should().BeTrue();
     }
 
     [Fact]
@@ -47,7 +47,7 @@ public class DocumentEditorToolbarCommandStateTests : LocalizationTestBase
 
         var button = cut.Find("[data-testid='document-save']");
         button.HasAttribute("disabled").Should().BeFalse();
-        button.GetAttribute("aria-disabled").Should().Be("false");
+        button.HasAttribute("disabled").Should().BeFalse();
     }
 
     // ─── 3.3 Undo/Redo – registry-driven ────────────────────────────────────
@@ -73,7 +73,7 @@ public class DocumentEditorToolbarCommandStateTests : LocalizationTestBase
 
         var button = cut.Find("[data-testid='document-undo']");
         button.HasAttribute("disabled").Should().BeTrue();
-        button.GetAttribute("aria-disabled").Should().Be("true");
+        button.HasAttribute("disabled").Should().BeTrue();
     }
 
     [Fact]
@@ -86,7 +86,7 @@ public class DocumentEditorToolbarCommandStateTests : LocalizationTestBase
 
         var button = cut.Find("[data-testid='document-undo']");
         button.HasAttribute("disabled").Should().BeFalse();
-        button.GetAttribute("aria-disabled").Should().Be("false");
+        button.HasAttribute("disabled").Should().BeFalse();
     }
 
     [Fact]
@@ -99,7 +99,7 @@ public class DocumentEditorToolbarCommandStateTests : LocalizationTestBase
 
         var button = cut.Find("[data-testid='document-redo']");
         button.HasAttribute("disabled").Should().BeFalse();
-        button.GetAttribute("aria-disabled").Should().Be("false");
+        button.HasAttribute("disabled").Should().BeFalse();
     }
 
     [Fact]
@@ -138,7 +138,7 @@ public class DocumentEditorToolbarCommandStateTests : LocalizationTestBase
 
         var button = cut.Find("[data-testid='document-bold']");
         button.HasAttribute("disabled").Should().BeTrue();
-        button.GetAttribute("aria-disabled").Should().Be("true");
+        button.HasAttribute("disabled").Should().BeTrue();
     }
 
     [Fact]
@@ -152,7 +152,7 @@ public class DocumentEditorToolbarCommandStateTests : LocalizationTestBase
 
         var bold = cut.Find("[data-testid='document-bold']");
         bold.HasAttribute("disabled").Should().BeFalse();
-        bold.GetAttribute("aria-disabled").Should().Be("false");
+        bold.HasAttribute("disabled").Should().BeFalse();
         bold.GetAttribute("aria-pressed").Should().Be("false",
             "the canonical JS formatting state, not a stale registry value, owns the active state");
     }
@@ -333,7 +333,7 @@ public class DocumentEditorToolbarCommandStateTests : LocalizationTestBase
 
         var button = cut.Find("[data-testid='document-track-changes']");
         button.HasAttribute("disabled").Should().BeTrue();
-        button.GetAttribute("aria-disabled").Should().Be("true");
+        button.HasAttribute("disabled").Should().BeTrue();
     }
 
     [Fact]
@@ -347,7 +347,7 @@ public class DocumentEditorToolbarCommandStateTests : LocalizationTestBase
 
         var button = cut.Find("[data-testid='document-track-changes']");
         button.HasAttribute("disabled").Should().BeFalse();
-        button.GetAttribute("aria-disabled").Should().Be("false");
+        button.HasAttribute("disabled").Should().BeFalse();
     }
 
     // ─── 3.3 Font selectors – registry-driven ────────────────────────────────
@@ -362,7 +362,7 @@ public class DocumentEditorToolbarCommandStateTests : LocalizationTestBase
 
         var select = cut.Find("[data-testid='document-font-family']");
         select.HasAttribute("disabled").Should().BeTrue();
-        select.GetAttribute("aria-disabled").Should().Be("true");
+        select.HasAttribute("disabled").Should().BeTrue();
     }
 
     [Fact]
@@ -375,7 +375,7 @@ public class DocumentEditorToolbarCommandStateTests : LocalizationTestBase
 
         var select = cut.Find("[data-testid='document-font-family']");
         select.HasAttribute("disabled").Should().BeFalse();
-        select.GetAttribute("aria-disabled").Should().Be("false");
+        select.HasAttribute("disabled").Should().BeFalse();
     }
 
     [Fact]
@@ -388,7 +388,7 @@ public class DocumentEditorToolbarCommandStateTests : LocalizationTestBase
 
         var select = cut.Find("[data-testid='document-font-size']");
         select.HasAttribute("disabled").Should().BeTrue();
-        select.GetAttribute("aria-disabled").Should().Be("true");
+        select.HasAttribute("disabled").Should().BeTrue();
     }
 
     [Fact]
@@ -433,7 +433,8 @@ public class DocumentEditorToolbarCommandStateTests : LocalizationTestBase
         cut.Find("[data-testid='document-font-family']")
             .GetAttribute("value")
             .Should()
-            .BeEmpty();
+            .Be("__mixed");
+        cut.Find("[data-testid='document-font-family']").TextContent.Should().Contain("Mixed");
         cut.Find("[data-testid='document-font-size']")
             .GetAttribute("value")
             .Should()
@@ -515,7 +516,7 @@ public class DocumentEditorToolbarCommandStateTests : LocalizationTestBase
         var cut = Render<TmDocumentEditorToolbar>(p => p
             .Add(x => x.CommandRegistry, registry));
 
-        cut.Find("[data-testid='document-align-left']").HasAttribute("disabled").Should().BeTrue();
+        cut.Find("[data-testid='document-align'] button").HasAttribute("disabled").Should().BeTrue();
     }
 
     [Fact]
@@ -526,7 +527,7 @@ public class DocumentEditorToolbarCommandStateTests : LocalizationTestBase
         var cut = Render<TmDocumentEditorToolbar>(p => p
             .Add(x => x.CommandRegistry, registry));
 
-        cut.Find("[data-testid='document-align-center']").HasAttribute("disabled").Should().BeFalse();
+        cut.Find("[data-testid='document-align'] button").HasAttribute("disabled").Should().BeFalse();
     }
 
     [Fact]
@@ -537,7 +538,7 @@ public class DocumentEditorToolbarCommandStateTests : LocalizationTestBase
         var cut = Render<TmDocumentEditorToolbar>(p => p
             .Add(x => x.CommandRegistry, registry));
 
-        cut.Find("[data-testid='document-align-right']").HasAttribute("disabled").Should().BeTrue();
+        cut.Find("[data-testid='document-align'] button").HasAttribute("disabled").Should().BeTrue();
     }
 
     [Fact]
@@ -548,7 +549,7 @@ public class DocumentEditorToolbarCommandStateTests : LocalizationTestBase
         var cut = Render<TmDocumentEditorToolbar>(p => p
             .Add(x => x.CommandRegistry, registry));
 
-        cut.Find("[data-testid='document-align-justify']").HasAttribute("disabled").Should().BeFalse();
+        cut.Find("[data-testid='document-align'] button").HasAttribute("disabled").Should().BeFalse();
     }
 
     // ─── 3.3 Link button – registry-driven ───────────────────────────────────

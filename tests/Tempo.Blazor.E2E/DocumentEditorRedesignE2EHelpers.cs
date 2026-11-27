@@ -37,14 +37,83 @@ internal static class DocumentEditorRedesignE2EHelpers
             : $"{baseUrl}{route}";
 
     /// <summary>
-    /// The View tab's debug commands sit behind a sibling button that intercepts the pointer before the redesign
-    /// (Playwright reports "open versions subtree intercepts pointer events", also on a desktop width), so ribbon
-    /// commands are activated programmatically; the overlap itself is part of the "before" state.
+    /// A REAL click on a ribbon command (redesign 146c7e1b, phase 4: the old pointer-intercepting siblings are gone, so the
+    /// DispatchEvent workaround is retired). A command on the bar is clicked in place; a command that lives only in the core
+    /// "More" menu (the OverflowOnly debug tools and the less frequent character formatting, or anything that did not fit
+    /// the width) is chosen from that menu, which is opened first.
     /// </summary>
     public static async Task ClickRibbonAsync(IPage page, string testId)
     {
-        await page.GetByTestId(testId).DispatchEventAsync("click");
+        var onBar = page.Locator($"button[data-testid='{testId}']:visible");
+        if (await onBar.CountAsync() > 0)
+        {
+            await onBar.First.ClickAsync();
+        }
+        else
+        {
+            await OpenMoreAsync(page);
+            await page.Locator($"[role='menu'] [data-testid='{testId}'], [role='menu'] [data-menu-testid='{testId}']").First.ClickAsync();
+        }
+
         await page.WaitForTimeoutAsync(200);
+    }
+
+    /// <summary>Opens the ribbon's core "More" menu (a no-op when it is already open).</summary>
+    public static async Task OpenMoreAsync(IPage page)
+    {
+        if (await page.Locator("[role='menu']").CountAsync() == 0)
+        {
+            await page.Locator("[data-testid='document-ribbon-toolbar'] .tm-toolbar-more").ClickAsync();
+        }
+
+        await Assertions.Expect(page.Locator("[role='menu']").First).ToBeVisibleAsync(new() { Timeout = 10_000 });
+    }
+
+    /// <summary>
+    /// Picks one entry of an option list that lives in "More" (change case, line / paragraph spacing, ...): the list is a labelled
+    /// <c>role="group"</c> section and the option is a menu item with the given text.
+    /// </summary>
+    public static async Task ChooseMoreOptionAsync(IPage page, string groupLabel, string optionText)
+    {
+        await OpenMoreAsync(page);
+        var entry = page.Locator($"[role='menu'] [role='group'][aria-label='{groupLabel}'] [role^='menuitem']")
+            .Filter(new() { HasTextRegex = new System.Text.RegularExpressions.Regex($"^\\s*{System.Text.RegularExpressions.Regex.Escape(optionText)}\\s*$") });
+        await entry.First.ClickAsync();
+        await page.WaitForTimeoutAsync(200);
+    }
+
+    /// <summary>
+    /// Chooses a value of a ribbon select: the native select when the row has room for it, otherwise the same option from its
+    /// check-marked section in the core More menu (a select that did not fit collapses there).
+    /// </summary>
+    public static async Task SelectRibbonOptionAsync(IPage page, string selectTestId, string value, string groupLabel, string optionText)
+    {
+        var select = page.Locator($"select[data-testid='{selectTestId}']:visible");
+        if (await select.CountAsync() > 0)
+        {
+            await select.First.SelectOptionAsync(value);
+            return;
+        }
+
+        await ChooseMoreOptionAsync(page, groupLabel, optionText);
+    }
+
+    /// <summary>
+    /// Chooses a paragraph alignment (<c>left</c> / <c>center</c> / <c>right</c> / <c>justify</c>): the alignment item is ONE trigger
+    /// with a menu of four entries on the bar, or the "Alignment" section of More when it did not fit.
+    /// </summary>
+    public static async Task ChooseAlignmentAsync(IPage page, string alignment)
+    {
+        var trigger = page.Locator("[data-testid='document-align'] button:visible");
+        if (await trigger.CountAsync() > 0)
+        {
+            await trigger.First.ClickAsync();
+            await page.Locator($"[role='menu'] [data-testid='document-align-{alignment}']").ClickAsync();
+            await page.WaitForTimeoutAsync(200);
+            return;
+        }
+
+        await ChooseMoreOptionAsync(page, "Alignment", char.ToUpperInvariant(alignment[0]) + alignment[1..]);
     }
 
     public static async Task ApplyDarkThemeAsync(IPage page)

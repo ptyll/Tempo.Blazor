@@ -24,13 +24,13 @@ internal sealed class ToolbarInterop : IAsyncDisposable
     }
 
     /// <summary>Attaches (or re-attaches with new options) the toolbar behaviour to the root element.</summary>
-    public async Task AttachAsync<T>(ElementReference root, DotNetObjectReference<T> dotNetRef, bool overflow) where T : class
+    public async Task AttachAsync<T>(ElementReference root, DotNetObjectReference<T> dotNetRef, bool overflow, bool labelsFirst = false) where T : class
     {
         if (_disposed) return;
         // Stored BEFORE the invoke: a dispose that races the attach still knows the root the
         // module may have attached to; the JS detach is idempotent.
         _attached = root;
-        await _lazy.TryInvokeVoidAsync("attach", root, dotNetRef, new { overflow });
+        await _lazy.TryInvokeVoidAsync("attach", root, dotNetRef, new { overflow, labelsFirst });
     }
 
     public async ValueTask DisposeAsync()

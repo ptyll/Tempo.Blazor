@@ -14,13 +14,26 @@
          @onmousedown:preventDefault="true"
          role="button"
          tabindex="@(Disabled ? "-1" : "0")"
+         aria-label="@TriggerAriaLabel"
          aria-haspopup="dialog"
          aria-expanded="@(_isOpen ? "true" : "false")"
          aria-disabled="@(Disabled ? "true" : "false")">
-        <div class="tm-color-picker-trigger-bg">
-            <div class="tm-color-picker-trigger-color"
-                 style="background: @(string.IsNullOrEmpty(Value) ? "transparent" : Value)"></div>
-        </div>
+        @if (string.IsNullOrEmpty(TriggerIcon))
+        {
+            <div class="tm-color-picker-trigger-bg">
+                <div class="tm-color-picker-trigger-color"
+                     style="background: @(string.IsNullOrEmpty(Value) ? "transparent" : Value)"></div>
+            </div>
+        }
+        else
+        {
+            @* A glyph with the current colour as a bar under it (a text / highlight colour trigger): no checkerboard swatch. *@
+            <span class="tm-color-picker-trigger-glyph" aria-hidden="true">
+                <TmIcon Name="@TriggerIcon" />
+                <span class="tm-color-picker-trigger-bar @(string.IsNullOrEmpty(Value) ? "tm-color-picker-trigger-bar--empty" : null)"
+                      style="@(string.IsNullOrEmpty(Value) ? null : $"background: {Value}")"></span>
+            </span>
+        }
         <span class="tm-color-picker-trigger-text">
             @(string.IsNullOrEmpty(Value) ? (Placeholder ?? Loc["TmColorPicker_SelectColor"]) : Value)
         </span>

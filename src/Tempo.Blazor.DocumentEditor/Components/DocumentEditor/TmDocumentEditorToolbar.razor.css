@@ -1,23 +1,12 @@
-.tm-document-editor__ribbon {
-    scrollbar-gutter: stable;
-}
-
-.tm-document-editor__ribbon-tabs,
-.tm-document-editor__ribbon-groups {
+/* DE-1.2: the ribbon row itself (buttons, selects, groups, overflow) is styled once, in the package stylesheet
+   (_document-editor-toolbar.css), because its controls are rendered by core components. This isolated file owns the
+   popups the ribbon markup opens (style gallery, equation / symbol menus, page layout inspector). */
+.tm-document-editor__ribbon-tabs {
     overscroll-behavior-x: contain;
     scroll-padding-inline: var(--tm-space-3);
     -webkit-overflow-scrolling: touch;
 }
 
-.tm-document-editor__ribbon-commands-wrapper {
-    min-width: 0;
-}
-
-.tm-document-editor__ribbon-button {
-    max-width: 5.25rem;
-}
-
-.tm-document-editor__ribbon-button span,
 .tm-document-editor__ribbon-tab,
 .tm-document-editor__ribbon-select span {
     min-width: 0;
@@ -25,43 +14,10 @@
     text-overflow: ellipsis;
 }
 
-.tm-document-editor__ribbon-select {
-    min-width: 0;
-}
-
-.tm-document-editor__ribbon-select select {
-    min-width: 0;
-    text-overflow: ellipsis;
-}
-
-.tm-document-editor__ribbon-group--formatting {
-    min-width: max-content;
-    max-width: none;
-}
-
-.tm-document-editor__advanced-char-tools {
-    display: inline-flex;
-    flex: 0 0 auto;
-    align-items: center;
-    gap: var(--tm-space-1);
-    min-width: max-content;
-}
-
-.tm-document-editor__advanced-char-tools .tm-document-editor__ribbon-select {
-    flex: 0 0 auto;
-}
-
-.tm-document-style-gallery-wrapper {
-    position: relative;
-    display: inline-flex;
-    align-items: stretch;
-    gap: var(--tm-space-1);
-}
-
 .tm-document-style-gallery {
     position: absolute;
     z-index: var(--tm-z-dropdown);
-    top: calc(100% + var(--tm-space-1));
+    top: var(--tm-space-1);
     left: 0;
     display: grid;
     width: min(28rem, calc(100vw - 2rem));
@@ -363,45 +319,6 @@
 
 .tm-document-page-layout-inspector__check--wide {
     grid-column: 1 / -1;
-}
-
-:where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__ribbon {
-    max-inline-size: 100vw;
-}
-
-:where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__ribbon-tabs {
-    padding-inline: max(var(--tm-space-2), env(safe-area-inset-left)) max(var(--tm-space-2), env(safe-area-inset-right));
-}
-
-:where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__ribbon-tab {
-    min-block-size: 2.75rem;
-}
-
-:where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__ribbon-commands-wrapper {
-    overflow-x: auto;
-    overflow-y: hidden;
-    scroll-padding-inline: var(--tm-space-2);
-    -webkit-overflow-scrolling: touch;
-}
-
-:where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__ribbon-groups {
-    flex: 0 0 auto;
-    min-width: max-content;
-    max-width: none;
-}
-
-:where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__ribbon-button {
-    inline-size: 2.75rem;
-    min-inline-size: 2.75rem;
-    min-block-size: 2.75rem;
-    max-width: 2.75rem;
-}
-
-:where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__ribbon-select,
-:where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__ribbon-color {
-    flex: 0 0 auto;
-    min-inline-size: 6.75rem;
-    max-inline-size: 8rem;
 }
 
 :where(.tm-document-editor[data-layout="mobile"]) .tm-document-style-gallery__quick,

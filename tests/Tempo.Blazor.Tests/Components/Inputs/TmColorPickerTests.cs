@@ -266,4 +266,30 @@ public class TmColorPickerTests : LocalizationTestBase
         swatches[0].GetAttribute("aria-label").Should().Be("Select color Crimson");
         swatches[1].GetAttribute("aria-label").Should().Be("Select color Forest green");
     }
+
+    [Fact]
+    public void TriggerIcon_ReplacesTheSwatchWithAGlyphAndAColourBar_AndTriggerAriaLabelNamesTheButton()
+    {
+        var cut = Render<TmColorPicker>(p => p
+            .Add(x => x.Value, "#dc2626")
+            .Add(x => x.TriggerIcon, "paintbrush")
+            .Add(x => x.TriggerAriaLabel, "Font color: #dc2626"));
+
+        var trigger = cut.Find(".tm-color-picker-trigger");
+        trigger.GetAttribute("aria-label").Should().Be("Font color: #dc2626");
+        trigger.QuerySelector(".tm-color-picker-trigger-glyph svg").Should().NotBeNull();
+        cut.FindAll(".tm-color-picker-trigger-bg").Should().BeEmpty("no checkerboard swatch when a glyph is requested");
+        cut.Find(".tm-color-picker-trigger-bar").GetAttribute("style").Should().Contain("#dc2626");
+    }
+
+    [Fact]
+    public void TriggerIcon_WithoutAValue_UsesTheEmptyBar_AndWithoutTheParametersNothingChanges()
+    {
+        var withIcon = Render<TmColorPicker>(p => p.Add(x => x.TriggerIcon, "highlighter"));
+        withIcon.Find(".tm-color-picker-trigger-bar").ClassList.Should().Contain("tm-color-picker-trigger-bar--empty");
+
+        var plain = Render<TmColorPicker>();
+        plain.FindAll(".tm-color-picker-trigger-bg").Should().HaveCount(1);
+        plain.Find(".tm-color-picker-trigger").HasAttribute("aria-label").Should().BeFalse();
+    }
 }

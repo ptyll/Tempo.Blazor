@@ -106,16 +106,8 @@ public sealed class DocumentEditorCanvasDropdownOpenE2ETests : WasmTestBase
         var fontSizeAfterEscape = await ReadCommandValueAsync(page, "fontsize");
         Assert.AreEqual(fontSizeBefore, fontSizeAfterEscape, "Escape z otevřeného dropdownu nesmí změnit formátování.");
 
-        var changeCase = page.GetByTestId("document-change-case");
-        if (await changeCase.CountAsync() > 0)
-        {
-            await changeCase.ClickAsync();
-            var caseFocus = await ReadActiveElementTestIdAsync(page);
-            await ScreenshotAsync(page, Path.Combine(output, "01-change-case-clicked-open.png"));
-            Assert.AreEqual("document-change-case", caseFocus, "klik na change-case select ho musí fokusovat (dropdown se otevírá).");
-            await page.Keyboard.PressAsync("Escape");
-            await AssertSelectionStillVisibleAsync(page, AgreementBlockId);
-        }
+        // Change case moved into the core More menu (OverflowOnly): no native select on the bar any more.
+        Assert.AreEqual(0, await page.GetByTestId("document-change-case").CountAsync(), "change case is a More option list, not a bar select");
 
         await File.WriteAllTextAsync(
             Path.Combine(output, "manifest.json"),
@@ -123,7 +115,6 @@ public sealed class DocumentEditorCanvasDropdownOpenE2ETests : WasmTestBase
             {
                 problem = "Fáze 13: font-family + change-case dropdowny v hlavním toolbaru",
                 familyFocus,
-                changeCaseRendered = await changeCase.CountAsync(),
                 edgeCase = "Escape z otevřeného dropdownu nemění formátování a drží selection"
             }, JsonWebIndented));
     }

@@ -78,7 +78,7 @@ public class DocumentEditorRedesignBaselineE2ETests : BaselineGeneratorTestBase
         {
             var page = await OpenAsync(DocumentEditorRedesignE2EHelpers.HistoryDocumentId, viewport.Width, viewport.Height, viewport.Touch);
             await page.GetByTestId("document-ribbon-tab-review").ClickAsync();
-            await page.GetByTestId("document-compare-open").ClickAsync();
+            await DocumentEditorRedesignE2EHelpers.ClickRibbonAsync(page, "document-compare-open");
             await Assertions.Expect(page.GetByTestId("document-compare-dialog")).ToBeVisibleAsync(new() { Timeout = 10_000 });
             await Shot(page, $"compare-dialog-{viewport.Name}.png");
             await DocumentEditorRedesignE2EHelpers.ApplyDarkThemeAsync(page);

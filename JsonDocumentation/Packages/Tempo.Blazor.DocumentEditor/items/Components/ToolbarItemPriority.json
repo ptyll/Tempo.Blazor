@@ -2,7 +2,7 @@
   "kind": "Enum",
   "category": "Components",
   "namespace": "Tempo.Blazor.Components.DocumentEditor.Registry",
-  "description": "Priority used when toolbar items move into overflow surfaces.",
+  "description": "The rank of a ribbon command when the bar runs out of room: the registry's declared metadata, published as data-priority on every ribbon command and mapped onto the core ToolbarButtonPriority (ToCorePriority). The measuring and the More menu belong to the core TmToolbar.",
   "packageId": "Tempo.Blazor.DocumentEditor",
   "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/Registry/ToolbarItemPriority.cs",
   "documentationStatus": "generated",

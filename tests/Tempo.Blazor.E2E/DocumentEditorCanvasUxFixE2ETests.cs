@@ -223,7 +223,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
         await ClickCanvasOffsetAsync(page, OverviewBlockId, 5);
         await WaitForCollapsedCaretAsync(page);
         await page.GetByTestId("document-ribbon-tab-insert").ClickAsync();
-        await page.GetByTestId("document-insert-page-break").ClickAsync();
+        await DocumentEditorRedesignE2EHelpers.ClickRibbonAsync(page, "document-insert-page-break");
         await page.WaitForTimeoutAsync(700);
         await ScreenshotAsync(page, Path.Combine(output, "00-after-insert.png"));
         var pageBreaksAfter = await ReadPageBreakCountAsync(page);

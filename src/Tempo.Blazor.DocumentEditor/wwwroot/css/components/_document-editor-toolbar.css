@@ -85,112 +85,193 @@
     outline-offset: 2px;
 }
 
+/* ─── DE-1.2: the ribbon command row ────────────────────────────────────────────────────────────
+   ONE row on the core TmToolbar (Overflow=Menu): icon buttons with a tooltip, groups divided by vertical rules (no captions),
+   a visible label only on the primary calls to action. tm-toolbar.js measures what fits; the commands that do not go to the
+   core "More" menu by priority - the row never scrolls. */
+.tm-document-editor__ribbon-commands-wrapper {
+    position: relative;
+    z-index: 20;
+    display: flex;
+    align-items: stretch;
+    min-width: 0;
+    overflow: visible;
+}
+
 .tm-document-editor__ribbon-groups {
     position: relative;
     z-index: 2;
-    display: flex;
+    display: block;
     flex: 1 1 auto;
-    flex-wrap: nowrap;
     min-width: 0;
-    /* Jedna vertikální osa (Fáze 15): container natahuje skupiny na plnou výšku (caption ::after
-       sedí u spodní hrany všech skupin), skupina pak centruje controls sjednocené na 3.25rem. */
-    align-items: stretch;
-    gap: 0;
-    min-height: 5.2rem;
-    padding: var(--tm-space-2) var(--tm-space-3) var(--tm-space-1);
-    overflow-x: auto;
-    overflow-y: visible;
     background: var(--tm-color-surface-elevated);
-    scrollbar-width: thin;
 }
 
-.tm-document-editor__ribbon-group {
-    position: relative;
+/* The core bar is a size container (its Labels=Auto follows its own width). The ribbon fixes its labels itself and owns popups
+   that are position:fixed (the table grid and its backdrop) - a container would become their containing block - so it is not one. */
+.tm-document-editor__ribbon-toolbar.tm-toolbar {
+    container-type: normal;
+    flex-wrap: nowrap;
+    gap: var(--tm-space-1);
+    min-height: 3rem;
+    padding: var(--tm-space-1) var(--tm-space-3);
+    background: transparent;
+    border-bottom: 0;
+}
+
+/* A group is a layout wrapper tm-toolbar.js flattens: its gap equals the bar's, so the measured fit is exact. */
+.tm-document-editor__ribbon-toolbar .tm-document-editor__ribbon-group {
     display: flex;
     flex: 0 0 auto;
-    flex-wrap: nowrap;
-    align-content: flex-start;
     align-items: center;
     gap: var(--tm-space-1);
     min-width: 0;
-    max-width: 100%;
-    /* Fáze 15: max-height odstraněna — spolu s ::after caption (padding-bottom 1rem) ořezávala
-       vyšší obsah (advanced-char-tools na Home); výšku drží min-height + jednotné 3.25rem controls. */
-    min-height: 4.6rem;
-    padding: 0 var(--tm-space-3) 1rem;
-    border-right: 1px solid var(--tm-color-border-subtle);
 }
 
-.tm-document-editor__ribbon-group::after {
-    position: absolute;
-    inset-inline: var(--tm-space-2);
-    bottom: 0;
-    content: attr(aria-label);
-    color: var(--tm-color-text-muted);
-    font-size: var(--tm-font-size-xs);
-    line-height: 1;
-    pointer-events: none;
-    text-align: center;
-    white-space: nowrap;
+/* A group of OverflowOnly commands renders only position markers on the bar: it takes no box and no gap. */
+.tm-document-editor__ribbon-toolbar .tm-document-editor__ribbon-group--overflow-only {
+    display: contents;
 }
 
-.tm-document-editor__ribbon-group:last-child {
-    border-right: 0;
+.tm-document-editor__ribbon-toolbar .tm-toolbar-item {
+    gap: var(--tm-space-1);
 }
 
-.tm-document-editor__ribbon-button {
-    position: relative;
-    z-index: 1;
-    display: inline-flex;
-    align-items: center;
+.tm-document-editor__ribbon-toolbar .tm-toolbar-btn {
+    min-width: 2.25rem;
+    min-height: 2.25rem;
+    padding: 0 var(--tm-space-2);
     justify-content: center;
-    flex: 0 0 auto;
-    inline-size: 4.75rem;
-    min-height: 3.25rem;
-    max-height: 3.25rem;
-    flex-direction: column;
-    gap: 0.2rem;
-    padding: var(--tm-space-1);
-    overflow: hidden;
-    border: 1px solid transparent;
-    border-radius: var(--tm-radius-control);
     color: var(--tm-color-text);
-    background: transparent;
-    cursor: pointer;
-    font-size: var(--tm-font-size-xs);
-    line-height: var(--tm-line-height-tight);
-    text-align: center;
-    transition: background-color var(--tm-duration-quick), border-color var(--tm-duration-quick), color var(--tm-duration-quick), box-shadow var(--tm-duration-quick);
+    border-radius: var(--tm-radius-control);
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-medium);
 }
 
-.tm-document-editor__ribbon-button:disabled {
-    color: var(--tm-color-text-disabled);
-    cursor: not-allowed;
+.tm-document-editor__ribbon-toolbar .tm-toolbar-btn .tm-icon {
+    flex: 0 0 auto;
+    width: 1.125rem;
+    height: 1.125rem;
 }
 
-.tm-document-editor__ribbon-button:hover:not(:disabled) {
+.tm-document-editor__ribbon-toolbar .tm-toolbar-btn:hover:not(:disabled) {
     color: var(--tm-color-primary);
     background: var(--tm-color-primary-subtle);
-    border-color: color-mix(in srgb, var(--tm-color-primary) 32%, var(--tm-color-border));
 }
 
-.tm-document-editor__ribbon-button:active:not(:disabled) {
-    transform: translateY(1px);
+.tm-document-editor__ribbon-toolbar .tm-toolbar-btn[aria-pressed="true"]:hover:not(:disabled) {
+    color: var(--tm-color-primary);
+    background: var(--tm-color-primary-subtle);
 }
 
-.tm-document-editor__ribbon-button .tm-icon {
-    flex: 0 0 auto;
-    width: 1rem;
-    height: 1rem;
+.tm-document-editor__ribbon-toolbar .tm-toolbar-btn:disabled {
+    color: var(--tm-color-text-disabled);
 }
 
-.tm-document-editor__ribbon-button span {
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+/* The primary calls to action (Link, Comment, Image, Table, the zoom readout) carry their label next to the icon. */
+.tm-document-editor__ribbon-toolbar .tm-toolbar-btn[data-large="true"] {
+    gap: var(--tm-space-2);
+    padding: 0 var(--tm-space-3);
 }
 
+.tm-document-editor__ribbon-toolbar .tm-toolbar-more {
+    min-height: 2.25rem;
+    color: var(--tm-color-text);
+}
+
+.tm-document-editor__ribbon-toolbar .tm-toolbar-more:hover:not(:disabled) {
+    color: var(--tm-color-primary);
+    background: var(--tm-color-primary-subtle);
+}
+
+.tm-document-editor__ribbon-toolbar .tm-toolbar-divider {
+    height: 1.5rem;
+    margin: 0 var(--tm-space-1);
+}
+
+/* A finger-sized target on a coarse pointer (the core rule is outranked by the ribbon sizing above). */
+@media (pointer: coarse) {
+    .tm-document-editor__ribbon-toolbar .tm-toolbar-btn,
+    .tm-document-editor__ribbon-toolbar .tm-toolbar-more,
+    .tm-document-editor__ribbon-toolbar .tm-document-editor__ribbon-select,
+    .tm-document-editor__ribbon-toolbar .tm-document-editor__ribbon-alignment .tm-dropdown-trigger,
+    .tm-document-editor__ribbon-toolbar .tm-document-editor__ribbon-tempo-color-picker .tm-color-picker-trigger {
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
+    }
+
+    .tm-document-editor__ribbon-toolbar .tm-document-editor__ribbon-select select {
+        min-height: calc(var(--tm-touch-target) - 2px);
+    }
+}
+
+/* Pressed: the quiet fill and the primary ink, no inset ring (the ring read as a heavy frame next to the flat icon row). Forced colors
+   keep the core SelectedItem rule. */
+.tm-document-editor__ribbon-toolbar .tm-toolbar-btn[aria-pressed="true"],
+.tm-document-editor__ribbon-toolbar .tm-toolbar-btn[aria-pressed="true"]:hover:not(:disabled) {
+    box-shadow: none;
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary);
+}
+
+.tm-document-editor__ribbon-toolbar .tm-toolbar-btn[aria-pressed="mixed"] {
+    box-shadow: inset 0 0 0 1px var(--tm-color-primary-500);
+}
+
+@media (forced-colors: active) {
+    .tm-document-editor__ribbon-toolbar .tm-toolbar-btn[aria-pressed="true"] {
+        forced-color-adjust: none;
+        background: SelectedItem;
+        color: SelectedItemText;
+    }
+}
+
+/* The More trigger keeps a gap to the last control. */
+.tm-document-editor__ribbon-toolbar .tm-toolbar-more {
+    margin-inline-start: var(--tm-space-1);
+}
+
+/* The More menu hangs below the trigger and scrolls inside its own cap (the core panel constrains it further to the room it has). */
+.tm-document-editor__ribbon-toolbar .tm-toolbar-more__panel {
+    max-height: min(28rem, calc(100dvh - 11rem));
+    overflow-y: auto;
+}
+
+/* The style gallery popup hangs under the ribbon row, outside the (collapsing) toolbar. */
+.tm-document-style-gallery-anchor {
+    position: absolute;
+    z-index: var(--tm-z-dropdown);
+    inset-block-start: 100%;
+    inset-inline-start: var(--tm-space-3);
+}
+
+/* The alignment item: a ribbon-sized trigger showing the current alignment icon. */
+.tm-document-editor__ribbon-alignment .tm-dropdown-trigger {
+    min-height: 2.25rem;
+    padding: 0 var(--tm-space-2);
+    gap: var(--tm-space-1);
+    border: 0;
+    background: transparent;
+    color: var(--tm-color-text);
+    border-radius: var(--tm-radius-control);
+}
+
+.tm-document-editor__ribbon-alignment .tm-dropdown-trigger:hover:not(:disabled) {
+    color: var(--tm-color-primary);
+    background: var(--tm-color-primary-subtle);
+}
+
+.tm-document-editor__ribbon-alignment .tm-dropdown-trigger > span:empty {
+    display: none;
+}
+
+/* The colour trigger: a glyph with the current colour as a 3px bar under it (no checkerboard). */
+.tm-document-editor__ribbon-tempo-color-picker .tm-color-picker-trigger-glyph .tm-icon {
+    width: 1.125rem;
+    height: 1.125rem;
+}
+
+/* Compact: the same row, denser; every label is hidden (the primary calls to action are icon buttons too, see LargeActions). */
 .tm-document-editor__ribbon--compact .tm-document-editor__ribbon-tabs {
     min-height: 2rem;
 }
@@ -202,187 +283,73 @@
     font-size: var(--tm-font-size-xs);
 }
 
-.tm-document-editor__ribbon--compact .tm-document-editor__ribbon-groups {
-    min-height: 3rem;
-    padding: var(--tm-space-1) var(--tm-space-2);
-}
-
-.tm-document-editor__ribbon--compact .tm-document-editor__ribbon-group {
-    min-height: 2.75rem;
-    padding: 0 var(--tm-space-1);
-}
-
-.tm-document-editor__ribbon--compact .tm-document-editor__ribbon-group::after {
-    display: none;
-}
-
-.tm-document-editor__ribbon--compact .tm-document-editor__ribbon-button {
-    inline-size: 2.5rem;
-    min-width: 2.5rem;
+.tm-document-editor__ribbon--compact .tm-document-editor__ribbon-toolbar.tm-toolbar {
     min-height: 2.5rem;
-    max-height: 2.5rem;
-    padding: 0;
-}
-
-.tm-document-editor__ribbon--compact .tm-document-editor__ribbon-select,
-.tm-document-editor__ribbon--compact .tm-document-editor__ribbon-color,
-.tm-document-editor__ribbon--compact .tm-document-editor__ribbon-color-picker,
-.tm-document-editor__ribbon--compact .tm-document-editor__ribbon-tempo-color-picker .tm-color-picker-trigger {
-    min-height: 2.5rem;
-    max-height: 2.5rem;
-}
-
-.tm-document-editor__ribbon--compact .tm-document-editor__ribbon-button span {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
-    border: 0;
+    padding: 0 var(--tm-space-2);
 }
 
 .tm-document-editor__ribbon--distraction-free {
     display: none;
 }
 
-.tm-document-editor__ribbon-button--active {
-    color: var(--tm-color-primary);
-    background: color-mix(in srgb, var(--tm-color-primary-subtle) 82%, var(--tm-color-surface));
-    border-color: color-mix(in srgb, var(--tm-color-primary) 55%, var(--tm-color-border));
-    box-shadow: inset 0 -3px 0 var(--tm-color-primary), 0 0 0 1px color-mix(in srgb, var(--tm-color-primary) 18%, transparent);
-}
-
-.tm-document-editor__ribbon-button--mixed {
-    background: var(--tm-color-warning-subtle);
-    border-color: color-mix(in srgb, var(--tm-color-warning) 55%, var(--tm-color-border));
-    box-shadow: inset 0 -2px 0 var(--tm-color-warning);
-}
-
-.tm-document-editor__track-toggle {
+/* Native selects of the row (block style, font, size, line spacing, markup display). */
+.tm-document-editor__ribbon-select {
     position: relative;
-    padding-inline-end: 1.25rem;
-}
-
-.tm-document-editor__track-toggle::before,
-.tm-document-editor__track-toggle::after {
-    position: absolute;
-    content: "";
-    pointer-events: none;
-}
-
-.tm-document-editor__track-toggle::before {
-    top: 0.35rem;
-    right: 0.35rem;
-    width: 1.35rem;
-    height: 0.72rem;
-    background: var(--tm-color-surface-secondary);
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-full);
-}
-
-.tm-document-editor__track-toggle::after {
-    top: calc(0.35rem + 0.14rem);
-    right: calc(0.35rem + 0.72rem);
-    width: 0.44rem;
-    height: 0.44rem;
-    background: var(--tm-color-text-muted);
-    border-radius: var(--tm-radius-full);
-    box-shadow: var(--tm-shadow-xs);
-    transition: right var(--tm-duration-quick), background-color var(--tm-duration-quick);
-}
-
-.tm-document-editor__track-toggle--on {
-    color: var(--tm-color-primary);
-    background: color-mix(in srgb, var(--tm-color-primary-subtle) 86%, var(--tm-color-surface));
-    border-color: color-mix(in srgb, var(--tm-color-primary) 62%, var(--tm-color-border));
-    box-shadow:
-        inset 0 -3px 0 var(--tm-color-primary),
-        0 0 0 1px color-mix(in srgb, var(--tm-color-primary) 18%, transparent);
-}
-
-.tm-document-editor__track-toggle--on::before {
-    background: var(--tm-color-primary);
-    border-color: var(--tm-color-primary);
-}
-
-.tm-document-editor__track-toggle--on::after {
-    right: calc(0.35rem + 0.16rem);
-    background: var(--tm-color-surface);
-}
-
-.tm-document-editor__track-toggle--off {
-    color: var(--tm-color-text);
-    background: var(--tm-color-surface);
-    border-color: var(--tm-color-border-subtle);
-}
-
-.tm-document-editor__ribbon-select,
-.tm-document-editor__ribbon-color {
     display: inline-flex;
     align-items: center;
-    /* Fáze 15: selecty nesmí růst ve shrink-to-content skupině (dřív flex: 1 1 7rem)
-       a sedí na stejné 3.25rem ose jako sloupcová tlačítka. */
-    flex: 0 1 auto;
+    flex: 0 0 auto;
     gap: var(--tm-space-1);
     min-width: 0;
-    max-width: 12rem;
-    min-height: 3.25rem;
-    max-height: 3.25rem;
-    padding: 0 var(--tm-space-2);
-    overflow: hidden;
+    min-height: 2.25rem;
+    padding: 0 var(--tm-space-1);
     border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-control);
     background: var(--tm-color-surface);
     color: var(--tm-color-text);
-    font-size: var(--tm-font-size-xs);
+    font-size: var(--tm-font-size-sm);
     white-space: nowrap;
 }
 
+.tm-document-editor__ribbon-select:focus-within {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 1px;
+}
+
 .tm-document-editor__ribbon-select select {
-    flex: 1 0 5.5rem;
-    min-width: 5.5rem;
-    max-width: 8rem;
-    width: auto;
+    min-width: 0;
+    width: 100%;
+    min-height: 2rem;
     border: 0;
+    outline: 0;
     background: transparent;
     color: inherit;
     font: inherit;
+    text-overflow: ellipsis;
 }
 
-.tm-document-editor__ribbon-select--compact select {
-    flex-basis: 4.25rem;
-    min-width: 4.25rem;
-    max-width: 4.25rem;
+.tm-document-editor__ribbon-select:has(select:disabled) {
+    color: var(--tm-color-text-disabled);
+    cursor: not-allowed;
 }
 
-.tm-document-editor__ribbon-color input {
-    width: 1.35rem;
-    height: 1.35rem;
-    padding: 0;
-    border: 0;
-    background: transparent;
-}
+.tm-document-editor__ribbon-select--style { inline-size: 8.5rem; }
+.tm-document-editor__ribbon-select--font { inline-size: 7rem; }
+.tm-document-editor__ribbon-select--size { inline-size: 4.75rem; }
+.tm-document-editor__ribbon-select--spacing { inline-size: 5.25rem; }
+.tm-document-editor__ribbon-select--review { inline-size: 9.5rem; }
 
 .tm-document-editor__ribbon-color-picker {
     position: relative;
     display: inline-flex;
     align-items: center;
-    min-height: 3.25rem;
+    min-height: 2.25rem;
 }
 
 .tm-document-editor__ribbon-tempo-color-picker {
     display: inline-flex;
 }
 
-/* Overflow must NOT flip to visible while a picker is open: the ribbon groups element is a
-   horizontal scroller (overflow-x:auto), and changing overflow destroys the scroll container —
-   scrollLeft silently resets to 0, the trigger snaps out of the viewport and overlay.js hides the
-   freshly opened panel (anchorIntersectsViewport). TmOverlayPanel renders in the browser top layer,
-   so ancestor overflow cannot clip the dropdown any more — the old un-clipping hack is obsolete. */
-
+/* The pickers render in the browser top layer (TmOverlayPanel): no ancestor overflow clips them, and the ribbon row has none. */
 .tm-document-editor__ribbon:has(.tm-document-editor__ribbon-tempo-color-picker.tm-color-picker--open) {
     z-index: calc(var(--tm-document-z-floating-ui, var(--tm-z-popover, 1000)) + 30);
 }
@@ -393,12 +360,12 @@
 }
 
 .tm-document-editor__ribbon-tempo-color-picker .tm-color-picker-trigger {
-    min-height: 3.25rem;
-    max-height: 3.25rem;
+    min-height: 2.25rem;
+    max-height: 2.25rem;
     gap: var(--tm-space-1);
     padding: 0 var(--tm-space-2);
     color: var(--tm-color-text);
-    background: var(--tm-color-surface);
+    background: transparent;
     border-color: transparent;
     border-radius: var(--tm-radius-control);
     font-size: var(--tm-font-size-xs);
@@ -471,6 +438,63 @@
     border-top: 1px solid var(--tm-color-border-subtle);
 }
 
+/* The pressed / mixed look is the core aria-pressed rule; the --active / --mixed modifier classes stay as the ribbon's stable
+   state hooks (and keep the ink consistent for a host that styles on them). */
+.tm-document-editor__ribbon-button--active {
+    color: var(--tm-color-primary);
+}
+
+.tm-document-editor__ribbon-button--mixed {
+    color: var(--tm-color-text);
+}
+
+/* Track changes keeps its state hooks (--on / --off) and wears a small status pip in the corner of the icon button: a ring
+   (::before) with a filled centre (::after) while tracking is on. The pressed look itself is the core aria-pressed rule. */
+.tm-document-editor__track-toggle {
+    position: relative;
+}
+
+.tm-document-editor__track-toggle::before,
+.tm-document-editor__track-toggle::after {
+    position: absolute;
+    content: "";
+    pointer-events: none;
+    border-radius: var(--tm-radius-full);
+}
+
+.tm-document-editor__track-toggle::before {
+    top: 0.2rem;
+    right: 0.2rem;
+    width: 0.5rem;
+    height: 0.5rem;
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-text-muted);
+}
+
+.tm-document-editor__track-toggle::after {
+    top: calc(0.2rem + 0.15rem);
+    right: calc(0.2rem + 0.15rem);
+    width: 0.2rem;
+    height: 0.2rem;
+    background: transparent;
+}
+
+.tm-document-editor__track-toggle--on::before {
+    border-color: var(--tm-color-primary);
+}
+
+.tm-document-editor__track-toggle--on::after {
+    background: var(--tm-color-primary);
+}
+
+.tm-document-editor__track-toggle--on {
+    color: var(--tm-color-primary);
+}
+
+.tm-document-editor__track-toggle--off {
+    color: var(--tm-color-text);
+}
+
 .tm-document-editor__ribbon .tm-document-editor__dirty,
 .tm-document-editor__ribbon .tm-document-editor__save-message,
 .tm-document-editor__ribbon .tm-document-editor__last-saved {
@@ -492,123 +516,45 @@
     background: var(--tm-color-surface-secondary);
 }
 
-.tm-document-editor__ribbon-commands-wrapper {
-    position: relative;
-    z-index: 20;
-    display: flex;
-    align-items: stretch;
-    overflow: visible;
-}
-
-.tm-document-editor__ribbon-group--quick-access {
-    flex: 0 0 auto;
-    background: var(--tm-color-surface-elevated);
-}
-
-.tm-document-editor__ribbon-more {
-    position: relative;
-    z-index: 30;
-    flex: 0 0 auto;
-    align-self: center;
-    min-height: 2rem;
+/* A ribbon button OUTSIDE the core bar - the style gallery's action buttons (a popup) and the declarative renderers' buttons
+   (DocumentToolbarComponentFactory, hosted on the demo page) - keeps a plain bordered look; inside the bar the core
+   .tm-toolbar-btn rules above are the look. */
+.tm-document-editor__ribbon-button:not(.tm-toolbar-btn) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--tm-space-2);
+    min-height: 2.25rem;
     padding: 0 var(--tm-space-3);
-    border-left: 1px solid var(--tm-color-border-subtle);
-    background: var(--tm-color-surface-elevated);
-    font-size: var(--tm-font-size-xs);
-    white-space: nowrap;
-    gap: var(--tm-space-1);
-}
-
-.tm-document-editor__ribbon-more:focus-visible {
-    outline: 2px solid var(--tm-color-primary);
-    outline-offset: 2px;
-}
-
-.tm-document-editor__overflow-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 59;
-    padding: 0;
-    background: transparent;
-    border: 0;
-    cursor: default;
-}
-
-.tm-document-editor__overflow-menu {
-    position: absolute;
-    top: calc(100% + 2px);
-    right: 0;
-    z-index: 60;
-    min-width: 13rem;
-    max-width: min(22rem, calc(100vw - var(--tm-space-4)));
-    max-height: min(26rem, calc(100vh - 8rem));
-    padding: var(--tm-space-1);
-    overflow: auto;
-    background: var(--tm-color-surface-elevated);
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-card);
-    box-shadow: var(--tm-shadow-popover);
-}
-
-.tm-document-editor__overflow-search {
-    display: block;
-    padding: var(--tm-space-1);
-}
-
-.tm-document-editor__overflow-search input {
-    width: 100%;
-    min-height: 2rem;
-    padding: 0 var(--tm-space-2);
-    color: var(--tm-color-text);
-    background: var(--tm-color-surface);
     border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-control);
+    color: var(--tm-color-text);
+    background: var(--tm-color-surface);
+    cursor: pointer;
     font-size: var(--tm-font-size-sm);
 }
 
-.tm-document-editor__overflow-search input:focus-visible {
-    outline: 2px solid var(--tm-color-primary);
-    outline-offset: 1px;
+.tm-document-editor__ribbon-button:not(.tm-toolbar-btn):hover:not(:disabled) {
+    color: var(--tm-color-primary);
+    background: var(--tm-color-primary-subtle);
+    border-color: var(--tm-color-primary);
 }
 
-.tm-document-editor__overflow-menu-empty {
-    padding: var(--tm-space-3);
-    color: var(--tm-color-text-muted);
-    font-size: var(--tm-font-size-sm);
-    text-align: center;
+.tm-document-editor__ribbon-button:not(.tm-toolbar-btn).tm-document-editor__ribbon-button--active {
+    color: var(--tm-color-primary);
+    background: var(--tm-color-primary-subtle);
+    border-color: var(--tm-color-primary);
 }
 
-.tm-document-editor__overflow-menu-group {
-    padding: var(--tm-space-2) var(--tm-space-3) var(--tm-space-1);
-    color: var(--tm-color-text-muted);
-    font-size: var(--tm-font-size-xs);
-    font-weight: var(--tm-font-weight-semibold);
-    text-transform: uppercase;
-}
-
-.tm-document-editor__overflow-menu-item {
-    display: flex;
-    width: 100%;
-    padding: var(--tm-space-2) var(--tm-space-3);
-    border-radius: var(--tm-radius-xs);
-    font-size: var(--tm-font-size-sm);
-    text-align: left;
-    white-space: nowrap;
-}
-
-.tm-document-editor__overflow-menu-item:hover:not(:disabled),
-.tm-document-editor__overflow-menu-item--active:not(:disabled) {
-    background: var(--tm-color-surface-hover);
-}
-
-.tm-document-editor__overflow-menu-item:focus-visible {
-    outline: 2px solid var(--tm-color-primary);
-    outline-offset: -2px;
-}
-
-.tm-document-editor__overflow-menu-item:disabled {
+.tm-document-editor__ribbon-button:not(.tm-toolbar-btn):disabled {
     color: var(--tm-color-text-disabled);
     cursor: not-allowed;
+}
+
+.tm-document-editor__ribbon-button:not(.tm-toolbar-btn) .tm-icon {
+    flex: 0 0 auto;
+    width: 1.125rem;
+    height: 1.125rem;
 }
 
 .tm-document-editor__link-dialog {
@@ -683,29 +629,25 @@
     min-height: 1.25rem;
 }
 
-/* ─── Fáze 15: dřív nestylované třídy ───────────────────────────────────────── */
+/* ─── Fáze 15 / DE-1.2: small shared classes ─────────────────────────────────────────────────────── */
 
 /* Vertikální oddělovač emitovaný DocumentToolbarSeparatorRenderer mezi itemy skupiny. */
 .tm-document-editor__ribbon-separator {
     flex: 0 0 auto;
     align-self: stretch;
     width: 1px;
-    margin: var(--tm-space-1) var(--tm-space-1) calc(var(--tm-space-1) + 1rem);
+    margin: var(--tm-space-1);
     background: var(--tm-color-border-subtle);
 }
 
-/* Header/footer scope skupina — jemné zvýraznění kontextového režimu. */
+/* Header/footer scope: a quiet highlight of the contextual mode. */
 .tm-document-editor__ribbon-group--scope {
+    padding: 0 var(--tm-space-2);
     background: color-mix(in srgb, var(--tm-color-primary-subtle) 45%, transparent);
     border-radius: var(--tm-radius-card);
-    border-right-color: transparent;
 }
 
-.tm-document-editor__ribbon-group--scope::after {
-    color: var(--tm-color-primary);
-}
-
-/* Úzký chevron toggle vedle style selectu, otevírá galerii stylů. */
+/* The style gallery opener is a narrow chevron-like button next to the style select. */
 .tm-document-style-gallery__toggle {
     inline-size: 2rem;
     min-width: 2rem;
@@ -715,75 +657,55 @@
 
 @media (prefers-reduced-motion: reduce) {
     .tm-document-editor__ribbon-tab,
-    .tm-document-editor__ribbon-button,
-    .tm-document-editor__track-toggle::after,
+    .tm-document-editor__ribbon-toolbar .tm-toolbar-btn,
     .tm-document-table-grid-picker__cell {
         transition: none;
-    }
-
-    .tm-document-editor__ribbon-button:active:not(:disabled) {
-        transform: none;
     }
 }
 
 /* DE-1.1: the ribbon sits OUTSIDE the editor's size container (its pickers and backdrops are position:fixed and a container
-   would become their containing block), so it follows the resolved layout the editor publishes as data-layout, not the viewport. */
-:where(.tm-document-editor:not([data-layout="desktop"])) .tm-document-editor__ribbon-groups {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    overflow-y: hidden;
-    padding-bottom: var(--tm-space-1);
-    scrollbar-width: thin;
-}
-
-:where(.tm-document-editor:not([data-layout="desktop"])) .tm-document-editor__ribbon-group {
-    border-right: 1px solid var(--tm-color-border);
+   would become their containing block), so it follows the resolved layout the editor publishes as data-layout, not the viewport.
+   Desktop and tablet share ONE row; the tablet row is simply shorter (the priority overflow moves more into More). The mobile
+   command row of the design is a later phase: until then a phone gets the same row, with more of it in More. */
+:where(.tm-document-editor[data-layout="tablet"]) .tm-document-editor__ribbon-toolbar.tm-toolbar {
+    padding-inline: var(--tm-space-2);
 }
 
 :where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__ribbon {
-    gap: var(--tm-space-1);
-    padding: var(--tm-space-1);
+    max-inline-size: 100vw;
+}
+
+:where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__ribbon-tabs {
+    padding-inline: max(var(--tm-space-2), env(safe-area-inset-left)) max(var(--tm-space-2), env(safe-area-inset-right));
 }
 
 :where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__ribbon-tab {
     min-width: 3.25rem;
+    min-block-size: var(--tm-touch-target);
     padding: 0 var(--tm-space-2);
     font-size: var(--tm-font-size-xs);
 }
 
-:where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__ribbon-group {
-    gap: 0;
-    min-height: 2.75rem;
-    padding: 0 var(--tm-space-1);
+:where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__ribbon-toolbar .tm-toolbar-btn,
+:where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__ribbon-toolbar .tm-document-editor__ribbon-alignment .tm-dropdown-trigger,
+:where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__ribbon-toolbar .tm-document-editor__ribbon-tempo-color-picker .tm-color-picker-trigger,
+:where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__ribbon-toolbar .tm-toolbar-more {
+    min-width: var(--tm-touch-target);
+    min-height: var(--tm-touch-target);
 }
 
-:where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__ribbon-group::after {
-    display: none;
+:where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__ribbon-toolbar.tm-toolbar {
+    padding-inline: max(var(--tm-space-2), env(safe-area-inset-left)) max(var(--tm-space-2), env(safe-area-inset-right));
 }
 
-:where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__ribbon-button {
-    inline-size: 2.5rem;
-    min-width: 2.5rem;
-    min-height: 2.5rem;
-    padding: 0;
-}
-
-:where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__ribbon-select,
-:where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__ribbon-color {
-    flex: 0 1 auto;
-    max-width: 100%;
-    min-height: 2.5rem;
-    max-height: 2.5rem;
-}
-
-:where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__ribbon-color-picker,
-:where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__ribbon-tempo-color-picker .tm-color-picker-trigger {
-    min-height: 2.5rem;
-    max-height: 2.5rem;
-}
-
-:where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__ribbon-button span {
-    display: none;
+/* The phone's own command row is a later phase. Until then the pinned popup items and the colour pickers cannot collapse, so the narrowest
+   widths keep a horizontal scroll as the FALLBACK - and it is the START container of the bar that scrolls, never the whole row: the More
+   trigger stays outside it, always visible and never overlapping a control. */
+:where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__ribbon-toolbar .tm-toolbar-start {
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
 }
 
 :where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__dirty,
@@ -797,4 +719,3 @@
     grid-template-columns: minmax(0, 1fr);
     align-items: stretch;
 }
-

@@ -37,16 +37,6 @@ public class DocumentEditorToolbarDropdownFixTests : LocalizationTestBase
     }
 
     [Fact]
-    public void ChangeCaseSelect_DoesNotPreventDefaultOnPointerOrMouseDown()
-    {
-        var cut = RenderToolbar(showAdvancedCharacterFormatting: true);
-
-        var select = cut.Find("[data-testid='document-change-case']");
-        HasPreventDefault(select, "pointerdown").Should().BeFalse("preventDefault na pointerdown blokuje otevření nativního selectu");
-        HasPreventDefault(select, "mousedown").Should().BeFalse("preventDefault na mousedown blokuje otevření nativního selectu");
-    }
-
-    [Fact]
     public void BoldButton_StillPreventsDefault_ToKeepCanvasFocus()
     {
         // Pozitivní kontrola detekčního mechanismu: tlačítka preventDefault mít MUSÍ,

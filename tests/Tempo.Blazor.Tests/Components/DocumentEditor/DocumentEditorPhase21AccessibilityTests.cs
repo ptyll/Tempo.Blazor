@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.DocumentEditor;
 using Tempo.Blazor.Components.DocumentEditor.Clipboard;
 using Tempo.Blazor.Components.DocumentEditor.Registry;
+using Tempo.Blazor.Components.Toolbar;
 using Tempo.Blazor.DocumentEditor.Models;
 using Tempo.Blazor.Tests.Localization;
 
@@ -29,36 +30,23 @@ public sealed class DocumentEditorPhase21AccessibilityTests : LocalizationTestBa
     }
 
     [Fact]
-    public async Task OverflowMenu_ExposesMenuSemanticsAndRovingTabIndex()
+    public async Task OverflowMenu_IsTheCoreMoreMenu_WithMenuSemanticsGroupsAndCheckableToggles()
     {
-        string? executed = null;
-        var cut = Render<TmDocumentToolbarOverflowMenu>(parameters => parameters
-            .Add(p => p.IsOverflowing, true)
-            .Add(p => p.IsOpen, true)
-            .Add(p => p.MoreLabel, "More")
-            .Add(p => p.MoreCommandsLabel, "More commands")
-            .Add(p => p.Groups, OverflowGroups())
-            .Add(p => p.OnCommandRequested, EventCallback.Factory.Create<string>(this, value => executed = value)));
+        var cut = Render<TmDocumentEditorToolbar>(parameters => parameters
+            .Add(p => p.BoldState, WysiwygFormattingValue.Active));
+        // Nothing fits: every collapsible ribbon command moves into the core "More" menu.
+        await cut.InvokeAsync(() => cut.FindComponent<TmToolbar>().Instance.OnFitChanged(0));
 
-        var menu = cut.Find("[data-testid='document-toolbar-more-menu']");
-        menu.GetAttribute("role").Should().Be("menu");
-        menu.GetAttribute("aria-label").Should().Be("More commands");
+        cut.Find("[data-testid='document-ribbon-toolbar'] .tm-toolbar-more").Click();
 
-        var items = cut.FindAll("[role='menuitem']");
-        items.Should().HaveCount(2);
-        items[0].GetAttribute("tabindex").Should().Be("0");
-        items[1].GetAttribute("tabindex").Should().Be("-1");
-
-        await items[0].KeyDownAsync(new KeyboardEventArgs { Key = "ArrowDown" });
-
-        items = cut.FindAll("[role='menuitem']");
-        items[0].GetAttribute("tabindex").Should().Be("-1");
-        items[1].GetAttribute("tabindex").Should().Be("0");
-
-        // Native <button> sequence: Enter produces the click on keydown.
-        await items[1].KeyDownAsync(new KeyboardEventArgs { Key = "Enter" });
-        await cut.FindAll("[role='menuitem']")[1].ClickAsync(new MouseEventArgs());
-        executed.Should().Be("italic");
+        var menu = cut.Find("[role='menu']");
+        menu.GetAttribute("aria-label").Should().NotBeNullOrWhiteSpace();
+        menu.QuerySelectorAll("[role='group']").Should().NotBeEmpty("the collapsed members keep their TmToolbarGroup as a labelled section");
+        var bold = menu.QuerySelector("[role='menuitemcheckbox'][data-menu-testid='document-bold'], [role='menuitemcheckbox'][data-testid='document-bold']");
+        bold.Should().NotBeNull("a pressed toggle keeps its state in More");
+        bold!.GetAttribute("aria-checked").Should().Be("true");
+        menu.QuerySelectorAll("[role='menuitem'], [role='menuitemcheckbox']").Count(item => item.GetAttribute("tabindex") == "0")
+            .Should().BeLessThanOrEqualTo(1, "the core menu owns the roving tab stop");
     }
 
     [Fact]
@@ -164,26 +152,6 @@ public sealed class DocumentEditorPhase21AccessibilityTests : LocalizationTestBa
         live.Find("[data-testid='document-editor-live-region']").GetAttribute("aria-live").Should().Be("assertive");
         live.Find("[data-testid='document-editor-live-region']").GetAttribute("aria-atomic").Should().Be("true");
     }
-
-    private static IReadOnlyList<DocumentToolbarOverflowMenuGroup> OverflowGroups() =>
-    [
-        new(
-            "formatting",
-            "Formatting",
-            [
-                new("bold", ToolbarItem("bold"), "Bold", true),
-                new("italic", ToolbarItem("italic"), "Italic", true)
-            ])
-    ];
-
-    private static DocumentToolbarItem ToolbarItem(string commandName) =>
-        new()
-        {
-            Id = commandName,
-            CommandName = commandName,
-            LabelKey = commandName,
-            Group = "formatting"
-        };
 
     private static Dictionary<string, DocumentEditorCommandState> CommandStates() =>
         new()

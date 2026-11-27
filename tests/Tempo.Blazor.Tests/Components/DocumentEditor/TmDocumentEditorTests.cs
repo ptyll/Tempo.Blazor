@@ -377,7 +377,8 @@ public class TmDocumentEditorTests : LocalizationTestBase
         cut.Find("[data-testid='document-save']").Should().NotBeNull();
         cut.Find("[data-testid='document-bold']").Should().NotBeNull();
         cut.Find("[data-testid='document-font-size']").Should().NotBeNull();
-        cut.FindAll("[data-testid='document-toolbar-table']").Should().BeEmpty();
+        // Home carries the primary calls to action of the mockups (Link, Comment, Image, Table); the full set stays on Insert.
+        cut.Find("[data-testid='document-toolbar-table']").GetAttribute("data-large").Should().Be("true");
 
         cut.Find("[data-testid='document-ribbon-tab-insert']").Click();
         cut.Find("[data-testid='document-toolbar-table']").Should().NotBeNull();
@@ -508,7 +509,8 @@ public class TmDocumentEditorTests : LocalizationTestBase
             cut.Find($"[data-testid='{testId}']").Should().NotBeNull();
         }
 
-        cut.FindAll("[data-testid='document-toolbar-table']").Should().BeEmpty();
+        // Home carries the Table call to action; the template preview belongs to the View tab.
+        cut.Find("[data-testid='document-toolbar-table']").Should().NotBeNull();
         cut.FindAll("[data-testid='document-template-preview']").Should().BeEmpty();
     }
 
@@ -869,12 +871,9 @@ public class TmDocumentEditorTests : LocalizationTestBase
             .NotContain("tm-document-editor__ribbon-button--active");
         cut.Find("[data-testid='document-underline']").GetAttribute("aria-pressed").Should().Be("false");
 
-        cut.Find("[data-testid='document-align-center']")
-            .GetAttribute("class")
-            .Should()
-            .Contain("tm-document-editor__ribbon-button--active");
-        cut.Find("[data-testid='document-align-center']").GetAttribute("aria-pressed").Should().Be("true");
-        cut.Find("[data-testid='document-align-left']").GetAttribute("aria-pressed").Should().Be("false");
+        cut.Find("[data-testid='document-align'] button").GetAttribute("aria-label").Should().Contain("Center");
+        AlignmentChecked(cut, "document-align-center").Should().Be("true");
+        AlignmentChecked(cut, "document-align-left").Should().Be("false");
     }
 
     [Fact]
@@ -948,7 +947,7 @@ public class TmDocumentEditorTests : LocalizationTestBase
 
         cut.Find("[data-testid='document-bold']").GetAttribute("aria-pressed").Should().Be("true");
         cut.Find("[data-testid='document-italic']").GetAttribute("aria-pressed").Should().Be("mixed");
-        cut.Find("[data-testid='document-align-right']").GetAttribute("aria-pressed").Should().Be("true");
+        AlignmentChecked(cut, "document-align-right").Should().Be("true");
         cut.Find("[data-testid='document-font-family']").GetAttribute("value").Should().Be("Inter, sans-serif");
         cut.Find("[data-testid='document-font-size']").GetAttribute("value").Should().Be("14");
         cut.Find("[data-testid='document-font-color-trigger'] .tm-color-picker-trigger-text").TextContent.Trim().Should().Be("#123456");
@@ -1267,7 +1266,7 @@ public class TmDocumentEditorTests : LocalizationTestBase
 
         await cut.Find("[data-testid='document-bold']").ClickAsync(new MouseEventArgs());
         await cut.Find("[data-testid='document-font-size']").ChangeAsync(new ChangeEventArgs { Value = "14" });
-        await cut.Find("[data-testid='document-align-right']").ClickAsync(new MouseEventArgs());
+        await ChooseAlignmentAsync(cut, "document-align-right");
 
         var commands = SetupDocumentCanvasModule().Invocations
             .Where(invocation => invocation.Identifier == "execCommand")
@@ -1307,14 +1306,13 @@ public class TmDocumentEditorTests : LocalizationTestBase
             .Add(p => p.ParagraphAlignment, DocumentTextAlignment.Left)
             .Add(p => p.ParagraphAlignmentMixed, true));
 
-        cut.Find("[data-testid='document-align-left']")
-            .GetAttribute("aria-pressed")
-            .Should()
-            .Be("mixed");
-        cut.Find("[data-testid='document-align-justify']").Should().NotBeNull();
+        // A mixed selection checks none of the four entries.
+        AlignmentChecked(cut, "document-align-left").Should().Be("false");
+        AlignmentChecked(cut, "document-align-justify").Should().Be("false");
         cut.Find("[data-testid='document-line-spacing']").TextContent.Should().Contain("1.5");
-        cut.Find("[data-testid='document-spacing-before']").Should().NotBeNull();
-        cut.Find("[data-testid='document-spacing-after']").Should().NotBeNull();
+        cut.Find("[data-testid='document-ribbon-toolbar'] .tm-toolbar-more").Click();
+        cut.FindAll("[role='menu'] [role='group']").Select(group => group.GetAttribute("aria-label"))
+            .Should().Contain(["Before", "After"], "paragraph spacing is OverflowOnly: it lives in More");
         cut.Find("[data-testid='document-increase-indent']").Should().NotBeNull();
         cut.Find("[data-testid='document-decrease-indent']").Should().NotBeNull();
     }
@@ -2950,7 +2948,7 @@ public class TmDocumentEditorTests : LocalizationTestBase
 
         cut.WaitForAssertion(() => cut.FindComponent<TmDocumentCanvasEngineHost>().Should().NotBeNull());
         cut.Find("[data-testid='document-ribbon-tab-view']").Click();
-        cut.Find("[data-testid='document-view-json']").Click();
+        FindDebugTool(cut, "document-view-json").Click();
 
         cut.WaitForAssertion(() => cut.Find("[data-testid='document-json-debug-modal']").Should().NotBeNull());
         cut.FindAll("[data-testid='document-runtime-recovery-debug']").Should().BeEmpty();
@@ -2970,7 +2968,7 @@ public class TmDocumentEditorTests : LocalizationTestBase
 
         cut.WaitForAssertion(() => cut.FindComponent<TmDocumentCanvasEngineHost>().Should().NotBeNull());
         cut.Find("[data-testid='document-ribbon-tab-view']").Click();
-        cut.Find("[data-testid='document-view-json']").Click();
+        FindDebugTool(cut, "document-view-json").Click();
 
         cut.WaitForAssertion(() => cut.Find("[data-testid='document-runtime-debug-content']").TextContent.Should().Contain("canvas"));
     }
@@ -4176,12 +4174,12 @@ public class TmDocumentEditorTests : LocalizationTestBase
         SetDocumentCanvasExecCommandResult("""{"handled":false}""");
 
         // Unhandled command: the optimistic paragraph-alignment state must NOT be applied.
-        await cut.Find("[data-testid='document-align-right']").ClickAsync(new MouseEventArgs());
-        cut.Find("[data-testid='document-align-right']").GetAttribute("aria-pressed").Should().Be("false",
+        await ChooseAlignmentAsync(cut, "document-align-right");
+        AlignmentChecked(cut, "document-align-right").Should().Be("false",
             "an engine-unhandled command must not flip the optimistic toolbar state");
 
         // The warning is logged once per command id per session, not per invocation.
-        await cut.Find("[data-testid='document-align-right']").ClickAsync(new MouseEventArgs());
+        await ChooseAlignmentAsync(cut, "document-align-right");
         logSink.Warnings.Count(message => message.Contains("align", StringComparison.OrdinalIgnoreCase))
             .Should().Be(1, "repeated unhandled invocations of one command must warn only once");
 
@@ -4192,9 +4190,8 @@ public class TmDocumentEditorTests : LocalizationTestBase
 
         // Control: a handled command applies the optimistic state and warns nothing.
         SetDocumentCanvasExecCommandResult("""{"handled":true}""");
-        await cut.Find("[data-testid='document-align-right']").ClickAsync(new MouseEventArgs());
-        cut.WaitForAssertion(() =>
-            cut.Find("[data-testid='document-align-right']").GetAttribute("aria-pressed").Should().Be("true"));
+        await ChooseAlignmentAsync(cut, "document-align-right");
+        cut.WaitForAssertion(() => AlignmentChecked(cut, "document-align-right").Should().Be("true"));
         logSink.Warnings.Count(message => message.Contains("align", StringComparison.OrdinalIgnoreCase))
             .Should().Be(1, "handled commands must not add warnings");
     }
@@ -4275,6 +4272,49 @@ public class TmDocumentEditorTests : LocalizationTestBase
 
     // ── Phase 15 – Debug tools / viewDocumentJson ────────────────────────
 
+    // ── alignment is ONE dropdown item (trigger `document-align`, entries `document-align-*` with aria-checked) ──
+
+    private static void OpenAlignmentMenu(IRenderedComponent<Microsoft.AspNetCore.Components.IComponent> cut)
+    {
+        if (cut.FindAll("[data-testid='document-align-left']").Count == 0)
+        {
+            cut.Find("[data-testid='document-align'] button").Click();
+        }
+    }
+
+    private static string? AlignmentChecked(IRenderedComponent<Microsoft.AspNetCore.Components.IComponent> cut, string testId)
+    {
+        OpenAlignmentMenu(cut);
+        return cut.Find($"[data-testid='{testId}']").GetAttribute("aria-checked");
+    }
+
+    private static async Task ChooseAlignmentAsync(IRenderedComponent<Microsoft.AspNetCore.Components.IComponent> cut, string testId)
+    {
+        OpenAlignmentMenu(cut);
+        await cut.Find($"[data-testid='{testId}']").ClickAsync(new MouseEventArgs());
+    }
+
+    /// <summary>The debug tools are OverflowOnly: they live only in the core "More" menu. Opens it (once) and finds the entry.</summary>
+    private static AngleSharp.Dom.IElement FindDebugTool(IRenderedComponent<Microsoft.AspNetCore.Components.IComponent> cut, string testId)
+    {
+        if (cut.FindAll("[role='menu']").Count == 0)
+        {
+            cut.Find("[data-testid='document-ribbon-toolbar'] .tm-toolbar-more").Click();
+        }
+
+        return cut.Find($"[role='menu'] [data-testid='{testId}']");
+    }
+
+    private static void AssertNoDebugTool(IRenderedComponent<Microsoft.AspNetCore.Components.IComponent> cut, string testId)
+    {
+        cut.FindAll("button[data-testid='" + testId + "']").Should().BeEmpty("a debug tool never renders on the bar");
+        if (cut.FindAll("[data-testid='document-ribbon-toolbar'] .tm-toolbar-more").Count > 0)
+        {
+            cut.Find("[data-testid='document-ribbon-toolbar'] .tm-toolbar-more").Click();
+            cut.FindAll("[role='menu'] [data-testid='" + testId + "']").Should().BeEmpty();
+        }
+    }
+
     [Fact]
     public void ViewTab_ViewDocumentJsonButton_NotPresentByDefault()
     {
@@ -4282,7 +4322,7 @@ public class TmDocumentEditorTests : LocalizationTestBase
 
         cut.Find("[data-testid='document-ribbon-tab-view']").Click();
 
-        cut.FindAll("[data-testid='document-view-json']").Should().BeEmpty();
+        AssertNoDebugTool(cut, "document-view-json");
     }
 
     [Fact]
@@ -4293,7 +4333,7 @@ public class TmDocumentEditorTests : LocalizationTestBase
 
         cut.Find("[data-testid='document-ribbon-tab-view']").Click();
 
-        cut.Find("[data-testid='document-view-json']").Should().NotBeNull();
+        FindDebugTool(cut, "document-view-json").Should().NotBeNull();
     }
 
     [Fact]
@@ -4305,9 +4345,9 @@ public class TmDocumentEditorTests : LocalizationTestBase
             .Add(p => p.OnViewDocumentJson, EventCallback.Factory.Create(this, () => called = true)));
 
         cut.Find("[data-testid='document-ribbon-tab-view']").Click();
-        cut.Find("[data-testid='document-view-json']").Click();
+        FindDebugTool(cut, "document-view-json").Click();
 
-        called.Should().BeTrue();
+        cut.WaitForAssertion(() => called.Should().BeTrue("the More entry invokes the same callback, after the menu closed"));
     }
 
     // ── Phase 15 – View clipboard HTML ──────────────────────────────────────
@@ -4330,7 +4370,7 @@ public class TmDocumentEditorTests : LocalizationTestBase
 
         cut.Find("[data-testid='document-ribbon-tab-view']").Click();
 
-        cut.Find("[data-testid='document-view-clipboard-html']").Should().NotBeNull();
+        FindDebugTool(cut, "document-view-clipboard-html").Should().NotBeNull();
     }
 
     [Fact]
@@ -4342,9 +4382,9 @@ public class TmDocumentEditorTests : LocalizationTestBase
             .Add(p => p.OnViewClipboardHtml, EventCallback.Factory.Create(this, () => called = true)));
 
         cut.Find("[data-testid='document-ribbon-tab-view']").Click();
-        cut.Find("[data-testid='document-view-clipboard-html']").Click();
+        FindDebugTool(cut, "document-view-clipboard-html").Click();
 
-        called.Should().BeTrue();
+        cut.WaitForAssertion(() => called.Should().BeTrue("the More entry invokes the same callback, after the menu closed"));
     }
 
     // ── Phase 18 – Developer-only source/debug workflow ───────────────────
@@ -4379,7 +4419,7 @@ public class TmDocumentEditorTests : LocalizationTestBase
 
         cut.WaitForAssertion(() => cut.Find("[data-testid='document-canvas-engine-host']").Should().NotBeNull());
         cut.Find("[data-testid='document-ribbon-tab-view']").Click();
-        cut.Find("[data-testid='document-view-json']").Click();
+        FindDebugTool(cut, "document-view-json").Click();
 
         cut.WaitForAssertion(() => cut.Find("[data-testid='document-json-debug-modal']").Should().NotBeNull());
         cut.Find("[data-testid='document-json-debug-content']").TextContent.Should().Contain("doc-1");
@@ -4402,8 +4442,8 @@ public class TmDocumentEditorTests : LocalizationTestBase
 
         cut.WaitForAssertion(() => cut.Find("[data-testid='document-canvas-engine-host']").Should().NotBeNull());
         cut.Find("[data-testid='document-ribbon-tab-view']").Click();
-        cut.Find("[data-testid='document-view-json']").Click();
-        cut.Find("[data-testid='document-json-debug-copy']").Click();
+        FindDebugTool(cut, "document-view-json").Click();
+        cut.WaitForElement("[data-testid='document-json-debug-copy']").Click();
 
         JSInterop.Invocations.Any(invocation =>
         {
@@ -4436,7 +4476,7 @@ public class TmDocumentEditorTests : LocalizationTestBase
         await MarkCanvasReadyAsync(cut);
 
         cut.Find("[data-testid='document-ribbon-tab-view']").Click();
-        cut.Find("[data-testid='document-view-clipboard-html']").Click();
+        FindDebugTool(cut, "document-view-clipboard-html").Click();
 
         cut.WaitForAssertion(() => cut.Find("[data-testid='document-clipboard-html-debug-modal']").Should().NotBeNull());
         cut.Find("[data-testid='document-clipboard-html-debug-content']").TextContent.Should().Contain("Phase 18");
@@ -4457,7 +4497,7 @@ public class TmDocumentEditorTests : LocalizationTestBase
 
         cut.WaitForAssertion(() => cut.Find("[data-testid='document-canvas-engine-host']").Should().NotBeNull());
         cut.Find("[data-testid='document-ribbon-tab-view']").Click();
-        cut.Find("[data-testid='document-view-json']").Click();
+        FindDebugTool(cut, "document-view-json").Click();
 
         cut.FindAll("[data-testid='document-html-source-editor']").Should().BeEmpty();
         cut.FindAll("[data-testid='document-json-debug-import']").Should().BeEmpty();
@@ -4484,11 +4524,11 @@ public class TmDocumentEditorTests : LocalizationTestBase
         await MarkCanvasReadyAsync(cut);
 
         cut.Find("[data-testid='document-ribbon-tab-view']").Click();
-        cut.Find("[data-testid='document-view-json']").Click();
+        FindDebugTool(cut, "document-view-json").Click();
         cut.WaitForAssertion(() => cut.Find("[data-testid='document-json-debug-modal']").Should().NotBeNull());
         cut.Find("[data-testid='document-floating-root'] [data-testid='document-json-debug-modal']").Should().NotBeNull();
 
-        cut.Find("[data-testid='document-view-clipboard-html']").Click();
+        FindDebugTool(cut, "document-view-clipboard-html").Click();
         cut.WaitForAssertion(() => cut.Find("[data-testid='document-clipboard-html-debug-modal']").Should().NotBeNull());
         cut.Find("[data-testid='document-floating-root'] [data-testid='document-clipboard-html-debug-modal']").Should().NotBeNull();
 

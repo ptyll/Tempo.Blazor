@@ -706,6 +706,12 @@
           "kind": "Property",
           "type": "IReadOnlyList<DocumentToolbarItem>",
           "description": "Built-in toolbar items in their default metadata form."
+        },
+        {
+          "name": "RibbonLocalCommands",
+          "kind": "Property",
+          "type": "IReadOnlyList<DocumentToolbarItem>",
+          "description": "The ribbon-local commands (no editor-registry command behind them) and their declared priority."
         }
       ]
     },
@@ -1947,69 +1953,10 @@
       "kind": "Enum",
       "category": "Components",
       "namespace": "Tempo.Blazor.Components.DocumentEditor",
-      "description": "Visual density and visibility mode for the document editor toolbar.",
+      "description": "Visual density and visibility mode for the document editor toolbar. Ribbon is the single icon row with the primary calls to action labelled; Compact is the same row, icon-only and denser; DistractionFree hides it.",
       "packageId": "Tempo.Blazor.DocumentEditor",
       "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/DocumentToolbarMode.cs",
       "documentationStatus": "merged"
-    },
-    {
-      "itemName": "DocumentToolbarOverflowMenuGroup",
-      "kind": "Record",
-      "category": "Components",
-      "namespace": "Tempo.Blazor.Components.DocumentEditor",
-      "description": "Represents one grouped section in the document editor toolbar overflow menu.",
-      "packageId": "Tempo.Blazor.DocumentEditor",
-      "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/DocumentToolbarOverflowMenuGroup.cs",
-      "documentationStatus": "merged",
-      "members": [
-        {
-          "name": "GroupId",
-          "kind": "Property",
-          "type": "string"
-        },
-        {
-          "name": "Items",
-          "kind": "Property",
-          "type": "IReadOnlyList<DocumentToolbarOverflowMenuItem>"
-        },
-        {
-          "name": "Label",
-          "kind": "Property",
-          "type": "string"
-        }
-      ]
-    },
-    {
-      "itemName": "DocumentToolbarOverflowMenuItem",
-      "kind": "Record",
-      "category": "Components",
-      "namespace": "Tempo.Blazor.Components.DocumentEditor",
-      "description": "Represents one command rendered in the document editor toolbar overflow menu.",
-      "packageId": "Tempo.Blazor.DocumentEditor",
-      "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/DocumentToolbarOverflowMenuItem.cs",
-      "documentationStatus": "merged",
-      "members": [
-        {
-          "name": "CommandName",
-          "kind": "Property",
-          "type": "string"
-        },
-        {
-          "name": "IsEnabled",
-          "kind": "Property",
-          "type": "bool"
-        },
-        {
-          "name": "Label",
-          "kind": "Property",
-          "type": "string"
-        },
-        {
-          "name": "Metadata",
-          "kind": "Property",
-          "type": "DocumentToolbarItem"
-        }
-      ]
     },
     {
       "itemName": "DocumentToolbarRenderContext",
@@ -3395,7 +3342,17 @@
       "kind": "Enum",
       "category": "Components",
       "namespace": "Tempo.Blazor.Components.DocumentEditor.Registry",
-      "description": "Priority used when toolbar items move into overflow surfaces.",
+      "description": "The rank of a ribbon command when the bar runs out of room: the registry's declared metadata, published as data-priority on every ribbon command and mapped onto the core ToolbarButtonPriority (ToCorePriority). The measuring and the More menu belong to the core TmToolbar.",
+      "packageId": "Tempo.Blazor.DocumentEditor",
+      "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/Registry/ToolbarItemPriority.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ToolbarItemPriorityExtensions",
+      "kind": "Class",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.DocumentEditor.Registry",
+      "description": "Maps the ribbon's ToolbarItemPriority onto the core toolbar's overflow rank.",
       "packageId": "Tempo.Blazor.DocumentEditor",
       "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/Registry/ToolbarItemPriority.cs",
       "documentationStatus": "merged"
@@ -3633,6 +3590,112 @@
         {
           "title": "Register the services in Program.cs",
           "code": "builder.Services.AddTempoBlazorDocumentEditor();"
+        }
+      ]
+    },
+    {
+      "itemName": "DocumentRibbonButton",
+      "kind": "Component",
+      "category": "Document Editor",
+      "namespace": "Tempo.Blazor.Components.DocumentEditor",
+      "description": "One command of the document editor ribbon (redesign DE-1.2): a core TmToolbarButton that carries the ribbon's stable contract - data-command, data-testid and data-priority (the rank declared for the command in DocumentEditorBuiltInToolbar, as primary, secondary or overflowonly). It registers with the enclosing TmToolbar (Overflow=Menu): tm-toolbar.js measures whether it fits and the core \"More\" menu offers it when it does not; a toggle (Pressed / PressedState) is a menuitemcheckbox there. The label is always supplied - it is the accessible name, the tooltip and the \"More\" entry - and is visible only on a Large button (the primary calls to action: Link, Comment, Image, Table). A pointer press does not take focus off the document (PreserveFocus).",
+      "packageId": "Tempo.Blazor.DocumentEditor",
+      "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/DocumentRibbonButton.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.DocumentEditor"
+      ],
+      "parameters": [
+        {
+          "name": "AriaLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "An accessible name that differs from Text; defaults to Text."
+        },
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS class."
+        },
+        {
+          "name": "Command",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The ribbon command name (data-command); also the key of the declared priority in DocumentEditorBuiltInToolbar."
+        },
+        {
+          "name": "Disabled",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Disables the button and its \"More\" entry."
+        },
+        {
+          "name": "Icon",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Icon name."
+        },
+        {
+          "name": "KeepMenuOpen",
+          "type": "bool",
+          "isRequired": false,
+          "description": "The \"More\" entry keeps the menu open while the surface the command opens is shown."
+        },
+        {
+          "name": "Large",
+          "type": "bool",
+          "isRequired": false,
+          "description": "True renders the label next to the icon (the primary call to action); false is an icon button."
+        },
+        {
+          "name": "OnClick",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised when the command is activated, from the bar or from \"More\"."
+        },
+        {
+          "name": "PreserveFocus",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "A pointer press does not move focus off the document (the selection survives). Default true."
+        },
+        {
+          "name": "Pressed",
+          "type": "bool?",
+          "isRequired": false,
+          "description": "A toggle's state; null is a plain button."
+        },
+        {
+          "name": "PressedState",
+          "type": "string?",
+          "isRequired": false,
+          "description": "A tri-state toggle as \"true\", \"false\" or \"mixed\"; wins over Pressed when set."
+        },
+        {
+          "name": "Priority",
+          "type": "ToolbarItemPriority?",
+          "isRequired": false,
+          "description": "Overrides the priority declared for Command in the registry."
+        },
+        {
+          "name": "TestId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The element's data-testid."
+        },
+        {
+          "name": "Text",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The label: accessible name, \"More\" entry, and the visible text of a Large button."
+        },
+        {
+          "name": "Tooltip",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The tooltip; defaults to Text. A disabled command carries the reason here."
         }
       ]
     },
@@ -5476,7 +5539,7 @@
       "kind": "Component",
       "category": "Document Editor",
       "namespace": "Tempo.Blazor.Components.DocumentEditor",
-      "description": "Full Word-style ribbon header for the document editor. Presents Home, Insert, Math, Layout, References, Review, and View tabs (plus an optional Header & Footer tab), a quick-access save/undo/redo group, and per-tab command groups such as the block-style gallery, font family and size, character formatting, alignment, spacing, and color pickers.",
+      "description": "The document editor ribbon: Home, Insert, Math, Layout, References, Review and View tabs (plus a contextual Header & Footer tab) and a quick-access save/undo/redo group when the header does not own them. Since DE-1.2 the ribbon is ONE icon row on the core TmToolbar (Overflow=Menu, Popover presentation): no group captions (a TmToolbarGroup is named for assistive technology and for its section in More), groups divided by vertical rules, icon buttons with a tooltip, and a visible label only on the primary calls to action (Link, Comment, Image, Table) in Ribbon mode. Which commands fit is measured by the core tm-toolbar.js; which ones leave is decided by priority (data-priority, declared in DocumentEditorBuiltInToolbar): Secondary before Primary, OverflowOnly commands (less frequent character formatting, paragraph spacing, the debug tools) only ever in the \"More\" menu, a role=menu with grouped sections, arrow keys and typeahead; a toggle is a menuitemcheckbox there. The text labels of Link, Comment, Image and Table give way first (Labels=ShrinkBeforeOverflow) before any command moves to More. The alignment is one item (the current alignment as its icon, a menu of four checked entries), the colour pickers, the image menu and the style gallery have a More form; only the table grid, the equation, symbol, page layout and header/footer popups stay pinned on the bar (they move onto TmOverlayPanel in a later phase).",
       "packageId": "Tempo.Blazor.DocumentEditor",
       "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentEditorToolbar.razor",
       "documentationStatus": "merged",
@@ -7745,110 +7808,6 @@
           "isRequired": false,
           "default": "[]",
           "description": "Tokens shown in the menu."
-        }
-      ]
-    },
-    {
-      "itemName": "TmDocumentToolbarOverflowMenu",
-      "kind": "Component",
-      "category": "Document Editor",
-      "namespace": "Tempo.Blazor.Components.DocumentEditor",
-      "description": "Ribbon overflow control that renders a \"More\" button and a popup menu of commands that did not fit in the toolbar. Supports an optional search box, grouped menu items with keyboard navigation, and a no-results message.",
-      "packageId": "Tempo.Blazor.DocumentEditor",
-      "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentToolbarOverflowMenu.razor",
-      "documentationStatus": "merged",
-      "requiredImports": [
-        "@using Tempo.Blazor.Components.DocumentEditor"
-      ],
-      "parameters": [
-        {
-          "name": "Groups",
-          "type": "IReadOnlyList<DocumentToolbarOverflowMenuGroup>",
-          "isRequired": false,
-          "default": "[]",
-          "description": "Grouped overflow menu items."
-        },
-        {
-          "name": "IsOpen",
-          "type": "bool",
-          "isRequired": false,
-          "description": "Whether the overflow menu is open."
-        },
-        {
-          "name": "IsOverflowing",
-          "type": "bool",
-          "isRequired": false,
-          "description": "Whether the toolbar currently has overflowed commands."
-        },
-        {
-          "name": "MoreCommandsLabel",
-          "type": "string",
-          "isRequired": false,
-          "default": "\"\"",
-          "description": "Accessible label for the More commands menu."
-        },
-        {
-          "name": "MoreLabel",
-          "type": "string",
-          "isRequired": false,
-          "default": "\"\"",
-          "description": "Visible text for the More button."
-        },
-        {
-          "name": "NoResultsLabel",
-          "type": "string",
-          "isRequired": false,
-          "default": "\"\"",
-          "description": "Message shown when the search filter yields no commands (Fáze 18)."
-        },
-        {
-          "name": "OnCommandRequested",
-          "type": "EventCallback<string>",
-          "isRequired": false,
-          "description": "Raised when a command is selected from the menu."
-        },
-        {
-          "name": "OnMenuItemKeyDown",
-          "type": "EventCallback<KeyboardEventArgs>",
-          "isRequired": false,
-          "description": "Raised when an overflow menu item receives a keydown event."
-        },
-        {
-          "name": "OnMoreKeyDown",
-          "type": "EventCallback<KeyboardEventArgs>",
-          "isRequired": false,
-          "description": "Raised when the More button receives a keydown event."
-        },
-        {
-          "name": "OnSearchInput",
-          "type": "EventCallback<ChangeEventArgs>",
-          "isRequired": false,
-          "description": "Raised when the search input changes."
-        },
-        {
-          "name": "OnToggle",
-          "type": "EventCallback",
-          "isRequired": false,
-          "description": "Raised when the More button is clicked."
-        },
-        {
-          "name": "SearchLabel",
-          "type": "string",
-          "isRequired": false,
-          "default": "\"\"",
-          "description": "Accessible label and placeholder for the search input."
-        },
-        {
-          "name": "SearchQuery",
-          "type": "string?",
-          "isRequired": false,
-          "description": "Current overflow search query."
-        },
-        {
-          "name": "ShowSearch",
-          "type": "bool",
-          "isRequired": false,
-          "description": "Whether the search box should be shown."
         }
       ]
     },
@@ -10235,22 +10194,14 @@
     {
       "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor/runtime/watchdog.mjs",
       "kind": "JavaScript"
-    },
-    {
-      "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor/toolbar/toolbar-overflow.mjs",
-      "kind": "JavaScript"
-    },
-    {
-      "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor/toolbar/toolbar-overflow.test.mjs",
-      "kind": "JavaScript"
     }
   ],
   "summary": {
-    "itemCount": 224,
-    "manualItemCount": 224,
-    "generatedItemCount": 221,
+    "itemCount": 223,
+    "manualItemCount": 223,
+    "generatedItemCount": 220,
     "generatedOnlyItemCount": 0,
     "componentCount": 40,
-    "publicApiTypeCount": 181
+    "publicApiTypeCount": 180
   }
 }

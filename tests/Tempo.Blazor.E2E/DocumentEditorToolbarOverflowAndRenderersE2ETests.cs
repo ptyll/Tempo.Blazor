@@ -4,13 +4,11 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Tempo.Blazor.E2E;
 
 /// <summary>
-/// Uzavření dvou carry-forward nálezů z perf plánu:
-/// (1) JS overflow measurement controller — SetOverflowingAsync byl mrtvý JSInvokable a More menu
-///     se v aplikaci nikdy neukázalo; nově toolbar-overflow.mjs měří [data-command] prvky ribbonu
-///     (ResizeObserver + scroll + MutationObserver) a na úzkém okně se More menu poprvé dá ověřit
-///     E2E včetně empty-state hlášky filtru z Fáze 18.
-/// (2) Demo stránka deklarativních toolbar rendererů (/document-toolbar-renderers) — extension API
-///     dostává runtime povrch: registry-driven toggle/select/color/button pipeline v prohlížeči.
+/// Demo stránka deklarativních toolbar rendererů (/document-toolbar-renderers) — extension API
+/// dostává runtime povrch: registry-driven toggle/select/color/button pipeline v prohlížeči.
+/// Overflow ribbonu (core TmToolbar, priorita, More menu) pokrývá od DE-1.2 (plán 146c7e1b, fáze 4)
+/// <see cref="DocumentEditorRibbonE2ETests"/>; původní testy DE-lokálního overflow controlleru
+/// (toolbar-overflow.mjs, document-toolbar-more) zanikly spolu s ním.
 /// </summary>
 [TestClass]
 [TestCategory("DocumentEditor")]
@@ -23,86 +21,6 @@ public sealed class DocumentEditorToolbarOverflowAndRenderersE2ETests : WasmTest
     [TestInitialize]
     public Task ResetDocumentEditorDemoAsync()
         => DocumentEditorE2EReset.ResetAsync();
-
-    /// <summary>Úzké okno → More tlačítko se odkryje, menu vyjmenuje přetečené příkazy + funguje
-    /// filtr s empty-state (Fáze 18); přepnutí na nepřetékající tab More schová. POZN.: demo layout
-    /// /document-editor má max-width cap obsahu (~943px i na 1920px viewportu), takže Home tab
-    /// nepřestane přetékat žádnou šířkou okna — „vejde se → skryto" dokazuje Layout tab.</summary>
-    [TestMethod]
-    public async Task OverflowController_NarrowViewport_ShowsMoreMenu_WideViewport_HidesIt()
-    {
-        var context = await CreateContextAsync();
-        var page = await context.NewPageAsync();
-        await page.SetViewportSizeAsync(700, 900);
-        await OpenDocumentAsync(page);
-        var output = CreateOutputDirectory("overflow-controller");
-
-        // Úzké okno: Home tab přetéká → controller odkryje More.
-        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-toolbar-more\"]')?.hidden === false", 15_000);
-        await ViewportScreenshotAsync(page, Path.Combine(output, "00-narrow-more-button-visible.png"));
-
-        await page.GetByTestId("document-toolbar-more").ClickAsync();
-        await Assertions.Expect(page.GetByTestId("document-toolbar-more-menu")).ToBeVisibleAsync(new() { Timeout = 10_000 });
-        var menuItemCount = await page.Locator("[data-testid='document-toolbar-more-menu'] [role='menuitem']").CountAsync();
-        Assert.IsTrue(menuItemCount > 0, "overflow menu musí vyjmenovat přetečené příkazy ribbonu.");
-        await ViewportScreenshotAsync(page, Path.Combine(output, "01-narrow-more-menu-open.png"));
-
-        // Fáze 18 empty-state — poprvé ověřitelný E2E: nesmyslný filtr nechá search box + hlášku.
-        var searchVisible = await page.GetByTestId("document-toolbar-more-search").IsVisibleAsync();
-        if (searchVisible)
-        {
-            await page.GetByTestId("document-toolbar-more-search").FillAsync("xyz-neexistuje");
-            await Assertions.Expect(page.GetByTestId("document-toolbar-more-empty")).ToBeVisibleAsync(new() { Timeout = 10_000 });
-            await Assertions.Expect(page.GetByTestId("document-toolbar-more-search")).ToBeVisibleAsync();
-            await ViewportScreenshotAsync(page, Path.Combine(output, "02-narrow-filter-empty-state.png"));
-            await page.GetByTestId("document-toolbar-more-search").FillAsync("");
-        }
-
-        await page.Keyboard.PressAsync("Escape");
-
-        // Nepřetékající tab (Layout má na 700px 3 příkazy): controller nahlásí false → More zmizí.
-        await page.GetByTestId("document-ribbon-tab-layout").ClickAsync();
-        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-toolbar-more\"]')?.hidden === true", 15_000);
-        Assert.AreEqual(0, await page.GetByTestId("document-toolbar-more-menu").CountAsync(),
-            "se schovaným More nesmí zůstat otevřené overflow menu.");
-        await ViewportScreenshotAsync(page, Path.Combine(output, "03-layout-tab-more-hidden.png"));
-    }
-
-    /// <summary>Přepnutí ribbon tabu na úzkém okně přeměří overflow (MutationObserver větev).</summary>
-    [TestMethod]
-    public async Task OverflowController_TabSwitch_RemeasuresOverflowedCommands()
-    {
-        var context = await CreateContextAsync();
-        var page = await context.NewPageAsync();
-        await page.SetViewportSizeAsync(700, 900);
-        await OpenDocumentAsync(page);
-        var output = CreateOutputDirectory("overflow-tab-switch");
-
-        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-toolbar-more\"]')?.hidden === false", 15_000);
-
-        await page.GetByTestId("document-toolbar-more").ClickAsync();
-        var homeCommands = await ReadOverflowMenuCommandsAsync(page);
-        await page.Keyboard.PressAsync("Escape");
-
-        // Layout tab má na 700px jen 3 příkazy a NEpřetéká → MutationObserver musí More schovat
-        // (negativní větev: přepnutí tabu nesmí nechat zamrzlý overflow stav Home tabu).
-        await page.GetByTestId("document-ribbon-tab-layout").ClickAsync();
-        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-ribbon-panel\"]')?.getAttribute('data-active-ribbon-tab') === 'layout'", 10_000);
-        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-toolbar-more\"]')?.hidden === true", 15_000);
-        await ViewportScreenshotAsync(page, Path.Combine(output, "00-layout-tab-no-overflow.png"));
-
-        // Insert tab přetéká → More se zase odkryje a menu obsahuje příkazy NOVÉHO tabu.
-        await page.GetByTestId("document-ribbon-tab-insert").ClickAsync();
-        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-ribbon-panel\"]')?.getAttribute('data-active-ribbon-tab') === 'insert'", 10_000);
-        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-toolbar-more\"]')?.hidden === false", 15_000);
-        await page.GetByTestId("document-toolbar-more").ClickAsync();
-        var insertCommands = await ReadOverflowMenuCommandsAsync(page);
-        await ViewportScreenshotAsync(page, Path.Combine(output, "01-insert-tab-overflow-menu.png"));
-
-        Assert.IsTrue(insertCommands.Length > 0, "Insert tab musí na úzkém okně hlásit přetečené příkazy.");
-        CollectionAssert.AreNotEqual(homeCommands, insertCommands,
-            "po přepnutí tabu musí overflow menu obsahovat příkazy nového tabu, ne zamrzlý Home seznam.");
-    }
 
     /// <summary>Demo stránka deklarativních rendererů: registry-driven toggle/select/color/button pipeline.</summary>
     [TestMethod]
@@ -173,16 +91,6 @@ public sealed class DocumentEditorToolbarOverflowAndRenderersE2ETests : WasmTest
             () => document.querySelectorAll('[data-canvas-text-rect]').length >= 1
                 && document.querySelector('[data-testid="document-bold"]')
             """, 60_000);
-    }
-
-    private static async Task<string[]> ReadOverflowMenuCommandsAsync(IPage page)
-    {
-        await Assertions.Expect(page.GetByTestId("document-toolbar-more-menu")).ToBeVisibleAsync(new() { Timeout = 10_000 });
-        return await page.EvaluateAsync<string[]>(
-            """
-            () => Array.from(document.querySelectorAll('[data-testid="document-toolbar-more-menu"] [role="menuitem"]'))
-                .map(item => item.getAttribute('data-command') || '')
-            """);
     }
 
     /// <summary>Viewport screenshot (poznatek Fáze 13: locator screenshot vysokého prvku scrolluje a zavírá floating UI).</summary>

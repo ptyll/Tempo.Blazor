@@ -213,7 +213,7 @@ public sealed class DocumentEditorCanvasImportExportE2ETests : WasmTestBase
     private static async Task ImportDocxThroughToolbarAsync(IPage page, string docxPath)
     {
         await page.GetByTestId("document-ribbon-tab-references").ClickAsync();
-        await page.GetByTestId("document-import-docx-label").ClickAsync();
+        await DocumentEditorRedesignE2EHelpers.ClickRibbonAsync(page, "document-import-docx-label");
         await Assertions.Expect(page.GetByTestId("document-import-docx-panel")).ToBeVisibleAsync(new() { Timeout = 5_000 });
         await page.GetByTestId("document-import-docx").SetInputFilesAsync(docxPath);
         await Assertions.Expect(page.GetByTestId("document-format-message")).ToContainTextAsync(new Regex("Imported|Importováno"), new() { Timeout = 15_000 });
@@ -387,7 +387,7 @@ public sealed class DocumentEditorCanvasImportExportE2ETests : WasmTestBase
     {
         await page.GetByTestId("document-ribbon-tab-review").ClickAsync();
         var workspaceBefore = await DocumentEditorLayoutShiftGuard.MeasureWorkspaceAsync(page);
-        await page.GetByTestId("document-compare-open").ClickAsync();
+        await DocumentEditorRedesignE2EHelpers.ClickRibbonAsync(page, "document-compare-open");
         await Assertions.Expect(page.GetByTestId("document-compare-dialog")).ToBeVisibleAsync(new() { Timeout = 10_000 });
         await DocumentEditorLayoutShiftGuard.AssertWorkspaceUnchangedAsync(page, workspaceBefore, "opening the compare dialog");
         await page.GetByTestId("document-compare-target-document-id").FillAsync(targetDocumentId);

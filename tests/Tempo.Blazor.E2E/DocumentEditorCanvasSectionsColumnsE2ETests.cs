@@ -43,7 +43,7 @@ public sealed class DocumentEditorCanvasSectionsColumnsE2ETests : WasmTestBase
         Assert.IsTrue(initialProbe.HasColumnSeparator, "The two-column section should expose a separator command on the page canvas.");
 
         await page.GetByTestId("document-ribbon-tab-layout").ClickAsync();
-        await page.GetByTestId("document-page-layout").ClickAsync();
+        await DocumentEditorRedesignE2EHelpers.ClickRibbonAsync(page, "document-page-layout");
         await page.GetByTestId("document-column-count").SelectOptionAsync("3");
         await WaitForFirstPageColumnsAsync(page, 3);
         await page.GetByTestId("document-line-numbering-enabled").SetCheckedAsync(false);

@@ -35,15 +35,15 @@ public sealed class DocumentEditorCanvasParagraphE2ETests : WasmTestBase
         });
 
         await ClickCanvasBlockAsync(page, "canvas-paragraph-body", 8);
-        await page.GetByTestId("document-align-center").ClickAsync();
+        await DocumentEditorRedesignE2EHelpers.ChooseAlignmentAsync(page, "center");
         await WaitForCommandValueAsync(page, "align", "center");
-        await page.GetByTestId("document-line-spacing").SelectOptionAsync("1.5");
+        await DocumentEditorRedesignE2EHelpers.SelectRibbonOptionAsync(page, "document-line-spacing", "1.5", "Line spacing", "1.5");
         await WaitForCommandValueAsync(page, "lineSpacing", "1.5");
-        await page.GetByTestId("document-spacing-before").SelectOptionAsync("12");
+        await DocumentEditorRedesignE2EHelpers.ChooseMoreOptionAsync(page, "Before", "12");
         await WaitForCommandValueAsync(page, "spacingBefore", "12");
-        await page.GetByTestId("document-spacing-after").SelectOptionAsync("18");
+        await DocumentEditorRedesignE2EHelpers.ChooseMoreOptionAsync(page, "After", "18");
         await WaitForCommandValueAsync(page, "spacingAfter", "18");
-        await page.GetByTestId("document-increase-indent").ClickAsync();
+        await DocumentEditorRedesignE2EHelpers.ClickRibbonAsync(page, "document-increase-indent");
         await WaitForCommandValueGreaterThanAsync(page, "decreaseIndent", 0);
         await page.GetByTestId("document-editor-demo").ScreenshotAsync(new LocatorScreenshotOptions
         {
@@ -52,7 +52,7 @@ public sealed class DocumentEditorCanvasParagraphE2ETests : WasmTestBase
         });
 
         await ClickCanvasBlockAsync(page, "canvas-paragraph-list", 3);
-        await page.GetByTestId("document-bullet-list").ClickAsync();
+        await DocumentEditorRedesignE2EHelpers.ClickRibbonAsync(page, "document-bullet-list");
         await WaitForCommandStateAsync(page, "bulletList", "active");
         await FocusHiddenCanvasInputAsync(page);
         await page.Keyboard.PressAsync("Tab");
@@ -60,7 +60,7 @@ public sealed class DocumentEditorCanvasParagraphE2ETests : WasmTestBase
         await FocusHiddenCanvasInputAsync(page);
         await page.Keyboard.PressAsync("Shift+Tab");
         await WaitForCommandLastAsync(page, "decreaselistlevel");
-        await page.GetByTestId("document-numbered-list").ClickAsync();
+        await DocumentEditorRedesignE2EHelpers.ClickRibbonAsync(page, "document-numbered-list");
         await WaitForCommandStateAsync(page, "numberedList", "active");
         var listProbe = await ReadParagraphProbeAsync(page);
         Assert.AreEqual("active", listProbe.NumberedListState);
@@ -98,11 +98,11 @@ public sealed class DocumentEditorCanvasParagraphE2ETests : WasmTestBase
         Assert.AreEqual("Heading 2", afterReloadProbe.BlockStyleValue);
 
         await page.GetByTestId("document-ribbon-tab-view").ClickAsync();
-        await page.GetByTestId("document-toggle-ruler").ClickAsync();
+        await DocumentEditorRedesignE2EHelpers.ClickRibbonAsync(page, "document-toggle-ruler");
         await Assertions.Expect(page.GetByTestId("document-canvas-ruler")).ToHaveAttributeAsync("data-canvas-ruler-visible", "false", new() { Timeout = 5_000 });
-        await page.GetByTestId("document-toggle-ruler").ClickAsync();
+        await DocumentEditorRedesignE2EHelpers.ClickRibbonAsync(page, "document-toggle-ruler");
         await Assertions.Expect(page.GetByTestId("document-canvas-ruler")).ToHaveAttributeAsync("data-canvas-ruler-visible", "true", new() { Timeout = 5_000 });
-        await page.GetByTestId("document-show-blocks").ClickAsync();
+        await DocumentEditorRedesignE2EHelpers.ClickRibbonAsync(page, "document-show-blocks");
         await Assertions.Expect(page.GetByTestId("document-canvas-show-blocks-overlay").First).ToBeVisibleAsync(new() { Timeout = 5_000 });
         await page.GetByTestId("document-toggle-nonprinting").ClickAsync();
         await Assertions.Expect(page.GetByTestId("document-canvas-nonprinting-overlay").First).ToBeVisibleAsync(new() { Timeout = 5_000 });

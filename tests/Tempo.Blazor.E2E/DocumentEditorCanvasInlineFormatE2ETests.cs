@@ -47,9 +47,9 @@ public sealed class DocumentEditorCanvasInlineFormatE2ETests : WasmTestBase
             Type = ScreenshotType.Png
         });
 
-        await page.GetByTestId("document-font-family").SelectOptionAsync("Georgia, \"Times New Roman\", serif");
+        await DocumentEditorRedesignE2EHelpers.SelectRibbonOptionAsync(page, "document-font-family", "Georgia, \"Times New Roman\", serif", "Font", "Georgia");
         await WaitForCommandValueAsync(page, "fontfamily", "Georgia, \"Times New Roman\", serif");
-        await page.GetByTestId("document-font-size").SelectOptionAsync("24");
+        await DocumentEditorRedesignE2EHelpers.SelectRibbonOptionAsync(page, "document-font-size", "24", "Size", "24 pt");
         await WaitForCommandValueAsync(page, "fontsize", "24");
         await AssertSelectionStillVisibleAsync(page, "canvas-format-body");
 
@@ -93,7 +93,7 @@ public sealed class DocumentEditorCanvasInlineFormatE2ETests : WasmTestBase
         const string linkHref = "https://example.test/canvas-phase9";
         var linkSelection = await SelectCanvasTextRangeAsync(page, "canvas-format-body", 0, 6);
         Assert.AreEqual("Format", linkSelection.ExpectedText);
-        await page.GetByTestId("document-link").ClickAsync();
+        await DocumentEditorRedesignE2EHelpers.ClickRibbonAsync(page, "document-link");
         await Assertions.Expect(page.GetByTestId("document-link-dialog")).ToBeVisibleAsync(new() { Timeout = 5_000 });
         await page.GetByTestId("document-link-url").FillAsync(linkHref);
         await page.GetByTestId("document-link-title").FillAsync("Canvas phase 9");

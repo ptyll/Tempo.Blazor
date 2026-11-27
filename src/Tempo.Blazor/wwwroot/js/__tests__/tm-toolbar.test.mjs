@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-    collapseOrder, chooseVisibleCount, nextRovingIndex, rovingItems, computeFit, markRedundantDividers, attach, detach, __resetForTests,
+    collapseOrder, chooseVisibleCount, nextRovingIndex, rovingItems, computeFit, computeFitLabelsFirst, markRedundantDividers, attach, detach, __resetForTests,
 } from '../tm-toolbar.js';
 
 test.beforeEach(() => __resetForTests());
@@ -868,4 +868,61 @@ test('C5 tm-toolbar-start/actions margins are not double-counted', () => {
     start.computed = { marginLeft: '10px', marginRight: '10px', columnGap: '8px', gap: '8px' };
     const bar = stubBar([start], 112);
     assert.equal(computeFit(bar).maxVisible, 2, 'the start/actions containers share the bar gap; their margins are not fixed width');
+});
+
+// ── labels first: the text of an icon+text button leaves before any button does ─────────────────
+
+function labelBar(children, clientWidth, labelWidth) {
+    // A bar whose buttons are `base` wide plus `labelWidth` while the labels show; the root carries the collapsed marker.
+    const attrs = new Map();
+    const bar = {
+        clientWidth,
+        children,
+        dataset: {},
+        hasAttribute: name => attrs.has(name),
+        getAttribute: name => attrs.get(name) ?? null,
+        setAttribute: (name, value) => attrs.set(name, String(value)),
+        removeAttribute: name => attrs.delete(name),
+    };
+    globalThis.getComputedStyle = el => el?.computed ?? ({ columnGap: '8px', gap: '8px' });
+    for (const c of children) {
+        if (c.base !== undefined) {
+            Object.defineProperty(c, 'offsetWidth', { get: () => c.base + (c.labelled && !attrs.has('data-tm-labels-collapsed') ? labelWidth : 0) });
+        }
+    }
+    return bar;
+}
+
+function labelled(base, rank, labelled = false) {
+    return { base, labelled, dataset: { tmToolbarItem: 'i' + base + rank + labelled, rank: String(rank), pin: 'auto' }, classList: { contains: () => false } };
+}
+
+test('labels first: the labels leave before any button collapses when that is enough', () => {
+    // 3 x 40 + a 60px label on the last = 180 + 16 gaps = 196 > 190; without the label 136 fits.
+    const bar = labelBar([labelled(40, 2), labelled(40, 1), labelled(40, 2, true)], 190, 60);
+    const fit = computeFitLabelsFirst(bar);
+    assert.equal(bar.getAttribute('data-tm-labels-collapsed'), 'true');
+    assert.equal(fit.maxVisible, 3, 'every button stays once the label is gone');
+});
+
+test('labels first: labels stay when everything fits with them', () => {
+    const bar = labelBar([labelled(40, 2), labelled(40, 2, true)], 400, 60);
+    computeFitLabelsFirst(bar);
+    assert.equal(bar.hasAttribute('data-tm-labels-collapsed'), false);
+});
+
+test('labels first: when the buttons still collapse without labels the labels stay hidden', () => {
+    const bar = labelBar([labelled(100, 2), labelled(100, 1), labelled(100, 2, true)], 150, 60);
+    const fit = computeFitLabelsFirst(bar);
+    assert.equal(bar.getAttribute('data-tm-labels-collapsed'), 'true');
+    assert.ok(fit.maxVisible < 3);
+});
+
+test('labels first: a widened bar gets its labels back (the marker is re-evaluated, not sticky)', () => {
+    const bar = labelBar([labelled(40, 2), labelled(40, 1), labelled(40, 2, true)], 190, 60);
+    computeFitLabelsFirst(bar);
+    assert.equal(bar.getAttribute('data-tm-labels-collapsed'), 'true');
+    bar.clientWidth = 400;
+    computeFitLabelsFirst(bar);
+    assert.equal(bar.hasAttribute('data-tm-labels-collapsed'), false);
 });

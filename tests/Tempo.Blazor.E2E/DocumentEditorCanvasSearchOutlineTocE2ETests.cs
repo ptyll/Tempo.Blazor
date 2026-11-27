@@ -44,7 +44,7 @@ public sealed class DocumentEditorCanvasSearchOutlineTocE2ETests : WasmTestBase
         await WaitForTextAsync(page, "Milestone-18");
 
         await page.GetByTestId("document-ribbon-tab-references").ClickAsync();
-        await page.GetByTestId("document-insert-toc").ClickAsync();
+        await DocumentEditorRedesignE2EHelpers.ClickRibbonAsync(page, "document-insert-toc");
         await WaitForTocEntryCountAtLeastAsync(page, 4);
         await WaitForTocHitCountAtLeastAsync(page, 4);
         var tocScreenshotPath = Path.Combine(output, "table-of-contents.png");

@@ -40,7 +40,8 @@ public sealed class DocumentEditorCanvasAdvancedCharE2ETests : WasmTestBase
         });
 
         await SelectCanvasTextRangeAsync(page, "canvas-e6-command-target", 0, 23);
-        await page.GetByTestId("document-change-case").SelectOptionAsync("titleCase");
+        // Change case is a "More formatting" option list (OverflowOnly): the entry is chosen from the core More menu.
+        await DocumentEditorRedesignE2EHelpers.ChooseMoreOptionAsync(page, "Change case", "Title Case");
         await WaitForMirrorTextAsync(page, "Phase E6 Command Target");
         await page.GetByTestId("document-undo").ClickAsync();
         await WaitForMirrorTextAsync(page, "phase e6 command target");
@@ -48,9 +49,9 @@ public sealed class DocumentEditorCanvasAdvancedCharE2ETests : WasmTestBase
         await WaitForMirrorTextAsync(page, "Phase E6 Command Target");
 
         await SelectCanvasTextRangeAsync(page, "canvas-e6-command-target", 0, 5);
-        await page.GetByTestId("document-superscript").ClickAsync();
+        await DocumentEditorRedesignE2EHelpers.ClickRibbonAsync(page, "document-superscript");
         await WaitForCommandStateAsync(page, "superscript", "active");
-        await page.GetByTestId("document-increase-font-size").ClickAsync();
+        await DocumentEditorRedesignE2EHelpers.ClickRibbonAsync(page, "document-increase-font-size");
         await WaitForCommandStateAsync(page, "fontsize", "active");
 
         await DocumentEditorCanvasVisualAssert.AssertNoUiOverlapAsync(page);

@@ -357,7 +357,7 @@ public sealed class DocumentEditorRedesignPhase2E2ETests : WasmTestBase
         // Compare dialog and find/replace.
         page = await OpenAsync(HistoryDocumentId, 1440, 900, false);
         await page.GetByTestId("document-ribbon-tab-review").ClickAsync();
-        await page.GetByTestId("document-compare-open").ClickAsync();
+        await DocumentEditorRedesignE2EHelpers.ClickRibbonAsync(page, "document-compare-open");
         await Assertions.Expect(page.GetByTestId("document-compare-dialog")).ToBeVisibleAsync(new() { Timeout = 10_000 });
         foreach (var (dark, indigo, name) in ThemeMatrix)
         {

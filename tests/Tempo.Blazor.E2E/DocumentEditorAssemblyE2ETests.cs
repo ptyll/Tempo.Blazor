@@ -75,7 +75,7 @@ public sealed class DocumentEditorAssemblyE2ETests : WasmTestBase
         await Assertions.Expect(mirror).ToContainTextAsync("ACME Ltd.", new() { Timeout = 15_000 });
 
         await page.GetByTestId("document-ribbon-tab-view").ClickAsync();
-        await page.GetByTestId("document-template-preview").ClickAsync();
+        await DocumentEditorRedesignE2EHelpers.ClickRibbonAsync(page, "document-template-preview");
         await Assertions.Expect(mirror).Not.ToContainTextAsync("ACME Ltd.", new() { Timeout = 10_000 });
     }
 

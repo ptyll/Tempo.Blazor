@@ -100,7 +100,9 @@ public class DocumentEditorMissingIconsTests : LocalizationTestBase
             .Add(x => x.ShowAdvancedCharacterFormatting, true));
 
         var single = cut.Find("[data-testid='document-strikethrough'] svg").InnerHtml;
-        var dbl = cut.Find("[data-testid='document-double-strikethrough'] svg").InnerHtml;
+        // The less frequent character formats live in the core "More" menu (OverflowOnly); the entry carries the icon.
+        cut.Find("[data-testid='document-ribbon-toolbar'] .tm-toolbar-more").Click();
+        var dbl = cut.Find("[role='menu'] [data-testid='document-double-strikethrough'] svg").InnerHtml;
         dbl.Should().NotBe(single);
     }
 

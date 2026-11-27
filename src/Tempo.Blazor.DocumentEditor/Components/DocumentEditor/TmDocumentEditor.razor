@@ -99,9 +99,9 @@
                                     HeaderStart="@HeaderStart"
                                     HeaderActions="@HeaderActions"
                                     OnSearch="OpenFindFromChromeAsync"
-                                    OnUndo="UndoAsync"
-                                    OnRedo="RedoAsync"
-                                    OnSave="SaveAsync"
+                                    OnUndo="HeaderUndoAsync"
+                                    OnRedo="HeaderRedoAsync"
+                                    OnSave="HeaderSaveAsync"
                                     OnOpenPrintPreview="OpenCanvasPrintPreviewAsync"
                                     OnExportPdf="ExportPdfAsync" />
         }

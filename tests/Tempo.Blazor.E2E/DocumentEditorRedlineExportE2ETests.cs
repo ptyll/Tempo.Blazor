@@ -38,7 +38,7 @@ public sealed class DocumentEditorRedlineExportE2ETests : WasmTestBase
         //    so the typed marker is an INSERTION in the redline.
         await page.GetByTestId("document-ribbon-tab-review").ClickAsync();
         var workspaceBefore = await DocumentEditorLayoutShiftGuard.MeasureWorkspaceAsync(page);
-        await page.GetByTestId("document-compare-open").ClickAsync();
+        await DocumentEditorRedesignE2EHelpers.ClickRibbonAsync(page, "document-compare-open");
         await Assertions.Expect(page.GetByTestId("document-compare-dialog")).ToBeVisibleAsync(new() { Timeout = 10_000 });
         await DocumentEditorLayoutShiftGuard.AssertWorkspaceUnchangedAsync(page, workspaceBefore, "opening the compare dialog");
         await page.GetByTestId("document-compare-base-source").SelectOptionAsync("DocumentId");
@@ -75,7 +75,7 @@ public sealed class DocumentEditorRedlineExportE2ETests : WasmTestBase
 
         // 5) Reimport the redline DOCX and verify the revisions arrive in the track-changes UI.
         await page.GetByTestId("document-ribbon-tab-references").ClickAsync();
-        await page.GetByTestId("document-import-docx-label").ClickAsync();
+        await DocumentEditorRedesignE2EHelpers.ClickRibbonAsync(page, "document-import-docx-label");
         await Assertions.Expect(page.GetByTestId("document-import-docx-panel")).ToBeVisibleAsync(new() { Timeout = 5_000 });
         await page.GetByTestId("document-import-docx").SetInputFilesAsync(docxPath!);
         await WaitForPredicateAsync(page, """
@@ -110,7 +110,7 @@ public sealed class DocumentEditorRedlineExportE2ETests : WasmTestBase
         await OpenDocumentAsync(page);
 
         await page.GetByTestId("document-ribbon-tab-review").ClickAsync();
-        await page.GetByTestId("document-compare-open").ClickAsync();
+        await DocumentEditorRedesignE2EHelpers.ClickRibbonAsync(page, "document-compare-open");
         await Assertions.Expect(page.GetByTestId("document-compare-dialog")).ToBeVisibleAsync(new() { Timeout = 10_000 });
         await page.GetByTestId("document-compare-target-document-id").FillAsync(DocumentId);
         await page.GetByTestId("document-compare-run").ClickAsync();

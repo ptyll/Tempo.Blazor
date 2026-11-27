@@ -1,0 +1,106 @@
+@namespace Tempo.Blazor.Components.DocumentEditor
+@using Tempo.Blazor.Components.DocumentEditor.Registry
+@using Tempo.Blazor.Components.Toolbar
+
+@* One ribbon command (redesign 146c7e1b, DE-1.2): a core TmToolbarButton that carries the ribbon's stable contract -
+   data-command, data-testid and data-priority (the declared rank from DocumentEditorBuiltInToolbar). It registers with
+   the enclosing TmToolbar (Overflow=Menu), which measures it and offers it in "More" when it does not fit; a toggle
+   (Pressed) is a menuitemcheckbox there. The label is always supplied: it is the accessible name, the tooltip and the
+   "More" entry, and is visible only on a Large (primary call to action) button. *@
+<TmToolbarButton Icon="@Icon"
+                 Text="@Text"
+                 Tooltip="@(Tooltip ?? Text)"
+                 Disabled="@Disabled"
+                 Pressed="@EffectivePressed"
+                 PressedMixed="@EffectiveMixed"
+                 Priority="@EffectivePriority"
+                 LabelPosition="@(Large ? ToolbarLabelPosition.Inline : ToolbarLabelPosition.Hidden)"
+                 PreserveFocus="@PreserveFocus"
+                 KeepMenuOpen="@KeepMenuOpen"
+                 OnClick="@OnClick"
+                 Class="@ButtonClass"
+                 aria-label="@(AriaLabel ?? Text)"
+                 data-command="@Command"
+                 data-testid="@TestId"
+                 data-priority="@PriorityDataValue"
+                 data-large="@(Large ? "true" : null)"
+                 @attributes="AdditionalAttributes" />
+
+@code {
+    /// <summary>The ribbon command name (<c>data-command</c>); also the key of the declared priority in <see cref="DocumentEditorBuiltInToolbar"/>.</summary>
+    [Parameter] public string? Command { get; set; }
+
+    /// <summary>The element's <c>data-testid</c>.</summary>
+    [Parameter] public string? TestId { get; set; }
+
+    /// <summary>Icon name.</summary>
+    [Parameter] public string? Icon { get; set; }
+
+    /// <summary>The label: accessible name, "More" entry, and the visible text of a <see cref="Large"/> button.</summary>
+    [Parameter] public string? Text { get; set; }
+
+    /// <summary>The tooltip; defaults to <see cref="Text"/>. A disabled command carries the reason here.</summary>
+    [Parameter] public string? Tooltip { get; set; }
+
+    /// <summary>An accessible name that differs from <see cref="Text"/>; defaults to <see cref="Text"/>.</summary>
+    [Parameter] public string? AriaLabel { get; set; }
+
+    /// <summary>True renders the label next to the icon (the primary call to action); false is an icon button.</summary>
+    [Parameter] public bool Large { get; set; }
+
+    /// <summary>Disables the button and its "More" entry.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>A toggle's state; <see langword="null"/> is a plain button.</summary>
+    [Parameter] public bool? Pressed { get; set; }
+
+    /// <summary>A tri-state toggle as <c>"true"</c>, <c>"false"</c> or <c>"mixed"</c>; wins over <see cref="Pressed"/> when set.</summary>
+    [Parameter] public string? PressedState { get; set; }
+
+    /// <summary>Overrides the priority declared for <see cref="Command"/> in the registry.</summary>
+    [Parameter] public ToolbarItemPriority? Priority { get; set; }
+
+    /// <summary>A pointer press does not move focus off the document (the selection survives). Default true.</summary>
+    [Parameter] public bool PreserveFocus { get; set; } = true;
+
+    /// <summary>The "More" entry keeps the menu open while the surface the command opens is shown.</summary>
+    [Parameter] public bool KeepMenuOpen { get; set; }
+
+    /// <summary>Raised when the command is activated, from the bar or from "More".</summary>
+    [Parameter] public EventCallback OnClick { get; set; }
+
+    /// <summary>Additional CSS class.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Additional attributes (<c>aria-haspopup</c>, <c>aria-expanded</c>, <c>data-state</c>, ...).</summary>
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private ToolbarItemPriority DeclaredPriority =>
+        Priority
+        ?? (Command is { Length: > 0 } && DocumentEditorBuiltInToolbar.FindItemByCommandName(Command) is { } item
+            ? item.Priority
+            : ToolbarItemPriority.Secondary);
+
+    private ToolbarButtonPriority EffectivePriority => DeclaredPriority.ToCorePriority();
+
+    private string PriorityDataValue => DeclaredPriority.ToDataValue();
+
+    private bool? EffectivePressed => PressedState switch
+    {
+        "true" => true,
+        "false" or "mixed" => false,
+        _ => Pressed,
+    };
+
+    private bool EffectiveMixed => PressedState == "mixed";
+
+    // The pressed/mixed look is the core toolbar's aria-pressed rule; the modifier classes stay as the stable hooks the
+    // ribbon always published (E2E and hosts select on them).
+    private string ButtonClass => string.Join(' ', new[]
+    {
+        "tm-document-editor__ribbon-button",
+        EffectivePressed == true ? "tm-document-editor__ribbon-button--active" : null,
+        EffectiveMixed ? "tm-document-editor__ribbon-button--mixed" : null,
+        Class,
+    }.Where(static c => !string.IsNullOrWhiteSpace(c)));
+}

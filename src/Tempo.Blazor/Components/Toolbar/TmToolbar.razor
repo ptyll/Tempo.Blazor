@@ -52,6 +52,7 @@
     private bool _pinned;
     private bool _attached;
     private ToolbarOverflow _attachedOverflow;
+    private bool _attachedLabelsFirst;
     private ToolbarOverflow _lastOverflow;
     private ToolbarLabels _lastLabels;
     private bool _disposed;
@@ -264,14 +265,16 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (_disposed) return;
-        if (_attached && _attachedOverflow == Overflow) return;
+        var labelsFirst = Labels == ToolbarLabels.ShrinkBeforeOverflow;
+        if (_attached && _attachedOverflow == Overflow && _attachedLabelsFirst == labelsFirst) return;
 
         // Set before the first await so a second render during the import cannot attach twice.
         _attached = true;
         _attachedOverflow = Overflow;
+        _attachedLabelsFirst = labelsFirst;
         _interop ??= new ToolbarInterop(JS);
         _dotNetRef ??= DotNetObjectReference.Create(this);
-        await _interop.AttachAsync(_root, _dotNetRef, Overflow == ToolbarOverflow.Menu);
+        await _interop.AttachAsync(_root, _dotNetRef, Overflow == ToolbarOverflow.Menu, labelsFirst);
     }
 
     /// <inheritdoc />

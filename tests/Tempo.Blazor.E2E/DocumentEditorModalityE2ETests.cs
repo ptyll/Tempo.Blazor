@@ -67,7 +67,7 @@ public sealed class DocumentEditorModalityE2ETests : WasmTestBase
             var page = await OpenAsync(HistoryDocumentId, viewport.Width, viewport.Height, viewport.Touch);
             await page.GetByTestId("document-ribbon-tab-review").ClickAsync();
             var before = await DocumentEditorLayoutShiftGuard.MeasureWorkspaceAsync(page);
-            await page.GetByTestId("document-compare-open").ClickAsync();
+            await DocumentEditorRedesignE2EHelpers.ClickRibbonAsync(page, "document-compare-open");
             var dialog = page.GetByTestId("document-compare-dialog");
             await Assertions.Expect(dialog).ToBeVisibleAsync(new() { Timeout = 10_000 });
             await page.WaitForTimeoutAsync(300);

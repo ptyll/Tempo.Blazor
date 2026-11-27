@@ -38,7 +38,7 @@ public sealed class DocumentEditorCanvasStylesE2ETests : WasmTestBase
         });
 
         await page.GetByTestId("document-block-style").SelectOptionAsync("Heading1");
-        await page.GetByTestId("document-style-gallery-toggle").ClickAsync();
+        await DocumentEditorRedesignE2EHelpers.ClickRibbonAsync(page, "document-style-gallery-toggle");
         await Assertions.Expect(page.GetByTestId("document-style-gallery")).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 5_000 });
         await page.GetByTestId("document-style-name").FillAsync("Executive Accent");
         await page.GetByTestId("document-style-create").ClickAsync();

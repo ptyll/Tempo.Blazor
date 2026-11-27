@@ -41,7 +41,7 @@ public sealed class DocumentEditorProtectionE2ETests : WasmTestBase
 
         // Protect the document from the Review ribbon.
         await page.GetByTestId("document-ribbon-tab-review").ClickAsync();
-        await page.GetByTestId("document-protect-document").ClickAsync();
+        await DocumentEditorRedesignE2EHelpers.ClickRibbonAsync(page, "document-protect-document");
         await WaitForProtectionStateAsync(page, isProtected: true, minMarkers: 0);
 
         // Typing outside any editable region must be a no-op.
@@ -57,7 +57,7 @@ public sealed class DocumentEditorProtectionE2ETests : WasmTestBase
         await SelectTextRangeAsync(page, "canvas-history-format", 0, 10);
         await page.GetByTestId("document-ribbon-tab-review").ClickAsync();
         await Assertions.Expect(page.GetByTestId("document-mark-editable-region")).ToBeEnabledAsync(new() { Timeout = 10_000 });
-        await page.GetByTestId("document-mark-editable-region").ClickAsync();
+        await DocumentEditorRedesignE2EHelpers.ClickRibbonAsync(page, "document-mark-editable-region");
         await WaitForProtectionStateAsync(page, isProtected: true, minMarkers: 1);
 
         // Typing inside the marked region must pass.

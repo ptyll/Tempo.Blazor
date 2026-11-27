@@ -49,7 +49,7 @@
       "type": "ToolbarLabels",
       "isRequired": false,
       "default": "Auto",
-      "description": "Whether icon buttons show their text. Auto (default) shows it except on a toolbar narrower than TmBreakpoints.Sm (640px), measured on the toolbar itself; a button's own LabelPosition of Hidden always wins."
+      "description": "Whether icon buttons show their text. Auto (default) shows it except on a toolbar narrower than TmBreakpoints.Sm (640px), measured on the toolbar itself; a button's own LabelPosition of Hidden always wins. ShrinkBeforeOverflow shows the labels like IconsWithText but, with Overflow=Menu, drops the text of the icon+text buttons first (the root carries data-tm-labels-collapsed) and only then moves buttons into More; measured on every layout pass, so a widened bar takes its labels back."
     },
     {
       "name": "OverflowLabel",

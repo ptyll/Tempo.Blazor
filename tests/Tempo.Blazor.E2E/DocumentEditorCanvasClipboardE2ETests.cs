@@ -75,7 +75,7 @@ public sealed class DocumentEditorCanvasClipboardE2ETests : WasmTestBase
         });
 
         await page.GetByTestId("document-ribbon-tab-view").ClickAsync();
-        await page.GetByTestId("document-view-clipboard-html").EvaluateAsync("button => button.click()");
+        await DocumentEditorRedesignE2EHelpers.ClickRibbonAsync(page, "document-view-clipboard-html");
         await Assertions.Expect(page.GetByTestId("document-clipboard-normalized-debug-content")).ToContainTextAsync("Approved rich term", new() { Timeout = 5_000 });
         await Assertions.Expect(page.GetByTestId("document-clipboard-normalized-debug-content")).Not.ToContainTextAsync("script", new() { Timeout = 5_000 });
         await page.GetByTestId("document-clipboard-html-debug-close").ClickAsync();

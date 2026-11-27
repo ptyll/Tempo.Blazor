@@ -32,10 +32,7 @@ public class DocumentEditorToolbarDeclarativeMigrationTests : LocalizationTestBa
         AssertCommand(cut, "document-underline", "underline");
         AssertCommand(cut, "document-link", "link");
         AssertCommand(cut, "document-clear-formatting", "clearFormatting");
-        AssertCommand(cut, "document-align-left", "alignLeft");
-        AssertCommand(cut, "document-align-center", "alignCenter");
-        AssertCommand(cut, "document-align-right", "alignRight");
-        AssertCommand(cut, "document-align-justify", "alignJustify");
+        AssertCommand(cut, "document-align", "alignment");
         AssertCommand(cut, "document-decrease-indent", "decreaseIndent");
         AssertCommand(cut, "document-increase-indent", "increaseIndent");
 
@@ -44,8 +41,12 @@ public class DocumentEditorToolbarDeclarativeMigrationTests : LocalizationTestBa
         cut.Find("[data-testid='document-font-color-trigger']").Should().NotBeNull();
         cut.Find("[data-testid='document-highlight-color-trigger']").Should().NotBeNull();
         cut.Find("[data-testid='document-line-spacing']").Should().NotBeNull();
-        cut.Find("[data-testid='document-spacing-before']").Should().NotBeNull();
-        cut.Find("[data-testid='document-spacing-after']").Should().NotBeNull();
+
+        // Paragraph spacing before/after are less frequent: they live in the core "More" menu (OverflowOnly), never on the bar.
+        cut.FindAll("[data-testid='document-spacing-before']").Should().BeEmpty();
+        cut.Find("[data-testid='document-ribbon-toolbar'] .tm-toolbar-more").Click();
+        cut.FindAll("[role='menu'] [role='group']").Select(group => group.GetAttribute("aria-label"))
+            .Should().Contain(["Before", "After"]);
     }
 
     [Fact]
@@ -177,9 +178,13 @@ public class DocumentEditorToolbarDeclarativeMigrationTests : LocalizationTestBa
         AssertCommand(cut, "document-fullscreen", "fullscreen");
         AssertCommand(cut, "document-open-print-preview", "openPrintPreview");
         AssertCommand(cut, "document-print-document", "printDocument");
-        AssertCommand(cut, "document-view-json", "viewDocumentJson");
-        AssertCommand(cut, "document-view-clipboard-html", "viewClipboardHtml");
         AssertCommand(cut, "document-open-versions", "openVersions");
+
+        // The debug tools are OverflowOnly: no bar button (the old siblings overlapped them), a "More" entry that owns the test id.
+        cut.FindAll("button[data-testid='document-view-json']").Should().BeEmpty();
+        cut.Find("[data-testid='document-ribbon-toolbar'] .tm-toolbar-more").Click();
+        cut.Find("[role='menu'] [data-testid='document-view-json']").Should().NotBeNull();
+        cut.Find("[role='menu'] [data-testid='document-view-clipboard-html']").Should().NotBeNull();
     }
 
     [Fact]

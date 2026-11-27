@@ -20725,6 +20725,18 @@
           "description": "Shows the preset color palette."
         },
         {
+          "name": "TriggerAriaLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Accessible name of the trigger button (e.g. \"Font color: #dc2626\"). Without it the trigger is named by its visually hidden text (the value, or the placeholder while nothing is selected)."
+        },
+        {
+          "name": "TriggerIcon",
+          "type": "string?",
+          "isRequired": false,
+          "description": "An icon name that replaces the checkerboard swatch of the trigger with a glyph and the current color as a bar under it (the text / highlight color triggers of an editor toolbar). null (default) keeps the swatch."
+        },
+        {
           "name": "Value",
           "type": "string?",
           "isRequired": false,
@@ -36052,7 +36064,7 @@
           "name": "Labels",
           "type": "ToolbarLabels",
           "isRequired": true,
-          "description": "Whether icon buttons show their text. Auto (default) shows it except on a toolbar narrower than TmBreakpoints.Sm (640px), measured on the toolbar itself; a button's own LabelPosition of Hidden always wins.",
+          "description": "Whether icon buttons show their text. Auto (default) shows it except on a toolbar narrower than TmBreakpoints.Sm (640px), measured on the toolbar itself; a button's own LabelPosition of Hidden always wins. ShrinkBeforeOverflow shows the labels like IconsWithText but, with Overflow=Menu, drops the text of the icon+text buttons first (the root carries data-tm-labels-collapsed) and only then moves buttons into More; measured on every layout pass, so a widened bar takes its labels back.",
           "default": "Auto"
         },
         {

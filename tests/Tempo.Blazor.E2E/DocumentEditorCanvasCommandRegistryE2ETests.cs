@@ -36,7 +36,9 @@ public sealed class DocumentEditorCanvasCommandRegistryE2ETests : WasmTestBase
         var output = CreateOutputDirectory("phase16-superscript");
         await SelectCanvasTextRangeAsync(page, AgreementBlockId, 0, 12);
 
-        var superscript = page.GetByTestId("document-superscript");
+        // Superscript is OverflowOnly (DE-1.2): it lives in the core More menu as a check-marked entry.
+        await DocumentEditorRedesignE2EHelpers.OpenMoreAsync(page);
+        var superscript = page.Locator("[role='menu'] [data-testid='document-superscript']");
         Assert.IsFalse(
             await superscript.IsDisabledAsync(),
             "superscript musí být enabled — nově registrovaný v command registry (dřív jen callback fallback).");
@@ -47,7 +49,9 @@ public sealed class DocumentEditorCanvasCommandRegistryE2ETests : WasmTestBase
             """, 10_000);
         await ViewportScreenshotAsync(page, Path.Combine(output, "00-superscript-applied.png"));
 
-        await Assertions.Expect(superscript).ToHaveAttributeAsync("aria-pressed", "true", new() { Timeout = 5_000 });
+        await DocumentEditorRedesignE2EHelpers.OpenMoreAsync(page);
+        await Assertions.Expect(page.Locator("[role='menu'] [data-testid='document-superscript']"))
+            .ToHaveAttributeAsync("aria-checked", "true", new() { Timeout = 5_000 });
     }
 
     /// <summary>Edge case: header/footer kontextové toggly (differentFirstPage, closeHeaderFooter) — enabled jen v HF módu.</summary>

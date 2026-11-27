@@ -80,6 +80,18 @@
       "description": "Placeholder text shown when no color is selected."
     },
     {
+      "name": "TriggerAriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Accessible name of the trigger button (e.g. \"Font color: #dc2626\"). Without it the trigger is named by its visually hidden text (the value, or the placeholder while nothing is selected)."
+    },
+    {
+      "name": "TriggerIcon",
+      "type": "string?",
+      "isRequired": false,
+      "description": "An icon name that replaces the checkerboard swatch of the trigger with a glyph and the current color as a bar under it (the text / highlight color triggers of an editor toolbar). null (default) keeps the swatch."
+    },
+    {
       "name": "ShowAlpha",
       "type": "bool",
       "isRequired": false,

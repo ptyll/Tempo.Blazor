@@ -1,283 +1,281 @@
+using AngleSharp.Dom;
 using Bunit;
 using FluentAssertions;
 using Tempo.Blazor.Components.DocumentEditor;
 using Tempo.Blazor.Components.DocumentEditor.Registry;
+using Tempo.Blazor.Components.Toolbar;
+using Tempo.Blazor.DocumentEditor.Models;
 using Tempo.Blazor.Tests.Localization;
 
 namespace Tempo.Blazor.Tests.Components.DocumentEditor;
 
-/// <summary>bUnit tests for Phase 4: overflow model, More button, overflow menu, and keyboard navigation.</summary>
+/// <summary>
+/// Redesign 146c7e1b, DE-1.2: the ribbon runs on the core <see cref="TmToolbar"/> (Overflow=Menu). The priority of every
+/// command is the registry's, published as <c>data-priority</c>; measuring and the "More" menu are the core's — the ribbon has
+/// no overflow model of its own.
+/// </summary>
 public class DocumentEditorToolbarOverflowTests : LocalizationTestBase
 {
-    // ─── 4.1 ToolbarItemPriority values ──────────────────────────────────────
+    private static readonly string[] Tabs = ["home", "insert", "math", "layout", "references", "review", "view"];
+
+    // ─── The priority is the registry's ───────────────────────────────────────
 
     [Fact]
-    public void ToolbarItemPriority_HasPrimarySecondaryAndOverflowOnlyValues()
+    public void ToolbarItemPriority_MapsOntoTheCoreToolbarPriority()
     {
-        var values = Enum.GetValues<ToolbarItemPriority>();
-
-        values.Should().Contain(ToolbarItemPriority.Primary);
-        values.Should().Contain(ToolbarItemPriority.Secondary);
-        values.Should().Contain(ToolbarItemPriority.OverflowOnly);
+        ToolbarItemPriority.Primary.ToCorePriority().Should().Be(ToolbarButtonPriority.Primary);
+        ToolbarItemPriority.Secondary.ToCorePriority().Should().Be(ToolbarButtonPriority.Secondary);
+        ToolbarItemPriority.OverflowOnly.ToCorePriority().Should().Be(ToolbarButtonPriority.OverflowOnly);
     }
 
-    // ─── 4.1 More button in DOM ───────────────────────────────────────────────
-
-    [Fact]
-    public void Toolbar_MoreButton_ExistsInDom()
+    [Theory]
+    [InlineData("home")]
+    [InlineData("insert")]
+    [InlineData("math")]
+    [InlineData("layout")]
+    [InlineData("references")]
+    [InlineData("review")]
+    [InlineData("view")]
+    public void EveryRibbonCommand_CarriesTheRegistryPriority_OnItsTab(string tab)
     {
-        var cut = Render<TmDocumentEditorToolbar>();
+        var cut = RenderAdvanced();
+        OpenTab(cut, tab);
 
-        var btn = cut.Find("[data-testid='document-toolbar-more']");
-        btn.Should().NotBeNull();
-    }
-
-    [Fact]
-    public void Toolbar_MoreButton_IsHiddenByDefault()
-    {
-        var cut = Render<TmDocumentEditorToolbar>();
-
-        var btn = cut.Find("[data-testid='document-toolbar-more']");
-        btn.HasAttribute("hidden").Should().BeTrue("More button must be hidden until JS signals overflow");
-    }
-
-    [Fact]
-    public async Task Toolbar_MoreButton_IsVisibleWhenJsSignalsOverflow()
-    {
-        var cut = Render<TmDocumentEditorToolbar>();
-
-        await cut.InvokeAsync(() =>
-            cut.Instance.SetOverflowingAsync(true, ["bold"]));
-
-        var btn = cut.Find("[data-testid='document-toolbar-more']");
-        btn.HasAttribute("hidden").Should().BeFalse("More button is shown once JS signals overflow");
+        var commands = cut.FindAll("[data-testid='document-ribbon-panel'] [data-command]");
+        commands.Should().NotBeEmpty();
+        foreach (var element in commands)
+        {
+            var command = element.GetAttribute("data-command")!;
+            var declared = DocumentEditorBuiltInToolbar.FindItemByCommandName(command);
+            declared.Should().NotBeNull($"'{command}' on the {tab} tab must be declared in DocumentEditorBuiltInToolbar");
+            element.GetAttribute("data-priority").Should().Be(declared!.Priority.ToDataValue(),
+                $"'{command}' publishes the registry priority as its stable data-priority contract");
+        }
     }
 
     [Fact]
-    public async Task Toolbar_MoreButton_IsHiddenAgainWhenOverflowClears()
+    public void Registry_DeclaresEveryCommandTheRibbonRenders_ChecklistAgainstTheBuiltInToolbar()
     {
-        var cut = Render<TmDocumentEditorToolbar>();
-        await cut.InvokeAsync(() => cut.Instance.SetOverflowingAsync(true, ["bold"]));
+        var cut = RenderAdvanced(parameters => parameters
+            .Add(p => p.ShowDebugTools, true)
+            .Add(p => p.ShowPrintPreviewTools, true)
+            .Add(p => p.ShowEquationTools, true)
+            .Add(p => p.ShowSymbolTools, true)
+            .Add(p => p.ShowAdvancedFields, true));
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var tab in Tabs)
+        {
+            OpenTab(cut, tab);
+            foreach (var element in cut.FindAll("[data-testid='document-ribbon-panel'] [data-command]"))
+            {
+                seen.Add(element.GetAttribute("data-command")!);
+            }
+        }
 
-        await cut.InvokeAsync(() => cut.Instance.SetOverflowingAsync(false, []));
-
-        var btn = cut.Find("[data-testid='document-toolbar-more']");
-        btn.HasAttribute("hidden").Should().BeTrue();
+        // OverflowOnly commands render only a position marker on the bar; their entries live in More (checked below).
+        seen.Should().Contain(["bold", "italic", "underline", "strikethrough", "link", "addComment", "insertImage", "insertTable"]);
+        foreach (var command in seen)
+        {
+            DocumentEditorBuiltInToolbar.FindItemByCommandName(command).Should().NotBeNull($"'{command}' must not be lost from the registry");
+        }
     }
 
-    // ─── Perf plan N7.1: overflow menu groups are cached between renders ──────
+    // ─── OverflowOnly lives in "More" even without measuring ──────────────────
 
     [Fact]
-    public async Task Toolbar_OverflowMenuGroups_AreReusedAcrossRendersWithUnchangedState()
+    public void OverflowOnlyCommands_AreInMore_WithoutAnyMeasurement()
     {
-        var cut = Render<TmDocumentEditorToolbar>();
-        await cut.InvokeAsync(() => cut.Instance.SetOverflowingAsync(true, ["bold", "italic"]));
+        var cut = RenderAdvanced();
 
-        var menu = cut.FindComponent<TmDocumentToolbarOverflowMenu>();
-        var groups = menu.Instance.Groups;
-        groups.Should().NotBeNull();
+        cut.FindAll("[data-testid='document-ribbon-panel'] button[data-command='superscript']").Should().BeEmpty(
+            "an OverflowOnly command never renders on the bar");
+        var more = cut.Find("[data-testid='document-ribbon-toolbar'] .tm-toolbar-more");
+        more.Click();
 
-        // A re-render with unchanged inputs must hand the SAME groups instance to the menu —
-        // rebuilding the LINQ pipeline (distinct/sort/group + registry scans) per render was the bug.
-        cut.Render();
-        cut.FindComponent<TmDocumentToolbarOverflowMenu>().Instance.Groups
-            .Should().BeSameAs(groups, "unchanged overflow state must reuse the cached groups");
-
-        // Changed overflow set must rebuild.
-        await cut.InvokeAsync(() => cut.Instance.SetOverflowingAsync(true, ["bold", "italic", "underline"]));
-        cut.FindComponent<TmDocumentToolbarOverflowMenu>().Instance.Groups
-            .Should().NotBeSameAs(groups, "a new overflow command set must rebuild the groups");
-    }
-
-    [Fact]
-    public async Task Toolbar_OverflowMenuGroups_RebuildWhenSearchQueryChanges()
-    {
-        var cut = Render<TmDocumentEditorToolbar>();
-        await cut.InvokeAsync(() => cut.Instance.SetOverflowingAsync(
-            true, ["bold", "italic", "underline", "strikethrough", "superscript", "subscript", "smallCaps", "allCaps"]));
-        cut.Find("[data-testid='document-toolbar-more']").Click();
-
-        var before = cut.FindComponent<TmDocumentToolbarOverflowMenu>().Instance.Groups;
-        cut.Find("[data-testid='document-toolbar-more-search']").Input("bold");
-
-        var after = cut.FindComponent<TmDocumentToolbarOverflowMenu>().Instance.Groups;
-        after.Should().NotBeSameAs(before, "a search query change must rebuild the groups");
-        after.SelectMany(group => group.Items).Should().OnlyContain(item =>
-            item.CommandName.Contains("bold", StringComparison.OrdinalIgnoreCase)
-            || item.Label.Contains("bold", StringComparison.OrdinalIgnoreCase));
-    }
-
-    // ─── 4.1 Overflow menu ────────────────────────────────────────────────────
-
-    [Fact]
-    public void Toolbar_OverflowMenu_IsNotRenderedByDefault()
-    {
-        var cut = Render<TmDocumentEditorToolbar>();
-
-        cut.FindAll("[data-testid='document-toolbar-more-menu']").Should().BeEmpty();
+        var menu = cut.Find("[role='menu']");
+        menu.QuerySelector("[data-testid='document-superscript']").Should().NotBeNull("the More entry owns the test id of an OverflowOnly command");
+        menu.QuerySelector("[data-testid='document-small-caps']").Should().NotBeNull();
+        menu.QuerySelector("[data-testid='document-double-strikethrough']").Should().NotBeNull();
+        var section = menu.QuerySelectorAll("[role='group']").Single(g => g.GetAttribute("aria-label") == "More formatting");
+        section.QuerySelectorAll("[role='menuitemcheckbox']").Should().NotBeEmpty("a toggle keeps its check-mark state in More");
     }
 
     [Fact]
-    public async Task Toolbar_MoreButton_Click_OpensOverflowMenu()
+    public void MoreFormatting_Options_AreCheckMarkedSectionsInMore()
     {
-        var cut = Render<TmDocumentEditorToolbar>();
-        await cut.InvokeAsync(() => cut.Instance.SetOverflowingAsync(true, ["bold"]));
+        var cut = RenderAdvanced(p => p.Add(x => x.CurrentSpacingBefore, 12));
 
-        cut.Find("[data-testid='document-toolbar-more']").Click();
+        cut.Find("[data-testid='document-ribbon-toolbar'] .tm-toolbar-more").Click();
 
-        cut.FindAll("[data-testid='document-toolbar-more-menu']").Should().HaveCount(1);
+        var menu = cut.Find("[role='menu']");
+        var before = menu.QuerySelectorAll("[role='group']").Single(g => g.GetAttribute("aria-label") == "Before");
+        before.QuerySelectorAll("[role='menuitemcheckbox']").Should().HaveCount(5);
+        before.QuerySelectorAll("[aria-checked='true']").Should().ContainSingle().Which.TextContent.Should().Contain("12");
     }
 
     [Fact]
-    public async Task Toolbar_MoreButton_SecondClick_ClosesOverflowMenu()
+    public async Task ChangeCaseEntry_InMore_RunsTheChangeCaseCallback()
     {
-        var cut = Render<TmDocumentEditorToolbar>();
-        await cut.InvokeAsync(() => cut.Instance.SetOverflowingAsync(true, ["bold"]));
-        cut.Find("[data-testid='document-toolbar-more']").Click();
+        string? applied = null;
+        var cut = RenderAdvanced(p => p.Add(x => x.OnChangeCase, value => applied = value));
+        cut.Find("[data-testid='document-ribbon-toolbar'] .tm-toolbar-more").Click();
 
-        cut.Find("[data-testid='document-toolbar-more']").Click();
+        var menu = cut.Find("[role='menu']");
+        var entry = menu.QuerySelectorAll("[role='group']").Single(g => g.GetAttribute("aria-label") == "Change case")
+            .QuerySelectorAll("button").First(b => b.TextContent.Contains("UPPERCASE", StringComparison.OrdinalIgnoreCase));
+        await entry.ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
 
-        cut.FindAll("[data-testid='document-toolbar-more-menu']").Should().BeEmpty();
+        cut.WaitForAssertion(() => applied.Should().Be("uppercase"));
     }
 
-    [Fact]
-    public async Task Toolbar_OverflowMenu_ShowsButtonForEachOverflowedCommand()
-    {
-        var cut = Render<TmDocumentEditorToolbar>();
-        await cut.InvokeAsync(() => cut.Instance.SetOverflowingAsync(true, ["bold", "italic"]));
-        cut.Find("[data-testid='document-toolbar-more']").Click();
-
-        var menu = cut.Find("[data-testid='document-toolbar-more-menu']");
-        menu.QuerySelectorAll("[data-command]").Should().HaveCount(2);
-        menu.QuerySelector("[data-command='bold']").Should().NotBeNull();
-        menu.QuerySelector("[data-command='italic']").Should().NotBeNull();
-    }
+    // ─── Measured overflow: grouped, in written order, toggles as menuitemcheckbox ────
 
     [Fact]
-    public async Task Toolbar_OverflowMenu_GroupsCommandsByToolbarGroup()
+    public async Task WhenNothingFits_TheCollapsedCommands_AreGroupedByToolbarGroup_InWrittenOrder()
     {
-        var cut = Render<TmDocumentEditorToolbar>();
-        await cut.InvokeAsync(() => cut.Instance.SetOverflowingAsync(true, ["bold", "insertTable", "save"]));
-        cut.Find("[data-testid='document-toolbar-more']").Click();
+        var cut = RenderAdvanced();
+        await cut.InvokeAsync(() => cut.FindComponent<TmToolbar>().Instance.OnFitChanged(0));
+        cut.Find("[data-testid='document-ribbon-toolbar'] .tm-toolbar-more").Click();
 
-        var groups = cut.FindAll("[data-testid='document-toolbar-more-group']");
+        var menu = cut.Find("[role='menu']");
+        var sections = menu.QuerySelectorAll("[role='group']").Select(g => g.GetAttribute("aria-label")).ToList();
+        sections.Should().Contain(["Character", "Paragraph"]);
 
-        groups.Select(group => group.GetAttribute("data-group"))
-            .Should().Contain(["clipboard", "formatting", "insert"]);
-    }
-
-    [Fact]
-    public async Task Toolbar_OverflowMenu_SortsCommandsByPriorityBeforeGroupOrder()
-    {
-        var cut = Render<TmDocumentEditorToolbar>();
-        await cut.InvokeAsync(() => cut.Instance.SetOverflowingAsync(true, ["exportDocx", "bold", "viewDocumentJson", "save"]));
-        cut.Find("[data-testid='document-toolbar-more']").Click();
-
-        var commands = cut.FindAll("[data-testid='document-toolbar-more-menu'] [data-command]")
-            .Select(button => button.GetAttribute("data-command"))
+        var tests = menu.QuerySelectorAll("button")
+            .Select(b => b.GetAttribute("data-testid") ?? b.GetAttribute("data-menu-testid"))
+            .Where(id => id is not null)
             .ToList();
-
-        commands.Should().Equal("save", "bold", "exportDocx", "viewDocumentJson");
+        tests.IndexOf("document-bold").Should().BeLessThan(tests.IndexOf("document-italic"));
+        tests.IndexOf("document-italic").Should().BeLessThan(tests.IndexOf("document-underline"));
+        tests.IndexOf("document-underline").Should().BeLessThan(tests.IndexOf("document-clear-formatting"),
+            "grouping never reorders: the written order of the ribbon is the order of the menu");
     }
 
     [Fact]
-    public async Task Toolbar_OverflowMenu_ShowsSearchForLargeCommandSetsAndFilters()
+    public async Task Toggles_InMore_AreMenuItemCheckboxes_WithAriaCheckedFromPressed()
+    {
+        var cut = Render<TmDocumentEditorToolbar>(p => p
+            .Add(x => x.BoldState, WysiwygFormattingValue.Active)
+            .Add(x => x.ItalicState, WysiwygFormattingValue.Mixed)
+            .Add(x => x.UnderlineState, WysiwygFormattingValue.Inactive));
+        await cut.InvokeAsync(() => cut.FindComponent<TmToolbar>().Instance.OnFitChanged(0));
+        cut.Find("[data-testid='document-ribbon-toolbar'] .tm-toolbar-more").Click();
+
+        var menu = cut.Find("[role='menu']");
+        MenuEntry(menu, "document-bold").GetAttribute("aria-checked").Should().Be("true");
+        MenuEntry(menu, "document-italic").GetAttribute("aria-checked").Should().Be("mixed");
+        MenuEntry(menu, "document-underline").GetAttribute("aria-checked").Should().Be("false");
+        MenuEntry(menu, "document-bold").GetAttribute("role").Should().Be("menuitemcheckbox");
+    }
+
+    [Fact]
+    public async Task MoreEntry_RunsTheSameCommand_AsTheBarButton()
+    {
+        var bold = 0;
+        var cut = Render<TmDocumentEditorToolbar>(p => p.Add(x => x.OnBold, () => { bold++; }));
+        await cut.InvokeAsync(() => cut.FindComponent<TmToolbar>().Instance.OnFitChanged(0));
+        cut.Find("[data-testid='document-ribbon-toolbar'] .tm-toolbar-more").Click();
+
+        MenuEntry(cut.Find("[role='menu']"), "document-bold").Click();
+
+        cut.WaitForAssertion(() => bold.Should().Be(1));
+    }
+
+    [Fact]
+    public async Task Priority_DecidesWhichCommandsLeaveFirst()
     {
         var cut = Render<TmDocumentEditorToolbar>();
-        await cut.InvokeAsync(() => cut.Instance.SetOverflowingAsync(true,
-        [
-            "save", "undo", "redo", "bold", "italic", "underline", "insertTable", "insertImage"
-        ]));
-        cut.Find("[data-testid='document-toolbar-more']").Click();
+        // Keep roughly the primary commands: one visible button less than the total leaves the lowest-ranked one.
+        var total = cut.FindAll("[data-testid='document-ribbon-panel'] .tm-toolbar-btn").Count;
+        await cut.InvokeAsync(() => cut.FindComponent<TmToolbar>().Instance.OnFitChanged(6));
 
-        cut.Find("[data-testid='document-toolbar-more-search']").Input("Bold");
-
-        var commands = cut.FindAll("[data-testid='document-toolbar-more-menu'] [data-command]")
-            .Select(button => button.GetAttribute("data-command"))
-            .ToList();
-
-        commands.Should().Equal("bold");
+        var collapsed = cut.FindAll(".tm-toolbar-item--collapsed").Select(e => e.GetAttribute("data-priority")).ToList();
+        collapsed.Should().NotBeEmpty();
+        total.Should().BeGreaterThan(6);
+        var visiblePrimary = cut.FindAll("[data-testid='document-ribbon-panel'] .tm-toolbar-btn:not(.tm-toolbar-item--collapsed)[data-priority='primary']");
+        visiblePrimary.Should().NotBeEmpty("Secondary commands leave the bar before any Primary one");
     }
 
-    [Fact]
-    public async Task Toolbar_OverflowMenu_CommandButton_FiresOnBoldCallback()
-    {
-        var boldFired = false;
-        var cut = Render<TmDocumentEditorToolbar>(p => p
-            .Add(x => x.OnBold, () => { boldFired = true; }));
-        await cut.InvokeAsync(() => cut.Instance.SetOverflowingAsync(true, ["bold"]));
-        cut.Find("[data-testid='document-toolbar-more']").Click();
-
-        cut.Find("[data-testid='document-toolbar-more-menu'] [data-command='bold']").Click();
-
-        boldFired.Should().BeTrue("clicking bold in overflow menu fires OnBold");
-    }
+    // ─── The ribbon is one icon row: labels only on the primary calls to action ───
 
     [Fact]
-    public async Task Toolbar_OverflowMenu_CommandButton_FiresOnUndoCallback()
-    {
-        var undoFired = false;
-        var cut = Render<TmDocumentEditorToolbar>(p => p
-            .Add(x => x.OnUndo, () => { undoFired = true; }));
-        await cut.InvokeAsync(() => cut.Instance.SetOverflowingAsync(true, ["undo"]));
-        cut.Find("[data-testid='document-toolbar-more']").Click();
-
-        cut.Find("[data-testid='document-toolbar-more-menu'] [data-command='undo']").Click();
-
-        undoFired.Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task Toolbar_OverflowMenu_DisabledCommand_HasDisabledAttribute()
-    {
-        var registry = BuildRegistry(("bold", enabled: false, value: null));
-        var cut = Render<TmDocumentEditorToolbar>(p => p
-            .Add(x => x.CommandRegistry, registry));
-        await cut.InvokeAsync(() => cut.Instance.SetOverflowingAsync(true, ["bold"]));
-        cut.Find("[data-testid='document-toolbar-more']").Click();
-
-        var boldBtn = cut.Find("[data-testid='document-toolbar-more-menu'] [data-command='bold']");
-        boldBtn.HasAttribute("disabled").Should().BeTrue("disabled registry state propagates to overflow menu");
-    }
-
-    [Fact]
-    public async Task Toolbar_OverflowMenu_EnabledCommand_NotDisabled()
-    {
-        var registry = BuildRegistry(("bold", enabled: true, value: null));
-        var cut = Render<TmDocumentEditorToolbar>(p => p
-            .Add(x => x.CommandRegistry, registry));
-        await cut.InvokeAsync(() => cut.Instance.SetOverflowingAsync(true, ["bold"]));
-        cut.Find("[data-testid='document-toolbar-more']").Click();
-
-        var boldBtn = cut.Find("[data-testid='document-toolbar-more-menu'] [data-command='bold']");
-        boldBtn.HasAttribute("disabled").Should().BeFalse();
-    }
-
-    [Fact]
-    public async Task Toolbar_MoreButton_AriaExpanded_ReflectsMenuState()
+    public void LargeActions_ShowVisibleText_AllOtherButtons_AreIconOnly_WithNameAndTooltip()
     {
         var cut = Render<TmDocumentEditorToolbar>();
-        await cut.InvokeAsync(() => cut.Instance.SetOverflowingAsync(true, ["bold"]));
 
-        var btn = cut.Find("[data-testid='document-toolbar-more']");
-        btn.GetAttribute("aria-expanded").Should().Be("false");
+        foreach (var testId in new[] { "document-link", "document-add-comment", "document-toolbar-image", "document-toolbar-table" })
+        {
+            var button = cut.Find($"[data-testid='{testId}']");
+            button.GetAttribute("data-large").Should().Be("true", testId);
+            button.QuerySelector(".tm-toolbar-btn-text").Should().NotBeNull($"{testId} is a primary call to action with a visible label");
+        }
 
-        btn.Click();
-        btn.GetAttribute("aria-expanded").Should().Be("true");
+        foreach (var testId in new[] { "document-bold", "document-italic", "document-clear-formatting" })
+        {
+            var button = cut.Find($"[data-testid='{testId}']");
+            button.QuerySelector(".tm-toolbar-btn-text").Should().BeNull($"{testId} is an icon button");
+            button.GetAttribute("aria-label").Should().NotBeNullOrWhiteSpace();
+            button.GetAttribute("title").Should().NotBeNullOrWhiteSpace("the tooltip names the icon");
+        }
     }
 
-    // ─── 4.3 Ribbon tab keyboard navigation ──────────────────────────────────
+    [Fact]
+    public void CompactMode_IsIconOnly_EvenForThePrimaryActions()
+    {
+        var cut = Render<TmDocumentEditorToolbar>(p => p.Add(x => x.ToolbarMode, DocumentToolbarMode.Compact));
+
+        cut.Find("[data-testid='document-link']").QuerySelector(".tm-toolbar-btn-text").Should().BeNull();
+        cut.Find("[data-testid='document-link']").GetAttribute("aria-label").Should().Be("Link");
+    }
+
+    [Fact]
+    public void Ribbon_SeparatesGroupsWithDividers_AndRendersNoGroupCaptions()
+    {
+        var cut = Render<TmDocumentEditorToolbar>();
+
+        cut.FindAll("[data-testid='document-ribbon-toolbar'] .tm-toolbar-divider").Count.Should().BeGreaterThanOrEqualTo(2);
+        foreach (var group in cut.FindAll("[data-testid='document-ribbon-toolbar'] .tm-toolbar-group[aria-label]"))
+        {
+            group.TextContent.Should().NotContain(group.GetAttribute("aria-label")!,
+                "a group is named for assistive technology and the More menu; it never prints a caption on the bar");
+        }
+    }
+
+    [Fact]
+    public void MathTab_Stays_AndRendersItsEquationCommand()
+    {
+        var cut = Render<TmDocumentEditorToolbar>(p => p.Add(x => x.ShowEquationTools, true));
+
+        cut.Find("[data-testid='document-ribbon-tab-math']").Should().NotBeNull();
+        OpenTab(cut, "math");
+        cut.Find("[data-testid='document-ribbon-panel'] [data-command='insertEquation']").Should().NotBeNull();
+    }
+
+    // ─── Ribbon structure ─────────────────────────────────────────────────────
+
+    [Fact]
+    public void Ribbon_IsOneCoreToolbar_InsideTheTabPanel_WithTheTokenisedOverflowMenu()
+    {
+        var cut = Render<TmDocumentEditorToolbar>();
+
+        var panel = cut.Find("[data-testid='document-ribbon-panel']");
+        panel.GetAttribute("role").Should().Be("tabpanel");
+        var toolbar = panel.QuerySelector("[data-testid='document-ribbon-toolbar']");
+        toolbar.Should().NotBeNull();
+        toolbar!.GetAttribute("role").Should().Be("toolbar");
+        toolbar.GetAttribute("aria-label").Should().NotBeNullOrWhiteSpace();
+        typeof(TmDocumentEditorToolbar).Assembly.GetType("Tempo.Blazor.Components.DocumentEditor.TmDocumentToolbarOverflowMenu")
+            .Should().BeNull("the ribbon has no overflow menu of its own any more");
+        cut.FindAll("[data-testid='document-toolbar-more-search']").Should().BeEmpty("groups and typeahead replace the old search box");
+    }
 
     [Fact]
     public void RibbonTabs_HaveRovingTabindex_ActiveTabIsZero()
     {
         var cut = Render<TmDocumentEditorToolbar>();
 
-        var homeTab = cut.Find("[data-testid='document-ribbon-tab-home']");
-        var insertTab = cut.Find("[data-testid='document-ribbon-tab-insert']");
-
-        homeTab.GetAttribute("tabindex").Should().Be("0", "active tab has tabindex 0");
-        insertTab.GetAttribute("tabindex").Should().Be("-1", "inactive tabs have tabindex -1");
+        cut.Find("[data-testid='document-ribbon-tab-home']").GetAttribute("tabindex").Should().Be("0");
+        cut.Find("[data-testid='document-ribbon-tab-insert']").GetAttribute("tabindex").Should().Be("-1");
     }
 
     [Fact]
@@ -291,35 +289,27 @@ public class DocumentEditorToolbarOverflowTests : LocalizationTestBase
         cut.Find("[data-testid='document-ribbon-tab-home']").GetAttribute("tabindex").Should().Be("-1");
     }
 
-    // ─── 4.4 Ribbon button stable size ───────────────────────────────────────
-
     [Fact]
-    public void RibbonButton_HasFixedSizeClass_InMarkup()
+    public void RibbonButton_KeepsTheFixedSizeClass()
     {
         var cut = Render<TmDocumentEditorToolbar>();
 
-        var saveBtn = cut.Find("[data-testid='document-save']");
-        saveBtn.ClassList.Should().Contain("tm-document-editor__ribbon-button",
-            "ribbon buttons must carry the fixed-size CSS class");
+        cut.Find("[data-testid='document-save']").ClassList.Should().Contain("tm-document-editor__ribbon-button");
     }
 
-    // ─── Helpers ─────────────────────────────────────────────────────────────
+    // ─── Helpers ──────────────────────────────────────────────────────────────
 
-    private static DocumentEditorCommandRegistry BuildRegistry(params (string name, bool enabled, string? value)[] commands)
-    {
-        var registry = new DocumentEditorCommandRegistry();
-        foreach (var (name, enabled, value) in commands)
+    private IRenderedComponent<TmDocumentEditorToolbar> RenderAdvanced(Action<ComponentParameterCollectionBuilder<TmDocumentEditorToolbar>>? configure = null)
+        => Render<TmDocumentEditorToolbar>(parameters =>
         {
-            var capturedEnabled = enabled;
-            var capturedValue = value;
-            registry.Register(new FuncDocumentEditorCommandEntry(
-                name, affectsData: false,
-                computeEnabled: _ => capturedEnabled,
-                computeValue: _ => capturedValue,
-                execute: (_, _) => Task.CompletedTask));
-        }
+            parameters.Add(p => p.ShowAdvancedCharacterFormatting, true);
+            configure?.Invoke(parameters);
+        });
 
-        registry.RefreshAllAsync(new DocumentEditorCommandContext()).GetAwaiter().GetResult();
-        return registry;
-    }
+    private static void OpenTab(IRenderedComponent<TmDocumentEditorToolbar> cut, string tab)
+        => cut.Find($"[data-testid='document-ribbon-tab-{tab}']").Click();
+
+    private static IElement MenuEntry(IElement menu, string testId)
+        => menu.QuerySelector($"[data-testid='{testId}']") ?? menu.QuerySelector($"[data-menu-testid='{testId}']")
+            ?? throw new InvalidOperationException($"No More entry for {testId}");
 }

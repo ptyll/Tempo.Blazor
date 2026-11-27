@@ -5,6 +5,9 @@
   /* F4: the toolbar is the container its own labels and overflow resolve against - the width of the
      TOOLBAR, not the viewport, decides (an editor panel in a narrow column is mobile on a desktop). */
   container-type: inline-size;
+  /* A host may opt out with container-type: normal (the DocumentEditor ribbon does: its popups are position:fixed and a size container
+     is their containing block). The opt-out costs Labels=Auto and every @container tm-toolbar rule below - use Labels=IconsWithText or
+     ShrinkBeforeOverflow (docs/toolbar.md, 'Hosts that opt out of the size container'). */
   container-name: tm-toolbar;
   /* A collapsed button is positioned against the toolbar (see .tm-toolbar-item--collapsed). */
   position: relative;
@@ -134,6 +137,12 @@
   .tm-toolbar-btn--labels-auto .tm-toolbar-btn-text {
     display: none;
   }
+}
+
+/* Labels=ShrinkBeforeOverflow: tm-toolbar.js marks the root while the labels have to give way (icon+text buttons become icon buttons;
+   the text stays the accessible name). Re-evaluated on every pass, so widening restores the labels. */
+.tm-toolbar[data-tm-labels-collapsed] .tm-toolbar-btn:has(> .tm-icon) > .tm-toolbar-btn-text {
+  display: none;
 }
 
 /* F4 - Overflow=Menu. A button that left the bar stays in the DOM so its width stays measurable: out

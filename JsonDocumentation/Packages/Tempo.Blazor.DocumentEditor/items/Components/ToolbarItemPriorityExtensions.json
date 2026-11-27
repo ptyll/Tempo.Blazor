@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.DocumentEditor.Registry",
+  "description": "Maps the ribbon's ToolbarItemPriority onto the core toolbar's overflow rank.",
+  "packageId": "Tempo.Blazor.DocumentEditor",
+  "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/Registry/ToolbarItemPriority.cs",
+  "documentationStatus": "generated",
+  "itemName": "ToolbarItemPriorityExtensions"
+}

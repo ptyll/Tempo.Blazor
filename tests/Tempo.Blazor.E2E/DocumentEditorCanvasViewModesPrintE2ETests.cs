@@ -92,7 +92,7 @@ public sealed class DocumentEditorCanvasViewModesPrintE2ETests : WasmTestBase
 
         await page.GetByTestId("document-ribbon-tab-view").ClickAsync();
         await Assertions.Expect(page.GetByTestId("document-open-print-preview")).ToBeEnabledAsync(new() { Timeout = 10_000 });
-        await page.GetByTestId("document-open-print-preview").ClickAsync();
+        await DocumentEditorRedesignE2EHelpers.ClickRibbonAsync(page, "document-open-print-preview");
         await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-canvas-engine-root\"]')?.getAttribute('data-canvas-print-preview-active') === 'true'", 10_000);
         await Assertions.Expect(page.GetByTestId("document-print-preview-actions")).ToBeVisibleAsync(new() { Timeout = 10_000 });
 

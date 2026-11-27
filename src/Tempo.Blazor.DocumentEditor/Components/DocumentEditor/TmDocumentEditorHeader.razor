@@ -225,11 +225,14 @@
         _ => string.Empty
     };
 
-    private bool CanExecuteSave => CommandRegistry?.GetState("save")?.IsEnabled ?? (!ReadOnly && !IsSaving);
+    private DocumentQuickActionState QuickActions
+        => DocumentQuickActionState.Resolve(CommandRegistry, ReadOnly, IsSaving, CanUndo, CanRedo);
 
-    private bool CanExecuteUndo => !ReadOnly && (CanUndo || (CommandRegistry?.GetState("undo")?.IsEnabled ?? false));
+    private bool CanExecuteSave => QuickActions.CanSave;
 
-    private bool CanExecuteRedo => !ReadOnly && (CanRedo || (CommandRegistry?.GetState("redo")?.IsEnabled ?? false));
+    private bool CanExecuteUndo => QuickActions.CanUndo;
+
+    private bool CanExecuteRedo => QuickActions.CanRedo;
 
     private bool IsCommandEnabled(string commandName, bool fallback)
         => CommandRegistry is null ? fallback : CommandRegistry.GetState(commandName)?.IsEnabled ?? false;
@@ -237,30 +240,10 @@
     private Task ExecuteAsync(string commandName, EventCallback callback, bool fallback)
         => IsCommandEnabled(commandName, fallback) ? callback.InvokeAsync() : Task.CompletedTask;
 
-    private string SaveTitle => ReadOnly
-        ? DisabledTitle(Loc["TmDocumentEditor_Save"], Loc["TmDocumentEditor_CommandDisabledReadOnly"])
-        : IsSaving
-            ? DisabledTitle(Loc["TmDocumentEditor_Save"], Loc["TmDocumentEditor_CommandDisabledBusy"])
-            : Loc["TmDocumentEditor_Save"];
+    private string SaveTitle => DocumentQuickActionState.SaveTitle(Loc, ReadOnly, IsSaving, CanExecuteSave);
 
-    private string UndoTitle => UndoRedoTitle(Loc["TmDocumentEditor_Undo"], CanUndo, NextUndoDescription);
+    private string UndoTitle => DocumentQuickActionState.UndoTitle(Loc, ReadOnly, CanExecuteUndo, NextUndoDescription);
 
-    private string RedoTitle => UndoRedoTitle(Loc["TmDocumentEditor_Redo"], CanRedo, NextRedoDescription);
+    private string RedoTitle => DocumentQuickActionState.RedoTitle(Loc, ReadOnly, CanExecuteRedo, NextRedoDescription);
 
-    private string UndoRedoTitle(string label, bool canExecute, string? description)
-    {
-        if (ReadOnly)
-        {
-            return DisabledTitle(label, Loc["TmDocumentEditor_CommandDisabledReadOnly"]);
-        }
-
-        if (!canExecute)
-        {
-            return DisabledTitle(label, Loc["TmDocumentEditor_CommandDisabledUnavailable"]);
-        }
-
-        return string.IsNullOrWhiteSpace(description) ? label : $"{label}: {description}";
-    }
-
-    private static string DisabledTitle(string label, string reason) => $"{label}: {reason}";
 }

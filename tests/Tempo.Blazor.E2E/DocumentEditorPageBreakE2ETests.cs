@@ -45,7 +45,7 @@ public sealed class DocumentEditorPageBreakE2ETests : WasmTestBase
         // Caret into the body (insertPageBreak requires a body selection), then insert the break.
         await ClickTextBlockAsync(page, "canvas-history-text");
         await page.GetByTestId("document-ribbon-tab-insert").ClickAsync();
-        await page.GetByTestId("document-insert-page-break").ClickAsync();
+        await DocumentEditorRedesignE2EHelpers.ClickRibbonAsync(page, "document-insert-page-break");
         await page.WaitForFunctionAsync(
             "baseline => Number(document.querySelector('[data-testid=\"document-canvas-engine-root\"]')?.getAttribute('data-canvas-page-count') || '0') === baseline + 1",
             basePageCount,

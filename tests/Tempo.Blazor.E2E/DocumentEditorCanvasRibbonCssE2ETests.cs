@@ -5,7 +5,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Tempo.Blazor.E2E;
 
 /// <summary>
-/// Fáze 15 — ribbon stylovaly dva soubory: legacy blok v _document-editor.css a novější
+/// Fáze 15 (aktualizováno ve fázi 4 / DE-1.2: jednořádkový ribbon na core TmToolbar) — ribbon stylovaly dva soubory: legacy blok v _document-editor.css a novější
 /// _document-editor-toolbar.css. Legacy blok byl smazán (prosakoval width:100% na ribbon-groups
 /// a min-width na tlačítka do nowrap+scroll modelu) a toolbar CSS je od Fáze 15 self-contained.
 /// Kontrakty: selecty nerostou (flex-grow 0), skupiny nemají max-height (clipping
@@ -41,23 +41,22 @@ public sealed class DocumentEditorCanvasRibbonCssE2ETests : WasmTestBase
             () => {
                 const cs = el => el ? getComputedStyle(el) : null;
                 const select = document.querySelector('.tm-document-editor__ribbon-select');
-                const groups = document.querySelector('.tm-document-editor__ribbon-groups');
+                const panel = document.querySelector('.tm-document-editor__ribbon-groups');
+                const bar = document.querySelector('[data-testid="document-ribbon-toolbar"]');
                 const group = document.querySelector('.tm-document-editor__ribbon-group');
                 const button = document.querySelector('[data-testid="document-bold"]');
                 const ribbon = document.querySelector('.tm-document-editor__ribbon');
-                const wrapper = document.querySelector('.tm-document-editor__ribbon-commands-wrapper');
                 return JSON.stringify({
                     selectFlexGrow: cs(select)?.flexGrow,
                     selectMinHeight: cs(select)?.minHeight,
-                    selectMaxHeight: cs(select)?.maxHeight,
                     buttonMinHeight: cs(button)?.minHeight,
-                    groupMaxHeight: cs(group)?.maxHeight,
-                    groupsAlignItems: cs(groups)?.alignItems,
                     groupAlignItems: cs(group)?.alignItems,
+                    groupCaption: getComputedStyle(group, '::after').content,
                     ribbonDisplay: cs(ribbon)?.display,
                     ribbonFlexDirection: cs(ribbon)?.flexDirection,
-                    groupsWidthVsWrapper: groups && wrapper ? Math.round(groups.getBoundingClientRect().width - wrapper.getBoundingClientRect().width) : null,
-                    buttonDisabledColorRuleApplies: !!button,
+                    barFlexWrap: cs(bar)?.flexWrap,
+                    barContainerType: cs(bar)?.containerType,
+                    panelOverflowX: cs(panel)?.overflowX,
                 });
             }
             """);
@@ -65,14 +64,17 @@ public sealed class DocumentEditorCanvasRibbonCssE2ETests : WasmTestBase
 
         using var probe = JsonDocument.Parse(probeJson);
         var root = probe.RootElement;
-        Assert.AreEqual("0", root.GetProperty("selectFlexGrow").GetString(), "selecty nesmí růst (flex: 0 1 auto) — legacy flex:1 1 7rem je pryč.");
-        Assert.AreEqual("52px", root.GetProperty("selectMinHeight").GetString(), "selecty sdílí 3.25rem (52px) osu s tlačítky.");
-        Assert.AreEqual("52px", root.GetProperty("buttonMinHeight").GetString(), "tlačítka drží 3.25rem (52px).");
-        Assert.AreEqual("none", root.GetProperty("groupMaxHeight").GetString(), "ribbon-group max-height odstraněna (ořezávala advanced-char-tools).");
-        Assert.AreEqual("flex", root.GetProperty("ribbonDisplay").GetString(), "ribbon musí zůstat display:flex i po smazání legacy bloku (base props přeneseny).");
+        // DE-1.2: the ribbon is ONE icon row on the core toolbar - buttons and selects share the 36 px (2.25rem) axis.
+        Assert.AreEqual("36px", root.GetProperty("selectMinHeight").GetString(), "selecty sdílí 2.25rem (36px) osu s tlačítky.");
+        Assert.AreEqual("36px", root.GetProperty("buttonMinHeight").GetString(), "tlačítka drží 2.25rem (36px).");
+        Assert.AreEqual("0", root.GetProperty("selectFlexGrow").GetString(), "selecty nesmí růst.");
+        Assert.AreEqual("flex", root.GetProperty("ribbonDisplay").GetString(), "ribbon musí zůstat display:flex.");
         Assert.AreEqual("column", root.GetProperty("ribbonFlexDirection").GetString());
-        Assert.AreEqual("stretch", root.GetProperty("groupsAlignItems").GetString());
+        Assert.AreEqual("nowrap", root.GetProperty("barFlexWrap").GetString(), "jediný řádek");
+        Assert.AreEqual("normal", root.GetProperty("barContainerType").GetString(), "the bar is no size container (fixed popups need the viewport as containing block)");
         Assert.AreEqual("center", root.GetProperty("groupAlignItems").GetString());
+        Assert.AreEqual("none", root.GetProperty("groupCaption").GetString(), "skupiny netisknou popisek");
+        Assert.AreNotEqual("auto", root.GetProperty("panelOverflowX").GetString(), "ribbon se neposouvá horizontálně");
     }
 
     /// <summary>Všech 7 tabů v light i dark režimu na 1920 px — screenshoty pro UX review.</summary>
@@ -96,15 +98,15 @@ public sealed class DocumentEditorCanvasRibbonCssE2ETests : WasmTestBase
         }
     }
 
-    /// <summary>Edge case: užší okna (1366/1024) — overflow chování ribbonu, Home + Review tab.</summary>
+    /// <summary>Edge case: užší okna (1440/1366/1024) — jeden řádek bez posunu, zbytek v More; Home + Review tab.</summary>
     [TestMethod]
-    public async Task Phase15_NarrowViewports_RibbonOverflowsGracefully()
+    public async Task Phase4_NarrowViewports_RibbonStaysOneRow_NeverScrolls()
     {
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
-        var output = CreateOutputDirectory("phase15-narrow");
+        var output = CreateOutputDirectory("phase4-narrow");
 
-        foreach (var width in new[] { 1366, 1024 })
+        foreach (var width in new[] { 1440, 1366, 1024 })
         {
             await page.SetViewportSizeAsync(width, 900);
             await OpenDocumentAsync(page);
@@ -112,20 +114,28 @@ public sealed class DocumentEditorCanvasRibbonCssE2ETests : WasmTestBase
             {
                 await SelectRibbonTabAsync(page, tab);
                 await ViewportScreenshotAsync(page, Path.Combine(output, $"w{width}-tab-{tab}.png"));
+                var overflow = await page.EvaluateAsync<string>(
+                    """
+                    () => {
+                        const panel = document.querySelector('.tm-document-editor__ribbon-groups');
+                        const bar = document.querySelector('[data-testid="document-ribbon-toolbar"]');
+                        const tops = Array.from(bar.querySelectorAll('.tm-toolbar-btn, .tm-document-editor__ribbon-select, .tm-toolbar-more'))
+                            .filter(el => !el.closest('.tm-toolbar-item--collapsed') && el.getBoundingClientRect().width > 0)
+                            .map(el => { const r = el.getBoundingClientRect(); return r.top + r.height / 2; });
+                        return JSON.stringify({
+                            overflowX: getComputedStyle(panel).overflowX,
+                            flexWrap: getComputedStyle(bar).flexWrap,
+                            scrolls: panel.scrollWidth > panel.clientWidth + 1 || bar.scrollWidth > bar.clientWidth + 1,
+                            spread: tops.length ? Math.max(...tops) - Math.min(...tops) : 0,
+                        });
+                    }
+                    """);
+                using var doc = JsonDocument.Parse(overflow);
+                Assert.IsFalse(doc.RootElement.GetProperty("scrolls").GetBoolean(), $"w{width} {tab}: the ribbon never scrolls horizontally");
+                Assert.AreNotEqual("auto", doc.RootElement.GetProperty("overflowX").GetString(), $"w{width} {tab}: no scroller");
+                Assert.AreEqual("nowrap", doc.RootElement.GetProperty("flexWrap").GetString(), $"w{width} {tab}: ONE row");
+                Assert.IsTrue(doc.RootElement.GetProperty("spread").GetDouble() <= 8, $"w{width} {tab}: every control sits in one row");
             }
-
-            // Skupiny se musí posouvat horizontálně (nowrap+scroll model), ne přetékat vertikálně.
-            var overflow = await page.EvaluateAsync<string>(
-                """
-                () => {
-                    const groups = document.querySelector('.tm-document-editor__ribbon-groups');
-                    const cs = getComputedStyle(groups);
-                    return JSON.stringify({ overflowX: cs.overflowX, flexWrap: cs.flexWrap });
-                }
-                """);
-            using var doc = JsonDocument.Parse(overflow);
-            Assert.AreEqual("auto", doc.RootElement.GetProperty("overflowX").GetString(), $"ribbon-groups na {width}px musí scrollovat horizontálně.");
-            Assert.AreEqual("nowrap", doc.RootElement.GetProperty("flexWrap").GetString(), $"ribbon-groups na {width}px drží nowrap model.");
         }
     }
 

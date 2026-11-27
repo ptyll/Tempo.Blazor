@@ -1,0 +1,106 @@
+{
+  "itemName": "DocumentRibbonButton",
+  "kind": "Component",
+  "category": "Document Editor",
+  "description": "One command of the document editor ribbon (redesign DE-1.2): a core TmToolbarButton that carries the ribbon's stable contract - data-command, data-testid and data-priority (the rank declared for the command in DocumentEditorBuiltInToolbar, as primary, secondary or overflowonly). It registers with the enclosing TmToolbar (Overflow=Menu): tm-toolbar.js measures whether it fits and the core \"More\" menu offers it when it does not; a toggle (Pressed / PressedState) is a menuitemcheckbox there. The label is always supplied - it is the accessible name, the tooltip and the \"More\" entry - and is visible only on a Large button (the primary calls to action: Link, Comment, Image, Table). A pointer press does not take focus off the document (PreserveFocus).",
+  "packageId": "Tempo.Blazor.DocumentEditor",
+  "namespace": "Tempo.Blazor.Components.DocumentEditor",
+  "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/DocumentRibbonButton.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.DocumentEditor"
+  ],
+  "parameters": [
+    {
+      "name": "AriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "An accessible name that differs from Text; defaults to Text."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class."
+    },
+    {
+      "name": "Command",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The ribbon command name (data-command); also the key of the declared priority in DocumentEditorBuiltInToolbar."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Disables the button and its \"More\" entry."
+    },
+    {
+      "name": "Icon",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Icon name."
+    },
+    {
+      "name": "KeepMenuOpen",
+      "type": "bool",
+      "isRequired": false,
+      "description": "The \"More\" entry keeps the menu open while the surface the command opens is shown."
+    },
+    {
+      "name": "Large",
+      "type": "bool",
+      "isRequired": false,
+      "description": "True renders the label next to the icon (the primary call to action); false is an icon button."
+    },
+    {
+      "name": "OnClick",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when the command is activated, from the bar or from \"More\"."
+    },
+    {
+      "name": "PreserveFocus",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "A pointer press does not move focus off the document (the selection survives). Default true."
+    },
+    {
+      "name": "Pressed",
+      "type": "bool?",
+      "isRequired": false,
+      "description": "A toggle's state; null is a plain button."
+    },
+    {
+      "name": "PressedState",
+      "type": "string?",
+      "isRequired": false,
+      "description": "A tri-state toggle as \"true\", \"false\" or \"mixed\"; wins over Pressed when set."
+    },
+    {
+      "name": "Priority",
+      "type": "ToolbarItemPriority?",
+      "isRequired": false,
+      "description": "Overrides the priority declared for Command in the registry."
+    },
+    {
+      "name": "TestId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The element's data-testid."
+    },
+    {
+      "name": "Text",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The label: accessible name, \"More\" entry, and the visible text of a Large button."
+    },
+    {
+      "name": "Tooltip",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The tooltip; defaults to Text. A disabled command carries the reason here."
+    }
+  ]
+}

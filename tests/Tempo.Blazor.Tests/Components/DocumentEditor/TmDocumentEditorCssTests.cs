@@ -94,12 +94,13 @@ public class TmDocumentEditorCssTests
         var adaptive = css.Contains("@container", StringComparison.Ordinal)
             || System.Text.RegularExpressions.Regex.IsMatch(css, @"@media\s*\(\s*max-width\s*:");
         adaptive.Should().BeTrue("the editor chrome must keep a responsive hook");
-        rules.Any(rule => rule.Selectors.Contains(".tm-document-editor__ribbon-button") && rule.Body.Contains("inline-size", StringComparison.Ordinal))
+        rules.Any(rule => rule.Selectors.Any(selector => selector.EndsWith(".tm-toolbar-btn", StringComparison.Ordinal) && selector.Contains(".tm-document-editor__ribbon-toolbar", StringComparison.Ordinal))
+                && rule.Body.Contains("min-height", StringComparison.Ordinal))
             .Should().BeTrue("the ribbon buttons keep a sizing rule");
         rules.Any(rule => rule.Selectors.Contains(".tm-document-editor__comment-rail") && rule.Body.Contains("max-height", StringComparison.Ordinal))
             .Should().BeTrue("the comment rail stays height-bounded");
-        rules.Any(rule => rule.Selectors.Any(selector => selector.StartsWith(".tm-document-editor__ribbon-group::after", StringComparison.Ordinal)) && rule.Body.Contains("content:", StringComparison.Ordinal))
-            .Should().BeTrue("the ribbon group caption is rendered from a pseudo element");
+        rules.Any(rule => rule.Selectors.Any(selector => selector.StartsWith(".tm-document-editor__ribbon-group::after", StringComparison.Ordinal)))
+            .Should().BeFalse("DE-1.2: a ribbon group prints no caption - its name is for assistive technology and for its section in More");
 
         // Elevation comes from a shadow declaration on the editor surface; the geometry is free to change.
         rules.Any(rule => rule.Selectors.Contains(".tm-document-editor") && rule.Body.Contains("box-shadow:", StringComparison.Ordinal))
@@ -278,6 +279,53 @@ public class TmDocumentEditorCssTests
         css.Should().Contain(".tm-document-canvas-engine-host--readonly");
         css.Should().Contain(".tm-document-canvas-engine-host__input");
         css.Should().Contain("cursor: not-allowed;");
+    }
+
+    // ── Phase 4 / DE-1.2: the compact ribbon on the core toolbar ────────────────────────────────────────────
+
+    [Fact]
+    public void Ribbon_IsOneRow_NeverScrollsHorizontally_AndPrintsNoGroupCaptions()
+    {
+        var css = ReadComponentCss("_document-editor-toolbar.css");
+        var rules = CssRules.Parse(css);
+
+        // Desktop and tablet never scroll the row: the overflow is the core More menu by priority. The phone keeps ONE documented
+        // scroll fallback until its own command row lands (a later phase).
+        rules.Where(rule => rule.Selectors.Any(selector => selector.Contains(".tm-document-editor__ribbon-groups", StringComparison.Ordinal)))
+            .Where(rule => rule.Body.Contains("overflow-x: auto", StringComparison.Ordinal))
+            .Should().OnlyContain(rule => rule.Selectors.All(selector => selector.Contains("[data-layout=\"mobile\"]", StringComparison.Ordinal)),
+                "only the phone layout keeps a horizontal scroll fallback");
+        css.Should().NotContain("content: attr(aria-label)", "a ribbon group prints no caption");
+        rules.Any(rule => rule.Selectors.Contains(".tm-document-editor__ribbon-toolbar.tm-toolbar") && rule.Body.Contains("flex-wrap: nowrap", StringComparison.Ordinal))
+            .Should().BeTrue("the ribbon is ONE row");
+        rules.Any(rule => rule.Selectors.Contains(".tm-document-editor__ribbon-toolbar.tm-toolbar") && rule.Body.Contains("container-type: normal", StringComparison.Ordinal))
+            .Should().BeTrue("the core bar's size container must not become the containing block of the ribbon's fixed pickers");
+    }
+
+    [Fact]
+    public void RibbonButtons_AreThirtySixPixels_OnDesktop_AndTouchTargetOnACoarsePointer()
+    {
+        var css = ReadComponentCss("_document-editor-toolbar.css");
+
+        css.Should().Contain("min-height: 2.25rem", "32-36 px buttons on desktop");
+        var coarse = css.IndexOf("@media (pointer: coarse)", StringComparison.Ordinal);
+        coarse.Should().BeGreaterThan(0);
+        var block = css[coarse..Math.Min(css.Length, coarse + 900)];
+        block.Should().Contain(".tm-document-editor__ribbon-toolbar .tm-toolbar-btn");
+        block.Should().Contain("var(--tm-touch-target)", "44 px on a coarse pointer");
+    }
+
+    [Fact]
+    public void RibbonLayoutRules_LiveInOnePlace_NotInTheScopedStylesheet()
+    {
+        var scoped = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "Tempo.Blazor.DocumentEditor", "Components", "DocumentEditor", "TmDocumentEditorToolbar.razor.css"));
+
+        // The ribbon's controls are core components: isolated CSS cannot reach them, and a second set of mobile-ribbon rules next to the
+        // package stylesheet is how the 40rem / 42rem conflict arose. The row is styled once.
+        scoped.Should().NotContain(".tm-document-editor__ribbon-groups");
+        scoped.Should().NotContain(".tm-document-editor__ribbon-commands-wrapper");
+        scoped.Should().NotContain("overflow-x: auto");
+        scoped.Should().NotContain("max-content", "a group that never shrinks below its content would defeat the measured overflow");
     }
 
     // ── Phase 2 / DE-2.1: tokens, visual layer and the shared panel building blocks ─────────────────────────

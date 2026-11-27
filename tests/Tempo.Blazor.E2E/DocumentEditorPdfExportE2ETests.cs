@@ -124,7 +124,7 @@ public sealed class DocumentEditorPdfExportE2ETests : WasmTestBase
 
         await page.GetByTestId("document-ribbon-tab-references").ClickAsync();
         var downloadTask = page.WaitForDownloadAsync(new PageWaitForDownloadOptions { Timeout = 60_000 });
-        await page.GetByTestId("document-export-pdf").ClickAsync();
+        await DocumentEditorRedesignE2EHelpers.ClickRibbonAsync(page, "document-export-pdf");
         var download = await downloadTask;
 
         var header = await page.EvaluateAsync<string>(
