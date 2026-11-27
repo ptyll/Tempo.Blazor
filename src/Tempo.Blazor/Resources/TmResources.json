@@ -4166,6 +4166,7 @@
   "TmNotionPageSettingsMenu_ExportMarkdown": "Export as Markdown",
   "TmNotionPageSettingsMenu_ExportOdt": "Export as ODT",
   "TmNotionPageSettingsMenu_ExportPdf": "Export as PDF",
+  "TmNotionPageSettingsMenu_Favorite": "Favorite",
   "TmNotionPageSettingsMenu_FullWidth": "Full width",
   "TmNotionPageSettingsMenu_Import": "Import",
   "TmNotionPageSettingsMenu_ImportHtml": "Import HTML (.html)",

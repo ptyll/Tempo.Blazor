@@ -4,7 +4,7 @@
 
 <li class="tm-npt-item @(IsActive ? "tm-npt-item--active" : "") @(_isDragOver ? "tm-npt-item--drag-over" : "")"
     role="treeitem"
-    aria-selected="@IsActive"
+    aria-selected="@BoolText(IsActive)"
     aria-expanded="@(_isExpanded.ToString().ToLowerInvariant())"
     draggable="true"
     @ondragstart="OnDragStart"
@@ -98,7 +98,7 @@
                     title="@Loc["TmNotionPageTree_OpenMenu"]"
                     aria-label="@Loc["TmNotionPageTree_OpenMenu"]"
                     aria-haspopup="true"
-                    aria-expanded="@MenuOpen"
+                    aria-expanded="@BoolText(MenuOpen)"
                     @onclick:stopPropagation="true"
                     @onclick="OpenMenu">
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">

@@ -502,6 +502,10 @@ public partial class TmNotionPageHistory : TmComponentBase, IAsyncDisposable
 
     // ── Time formatting ───────────────────────────────────────────────────────
 
+    // ARIA state attributes are strings: a Blazor bool renders the invalid empty value (true)
+    // or omits the attribute entirely (false) — never a valid "true"/"false" state.
+    private static string BoolText(bool value) => value ? "true" : "false";
+
     private static string FormatVersionTime(DateTime utc)
     {
         var local = utc.ToLocalTime();

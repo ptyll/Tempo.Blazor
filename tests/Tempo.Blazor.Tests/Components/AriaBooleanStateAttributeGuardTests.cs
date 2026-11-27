@@ -34,7 +34,11 @@ namespace Tempo.Blazor.Tests.Components;
 /// shrink — fixing a site removes its entry; adding a new site fails the guard).
 /// Fáze 4h (plan b75365fb) extended the sweep to the demo surfaces
 /// (<c>Tempo.Blazor.Demo.SharedUI</c>, <c>Tempo.ReportServer.Web.Client</c>) with zero tolerance —
-/// no frozen entries there.
+/// no frozen entries there. Fáze 4i fixed the NotionEditor page and sidebar sites (the settings
+/// menu, watch button, sidebar sections, page tree, comment panel, my tasks and page history)
+/// through a string <c>BoolText</c> helper — except the watch toggle, whose <c>aria-pressed</c>
+/// was removed entirely (its changing name announces the state, APG) — shrinking the frozen
+/// list by 19.
 /// </summary>
 public class AriaBooleanStateAttributeGuardTests
 {
@@ -70,24 +74,11 @@ public class AriaBooleanStateAttributeGuardTests
     private static readonly string[] Frozen =
     [
         // ── bare identifier offenders (known debt, see plan_report_remaining) ────────────────
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Page/TmNotionPageSettingsMenu.razor|aria-expanded|@_open",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Page/TmNotionPageSettingsMenu.razor|aria-expanded|@_exportOpen",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Page/TmNotionPageSettingsMenu.razor|aria-expanded|@_importOpen",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Page/TmNotionPageSettingsMenu.razor|aria-expanded|@_moveToOpen",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionWatchButton.razor|aria-pressed|@_watching",
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionTokenDropdown.razor|aria-selected|@isSelected",
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Lists/TmNotionToggleBlock.razor|aria-expanded|@_isOpen",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Sidebar/TmNotionSidebarRecent.razor|aria-expanded|@_isExpanded",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Sidebar/TmNotionSidebarFavorites.razor|aria-expanded|@_isExpanded",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Sidebar/TmNotionSidebar.razor|aria-expanded|@_pagesExpanded",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Sidebar/TmNotionPageTreeItem.razor|aria-selected|@IsActive",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Sidebar/TmNotionPageTreeItem.razor|aria-expanded|@MenuOpen",
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDbTableView.razor|aria-expanded|@isExpanded",
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionBlockTypeSwitcher.razor|aria-selected|@isCurrent",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionPageCommentPanel.razor|aria-expanded|@Expanded",
         // ── parenthesised bool-expression offenders ───────────────────────────────────────────
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionPageHistory.razor|aria-pressed|@(_diffViewMode == NotionDiffViewMode.Inline)",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionPageHistory.razor|aria-pressed|@(_diffViewMode == NotionDiffViewMode.SideBySide)",
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionMentionMenu.razor|aria-selected|@(_tab == MentionTab.People)",
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionMentionMenu.razor|aria-selected|@(_tab == MentionTab.Pages)",
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionMentionMenu.razor|aria-selected|@(_tab == MentionTab.Date)",
@@ -105,16 +96,7 @@ public class AriaBooleanStateAttributeGuardTests
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDbImportExport.razor|aria-selected|@(_tab == ActiveTab.Export)",
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDbGroupBar.razor|aria-selected|@(_selectedFieldId is null)",
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDbGroupBar.razor|aria-selected|@(_selectedFieldId == f.Id)",
-        // ── dotted member paths (review round: a bool model property renders the invalid empty
-        //    value; the guard cannot see the type across files, so these stay frozen until the
-        //    sites pass the state as a string) ────────────────────────────────────────────────
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Page/TmNotionPageSettingsMenu.razor|aria-checked|@Page.IsFullWidth",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Page/TmNotionPageSettingsMenu.razor|aria-checked|@Page.IsSmallText",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Page/TmNotionPageSettingsMenu.razor|aria-checked|@Page.IsLocked",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Page/TmNotionPageSettingsMenu.razor|aria-checked|@Page.IsFavorite",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionMyTasks.razor|aria-pressed|@task.IsCompleted",
         // ── method calls declared bool in the same file ───────────────────────────────────────
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Sidebar/TmNotionSidebar.razor|aria-selected|@IsActivePage(page)",
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionPageSearch.razor|aria-selected|@IsPageSelected(pIdx)",
         "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionPageSearch.razor|aria-selected|@IsBlockSelected(bIdx)",
         // ── code-behind AddAttribute with a bool expression ───────────────────────────────────

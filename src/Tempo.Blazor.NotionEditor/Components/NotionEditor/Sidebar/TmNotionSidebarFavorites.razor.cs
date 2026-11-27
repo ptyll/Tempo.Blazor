@@ -40,6 +40,10 @@ public partial class TmNotionSidebarFavorites : ComponentBase
 
     // ── Computed ──────────────────────────────────────────────────────────────
 
+    // ARIA state attributes are strings: a Blazor bool renders the invalid empty value (true)
+    // or omits the attribute entirely (false) — never a valid "true"/"false" state.
+    private static string BoolText(bool value) => value ? "true" : "false";
+
     private bool IsActive(INotionPage page) =>
         ActivePageId is not null &&
         page.Id.ToString().Equals(ActivePageId, StringComparison.OrdinalIgnoreCase);

@@ -15,7 +15,7 @@
             aria-label="@Loc["TmNotionPageSettingsMenu_TriggerLabel"]"
             title="@Loc["TmNotionPageSettingsMenu_TriggerLabel"]"
             aria-haspopup="menu"
-            aria-expanded="@_open"
+            aria-expanded="@BoolText(_open)"
             @ref="_triggerRef"
             @onclick="ToggleMenuAsync">
         <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
@@ -51,7 +51,7 @@
                 <button class="tm-npsm__item"
                         type="button"
                         role="menuitemcheckbox"
-                        aria-checked="@Page.IsFullWidth"
+                        aria-checked="@BoolText(Page.IsFullWidth)"
                         disabled="@(_toggleLoading || ReadOnly)"
                         @onclick="ToggleFullWidthAsync">
                     <span class="tm-npsm__item-icon" aria-hidden="true">
@@ -67,7 +67,7 @@
                 <button class="tm-npsm__item"
                         type="button"
                         role="menuitemcheckbox"
-                        aria-checked="@Page.IsSmallText"
+                        aria-checked="@BoolText(Page.IsSmallText)"
                         disabled="@(_toggleLoading || ReadOnly)"
                         @onclick="ToggleSmallTextAsync">
                     <span class="tm-npsm__item-icon" aria-hidden="true">
@@ -82,7 +82,7 @@
                 <button class="tm-npsm__item"
                         type="button"
                         role="menuitemcheckbox"
-                        aria-checked="@Page.IsLocked"
+                        aria-checked="@BoolText(Page.IsLocked)"
                         disabled="@(_toggleLoading)"
                         @onclick="ToggleLockAsync">
                     <span class="tm-npsm__item-icon" aria-hidden="true">
@@ -107,7 +107,7 @@
                             type="button"
                             role="menuitem"
                             aria-haspopup="true"
-                            aria-expanded="@_exportOpen"
+                            aria-expanded="@BoolText(_exportOpen)"
                             disabled="@_exportLoading"
                             @onclick="OpenExport">
                         <span class="tm-npsm__item-icon" aria-hidden="true">
@@ -177,7 +177,7 @@
                             type="button"
                             role="menuitem"
                             aria-haspopup="true"
-                            aria-expanded="@_importOpen"
+                            aria-expanded="@BoolText(_importOpen)"
                             disabled="@_importLoading"
                             @onclick="OpenImport">
                         <span class="tm-npsm__item-icon" aria-hidden="true">
@@ -340,7 +340,7 @@
                         type="button"
                         role="menuitem"
                         aria-haspopup="true"
-                        aria-expanded="@_moveToOpen"
+                        aria-expanded="@BoolText(_moveToOpen)"
                         disabled="@_moveLoading"
                         @onclick="OpenMoveToAsync">
                     <span class="tm-npsm__item-icon" aria-hidden="true">
@@ -414,7 +414,7 @@
                 }
 
                 <button class="tm-npsm__item" type="button" role="menuitemcheckbox"
-                        aria-checked="@Page.IsFavorite"
+                        aria-checked="@BoolText(Page.IsFavorite)"
                         disabled="@_favoriteLoading"
                         @onclick="ToggleFavoriteAsync">
                     <span class="tm-npsm__item-icon" aria-hidden="true">
@@ -424,8 +424,10 @@
                                   fill="@(Page.IsFavorite ? "currentColor" : "none")"/>
                         </svg>
                     </span>
+                    @* The name stays constant ("Favorite") — aria-checked carries the state;
+                       a changing Add/Remove name on a menuitemcheckbox would announce the state twice. *@
                     <span class="tm-npsm__item-label">
-                        @(Page.IsFavorite ? Loc["TmNotionPageSettingsMenu_RemoveFromFavorites"] : Loc["TmNotionPageSettingsMenu_AddToFavorites"])
+                        @Loc["TmNotionPageSettingsMenu_Favorite"]
                     </span>
                 </button>
 

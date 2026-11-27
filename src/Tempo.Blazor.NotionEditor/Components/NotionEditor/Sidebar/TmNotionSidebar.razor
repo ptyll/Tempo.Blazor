@@ -69,7 +69,7 @@ else if (_searchOpen)
                     <button class="tm-ns-page-item tm-ns-search__result @(IsActivePage(page) ? "tm-ns-page-item--active" : "")"
                             type="button"
                             role="option"
-                            aria-selected="@IsActivePage(page)"
+                            aria-selected="@BoolText(IsActivePage(page))"
                             title="@GetPageTitle(page)"
                             @onclick="async () => { CloseSearch(); await NavigateToAsync(page); }">
                         <span class="tm-ns-page-item__icon" aria-hidden="true">@GetPageIcon(page)</span>
@@ -179,7 +179,7 @@ else
 
                 <button class="tm-ns-section__header"
                         type="button"
-                        aria-expanded="@_pagesExpanded"
+                        aria-expanded="@BoolText(_pagesExpanded)"
                         aria-controls="tm-ns-pages"
                         @onclick="() => _pagesExpanded = !_pagesExpanded">
                     <svg class="tm-ns-section__chevron @(_pagesExpanded ? "tm-ns-section__chevron--open" : "")"

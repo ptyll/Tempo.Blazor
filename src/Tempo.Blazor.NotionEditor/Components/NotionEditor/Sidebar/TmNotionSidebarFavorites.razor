@@ -5,7 +5,7 @@
 
     <button class="tm-nsf-header"
             type="button"
-            aria-expanded="@_isExpanded"
+            aria-expanded="@BoolText(_isExpanded)"
             @onclick="() => _isExpanded = !_isExpanded">
         <svg class="tm-nsf-header__chevron @(_isExpanded ? "tm-nsf-header__chevron--open" : "")"
              width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
