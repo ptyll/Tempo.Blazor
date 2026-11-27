@@ -80668,7 +80668,7 @@
           "category": "Notion Editor",
           "subcategory": "UI",
           "namespace": "Tempo.Blazor.Components.NotionEditor.UI",
-          "description": "Version-history dialog with a paginated version list and a content pane showing either a read-only version preview or a diff (via TmNotionDiffViewer), supporting compare mode and restore with confirmation.",
+          "description": "Version-history dialog with a paginated version list and a content pane showing either a read-only version preview or a diff (via TmNotionDiffViewer), supporting compare mode and restore with confirmation. The version preview (.tm-nph__preview) is a named role=region — a display-only container of sanitized static block HTML, so it carries no aria-readonly (ARIA 1.2 does not support the attribute on a region).",
           "packageId": "Tempo.Blazor.NotionEditor",
           "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionPageHistory.razor",
           "documentationStatus": "merged",
@@ -86091,7 +86091,7 @@
               "name": "ReadOnly",
               "type": "bool",
               "isRequired": false,
-              "description": "Whether the panel should prevent edits."
+              "description": "Whether the panel should prevent edits. Every inner editor renders disabled, so the lock is announced on the controls themselves; the root <aside> carries the stable tm-signing-field-editor-panel--readonly class for hosts and deliberately NO aria-readonly (ARIA 1.2 does not support it on the aside's complementary role). The ReadOnly checkbox of the edited field itself stays enabled — it is the control that changes the flag."
             },
             {
               "name": "ShowGeometry",

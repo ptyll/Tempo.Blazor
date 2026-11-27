@@ -107,6 +107,33 @@
   ```
 
   Outside a `TmFormField` the attribute is byte-identical, and the segments/spinbuttons are unchanged (they consumed the cascade all along).
+- **The `TmSigningFieldEditorPanel` root no longer carries `aria-readonly`, and the `TmNotionPageHistory` version preview no longer carries `aria-readonly` / an unrole'd `aria-label`.** Before: the locked panel root was `<aside class="tm-signing-field-editor-panel tm-signing-field-editor-panel--readonly" aria-readonly="true">` and the preview was `<div class="tm-nph__preview" aria-label="…" aria-readonly="true">` — ARIA 1.2 supports `aria-readonly` on neither the complementary nor the region/generic role (and prohibits `aria-label` on a generic div), so both attributes were invalid and announced nothing. After: the panel root drops the attribute (the lock is announced on the disabled inner editors; the `tm-signing-field-editor-panel--readonly` root class is unchanged) and the preview is `<div class="tm-nph__preview" role="region" aria-label="…">`. A host or test that selected either surface through the attribute must switch to the stable class hooks:
+
+  ```css
+  /* before */ aside.tm-signing-field-editor-panel[aria-readonly="true"] { … }
+  /* after  */ .tm-signing-field-editor-panel--readonly { … }
+
+  /* before */ aside.tm-signing-field-editor-panel[aria-readonly="false"] { … }
+  /* after  */ .tm-signing-field-editor-panel:not(.tm-signing-field-editor-panel--readonly) { … }
+
+  /* before */ .tm-nph__preview[aria-readonly] { … }
+  /* after  */ .tm-nph__preview { … }              /* the class is unchanged */
+  /* after  */ .tm-nph__preview[role="region"] { … } /* when the landmark matters */
+  ```
+
+  ```csharp
+  // before: a Playwright/bUnit assertion on the invalid attribute
+  Assert.Equal("true", await panel.GetAttributeAsync("aria-readonly"));
+  // after: assert the class hook (and the disabled controls that announce the lock)
+  StringAssert.Contains(await panel.GetAttributeAsync("class"),
+      "tm-signing-field-editor-panel--readonly");
+  ```
+
+### Fixed — aria-readonly only where ARIA supports it (`Tempo.Blazor.Signing` / `Tempo.Blazor.NotionEditor`)
+
+- **The locked `TmSigningFieldEditorPanel` no longer puts `aria-readonly` on its root `<aside>`.** ARIA 1.2 supports the attribute only on checkbox, combobox, grid, gridcell, listbox, radiogroup, slider, spinbutton, textbox, columnheader, rowheader, menuitemcheckbox, menuitemradio and switch — never on the aside's implicit complementary role, so the attribute was invalid and a screen reader never announced the lock from it (remaining task of the phase-4c review; decision `READONLY-BUTTON-TRIGGER-ARIA-DISABLED` extended with the guard). The panel already disables every inner editor while `ReadOnly`, so the lock is announced where it applies — on the controls themselves — and the stable `tm-signing-field-editor-panel--readonly` root class (already rendered) stays the host hook for the locked panel. The `BoolText` helper stays: the section toggles still pass their `aria-expanded` through it.
+- **The `TmNotionPageHistory` version preview is now a named region instead of a generic div with two invalid attributes.** The preview container carried `aria-label` (prohibited on a generic div in ARIA 1.2) and `aria-readonly="true"` (not supported on a region/generic either); it renders sanitized static block HTML with no interactive elements, so there is no lock to announce. It now renders `role="region"` with the same localized `aria-label` — a screen reader reaches a named "Version preview (read-only)" landmark — and no `aria-readonly`.
+- **A repo-wide ratchet keeps the attribute off unsupported roles.** The new `AriaReadonlyRoleGuardTests` sweeps every library razor file (comments stripped) and fails when an `aria-readonly` sits on an element whose literal `role` is outside the supported set or that is not a native `<input>`/`<textarea>`/`<select>` — no frozen list, the tree is clean and must stay clean (the analyzer's own fixtures pin the mutant: the attribute on a `<div>` is reported). The remaining library occurrences (`TmSelect`, `TmFilterableDropdown`, `TmTimeInput`, `TmTimeSelector`, `TmOtpInput`) were verified to sit on supported roles and are unchanged. Pinned in bUnit (root attributes + the disabled-controls announcement, the named-region preview) and in WASM E2E `AriaReadonlyRoleE2ETests` with scoped axe scans (aria-allowed-attr, aria-prohibited-attr) in both themes plus a phone pass; demo card on `/signing-components` (`field-editor-readonly-card`). See Breaking / Migration for the changed DOM attributes.
 
 ### Fixed — TmTimePicker trigger reads the TmFormField help and error (`Tempo.Blazor`)
 

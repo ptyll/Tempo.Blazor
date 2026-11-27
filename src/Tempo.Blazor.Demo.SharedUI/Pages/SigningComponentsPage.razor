@@ -359,6 +359,21 @@
                                        data-testid="field-editor-panel" />
         </div>
     </div>
+
+    @* Fáze 4g (plan b75365fb): the locked panel — every editor disabled (the lock is announced
+        on the controls), the root carries the stable --readonly class and NO aria-readonly
+        (ARIA 1.2 does not support it on the aside's complementary role). *@
+    <div class="showcase-card" data-testid="field-editor-readonly-card">
+        <h3 class="text-sm font-semibold text-slate-900 dark:text-white mb-1">Read-only field editor</h3>
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-3">A locked template renders the same panel with every editor disabled — the lock is announced on the controls themselves, and hosts key the locked panel off the <code>tm-signing-field-editor-panel--readonly</code> root class.</p>
+        <TmSigningFieldEditorPanel Field="_readOnlyEditorField"
+                                   Fields="_editorFields"
+                                   SubmitterRoles="_templateRoles"
+                                   ReadOnly="true"
+                                   Culture="@_fieldEditorCulture"
+                                   FallbackCulture="cs-CZ"
+                                   data-testid="field-editor-readonly-panel" />
+    </div>
 </section>
 
 <section class="demo-section">
@@ -907,6 +922,23 @@
         ]
     };
     private string _fieldEditorStatus = "Country: Select, required: False, options: 2, conditions: 0";
+    // Fáze 4g: a static locked field for the read-only field editor card — the panel renders
+    // every editor disabled and announces the lock on the controls (no aria-readonly on the root).
+    private readonly SigningField _readOnlyEditorField = new()
+    {
+        Uuid = "editor-readonly-country",
+        SubmitterUuid = "template-signer",
+        Name = "Country",
+        Title = "Country of residence",
+        Description = "Choose where the signer is located.",
+        Type = SigningFieldType.Select,
+        Required = true,
+        Options =
+        [
+            new SigningFieldOption { Uuid = "readonly-country-cz", Value = "CZ" },
+            new SigningFieldOption { Uuid = "readonly-country-us", Value = "US" }
+        ]
+    };
     private IReadOnlyList<SigningField> _designerFields =
     [
         new SigningField

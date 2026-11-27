@@ -1558,6 +1558,7 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmNotionPageHistory_DiffModeInline"] = "Inline",
         ["TmNotionPageHistory_DiffModeSideBySide"] = "Side by side",
         ["TmNotionPageHistory_ContentLabel"] = "Version content",
+        ["TmNotionPageHistory_PreviewLabel"] = "Version preview (read-only)",
         ["TmPdfTemplateDesigner_CanvasLabel"] = "Template canvas",
         ["TmReportDesigner_CanvasLabel"] = "Report canvas",
 
@@ -7904,6 +7905,7 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmNotionPageHistory_DiffModeInline"] = "V řádku",
         ["TmNotionPageHistory_DiffModeSideBySide"] = "Vedle sebe",
         ["TmNotionPageHistory_ContentLabel"] = "Obsah verze",
+        ["TmNotionPageHistory_PreviewLabel"] = "Náhled verze (pouze pro čtení)",
         ["TmPdfTemplateDesigner_CanvasLabel"] = "Plocha šablony",
         ["TmReportDesigner_CanvasLabel"] = "Plocha sestavy",
 

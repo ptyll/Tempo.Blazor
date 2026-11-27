@@ -4,9 +4,11 @@
 @using Tempo.Blazor.Components.DataDisplay
 @using Tempo.Blazor.Components.Inputs
 
+@* No aria-readonly on the root: ARIA 1.2 does not support it on the aside's implicit
+   complementary role. The lock is announced on the disabled inner editors; hosts key the
+   locked panel off the stable tm-signing-field-editor-panel--readonly root class. *@
 <aside @attributes="AdditionalAttributes"
-       class="@RootClass"
-       aria-readonly="@BoolText(ReadOnly)">
+       class="@RootClass">
     @if (_field is null)
     {
         <div class="tm-signing-field-editor-panel__empty">

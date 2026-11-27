@@ -215,8 +215,10 @@
                 </div>
 
                 @* ── Preview blocks ────────────────────────────────────────── *@
-                <div class="tm-nph__preview" aria-label="@Loc["TmNotionPageHistory_PreviewLabel"]"
-                     aria-readonly="true">
+                @* A named region: aria-label is prohibited on a generic div, and aria-readonly
+                   is not supported on role=region (ARIA 1.2) — the preview is display-only, so
+                   there is no lock to announce. *@
+                <div class="tm-nph__preview" role="region" aria-label="@Loc["TmNotionPageHistory_PreviewLabel"]">
                     @if (_previewLoading)
                     {
                         <div class="tm-nph__status">
