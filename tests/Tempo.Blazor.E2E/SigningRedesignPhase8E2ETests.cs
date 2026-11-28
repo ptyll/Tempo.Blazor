@@ -797,6 +797,13 @@ public class SigningRedesignPhase8BehaviorE2ETests : WasmTestBase
         await Assertions.Expect(designer.Locator(".tm-pdf-template-designer__palette--rail")).ToHaveCountAsync(1);
         await Assertions.Expect(page.Locator(".tm-editor-shell__overlay--left")).ToHaveCountAsync(0);
 
+        // The demo page grew (the fáze-4g read-only card), so the designer now scrolls all the way
+        // to the viewport top where the STICKY demo header covers the field — a Force click still
+        // dispatches at the field's coordinates and the header eats it. Center the field first so
+        // the click reaches it.
+        await SigningRedesignPhase8Specs.Field(page, "designer-name")
+            .EvaluateAsync("el => el.scrollIntoView({ block: 'center', inline: 'center' })");
+        await page.WaitForTimeoutAsync(200);
         await SigningRedesignPhase8Specs.Field(page, "designer-name").ClickAsync(new LocatorClickOptions { Force = true });
         await Assertions.Expect(page.Locator(".tm-editor-shell__overlay--right")).ToBeVisibleAsync();
         await Assertions.Expect(designer.Locator(".tm-signing-field-editor-panel__title")).ToBeVisibleAsync();

@@ -53,7 +53,9 @@ public class SigningContainerQueryE2ETests : WasmTestBase
                 panel.style.width = '300px';
             }
             """);
-        await page.Locator(".tm-signing-field-editor-panel__open-conditions").ClickAsync();
+        // The page carries TWO field editor panels since fáze 4g (the read-only demo card renders a
+        // second, disabled one) — scope the click to the editable panel the test resized above.
+        await page.Locator("[data-testid='field-editor-panel'] .tm-signing-field-editor-panel__open-conditions").ClickAsync();
         await page.WaitForSelectorAsync(
             ".tm-signing-field-editor-panel__condition-builder .tm-condition-builder__row",
             new PageWaitForSelectorOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });

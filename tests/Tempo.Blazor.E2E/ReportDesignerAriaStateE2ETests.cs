@@ -20,11 +20,15 @@ namespace Tempo.Blazor.E2E;
 [TestCategory("Reporting")]
 [TestCategory("Reporting:F13")]
 [DoNotParallelize]
-public sealed class ReportDesignerAriaStateE2ETests
+public sealed class ReportDesignerAriaStateE2ETests : PlaywrightTestBase
 {
     private const string AxeCdn = "https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.2/axe.min.js";
 
-    public TestContext TestContext { get; set; } = default!;
+    private DotnetWebAppHost? _host;
+
+    // The spec navigates to its own self-hosted ReportServer.Web (a dynamic port), never to a demo
+    // app — BaseUrl only satisfies the abstract member and is unread on this path.
+    protected override string BaseUrl => _host?.BaseUrl ?? "http://127.0.0.1";
 
     [TestMethod]
     public async Task ReportDesigner_Tabs_AnnounceTheStringState_InBothStates()
@@ -33,9 +37,10 @@ public sealed class ReportDesignerAriaStateE2ETests
         await using var host = await DotnetWebAppHost.StartAsync(
             repositoryRoot,
             Path.Combine("src", "Tempo.ReportServer.Web", "Tempo.ReportServer.Web.csproj")).ConfigureAwait(false);
-        using var playwright = await Microsoft.Playwright.Playwright.CreateAsync().ConfigureAwait(false);
-        await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true }).ConfigureAwait(false);
-        var browserContext = await browser.NewContextAsync(new BrowserNewContextOptions
+        _host = host;
+        // The shared browser + central context factory (trace, bounded relaunch, cleanup) — the
+        // readiness ratchet forbids a spec-owned NewContextAsync even for a self-hosted app.
+        var browserContext = await CreateContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = 1440, Height = 980 },
         }).ConfigureAwait(false);
@@ -155,8 +160,6 @@ public sealed class ReportDesignerAriaStateE2ETests
             Assert.IsTrue(clientErrors.Count == 0,
                 "Unhandled client-side errors occurred:\n" + string.Join("\n", clientErrors));
         }
-
-        await browserContext.CloseAsync().ConfigureAwait(false);
     }
 
     private static DirectoryInfo FindRepositoryRoot()
