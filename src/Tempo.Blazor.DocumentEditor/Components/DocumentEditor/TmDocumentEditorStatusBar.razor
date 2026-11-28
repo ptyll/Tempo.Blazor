@@ -1,5 +1,7 @@
 @namespace Tempo.Blazor.Components.DocumentEditor
 @inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Components.Dropdowns
+@using Tempo.Blazor.Components.Overlay
 
 @* Only the save group is a live region: the page, the zoom and the controls change at the reader's own hand and must not be announced as a whole. *@
 <footer class="tm-document-editor__status-bar"
@@ -72,7 +74,29 @@
                         @onclick="() => StepZoomAsync(-ZoomStep)">
                     <TmIcon Name="zoom-out" Size="IconSize.Sm" />
                 </button>
-                <span class="tm-document-editor__status-zoom-value" data-testid="@TestId("document-status-zoom")" aria-label="@Loc["TmDocumentEditor_ZoomStatus", ZoomLabel]">@ZoomLabel</span>
+                @* The zoom value is a MENU button (Phase 11 fix round): Automatic / Page width / Whole page and the round percents. The label is
+                   the trigger text, so the percent a fitted page ended up at is always readable; the minus / plus buttons step on the grid of the
+                   step (a fitted 62 % goes to 70 / 60, never to 72). *@
+                <TmDropdown Class="tm-document-editor__status-zoom-menu"
+                            Text="@ZoomLabel"
+                            AriaLabel="@(string.IsNullOrEmpty(ZoomAriaLabel) ? Loc["TmDocumentEditor_ZoomStatus", ZoomLabel] : ZoomAriaLabel)"
+                            ShowChevron="true"
+                            Placement="OverlayPlacement.Top"
+                            OnSelect="OnZoomMenuSelectAsync"
+                            data-testid="@TestId("document-status-zoom")">
+                    @if (ShowAutomaticZoom)
+                    {
+                        <TmDropdownItem Value="auto" Checked="@(ZoomAutoFit == "narrow")" data-testid="@TestId("document-status-zoom-auto")">@Loc["TmDocumentEditor_ZoomMenuAutomatic"]</TmDropdownItem>
+                    }
+                    <TmDropdownItem Value="pagewidth" Checked="@(ZoomPreset == "fitWidth" && ZoomAutoFit != "narrow")" data-testid="@TestId("document-status-zoom-page-width")">@Loc["TmDocumentEditor_ZoomPageWidth"]</TmDropdownItem>
+                    <TmDropdownItem Value="wholepage" Checked="@(ZoomPreset == "fitPage")" data-testid="@TestId("document-status-zoom-whole-page")">@Loc["TmDocumentEditor_ZoomWholePage"]</TmDropdownItem>
+                    @foreach (var preset in ZoomMenuPercents)
+                    {
+                        <TmDropdownItem Value="@preset.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                        Checked="@(ZoomPreset == "custom" && ZoomAutoFit == "off" && ZoomPercent == preset)"
+                                        data-testid="@TestId($"document-status-zoom-{preset}")">@DocumentZoomMath.FormatPercent(preset, Loc.Culture)</TmDropdownItem>
+                    }
+                </TmDropdown>
                 <button type="button"
                         class="tm-document-editor__status-button"
                         disabled="@(ZoomPercent >= ZoomMax)"
@@ -86,7 +110,7 @@
         }
         else
         {
-            <span data-testid="@TestId("document-status-zoom")">@Loc["TmDocumentEditor_ZoomStatus", ZoomLabel]</span>
+            <span data-testid="@TestId("document-status-zoom")" aria-label="@(string.IsNullOrEmpty(ZoomAriaLabel) ? Loc["TmDocumentEditor_ZoomStatus", ZoomLabel] : ZoomAriaLabel)">@ZoomLabel</span>
         }
         @if (OnToggleFullscreen.HasDelegate)
         {
@@ -143,7 +167,10 @@
     /// <summary>The zoom in percent; the minus / plus buttons step from it and disable at <see cref="ZoomMin"/> / <see cref="ZoomMax"/>.</summary>
     [Parameter] public int ZoomPercent { get; set; } = 100;
 
-    /// <summary>The lowest zoom the buttons reach, in percent. Defaults to the editor's own floor, 50.</summary>
+    /// <summary>
+    /// The lowest zoom the buttons and the menu percents reach, in percent. Defaults to the editor's reader floor, 50. The AUTOMATIC fit may show a smaller
+    /// page on a narrow phone (the engine's floor is 25); the first step of the buttons from such a page lands on this floor.
+    /// </summary>
     [Parameter] public int ZoomMin { get; set; } = 50;
 
     /// <summary>The highest zoom the buttons reach, in percent. Defaults to the editor's own ceiling, 200.</summary>
@@ -152,8 +179,29 @@
     /// <summary>How far one press of minus / plus moves the zoom, in percent. Defaults to 10.</summary>
     [Parameter] public int ZoomStep { get; set; } = 10;
 
-    /// <summary>Raised with the new zoom percent when the reader presses minus / plus. The controls render only when it is bound.</summary>
+    /// <summary>Raised with the new zoom percent when the reader presses minus / plus or picks a percent of the menu. The controls render only when it is bound.</summary>
     [Parameter] public EventCallback<int> OnZoomChanged { get; set; }
+
+    /// <summary>The zoom preset the engine reports: <c>custom</c>, <c>fitWidth</c> or <c>fitPage</c>. Marks the checked entry of the zoom menu.</summary>
+    [Parameter] public string ZoomPreset { get; set; } = "custom";
+
+    /// <summary>The automatic-fit state the engine reports: <c>off</c> (the reader's zoom), <c>narrow</c> (Automatic) or <c>always</c> (Page width).</summary>
+    [Parameter] public string ZoomAutoFit { get; set; } = "off";
+
+    /// <summary>Whether the "Automatic" entry is offered. The editor hides it while its page fit mode is Off: there is no automatic zoom to return to.</summary>
+    [Parameter] public bool ShowAutomaticZoom { get; set; }
+
+    /// <summary>The accessible name of the zoom value. A fitted page names the fit ("Zoom 62 percent, fitted to width"); null derives it from <see cref="ZoomLabel"/>.</summary>
+    [Parameter] public string? ZoomAriaLabel { get; set; }
+
+    /// <summary>Raised when "Automatic" is chosen: back to the editor's configured automatic fit.</summary>
+    [Parameter] public EventCallback OnZoomAutomatic { get; set; }
+
+    /// <summary>Raised when "Page width" is chosen: the page follows the column from now on.</summary>
+    [Parameter] public EventCallback OnZoomPageWidth { get; set; }
+
+    /// <summary>Raised when "Whole page" is chosen: the whole page fits the document region.</summary>
+    [Parameter] public EventCallback OnZoomWholePage { get; set; }
 
     /// <summary>Whether the editor is in fullscreen (the switch is pressed).</summary>
     [Parameter] public bool IsFullscreen { get; set; }
@@ -173,6 +221,19 @@
     /// <summary>When <c>true</c>, <see cref="RuntimeMessage"/> describes a recovery failure.</summary>
     [Parameter] public bool RuntimeFailed { get; set; }
 
+    private IEnumerable<int> ZoomMenuPercents => new[] { 50, 75, 100, 125, 150, 200 }.Where(percent => percent >= ZoomMin && percent <= ZoomMax);
+
+    // The buttons step on the grid of ZoomStep: from a fitted 62 percent the next step is 70 / 60, never 72 / 52.
     private Task StepZoomAsync(int delta)
-        => OnZoomChanged.InvokeAsync(Math.Clamp(ZoomPercent + delta, ZoomMin, ZoomMax));
+        => OnZoomChanged.InvokeAsync(DocumentZoomMath.Step(ZoomPercent, Math.Abs(delta), ZoomMin, ZoomMax, up: delta > 0));
+
+    private Task OnZoomMenuSelectAsync(string value) => value switch
+    {
+        "auto" => OnZoomAutomatic.InvokeAsync(),
+        "pagewidth" => OnZoomPageWidth.InvokeAsync(),
+        "wholepage" => OnZoomWholePage.InvokeAsync(),
+        _ => int.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var percent)
+            ? OnZoomChanged.InvokeAsync(Math.Clamp(percent, ZoomMin, ZoomMax))
+            : Task.CompletedTask,
+    };
 }

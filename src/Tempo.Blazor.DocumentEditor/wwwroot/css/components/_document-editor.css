@@ -237,6 +237,8 @@
     flex-direction: column;
     gap: var(--tm-space-3);
     min-width: 0;
+    /* The workspace token paints the whole document column; the canvas stage is transparent, so the page column never shows as a lighter band. */
+    background: var(--tm-bg-workspace);
 }
 
 /* The internal banner slot of the doc region (the review summary today; the version preview and the diff later). It takes
@@ -537,6 +539,18 @@
 .tm-document-editor__status-zoom-value {
     min-inline-size: 3rem;
     color: var(--tm-color-text);
+    text-align: center;
+}
+
+/* The zoom value is a menu button (Automatic / Page width / Whole page / percents). Its text changes length while a fitted page is resized
+   ("Fit 62 %" -> "Fit 100 %"), so the trigger keeps a stable width and tabular digits: the controls beside it never jump. */
+.tm-document-editor__status-zoom-menu .tm-dropdown-trigger {
+    min-inline-size: 11ch;
+    justify-content: center;
+    padding-inline: var(--tm-space-2);
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-xs);
+    font-variant-numeric: tabular-nums;
     text-align: center;
 }
 
@@ -1002,11 +1016,6 @@
 }
 
 @container tm-doc-panel (width < 23rem) {
-    .tm-document-side-panel[data-tab-style="text"] .tm-document-side-panel__tab {
-        padding-inline: calc(var(--tm-space-1) / 2);
-        font-size: var(--tm-font-size-xs);
-    }
-
     .tm-document-side-panel[data-tab-style="text"] .tm-document-side-panel__tabs {
         gap: 0;
     }
@@ -1015,6 +1024,45 @@
         min-width: 0.875rem;
         height: 0.875rem;
         padding-inline: 0.125rem;
+    }
+}
+
+/* The count badge leaves the row (visually only: the number stays in the accessible name of the tab, a display:none pill would take it away from a
+   screen reader) when the row REALLY overflows with it - side-panel-tabs.mjs publishes data-tabs-overflow and brings the badge back once the row has
+   grown to the width it needed - or when the dock is below 19 rem. The tab keeps its size (--tm-font-size-sm) and, while the row has room, its gutter
+   (--tm-space-2); a row that overflows takes the gutter down to --tm-space-1 with the pill, and one that still overflows scrolls with the edge fade
+   instead of shrinking the type. Keyed on the panel's own size container, never on the viewport. */
+.tm-document-side-panel[data-tab-style="text"] .tm-document-side-panel__tabs[data-tabs-overflow="true"] .tm-document-side-panel__tab {
+    position: relative;
+    /* with the pill gone the row still has to hold four labels at --tm-font-size-sm: the gutter gives way, never the type size */
+    padding-inline: var(--tm-space-1);
+}
+
+.tm-document-side-panel[data-tab-style="text"] .tm-document-side-panel__tabs[data-tabs-overflow="true"] .tm-document-side-panel__badge {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    min-width: 0;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+@container tm-doc-panel (width < 19rem) {
+    .tm-document-side-panel[data-tab-style="text"] .tm-document-side-panel__tab {
+        position: relative;
+    }
+
+    .tm-document-side-panel[data-tab-style="text"] .tm-document-side-panel__badge {
+        position: absolute;
+        inline-size: 1px;
+        block-size: 1px;
+        min-width: 0;
+        padding: 0;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
     }
 }
 

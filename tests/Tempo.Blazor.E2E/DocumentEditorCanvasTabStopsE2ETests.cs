@@ -239,8 +239,10 @@ public sealed class DocumentEditorCanvasTabStopsE2ETests : WasmTestBase
                 const root = document.querySelector('[data-testid="document-canvas-ruler-shell"]');
                 const marginLeft = Number(root.__tmRulerState?.marginLeftPx || 0);
                 const leftIndent = Number(root.__tmRulerState?.leftIndentPx || 0);
+                // Phase 11: the ruler follows the zoom scale of a fitted page (track width and markers), so a page position maps to scale x its pixels.
+                const scale = Number(root.__tmRulerState?.scale || 1) || 1;
                 return {
-                    x: marginLeft + leftIndent + Number(positionPoints) * 96 / 72,
+                    x: (marginLeft + leftIndent + Number(positionPoints) * 96 / 72) * scale,
                     y: 9
                 };
             }

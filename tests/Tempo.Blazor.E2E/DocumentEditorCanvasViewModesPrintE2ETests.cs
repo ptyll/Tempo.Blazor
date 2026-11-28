@@ -41,7 +41,8 @@ public sealed class DocumentEditorCanvasViewModesPrintE2ETests : WasmTestBase
 
         var initial = await ReadViewProbeAsync(page);
         Assert.AreEqual("print", initial.ViewMode);
-        Assert.AreEqual(100, initial.ZoomPercent);
+        // Phase 11: the 1440 viewport leaves the doc column narrower than the A4 page, so the engine opens the document fitted (never above 100 percent).
+        Assert.IsTrue(initial.ZoomPercent is > 0 and <= 100, initial.Debug);
         Assert.IsFalse(initial.Dirty, initial.Debug);
 
         var reading = await ExecuteCanvasCommandAsync(page, "readingMode", new { });
@@ -73,7 +74,8 @@ public sealed class DocumentEditorCanvasViewModesPrintE2ETests : WasmTestBase
         var fitProbe = await ReadViewProbeAsync(page);
         // fitWidth is defined against the scroll viewport (host clientWidth); the content-sized
         // mount width tracks the page and is not a stable reference for the expected page width.
-        var expectedFitWidth = Math.Max(1, Math.Round(fitProbe.HostClientWidth - 48));
+        // Phase 11: the page column also counts the 2 x 16 px padding of the mount (80 px in all), so the fitted page never scrolls sideways.
+        var expectedFitWidth = Math.Max(1, Math.Round(fitProbe.HostClientWidth - 80));
         Assert.AreEqual("fitWidth", fitProbe.ZoomPreset, fitProbe.Debug);
         Assert.IsTrue(fitProbe.ZoomPercent > 0, fitProbe.Debug);
         Assert.IsTrue(fitProbe.LogicalPageWidth > 0, fitProbe.Debug);
@@ -226,7 +228,8 @@ public sealed class DocumentEditorCanvasViewModesPrintE2ETests : WasmTestBase
                     return false;
                 }
 
-                const expected = Math.max(1, Math.round(viewportWidth - 48));
+                // Phase 11: the fit leaves room for the root padding (2 x 24) AND the mount padding (2 x 16), the page column the page needs.
+                const expected = Math.max(1, Math.round(viewportWidth - 80));
                 return Math.abs(cssPageWidth - expected) <= 24;
             }
             """, 10_000);

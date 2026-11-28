@@ -33,7 +33,29 @@ export function overflowState({ scrollLeft, clientWidth, scrollWidth }) {
     };
 }
 
+/**
+ * Whether the row must drop the count badges out of its layout (`data-tabs-overflow`). The badges go ONLY when the row really overflows with them
+ * shown, and come back only when the row has grown to the width it measured at that moment: hiding the badges removes the overflow, so a rule that
+ * re-measured the hidden state would flip them back and forth. `previous` is the state kept by the caller ({ compact, fullWidth }).
+ */
+export function nextTabsCompact(previous, { clientWidth, scrollWidth }) {
+    if (!previous?.compact) {
+        return scrollWidth > clientWidth + 1
+            ? { compact: true, fullWidth: scrollWidth }
+            : { compact: false, fullWidth: 0 };
+    }
+
+    return clientWidth >= previous.fullWidth
+        ? { compact: false, fullWidth: 0 }
+        : previous;
+}
+
+const compactStates = new WeakMap();
+
 function publishOverflow(list) {
+    const compact = nextTabsCompact(compactStates.get(list), list);
+    compactStates.set(list, compact);
+    list.setAttribute('data-tabs-overflow', compact.compact);
     const state = overflowState(list);
     list.setAttribute('data-overflow-start', state.start);
     list.setAttribute('data-overflow-end', state.end);
@@ -86,4 +108,5 @@ export function detachTabScroller(list) {
     list.removeEventListener('scroll', entry.onScroll);
     entry.observer?.disconnect();
     attached.delete(list);
+    compactStates.delete(list);
 }

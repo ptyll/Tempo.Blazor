@@ -147,6 +147,13 @@
     /// <summary>Current canvas review display mode for tracked revisions.</summary>
     [Parameter] public DocumentReviewDisplayMode ReviewDisplayMode { get; set; } = DocumentReviewDisplayMode.AllMarkup;
 
+    /// <summary>
+    /// How the engine fits the page to the document column (a mode of the engine, re-applied by its own resize observer). Defaults to <see cref="DocumentPageFitMode.Auto"/>:
+    /// a bare canvas host that used to keep 100 percent in a narrow column now fits the page (never enlarging it); pass <see cref="DocumentPageFitMode.Off"/> for the old behaviour.
+    /// Changing it after mount replaces the reader's zoom with the new mode.
+    /// </summary>
+    [Parameter] public DocumentPageFitMode PageFitMode { get; set; } = DocumentPageFitMode.Auto;
+
     /// <summary>Accessible label for the canvas document surface.</summary>
     [Parameter] public string? AriaLabel { get; set; }
 
@@ -896,6 +903,24 @@
         }
     }
 
+    /// <summary>
+    /// JavaScript callback for a change of the VIEW the engine made on its own (the automatic fit after the document column was resized):
+    /// carries only the pushed UI snapshot, so the zoom label and the page-fit state follow without a selection event.
+    /// </summary>
+    [JSInvokable]
+    public Task OnCanvasViewChanged(string? stateJson)
+    {
+        if (_disposed)
+        {
+            return Task.CompletedTask;
+        }
+
+        var envelope = DeserializeState<CanvasEngineUiStateEnvelope?>(stateJson, null);
+        return OnUiStateChanged is not null && envelope?.UiState is not null
+            ? OnUiStateChanged(envelope.UiState)
+            : Task.CompletedTask;
+    }
+
     /// <summary>JavaScript callback for canvas context menu requests.</summary>
     [JSInvokable]
     public Task OnCanvasContextMenuRequested(string? stateJson)
@@ -1236,6 +1261,12 @@
             inputId = InputId,
             readOnly = ReadOnly,
             canEdit = EffectiveCanEdit,
+            autoFit = PageFitMode switch
+            {
+                DocumentPageFitMode.Off => "off",
+                DocumentPageFitMode.FitWidth => "always",
+                _ => "narrow"
+            },
             contentControlRenderMode = EffectiveContentControlRenderMode,
             signingRoles = (SigningRoles ?? []).Select(role => new
             {

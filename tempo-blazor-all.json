@@ -65228,6 +65228,16 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "DocumentPageFitMode",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.DocumentEditor",
+          "description": "How the canvas engine fits the page to the width of the document column. Auto fits only a page wider than the column and never enlarges it (the default in every layout), Off never fits, FitWidth always follows the column width. The reader's own zoom wins over the fit.",
+          "packageId": "Tempo.Blazor.DocumentEditor",
+          "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/DocumentPageFitMode.cs",
+          "documentationStatus": "merged"
+        },
+        {
           "itemName": "DocumentPosition",
           "kind": "Class",
           "category": "Components",
@@ -67894,6 +67904,13 @@
               "description": "Raised when a canvas keyboard shortcut requests the versions side panel."
             },
             {
+              "name": "PageFitMode",
+              "type": "DocumentPageFitMode",
+              "isRequired": false,
+              "default": "DocumentPageFitMode.Auto",
+              "description": "How the engine fits the page to the document column (a mode of the engine, re-applied by its own resize observer): Auto fits only a page wider than the column, Off never fits, FitWidth always follows the width. The bare canvas host defaults to Auto too (before phase 11 it kept 100 percent in a narrow column): pass Off to restore that. Changing it after mount replaces the reader's zoom with the new mode."
+            },
+            {
               "name": "Permissions",
               "type": "DocumentEditorPermissions?",
               "isRequired": false,
@@ -69156,6 +69173,13 @@
               "description": "Raised after a document version was created successfully."
             },
             {
+              "name": "PageFitMode",
+              "type": "DocumentPageFitMode",
+              "isRequired": false,
+              "default": "DocumentPageFitMode.Auto",
+              "description": "How the canvas engine fits the page to the document column. Auto (default) fits the page only when the column is narrower than the page - a desktop container of 1024 - 1400 px next to the docked inspector, a tablet, a phone - and never enlarges it; Off leaves the zoom alone; FitWidth always follows the width. The reader's own zoom wins over the fit until \"Automatic\" (Ctrl+0) or \"Page width\" is chosen. Changing the parameter after mount applies the new mode at once and REPLACES the reader's zoom. A desktop container whose docked inspector would squeeze the fitted page below 75 percent presents the inspector as the overlay sheet instead (decision DE-AUTO-FIT-READABLE-FLOOR)."
+            },
+            {
               "name": "PdfExportProvider",
               "type": "IDocumentPdfExportProvider?",
               "isRequired": false,
@@ -69565,7 +69589,7 @@
           "kind": "Component",
           "category": "Document Editor",
           "namespace": "Tempo.Blazor.Components.DocumentEditor",
-          "description": "Editor status bar footer showing save and dirty state, a save message with optional retry, the last-saved time, runtime recovery messages, and document metrics such as word count, page count, active region, and zoom. Phase 7: \"Page X of Y\" (CurrentPage / PageCount), plural word count, and - when OnZoomChanged / OnToggleFullscreen are bound - zoom minus / value / plus (10 percent steps within ZoomMin..ZoomMax) and the fullscreen switch.",
+          "description": "Editor status bar footer showing save and dirty state, a save message with optional retry, the last-saved time, runtime recovery messages, and document metrics such as word count, page count, active region, and zoom. Phase 7: \"Page X of Y\" (CurrentPage / PageCount), plural word count, and - when OnZoomChanged / OnToggleFullscreen are bound - zoom minus / value / plus (the steps snap to the grid of 10 within ZoomMin..ZoomMax, so a fitted 62 percent goes to 70 / 60) and the fullscreen switch. The zoom value is a menu button: Automatic (ShowAutomaticZoom, checked for ZoomAutoFit narrow), Page width, Whole page and the round percents; its accessible name is ZoomAriaLabel.",
           "packageId": "Tempo.Blazor.DocumentEditor",
           "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentEditorStatusBar.razor",
           "documentationStatus": "merged",
@@ -69624,10 +69648,28 @@
               "description": "Raised when the fullscreen switch is pressed. The switch renders only when it is bound."
             },
             {
+              "name": "OnZoomAutomatic",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Raised when \"Automatic\" is chosen in the zoom menu: back to the editor's configured automatic fit."
+            },
+            {
               "name": "OnZoomChanged",
               "type": "EventCallback<int>",
               "isRequired": false,
               "description": "Raised with the new zoom percent when the reader presses minus / plus. The controls render only when it is bound."
+            },
+            {
+              "name": "OnZoomPageWidth",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Raised when \"Page width\" is chosen in the zoom menu: the page follows the column from now on."
+            },
+            {
+              "name": "OnZoomWholePage",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Raised when \"Whole page\" is chosen in the zoom menu: the whole page fits the document region."
             },
             {
               "name": "PageCount",
@@ -69667,6 +69709,12 @@
               "description": "Optional save status message."
             },
             {
+              "name": "ShowAutomaticZoom",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the \"Automatic\" entry of the zoom menu is offered; the editor hides it while its page fit mode is not Auto."
+            },
+            {
               "name": "ShowLastSaved",
               "type": "bool",
               "isRequired": false,
@@ -69678,6 +69726,19 @@
               "type": "int",
               "isRequired": false,
               "description": "Current document word count."
+            },
+            {
+              "name": "ZoomAriaLabel",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The accessible name of the zoom value; a fitted page names the fit (\"Zoom 62 percent, fitted to width\"). Null derives it from ZoomLabel."
+            },
+            {
+              "name": "ZoomAutoFit",
+              "type": "string",
+              "isRequired": false,
+              "default": "\"off\"",
+              "description": "The automatic-fit state the engine reports: off (the reader's zoom), narrow (Automatic) or always (Page width)."
             },
             {
               "name": "ZoomLabel",
@@ -69706,6 +69767,13 @@
               "isRequired": false,
               "default": "100",
               "description": "The zoom in percent; the minus / plus buttons step from it and disable at ZoomMin / ZoomMax."
+            },
+            {
+              "name": "ZoomPreset",
+              "type": "string",
+              "isRequired": false,
+              "default": "\"custom\"",
+              "description": "The zoom preset the engine reports: custom, fitWidth or fitPage. Marks the checked entry of the zoom menu."
             },
             {
               "name": "ZoomStep",
@@ -70551,6 +70619,12 @@
               "description": "Raised when the view document JSON debug button is clicked."
             },
             {
+              "name": "OnZoomAutomatic",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Raised when \"Automatic zoom\" is requested: back to the configured automatic fit."
+            },
+            {
               "name": "OnZoomPageWidth",
               "type": "EventCallback",
               "isRequired": false,
@@ -70641,6 +70715,12 @@
               "type": "bool",
               "isRequired": false,
               "description": "Whether advanced canvas field and cross-reference controls are visible."
+            },
+            {
+              "name": "ShowAutomaticZoom",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the View tab offers \"Automatic zoom\" (the editor's page fit mode is Auto)."
             },
             {
               "name": "ShowBlocks",
@@ -70782,6 +70862,13 @@
               "type": "WysiwygFormattingValue",
               "isRequired": true,
               "description": "Current underline formatting state for the selection."
+            },
+            {
+              "name": "ZoomAutoFit",
+              "type": "string",
+              "isRequired": false,
+              "default": "\"off\"",
+              "description": "The engine's automatic-fit state: off (the reader's zoom), narrow (Automatic) or always (Page width)."
             },
             {
               "name": "ZoomPageWidth",
@@ -73714,6 +73801,10 @@
           "kind": "JavaScript"
         },
         {
+          "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor-canvas/render/__tests__/ruler-scale.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor-canvas/render/__tests__/signing-field-render.test.mjs",
           "kind": "JavaScript"
         },
@@ -73771,6 +73862,10 @@
         },
         {
           "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor-canvas/selection/__tests__/hit-test.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor-canvas/selection/__tests__/object-selection-source.test.mjs",
           "kind": "JavaScript"
         },
         {
@@ -73854,7 +73949,15 @@
           "kind": "JavaScript"
         },
         {
+          "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor-canvas/view/auto-fit-observer.mjs",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor-canvas/view/print-preview.mjs",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor-canvas/view/view-change-notifier.mjs",
           "kind": "JavaScript"
         },
         {
@@ -73863,6 +73966,14 @@
         },
         {
           "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor-canvas/view/zoom-controller.mjs",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor-canvas/view/__tests__/auto-fit-observer.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor-canvas/view/__tests__/view-change-notifier.test.mjs",
           "kind": "JavaScript"
         },
         {
@@ -75107,12 +75218,12 @@
         }
       ],
       "summary": {
-        "itemCount": 240,
-        "manualItemCount": 240,
-        "generatedItemCount": 237,
+        "itemCount": 241,
+        "manualItemCount": 241,
+        "generatedItemCount": 238,
         "generatedOnlyItemCount": 0,
         "componentCount": 47,
-        "publicApiTypeCount": 190
+        "publicApiTypeCount": 191
       }
     },
     {
@@ -151650,10 +151761,10 @@
   ],
   "summary": {
     "packageCount": 29,
-    "itemCount": 3788,
-    "manualItemCount": 3788,
+    "itemCount": 3789,
+    "manualItemCount": 3789,
     "generatedOnlyItemCount": 0,
     "componentCount": 579,
-    "publicApiTypeCount": 3157
+    "publicApiTypeCount": 3158
   }
 }

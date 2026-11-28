@@ -136,6 +136,7 @@ export function queryCanvasViewCommandState(state = {}) {
             zoom: current.zoom,
             zoomPercent: current.zoom.percent,
             zoomPreset: current.zoom.preset,
+            zoomAutoFit: current.zoom.autoFit,
             scrollAnchor: current.scrollAnchor,
             printPreview: {
                 active: current.printPreview.active === true,
@@ -201,8 +202,10 @@ export function viewPresentation(state = {}) {
         toolbarHidden: false,
         rootGap: 24,
         rootPadding: 24,
-        pageShadow: '0 14px 34px rgba(15, 23, 42, 0.18)',
-        pageBorder: '1px solid rgba(148, 163, 184, 0.45)',
+        // Tokens first (dark mode swaps them: a light page on a dark workspace is told apart by the 1px outline and the dark-aware shadow); the literal is only the
+        // fallback of a host without the design tokens.
+        pageShadow: 'var(--tm-shadow-lg, 0 14px 34px rgba(15, 23, 42, 0.18))',
+        pageBorder: '1px solid var(--tm-border-color, rgba(148, 163, 184, 0.45))',
     };
 }
 

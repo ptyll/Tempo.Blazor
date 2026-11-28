@@ -231,10 +231,12 @@ public sealed class DocumentEditorRedesignPhase9E2ETests : WasmTestBase
     }
 
     [TestMethod]
-    [Description("The docked inspector's text tabs fit their row at 1440: every tab lies inside the tablist (none half hidden behind the fade)")]
-    public async Task Desktop_InspectorTabs_AreInsideTheTablist()
+    [Description("The inspector's text tabs fit their row - as the sheet of a 1440 viewport (a 1046 px editor) and docked at 1600: every tab lies inside the tablist (none half hidden behind the fade)")]
+    [DataRow(1440)]
+    [DataRow(1600)]
+    public async Task Desktop_InspectorTabs_AreInsideTheTablist(int viewportWidth)
     {
-        var page = await OpenAsync(RevisionsDocumentId, 1440, 900, touch: false);
+        var page = await OpenAsync(RevisionsDocumentId, viewportWidth, 900, touch: false);
         await OpenInspectorTabAsync(page, "revisions");
         var tablist = page.GetByTestId("document-side-panel").Locator("[role='tablist']");
         var list = await tablist.BoundingBoxAsync();

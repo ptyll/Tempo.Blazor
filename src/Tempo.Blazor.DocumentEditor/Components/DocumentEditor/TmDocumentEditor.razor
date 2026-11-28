@@ -29,6 +29,7 @@
      aria-label="@Loc["TmDocumentEditor_EditorLabel"]"
      tabindex="0"
      data-layout="@lay.CssModifier"
+     data-inspector-sheet="@(InspectorIsSheet && IsDesktopLayout ? "true" : null)"
      data-layout-forced="@(LayoutMode != TmLayoutMode.Auto ? "true" : null)"
      data-page-fit="@(_pageFitApplied ? "true" : null)"
      data-can-view-audit="@CanViewAudit.ToString()"
@@ -185,7 +186,10 @@
                                      ShowRuler="@_showRuler"
                                      ShowRulerChanged="SetRulerVisibleAsync"
                                      ZoomPercent="@_zoomPercent"
-                                     ZoomPageWidth="@_zoomPageWidth"
+                                     ZoomPageWidth="@ZoomPageWidthPressed"
+                                     ZoomAutoFit="@_zoomAutoFit"
+                                     ShowAutomaticZoom="@ShowAutomaticZoom"
+                                     OnZoomAutomatic="SetZoomAutomaticAsync"
                                      ZoomPercentChanged="SetZoomPercentAsync"
                                      TemplatePreviewMessage="@_templatePreviewMessage"
                                      OnSave="SaveAsync"
@@ -470,6 +474,7 @@
                                                     Author="@Author"
                                                     TrackChangesEnabled="@CanvasEngineTracksChanges"
                                                     ReviewDisplayMode="@_reviewDisplayMode"
+                                                    PageFitMode="@PageFitMode"
                                                     AriaLabel="@Loc["TmDocumentEditor_CanvasSurfaceLabel"]"
                                                     InputAriaLabel="@Loc["TmDocumentEditor_CanvasInputLabel"]"
                                                     OnReady="HandleCanvasEngineReadyAsync"
@@ -492,7 +497,7 @@
                 <div class="tm-document-editor__inspector"
                      data-region="inspector"
                      data-focus-region="inspector"
-                     data-presentation="@(IsDesktopLayout ? "docked" : "sheet")">
+                     data-presentation="@(IsDesktopLayout && !InspectorIsSheet ? "docked" : "sheet")">
                     @if (CanvasPrintPreviewActive && IsDesktopLayout)
                     {
                         @PrintPreviewActions
@@ -516,8 +521,15 @@
                                    CurrentPage="@(_activePageIndex + 1)"
                                    ActiveRegionLabel="@ActiveRegionLabel"
                                    ZoomLabel="@ZoomStatusLabel"
+                                   ZoomAriaLabel="@ZoomStatusAriaLabel"
                                    ZoomPercent="@_zoomPercent"
+                                   ZoomPreset="@_zoomPreset"
+                                   ZoomAutoFit="@_zoomAutoFit"
+                                   ShowAutomaticZoom="@ShowAutomaticZoom"
                                    OnZoomChanged="SetZoomPercentAsync"
+                                   OnZoomAutomatic="SetZoomAutomaticAsync"
+                                   OnZoomPageWidth="SetZoomPageWidthAsync"
+                                   OnZoomWholePage="SetZoomWholePageAsync"
                                    IsFullscreen="@_isFullscreen"
                                    OnToggleFullscreen="ToggleFullscreenAsync"
                                    RuntimeMessage="@_runtimeMessage"
@@ -1656,6 +1668,10 @@
                     value="@PrintPreviewZoomValue"
                     data-testid="@TestId("document-print-preview-zoom")"
                     @onchange="PrintPreviewZoomSelectAsync">
+                @if (ShowAutomaticZoom)
+                {
+                    <option value="auto">@Loc["TmDocumentEditor_ZoomMenuAutomatic"]</option>
+                }
                 <option value="fit">@Loc["TmDocumentEditor_ZoomPageWidth"]</option>
                 @foreach (var preset in PrintPreviewZoomOptions)
                 {

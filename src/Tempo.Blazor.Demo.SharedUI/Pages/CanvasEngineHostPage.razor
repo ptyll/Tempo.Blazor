@@ -47,6 +47,7 @@
                           SuggestionProvider="@(SuggestionMode ? SuggestionProviderInstance : null)"
                           SuggestionsEnabled="@SuggestionMode"
 	                      ShowToolbar="@ShowToolbar"
+                          PageFitMode="@EffectivePageFitMode"
                           ShowHeader="@(ShowHeader ?? true)"
                           PdfForensicWatermark="@(ForensicPdf ? new DocumentPdfForensicWatermarkOptions() : null)"
                           TokenProvider="@TokenProvider"
@@ -85,6 +86,21 @@
     [Parameter]
     [SupplyParameterFromQuery(Name = "showHeader")]
     public bool? ShowHeader { get; set; }
+
+    /// <summary>
+    /// How the engine fits the page to the document column: <c>auto</c> (default, only a narrow column), <c>off</c> (the zoom stays at 100 percent - the pixel-geometry
+    /// specs of the canvas pin it so their measured points do not move with a fitted scale) or <c>fitwidth</c>.
+    /// </summary>
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "pageFit")]
+    public string? PageFit { get; set; }
+
+    private DocumentPageFitMode EffectivePageFitMode => PageFit?.Trim().ToLowerInvariant() switch
+    {
+        "off" => DocumentPageFitMode.Off,
+        "fitwidth" => DocumentPageFitMode.FitWidth,
+        _ => DocumentPageFitMode.Auto
+    };
 
     /// <summary>Enables canvas suggestion mode (B4): edits become engine revisions surfaced as suggestions.</summary>
     [Parameter]

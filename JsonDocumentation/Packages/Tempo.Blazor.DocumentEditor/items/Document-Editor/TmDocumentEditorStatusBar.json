@@ -2,7 +2,7 @@
   "itemName": "TmDocumentEditorStatusBar",
   "kind": "Component",
   "category": "Document Editor",
-  "description": "Editor status bar footer showing save and dirty state, a save message with optional retry, the last-saved time, runtime recovery messages, and document metrics such as word count, page count, active region, and zoom. Phase 7: \"Page X of Y\" (CurrentPage / PageCount), plural word count, and - when OnZoomChanged / OnToggleFullscreen are bound - zoom minus / value / plus (10 percent steps within ZoomMin..ZoomMax) and the fullscreen switch.",
+  "description": "Editor status bar footer showing save and dirty state, a save message with optional retry, the last-saved time, runtime recovery messages, and document metrics such as word count, page count, active region, and zoom. Phase 7: \"Page X of Y\" (CurrentPage / PageCount), plural word count, and - when OnZoomChanged / OnToggleFullscreen are bound - zoom minus / value / plus (the steps snap to the grid of 10 within ZoomMin..ZoomMax, so a fitted 62 percent goes to 70 / 60) and the fullscreen switch. The zoom value is a menu button: Automatic (ShowAutomaticZoom, checked for ZoomAutoFit narrow), Page width, Whole page and the round percents; its accessible name is ZoomAriaLabel.",
   "packageId": "Tempo.Blazor.DocumentEditor",
   "namespace": "Tempo.Blazor.Components.DocumentEditor",
   "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentEditorStatusBar.razor",
@@ -150,6 +150,50 @@
       "isRequired": false,
       "default": "10",
       "description": "How far one press of minus / plus moves the zoom, in percent. Defaults to 10."
+    },
+    {
+      "name": "ZoomPreset",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"custom\"",
+      "description": "The zoom preset the engine reports: custom, fitWidth or fitPage. Marks the checked entry of the zoom menu."
+    },
+    {
+      "name": "ZoomAutoFit",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"off\"",
+      "description": "The automatic-fit state the engine reports: off (the reader's zoom), narrow (Automatic) or always (Page width)."
+    },
+    {
+      "name": "ShowAutomaticZoom",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the \"Automatic\" entry of the zoom menu is offered; the editor hides it while its page fit mode is not Auto."
+    },
+    {
+      "name": "ZoomAriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The accessible name of the zoom value; a fitted page names the fit (\"Zoom 62 percent, fitted to width\"). Null derives it from ZoomLabel."
+    },
+    {
+      "name": "OnZoomAutomatic",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when \"Automatic\" is chosen in the zoom menu: back to the editor's configured automatic fit."
+    },
+    {
+      "name": "OnZoomPageWidth",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when \"Page width\" is chosen in the zoom menu: the page follows the column from now on."
+    },
+    {
+      "name": "OnZoomWholePage",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when \"Whole page\" is chosen in the zoom menu: the whole page fits the document region."
     }
   ]
 }

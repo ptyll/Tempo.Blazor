@@ -640,7 +640,7 @@ public class TmDocumentEditorTests : LocalizationTestBase
         cut.Find("[data-testid='document-status-page-count']").TextContent.Should().Contain("of 2");
         cut.Find("[data-testid='document-status-word-count']").TextContent.Should().Contain("words");
         cut.Find("[data-testid='document-status-region']").TextContent.Should().Contain("body");
-        cut.Find("[data-testid='document-status-zoom']").GetAttribute("aria-label").Should().Contain("Zoom 100%");
+        cut.Find("[data-testid='document-status-zoom'] button").GetAttribute("aria-label").Should().Contain("Zoom 100%");
     }
 
     [Fact]

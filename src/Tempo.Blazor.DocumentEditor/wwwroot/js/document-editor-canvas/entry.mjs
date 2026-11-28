@@ -29,6 +29,8 @@ import { createCanvasSearchOverlay } from './search/search-overlay.mjs';
 import { createCanvasSelectionController } from './selection/selection-controller.mjs';
 import { createCanvasShortcutManager } from './shortcuts/shortcut-manager.mjs';
 import { createPrintDialogResult, createPrintPreviewSnapshot } from './view/print-preview.mjs';
+import { createAutoFitObserver } from './view/auto-fit-observer.mjs';
+import { isZoomCommand, normalizeAutoFitMode } from './view/zoom-controller.mjs';
 
 // Perf plan N11.2: page-chunk size for the idle continuation of the progressive first layout.
 const PROGRESSIVE_LAYOUT_CHUNK_PAGES = 10;
@@ -57,6 +59,53 @@ function resolveScrollViewportElement(element) {
     }
     return null;
 }
+
+// The element that really scrolls the document VERTICALLY: the nearest ancestor that clips and has something to scroll, otherwise the page itself.
+// It is not always the horizontal viewport the fit measures (a host may clip the column with overflow:hidden and scroll the window).
+function resolveVerticalScroller(element) {
+    const view = element?.ownerDocument?.defaultView || globalThis;
+    let node = element?.parentElement || null;
+    while (node) {
+        const style = typeof view.getComputedStyle === 'function' ? view.getComputedStyle(node) : null;
+        if (style && /(auto|scroll|overlay)/.test(String(style.overflowY || '')) && Number(node.scrollHeight) > Number(node.clientHeight) + 1) {
+            return { element: node, isDocument: false };
+        }
+        node = node.parentElement;
+    }
+
+    const doc = element?.ownerDocument || null;
+    const root = doc?.scrollingElement || doc?.documentElement || null;
+    return root ? { element: root, isDocument: true } : null;
+}
+
+// The client Y of the top edge of what the reader sees through the scroller.
+// When the window is the scroller, the bottom of the editor's sticky ribbon is the edge the reader actually sees from (page content scrolls
+// beneath a stuck ribbon); without a stuck ribbon (or a host that has none) it is the top of the window.
+function scrollerViewTop(scroller, host = null) {
+    if (!scroller.isDocument) {
+        return Number(scroller.element.getBoundingClientRect?.().top) || 0;
+    }
+
+    const ribbon = host?.closest?.('.tm-document-editor')?.querySelector?.('.tm-document-editor__ribbon') || null;
+    const rect = ribbon?.getBoundingClientRect?.();
+    if (rect && rect.height > 0 && rect.top <= 1 && rect.bottom > 0) {
+        const view = ribbon.ownerDocument?.defaultView;
+        const position = view?.getComputedStyle?.(ribbon)?.position;
+        if (position === 'sticky' || position === 'fixed') {
+            return rect.bottom;
+        }
+    }
+
+    return 0;
+}
+
+// A fitted page lets go of the fit only when it would hold with this many spare pixels on top of the 2 px hysteresis: the vertical scrollbar
+// that appears and disappears with the document's height must not flip the page between 100 percent and the fit.
+const AUTO_FIT_SCROLLBAR_ALLOWANCE_PX = 16;
+
+// The reading position is restored once synchronously and then again for this many frames: a page that was virtualized away is mounted by the
+// repaint that follows the scroll, and only its real rectangle says where the reader's place is now.
+const READING_ANCHOR_SETTLE_FRAMES = 3;
 
 export class CanvasDocumentEngine {
     constructor(options = {}) {
@@ -150,6 +199,8 @@ export class CanvasDocumentEngine {
         });
         this.history = createCanvasHistoryController();
         this.commandRuntime = createCanvasCommandRuntime({
+            // The configured automatic fit is the zoom's mode from the very first state, so turning it on at mount is not a view change of its own.
+            viewState: { zoom: { autoFit: normalizeAutoFitMode(options.autoFit) } },
             getModel: () => this.modelStore.getModel(),
             getSelection: () => this.selectionController.getSelection(),
             getLayout: () => this.lastLayout,
@@ -237,6 +288,13 @@ export class CanvasDocumentEngine {
         this.wheelHandler = event => this.handleWheel(event);
         this.scrollHandler = () => this.handleScroll();
         this.scrollRenderPending = false;
+        // Phase 11: the configured automatic fit ('off' | 'narrow' | 'always'); the live state of the zoom (a reader's zoom turns it off
+        // until fitWidth / resetZoom) is `zoom.autoFit` of the view state, this is the mode `resetZoom` returns to.
+        this.autoFitMode = normalizeAutoFitMode(options.autoFit);
+        this.autoFitObserver = null;
+        // The viewport width the fit was last computed for: a width that grows by no more than a scrollbar does not ask for another fit.
+        this.autoFitComputedWidth = null;
+        this.onViewChanged = typeof options.onViewChanged === 'function' ? options.onViewChanged : null;
         this.mounted = false;
     }
 
@@ -265,7 +323,211 @@ export class CanvasDocumentEngine {
         this.host.setAttribute?.('data-canvas-engine-ready', 'false');
         this.host.setAttribute?.('data-canvas-engine-page-strategy', this.layoutService.pageSurfaceStrategy);
         this.mounted = true;
+        this.attachAutoFitObserver();
         return this;
+    }
+
+    // Phase 11: ONE observer on the scroll viewport re-applies the automatic fit whenever the width of the document column changes.
+    attachAutoFitObserver() {
+        this.autoFitObserver?.destroy?.();
+        this.autoFitObserver = createAutoFitObserver({
+            view: this.document?.defaultView || globalThis,
+            resolveTarget: () => resolveScrollViewportElement(this.host),
+            onResize: () => this.applyAutoFit(),
+        });
+    }
+
+    // The scroll viewport can be REPLACED after mount (a host re-parents the mount, a layout swaps the scroller): the observer then watches a
+    // detached node and the fit silently stops following the column. Every fit notices that and binds the new element.
+    ensureAutoFitObserverTarget() {
+        const current = resolveScrollViewportElement(this.host);
+        if (current !== (this.autoFitObserver?.target ?? null)) {
+            this.attachAutoFitObserver();
+        }
+    }
+
+    // Sets (and applies at once) the configured automatic fit mode; a reader's zoom is replaced by it.
+    setAutoFitMode(mode) {
+        this.autoFitMode = normalizeAutoFitMode(mode);
+        return this.runAutoFitCommand('setAutoFit', { mode: this.autoFitMode });
+    }
+
+    // Re-resolves the fit for the current column (a no-op while the zoom is the reader's).
+    applyAutoFit() {
+        if (!this.mounted || this.commandRuntime.getViewState().zoom?.autoFit === 'off') {
+            return null;
+        }
+
+        this.ensureAutoFitObserverTarget();
+        const zoom = this.commandRuntime.getViewState().zoom || {};
+        const width = Number(resolveScrollViewportElement(this.host)?.clientWidth) || 0;
+        const computed = this.autoFitComputedWidth;
+        // A fitted page whose column grew by no more than a scrollbar is left alone: the scrollbar that disappeared with the shorter fitted
+        // document would otherwise enlarge the page, bring the scrollbar back and shrink it again (the fit oscillating around the threshold).
+        if (zoom.preset === 'fitWidth' && computed !== null && width > computed && width - computed <= AUTO_FIT_SCROLLBAR_ALLOWANCE_PX) {
+            return null;
+        }
+
+        return this.runAutoFitCommand('applyAutoFit', null);
+    }
+
+    runAutoFitCommand(commandId, argument) {
+        if (!this.mounted) {
+            return null;
+        }
+
+        this.ensureAutoFitObserverTarget();
+        const result = this.execCommand(commandId, { ...(argument || {}), scrollbarAllowance: AUTO_FIT_SCROLLBAR_ALLOWANCE_PX });
+        const after = this.commandRuntime.getViewState().zoom || {};
+        this.autoFitComputedWidth = Number(resolveScrollViewportElement(this.host)?.clientWidth) || null;
+        this.syncZoomAutoFitAttribute();
+        if (result?.result?.viewChanged === true || result?.viewChanged === true) {
+            this.onViewChanged?.(after);
+        }
+
+        return result;
+    }
+
+    // `data-canvas-zoom-auto-fit` follows the zoom state even when the change was the mode alone (no scale change, so no repaint wrote it).
+    syncZoomAutoFitAttribute() {
+        const mode = this.commandRuntime.getViewState().zoom?.autoFit || 'off';
+        const root = this.canvasStack.root;
+        if (root?.getAttribute?.('data-canvas-zoom-auto-fit') !== mode) {
+            root?.setAttribute?.('data-canvas-zoom-auto-fit', mode);
+        }
+    }
+
+    // The reader's place in the document: the page at the top of what is visible and how far down that page the top edge is (a fraction, so it
+    // survives a change of the scale). Null when nothing measurable is mounted (a bare host in a test, a document without pages).
+    captureReadingAnchor(scroller) {
+        if (!scroller) {
+            return null;
+        }
+
+        const viewTop = scrollerViewTop(scroller, this.host);
+        let best = null;
+        for (const [key, page] of this.canvasStack.pages || []) {
+            const rect = page?.pageElement?.getBoundingClientRect?.();
+            const index = Number(key);
+            if (!rect || !Number.isFinite(index) || !(rect.height > 0) || rect.bottom <= viewTop + 1) {
+                continue;
+            }
+
+            if (best === null || index < best.pageIndex) {
+                // `leadPx` is the gap between the view's top edge and the page when the page starts below it (the document top: the gutter
+                // above page one); without it a fit at the top would scroll the page up to the view edge, under a sticky ribbon.
+                best = {
+                    pageIndex: index,
+                    fraction: Math.max(0, Math.min(1, (viewTop - rect.top) / rect.height)),
+                    leadPx: Math.max(0, rect.top - viewTop),
+                };
+            }
+        }
+
+        return best;
+    }
+
+    // Client rectangle (top, height) of a page: the real one when it is mounted, otherwise estimated from the nearest mounted page with the
+    // layout's own page heights (the repaint that follows the scroll mounts it and the next settle frame uses the real rectangle).
+    pageClientBox(pageIndex) {
+        const mounted = this.canvasStack.pages?.get?.(String(pageIndex))?.pageElement?.getBoundingClientRect?.();
+        if (mounted && mounted.height > 0) {
+            return { top: mounted.top, height: mounted.height, exact: true };
+        }
+
+        const layoutPages = Array.isArray(this.lastLayout?.pages) ? this.lastLayout.pages : [];
+        const scale = Number(this.commandRuntime.getViewState().zoom?.scale) || 1;
+        const gap = 24;
+        let nearest = null;
+        for (const [key, page] of this.canvasStack.pages || []) {
+            const index = Number(key);
+            const rect = page?.pageElement?.getBoundingClientRect?.();
+            if (rect && rect.height > 0 && Number.isFinite(index) && (nearest === null || Math.abs(index - pageIndex) < Math.abs(nearest.index - pageIndex))) {
+                nearest = { index, top: rect.top, height: rect.height };
+            }
+        }
+
+        const heightOf = index => (Number(layoutPages[index]?.height) || Number(layoutPages[0]?.height) || 1123) * scale;
+        if (nearest === null || layoutPages.length === 0) {
+            return null;
+        }
+
+        let top = nearest.top;
+        if (pageIndex > nearest.index) {
+            for (let index = nearest.index; index < pageIndex; index += 1) {
+                top += (index === nearest.index ? nearest.height : heightOf(index)) + gap;
+            }
+        } else {
+            for (let index = nearest.index - 1; index >= pageIndex; index -= 1) {
+                top -= heightOf(index) + gap;
+            }
+        }
+
+        return { top, height: heightOf(pageIndex), exact: false };
+    }
+
+    // Scrolls so that the anchored page fraction sits at the top of the view again. Returns null when the page cannot be placed at all,
+    // otherwise whether the position was exact (the page is mounted) or only estimated.
+    restoreReadingAnchor(anchor, scroller) {
+        const box = this.pageClientBox(anchor.pageIndex);
+        if (!box) {
+            return null;
+        }
+
+        const delta = box.top + anchor.fraction * box.height - (Number(anchor.leadPx) || 0) - scrollerViewTop(scroller, this.host);
+        if (Math.abs(delta) >= 1) {
+            scroller.element.scrollTop = (Number(scroller.element.scrollTop) || 0) + delta;
+        }
+
+        return box.exact;
+    }
+
+    // The auto-fit family of commands (and the explicit fit) change the scale: the reader stays at the same place of the document instead of
+    // at the same pixel offset. The scale changes the page size but not the layout, so "page + fraction" is exact; a document that cannot
+    // be measured (no mounted page) keeps the proportional scroll offset.
+    execZoomKeepingReadingPosition(commandId, argument) {
+        const scroller = resolveVerticalScroller(this.host);
+        const anchor = this.captureReadingAnchor(scroller);
+        const fallbackScrollTop = Number(scroller?.element?.scrollTop) || 0;
+        const before = this.commandRuntime.getViewState().zoom || {};
+        const result = this.execCommandCore(commandId, argument);
+        const after = this.commandRuntime.getViewState().zoom || {};
+        const beforeScale = Number(before.scale) || 1;
+        const afterScale = Number(after.scale) || 1;
+        if (!scroller || Math.abs(afterScale - beforeScale) <= 0.0001) {
+            return result;
+        }
+
+        if (scroller.element.scrollLeft > 0 && !scroller.isDocument) {
+            scroller.element.scrollLeft = 0;
+        }
+
+        if (anchor && this.restoreReadingAnchor(anchor, scroller) !== null) {
+            this.handleScroll();
+            this.settleReadingAnchor(anchor, scroller, READING_ANCHOR_SETTLE_FRAMES);
+        } else {
+            scroller.element.scrollTop = fallbackScrollTop * (afterScale / beforeScale);
+            this.handleScroll();
+        }
+
+        return result;
+    }
+
+    settleReadingAnchor(anchor, scroller, framesLeft) {
+        const view = this.document?.defaultView || globalThis;
+        const frame = view.requestAnimationFrame?.bind(view) || globalThis.requestAnimationFrame;
+        if (framesLeft <= 0 || typeof frame !== 'function') {
+            return;
+        }
+
+        frame(() => {
+            if (!this.mounted) {
+                return;
+            }
+
+            this.restoreReadingAnchor(anchor, scroller);
+            this.settleReadingAnchor(anchor, scroller, framesLeft - 1);
+        });
     }
 
     render(renderOptions = {}) {
@@ -528,6 +790,12 @@ export class CanvasDocumentEngine {
             signingRoles: Array.isArray(options.signingRoles) ? options.signingRoles : this.engineOptions.signingRoles,
         };
         this.applyEditability(options);
+        const autoFitRequested = options.autoFit !== undefined && options.autoFit !== null
+            ? normalizeAutoFitMode(options.autoFit)
+            : null;
+        if (autoFitRequested !== null && autoFitRequested !== this.autoFitMode) {
+            this.setAutoFitMode(autoFitRequested);
+        }
         // Async proofing providers (ITempoProofingProvider) push refreshed word lists through this
         // path long after mount — swap the proofing config and re-analyze immediately instead of
         // waiting for the next typing debounce.
@@ -669,6 +937,8 @@ export class CanvasDocumentEngine {
         this.inputBridge.destroy();
         this.selectionController.destroy();
         this.rulerOverlay.destroy();
+        this.autoFitObserver?.destroy?.();
+        this.autoFitObserver = null;
         this.canvasStack.destroy();
         if (this.accessibilityMirror.root.parentNode) {
             this.accessibilityMirror.root.parentNode.removeChild(this.accessibilityMirror.root);
@@ -1433,6 +1703,17 @@ export class CanvasDocumentEngine {
     }
 
     execCommand(commandId, argument = null) {
+        const normalized = String(commandId || '').replace(/[\s_-]/g, '').toLowerCase();
+        // The automatic fit family changes the scale of the page on the reader's behalf: the reader keeps their place (the explicit zoom
+        // gestures - wheel, pinch, the zoom buttons - keep their own scroll behaviour).
+        if (this.mounted && ['applyautofit', 'setautofit', 'resetzoom', 'fitwidth', 'zoompagewidth'].includes(normalized) && isZoomCommand(normalized)) {
+            return this.execZoomKeepingReadingPosition(commandId, argument);
+        }
+
+        return this.execCommandCore(commandId, argument);
+    }
+
+    execCommandCore(commandId, argument = null) {
         this.flushPendingTextInputSideEffects();
         const annotationResult = this.execAnnotationCommand(commandId, argument);
         if (annotationResult) {
@@ -1707,22 +1988,25 @@ export class CanvasDocumentEngine {
         root?.setAttribute?.('data-canvas-recalc-idle-count', String(recalc.idleReconciliationCount || 0));
     }
 
-    // The room the fit leaves around the page: the 48 px of a desktop, or - on a tablet and a phone (data-layout of the editor root) - the real inline padding of
-    // the mount plus the hairline of the engine root, so a page fitted to a 390 px column fills it instead of leaving a bezel of 24 px a side. Reading the padding flushes the layout the
+    // The room the fit leaves around the page: the real inline padding of the mount plus the padding of the engine root (24 px a side on a desktop, never below 48 px; a hairline on a
+    // tablet and a phone, data-layout of the editor root), so a page fitted to a 390 px column fills it instead of leaving a bezel of 24 px a side. Reading the padding flushes the layout the
     // render just produced, which is what makes a fit requested right after a layout switch measure the NEW arrangement.
     getFitPaddingInline() {
         const fallback = 48;
         try {
             const layout = this.host?.closest?.('[data-layout]')?.getAttribute?.('data-layout');
-            if (!layout || layout === 'desktop') {
+            const style = globalThis.getComputedStyle?.(this.host);
+            if (!style) {
                 return fallback;
             }
 
-            const style = globalThis.getComputedStyle?.(this.host);
-            const mountPadding = (Number.parseFloat(style?.paddingLeft) || 0) + (Number.parseFloat(style?.paddingRight) || 0);
+            const mountPadding = (Number.parseFloat(style.paddingLeft) || 0) + (Number.parseFloat(style.paddingRight) || 0);
             // The engine root inside the mount pads the page column too (a hairline on a tablet / a phone, see resolveRootPaddingInline).
             const rootPadding = 2 * resolveRootPaddingInline(this.host, 24);
-            return Math.max(8, mountPadding + rootPadding);
+            // The column the page needs is the root padding PLUS the mount padding in every layout; a desktop never takes less than its 48 px.
+            return !layout || layout === 'desktop'
+                ? Math.max(fallback, mountPadding + rootPadding)
+                : Math.max(8, mountPadding + rootPadding);
         } catch {
             return fallback;
         }
@@ -1748,6 +2032,8 @@ export class CanvasDocumentEngine {
             pageGap: 24,
             paddingInline: this.getFitPaddingInline(),
             paddingBlock: 48,
+            // Context of the zoom commands, not a measurement: the mode `resetZoom` returns to.
+            autoFitMode: this.autoFitMode,
         };
     }
 

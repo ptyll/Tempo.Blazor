@@ -231,7 +231,9 @@ function positionFromClientX(clientX, track, state = {}) {
     const rect = track?.getBoundingClientRect?.() || { left: 0 };
     const marginLeftPx = Number(state.marginLeftPx || 0) || 0;
     const leftIndentPx = Number(state.leftIndentPx || 0) || 0;
-    const x = Math.max(0, Number(clientX || 0) - Number(rect.left || 0));
+    // The track is as wide as the SCALED page (a fitted page): the pointer offset is back in page pixels before the margins are taken off.
+    const scale = Math.max(0.01, Number(state.scale) || 1);
+    const x = Math.max(0, Number(clientX || 0) - Number(rect.left || 0)) / scale;
     return Math.max(0, (x - marginLeftPx - leftIndentPx) * CSS_PIXELS_TO_POINTS);
 }
 

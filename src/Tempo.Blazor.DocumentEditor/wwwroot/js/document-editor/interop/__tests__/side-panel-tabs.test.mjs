@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { attachTabScroller, detachTabScroller, overflowState, scrollLeftForTab, syncTabScroller } from '../side-panel-tabs.mjs';
+import { attachTabScroller, detachTabScroller, nextTabsCompact, overflowState, scrollLeftForTab, syncTabScroller } from '../side-panel-tabs.mjs';
 
 test('scrollLeftForTab: a tab already inside the scroller keeps the scroll', () => {
     assert.equal(scrollLeftForTab({ scrollLeft: 0, clientWidth: 300, tabStart: 20, tabEnd: 90 }), 0);
@@ -90,4 +90,28 @@ test('attach listens for scroll and keeps the cue in step; detach is idempotent'
     detachTabScroller(list);
     detachTabScroller(list);
     assert.equal(list.listeners.size, 0);
+});
+
+test('nextTabsCompact drops the badges only on a REAL overflow and brings them back at the width they needed', () => {
+    const roomy = nextTabsCompact(undefined, { clientWidth: 352, scrollWidth: 352 });
+    assert.equal(roomy.compact, false, 'four labels and their badges fit: nothing is hidden');
+
+    const tight = nextTabsCompact(roomy, { clientWidth: 330, scrollWidth: 372 });
+    assert.deepEqual(tight, { compact: true, fullWidth: 372 });
+
+    // with the badges hidden the row no longer overflows - that must not flip them back
+    const stillCompact = nextTabsCompact(tight, { clientWidth: 330, scrollWidth: 330 });
+    assert.equal(stillCompact.compact, true, 'no flapping');
+    assert.equal(nextTabsCompact(stillCompact, { clientWidth: 371, scrollWidth: 371 }).compact, true, 'one pixel short of the full width');
+    assert.equal(nextTabsCompact(stillCompact, { clientWidth: 372, scrollWidth: 372 }).compact, false, 'the row has grown to the full width again');
+});
+
+test('syncTabScroller publishes data-tabs-overflow next to the overflow sides', () => {
+    const fits = fakeTablist({ clientWidth: 400, scrollWidth: 400, tabs: [{ start: 0, end: 100, selected: true }] });
+    syncTabScroller(fits);
+    assert.equal(fits.getAttribute('data-tabs-overflow'), 'false');
+
+    const overflows = fakeTablist({ clientWidth: 300, scrollWidth: 500, tabs: [{ start: 0, end: 100, selected: true }] });
+    syncTabScroller(overflows);
+    assert.equal(overflows.getAttribute('data-tabs-overflow'), 'true');
 });

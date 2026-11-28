@@ -5,6 +5,8 @@ const SHORTCUTS = [
     { key: 'z', ctrl: true, command: 'undo' },
     { key: 'y', ctrl: true, command: 'redo' },
     { key: 'k', ctrl: true, command: 'link', argument: 'https://example.com' },
+    // Reset zoom: back to the configured automatic fit (the browser's own Ctrl+0 would reset the page zoom of the whole host).
+    { key: '0', code: 'Digit0', ctrl: true, command: 'resetZoom' },
     { key: 'p', ctrl: true, shift: true, palette: true },
 ];
 
@@ -119,7 +121,7 @@ function matchShortcut(event) {
     }
 
     return SHORTCUTS.find(shortcut =>
-        shortcut.key === key
+        (shortcut.key === key || (shortcut.code !== undefined && event?.code === shortcut.code))
         && shortcut.ctrl === ctrl
         && (shortcut.shift === true) === shift) || null;
 }

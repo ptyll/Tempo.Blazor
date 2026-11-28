@@ -114,6 +114,13 @@
       "description": "Raised when a canvas keyboard shortcut requests the versions side panel."
     },
     {
+      "name": "PageFitMode",
+      "type": "DocumentPageFitMode",
+      "isRequired": false,
+      "default": "DocumentPageFitMode.Auto",
+      "description": "How the engine fits the page to the document column (a mode of the engine, re-applied by its own resize observer): Auto fits only a page wider than the column, Off never fits, FitWidth always follows the width. The bare canvas host defaults to Auto too (before phase 11 it kept 100 percent in a narrow column): pass Off to restore that. Changing it after mount replaces the reader's zoom with the new mode."
+    },
+    {
       "name": "Permissions",
       "type": "DocumentEditorPermissions?",
       "isRequired": false,

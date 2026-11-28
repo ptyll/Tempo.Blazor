@@ -1,6 +1,7 @@
 import { createCanvasDocumentEngine } from './entry.mjs';
 import { isDeliberateSelectionNotification } from './selection-cadence.mjs';
 import { buildFormattingState } from './format-state.mjs';
+import { createViewChangeNotifier } from './view/view-change-notifier.mjs';
 import { selectionToRestoreAfterModelRefresh } from './selection/selection-restore.mjs';
 import { extractAnnotations, countModelWords } from './annotations-state.mjs';
 import { clampExportScale, renderDisplayListPageToCanvas } from './render/page-image-export.mjs';
@@ -68,6 +69,11 @@ export function mount(hostElement, mountElement, modelJson, optionsJson, dotNetR
         canEdit: options.canEdit,
         trackChanges: options.trackChanges,
         reviewDisplayMode: options.trackChanges?.reviewDisplayMode || options.reviewDisplayMode,
+        autoFit: options.autoFit,
+        // Phase 11: the engine re-fits the page on a resize of the document column on its own; the host learns the new zoom here.
+        // The report is debounced (trailing, ~150 ms) and sent only when the percent / preset / autoFit really changed: a drag of the splitter
+        // re-fits the page every frame, the host needs the zoom it settled on.
+        onViewChanged: () => state?.viewNotifier?.request(),
         onContextMenu: payload => notifyDotNet(dotNetRef, 'OnCanvasContextMenuRequested', payload),
         onSelectionChange: payload => {
             if (!state) {
@@ -80,6 +86,7 @@ export function mount(hostElement, mountElement, modelJson, optionsJson, dotNetR
             // heavy flows. Collapsed selections fall through to the debounced toolbar-sync as before.
             if (payload && typeof payload === 'object' && isDeliberateSelectionNotification(payload)) {
                 payload.uiState = buildUiState(state);
+                state.viewNotifier?.markNotified(engine.commandRuntime.getViewState().zoom);
             }
             notifySelectionChanged(state, payload);
         },
@@ -97,6 +104,8 @@ export function mount(hostElement, mountElement, modelJson, optionsJson, dotNetR
         },
     });
     const result = engine.render();
+    // Fit the page to the column before the host learns the engine is ready (the second paint only happens when the page does not fit).
+    engine.setAutoFitMode(engine.autoFitMode);
     state = {
         engine,
         host,
@@ -106,6 +115,14 @@ export function mount(hostElement, mountElement, modelJson, optionsJson, dotNetR
         dirty: false,
         savedVersion: engine.getSnapshot().modelVersion,
         options,
+        viewNotifier: createViewChangeNotifier({
+            read: () => engine.commandRuntime.getViewState().zoom,
+            notify: () => notifyDotNet(dotNetRef, 'OnCanvasViewChanged', { uiState: buildUiState(state) }),
+            // The ready snapshot below already carries the zoom the engine chose at mount.
+            initial: engine.commandRuntime.getViewState().zoom,
+            setTimeout: (callback, delay) => (mountHost.ownerDocument?.defaultView || globalThis).setTimeout(callback, delay),
+            clearTimeout: timer => (mountHost.ownerDocument?.defaultView || globalThis).clearTimeout(timer),
+        }),
     };
     instances.set(handle, state);
     setReadyAttributes(state, true);
@@ -137,6 +154,7 @@ export function dispose(handle) {
         if (state.selectionNotifyTimer) { clear(state.selectionNotifyTimer); state.selectionNotifyTimer = 0; }
     }
 
+    state.viewNotifier?.destroy();
     state.engine.destroy();
     setReadyAttributes(state, false);
     instances.delete(handle);

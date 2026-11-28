@@ -998,6 +998,16 @@
                                       OnClick="ZoomToPageWidthAsync"
                                       Command="zoomPageWidth"
                                       TestId="@TestId("document-zoom-page-width")" />
+                @if (ShowAutomaticZoom)
+                {
+                    <DocumentRibbonButton Icon="scan"
+                                          Text="@Loc["TmDocumentEditor_ZoomAutomatic"]"
+                                          Tooltip="@Loc["TmDocumentEditor_ZoomAutomatic"]"
+                                          Pressed="@(ZoomAutoFit == "narrow")"
+                                          OnClick="ZoomAutomaticAsync"
+                                          Command="resetZoom"
+                                          TestId="@TestId("document-zoom-automatic")" />
+                }
                 <DocumentRibbonButton Icon="layout-panel-top"
                                       Text="@Loc["TmDocumentEditor_ShowBlocks"]"
                                       Disabled="@(!IsCommandEnabled("showBlocks", fallback: true))"
@@ -1850,7 +1860,7 @@
         hash.Add(ShowPrintPreviewTools); hash.Add(PrintPreviewActive); hash.Add(TemplatePreviewMessage);
         hash.Add(CanCompareDocuments); hash.Add(ShowAdvancedFields); hash.Add(ActiveRegion);
         hash.Add(ActiveHeaderFooterScopeLabel); hash.Add(DifferentFirstPage); hash.Add(DifferentOddAndEvenPages);
-        hash.Add(ShowRuler); hash.Add(ZoomPercent); hash.Add(ZoomPageWidth); hash.Add(CanUploadImages);
+        hash.Add(ShowRuler); hash.Add(ZoomPercent); hash.Add(ZoomPageWidth); hash.Add(ZoomAutoFit); hash.Add(ShowAutomaticZoom); hash.Add(CanUploadImages);
         hash.Add(CanBrowseImageAssets); hash.Add(ShowEquationTools); hash.Add(ShowSymbolTools); hash.Add(ShowBlockStyle);
         hash.Add(CurrentBlockStyle); hash.Add(ShowStyleManagement); hash.Add(ShowAdvancedCharacterFormatting);
         // Inherited from TmComponentBase — both feed rendered data-testid attribute values.
@@ -2127,6 +2137,15 @@
 
     /// <summary>Raised when page-width zoom is requested.</summary>
     [Parameter] public EventCallback OnZoomPageWidth { get; set; }
+
+    /// <summary>The engine's automatic-fit state: <c>off</c> (the reader's zoom), <c>narrow</c> (Automatic) or <c>always</c> (Page width).</summary>
+    [Parameter] public string ZoomAutoFit { get; set; } = "off";
+
+    /// <summary>Whether the "Automatic zoom" button is offered (the editor's page fit mode is <c>Auto</c>).</summary>
+    [Parameter] public bool ShowAutomaticZoom { get; set; }
+
+    /// <summary>Raised when "Automatic zoom" is requested: back to the configured automatic fit.</summary>
+    [Parameter] public EventCallback OnZoomAutomatic { get; set; }
 
     /// <summary>Raised when save is requested.</summary>
     [Parameter] public EventCallback OnSave { get; set; }
@@ -3977,11 +3996,15 @@
     private Task ToggleRulerAsync()
         => ShowRulerChanged.InvokeAsync(!ShowRuler);
 
+    // The steps snap to the grid of 10 (a fitted 62 percent goes to 70 / 60), inside the reader's 50 - 200 range.
     private Task ZoomOutAsync()
-        => ZoomPercentChanged.InvokeAsync(Math.Max(50, ZoomPercent - 10));
+        => ZoomPercentChanged.InvokeAsync(DocumentZoomMath.Step(ZoomPercent, 10, 50, 200, up: false));
 
     private Task ZoomInAsync()
-        => ZoomPercentChanged.InvokeAsync(Math.Min(200, ZoomPercent + 10));
+        => ZoomPercentChanged.InvokeAsync(DocumentZoomMath.Step(ZoomPercent, 10, 50, 200, up: true));
+
+    private Task ZoomAutomaticAsync()
+        => OnZoomAutomatic.InvokeAsync();
 
     private Task ZoomTo100Async()
         => ZoomPercentChanged.InvokeAsync(100);

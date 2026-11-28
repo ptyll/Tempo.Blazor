@@ -61,6 +61,63 @@
     overflow: visible;
 }
 
+/* ── The readable floor (decision DE-AUTO-FIT-READABLE-FLOOR) ───────────────────────────────────────────────────────────────────
+   A DESKTOP editor whose docked inspector would squeeze the fitted page below three quarters of its size keeps everything else of the desktop (the
+   ribbon, the navigation rail) and presents ONLY the inspector as the side sheet of a tablet: the root carries data-inspector-sheet="true" (never during
+   the print preview, whose actions column stays docked). The workspace loses its inspector column and the region sits in the document's cell. */
+.tm-document-editor[data-layout="desktop"][data-inspector-sheet="true"] .tm-document-editor__workspace,
+.tm-document-editor[data-layout="desktop"][data-inspector-sheet="true"] .tm-document-editor__workspace--side-panel-closed {
+    grid-template-columns: var(--tm-document-nav-width) minmax(0, 1fr);
+    grid-template-areas: "nav doc";
+}
+
+.tm-document-editor[data-layout="desktop"][data-inspector-sheet="true"] .tm-document-editor__workspace--nav-collapsed,
+.tm-document-editor[data-layout="desktop"][data-inspector-sheet="true"] .tm-document-editor__workspace--nav-collapsed.tm-document-editor__workspace--side-panel-closed {
+    grid-template-columns: var(--tm-touch-target) minmax(0, 1fr);
+}
+
+.tm-document-editor[data-inspector-sheet="true"] .tm-document-editor__workspace > [data-region="inspector"] {
+    grid-area: doc;
+    justify-self: end;
+    align-self: stretch;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    width: min(var(--tm-document-sheet-width), 100%);
+    pointer-events: none;
+}
+
+.tm-document-editor[data-inspector-sheet="true"] .tm-document-editor__workspace--side-panel-closed > [data-region="inspector"] {
+    width: auto;
+}
+
+.tm-document-editor[data-inspector-sheet="true"] [data-region="inspector"] > .tm-document-side-panel {
+    inline-size: 100%;
+    pointer-events: auto;
+    position: sticky;
+    top: calc(var(--tm-document-ribbon-block-size) + var(--tm-space-2));
+    max-height: min(calc(100dvh - var(--tm-document-ribbon-block-size) - var(--tm-space-6)), 100%);
+    box-shadow: var(--tm-shadow-popover);
+}
+
+.tm-document-editor[data-inspector-sheet="true"] [data-region="inspector"] > .tm-document-side-panel__edge-toggle {
+    pointer-events: auto;
+    position: sticky;
+    top: calc(var(--tm-document-ribbon-block-size) + var(--tm-space-2));
+}
+
+.tm-document-editor[data-inspector-sheet="true"] .tm-document-editor__workspace--side-panel-closed .tm-document-editor__doc-banners {
+    padding-inline-end: calc(var(--tm-touch-target) + var(--tm-space-2));
+}
+
+.tm-document-editor[data-inspector-sheet="true"] .tm-document-side-panel .tm-document-editor__comment-rail {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+    overflow: visible;
+}
+
 /* The first-frame guard of an Auto editor: a desktop mode in a container narrower than the desktop step already shows the sheet. The same rules as
    above, answering to the container (a forced mode is the host's decision and is never second-guessed). */
 @container tm-doc-editor (width < 1024px) {
@@ -269,9 +326,23 @@
     display: none;
 }
 
-/* A page fitted to a tablet or a phone column: the ruler is as wide as the page at 100 percent, so left in the layout it keeps the mount (and the
-   page, centred in it) wider than the column - the fitted page sat off-centre and clipped. The ruler is a desktop editing aid; it returns with the
-   desktop layout and with a page that holds its own size. */
-.tm-document-editor[data-page-fit="true"]:not([data-layout="desktop"]) .tm-document-canvas-ruler-shell {
+/* A page fitted to its column (in EVERY layout since the engine owns the fit): the ruler is as wide as the page at 100 percent, so left in the layout it keeps
+   the mount (and the page, centred in it) wider than the column - the fitted page sat off-centre and clipped. The ruler is an editing aid that returns with
+   a page that holds its own size. A ruler that scales with the fitted page is a later phase (the stopgap hides it). */
+.tm-document-editor[data-page-fit="true"] .tm-document-canvas-ruler-shell {
     display: none;
+}
+
+/* A fitted page spends its width on the page, not on the stage: from a 768 px container up the inline padding of the stage drops to --tm-space-3 while
+   the page is fitted (the fit measures the real padding, so the page grows by the room that was taken back). Below 768 px the stage already pads by
+   --tm-space-2 (TmDocumentCanvasEngineHost.razor.css), which is less - it is never made wider. */
+@container tm-doc-editor (width >= 768px) {
+    .tm-document-editor[data-page-fit="true"] .tm-document-canvas-engine-host__mount {
+        padding-inline: max(var(--tm-space-3), env(safe-area-inset-left)) max(var(--tm-space-3), env(safe-area-inset-right));
+    }
+}
+
+/* A phone does not waste its first screen on a desktop-sized gutter above the page. */
+.tm-document-editor[data-layout="mobile"] .tm-document-canvas-engine-host__mount {
+    padding-block-start: var(--tm-space-2);
 }

@@ -154,6 +154,9 @@ public partial class TmDocumentCanvasEngineHost
         /// <summary>Current canvas zoom preset.</summary>
         public string ZoomPreset { get; set; } = "custom";
 
+        /// <summary>Automatic fit state of the canvas zoom: <c>off</c> (the reader's zoom), <c>narrow</c> or <c>always</c>.</summary>
+        public string ZoomAutoFit { get; set; } = "off";
+
         /// <summary>Whether the current canvas view hides the editor toolbar.</summary>
         public bool ToolbarHidden { get; set; }
 

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
@@ -245,27 +246,233 @@ public class TmDocumentEditorLayoutTests : LocalizationTestBase
         return (cut, canvas.Invocations.Where(i => i.Identifier == "execCommand").ToArray());
     }
 
-    [Theory]
-    [InlineData(700, "tablet")]
-    [InlineData(390, "mobile")]
-    public async Task Fit_ANonDesktopContainerNarrowerThanThePage_FitsItAfterTheLayoutRendered(double width, string mode)
-    {
-        var (cut, _) = await RenderAutoAsync(width, mode);
+    // Phase 11: the fit is a mode of the ENGINE (zoom.autoFit re-applied by a ResizeObserver on the scroll viewport); Blazor only forwards the
+    // PageFitMode and reflects what the engine reports.
+    private static string? MountedAutoFit(Bunit.JSRuntimeInvocation mount)
+        => JsonDocument.Parse((string)mount.Arguments[3]!).RootElement.TryGetProperty("autoFit", out var value) ? value.GetString() : null;
 
-        cut.WaitForAssertion(() => cut.Instance.GetType().GetField("_fitPending", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
-            .GetValue(cut.Instance).Should().Be(false));
-        var canvas = SetupDocumentCanvasModule();
-        canvas.Invocations.Where(i => i.Identifier == "execCommand" && i.Arguments.Any(a => string.Equals(a as string, "fitWidth", StringComparison.Ordinal)))
-            .Should().NotBeEmpty("the page is wider than the column, so the engine fits it");
+    [Theory]
+    [InlineData(DocumentPageFitMode.Auto, "narrow")]
+    [InlineData(DocumentPageFitMode.Off, "off")]
+    [InlineData(DocumentPageFitMode.FitWidth, "always")]
+    public void PageFitMode_IsPassedToTheEngineAtMount(DocumentPageFitMode mode, string expected)
+    {
+        var cut = RenderEditor(TmLayoutMode.Desktop, parameters => parameters.Add(p => p.PageFitMode, mode));
+        cut.WaitForAssertion(() => SetupDocumentCanvasModule().Invocations.Any(i => i.Identifier == "mount").Should().BeTrue());
+
+        MountedAutoFit(SetupDocumentCanvasModule().Invocations.First(i => i.Identifier == "mount")).Should().Be(expected);
     }
 
     [Fact]
-    public async Task Fit_AColumnThatHoldsThePage_IsLeftAlone()
+    public void PageFitMode_DefaultsToAuto_NarrowOnlyInEveryLayout()
     {
-        var (_, _) = await RenderAutoAsync(1000, "tablet");
+        new TmDocumentEditor().PageFitMode.Should().Be(DocumentPageFitMode.Auto);
+        var cut = RenderEditor(TmLayoutMode.Tablet);
+        cut.WaitForAssertion(() => SetupDocumentCanvasModule().Invocations.Any(i => i.Identifier == "mount").Should().BeTrue());
 
+        MountedAutoFit(SetupDocumentCanvasModule().Invocations.First(i => i.Identifier == "mount")).Should().Be("narrow");
+    }
+
+    [Fact]
+    public async Task PageFitMode_ChangedAfterMount_IsPushedToTheEngine()
+    {
+        var cut = RenderEditor(TmLayoutMode.Desktop);
+        await MarkCanvasReadyAsync(cut);
+
+        cut.Render(ParameterView.FromDictionary(new Dictionary<string, object?> { ["PageFitMode"] = DocumentPageFitMode.Off }));
+
+        cut.WaitForAssertion(() => SetupDocumentCanvasModule().Invocations
+            .Any(i => i.Identifier == "setOptions" && i.Arguments.Any(a => a is string text && text.Contains("\"autoFit\":\"off\"", StringComparison.Ordinal)))
+            .Should().BeTrue("the engine learns the new mode through setOptions"));
+    }
+
+    [Theory]
+    [InlineData(700, "tablet")]
+    [InlineData(390, "mobile")]
+    public async Task Fit_BlazorNoLongerFitsTheColumnItself_TheEngineDoes(double width, string mode)
+    {
+        var (cut, _) = await RenderAutoAsync(width, mode);
+
+        cut.Instance.GetType().GetField("_fitPending", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+            .Should().BeNull("the duplicate Blazor fit state is gone");
         SetupDocumentCanvasModule().Invocations.Where(i => i.Identifier == "execCommand" && i.Arguments.Any(a => string.Equals(a as string, "fitWidth", StringComparison.Ordinal)))
-            .Should().BeEmpty("a 1000 px column holds an A4 page (794 px plus the gutters): no fit, the page keeps its zoom");
+            .Should().BeEmpty("a narrow column is fitted by the engine's own observer, never by an interop command from the component");
+    }
+
+    [Fact]
+    public async Task Fit_ALayoutSwitch_AsksTheEngineToResolveTheFitAgain()
+    {
+        var (_, _) = await RenderAutoAsync(700, "tablet");
+
+        SetupDocumentCanvasModule().Invocations.Any(i => i.Identifier == "execCommand" && i.Arguments.Any(a => string.Equals(a as string, "applyAutoFit", StringComparison.Ordinal)))
+            .Should().BeTrue("the padding of the column changes with the layout, so the engine re-resolves the fit once the layout rendered");
+    }
+
+    private async Task PushViewStateAsync(IRenderedComponent<TmDocumentEditor> cut, int percent, string preset, string autoFit)
+    {
+        var formatting = new TmDocumentCanvasEngineHost.CanvasEngineFormattingState { ZoomPercent = percent, ZoomPreset = preset, ZoomAutoFit = autoFit };
+        var host = cut.FindComponent<TmDocumentCanvasEngineHost>();
+        var json = JsonSerializer.Serialize(
+            new { UiState = new TmDocumentCanvasEngineHost.CanvasEngineUiState { Formatting = formatting } }, DocumentEditorJson.Options);
+        await cut.InvokeAsync(() => host.Instance.OnCanvasViewChanged(json));
+    }
+
+    [Fact]
+    public async Task Fit_TheEngineReportOfAFittedPage_SetsDataPageFitAndTheFitLabelWithThePercent()
+    {
+        var cut = RenderEditor(TmLayoutMode.Desktop);
+        await MarkCanvasReadyAsync(cut);
+        cut.Find(".tm-document-editor").HasAttribute("data-page-fit").Should().BeFalse("a page at 100 percent keeps the ruler");
+
+        await PushViewStateAsync(cut, 87, "fitWidth", "narrow");
+
+        cut.WaitForAssertion(() => cut.Find(".tm-document-editor").GetAttribute("data-page-fit").Should().Be("true"));
+        cut.Find("[data-testid='document-status-zoom']").TextContent.Should().Contain("Fit 87%", "the AUTOMATIC fit names itself 'Fit' and the percent it resulted in");
+        cut.Find("[data-testid='document-status-zoom'] button").GetAttribute("aria-label").Should().Be("Zoom 87 percent, fitted to width");
+
+        await PushViewStateAsync(cut, 100, "custom", "narrow");
+
+        cut.WaitForAssertion(() => cut.Find(".tm-document-editor").HasAttribute("data-page-fit").Should().BeFalse("the column grew back, the engine released the fit"));
+        cut.Find("[data-testid='document-status-zoom']").TextContent.Should().Contain("100%");
+    }
+
+    [Fact]
+    public async Task Fit_TheReadersOwnPageWidth_IsLabelledPageWidthWithThePercent_AndOnlyThenPressesThePageWidthButton()
+    {
+        var cut = RenderEditor(TmLayoutMode.Desktop);
+        await MarkCanvasReadyAsync(cut);
+
+        await PushViewStateAsync(cut, 130, "fitWidth", "always");
+
+        cut.WaitForAssertion(() => cut.Find("[data-testid='document-status-zoom']").TextContent.Should().Contain("Page width · 130%"));
+        cut.Find("[data-testid='document-ribbon-tab-view']").Click();
+        cut.Find("[data-testid='document-zoom-page-width']").GetAttribute("aria-pressed").Should().Be("true");
+
+        await PushViewStateAsync(cut, 87, "fitWidth", "narrow");
+
+        cut.WaitForAssertion(() => cut.Find("[data-testid='document-status-zoom']").TextContent.Should().Contain("Fit 87%"));
+        cut.Find("[data-testid='document-zoom-page-width']").GetAttribute("aria-pressed").Should().Be("false", "the automatic fit is not the reader's Page width");
+        cut.Find("[data-testid='document-zoom-automatic']").GetAttribute("aria-pressed").Should().Be("true");
+    }
+
+    private bool ExecutedCanvasCommand(string command)
+        => SetupDocumentCanvasModule().Invocations.Any(i => i.Identifier == "execCommand" && i.Arguments.Any(a => string.Equals(a as string, command, StringComparison.Ordinal)));
+
+    [Fact]
+    public async Task ZoomMenu_OffersAutomaticPageWidthWholePageAndThePercents_WithTheStateChecked()
+    {
+        var cut = RenderEditor(TmLayoutMode.Desktop);
+        await MarkCanvasReadyAsync(cut);
+        await PushViewStateAsync(cut, 87, "fitWidth", "narrow");
+        cut.Find("[data-testid='document-status-zoom'] .tm-dropdown-trigger").Click();
+
+        cut.Find("[data-testid='document-status-zoom-auto']").GetAttribute("aria-checked").Should().Be("true", "the automatic fit is the active mode");
+        cut.Find("[data-testid='document-status-zoom-page-width']").GetAttribute("aria-checked").Should().Be("false");
+        cut.Find("[data-testid='document-status-zoom-whole-page']").GetAttribute("aria-checked").Should().Be("false");
+        foreach (var percent in new[] { 50, 75, 100, 125, 150, 200 })
+        {
+            cut.Find($"[data-testid='document-status-zoom-{percent}']").GetAttribute("aria-checked").Should().Be("false");
+        }
+    }
+
+    [Fact]
+    public async Task ZoomMenu_AutomaticResetsTheZoomInTheEngine_PageWidthAndWholePageHaveTheirOwnCommands()
+    {
+        var cut = RenderEditor(TmLayoutMode.Desktop);
+        await MarkCanvasReadyAsync(cut);
+        await PushViewStateAsync(cut, 140, "custom", "off");
+
+        foreach (var (item, command) in new[] { ("auto", "resetZoom"), ("page-width", "fitWidth"), ("whole-page", "fitPage"), ("75", "setZoom") })
+        {
+            cut.Find("[data-testid='document-status-zoom'] .tm-dropdown-trigger").Click();
+            cut.WaitForElement($"[data-testid='document-status-zoom-{item}']").Click();
+            cut.WaitForAssertion(() => ExecutedCanvasCommand(command).Should().BeTrue($"'{item}' runs {command} in the engine"));
+        }
+    }
+
+    [Fact]
+    public async Task ZoomMenu_WithPageFitModeOff_HidesAutomatic_AndTheRegistryCommandIsDisabled()
+    {
+        var cut = RenderEditor(TmLayoutMode.Desktop, parameters => parameters.Add(p => p.PageFitMode, DocumentPageFitMode.Off));
+        await MarkCanvasReadyAsync(cut);
+        cut.Find("[data-testid='document-status-zoom'] .tm-dropdown-trigger").Click();
+
+        cut.FindAll("[data-testid='document-status-zoom-auto']").Should().BeEmpty("there is no automatic zoom to return to");
+        cut.Find("[data-testid='document-status-zoom-page-width']").Should().NotBeNull();
+        cut.Find("[data-testid='document-ribbon-tab-view']").Click();
+        cut.FindAll("[data-testid='document-zoom-automatic']").Should().BeEmpty();
+    }
+
+    // Phase 11 (fix round, decision `DE-AUTO-FIT-READABLE-FLOOR`): next to a docked inspector a fit below ReadableAutoFitScale (0.75) is not readable,
+    // so a desktop container that would squeeze the page that far keeps its ribbon and navigation but presents the INSPECTOR as the tablet overlay sheet.
+    private async Task<IRenderedComponent<TmDocumentEditor>> RenderAutoAtWidthAsync(double width, Action<ComponentParameterCollectionBuilder<TmDocumentEditor>>? configure = null)
+    {
+        SetupLayoutObserverModule();
+        var provider = new InMemoryDocumentEditorProvider();
+        provider.SeedContractDocument("doc-1");
+        SetupDocumentCanvasModule();
+        var cut = Render<TmDocumentEditor>(p =>
+        {
+            p.Add(c => c.DocumentId, "doc-1").Add(c => c.Provider, provider);
+            configure?.Invoke(p);
+        });
+        cut.WaitForAssertion(() => cut.Find("[data-testid='document-canvas-engine-host']").Should().NotBeNull());
+        var observer = cut.FindComponent<TmLayoutObserver>();
+        await cut.InvokeAsync(() => observer.Instance.OnContainerWidthChanged(width));
+        return cut;
+    }
+
+    [Theory]
+    [InlineData(1048, true)]
+    [InlineData(1130, true)]
+    [InlineData(1180, false)]
+    [InlineData(1440, false)]
+    public async Task ReadableFloor_ADesktopContainerThatWouldFitBelowThreeQuarters_PresentsOnlyTheInspectorAsTheSheet(double width, bool sheet)
+    {
+        var cut = await RenderAutoAtWidthAsync(width);
+
+        cut.Find(".tm-document-editor").GetAttribute("data-layout").Should().Be("desktop", "the ribbon and the navigation stay the desktop's");
+        cut.Find(".tm-document-editor").HasAttribute("data-inspector-sheet").Should().Be(sheet);
+        cut.Find("[data-region='inspector']").GetAttribute("data-presentation").Should().Be(sheet ? "sheet" : "docked");
+        cut.FindAll("[data-region='nav']").Should().HaveCount(1);
+    }
+
+    [Fact]
+    public async Task ReadableFloor_StartsTheSheetClosed_AndDocksTheInspectorAgainWhenTheContainerGrows()
+    {
+        var cut = await RenderAutoAtWidthAsync(1048);
+        cut.Find("[data-testid='document-editor-workspace']").ClassList.Should().Contain("tm-document-editor__workspace--side-panel-closed", "an open sheet would hide half of a page the reader has not seen");
+        var observer = cut.FindComponent<TmLayoutObserver>();
+
+        await cut.InvokeAsync(() => observer.Instance.OnContainerWidthChanged(1400));
+
+        cut.WaitForAssertion(() => cut.Find("[data-region='inspector']").GetAttribute("data-presentation").Should().Be("docked"));
+        cut.Find(".tm-document-editor").HasAttribute("data-inspector-sheet").Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ReadableFloor_NeverSecondGuessesAForcedLayout_OrAPageFitModeOff()
+    {
+        var forced = RenderEditor(TmLayoutMode.Desktop);
+        await MarkCanvasReadyAsync(forced);
+        var observer = forced.FindComponent<TmLayoutObserver>();
+        await forced.InvokeAsync(() => observer.Instance.OnContainerWidthChanged(1048));
+        forced.Find(".tm-document-editor").HasAttribute("data-inspector-sheet").Should().BeFalse("a forced LayoutMode is the host's decision");
+
+        var off = await RenderAutoAtWidthAsync(1048, p => p.Add(c => c.PageFitMode, DocumentPageFitMode.Off));
+        off.Find(".tm-document-editor").HasAttribute("data-inspector-sheet").Should().BeFalse("without a fit there is no scale to protect");
+    }
+
+    [Fact]
+    public async Task Fit_AReaderZoomReportedByTheEngine_ShowsThePercentOnly()
+    {
+        var cut = RenderEditor(TmLayoutMode.Desktop);
+        await MarkCanvasReadyAsync(cut);
+
+        await PushViewStateAsync(cut, 120, "custom", "off");
+
+        cut.WaitForAssertion(() => cut.Find("[data-testid='document-status-zoom']").TextContent.Should().Contain("120%"));
+        cut.Find(".tm-document-editor").HasAttribute("data-page-fit").Should().BeFalse();
     }
 
     // ── header ─────────────────────────────────────────────────────────────

@@ -54,13 +54,14 @@ public class TmDocumentEditorModesTests : LocalizationTestBase
     }
 
     // The engine reports the print preview through the pushed UI state of the mini-toolbar callback, exactly as in the browser.
-    private async Task SetPrintPreviewAsync(IRenderedComponent<TmDocumentEditor> cut, bool active, int zoomPercent = 100, string zoomPreset = "fitWidth")
+    private async Task SetPrintPreviewAsync(IRenderedComponent<TmDocumentEditor> cut, bool active, int zoomPercent = 100, string zoomPreset = "fitWidth", string zoomAutoFit = "off")
     {
         var formatting = new TmDocumentCanvasEngineHost.CanvasEngineFormattingState
         {
             PrintPreviewActive = active,
             ZoomPercent = zoomPercent,
-            ZoomPreset = zoomPreset
+            ZoomPreset = zoomPreset,
+            ZoomAutoFit = zoomAutoFit
         };
         SetDocumentCanvasFormattingStateJson(JsonSerializer.Serialize(formatting, DocumentEditorJson.Options));
         var host = cut.FindComponent<TmDocumentCanvasEngineHost>();
@@ -518,6 +519,24 @@ public class TmDocumentEditorModesTests : LocalizationTestBase
 
         cut.WaitForAssertion(() => cut.Find("[data-testid='document-version-status']").TextContent.Should().Be("Document comparison failed."));
         cut.FindAll("[data-testid='document-diff-mode']").Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task PrintPreview_ClosedAfterAnAutomaticallyFittedEditingZoom_ResetsTheZoomInsteadOfPinningThePercent()
+    {
+        var cut = RenderEditor();
+        var host = cut.FindComponent<TmDocumentCanvasEngineHost>();
+        await cut.InvokeAsync(() => host.Instance.OnCanvasEngineReady("{}"));
+        // The engine's automatic fit left the page at 100 percent (the column holds it): the reader never chose a zoom.
+        await SetPrintPreviewAsync(cut, false, zoomPercent: 100, zoomPreset: "custom", zoomAutoFit: "narrow");
+        await SetPrintPreviewAsync(cut, true, zoomPercent: 100, zoomPreset: "custom", zoomAutoFit: "narrow");
+        cut.WaitForAssertion(() => cut.Find("[data-testid='document-print-preview-close']").Should().NotBeNull());
+
+        cut.Find("[data-testid='document-print-preview-close']").Click();
+
+        cut.WaitForAssertion(() => HasCanvasCommand("resetZoom").Should().BeTrue("the automatic fit comes back with the editing view"));
+        SetupDocumentCanvasModule().Invocations.Any(i => i.Identifier == "execCommand" && i.Arguments.Count >= 3 && i.Arguments[1]?.ToString() == "setZoom")
+            .Should().BeFalse("a zoom that was never the reader's is not pinned as one");
     }
 
     [Fact]

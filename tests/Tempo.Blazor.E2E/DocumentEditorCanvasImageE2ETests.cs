@@ -216,6 +216,41 @@ public sealed class DocumentEditorCanvasImageE2ETests : WasmTestBase
         TestContext.AddResultFile(manifestPath);
     }
 
+    [TestMethod]
+    [Description("Phase 11 (fix round): on a page the engine FITTED to a 700 px column the resize handle grows the image by the pointer distance divided by the scale (model space)")]
+    public async Task Phase11_CanvasImage_ResizeHandleOnAFittedPage_GrowsTheModelByTheModelSpaceDistance()
+    {
+        var context = await CreateContextAsync();
+        var page = await context.NewPageAsync();
+        await page.SetViewportSizeAsync(1440, 1000);
+        await OpenPhase15DocumentAsync(page);
+        var scale = await DocumentEditorFittedScaleE2EHelpers.NarrowTheColumnAndWaitForTheFitAsync(page);
+
+        var hit = await ReadObjectHitPointAsync(page, "canvas-image-phase15-main");
+        await page.Mouse.ClickAsync((float)hit.X, (float)hit.Y);
+        await WaitForObjectSelectionAsync(page, "canvas-image-phase15-main");
+        var before = await ReadObjectModelLayoutAsync(page, "canvas-image-phase15-main");
+
+        const double pointerDelta = 56;
+        await ResizeObjectFromHandleByMouseAsync(page, "canvas-image-phase15-main", "se", pointerDelta, pointerDelta * 0.6);
+        var after = await WaitForObjectModelLayoutAsync(
+            page,
+            "canvas-image-phase15-main",
+            minimumX: before.X - 1,
+            minimumY: before.Y - 1,
+            minimumWidth: before.Width + 8,
+            minimumHeight: before.Height + 4);
+
+        // the pointer travelled 56 screen px = 56 / scale px of the page (the image snaps to the grid of 8 on top of that)
+        var expected = pointerDelta / scale;
+        Assert.IsTrue(
+            Math.Abs((after.Width - before.Width) - expected) <= ImageSnapGrid + 6,
+            $"the image grew by {after.Width - before.Width:N1} model px, the pointer distance at scale {scale:N2} is {expected:N1}");
+        Assert.AreEqual(before.X, after.X, ImageSnapGrid, "the south-east handle keeps the top-left corner");
+
+        await page.Context.CloseAsync();
+    }
+
     private async Task OpenPhase15DocumentAsync(IPage page)
     {
         await GotoAppReadyAsync(page, $"{BaseUrl}/canvas-engine-host?documentId={Phase15DocumentId}&showToolbar=true&preferLocalDraft=false", WaitUntilState.DOMContentLoaded);

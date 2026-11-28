@@ -89,12 +89,15 @@ export function updateRulerOverlay(root, layout, model, viewState = {}) {
     ruler?.setAttribute?.('data-canvas-ruler-show-blocks', String(viewState.showBlocks === true));
     ruler?.setAttribute?.('data-canvas-ruler-show-nonprinting', String(viewState.showNonPrintingCharacters === true));
 
+    // A page the engine fitted smaller (or a reader zoomed) than itself: the ruler follows the scale, so it is never wider than the page column.
+    const scale = Math.max(0.01, Number(viewState.zoom?.scale) || 1);
     const track = root.querySelector?.('.tm-document-canvas-ruler__track');
     if (track) {
-        track.style.width = `${pageWidth}px`;
+        track.style.width = `${Math.round(pageWidth * scale * 100) / 100}px`;
     }
 
     root.__tmRulerState = {
+        scale,
         blockId: block?.id || '',
         marginLeftPx: marginLeft,
         marginRightPx: marginRight,
@@ -107,12 +110,12 @@ export function updateRulerOverlay(root, layout, model, viewState = {}) {
         track,
     };
 
-    setMarker(root, 'document-canvas-ruler-margin-left', marginLeft);
-    setMarker(root, 'document-canvas-ruler-first-line-indent', marginLeft + leftIndent + firstLineIndent);
-    setMarker(root, 'document-canvas-ruler-left-indent', marginLeft + leftIndent);
-    setMarker(root, 'document-canvas-ruler-right-indent', Math.max(0, pageWidth - marginRight - rightIndent));
-    setMarker(root, 'document-canvas-ruler-margin-right', Math.max(0, pageWidth - marginRight));
-    renderTabStops(root, props, marginLeft + leftIndent);
+    setMarker(root, 'document-canvas-ruler-margin-left', marginLeft, scale);
+    setMarker(root, 'document-canvas-ruler-first-line-indent', marginLeft + leftIndent + firstLineIndent, scale);
+    setMarker(root, 'document-canvas-ruler-left-indent', marginLeft + leftIndent, scale);
+    setMarker(root, 'document-canvas-ruler-right-indent', Math.max(0, pageWidth - marginRight - rightIndent), scale);
+    setMarker(root, 'document-canvas-ruler-margin-right', Math.max(0, pageWidth - marginRight), scale);
+    renderTabStops(root, props, marginLeft + leftIndent, scale);
 }
 
 export function syncBlockVisualization(canvasStack, layout, model, viewState = {}) {
@@ -176,18 +179,18 @@ function marker(doc, testId, type) {
     return item;
 }
 
-function setMarker(root, testId, x) {
+function setMarker(root, testId, x, scale = 1) {
     const item = root.querySelector?.(`[data-testid="${testId}"]`);
     if (!item) {
         return;
     }
 
     const value = Math.round((Number(x) || 0) * 100) / 100;
-    item.style.left = `${value}px`;
+    item.style.left = `${Math.round(value * scale * 100) / 100}px`;
     item.setAttribute('data-ruler-position', String(value));
 }
 
-function renderTabStops(root, props, baseX) {
+function renderTabStops(root, props, baseX, scale = 1) {
     const doc = root.ownerDocument;
     const track = root.querySelector?.('.tm-document-canvas-ruler__track');
     if (!doc || !track) {
@@ -208,7 +211,7 @@ function renderTabStops(root, props, baseX) {
         item.setAttribute('data-tab-position', String(stop.position));
         item.setAttribute('data-tab-alignment', stop.alignment);
         item.setAttribute('data-tab-leader', stop.leader);
-        item.style.left = `${Math.round((baseX + pointsToCssPixels(stop.position)) * 100) / 100}px`;
+        item.style.left = `${Math.round((baseX + pointsToCssPixels(stop.position)) * scale * 100) / 100}px`;
         item.style.width = stop.alignment === 'bar' ? '4px' : '13px';
         item.style.height = '13px';
         item.style.position = 'absolute';

@@ -55,6 +55,7 @@ export function buildFormattingState(formatting) {
         viewMode: view.viewMode || view.mode || 'print',
         zoomPercent: Number(view.zoomPercent || view.zoom?.percent || 100) || 100,
         zoomPreset: view.zoomPreset || view.zoom?.preset || 'custom',
+        zoomAutoFit: view.zoomAutoFit || view.zoom?.autoFit || 'off',
         toolbarHidden: view.toolbarHidden === true,
         printPreviewActive: view.printPreview?.active === true,
         image: f.image || null,

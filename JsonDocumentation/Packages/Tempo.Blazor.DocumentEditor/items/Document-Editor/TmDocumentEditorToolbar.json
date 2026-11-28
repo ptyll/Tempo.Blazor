@@ -1081,6 +1081,25 @@
       "type": "bool",
       "isRequired": false,
       "description": "The phone layout (decision G2: viewing plus light edits). The ribbon shows the Home, Insert, Review and View tabs; Math, Layout and References (equations, page layout, fields) are tablet-and-up, the \"More\" menu is a sheet and Save is the action bar's. The editor sets it from its own layout; defaults to false."
+    },
+    {
+      "name": "ZoomAutoFit",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"off\"",
+      "description": "The engine's automatic-fit state: off (the reader's zoom), narrow (Automatic) or always (Page width)."
+    },
+    {
+      "name": "ShowAutomaticZoom",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the View tab offers \"Automatic zoom\" (the editor's page fit mode is Auto)."
+    },
+    {
+      "name": "OnZoomAutomatic",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when \"Automatic zoom\" is requested: back to the configured automatic fit."
     }
   ]
 }

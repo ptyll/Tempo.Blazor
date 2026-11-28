@@ -1162,6 +1162,47 @@ public sealed class DocumentEditorCanvasShapesDrawingsE2ETests : WasmTestBase
         TestContext.AddResultFile(manifestPath);
     }
 
+    [TestMethod]
+    [Description("Phase 11 (fix round): on a page the engine FITTED to a 700 px column a shape follows the pointer - a 54 px drag moves it 54 / scale px in the model")]
+    public async Task Phase11_CanvasShape_DragOnAFittedPage_MovesTheModelByTheModelSpaceDistance()
+    {
+        var context = await CreateContextAsync();
+        var page = await context.NewPageAsync();
+        await page.SetViewportSizeAsync(1440, 1000);
+        await OpenPhaseE7DocumentAsync(page);
+
+        var shapeId = $"e7-fitted-rectangle-{Guid.NewGuid():N}";
+        var insert = await ExecuteCanvasCommandAsync(page, "insertShape", new
+        {
+            objectId = shapeId,
+            anchorBlockId = "canvas-shapes-after",
+            width = 148,
+            height = 86,
+            wrapMode = "InFrontOfText",
+            x = 82,
+            y = 438,
+            shape = new { preset = "rectangle", fill = new { color = "#dbeafe", opacity = 1 }, stroke = new { color = "#2563eb", width = 2 } },
+            altText = "E7 fitted-scale rectangle"
+        });
+        Assert.IsTrue(insert.Changed, insert.Debug);
+        await WaitForModelDrawingAsync(page, shapeId);
+        var scale = await DocumentEditorFittedScaleE2EHelpers.NarrowTheColumnAndWaitForTheFitAsync(page);
+
+        var before = await ReadObjectTransformAsync(page, shapeId);
+        const double pointerDelta = 54;
+        await DragCanvasObjectAsync(page, shapeId, pointerDelta, pointerDelta * 0.6);
+        await WaitForObjectTransformAtLeastAsync(page, shapeId, before.X + 20, before.Y + 8, before.Width, before.Height);
+        var after = await ReadObjectTransformAsync(page, shapeId);
+
+        var expected = pointerDelta / scale;
+        Assert.IsTrue(
+            Math.Abs((after.X - before.X) - expected) <= 12,
+            $"the shape moved {after.X - before.X:N1} model px, the pointer distance at scale {scale:N2} is {expected:N1} ({after.Debug})");
+        Assert.AreEqual(before.Width, after.Width, 0.5, "a move never resizes");
+
+        await page.Context.CloseAsync();
+    }
+
     private async Task OpenPhaseE7DocumentAsync(IPage page)
     {
         await GotoAppReadyAsync(page, $"{BaseUrl}/canvas-engine-host?documentId={PhaseE7DocumentId}&showToolbar=true&disableCollaboration=true");

@@ -855,11 +855,33 @@ public class TmDocumentEditorCssTests
     {
         var rules = CssRules.Parse(ReadComponentCss("_document-editor-sheets.css"));
 
-        CssRules.Body(rules, ".tm-document-editor[data-page-fit=\"true\"]:not([data-layout=\"desktop\"]) .tm-document-canvas-ruler-shell")
+        // Phase 11 (fix round): the stopgap hides the ruler of a fitted page in EVERY layout (a desktop fitted next to the docked inspector too).
+        CssRules.Body(rules, ".tm-document-editor[data-page-fit=\"true\"] .tm-document-canvas-ruler-shell")
             .Should().Contain("display: none");
+        ReadComponentCss("_document-editor-sheets.css").Should().NotContain("[data-page-fit=\"true\"]:not([data-layout=\"desktop\"])");
+        var sheets2 = ReadComponentCss("_document-editor-sheets.css");
+        var fittedStage = System.Text.RegularExpressions.Regex.Match(sheets2, @"@container tm-doc-editor \(width >= 768px\)\s*\{(?<body>.*?)\n\}", System.Text.RegularExpressions.RegexOptions.Singleline).Groups["body"].Value;
+        fittedStage.Should().Contain(".tm-document-editor[data-page-fit=\"true\"] .tm-document-canvas-engine-host__mount").And.Contain("var(--tm-space-3)",
+            "a fitted page takes back the stage padding from 768 px up; a phone's stage already pads by --tm-space-2 and is never made wider");
+        CssRules.Body(rules, ".tm-document-editor[data-layout=\"mobile\"] .tm-document-canvas-engine-host__mount")
+            .Should().Contain("padding-block-start: var(--tm-space-2)", "a phone shrinks the gutter above the page");
         var sheets = ReadComponentCss("_document-editor-sheets.css");
         sheets.Should().Contain(".tm-document-editor[data-layout=\"mobile\"] .tm-document-editor__status-bar-group--metrics")
             .And.Contain(".tm-document-editor[data-layout=\"mobile\"] .tm-document-editor__status-bar-group--controls");
+    }
+
+    [Fact]
+    public void SheetsCss_TheReadableFloorPresentsOnlyTheInspectorAsTheSheet_OnADesktopLayout()
+    {
+        // Decision DE-AUTO-FIT-READABLE-FLOOR: data-inspector-sheet keeps the desktop ribbon / navigation and drops only the inspector column.
+        var rules = CssRules.Parse(ReadComponentCss("_document-editor-sheets.css"));
+        var workspace = ".tm-document-editor[data-layout=\"desktop\"][data-inspector-sheet=\"true\"] .tm-document-editor__workspace";
+
+        CssRules.Body(rules, workspace).Should().Contain("grid-template-areas: \"nav doc\"");
+        CssRules.Body(rules, ".tm-document-editor[data-inspector-sheet=\"true\"] .tm-document-editor__workspace > [data-region=\"inspector\"]")
+            .Should().Contain("grid-area: doc").And.Contain("pointer-events: none");
+        CssRules.Body(rules, ".tm-document-editor[data-inspector-sheet=\"true\"] [data-region=\"inspector\"] > .tm-document-side-panel")
+            .Should().Contain("position: sticky").And.Contain("box-shadow: var(--tm-shadow-popover)");
     }
 
     [Fact]
@@ -952,8 +974,28 @@ public class TmDocumentEditorCssTests
         CssRules.Body(rules, ".tm-document-side-panel[data-tab-style=\"text\"]").Should().Contain("container: tm-doc-panel / inline-size");
         css.Should().Contain("@container tm-doc-panel (width < 23rem)");
         var dense = System.Text.RegularExpressions.Regex.Match(css, @"@container tm-doc-panel \(width < 23rem\)\s*\{(?<body>.*?)\n\}", System.Text.RegularExpressions.RegexOptions.Singleline).Groups["body"].Value;
-        dense.Should().Contain("padding-inline: calc(var(--tm-space-1) / 2)").And.Contain("font-size: var(--tm-font-size-xs)");
+        dense.Should().NotContain("font-size", "the tab keeps --tm-font-size-sm: a dock that still overflows scrolls instead of shrinking the type");
+        dense.Should().NotContain("padding-inline: calc(var(--tm-space-1) / 2)", "the tab keeps its --tm-space-2 gutter");
         CssRules.Body(rules, ".tm-document-editor__workspace").Should().Contain("--tm-document-inspector-width: clamp(22rem, 26cqw, 24rem)", "Properties, Comments, Revisions and Versions fit the dock without a sideways scroll");
+    }
+
+    [Fact]
+    public void SidePanelTextTabs_DropTheCountBadgeOnlyOnARealOverflow_OrBelowNineteenRem_SoTheFirstTabIsNeverHalfHidden()
+    {
+        // Phase 11 (fix round): the badge leaves the row (visually; the number stays in the accessible name of the tab) when side-panel-tabs.mjs publishes
+        // data-tabs-overflow - the row REALLY overflows with the badges shown - or when the dock is below 19 rem. The tab keeps --tm-space-2 and
+        // --tm-font-size-sm. Keyed on the panel's own size container, never on the viewport.
+        var css = ReadComponentCss("_document-editor.css");
+        var rules = CssRules.Parse(css);
+        var badge = ".tm-document-side-panel[data-tab-style=\"text\"] .tm-document-side-panel__tabs[data-tabs-overflow=\"true\"] .tm-document-side-panel__badge";
+
+        CssRules.Body(rules, badge).Should().Contain("clip-path: inset(50%)").And.NotContain("display: none");
+        CssRules.Body(rules, ".tm-document-side-panel[data-tab-style=\"text\"] .tm-document-side-panel__tabs[data-tabs-overflow=\"true\"] .tm-document-side-panel__tab")
+            .Should().Contain("padding-inline: var(--tm-space-1)").And.NotContain("font-size", "an overflowing row gives up the gutter, never the type size");
+        css.Should().NotContain("@container tm-doc-panel (width < 22rem)", "the unconditional 22 rem rule is gone");
+        var dense = System.Text.RegularExpressions.Regex.Match(css, @"@container tm-doc-panel \(width < 19rem\)\s*\{(?<body>.*?)\n\}", System.Text.RegularExpressions.RegexOptions.Singleline).Groups["body"].Value;
+        dense.Should().Contain(".tm-document-side-panel__badge").And.Contain("clip-path: inset(50%)").And.NotContain("display: none");
+        CssRules.Body(rules, ".tm-document-side-panel[data-tab-style=\"text\"] .tm-document-side-panel__tab").Should().Contain("padding-inline: var(--tm-space-2)").And.Contain("font-size: var(--tm-font-size-sm)");
     }
 
     [Fact]

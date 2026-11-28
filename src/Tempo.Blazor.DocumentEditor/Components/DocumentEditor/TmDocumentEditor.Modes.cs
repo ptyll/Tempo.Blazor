@@ -30,7 +30,7 @@ public partial class TmDocumentEditor
     // (the diff is text, the editing commands act on the canvas behind it), then runs.
     private static readonly HashSet<string> ViewOnlyCommands = new(StringComparer.OrdinalIgnoreCase)
     {
-        "setZoom", "fitWidth", "fitPage", "zoomIn", "zoomOut", "zoom", "zoomPageWidth",
+        "setZoom", "fitWidth", "fitPage", "zoomIn", "zoomOut", "zoom", "zoomPageWidth", "resetZoom",
         "openPrintPreview", "closePrintPreview", "printDocument", "fullscreen",
         "toggleRuler", "showRuler", "toggleNonPrintingCharacters", "showBlocks",
         "printLayout", "webLayout", "readingView", "outlineView", "commandPalette", "save", "openVersions", "openComments", "openRevisions",
@@ -69,6 +69,21 @@ public partial class TmDocumentEditor
         if (_zoomBeforePrintPreview is int zoom)
         {
             _zoomBeforePrintPreview = null;
+            var autoFit = _autoFitBeforePrintPreview;
+            _autoFitBeforePrintPreview = null;
+            if (!string.IsNullOrEmpty(autoFit) && !string.Equals(autoFit, "off", StringComparison.Ordinal))
+            {
+                // The zoom the page had was the engine's automatic fit, never the reader's choice: the editing view gets the fit back, not a pinned percent.
+                CloseFieldPopoversForViewportChange();
+                _zoomPageWidth = false;
+                if (!await RouteToCanvasEngineAsync("resetZoom", null, focus: true))
+                {
+                    await InvokeAsync(StateHasChanged);
+                }
+
+                return;
+            }
+
             await SetZoomPercentAsync(zoom);
         }
     }
@@ -96,7 +111,9 @@ public partial class TmDocumentEditor
     private IEnumerable<int> PrintPreviewZoomOptions
         => PrintPreviewZoomPresets.Contains(_zoomPercent) ? PrintPreviewZoomPresets : PrintPreviewZoomPresets.Append(_zoomPercent).Order();
 
-    private string PrintPreviewZoomValue => _zoomPageWidth ? "fit" : _zoomPercent.ToString(CultureInfo.InvariantCulture);
+    private string PrintPreviewZoomValue => ZoomFittedAutomatically
+        ? "auto"
+        : _zoomPageWidth ? "fit" : _zoomPercent.ToString(CultureInfo.InvariantCulture);
 
     // "A4 (210 x 297 mm)": the page size is stored in points, the paper is read in millimetres.
     private string PrintPreviewPaperText
@@ -130,12 +147,18 @@ public partial class TmDocumentEditor
             : Task.CompletedTask;
     }
 
+    // The steps snap to the grid of the step, like the status bar: from a fitted 62 percent the next step is 70 / 60.
     private Task PrintPreviewStepZoomAsync(int delta)
-        => SetZoomPercentAsync(Math.Clamp(_zoomPercent + delta, PrintPreviewZoomMin, PrintPreviewZoomMax));
+        => SetZoomPercentAsync(DocumentZoomMath.Step(_zoomPercent, Math.Abs(delta), PrintPreviewZoomMin, PrintPreviewZoomMax, up: delta > 0));
 
     private Task PrintPreviewZoomSelectAsync(ChangeEventArgs args)
     {
         var value = args.Value?.ToString();
+        if (string.Equals(value, "auto", StringComparison.Ordinal))
+        {
+            return SetZoomAutomaticAsync();
+        }
+
         if (string.Equals(value, "fit", StringComparison.Ordinal))
         {
             return SetZoomPageWidthAsync();
@@ -168,7 +191,7 @@ public partial class TmDocumentEditor
             DocumentVersionText.Title(Loc, request.Compare));
         // A phone's sheet covers the whole page and a tablet's side sheet overlays the right half of it: the comparison it just asked for is shown only once
         // the sheet has made room for it (a desktop's docked inspector steps aside by itself).
-        if (IsSheetLayout && _sidePanelOpen)
+        if (InspectorIsSheet && _sidePanelOpen)
         {
             CloseSidePanel();
         }

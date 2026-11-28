@@ -48,8 +48,19 @@ public sealed class DocumentEditorResponsiveShellE2ETests : WasmTestBase
             // The regions are laid out side by side exactly when the container is wide enough, and never overlap.
             if (expected == "desktop")
             {
-                Assert.IsTrue(probe.NavRight <= probe.DocLeft + 1 && probe.DocRight <= probe.InspectorLeft + 1,
-                    $"{name}: navigation | document | inspector sit in one row ({probe.NavRight}/{probe.DocLeft}/{probe.DocRight}/{probe.InspectorLeft})");
+                // Phase 11 (decision DE-AUTO-FIT-READABLE-FLOOR): a desktop container whose docked inspector would squeeze the fitted page below 75 percent
+                // (the demo's 1046 px at a 1440 viewport) presents the inspector as the side sheet over the document, like a tablet.
+                var sheet = await page.EvaluateAsync<bool>("() => document.querySelector('.tm-document-editor').getAttribute('data-inspector-sheet') === 'true'");
+                if (sheet)
+                {
+                    Assert.IsTrue(probe.NavRight <= probe.DocLeft + 1, $"{name}: navigation | document sit in one row");
+                    Assert.IsTrue(probe.InspectorLeft >= probe.DocLeft - 1 && probe.InspectorLeft <= probe.DocRight + 1, $"{name}: the sheet shares the document's cell");
+                }
+                else
+                {
+                    Assert.IsTrue(probe.NavRight <= probe.DocLeft + 1 && probe.DocRight <= probe.InspectorLeft + 1,
+                        $"{name}: navigation | document | inspector sit in one row ({probe.NavRight}/{probe.DocLeft}/{probe.DocRight}/{probe.InspectorLeft})");
+                }
             }
             else if (expected == "tablet")
             {
@@ -335,9 +346,16 @@ public sealed class DocumentEditorResponsiveShellE2ETests : WasmTestBase
     [Description("F6 lands on the SELECTED ribbon tab, shows a visible ring and keeps the focused control inside the viewport and its region")]
     public async Task F6_IntoTheRibbon_FocusesTheSelectedTab_WithAVisibleRing()
     {
-        var (page, errors) = await OpenAsync(HistoryDocumentId, 1440, 900, touch: false);
+        // 1600: a docked inspector (the 1440 viewport's 1046 px editor presents it as a closed sheet, see the readable floor)
+        var (page, errors) = await OpenAsync(HistoryDocumentId, 1600, 900, touch: false);
+        // The docked inspector has rendered its tabs and the host has learned the engine's fit (its debounced report re-renders the chrome): F6 into
+        // the inspector needs a settled page to land on.
+        await Assertions.Expect(page.GetByTestId("document-side-panel-tab-comments")).ToBeVisibleAsync(new() { Timeout = 15_000 });
+        await Assertions.Expect(page.GetByTestId("document-status-zoom")).ToContainTextAsync("Fit ", new() { Timeout = 15_000 });
         await page.GetByTestId("document-ribbon-tab-review").ClickAsync();
-        await page.GetByTestId("document-canvas-engine-host").ClickAsync();
+        // Focus the document without clicking into it: a click at the host's centre now lands on a selectable object of the fitted page, whose inspector
+        // context opens a moment later and takes the first F6.
+        await page.GetByTestId("document-canvas-hidden-input").FocusAsync();
 
         // doc -> inspector -> header -> ribbon
         for (var i = 0; i < 3; i++)
@@ -362,12 +380,13 @@ public sealed class DocumentEditorResponsiveShellE2ETests : WasmTestBase
         Assert.AreEqual("true", ring[2], "the focused control is inside the viewport");
         Assert.AreEqual("true", ring[3], "the focused control is inside its region");
 
-        await page.GetByTestId("document-canvas-engine-host").ClickAsync();
+        await page.GetByTestId("document-canvas-hidden-input").FocusAsync();
         await WaitForPredicateAsync(page, "() => !document.querySelector('[data-region-focus]')", 5_000);
 
-        // the inspector selects its active tab too
+        // the inspector selects its active tab too (from the top of the page: the F6 focus scrolled it, and the sticky ribbon would cover the tab)
+        await page.EvaluateAsync("() => window.scrollTo(0, 0)");
         await page.GetByTestId("document-side-panel-tab-comments").ClickAsync();
-        await page.GetByTestId("document-canvas-engine-host").ClickAsync();
+        await page.GetByTestId("document-canvas-hidden-input").FocusAsync();
         await page.Keyboard.PressAsync("F6");
         Assert.AreEqual("document-side-panel-tab-comments", await page.EvaluateAsync<string>("() => document.activeElement?.getAttribute('data-testid')"));
 
@@ -442,6 +461,411 @@ public sealed class DocumentEditorResponsiveShellE2ETests : WasmTestBase
         Assert.IsTrue(probe[2] >= probe[0], $"the sticky column's top ({probe[2]}) clears the ribbon ({probe[0]})");
 
         AssertNoClientErrors(errors, "sticky navigation");
+        await page.Context.CloseAsync();
+    }
+
+    // ── phase 11: the engine fits every narrow document column ─────────────────────────────────────────────────────
+
+    private sealed record FitProbe(
+        string Preset, string AutoFit, double Percent, double PageLeft, double PageRight, double HostLeft, double HostRight,
+        double HostScrollWidth, double HostClientWidth, string Layout, double EditorWidth);
+
+    private static async Task<FitProbe> ReadFitAsync(IPage page)
+    {
+        var json = await page.EvaluateAsync<System.Text.Json.JsonElement>(
+            """
+            () => {
+                const root = document.querySelector('[data-testid="document-canvas-engine-root"]');
+                const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
+                const pageEl = document.querySelector('[data-testid="document-canvas-page"]');
+                const h = host.getBoundingClientRect();
+                const p = pageEl.getBoundingClientRect();
+                const editor = document.querySelector('.tm-document-editor');
+                return {
+                    preset: root.getAttribute('data-canvas-zoom-preset') || '',
+                    autoFit: root.getAttribute('data-canvas-zoom-auto-fit') || '',
+                    percent: Number(root.getAttribute('data-canvas-zoom-percent') || '0'),
+                    pageLeft: p.left, pageRight: p.right, hostLeft: h.left, hostRight: h.left + host.clientWidth,
+                    hostScrollWidth: host.scrollWidth, hostClientWidth: host.clientWidth,
+                    layout: editor.getAttribute('data-layout') || '', editorWidth: editor.clientWidth,
+                };
+            }
+            """);
+        return new FitProbe(
+            json.GetProperty("preset").GetString()!, json.GetProperty("autoFit").GetString()!, json.GetProperty("percent").GetDouble(),
+            json.GetProperty("pageLeft").GetDouble(), json.GetProperty("pageRight").GetDouble(),
+            json.GetProperty("hostLeft").GetDouble(), json.GetProperty("hostRight").GetDouble(),
+            json.GetProperty("hostScrollWidth").GetDouble(), json.GetProperty("hostClientWidth").GetDouble(),
+            json.GetProperty("layout").GetString()!, json.GetProperty("editorWidth").GetDouble());
+    }
+
+    // The demo layout caps its content at ~1280 px, so the document column never exceeds ~770 px there: lifting the cap on the editor's ancestors
+    // lets the column grow past the page, the situation a wide host application has.
+    private static Task LiftDemoWidthCapAsync(IPage page)
+        => page.EvaluateAsync(
+            """
+            () => {
+                for (let el = document.querySelector('.tm-document-editor-host'); el && el !== document.documentElement; el = el.parentElement) {
+                    el.style.maxWidth = 'none';
+                    el.style.maxInlineSize = 'none';
+                }
+            }
+            """);
+
+    private static Task WaitForZoomSettledAsync(IPage page, string predicate)
+        => WaitForPredicateAsync(page, $"() => {{ const r = document.querySelector('[data-testid=\"document-canvas-engine-root\"]'); const p = Number(r?.getAttribute('data-canvas-zoom-percent') || '0'); const preset = r?.getAttribute('data-canvas-zoom-preset'); return {predicate}; }}", 15_000);
+
+    private static void AssertPageInsideColumn(FitProbe probe, string name)
+    {
+        Assert.IsTrue(probe.PageRight <= probe.HostRight + 1, $"{name}: the page right edge ({probe.PageRight}) is inside the column ({probe.HostRight}), zoom {probe.Percent}% {probe.Preset}/{probe.AutoFit}");
+        Assert.IsTrue(probe.PageLeft >= probe.HostLeft - 1, $"{name}: the page left edge ({probe.PageLeft}) is inside the column ({probe.HostLeft})");
+        Assert.IsTrue(probe.HostScrollWidth <= probe.HostClientWidth + 1, $"{name}: no horizontal scroll in the document column ({probe.HostScrollWidth} > {probe.HostClientWidth})");
+    }
+
+    [TestMethod]
+    [Description("1440 viewport with the demo sidebar (a 1046 px editor): the readable floor presents the inspector as the sheet, the page holds its 100 percent and nothing scrolls sideways")]
+    public async Task ReadableFloor_At1440WithTheDemoSidebar_PresentsTheInspectorAsTheSheet_AndKeepsThePageReadable()
+    {
+        var (page, errors) = await OpenAsync(HistoryDocumentId, 1440, 900, touch: false);
+        await WaitForZoomSettledAsync(page, "p > 0");
+
+        var probe = await ReadFitAsync(page);
+        Assert.AreEqual("desktop", probe.Layout, "the ribbon and the navigation stay the desktop's");
+        Assert.IsTrue(probe.EditorWidth is > 1024 and < 1136, $"this spec needs the demo's narrow desktop container ({probe.EditorWidth})");
+        Assert.AreEqual("true", await page.Locator(".tm-document-editor").GetAttributeAsync("data-inspector-sheet"), "the docked inspector would squeeze the page below 75 percent");
+        Assert.AreEqual("sheet", await page.Locator("[data-region='inspector']").GetAttributeAsync("data-presentation"));
+        Assert.IsTrue(probe.Percent >= 75, $"the page stays at least at the readable floor ({probe.Percent}%)");
+        AssertPageInsideColumn(probe, "1440 sheet");
+
+        AssertNoClientErrors(errors, "readable floor 1440");
+        await page.Context.CloseAsync();
+    }
+
+    [TestMethod]
+    [Description("1600 viewport with the demo sidebar (a docked inspector): the page is fitted into the narrow doc column, nothing scrolls sideways and a click 10 px from the right text edge lands on the last characters")]
+    public async Task AutoFit_At1600WithTheDemoSidebar_FitsThePage_AndAClickAtTheRightTextEdgeHitsTheText()
+    {
+        var (page, errors) = await OpenAsync(HistoryDocumentId, 1600, 900, touch: false);
+        await WaitForZoomSettledAsync(page, "preset === 'fitWidth' || p === 100");
+
+        var probe = await ReadFitAsync(page);
+        Assert.AreEqual("narrow", probe.AutoFit, "the default mode is the engine's narrow-only fit");
+        Assert.IsTrue(probe.HostClientWidth < 842, $"this spec needs a doc column narrower than the page (A4 + gutters = 842), got {probe.HostClientWidth} in an editor of {probe.EditorWidth}");
+        Assert.AreEqual("fitWidth", probe.Preset, "the page is fitted to the narrow column");
+        Assert.IsTrue(probe.Percent < 100 && probe.Percent >= 25, $"the fit shrinks the page ({probe.Percent}%)");
+        AssertPageInsideColumn(probe, "1440");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => document.querySelector('.tm-document-editor').hasAttribute('data-page-fit')"), "data-page-fit follows the engine's report");
+
+        // A fit at the top of the document keeps the reader at the top: the window is not scrolled and page one starts below the sticky ribbon.
+        var top = await page.EvaluateAsync<System.Text.Json.JsonElement>(
+            """
+            () => ({
+                scrollY: Math.round(window.scrollY),
+                pageTop: document.querySelector('[data-testid="document-canvas-page"][data-page-index="0"]').getBoundingClientRect().top,
+                ribbonBottom: document.querySelector('[data-focus-region="ribbon"]').getBoundingClientRect().bottom,
+            })
+            """);
+        Assert.AreEqual(0, top.GetProperty("scrollY").GetInt32(), "the fit does not scroll the window away from the top");
+        Assert.IsTrue(top.GetProperty("pageTop").GetDouble() >= top.GetProperty("ribbonBottom").GetDouble() - 1,
+            $"page one starts below the ribbon (page top {top.GetProperty("pageTop").GetDouble():0.#}, ribbon bottom {top.GetProperty("ribbonBottom").GetDouble():0.#})");
+
+        // The rightmost word of the first page: a click 10 px inside its right edge hits its last characters (before the fit this point was clipped away).
+        var target = await page.EvaluateAsync<System.Text.Json.JsonElement>(
+            """
+            () => {
+                const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
+                const hostRight = host.getBoundingClientRect().left + host.clientWidth;
+                const rects = [...document.querySelectorAll('[data-canvas-text-rect]')]
+                    .map(el => ({ el, r: el.getBoundingClientRect() }))
+                    .filter(item => item.r.width > 30 && item.r.right <= hostRight && item.el.getAttribute('data-canvas-text').trim().length > 3)
+                    .sort((a, b) => b.r.right - a.r.right);
+                const best = rects[0];
+                return {
+                    x: best.r.right - 10, y: best.r.top + best.r.height / 2,
+                    blockId: best.el.getAttribute('data-block-id'),
+                    start: Number(best.el.getAttribute('data-canvas-start-offset')), end: Number(best.el.getAttribute('data-canvas-end-offset')),
+                    text: best.el.getAttribute('data-canvas-text'),
+                };
+            }
+            """);
+        await page.Mouse.ClickAsync((float)target.GetProperty("x").GetDouble(), (float)target.GetProperty("y").GetDouble());
+        await WaitForPredicateAsync(page,
+            $"() => document.querySelector('[data-testid=\"document-canvas-engine-root\"]')?.getAttribute('data-canvas-selection-focus-block-id') === '{target.GetProperty("blockId").GetString()}'", 10_000);
+        var offset = await page.EvaluateAsync<int>("() => Number(document.querySelector('[data-testid=\"document-canvas-engine-root\"]').getAttribute('data-canvas-selection-focus-offset') || '-1')");
+        var end = target.GetProperty("end").GetInt32();
+        Assert.IsTrue(offset <= end && offset >= end - 4,
+            $"the caret lands at the end of the word '{target.GetProperty("text").GetString()}' (offset {offset}, word end {end})");
+
+        AssertNoClientErrors(errors, "auto fit 1600");
+        await page.Context.CloseAsync();
+    }
+
+    [TestMethod]
+    [Description("Resizing the window to 1920 releases the fit (100 percent), and shrinking it again fits once more")]
+    public async Task AutoFit_ResizeTo1920_GoesBackToOneHundredPercent_AndFitsAgainWhenNarrow()
+    {
+        var (page, errors) = await OpenAsync(HistoryDocumentId, 1600, 900, touch: false);
+        await WaitForZoomSettledAsync(page, "preset === 'fitWidth'");
+
+        await LiftDemoWidthCapAsync(page);
+        await page.SetViewportSizeAsync(1920, 1080);
+        await WaitForZoomSettledAsync(page, "p === 100 && preset === 'custom'");
+        var wide = await ReadFitAsync(page);
+        Assert.AreEqual("narrow", wide.AutoFit, "the automatic mode survives the release of the fit");
+        AssertPageInsideColumn(wide, "1920");
+        // The engine reports its own re-fit to .NET debounced (trailing ~150 ms), so the root learns it a moment after the engine's own attribute.
+        await WaitForPredicateAsync(page, "() => !document.querySelector('.tm-document-editor').hasAttribute('data-page-fit')", 10_000);
+
+        await page.SetViewportSizeAsync(1600, 900);
+        await WaitForZoomSettledAsync(page, "preset === 'fitWidth'");
+        AssertPageInsideColumn(await ReadFitAsync(page), "back at 1600");
+
+        AssertNoClientErrors(errors, "auto fit resize");
+        await page.Context.CloseAsync();
+    }
+
+    [TestMethod]
+    [Description("A reader zoom of 120 percent wins: a later resize keeps it, and Page width brings the fit back")]
+    public async Task AutoFit_ReaderZoomWins_OverAResize_AndPageWidthBringsTheFitBack()
+    {
+        var (page, errors) = await OpenAsync(HistoryDocumentId, 1920, 1080, touch: false);
+        await LiftDemoWidthCapAsync(page);
+        await WaitForZoomSettledAsync(page, "p === 100");
+        // The lifted cap lets the column grow past the page: the engine released its fit, and the host learns that (debounced) a moment later - the label
+        // says "100%" once it does, and the buttons step from what the label says.
+        await Assertions.Expect(page.GetByTestId("document-status-zoom")).ToContainTextAsync("100%", new() { Timeout = 10_000 });
+        await page.GetByTestId("document-status-zoom-in").ClickAsync();
+        await WaitForZoomSettledAsync(page, "p === 110");
+        await page.GetByTestId("document-status-zoom-in").ClickAsync();
+        await WaitForZoomSettledAsync(page, "p === 120");
+        Assert.AreEqual("off", (await ReadFitAsync(page)).AutoFit, "an explicit zoom switches the automatic fit off");
+
+        var widthBefore = await page.EvaluateAsync<double>("() => document.querySelector('[data-testid=\"document-canvas-engine-host\"]').clientWidth");
+        await page.SetViewportSizeAsync(1300, 900);
+        // No fixed pause: the column really changed, then two animation frames let the engine's observer (one fit per frame) have its say.
+        await WaitForPredicateAsync(page, $"() => document.querySelector('[data-testid=\"document-canvas-engine-host\"]').clientWidth !== {widthBefore.ToString(System.Globalization.CultureInfo.InvariantCulture)}", 10_000);
+        await page.EvaluateAsync("() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))");
+        var after = await ReadFitAsync(page);
+        Assert.AreEqual(120, after.Percent, "the reader's zoom survives the resize");
+        Assert.AreEqual("off", after.AutoFit);
+
+        await page.GetByTestId("document-ribbon-tab-view").ClickAsync();
+        await ClickRibbonAsync(page, "document-zoom-page-width");
+        await WaitForZoomSettledAsync(page, "preset === 'fitWidth'");
+        var fitted = await ReadFitAsync(page);
+        Assert.AreEqual("always", fitted.AutoFit, "the explicit fit follows the column again");
+        AssertPageInsideColumn(fitted, "page width");
+
+        AssertNoClientErrors(errors, "auto fit reader zoom");
+        await page.Context.CloseAsync();
+    }
+
+    [TestMethod]
+    [Description("Tablet 820 x 1180 touch: the page is inside the column, no sideways scrolling")]
+    public async Task AutoFit_OnATablet820_KeepsThePageInsideTheColumn()
+    {
+        var (page, errors) = await OpenAsync(HistoryDocumentId, 820, 1180, touch: true);
+        await WaitForZoomSettledAsync(page, "preset === 'fitWidth'");
+
+        var probe = await ReadFitAsync(page);
+        Assert.AreEqual("tablet", probe.Layout);
+        AssertPageInsideColumn(probe, "tablet 820");
+        Assert.IsTrue(probe.Percent < 100, $"a 820 px tablet fits the 794 px page plus gutters ({probe.Percent}%)");
+
+        AssertNoClientErrors(errors, "auto fit tablet");
+        await page.Context.CloseAsync();
+    }
+
+    [TestMethod]
+    [Description("A slow resize of 20 steps of 5 px never makes the zoom oscillate: it only ever shrinks as the column shrinks")]
+    public async Task AutoFit_SlowResize_DoesNotOscillate()
+    {
+        var (page, errors) = await OpenAsync(HistoryDocumentId, 1600, 900, touch: false);
+        // The docked inspector must hold over the whole range (the readable floor turns it into a sheet below ~1136 px of the editor and the page then
+        // GROWS): aim the editor at 1260 px so the 20 steps of 5 px end at 1160.
+        var container = await page.EvaluateAsync<double>("() => document.querySelector('.tm-document-editor').clientWidth");
+        var startViewport = (int)Math.Round(1600 + (1260 - container));
+        var hostBefore = await page.EvaluateAsync<double>("() => document.querySelector('[data-testid=\"document-canvas-engine-host\"]').clientWidth");
+        await page.SetViewportSizeAsync(startViewport, 900);
+        if (startViewport != 1600)
+        {
+            await WaitForPredicateAsync(page, $"() => document.querySelector('[data-testid=\"document-canvas-engine-host\"]').clientWidth !== {hostBefore.ToString(System.Globalization.CultureInfo.InvariantCulture)}", 10_000);
+        }
+
+        await page.EvaluateAsync("() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve))))");
+        await WaitForZoomSettledAsync(page, "preset === 'fitWidth'");
+        var startProbe = await ReadFitAsync(page);
+        Assert.AreEqual("fitWidth", startProbe.Preset, "the spec starts with a FITTED page");
+        Assert.AreEqual("narrow", startProbe.AutoFit);
+        await page.EvaluateAsync(
+            """
+            () => {
+                const root = document.querySelector('[data-testid="document-canvas-engine-root"]');
+                window.__zoomLog = [Number(root.getAttribute('data-canvas-zoom-percent'))];
+                new MutationObserver(() => window.__zoomLog.push(Number(root.getAttribute('data-canvas-zoom-percent'))))
+                    .observe(root, { attributes: true, attributeFilter: ['data-canvas-zoom-percent'] });
+            }
+            """);
+
+        for (var step = 1; step <= 20; step++)
+        {
+            await page.SetViewportSizeAsync(startViewport - step * 5, 900);
+            await page.WaitForTimeoutAsync(120);
+        }
+
+        await page.WaitForTimeoutAsync(500);
+        var log = await page.EvaluateAsync<double[]>("() => window.__zoomLog");
+        var changes = log.Zip(log.Skip(1), (a, b) => b - a).Count(d => d != 0);
+        Assert.IsTrue(changes <= 20, $"at most one zoom change per resize step ({changes}): {string.Join(",", log)}");
+        for (var i = 1; i < log.Length; i++)
+        {
+            Assert.IsTrue(log[i] <= log[i - 1], $"the zoom never grows while the column shrinks: {string.Join(",", log)}");
+        }
+
+        var endProbe = await ReadFitAsync(page);
+        Assert.IsTrue(startProbe.HostClientWidth - endProbe.HostClientWidth >= 50, $"the column really shrank ({startProbe.HostClientWidth} -> {endProbe.HostClientWidth})");
+        Assert.IsTrue(endProbe.Percent < startProbe.Percent, $"and the fit followed it ({startProbe.Percent}% -> {endProbe.Percent}%)");
+        AssertPageInsideColumn(endProbe, "after the slow resize");
+        AssertNoClientErrors(errors, "auto fit slow resize");
+        await page.Context.CloseAsync();
+    }
+
+    [TestMethod]
+    [Description("Reset zoom: after a reader zoom the status-bar menu entry Automatic and Ctrl+0 return to the automatic fit and the label reads Fit again; a fitted page hides the ruler")]
+    public async Task AutoFit_ResetZoom_FromTheMenuAndCtrlZero_ReturnsToTheAutomaticFit()
+    {
+        var (page, errors) = await OpenAsync(HistoryDocumentId, 1600, 900, touch: false);
+        await WaitForZoomSettledAsync(page, "preset === 'fitWidth'");
+        var fitted = await ReadFitAsync(page);
+        Assert.AreEqual("narrow", fitted.AutoFit);
+        await Assertions.Expect(page.GetByTestId("document-status-zoom")).ToContainTextAsync("Fit ", new() { Timeout = 10_000 });
+        Assert.AreEqual(0, await page.Locator(".tm-document-canvas-ruler-shell:visible").CountAsync(), "a fitted page hides the ruler in every layout");
+
+        // The first step lands on the grid of 10 above the fitted value, and it is the reader's zoom now.
+        await page.GetByTestId("document-status-zoom-in").ClickAsync();
+        await WaitForZoomSettledAsync(page, "preset === 'custom'");
+        var stepped = await ReadFitAsync(page);
+        Assert.AreEqual("off", stepped.AutoFit);
+        Assert.AreEqual(0, stepped.Percent % 10, $"the step snaps to the grid ({fitted.Percent}% -> {stepped.Percent}%)");
+        await Assertions.Expect(page.GetByTestId("document-status-zoom")).Not.ToContainTextAsync("Fit ");
+
+        await page.Locator("[data-testid='document-status-zoom'] .tm-dropdown-trigger").ClickAsync();
+        await page.GetByTestId("document-status-zoom-auto").ClickAsync();
+        await WaitForZoomSettledAsync(page, "preset === 'fitWidth'");
+        var reset = await ReadFitAsync(page);
+        Assert.AreEqual("narrow", reset.AutoFit, "Automatic is back");
+        Assert.AreEqual(fitted.Percent, reset.Percent, 1.0);
+        await Assertions.Expect(page.GetByTestId("document-status-zoom")).ToContainTextAsync("Fit ", new() { Timeout = 10_000 });
+
+        // Ctrl+0 in the document is the same command.
+        await page.GetByTestId("document-status-zoom-in").ClickAsync();
+        await WaitForZoomSettledAsync(page, "preset === 'custom'");
+        await page.GetByTestId("document-canvas-engine-host").ClickAsync();
+        await page.Keyboard.PressAsync("Control+0");
+        await WaitForZoomSettledAsync(page, "preset === 'fitWidth'");
+        Assert.AreEqual("narrow", (await ReadFitAsync(page)).AutoFit);
+
+        AssertNoClientErrors(errors, "reset zoom");
+        await page.Context.CloseAsync();
+    }
+
+    [TestMethod]
+    [Description("A re-fit keeps the reader's place: on a multi-page document scrolled to page 3 a window resize moves the block at the top by no more than 24 px")]
+    public async Task AutoFit_ReFit_KeepsTheReadingPosition_OnAMultiPageDocument()
+    {
+        var context = await CreateContextAsync(ContextOptions(1800, 900, touch: false));
+        var page = await context.NewPageAsync();
+        var errors = new List<string>();
+        page.PageError += (_, message) => errors.Add($"pageerror: {message}");
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?documentId=large-perf-1000", WaitUntilState.DOMContentLoaded);
+        await WaitForPredicateAsync(page, """
+            () => document.querySelector('[data-testid="document-canvas-engine-host"][data-canvas-engine-ready="true"]')
+                && Number(document.querySelector('[data-testid="document-canvas-engine-root"]')?.getAttribute('data-canvas-estimated-page-count') || '0') >= 4
+            """, 90_000);
+
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-canvas-engine-root\"]')?.getAttribute('data-canvas-layout-complete') === 'true'", 90_000);
+        // Wheel the document (whatever scrolls - the window or the canvas host) until page 3 is mounted and sits near the top of the view.
+        await page.Mouse.MoveAsync(700, 500);
+        for (var i = 0; i < 30; i++)
+        {
+            var onPageThree = await page.EvaluateAsync<bool>(
+                """
+                () => {
+                    const pageEl = document.querySelector('[data-testid="document-canvas-page"][data-page-index="2"]');
+                    return !!pageEl && pageEl.getBoundingClientRect().top < 300;
+                }
+                """);
+            if (onPageThree)
+            {
+                break;
+            }
+
+            await page.Mouse.WheelAsync(0, 600);
+            await page.EvaluateAsync("() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))");
+        }
+
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => !!document.querySelector('[data-testid=\"document-canvas-page\"][data-page-index=\"2\"]')"), "the spec reads page 3 of the document");
+
+        // The reader's place: the page under the bottom edge of the sticky ribbon and how far down that page the line sits (a fraction of the page, so it
+        // survives a change of the scale). After the re-fit the same fraction of the same page must be at the same line, within 24 px.
+        const string readPlace = """
+            (anchor) => {
+                const line = document.querySelector('[data-focus-region="ribbon"]').getBoundingClientRect().bottom + 8;
+                const pages = [...document.querySelectorAll('[data-testid="document-canvas-page"]')].map(el => ({ index: el.getAttribute('data-page-index'), r: el.getBoundingClientRect() }));
+                const hit = anchor ? pages.find(p => p.index === anchor.index) : pages.find(p => p.r.top <= line && p.r.bottom > line);
+                return hit ? { index: hit.index, line, top: hit.r.top, height: hit.r.height } : null;
+            }
+            """;
+        var before = await page.EvaluateAsync<System.Text.Json.JsonElement>($"() => ({readPlace})(null)");
+        Assert.AreNotEqual(System.Text.Json.JsonValueKind.Null, before.ValueKind, "a page sits under the ribbon before the re-fit");
+        var pageIndex = before.GetProperty("index").GetString()!;
+        var fraction = (before.GetProperty("line").GetDouble() - before.GetProperty("top").GetDouble()) / before.GetProperty("height").GetDouble();
+        var percentBefore = await page.EvaluateAsync<double>("() => Number(document.querySelector('[data-testid=\"document-canvas-engine-root\"]').getAttribute('data-canvas-zoom-percent'))");
+
+        await page.SetViewportSizeAsync(1600, 900);
+        await WaitForPredicateAsync(page, $"() => Number(document.querySelector('[data-testid=\"document-canvas-engine-root\"]').getAttribute('data-canvas-zoom-percent')) < {percentBefore.ToString(System.Globalization.CultureInfo.InvariantCulture)}", 15_000);
+        await page.EvaluateAsync("() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve))))");
+
+        var after = await page.EvaluateAsync<System.Text.Json.JsonElement>($"() => ({readPlace})({{ index: '{pageIndex}' }})");
+        Assert.AreNotEqual(System.Text.Json.JsonValueKind.Null, after.ValueKind, $"page {pageIndex} is still mounted after the re-fit");
+        var lineAfter = after.GetProperty("top").GetDouble() + fraction * after.GetProperty("height").GetDouble();
+        var drift = Math.Abs(lineAfter - after.GetProperty("line").GetDouble());
+        Assert.IsTrue(drift <= 24, $"the same place of the document stays under the ribbon: it drifted {drift:0.#} px (page {pageIndex}, fraction {fraction:0.###})");
+
+        AssertNoClientErrors(errors, "reading position");
+        await page.Context.CloseAsync();
+    }
+
+    [TestMethod]
+    [Description("The docked inspector's text tabs sit in one row at ~1080 px and the active tab is entirely visible, the first tab included")]
+    public async Task InspectorTabs_At1080_AreAllFullyVisible_NoHalfHiddenFirstTab()
+    {
+        var (page, errors) = await OpenAsync(HistoryDocumentId, 1472, 900, touch: false);
+
+        foreach (var tab in new[] { "properties", "comments", "revisions", "versions" })
+        {
+            var locator = page.GetByTestId($"document-side-panel-tab-{tab}");
+            if (await locator.CountAsync() == 0) continue;
+            await locator.ClickAsync();
+            await page.WaitForTimeoutAsync(150);
+            var geometry = await page.EvaluateAsync<System.Text.Json.JsonElement>(
+                """
+                () => {
+                    const row = document.querySelector('.tm-document-side-panel__tabs').getBoundingClientRect();
+                    const tabs = [...document.querySelectorAll('.tm-document-side-panel__tabs [role="tab"]')].map(t => t.getBoundingClientRect());
+                    const list = document.querySelector('.tm-document-side-panel__tabs');
+                    return {
+                        allInside: tabs.every(r => r.left >= row.left - 1 && r.right <= row.right + 1),
+                        scrolls: list.scrollWidth > list.clientWidth + 1,
+                        first: tabs.length ? tabs[0].left - row.left : 0,
+                    };
+                }
+                """);
+            Assert.IsTrue(geometry.GetProperty("allInside").GetBoolean(), $"with '{tab}' active every tab is fully inside the row");
+            Assert.IsFalse(geometry.GetProperty("scrolls").GetBoolean(), $"with '{tab}' active the tab row needs no sideways scroll");
+        }
+
+        AssertNoClientErrors(errors, "inspector tabs 1080");
         await page.Context.CloseAsync();
     }
 

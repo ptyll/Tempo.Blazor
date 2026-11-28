@@ -740,12 +740,23 @@ public partial class TmDocumentEditor
         _commandRegistry.Register(new FuncDocumentEditorCommandEntry(
             "zoomPageWidth", affectsData: false,
             computeEnabled: ctx => ctx.HasDocument && UsingCanvasEngine,
-            computeValue: _ => _zoomPageWidth ? "active" : "inactive",
+            computeValue: _ => ZoomPageWidthPressed ? "active" : "inactive",
             execute: (_, _) => SetZoomPageWidthAsync(),
             descriptionKey: "TmDocumentEditor_PageWidth",
             tooltipKey: "TmDocumentEditor_PageWidth",
             category: "View",
             icon: "panel-top"));
+
+        // Phase 11 (fix round): back to the automatic zoom (Ctrl+0). Offered only while the host lets the engine fit the page.
+        _commandRegistry.Register(new FuncDocumentEditorCommandEntry(
+            "resetZoom", affectsData: false,
+            computeEnabled: ctx => ctx.HasDocument && UsingCanvasEngine && PageFitMode != DocumentPageFitMode.Off,
+            computeValue: _ => ZoomFittedAutomatically ? "active" : "inactive",
+            execute: (_, _) => SetZoomAutomaticAsync(),
+            descriptionKey: "TmDocumentEditor_ZoomAutomatic",
+            tooltipKey: "TmDocumentEditor_ZoomAutomatic",
+            category: "View",
+            icon: "scan"));
 
         _commandRegistry.Register(new FuncDocumentEditorCommandEntry(
             "differentFirstPage", affectsData: true,
@@ -868,7 +879,7 @@ public partial class TmDocumentEditor
             formatting.DoubleStrikethrough,
             formatting.SpacingBefore, formatting.SpacingBeforeMixed,
             formatting.SpacingAfter, formatting.SpacingAfterMixed,
-            _showRuler, _zoomPageWidth, DifferentFirstPageHeaderFooter, DifferentOddAndEvenHeaderFooter,
+            _showRuler, _zoomPageWidth, _zoomAutoFit, PageFitMode, DifferentFirstPageHeaderFooter, DifferentOddAndEvenHeaderFooter,
             selection?.ActiveTableCellId, selection?.ActiveObjectId, selection?.ObjectSelection?.ObjectId,
             _selection.ActiveTableCellId, _selection.ActiveObjectId, _selection.ObjectSelection?.ObjectId,
             // Fáze 10 (command-layer plán): HasActiveImage nově čte i canvas-side aktivní obrázek.

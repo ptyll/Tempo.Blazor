@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.DocumentEditor",
+  "description": "How the canvas engine fits the page to the width of the document column. Auto fits only a page wider than the column and never enlarges it (the default in every layout), Off never fits, FitWidth always follows the column width. The reader's own zoom wins over the fit.",
+  "packageId": "Tempo.Blazor.DocumentEditor",
+  "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/DocumentPageFitMode.cs",
+  "documentationStatus": "generated",
+  "itemName": "DocumentPageFitMode"
+}

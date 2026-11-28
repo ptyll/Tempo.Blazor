@@ -195,9 +195,41 @@ is `data-layout="desktop|tablet|mobile"` on `.tm-document-editor`; the steps are
 - **Width reporting is deliberate.** The editor binds `TmLayoutObserver.ContainerWidthChanged`, so the observer reports every
   rounded width change. The handler only acts on crossing the fold width (a report that changes nothing suppresses the implicit
   render); `DocumentEditorCanvasPerfBudgetE2ETests` and the host-resize specs cover it.
-- **A page wider than the doc region.** Nothing clips the surface: the canvas host is the horizontal scroller, so a clipped A4
-  page is reachable by scrolling. An automatic fit-width zoom is planned (phase 8), and the sticky ribbon height is published as
-  `--tm-document-ribbon-block-size` (observed by `region-cycle.mjs`) so the sticky navigation column parks below it.
+- **A page wider than the doc region - the engine fits it (decision `DE-ENGINE-AUTO-FIT`).** The page is fitted to the width of the
+  document column by the canvas ENGINE, in every layout: `zoom.autoFit` (`off` | `narrow` | `always`) lives in the engine's view state, a
+  `ResizeObserver` on the real scroll viewport (`resolveScrollViewportElement`, never the content-sized mount; re-bound when a host replaces the
+  viewport) re-applies it once per animation frame when the width changes (`view/auto-fit-observer.mjs`). **The reader keeps their place:** before the
+  scale changes the engine records the page at the top of the view and the fraction of that page above the top edge, afterwards it scrolls the REAL
+  vertical scroller (the clipping scroll ancestor, or the window when the host scrolls the page) so the same fraction of the same page is at the top
+  again - exact for a mounted page, estimated and re-settled over the next frames for a page the virtualizer dropped; with nothing measurable it falls
+  back to a proportional offset. `resolveAutoFitScale` (`view/zoom-controller.mjs`) is the pure rule: in `narrow` a page whose width plus gutters exceeds the column is
+  fitted (`fitWidth`), a column that holds it shows 100 percent, the fit never enlarges, the floor is 0.25, a 2 px hysteresis (a fitted page
+  lets go only with 2 px plus a scrollbar allowance to spare) and a guard that ignores a width that grew by no more than a scrollbar stop the page
+  flipping when a scrollbar appears with the fit. The reader's own zoom (`setZoom`, zoom in / out, ctrl+wheel, pinch, fit page) switches
+  `autoFit` off until the `fitWidth` command ("Page width", mode `always`) or `resetZoom` is run - `resetZoom` returns to the mode the host
+  configured, which the engine puts into the command context (`metrics.autoFitMode`), and is offered as the status-bar menu entry "Automatic", the
+  View tab button "Automatic zoom" and **Ctrl+0**. The snapshot reports `formatting.zoomPreset` and `zoomAutoFit` and `data-canvas-zoom-auto-fit`
+  is on the engine root. The engine reports its own re-fits to .NET through `OnCanvasViewChanged`, debounced (trailing 150 ms, only when the
+  percent / preset / mode changed - `view/view-change-notifier.mjs`). Blazor owns only `PageFitMode` (`Auto` = `narrow`, default; `Off`;
+  `FitWidth` = `always`), forwards it with the mount options / `setOptions` (changing it after mount REPLACES the reader's zoom with the new mode),
+  and reflects the engine report: `data-page-fit` on the root while the page is fitted smaller than itself (the ruler gives way then, in every
+  layout - a stopgap until the ruler scales with the page) and the status bar label "Fit 62 %" (automatic) / "Page width · 62 %" (the reader's own
+  fit), percent formatted for the UI culture. A layout switch asks the engine for one `applyAutoFit` because the padding of the page column belongs
+  to the layout. The ruler follows the zoom scale (track width and markers). Sticky ribbon height is published as `--tm-document-ribbon-block-size`
+  (observed by `region-cycle.mjs`) so the sticky navigation column parks below it.
+- **The readable floor (decision `DE-AUTO-FIT-READABLE-FLOOR`).** Next to a DOCKED inspector the fit of a 1024 - 1136 px container (the demo's
+  1046 px editor at a 1440 viewport) would drop the page to about 0.64 (text at two thirds of its size). `TmDocumentEditor` therefore estimates the fit a
+  docked layout would give (`EstimatedFitBelowReadableFloor`: container minus the folded navigation rail, the inspector clamp(352, 26 %, 384) and the
+  workspace / stage chrome, over the page width) and, when it is below `ReadableAutoFitScale` (0.75; a 1 percent hysteresis on the way back), keeps
+  the desktop ribbon and navigation rail and presents ONLY the inspector as the tablet's overlay sheet: `data-inspector-sheet="true"` on the root,
+  `data-presentation="sheet"` on the region, CSS in `_document-editor-sheets.css`; the sheet starts closed (an open one would hide half of the page)
+  unless the reader chose the panel's state, and the print preview keeps its docked actions column. The estimate is a pure function of the container
+  width (and the page), never of the current presentation or of whether the inspector is open, so the sheet cannot flip the answer back; a forced
+  `LayoutMode` and `PageFitMode.Off` are never second-guessed. The page then keeps the width the sheet gives back (a 1048 px container holds it at
+  100 percent).
+- **Why the navigation column still folds below 1546 px.** The phase-3 fold (navigation + A4 page + inspector + gutters) stays: with the fit a
+  1200 px container WITHOUT the fold would give the page 576 px (a 0.6 scale, text too small to read), WITH the fold (the 3 rem rail) 800 px
+  (about 0.93). The fold buys readable text, the fit guarantees no clipping for the rest; the reader's own choice of the column still wins.
 - **Doc region banner slot.** `.tm-document-editor__doc-banners` (`data-testid="document-doc-banners"`) sits above the page
   inside `[data-region="doc"]`; the review summary and the version preview strip (`TmDocumentVersionPreviewStrip`) live there, the diff banner joins later.
 - **F6.** F6 / Shift+F6 cycle the landmarks marked `data-focus-region`: header, ribbon, navigation, document, inspector (a
@@ -268,8 +300,8 @@ measured by the core `tm-toolbar.js` (lowest rank leaves first, the later of equ
   rule, because a `TmModal` body is not a size container; a phone layout pinned on a wide screen keeps their desktop column count (the modal is a
   sheet / fullscreen through the cascaded viewport scope, only the inner grid differs). The command palette is keyed on `data-layout` and is
   fullscreen for a pinned phone layout.
-- A desktop container of 1024 - 1400 px keeps the A4 page at 100 percent next to the docked inspector (the page scrolls inside the canvas host);
-  an automatic fit-width for that band, a viewport-bounded editor frame and a `IsSheet` mode of the core floating panel are not part of this plan.
+- A viewport-bounded editor frame and a `IsSheet` mode of the core floating panel are not part of this plan (the automatic fit-width for a
+  desktop container of 1024 - 1400 px is: the engine fits the page, see "A page wider than the doc region").
 
 ## What the redesign did not do
 

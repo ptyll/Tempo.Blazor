@@ -547,6 +547,49 @@ public sealed class DocumentEditorCanvasTableE2ETests : WasmTestBase
             """,
             cellId);
 
+    [TestMethod]
+    [Description("Phase 11 (fix round): on a page the engine FITTED to a 700 px column the column border follows the pointer (the cell grows by the pointer distance) and a click lands in the cell it points at")]
+    public async Task Phase11_CanvasTable_ColumnResizeOnAFittedPage_FollowsThePointer()
+    {
+        var context = await CreateContextAsync();
+        var page = await context.NewPageAsync();
+        await page.SetViewportSizeAsync(1440, 1000);
+        await OpenPhase14DocumentAsync(page);
+        var scale = await DocumentEditorFittedScaleE2EHelpers.NarrowTheColumnAndWaitForTheFitAsync(page);
+
+        var cell = await ReadCellRectAsync(page, "canvas-table-phase14-c-layout");
+        // a click at the centre of a cell on a scaled page selects THAT cell (the hit-test inverts the scale)
+        await page.Mouse.ClickAsync((float)cell.CenterX, (float)cell.CenterY);
+        await WaitForPredicateAsync(page, """
+            () => document.querySelector('[data-testid="document-canvas-engine-root"]')?.getAttribute('data-canvas-selection-cell-id') === 'canvas-table-phase14-c-layout'
+            """, 10_000);
+
+        // the column border: the right edge of the cell, dragged by 30 screen px
+        cell = await ReadCellRectAsync(page, "canvas-table-phase14-c-layout");
+        var widthBefore = cell.Width;
+        await page.Mouse.MoveAsync((float)(cell.X + cell.Width), (float)cell.CenterY);
+        await page.Mouse.DownAsync();
+        await page.Mouse.MoveAsync((float)(cell.X + cell.Width + 30), (float)cell.CenterY, new MouseMoveOptions { Steps = 5 });
+        await page.Mouse.UpAsync();
+        await WaitForPredicateAsync(
+            page,
+            """
+            ([cellId, widthBefore]) => {
+                const node = document.querySelector(`[data-canvas-table-cell][data-cell-id="${cellId}"]`);
+                return node?.getBoundingClientRect().width > Number(widthBefore) + 15
+                    && document.querySelector('[data-testid="document-canvas-engine-root"]')?.getAttribute('data-canvas-table-resize-active') === 'false';
+            }
+            """,
+            new object[] { "canvas-table-phase14-c-layout", widthBefore },
+            10_000);
+
+        var grown = (await ReadCellRectAsync(page, "canvas-table-phase14-c-layout")).Width - widthBefore;
+        // the border sticks to the pointer: 30 screen px (in model space 30 / scale), within a few px of rounding
+        Assert.IsTrue(Math.Abs(grown - 30) <= 8, $"the cell grew by {grown:N1} screen px for a 30 px drag at scale {scale:N2} ({30 / scale:N1} model px)");
+
+        await page.Context.CloseAsync();
+    }
+
     private async Task OpenPhase14DocumentAsync(IPage page)
     {
         await GotoAppReadyAsync(page, $"{BaseUrl}/canvas-engine-host?documentId={Phase14DocumentId}&showToolbar=true");

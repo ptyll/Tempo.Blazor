@@ -479,6 +479,9 @@ export function createCanvasCommandRuntime(options = {}) {
         'twopages',
         'ctrlwheelzoom',
         'pinchzoom',
+        'applyautofit',
+        'setautofit',
+        'resetzoom',
         'openprintpreview',
         'printpreview',
         'closeprintpreview',
@@ -816,8 +819,14 @@ export function createCanvasCommandRuntime(options = {}) {
             ...(getViewportMetrics() || {}),
             ...(argument?.metrics || {}),
         };
+        const previousZoom = canvasViewState.zoom;
         const result = applyCanvasViewCommand(canvasViewState, commandId, argument, metrics);
         canvasViewState = createCanvasViewState(result.state || canvasViewState);
+        // A change of the automatic-fit MODE alone (same preset, same scale) repaints nothing: the state is updated and reported, the page is not drawn again.
+        const zoomModeOnly = result.operation === 'zoom'
+            && result.viewChanged === true
+            && previousZoom?.preset === canvasViewState.zoom.preset
+            && Math.abs((Number(previousZoom?.scale) || 1) - canvasViewState.zoom.scale) < 0.0001;
         revision += 1;
         lastCommand = {
             id: normalizeCommandId(commandId),
@@ -827,7 +836,7 @@ export function createCanvasCommandRuntime(options = {}) {
             revision,
         };
 
-        if (result.viewChanged || result.printRequested) {
+        if ((result.viewChanged && !zoomModeOnly) || result.printRequested) {
             commit({
                 model: getModel(),
                 selection: getSelection(),

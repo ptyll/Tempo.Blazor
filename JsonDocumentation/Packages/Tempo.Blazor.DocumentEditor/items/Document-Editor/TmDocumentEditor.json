@@ -20,6 +20,13 @@
       "editorRequired": true
     },
     {
+      "name": "PageFitMode",
+      "type": "DocumentPageFitMode",
+      "isRequired": false,
+      "default": "DocumentPageFitMode.Auto",
+      "description": "How the canvas engine fits the page to the document column. Auto (default) fits the page only when the column is narrower than the page - a desktop container of 1024 - 1400 px next to the docked inspector, a tablet, a phone - and never enlarges it; Off leaves the zoom alone; FitWidth always follows the width. The reader's own zoom wins over the fit until \"Automatic\" (Ctrl+0) or \"Page width\" is chosen. Changing the parameter after mount applies the new mode at once and REPLACES the reader's zoom. A desktop container whose docked inspector would squeeze the fitted page below 75 percent presents the inspector as the overlay sheet instead (decision DE-AUTO-FIT-READABLE-FLOOR)."
+    },
+    {
       "name": "PdfForensicWatermark",
       "type": "DocumentPdfForensicWatermarkOptions?",
       "isRequired": false,

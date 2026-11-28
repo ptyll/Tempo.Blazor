@@ -98,6 +98,16 @@
             </select>
         </label>
         <label class="inline-flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+            Page fit
+            <select class="rounded-md border-slate-300 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                    @bind="_pageFitMode"
+                    data-testid="document-editor-page-fit-mode">
+                <option value="@DocumentPageFitMode.Auto">Auto (only a narrow column)</option>
+                <option value="@DocumentPageFitMode.Off">Off (fixed zoom)</option>
+                <option value="@DocumentPageFitMode.FitWidth">Fit width (always)</option>
+            </select>
+        </label>
+        <label class="inline-flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
             Host width
             <select class="rounded-md border-slate-300 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
                     @bind="_hostWidth"
@@ -231,6 +241,7 @@
 <div style="@HostStyle" data-testid="document-editor-host">
 <TmDocumentEditor DocumentId="@_documentId"
                   LayoutMode="@_layoutMode"
+                  PageFitMode="@_pageFitMode"
                   ShowHeader="@_showHeader"
                   Subtitle="@(_headerSlots ? "Demo document" : null)"
                   HeaderStart="@(_headerSlots ? DemoHeaderStart : null)"
@@ -267,6 +278,7 @@
 @code {
     private string _documentId = "contract-demo";
     private TmLayoutMode _layoutMode = TmLayoutMode.Auto;
+    private DocumentPageFitMode _pageFitMode = DocumentPageFitMode.Auto;
     private string _hostWidth = string.Empty;
     private bool _showHeader = true;
     private bool _headerSlots;

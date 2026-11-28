@@ -68,9 +68,12 @@ editor resolves Desktop on its own (>= 1024 of the editor's OWN width); pin `Lay
 
 ## Page width
 
-On a tablet or a phone container narrower than its page the page is fitted to the width of the column (the engine's `fitWidth`) when the canvas is
-ready and whenever the layout or the container width changes - requested as a pending flag and run after the render of that layout; the reader's own zoom wins
-over the fit and a sheet never refits (it overlays the column).
+The page is fitted to the width of the column by the canvas ENGINE (`PageFitMode`, default `Auto`), in every layout and not only on a tablet or a
+phone: a container narrower than its page (plus gutters) shows the page as wide as the column - one text column, no sideways scrolling - and a column
+that holds the page shows it at 100 percent (the fit never enlarges). The engine's resize observer re-applies the fit on every width change (a
+rotation, the keyboard dismissing, a host resize), so Blazor keeps no pending flag; a layout switch asks the engine to resolve it once more because the
+padding of the column belongs to the layout. The reader's own zoom wins over the fit until "Page width" / Reset zoom; a sheet never refits (it overlays
+the column). `PageFitMode="Off"` restores the old fixed zoom, `FitWidth` makes the page always follow the column. The reader can always get back: the status-bar zoom menu entry "Automatic", the View tab's "Automatic zoom" and Ctrl+0 run the engine's `resetZoom`. A desktop container whose docked inspector would squeeze the page below 75 percent (about 1024 - 1136 px) keeps the desktop ribbon and navigation and shows only the inspector as the tablet sheet (decision `DE-AUTO-FIT-READABLE-FLOOR`, see the developer guide). Not done in this phase: a phone's reflow to a text column ("fit text column") instead of a scaled page - tracked as remaining work.
 
 ## Touch
 

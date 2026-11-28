@@ -26,7 +26,8 @@ public sealed class DocumentEditorRedesignPhase7E2ETests : WasmTestBase
     [Description("Version panel: Base + Compare -> Show differences opens the comparison MODE of the document region (one canvas, hidden), Back returns")]
     public async Task VersionPanel_ShowDifferences_OpensTheComparisonMode_AndBackReturns()
     {
-        var page = await OpenEditorAsync(1440, 900, touch: false);
+        // 1600: a docked inspector - the 1440 viewport's 1046 px editor presents it as a closed sheet (the readable floor)
+        var page = await OpenEditorAsync(1600, 900, touch: false);
         var marker = await CreateTwoVersionsAsync(page);
 
         await Assertions.Expect(page.GetByTestId("document-version-show-diff")).ToBeDisabledAsync();
@@ -159,9 +160,13 @@ public sealed class DocumentEditorRedesignPhase7E2ETests : WasmTestBase
         var bar = page.GetByTestId("document-status-bar");
         await Assertions.Expect(bar.GetByTestId("document-status-page-count")).ToContainTextAsync("Page 1 of");
 
+        // Phase 11: the 1440 viewport leaves the doc column narrower than the page, so the engine opens the document fitted (below 100 percent); the
+        // buttons step from whatever the zoom is, and the reader's step turns the automatic fit off.
+        var start = await page.EvaluateAsync<int>("() => Number(document.querySelector('[data-testid=\"document-canvas-engine-root\"]')?.getAttribute('data-canvas-zoom-percent') || '100')");
+        var expected = ((start / 10) + 1) * 10; // the buttons step on the grid of 10 (a fitted 62 percent goes to 70)
         await page.GetByTestId("document-status-zoom-in").ClickAsync();
-        await Assertions.Expect(bar.GetByTestId("document-status-zoom")).ToContainTextAsync("110%", new() { Timeout = 10_000 });
-        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-canvas-engine-root\"]')?.getAttribute('data-canvas-zoom-percent') === '110'", 10_000);
+        await Assertions.Expect(bar.GetByTestId("document-status-zoom")).ToContainTextAsync($"{expected}%", new() { Timeout = 10_000 });
+        await WaitForPredicateAsync(page, $"() => document.querySelector('[data-testid=\"document-canvas-engine-root\"]')?.getAttribute('data-canvas-zoom-percent') === '{expected}'", 10_000);
         for (var i = 0; i < 12; i++)
         {
             if (await page.GetByTestId("document-status-zoom-out").IsDisabledAsync())

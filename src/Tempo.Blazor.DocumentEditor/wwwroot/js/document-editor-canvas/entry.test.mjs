@@ -395,6 +395,436 @@ test('view zoom commands rerender page surfaces without marking document dirty',
     assert.equal(engine.getSnapshot().modelVersion, 0);
 });
 
+// ── Phase 11: engine auto-fit (reader lock, fitWidth, resize observer, destroy) ─────────────────────────────────────
+
+function createAutoFitHarness(initialWidth) {
+    const observers = [];
+    class FakeResizeObserver {
+        constructor(callback) {
+            this.callback = callback;
+            this.disconnected = false;
+            observers.push(this);
+        }
+
+        observe() {}
+
+        disconnect() {
+            this.disconnected = true;
+        }
+
+        emit(width) {
+            this.callback([{ contentRect: { width } }]);
+        }
+    }
+
+    const frames = [];
+    const view = {
+        ResizeObserver: FakeResizeObserver,
+        innerWidth: 1440,
+        innerHeight: 900,
+        requestAnimationFrame: callback => frames.push(callback),
+        cancelAnimationFrame: () => {},
+        getComputedStyle: node => ({
+            overflowX: node?.isScroller ? 'auto' : 'visible',
+            overflowY: node?.isScroller ? 'auto' : 'visible',
+            paddingLeft: '0px',
+            paddingRight: '0px',
+        }),
+    };
+    const doc = createFakeDocument();
+    doc.defaultView = view;
+    const scroller = { isScroller: true, clientWidth: initialWidth, clientHeight: 900, scrollTop: 0, scrollHeight: 4000, getBoundingClientRect: () => ({ width: scroller.clientWidth, height: 900 }) };
+    const host = doc.createElement('div');
+    host.parentElement = scroller;
+    return {
+        doc,
+        host,
+        scroller,
+        observers,
+        frames,
+        flush() {
+            // animation frames of the observer AND of the engine repaint run in order, a frame may schedule another one
+            for (let guard = 0; guard < 10 && frames.length > 0; guard += 1) {
+                frames.splice(0, frames.length).forEach(callback => callback());
+            }
+        },
+        resize(width) {
+            scroller.clientWidth = width;
+            observers[0].emit(width);
+        },
+    };
+}
+
+function zoomOf(engine) {
+    return engine.commandRuntime.getViewState().zoom;
+}
+
+test('auto fit: a narrow column is fitted at mount and follows a width change once per frame, reporting the change', () => {
+    const h = createAutoFitHarness(650);
+    const reports = [];
+    const engine = createCanvasDocumentEngine({
+        host: h.host,
+        document: h.doc,
+        model: createTextModel('Auto fit keeps the page inside a narrow column.', 0),
+        autoFit: 'narrow',
+        onViewChanged: zoom => reports.push(zoom),
+    });
+    engine.render();
+    engine.setAutoFitMode('narrow');
+
+    assert.equal(zoomOf(engine).preset, 'fitWidth', 'the 650 px column fits the page at once');
+    assert.ok(zoomOf(engine).scale < 1);
+    assert.equal(zoomOf(engine).autoFit, 'narrow');
+
+    h.flush();
+    reports.length = 0;
+    h.scroller.clientWidth = 1200;
+    h.observers[0].emit(1200);
+    h.observers[0].emit(1200);
+    assert.equal(h.frames.length, 1, 'repeated reports within a frame schedule one fit');
+    h.flush();
+    assert.equal(zoomOf(engine).scale, 1, 'a column that holds the page shows it at 100 percent');
+    assert.equal(zoomOf(engine).preset, 'custom');
+    assert.equal(zoomOf(engine).autoFit, 'narrow');
+    assert.equal(reports.length, 1, 'the host learns about the fit once');
+    engine.destroy();
+});
+
+test('auto fit: a reader zoom switches the fit off, fitWidth switches it on, resetZoom restores the configured mode', () => {
+    const h = createAutoFitHarness(650);
+    const engine = createCanvasDocumentEngine({
+        host: h.host,
+        document: h.doc,
+        model: createTextModel('Reader zoom wins.', 0),
+        autoFit: 'narrow',
+    });
+    engine.render();
+    engine.setAutoFitMode('narrow');
+
+    engine.execCommand('setZoom', { percent: 120 });
+    assert.equal(zoomOf(engine).autoFit, 'off');
+    assert.equal(zoomOf(engine).percent, 120);
+
+    h.resize(500);
+    h.flush();
+    assert.equal(zoomOf(engine).percent, 120, 'the reader zoom wins over the resize');
+    assert.equal(zoomOf(engine).autoFit, 'off');
+
+    engine.execCommand('fitWidth');
+    assert.equal(zoomOf(engine).autoFit, 'always');
+    assert.equal(zoomOf(engine).preset, 'fitWidth');
+
+    h.resize(900);
+    h.flush();
+    assert.equal(zoomOf(engine).preset, 'fitWidth', 'the explicit fit follows the column again');
+    assert.ok(zoomOf(engine).percent > 80);
+
+    engine.execCommand('resetZoom');
+    assert.equal(zoomOf(engine).autoFit, 'narrow', 'Reset zoom brings back the configured automatic mode');
+    engine.destroy();
+});
+
+test('auto fit: a scroll position is kept in proportion when the scale changes', () => {
+    const h = createAutoFitHarness(1200);
+    const engine = createCanvasDocumentEngine({
+        host: h.host,
+        document: h.doc,
+        model: createTextModel('Reading position.', 0),
+        autoFit: 'narrow',
+    });
+    engine.render();
+    engine.setAutoFitMode('narrow');
+    assert.equal(zoomOf(engine).scale, 1);
+
+    h.scroller.scrollTop = 1000;
+    h.resize(600);
+    h.flush();
+    const scale = zoomOf(engine).scale;
+    assert.ok(scale < 1);
+    assert.equal(Math.round(h.scroller.scrollTop), Math.round(1000 * scale), 'the same place of the document stays at the top');
+    engine.destroy();
+});
+
+test('auto fit: the reading position follows the page the reader is on, not a proportional pixel offset', () => {
+    const h = createAutoFitHarness(1200);
+    const engine = createCanvasDocumentEngine({
+        host: h.host,
+        document: h.doc,
+        model: createTextModel('Anchored reading position.', 0),
+        autoFit: 'narrow',
+    });
+    engine.render();
+    engine.setAutoFitMode('narrow');
+    const page = engine.canvasStack.pages.get('0').pageElement;
+    const pageHeight = () => 1123 * zoomOf(engine).scale;
+    // the page starts 24 px below the top of the scroller and scrolls with it
+    page.getBoundingClientRect = () => ({ top: 24 - h.scroller.scrollTop, height: pageHeight(), bottom: 24 - h.scroller.scrollTop + pageHeight() });
+    h.scroller.scrollTop = 500;
+    const fraction = (500 - 24) / 1123;
+
+    h.resize(600);
+    h.flush();
+    const scale = zoomOf(engine).scale;
+    assert.ok(scale < 1);
+    // the same fraction of the page is at the top: 24 px gutter + fraction of the SCALED page (a proportional offset would give 500 * scale)
+    assert.ok(Math.abs(h.scroller.scrollTop - (24 + fraction * 1123 * scale)) < 1.5, `scrollTop ${h.scroller.scrollTop}`);
+    assert.ok(Math.abs(h.scroller.scrollTop - 500 * scale) > 5, 'the page gutter is not scaled, so the anchored position differs from the proportional one');
+    engine.destroy();
+});
+
+test('auto fit: the reading position is restored on the real vertical scroller when the horizontal viewport is a clipping wrapper', () => {
+    const h = createAutoFitHarness(1200);
+    // the observed viewport clips (overflow hidden) but does not scroll vertically; the document itself scrolls
+    h.scroller.scrollHeight = 900;
+    h.scroller.getBoundingClientRect = () => ({ top: 0, width: h.scroller.clientWidth, height: 900 });
+    const scrollingElement = { scrollTop: 800, scrollHeight: 6000, clientHeight: 900, getBoundingClientRect: () => ({ top: 0 }) };
+    h.doc.scrollingElement = scrollingElement;
+    h.host.ownerDocument = h.doc;
+    const engine = createCanvasDocumentEngine({
+        host: h.host,
+        document: h.doc,
+        model: createTextModel('Window scroll.', 0),
+        autoFit: 'narrow',
+    });
+    engine.render();
+    engine.setAutoFitMode('narrow');
+    const page = engine.canvasStack.pages.get('0').pageElement;
+    page.getBoundingClientRect = () => ({ top: 24 - scrollingElement.scrollTop, height: 1123 * zoomOf(engine).scale, bottom: 24 - scrollingElement.scrollTop + 1123 * zoomOf(engine).scale });
+    scrollingElement.scrollTop = 800;
+
+    h.resize(500);
+    h.flush();
+    const scale = zoomOf(engine).scale;
+    assert.ok(Math.abs(scrollingElement.scrollTop - (24 + ((800 - 24) / 1123) * 1123 * scale)) < 1.5, `document scrollTop ${scrollingElement.scrollTop}`);
+    engine.destroy();
+});
+
+test('auto fit: a fit at the top of the document keeps the page where it was (the lead above page one is not scrolled away)', () => {
+    for (const lead of [24, 290]) {
+        const h = createAutoFitHarness(1200);
+        const engine = createCanvasDocumentEngine({
+            host: h.host,
+            document: h.doc,
+            model: createTextModel('Fit at the top.', 0),
+            autoFit: 'narrow',
+        });
+        engine.render();
+        engine.setAutoFitMode('narrow');
+        const page = engine.canvasStack.pages.get('0').pageElement;
+        const pageHeight = () => 1123 * zoomOf(engine).scale;
+        page.getBoundingClientRect = () => ({ top: lead - h.scroller.scrollTop, height: pageHeight(), bottom: lead - h.scroller.scrollTop + pageHeight() });
+        h.scroller.scrollTop = 0;
+
+        h.resize(600);
+        h.flush();
+        assert.ok(zoomOf(engine).scale < 1);
+        assert.equal(Math.round(h.scroller.scrollTop), 0, `lead ${lead}: the page stays ${lead} px below the top of the view`);
+        engine.destroy();
+    }
+});
+
+test('auto fit: a fit at the top with the window as the scroller does not scroll the window', () => {
+    const h = createAutoFitHarness(1200);
+    h.scroller.scrollHeight = 900;
+    h.scroller.getBoundingClientRect = () => ({ top: 0, width: h.scroller.clientWidth, height: 900 });
+    const scrollingElement = { scrollTop: 0, scrollHeight: 6000, clientHeight: 900, getBoundingClientRect: () => ({ top: 0 }) };
+    h.doc.scrollingElement = scrollingElement;
+    h.host.ownerDocument = h.doc;
+    const engine = createCanvasDocumentEngine({
+        host: h.host,
+        document: h.doc,
+        model: createTextModel('Window fit at the top.', 0),
+        autoFit: 'narrow',
+    });
+    engine.render();
+    engine.setAutoFitMode('narrow');
+    const page = engine.canvasStack.pages.get('0').pageElement;
+    const pageHeight = () => 1123 * zoomOf(engine).scale;
+    page.getBoundingClientRect = () => ({ top: 290 - scrollingElement.scrollTop, height: pageHeight(), bottom: 290 - scrollingElement.scrollTop + pageHeight() });
+
+    h.resize(500);
+    h.flush();
+    assert.equal(Math.round(scrollingElement.scrollTop), 0);
+    engine.destroy();
+});
+
+test('auto fit: a width that grows by no more than a scrollbar keeps the fit, a larger one fits again', () => {
+    const h = createAutoFitHarness(700);
+    const engine = createCanvasDocumentEngine({
+        host: h.host,
+        document: h.doc,
+        model: createTextModel('Oscillation.', 0),
+        autoFit: 'narrow',
+    });
+    engine.render();
+    engine.setAutoFitMode('narrow');
+    const fitted = zoomOf(engine).scale;
+    assert.equal(zoomOf(engine).preset, 'fitWidth');
+
+    h.resize(715);
+    h.flush();
+    assert.equal(zoomOf(engine).scale, fitted, 'W + 15 px (the scrollbar that left with the shorter document) does not enlarge the page');
+
+    h.resize(740);
+    h.flush();
+    assert.ok(zoomOf(engine).scale > fitted, 'W + 40 px is a real width change');
+    engine.destroy();
+});
+
+test('auto fit: the observer follows a replaced scroll viewport', () => {
+    const h = createAutoFitHarness(650);
+    const engine = createCanvasDocumentEngine({
+        host: h.host,
+        document: h.doc,
+        model: createTextModel('Rebind.', 0),
+        autoFit: 'narrow',
+    });
+    engine.render();
+    engine.setAutoFitMode('narrow');
+    assert.equal(h.observers.length, 1);
+    assert.equal(engine.autoFitObserver.target, h.scroller);
+
+    const replacement = { isScroller: true, clientWidth: 650, clientHeight: 900, scrollTop: 0, scrollHeight: 4000, getBoundingClientRect: () => ({ width: replacement.clientWidth, height: 900 }) };
+    h.host.parentElement = replacement;
+    engine.applyAutoFit();
+    assert.equal(h.observers.length, 2, 'a new observer is bound to the new scroller');
+    assert.equal(h.observers[0].disconnected, true, 'the old one is released');
+    assert.equal(engine.autoFitObserver.target, replacement);
+    engine.destroy();
+});
+
+test('auto fit: the configured mode is seeded into the zoom at construction, so setting it at mount is no view change of its own', () => {
+    const h = createAutoFitHarness(1200);
+    const engine = createCanvasDocumentEngine({
+        host: h.host,
+        document: h.doc,
+        model: createTextModel('Seeded.', 0),
+        autoFit: 'narrow',
+    });
+    assert.equal(zoomOf(engine).autoFit, 'narrow', 'before the first render');
+    engine.render();
+    const reports = [];
+    engine.onViewChanged = zoom => reports.push(zoom);
+    const renders = engine.performanceMetrics.snapshot().renderCount;
+    assert.ok(renders >= 1);
+    engine.setAutoFitMode('narrow');
+    assert.equal(zoomOf(engine).scale, 1);
+    assert.equal(reports.length, 0, 'the column holds the page: nothing changed, nothing is reported');
+    assert.equal(engine.performanceMetrics.snapshot().renderCount, renders, 'and nothing is painted again');
+
+    assert.equal(engine.canvasStack.root.getAttribute('data-canvas-zoom-auto-fit'), 'narrow');
+    engine.destroy();
+});
+
+test('auto fit: a mode-only change updates the zoom-auto-fit attribute without a repaint', () => {
+    const h = createAutoFitHarness(1200);
+    const engine = createCanvasDocumentEngine({
+        host: h.host,
+        document: h.doc,
+        model: createTextModel('Mode only.', 0),
+        autoFit: 'narrow',
+    });
+    engine.render();
+    engine.setAutoFitMode('narrow');
+    const renders = engine.performanceMetrics.snapshot().renderCount;
+    const reports = [];
+    engine.onViewChanged = zoom => reports.push(zoom);
+    engine.setAutoFitMode('off');
+    assert.equal(zoomOf(engine).autoFit, 'off');
+    assert.equal(engine.canvasStack.root.getAttribute('data-canvas-zoom-auto-fit'), 'off');
+    assert.equal(engine.performanceMetrics.snapshot().renderCount, renders, 'the mode alone draws nothing');
+    assert.equal(reports.length, 1, 'but the host still learns the mode');
+    engine.destroy();
+});
+
+test('auto fit: resetZoom reads the configured mode from the engine context, not from the argument', () => {
+    const h = createAutoFitHarness(650);
+    const engine = createCanvasDocumentEngine({ host: h.host, document: h.doc, model: createTextModel('Reset.', 0), autoFit: 'narrow' });
+    engine.render();
+    engine.setAutoFitMode('narrow');
+    engine.execCommand('setZoom', { percent: 150 });
+    engine.execCommand('resetZoom');
+    assert.equal(zoomOf(engine).autoFit, 'narrow');
+    assert.equal(zoomOf(engine).preset, 'fitWidth');
+    engine.destroy();
+});
+
+test('auto fit: Ctrl+0 is the Reset zoom shortcut', () => {
+    const h = createAutoFitHarness(650);
+    const engine = createCanvasDocumentEngine({ host: h.host, document: h.doc, model: createTextModel('Ctrl 0.', 0), autoFit: 'narrow' });
+    engine.render();
+    engine.setAutoFitMode('narrow');
+    engine.execCommand('setZoom', { percent: 150 });
+    assert.equal(zoomOf(engine).autoFit, 'off');
+    let prevented = false;
+    const handlers = [];
+    const root = engine.canvasStack.root;
+    root.addEventListener = (type, handler) => handlers.push({ type, handler });
+    engine.shortcutManager.destroy();
+    engine.shortcutManager.mount();
+    handlers.filter(item => item.type === 'keydown').forEach(item => item.handler({ key: '0', code: 'Digit0', ctrlKey: true, preventDefault: () => { prevented = true; }, stopPropagation() {} }));
+    assert.equal(prevented, true);
+    assert.equal(zoomOf(engine).autoFit, 'narrow', 'Ctrl+0 returns to the automatic fit');
+    engine.destroy();
+});
+
+test('auto fit: a slow 20 step resize never changes the zoom more often than the width changed', () => {
+    const h = createAutoFitHarness(900);
+    const engine = createCanvasDocumentEngine({
+        host: h.host,
+        document: h.doc,
+        model: createTextModel('Slow resize.', 0),
+        autoFit: 'narrow',
+    });
+    engine.render();
+    engine.setAutoFitMode('narrow');
+    let changes = 0;
+    let last = zoomOf(engine).scale;
+    for (let step = 1; step <= 20; step += 1) {
+        h.resize(900 - step * 5);
+        h.flush();
+        const now = zoomOf(engine).scale;
+        if (now !== last) {
+            changes += 1;
+            last = now;
+        }
+    }
+
+    assert.ok(changes <= 20, `${changes} zoom changes for 20 width steps`);
+    engine.destroy();
+});
+
+test('auto fit: an off mode never touches the zoom and destroy disconnects the observer', () => {
+    const h = createAutoFitHarness(500);
+    const engine = createCanvasDocumentEngine({ host: h.host, document: h.doc, model: createTextModel('Off.', 0) });
+    engine.render();
+    assert.equal(zoomOf(engine).autoFit, 'off');
+    h.resize(300);
+    h.flush();
+    assert.equal(zoomOf(engine).percent, 100);
+    assert.equal(zoomOf(engine).preset, 'custom');
+
+    engine.destroy();
+    assert.equal(h.observers[0].disconnected, true);
+});
+
+test('auto fit: the snapshot reports zoomAutoFit next to the zoom preset and percent', () => {
+    const h = createAutoFitHarness(650);
+    const engine = createCanvasDocumentEngine({
+        host: h.host,
+        document: h.doc,
+        model: createTextModel('Snapshot.', 0),
+        autoFit: 'narrow',
+    });
+    engine.render();
+    engine.setAutoFitMode('narrow');
+    const view = engine.getSnapshot().formatting.view;
+    assert.equal(view.zoomAutoFit, 'narrow');
+    assert.equal(view.zoomPreset, 'fitWidth');
+    assert.ok(view.zoomPercent < 100);
+    engine.destroy();
+});
+
 test('proofing analysis and the accessibility mirror are deferred during incremental edits (Phase 6)', () => {
     const doc = createFakeDocument();
     const host = doc.createElement('div');
@@ -997,7 +1427,7 @@ test('the page column of a tablet and a phone is padded by a hairline, a desktop
     assert.equal(resolveRootPaddingInline({ closest: () => { throw new Error('detached'); } }, 24), 24);
 });
 
-test('getFitPaddingInline adds the mount padding and the root hairline on a non-desktop layout, 48 on a desktop', () => {
+test('getFitPaddingInline adds the mount padding to the root padding in every layout (a desktop never below 48)', () => {
     const host = layout => ({ closest: () => ({ getAttribute: () => layout }) });
     const withStyle = (layout, left, right) => {
         const previous = globalThis.getComputedStyle;
@@ -1009,7 +1439,11 @@ test('getFitPaddingInline adds the mount padding and the root hairline on a non-
         }
     };
 
-    assert.equal(withStyle('desktop', 8, 8), 48);
+    // The mount's own padding counts on a desktop too: the page column is root padding + mount padding wide (16 px a side in the demo), and a
+    // fit that ignored it left the document column 32 px wider than its viewport.
+    assert.equal(withStyle('desktop', 8, 8), 8 + 8 + 48);
+    assert.equal(withStyle('desktop', 16, 16), 32 + 48);
+    assert.equal(withStyle('desktop', 0, 0), 48);
     assert.equal(withStyle('mobile', 8, 8), 8 + 8 + 2 * COMPACT_ROOT_PADDING_INLINE);
     assert.equal(withStyle('tablet', 8, 8), 8 + 8 + 2 * COMPACT_ROOT_PADDING_INLINE);
 });

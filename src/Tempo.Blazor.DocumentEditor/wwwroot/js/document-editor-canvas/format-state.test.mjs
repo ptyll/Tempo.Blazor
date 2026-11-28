@@ -67,3 +67,12 @@ test('command value wins over paragraph fallback for alignment', () => {
     });
     assert.equal(f.alignment, 'right');
 });
+
+test('buildFormattingState reports zoomAutoFit (off by default) next to the zoom preset', () => {
+    assert.equal(buildFormattingState(null).zoomAutoFit, 'off');
+    const f = buildFormattingState({ view: { zoomPercent: 87, zoomPreset: 'fitWidth', zoomAutoFit: 'narrow' } });
+    assert.equal(f.zoomAutoFit, 'narrow');
+    assert.equal(f.zoomPreset, 'fitWidth');
+    assert.equal(f.zoomPercent, 87);
+    assert.equal(buildFormattingState({ view: { zoom: { percent: 60, preset: 'fitWidth', autoFit: 'always' } } }).zoomAutoFit, 'always');
+});

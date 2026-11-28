@@ -43,6 +43,11 @@ public sealed class DocumentEditorCanvasCaretSelectionE2ETests : WasmTestBase
         Assert.IsFalse(afterShift.IsCollapsed);
         Assert.IsTrue(afterShift.SelectionRectCount >= 1);
 
+        // Collapse the selection first: the floating mini toolbar of a range selection floats over the first line, and on a page the engine fitted to a narrow
+        // column (phase 11) it sits right over the word the drag starts from - the press would land on the toolbar instead of the text.
+        await page.Keyboard.PressAsync("ArrowRight");
+        await Assertions.Expect(page.GetByTestId("document-mini-toolbar")).ToHaveCountAsync(0, new() { Timeout = 10_000 });
+
         var dragStart = await ReadTextPointAsync(page, "canvas-selection-body", 1);
         var dragEnd = await ReadTextPointAsync(page, "canvas-selection-second", 2);
         await page.Mouse.MoveAsync((float)dragStart.X, (float)dragStart.Y);
@@ -124,6 +129,36 @@ public sealed class DocumentEditorCanvasCaretSelectionE2ETests : WasmTestBase
             () => document.querySelectorAll('[data-canvas-text-rect][data-block-id="canvas-selection-body"]').length >= 3
                 && document.querySelector('[data-testid="document-canvas-caret"]')
             """, 30_000);
+    }
+
+    [TestMethod]
+    [Description("Phase 11 (fix round): on a page the engine FITTED to a 700 px column a click 6 px inside the right end of a text run puts the caret at the end of that run (the hit-test inverts the scale)")]
+    public async Task Phase11_CaretHitTest_OnAFittedPage_LandsAtTheClickedTextEnd()
+    {
+        var context = await CreateContextAsync();
+        var page = await context.NewPageAsync();
+        await page.SetViewportSizeAsync(1440, 1000);
+        await OpenCaretSelectionDocumentAsync(page);
+        var scale = await DocumentEditorFittedScaleE2EHelpers.NarrowTheColumnAndWaitForTheFitAsync(page);
+
+        var target = await page.EvaluateAsync<System.Text.Json.JsonElement>(
+            """
+            () => {
+                const node = Array.from(document.querySelectorAll('[data-canvas-text-rect][data-block-id="canvas-selection-body"]'))
+                    .filter(el => el.getBoundingClientRect().width > 40)[0];
+                const rect = node.getBoundingClientRect();
+                return { x: rect.right - 6, y: rect.top + rect.height / 2, end: Number(node.getAttribute('data-canvas-end-offset')) };
+            }
+            """);
+        await page.Mouse.ClickAsync((float)target.GetProperty("x").GetDouble(), (float)target.GetProperty("y").GetDouble());
+        await DocumentEditorCanvasVisualAssert.AssertCaretVisibleAsync(page.Locator("[data-testid='document-canvas-caret']").First);
+
+        var probe = await ReadSelectionProbeAsync(page);
+        var end = target.GetProperty("end").GetInt32();
+        Assert.AreEqual("canvas-selection-body", probe.FocusBlockId);
+        Assert.IsTrue(probe.FocusOffset <= end && probe.FocusOffset >= end - 3, $"scale {scale:N2}: the caret lands at {probe.FocusOffset}, the run ends at {end}");
+
+        await page.Context.CloseAsync();
     }
 
     private static Task<CanvasPoint> ReadTextPointAsync(IPage page, string blockId, int index)

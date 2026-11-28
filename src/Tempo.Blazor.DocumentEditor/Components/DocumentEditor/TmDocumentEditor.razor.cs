@@ -100,6 +100,15 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
     /// <summary>Visual mode used by the document editor toolbar.</summary>
     [Parameter] public DocumentToolbarMode ToolbarMode { get; set; } = DocumentToolbarMode.Ribbon;
 
+    /// <summary>
+    /// How the canvas engine fits the page to the document column. <see cref="DocumentPageFitMode.Auto"/> (default) fits the page only when
+    /// the column is narrower than the page (desktop 1024 - 1400 px next to the docked inspector, a tablet, a phone) and never enlarges it;
+    /// <see cref="DocumentPageFitMode.Off"/> leaves the zoom alone; <see cref="DocumentPageFitMode.FitWidth"/> always follows the width.
+    /// The reader's own zoom wins over the fit until "Automatic" (Ctrl+0) or "Page width" is chosen. Changing this parameter after the editor is mounted
+    /// applies the new mode at once and REPLACES the reader's zoom (a host that flips the mode asks for that fit).
+    /// </summary>
+    [Parameter] public DocumentPageFitMode PageFitMode { get; set; } = DocumentPageFitMode.Auto;
+
     /// <summary>Whether the comments rail is displayed.</summary>
     [Parameter] public bool ShowComments { get; set; } = true;
 
@@ -438,7 +447,8 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
     private WysiwygSelectionSnapshot? _pendingLinkSelectionSnapshot;
     private bool _showRuler = true;
     private int _zoomPercent = 100;
-    private bool _zoomPageWidth = true;
+    private bool _zoomPageWidth;
+    private string _zoomPreset = "custom";
     private string _canvasViewMode = "print";
     private bool _canvasPrintPreviewActive;
     private bool _ribbonKeyboardMode;
@@ -607,9 +617,9 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
             await RestoreEditingZoomAsync();
         }
 
-        if (_fitPending)
+        if (_autoFitRefreshPending)
         {
-            await FitPageToColumnAsync();
+            await RefreshAutoFitAsync();
         }
 
         if (_fitPrintPreviewOnRender)
@@ -701,6 +711,8 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
 
     private bool IsDesktopLayout => _layout == TmLayoutMode.Desktop;
 
+    private bool _readableFloorSheet;
+
     private bool NavCollapsed => _navUserCollapsed ?? AutoCollapsed;
 
     // Before the first width report (and with a forced LayoutMode that never measures) the column is open.
@@ -746,6 +758,63 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
         }
     }
 
+    // The inspector is presented as the side sheet over the document when the layout is a tablet / phone OR when the readable floor applies to a desktop
+    // (the print preview keeps its docked actions column: it is a mode of the document region, not the inspector).
+    private bool InspectorIsSheet => IsSheetLayout || (_readableFloorSheet && IsDesktopLayout && !CanvasPrintPreviewActive);
+
+    // The first time the readable floor turns the docked inspector into a sheet it starts closed (an open sheet would hide half of a page the reader has
+    // not seen yet), unless the reader chose the panel's state on purpose - the same rule as the first tablet / phone layout.
+    private bool _floorSheetSeen;
+
+    private void ApplyReadableFloor(bool floorSheet)
+    {
+        if (floorSheet == _readableFloorSheet)
+        {
+            return;
+        }
+
+        _readableFloorSheet = floorSheet;
+        if (floorSheet && !_floorSheetSeen)
+        {
+            _floorSheetSeen = true;
+            if (!_sidePanelChosenByReader)
+            {
+                _sidePanelOpen = false;
+            }
+        }
+    }
+
+    // The smallest scale of the automatic fit the editor accepts next to a DOCKED inspector (decision `DE-AUTO-FIT-READABLE-FLOOR`): text set at less than
+    // three quarters of its size is no longer comfortable to read, and a sheet that opens on request gives the page the whole column instead.
+    internal const double ReadableAutoFitScale = 0.75;
+
+    // Whether the page fitted next to the docked navigation and inspector would be smaller than the readable floor. A pure function of the container
+    // width (the navigation is counted as the container folds it, not as the reader toggled it: opening the column on purpose must not undock the
+    // inspector), NEVER of the current presentation or of whether the inspector is open: the sheet must not flip the answer back, or the editor would
+    // dock and undock on every report.
+    private bool EstimatedFitBelowReadableFloor(double width)
+    {
+        if (LayoutMode != TmLayoutMode.Auto || PageFitMode == DocumentPageFitMode.Off || width <= 0)
+        {
+            return false;
+        }
+
+        var size = ActivePageSettings.Size;
+        var pagePx = size is { Width: > 0 } ? size.Width * 96d / 72d : DefaultPagePixelWidth;
+        var nav = width < NavigationFoldWidth ? NavigationRailWidth : Math.Clamp(width * 0.18, 224, NavigationMaxWidth);
+        var inspector = Math.Clamp(width * 0.26, 352, InspectorMaxWidth);
+        var column = width - nav - inspector - WorkspaceChrome - FittedStagePadding;
+        var scale = (column) / pagePx;
+        // A little hysteresis (one percent of the scale) so a drag of the window across the threshold does not flicker the presentation.
+        return scale < (_readableFloorSheet ? ReadableAutoFitScale + 0.01 : ReadableAutoFitScale);
+    }
+
+    private const double NavigationRailWidth = 44;
+
+    // The workspace paddings and the two grid gaps (var(--tm-space-4) * 4) and the stage + root padding the fit leaves around the page (about 80 px).
+    private const double WorkspaceChrome = 64;
+    private const double FittedStagePadding = 80;
+
     private async Task OnResolvedLayoutChangedAsync(TmLayoutMode resolved)
     {
         ApplyLayout(resolved);
@@ -763,9 +832,9 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
             await SyncCanvasNavigationAsync();
         }
 
-        // The fit is measured after this layout switch has RENDERED (OnAfterRenderAsync): the editor renders once more for it (a non-desktop
-        // container that does not fit its page), the way the print preview and the zoom restore do.
-        if (RequestPageFit())
+        // The padding of the page column belongs to the layout, so the engine re-resolves its fit once this layout switch has RENDERED
+        // (OnAfterRenderAsync): the editor renders once more for it - a layout switch is rare, a width report is not.
+        if (RequestAutoFitRefresh())
         {
             _suppressNextChromeRender = false;
         }
@@ -776,14 +845,23 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
     private async Task OnContainerWidthChangedAsync(double width)
     {
         var before = AutoCollapsed;
-        var widthChanged = Math.Abs(_containerWidth - width) >= 1;
         _containerWidth = width;
-        // A tablet or a phone fits its page to the column: a rotation or a host resize fits it again (a sheet never changes the width).
-        var fitRequested = widthChanged && RequestPageFit();
 
+        // The readable floor is a property of the width: crossing it swaps the docked inspector for the sheet over the document (a rare, deliberate re-render).
+        var floorSheet = EstimatedFitBelowReadableFloor(width);
+        if (floorSheet != _readableFloorSheet)
+        {
+            ApplyReadableFloor(floorSheet);
+            _suppressNextChromeRender = false;
+            RequestAutoFitRefresh();
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        // The page is fitted to the column by the ENGINE (its own resize observer on the scroll viewport), so a width report needs no render of ours.
         if (AutoCollapsed == before)
         {
-            _suppressNextChromeRender = !fitRequested;
+            _suppressNextChromeRender = true;
             return;
         }
 
@@ -806,84 +884,48 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
 
     private Task OpenFindFromChromeAsync() => OpenFindPanelAsync(replaceMode: false);
 
-    // Phase 8 (decision G2, `--tm-document-page-fit-zoom`): a tablet or a phone container narrower than its page shows the page as wide as the column - one
-    // text column, no sideways scrolling - until the reader zooms on purpose (the engine then reports a custom zoom, which this never overrides). A
-    // container that holds the page keeps the page at the zoom it has. Focus is never taken: a focus on the canvas opens the virtual keyboard.
-    private bool _fitPending;
+    // Phase 11 (decision `DE-ENGINE-AUTO-FIT`): the page is fitted to the document column by the ENGINE - zoom.autoFit with a resize observer on the
+    // scroll viewport - for every layout (a desktop container of 1024 - 1400 px next to the docked inspector, a tablet, a phone). Blazor only forwards
+    // PageFitMode and reflects what the engine reports (the zoom label and `data-page-fit`, which makes the ruler give way on a tablet / phone).
+    // The one thing the engine cannot see is the padding that belongs to a layout, so a layout switch asks it to resolve the fit again once the new
+    // layout has rendered. Focus is never taken: a focus on the canvas opens the virtual keyboard.
+    private bool _autoFitRefreshPending;
     private bool _pageFitApplied;
+    private string _zoomAutoFit = "off";
 
-    // The page the container cannot hold: the page of the active section (A4 = 794 px when unknown) plus the gutters of the workspace.
-    private bool PageWiderThanColumn
-    {
-        get
-        {
-            var size = ActivePageSettings.Size;
-            var pagePx = size is { Width: > 0 } ? size.Width * 96d / 72d : DefaultPagePixelWidth;
-            return _containerWidth > 0 && _containerWidth < pagePx + WorkspaceGutters;
-        }
-    }
+    // The editing zoom's automatic-fit state when the print preview was entered: a fit that was never the reader's zoom comes back with the editing view.
+    private string? _autoFitBeforePrintPreview;
 
-    // Marks a fit as due and tells the caller whether the editor must render (the fit runs in OnAfterRenderAsync, after the layout it measures).
-    private bool RequestPageFit()
+    // Marks a refresh as due and tells the caller whether the editor must render (it runs in OnAfterRenderAsync, after the layout it measures).
+    private bool RequestAutoFitRefresh()
     {
-        if (!IsSheetLayout || _disposed || _zoomLockedByReader)
+        if (_disposed || PageFitMode == DocumentPageFitMode.Off || !UsingCanvasEngine || _canvasHost is null)
         {
             return false;
         }
 
-        // Nothing to do while the page fits and no fit was applied before (then the zoom is the reader's / the default).
-        if (!PageWiderThanColumn && !_pageFitApplied)
-        {
-            return false;
-        }
-
-        _fitPending = true;
+        _autoFitRefreshPending = true;
         return true;
     }
 
-    private async Task FitPageToColumnAsync()
+    private async Task RefreshAutoFitAsync()
     {
-        if (!_fitPending)
-        {
-            return;
-        }
-
-        _fitPending = false;
-        if (!IsSheetLayout || _disposed || !UsingCanvasEngine || _canvasHost is null || CanvasPrintPreviewActive || _zoomLockedByReader)
+        _autoFitRefreshPending = false;
+        if (_disposed || !UsingCanvasEngine || _canvasHost is null)
         {
             return;
         }
 
         try
         {
-            if (PageWiderThanColumn)
-            {
-                // The engine reads the clientWidth of its scroll viewport for the fit, which flushes the layout the render just produced.
-                var firstFit = !_pageFitApplied;
-                _pageFitApplied = true;
-                await RouteToCanvasEngineAsync("fitWidth", null, focus: false);
-                if (firstFit)
-                {
-                    // data-page-fit on the root: the ruler (as wide as the page at 100 percent) gives way while the page is fitted.
-                    await InvokeAsync(StateHasChanged);
-                }
-            }
-            else if (_pageFitApplied)
-            {
-                // The column grew back to hold the page (a rotation, a wider host): the fit made earlier gives way to the page's own size.
-                _pageFitApplied = false;
-                await RouteToCanvasEngineAsync("setZoom", new { percent = 100 }, focus: false);
-                await InvokeAsync(StateHasChanged);
-            }
+            // A no-op for the engine while the zoom is the reader's (autoFit off) or the fit did not change.
+            await RouteToCanvasEngineAsync("applyAutoFit", null, focus: false);
         }
         catch (Exception exception) when (exception is JSDisconnectedException or TaskCanceledException or ObjectDisposedException or JSException)
         {
             // The circuit or the canvas is gone: there is nothing left to fit.
         }
     }
-
-    // Set by an explicit zoom (the status bar, the View tab): the reader's choice wins over the phone's fit.
-    private bool _zoomLockedByReader;
 
     private string DocumentTitle => string.IsNullOrWhiteSpace(_document?.Metadata.Title)
         ? Loc["TmDocumentEditor_UntitledDocument"]
@@ -1272,9 +1314,30 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
         ?? _pendingActions.GetMessage(PendingActionId.AutosaveWaiting)
         ?? _pendingActions.FirstMessage;
 
-    private string ZoomStatusLabel => _zoomPageWidth
-        ? Loc["TmDocumentEditor_ZoomPageWidth"]
-        : string.Create(CultureInfo.InvariantCulture, $"{_zoomPercent}%");
+    // The percent in the language of the UI: "62%" in English, "62 %" with a non-breaking space in Czech / Slovak / French.
+    private string ZoomPercentText => DocumentZoomMath.FormatPercent(_zoomPercent, Loc.Culture);
+
+    // The automatic mode ("Fit 62 %") fitted the page the way the host configured it; "Page width" is the reader's own explicit fit, which keeps
+    // following the column (enlarging included). A fit alone says nothing about how small the text got, so both carry the percent they resulted in.
+    private bool ZoomFittedAutomatically => _zoomPageWidth && string.Equals(_zoomAutoFit, "narrow", StringComparison.Ordinal);
+
+    private string ZoomStatusLabel => !_zoomPageWidth
+        ? ZoomPercentText
+        : ZoomFittedAutomatically
+            ? Loc["TmDocumentEditor_ZoomAutoFitPercent", ZoomPercentText]
+            : Loc["TmDocumentEditor_ZoomPageWidthPercent", ZoomPercentText];
+
+    // A fitted page is announced as a fit ("Zoom 62 percent, fitted to width"), not as a bare percent.
+    private string ZoomStatusAriaLabel => _zoomPageWidth
+        ? Loc["TmDocumentEditor_ZoomStatusFitted", _zoomPercent]
+        : Loc["TmDocumentEditor_ZoomStatus", ZoomStatusLabel];
+
+    // "Automatic" is offered only while the host lets the engine fit the page narrowly: with PageFitMode Off there is no automatic zoom to return to,
+    // with FitWidth the "Page width" entry already is that behaviour.
+    private bool ShowAutomaticZoom => PageFitMode == DocumentPageFitMode.Auto && UsingCanvasEngine;
+
+    // "Page width" is pressed only for the reader's own explicit fit (zoom.autoFit == always), not for the automatic fit that merely happens to be narrow.
+    private bool ZoomPageWidthPressed => _zoomPageWidth && !string.Equals(_zoomAutoFit, "narrow", StringComparison.Ordinal);
 
     private bool CanvasReadingMode
         => EffectiveRenderEngine == DocumentEditorRenderEngine.CanvasEnginePreview
@@ -1301,6 +1364,9 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
         {
             _layout = LayoutMode;
         }
+
+        // A host that flips PageFitMode (or pins a LayoutMode) changes whether the readable floor applies at the width it already has.
+        ApplyReadableFloor(EstimatedFitBelowReadableFloor(_containerWidth));
 
         _trackChangesEnabled = TrackChangesEnabled || _trackChangesEnabled || RequiresTrackedEditing;
         _suggestionsEnabled = SuggestionProvider is not null && (SuggestionsEnabled || _suggestionsEnabled);
@@ -1567,7 +1633,7 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
             _compareDocumentSnapshot = null;
             _diffRequest = null;
             // A phone and a tablet open their inspector sheet on request only (see ApplyLayout).
-            _sidePanelOpen = !IsSheetLayout && (ShowComments || ShowVersionHistory || _trackChangesEnabled);
+            _sidePanelOpen = !InspectorIsSheet && (ShowComments || ShowVersionHistory || _trackChangesEnabled);
             _contextSheetOpen = false;
             _activeSidePanelTab = _trackChangesEnabled
                 ? DocumentSidePanelTab.Revisions
@@ -6662,12 +6728,16 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
         _fieldPopoverEpoch++;
     }
 
+    // The reader's zoom range is 50 - 200 percent; the AUTOMATIC fit may show a smaller page on a narrow phone (the engine's own floor is 25), and the
+    // first step of the buttons from such a page lands on 50.
     private async Task SetZoomPercentAsync(int percent)
     {
         CloseFieldPopoversForViewportChange();
         _zoomPercent = Math.Clamp(percent, 50, 200);
         _zoomPageWidth = false;
-        _zoomLockedByReader = true;
+        _zoomAutoFit = "off";
+        _zoomPreset = "custom";
+        // The engine turns its automatic fit off for an explicit zoom (setZoom): the reader's choice wins until "Fit width" / "Reset zoom".
         if (await RouteToCanvasEngineAsync("setZoom", new { percent = _zoomPercent }, focus: true))
         {
             return;
@@ -6680,9 +6750,42 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
     {
         CloseFieldPopoversForViewportChange();
         _zoomPageWidth = true;
-        _zoomLockedByReader = false;
+        _zoomAutoFit = "always";
+        _zoomPreset = "fitWidth";
         _zoomPercent = 100;
         if (await RouteToCanvasEngineAsync("fitWidth", null, focus: true))
+        {
+            return;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    // "Automatic zoom" / Ctrl+0: back to the configured automatic fit from a clean 100 percent. A no-op while the host switched the fit off.
+    private async Task SetZoomAutomaticAsync()
+    {
+        if (PageFitMode == DocumentPageFitMode.Off || !UsingCanvasEngine)
+        {
+            return;
+        }
+
+        CloseFieldPopoversForViewportChange();
+        if (await RouteToCanvasEngineAsync("resetZoom", null, focus: true))
+        {
+            return;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    // "Whole page": the whole page fits the document region (the engine's fitPage preset - a reader zoom, the automatic fit is off).
+    private async Task SetZoomWholePageAsync()
+    {
+        CloseFieldPopoversForViewportChange();
+        _zoomPageWidth = false;
+        _zoomAutoFit = "off";
+        _zoomPreset = "fitPage";
+        if (await RouteToCanvasEngineAsync("fitPage", null, focus: true))
         {
             return;
         }
@@ -8348,17 +8451,17 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
         }
 
         _zoomPageWidth = string.Equals(fmt.ZoomPreset, "fitWidth", StringComparison.OrdinalIgnoreCase);
-        // The engine left the fit the phone applied (a pinch, the zoom control): that is the reader's decision, the fit never comes back by itself.
-        if (_pageFitApplied && !_zoomPageWidth && !CanvasPrintPreviewActive)
-        {
-            _zoomLockedByReader = true;
-        }
+        _zoomPreset = string.IsNullOrWhiteSpace(fmt.ZoomPreset) ? "custom" : fmt.ZoomPreset;
+        _zoomAutoFit = string.IsNullOrWhiteSpace(fmt.ZoomAutoFit) ? "off" : fmt.ZoomAutoFit;
+        // data-page-fit on the root: a page fitted SMALLER than itself is narrower than the ruler (as wide as the page at 100 percent), which gives way on a tablet / phone.
+        _pageFitApplied = _zoomPageWidth && _zoomPercent < 100;
 
         // Entering the print preview fits the page to the (now narrower) document region once, like a browser's print preview does.
         if (fmt.PrintPreviewActive && !_canvasPrintPreviewActive && !_zoomPageWidth)
         {
             _fitPrintPreviewOnRender = true;
             _zoomBeforePrintPreview = _zoomPercent;
+            _autoFitBeforePrintPreview = _zoomAutoFit;
         }
         else if (!fmt.PrintPreviewActive && _canvasPrintPreviewActive && _zoomBeforePrintPreview is not null)
         {
@@ -8621,14 +8724,8 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
 
     private async Task HandleCanvasEngineReadyAsync(TmDocumentCanvasEngineHost host)
     {
+        // The engine fitted the page to the column at mount (before it reported ready); the state sync reads the zoom it chose.
         await SyncCanvasEngineStateAsync();
-        if (RequestPageFit())
-        {
-            // The render that runs the fit must not be swallowed by a suppression flag left over from the layout or the state sync.
-            _suppressNextChromeRender = false;
-            _suppressNextWysiwygStateRender = false;
-            await InvokeAsync(StateHasChanged);
-        }
     }
 
     private async Task HandleCanvasEngineChangedAsync(TmDocumentCanvasEngineHost.CanvasEngineChangedState state)
@@ -8761,7 +8858,7 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
         // registration (B6, formerly done by the always-rendering document reconcile) re-render the comment
         // rail / revision + suggestion panels and the autosave/pending status when they change.
         var annotations = $"{_comments.Count}:{_canvasRevisions?.Count ?? 0}:{PendingRevisionCount}:{_pendingActions.Count}:{_pendingActions.FirstMessage}";
-        return string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{_isDirty}|{u.CanUndo}|{u.CanRedo}|{_isSaving}|{_saveMessage}|{f.Bold}|{f.Italic}|{f.Underline}|{f.Strikethrough}|{f.Superscript}|{f.Subscript}|{f.SmallCaps}|{f.AllCaps}|{f.DoubleStrikethrough}|{f.FontFamily}|{f.FontFamilyMixed}|{f.FontSize}|{f.FontSizeMixed}|{f.TextColor}|{f.TextColorMixed}|{f.HighlightColor}|{f.HighlightColorMixed}|{f.ParagraphAlignment}|{f.ParagraphAlignmentMixed}|{f.LineSpacing}|{f.LineSpacingMixed}|{f.SpacingBefore}|{f.SpacingAfter}|{f.LeftIndent}|{f.IsBulletList}|{f.IsNumberedList}|{f.ListMixed}|{_currentBlockStyle}|{_showRuler}|{_showBlocks}|{_showNonPrintingCharacters}|{_canvasViewMode}|{_miniToolbar is not null}|{annotations}");
+        return string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{_isDirty}|{u.CanUndo}|{u.CanRedo}|{_isSaving}|{_saveMessage}|{f.Bold}|{f.Italic}|{f.Underline}|{f.Strikethrough}|{f.Superscript}|{f.Subscript}|{f.SmallCaps}|{f.AllCaps}|{f.DoubleStrikethrough}|{f.FontFamily}|{f.FontFamilyMixed}|{f.FontSize}|{f.FontSizeMixed}|{f.TextColor}|{f.TextColorMixed}|{f.HighlightColor}|{f.HighlightColorMixed}|{f.ParagraphAlignment}|{f.ParagraphAlignmentMixed}|{f.LineSpacing}|{f.LineSpacingMixed}|{f.SpacingBefore}|{f.SpacingAfter}|{f.LeftIndent}|{f.IsBulletList}|{f.IsNumberedList}|{f.ListMixed}|{_currentBlockStyle}|{_showRuler}|{_showBlocks}|{_showNonPrintingCharacters}|{_canvasViewMode}|{_zoomPercent}|{_zoomPageWidth}|{_zoomAutoFit}|{_zoomPreset}|{_miniToolbar is not null}|{annotations}");
     }
 
     // B6: ScheduleCanvasDocumentReconcile / DebouncedCanvasReconcileAsync / ReconcileCanvasDocumentAsync —

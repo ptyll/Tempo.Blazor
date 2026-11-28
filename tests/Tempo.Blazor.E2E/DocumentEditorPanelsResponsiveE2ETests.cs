@@ -443,7 +443,10 @@ public sealed class DocumentEditorPanelsResponsiveE2ETests : WasmTestBase
             Assert.IsTrue(panel.X + panel.Width <= width + 0.5 && panel.X >= open.X - 1, $"{name}: the sheet sits over the document's end");
 
             // The sheet follows the reader down a tall document (it parks below the sticky ribbon) and never leaves the screen.
-            await page.EvaluateAsync("() => window.scrollBy(0, 900)");
+            // Phase 11: the engine fits a page wider than the column (this document's pages are about 1250 px wide), which makes the document SHORTER - the
+            // scroll stays inside the document region: half of its height, at most 900 px.
+            var scrollDistance = Math.Min(900, Math.Floor(open.Height / 2));
+            await page.EvaluateAsync("distance => window.scrollBy(0, distance)", scrollDistance);
             await page.WaitForTimeoutAsync(400);
             var parked = await page.GetByTestId("document-side-panel").BoundingBoxAsync();
             Assert.IsNotNull(parked);
@@ -510,10 +513,10 @@ public sealed class DocumentEditorPanelsResponsiveE2ETests : WasmTestBase
     }
 
     [TestMethod]
-    [Description("The desktop (1440) is unchanged: navigation, document and the docked inspector, no action bar, find in the inspector")]
+    [Description("The desktop is unchanged: navigation, document and the docked inspector, no action bar, find in the inspector (a 1600 viewport: the 1440 viewport's 1046 px editor presents the inspector as a sheet, see the readable floor)")]
     public async Task Desktop_1440_IsUnchanged()
     {
-        var (page, errors) = await OpenAsync(RevisionsDocumentId, 1440, 900, touch: false);
+        var (page, errors) = await OpenAsync(RevisionsDocumentId, 1600, 900, touch: false);
 
         Assert.AreEqual("desktop", await LayoutAsync(page));
         Assert.AreEqual(0, await page.GetByTestId("document-mobile-action-bar").CountAsync(), "no action bar on a desktop");

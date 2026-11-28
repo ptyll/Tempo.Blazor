@@ -47,7 +47,8 @@ export function createCanvasStack(options = {}) {
     root.style.justifyContent = 'center';
     root.style.gap = '24px';
     root.style.padding = '24px';
-    root.style.background = readThemeValue(theme, 'workspaceBackground', 'var(--tm-color-surface-muted, #eef1f5)');
+    // The stage is transparent: the workspace token paints the whole document column (the host and the surface), so the page column never shows as a lighter band.
+    root.style.background = readThemeValue(theme, 'workspaceBackground', 'transparent');
     const topSpacer = createSpacer(doc, 'document-canvas-virtual-top-spacer');
     const bottomSpacer = createSpacer(doc, 'document-canvas-virtual-bottom-spacer');
     root.appendChild(topSpacer);
@@ -120,8 +121,8 @@ export function createCanvasStack(options = {}) {
         pageElement.style.width = `${pageLayout.width}px`;
         pageElement.style.height = `${pageLayout.height}px`;
         pageElement.style.background = readThemeValue(theme, 'pageBackground', 'var(--tm-color-surface, #ffffff)');
-        pageElement.style.boxShadow = readThemeValue(theme, 'pageShadow', '0 14px 34px rgba(15, 23, 42, 0.18)');
-        pageElement.style.border = readThemeValue(theme, 'pageBorder', '1px solid rgba(148, 163, 184, 0.45)');
+        pageElement.style.boxShadow = readThemeValue(theme, 'pageShadow', 'var(--tm-shadow-lg, 0 14px 34px rgba(15, 23, 42, 0.18))');
+        pageElement.style.border = readThemeValue(theme, 'pageBorder', '1px solid var(--tm-border-color, rgba(148, 163, 184, 0.45))');
 
         const layers = new Map();
         for (const kind of CANVAS_LAYER_KINDS) {
@@ -269,6 +270,7 @@ export function createCanvasStack(options = {}) {
         root.setAttribute('data-canvas-view-toolbar-hidden', String(presentation.toolbarHidden === true));
         root.setAttribute('data-canvas-zoom-percent', String(viewState.zoom.percent));
         root.setAttribute('data-canvas-zoom-preset', viewState.zoom.preset);
+        root.setAttribute('data-canvas-zoom-auto-fit', viewState.zoom.autoFit || 'off');
         root.setAttribute('data-canvas-print-preview-active', String(viewState.printPreview.active === true));
         root.style.gap = `${presentation.rootGap}px`;
         root.style.padding = `${presentation.rootPadding}px ${resolveRootPaddingInline(root, presentation.rootPadding)}px`;
@@ -484,6 +486,7 @@ export function createCanvasStack(options = {}) {
                 zoomPercent: viewState.zoom.percent,
                 zoomScale,
                 zoomPreset: viewState.zoom.preset,
+                zoomAutoFit: viewState.zoom.autoFit || 'off',
                 printPreviewActive: viewState.printPreview.active === true,
             },
             displayList,
