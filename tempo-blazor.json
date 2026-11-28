@@ -9671,6 +9671,18 @@
       "documentationStatus": "merged",
       "members": [
         {
+          "name": "Badge",
+          "kind": "Property",
+          "type": "string?",
+          "description": "An optional short count or state (\"3\", \"9+\") shown as a small badge beside the label of the TmMobileActionBar tile (a pending-changes count on a Comments action, say). Bar tiles only: the \"More\" menu entry carries no badge. Empty or null renders no badge. The text is part of the tile's accessible name, so it must read well after the label."
+        },
+        {
+          "name": "BadgeLabel",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The words behind Badge (\"3 to review\"). When set, the badge pill is decorative (aria-hidden) and the tile's accessible name reads \", {BadgeLabel}\" after the label through a visually hidden span; without it the pill's own text is part of the name."
+        },
+        {
           "name": "Checked",
           "kind": "Property",
           "type": "bool?",
@@ -9747,6 +9759,12 @@
           "kind": "Property",
           "type": "ActionOverflow",
           "description": "Pins the item to the surface or to the overflow menu, independently of Priority: Never keeps it on the surface, Always puts it in the \"More\" menu even when the budget would show it, Auto (default) lets the budget and the priority rank decide. Never-pinned items count against the visible budget; always-pinned items do not."
+        },
+        {
+          "name": "Primary",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Marks the action as the primary call to action: its TmMobileActionBar tile is a filled button (icon beside the label) in the primary colour instead of an icon-over-label tile. One per bar is the intent; the menu entry is unchanged."
         },
         {
           "name": "Priority",

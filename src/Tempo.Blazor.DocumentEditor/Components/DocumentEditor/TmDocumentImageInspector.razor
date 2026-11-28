@@ -21,6 +21,8 @@
                                    TestIdPrefix="@TestIdPrefix" />
     }
 
+    @if (!ShortSet)
+    {
     <TmDocumentInspectorSection Title="@Loc["TmDocumentEditor_ImageSectionPicture"]"
                                 SectionTestId="document-image-inspector-section-picture"
                                 TestIdPrefix="@TestIdPrefix">
@@ -70,8 +72,9 @@
             </label>
         }
     </TmDocumentInspectorSection>
+    }
 
-    @if (SizeChanged.HasDelegate)
+    @if (SizeChanged.HasDelegate && !ShortSet)
     {
         <TmDocumentInspectorSection Title="@Loc["TmDocumentEditor_ImageSectionSizeRotation"]"
                                     SectionTestId="document-image-inspector-section-size"
@@ -189,7 +192,7 @@
                     </div>
                 </div>
             }
-            @if (PositionChanged.HasDelegate)
+            @if (PositionChanged.HasDelegate && !ShortSet)
             {
                 <div class="tm-document-image-inspector__pair">
                     <label class="tm-document-inspector-form__field">
@@ -222,12 +225,15 @@
                     </label>
                 </div>
             }
+            @if (!ShortSet)
+            {
             <div class="tm-document-inspector-form__field tm-document-image-inspector__asset"
                  data-testid="@TestId("document-image-inspector-anchor-paragraph")">
                 <span class="tm-document-inspector-form__label">@Loc["TmDocumentEditor_ImageAnchorParagraph"]</span>
                 <strong class="tm-document-image-inspector__asset-value">@AnchorParagraphLabel</strong>
             </div>
-            @if (LockAnchorChanged.HasDelegate)
+            }
+            @if (LockAnchorChanged.HasDelegate && !ShortSet)
             {
                 <label class="tm-document-inspector-form__check">
                     <input type="checkbox"
@@ -240,7 +246,7 @@
         </TmDocumentInspectorSection>
     }
 
-    @if (BringForward.HasDelegate || SendBackward.HasDelegate)
+    @if ((BringForward.HasDelegate || SendBackward.HasDelegate) && !ShortSet)
     {
         <TmDocumentInspectorSection Title="@Loc["TmDocumentEditor_ImageSectionOrder"]"
                                     SectionTestId="document-image-inspector-section-order"
@@ -328,6 +334,13 @@
     /// panel as a contextual surface whose header already names it and passes <c>false</c>.
     /// </summary>
     [Parameter] public bool ShowHeader { get; set; } = true;
+
+    /// <summary>
+    /// The short set of a phone (decision G2: viewing plus light edits): the wrapping, the alignment and the alternative text. The picture
+    /// source, the size, the exact position, the anchor and the stacking order stay for a tablet and up. Defaults to <c>false</c> (the
+    /// full inspector).
+    /// </summary>
+    [Parameter] public bool ShortSet { get; set; }
 
     /// <summary>Raised when alternative text changes. The control renders only when this callback is bound.</summary>
     [Parameter] public EventCallback<string> AltTextChanged { get; set; }

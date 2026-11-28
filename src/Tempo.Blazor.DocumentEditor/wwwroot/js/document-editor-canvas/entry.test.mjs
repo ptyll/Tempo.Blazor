@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { CANVAS_LAYER_KINDS, CanvasDocumentEngine, createCanvasDocumentEngine } from './entry.mjs';
+import { COMPACT_ROOT_PADDING_INLINE, resolveRootPaddingInline } from './render/canvas-stack.mjs';
 
 test('createCanvasDocumentEngine mounts a canvas-per-visible-page stack without Blazor', () => {
     const doc = createFakeDocument();
@@ -982,4 +983,33 @@ test('scrollMatchRectIntoView scrolls a transient probe at the match rectangle i
     // Nothing to scroll to: no page, no rectangle - and no throw.
     assert.doesNotThrow(() => CanvasDocumentEngine.prototype.scrollMatchRectIntoView.call(fake, null));
     assert.doesNotThrow(() => CanvasDocumentEngine.prototype.scrollMatchRectIntoView.call(fake, { pageIndex: 9, x: 0, y: 0, height: 1 }));
+});
+
+test('the page column of a tablet and a phone is padded by a hairline, a desktop keeps the view mode padding', () => {
+    const inLayout = layout => ({ closest: selector => (selector === '[data-layout]' ? { getAttribute: () => layout } : null) });
+
+    assert.equal(resolveRootPaddingInline(inLayout('desktop'), 24), 24);
+    assert.equal(resolveRootPaddingInline(inLayout('tablet'), 24), COMPACT_ROOT_PADDING_INLINE);
+    assert.equal(resolveRootPaddingInline(inLayout('mobile'), 24), COMPACT_ROOT_PADDING_INLINE);
+    // A narrower view-mode padding is never widened, an element outside any editor and a throwing probe fall back to the view mode's own.
+    assert.equal(resolveRootPaddingInline(inLayout('mobile'), 2), 2);
+    assert.equal(resolveRootPaddingInline({ closest: () => null }, 24), 24);
+    assert.equal(resolveRootPaddingInline({ closest: () => { throw new Error('detached'); } }, 24), 24);
+});
+
+test('getFitPaddingInline adds the mount padding and the root hairline on a non-desktop layout, 48 on a desktop', () => {
+    const host = layout => ({ closest: () => ({ getAttribute: () => layout }) });
+    const withStyle = (layout, left, right) => {
+        const previous = globalThis.getComputedStyle;
+        globalThis.getComputedStyle = () => ({ paddingLeft: `${left}px`, paddingRight: `${right}px` });
+        try {
+            return CanvasDocumentEngine.prototype.getFitPaddingInline.call({ host: host(layout) });
+        } finally {
+            globalThis.getComputedStyle = previous;
+        }
+    };
+
+    assert.equal(withStyle('desktop', 8, 8), 48);
+    assert.equal(withStyle('mobile', 8, 8), 8 + 8 + 2 * COMPACT_ROOT_PADDING_INLINE);
+    assert.equal(withStyle('tablet', 8, 8), 8 + 8 + 2 * COMPACT_ROOT_PADDING_INLINE);
 });

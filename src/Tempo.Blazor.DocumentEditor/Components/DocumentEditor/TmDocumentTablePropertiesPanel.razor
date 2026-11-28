@@ -15,6 +15,8 @@
     <TmDocumentInspectorSection Title="@Loc["TmDocumentEditor_TableProperties"]"
                                 Icon="table-properties"
                                 SectionTestId="@($"{TestIdRoot}-section")">
+        @if (!ShortSet)
+        {
         <label class="tm-document-inspector-form__field tm-document-inspector-form__field--stacked tm-document-inspector-form__field--unit">
             <span class="tm-document-inspector-form__label">@Loc["TmDocumentEditor_TableWidth"]</span>
             <input class="tm-input"
@@ -27,6 +29,7 @@
                    @onchange="HandleWidthChangedAsync" />
             <span class="tm-document-inspector-form__suffix" id="@_widthUnitId">@Loc["TmDocumentEditor_UnitPx"]</span>
         </label>
+        }
 
         <div class="tm-document-inspector-form__field tm-document-inspector-form__field--stacked">
             <span class="tm-document-inspector-form__label">@Loc["TmDocumentEditor_TableAlignment"]</span>
@@ -46,6 +49,8 @@
             </div>
         </div>
 
+        @if (!ShortSet)
+        {
         <label class="tm-document-inspector-form__field tm-document-inspector-form__field--stacked tm-document-inspector-form__field--unit">
             <span class="tm-document-inspector-form__label">@Loc["TmDocumentEditor_TableCellPadding"]</span>
             <input class="tm-input"
@@ -88,6 +93,7 @@
             <option value="@DocumentBorderPresets.Custom" disabled="@(BorderPreset != DocumentBorderPresets.Custom)">@Loc["TmDocumentEditor_BorderCustom"]</option>
             </select>
         </label>
+        }
     </TmDocumentInspectorSection>
 </section>
 
@@ -107,6 +113,12 @@
 
     /// <summary>Raised when table properties change.</summary>
     [Parameter] public EventCallback<TableLayoutContent> LayoutChanged { get; set; }
+
+    /// <summary>
+    /// The short set of a phone (decision G2: viewing plus light edits): only the table alignment. The width, the cell padding, the
+    /// background and the border stay for a tablet and up. Defaults to <c>false</c> (the full panel).
+    /// </summary>
+    [Parameter] public bool ShortSet { get; set; }
 
     /// <summary>Base string for this panel's <c>data-testid</c> attributes. Defaults to document-table-properties.</summary>
     [Parameter] public string TestIdRoot { get; set; } = "document-table-properties";

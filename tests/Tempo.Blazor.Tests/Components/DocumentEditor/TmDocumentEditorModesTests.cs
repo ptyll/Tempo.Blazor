@@ -268,6 +268,39 @@ public class TmDocumentEditorModesTests : LocalizationTestBase
     }
 
     [Fact]
+    public async Task Mobile_VersionPanel_ShowDifferences_ClosesTheSheet_SoTheComparisonIsSeen()
+    {
+        var provider = new InMemoryDocumentEditorProvider();
+        var document = provider.SeedContractDocument("doc-1");
+        await provider.CreateVersionAsync(new DocumentVersionCreateRequest { DocumentId = "doc-1", Label = "Draft", Author = new DocumentEditorAuthor { Id = "a", DisplayName = "Ada" } });
+        var edited = DocumentEditorJson.Deserialize(DocumentEditorJson.Serialize(document));
+        edited.Blocks.Add(new DocumentBlock
+        {
+            Id = "added-block",
+            Order = edited.Blocks.Count + 1,
+            Type = DocumentBlockType.Paragraph,
+            Content = new ParagraphBlockContent { Inlines = [new TextRun { Text = "A brand new closing paragraph" }] }
+        });
+        await provider.SaveAsync(new DocumentEditorSaveRequest { DocumentId = "doc-1", Document = edited, ConcurrencyMode = DocumentEditorConcurrencyMode.Force });
+        await provider.CreateVersionAsync(new DocumentVersionCreateRequest { DocumentId = "doc-1", Label = "Final", Author = new DocumentEditorAuthor { Id = "a", DisplayName = "Ada" } });
+
+        var cut = RenderDocumentEditor(parameters =>
+            parameters.Add(p => p.DocumentId, "doc-1").Add(p => p.Provider, provider).Add(p => p.LayoutMode, TmLayoutMode.Mobile));
+        cut.WaitForAssertion(() => cut.Find("[data-testid='document-mobile-comments']").Should().NotBeNull());
+        cut.Find("[data-testid='document-mobile-comments']").Click();
+        cut.WaitForAssertion(() => cut.Find("[data-testid='document-side-panel-tab-versions']").Should().NotBeNull());
+        cut.Find("[data-testid='document-side-panel-tab-versions']").Click();
+        cut.WaitForAssertion(() => cut.FindAll("[data-testid='document-version-item']").Should().HaveCount(2));
+
+        FindVersionButton(cut, "document-version-diff-base", "Draft").Click();
+        FindVersionButton(cut, "document-version-diff-compare", "Final").Click();
+        cut.Find("[data-testid='document-version-show-diff']").Click();
+
+        cut.WaitForAssertion(() => cut.Find("[data-testid='document-diff-viewer']").Should().NotBeNull());
+        cut.FindAll("[data-testid='document-side-panel']").Should().BeEmpty("a phone's sheet covers the page: it closes when the comparison it asked for opens");
+    }
+
+    [Fact]
     public async Task ComparisonMode_Escape_ReturnsToTheDocument()
     {
         var provider = new InMemoryDocumentEditorProvider();

@@ -111,19 +111,19 @@ public partial class TmDocumentEditor
 
     // On a desktop layout the object inspector is the context; once the reader dismissed it, the Properties tab shows it instead (a dismissed
     // inspector must not leave the selected object without one). Tablet and phone never have a context, so their tab always shows it.
-    private bool ShowImageInspectorInTab => HasImageInspector && (!IsDesktopLayout || _inspectorContext is null);
+    private bool ShowImageInspectorInTab => HasImageInspector && (IsMobileLayout || _inspectorContext is null);
 
-    private bool ShowTableInspectorInTab => HasTableInspector && (!IsDesktopLayout || _inspectorContext is null);
+    private bool ShowTableInspectorInTab => HasTableInspector && (IsMobileLayout || _inspectorContext is null);
 
     private bool HasTableInspector => ActiveTableContent is not null && ActiveTableCell is not null;
 
     /// <summary>
-    /// The contextual inspector of the current selection, or null. Desktop only: a tablet and a phone keep the tabs (their inspector is a
-    /// sheet). Find wins over an object - it is a deliberate request - and a dismissed context stays dismissed for the same object.
+    /// The contextual inspector of the current selection, or null. A desktop dock and a tablet side sheet have one; a phone keeps the tabs
+    /// (its object inspector is a short bottom sheet of its own, see ContextSheetKind). Find wins over an object - it is a deliberate request - and a dismissed context stays dismissed for the same object.
     /// </summary>
     private InspectorContext? ResolveInspectorContext()
     {
-        if (!IsDesktopLayout)
+        if (IsMobileLayout)
         {
             return null;
         }

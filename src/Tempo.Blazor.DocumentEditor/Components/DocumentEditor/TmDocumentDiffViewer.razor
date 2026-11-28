@@ -2,6 +2,7 @@
 @inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.DocumentEditor.Models
 @using Tempo.Blazor.DocumentEditor.Services
+@using Tempo.Blazor.Components.Inputs
 
 @* Redesign 146c7e1b, phase 7 (DE-2.6, decision DE3): the diff is TEXT, aligned by BLOCK. A header (title, the found-changes sentence, the
    legend and the view switch) sits above two columns - the old side on the left, the new side on the right - with ONE row per block, so a
@@ -11,6 +12,8 @@
 <section class="tm-document-diff"
          data-testid="@TestId("document-diff-viewer")"
          data-view-mode="@_mode.ToString().ToLowerInvariant()"
+         data-compact="@(Compact ? "true" : null)"
+         data-segment="@(Compact ? _segment.ToString().ToLowerInvariant() : null)"
          aria-label="@HeaderTitle">
     <header class="tm-document-diff__header">
         <div class="tm-document-diff__titles">
@@ -32,16 +35,31 @@
             }
         </div>
         <div class="tm-document-diff__controls">
-            <label class="tm-document-diff__view-mode">
-                <span>@Loc["TmDocumentEditor_DiffViewMode"]</span>
-                <select class="tm-input"
-                        value="@_mode.ToString()"
-                        data-testid="@TestId("document-diff-view-mode")"
-                        @onchange="ChangeViewModeAsync">
-                    <option value="@DiffViewMode.SideBySide">@Loc["TmDocumentEditor_DiffViewSideBySide"]</option>
-                    <option value="@DiffViewMode.Unified">@Loc["TmDocumentEditor_DiffViewUnified"]</option>
-                </select>
-            </label>
+            @if (Compact)
+            {
+                @* A phone shows ONE text at a time: the older, the newer, or the differences between them (the default). *@
+                <div class="tm-document-diff__segments" data-testid="@TestId("document-diff-segments")">
+                    <TmSegmentedControl TValue="DiffSegment"
+                                        Options="@SegmentOptions"
+                                        Value="@_segment"
+                                        ValueChanged="SetSegmentAsync"
+                                        AriaLabel="@Loc["TmDocumentEditor_DiffSegmentsLabel"]"
+                                        FullWidth="true" />
+                </div>
+            }
+            else
+            {
+                <label class="tm-document-diff__view-mode">
+                    <span>@Loc["TmDocumentEditor_DiffViewMode"]</span>
+                    <select class="tm-input"
+                            value="@_mode.ToString()"
+                            data-testid="@TestId("document-diff-view-mode")"
+                            @onchange="ChangeViewModeAsync">
+                        <option value="@DiffViewMode.SideBySide">@Loc["TmDocumentEditor_DiffViewSideBySide"]</option>
+                        <option value="@DiffViewMode.Unified">@Loc["TmDocumentEditor_DiffViewUnified"]</option>
+                    </select>
+                </label>
+            }
             <div class="tm-document-diff__nav" role="group" aria-label="@Loc["TmDocumentEditor_DiffNavigationLabel"]">
                 <button type="button"
                         class="tm-btn tm-btn-sm tm-btn-secondary tm-document-diff__nav-button"
@@ -107,7 +125,7 @@
              role="list"
              aria-label="@HeaderTitle"
              data-testid="@TestId(_mode == DiffViewMode.SideBySide ? "document-diff-side-by-side" : "document-diff-unified")">
-            @foreach (var row in _rows)
+            @foreach (var row in VisibleRows)
             {
                 @* The selected change is the only row that needs an element reference (to take the focus), so it is the one branch with @ref. *@
                 @if (row.ChangeIndex >= 0 && row.ChangeIndex == _current)
@@ -126,6 +144,9 @@
 @code {
     private enum RowKind { Unchanged, Changed, Added, Removed }
 
+    /// <summary>What a phone shows: only the older text, only the newer text, or the differences between them.</summary>
+    private enum DiffSegment { Older, Newer, Differences }
+
     private sealed record DiffRow(string Key, RowKind Kind, string? BlockId, string OldText, string NewText, IReadOnlyList<DocumentTextDiffSegment> Segments, int ChangeIndex);
 
     private ElementReference _currentRow;
@@ -138,6 +159,7 @@
     private int _current = -1;
     private int _focusPending = -1;
     private DiffViewMode _mode = DiffViewMode.SideBySide;
+    private DiffSegment _segment = DiffSegment.Differences;
     private DiffViewMode _lastModeParameter = DiffViewMode.SideBySide;
     private bool? _sideBySideAlias;
     private bool _viewModeExplicit;
@@ -194,6 +216,13 @@
     /// <summary>When bound, a "Back to document" button is shown in the header and raises this callback.</summary>
     [Parameter] public EventCallback OnBack { get; set; }
 
+    /// <summary>
+    /// The phone presentation (decision G2): the view starts as <see cref="DiffViewMode.Unified"/> (unless <see cref="ViewMode"/> is set) and the
+    /// side-by-side selector gives way to a three-segment switch - Older, Newer, Differences - that shows one text at a time. Defaults to
+    /// <c>false</c> (the full viewer).
+    /// </summary>
+    [Parameter] public bool Compact { get; set; }
+
     /// <summary>Id of a block whose row is selected (and brought into view) when the viewer first shows it.</summary>
     [Parameter] public string? InitialBlockId { get; set; }
 
@@ -215,8 +244,26 @@
 
     // ViewMode wins whenever the host sets it; the obsolete SideBySide alias only counts when ViewMode is not set, whatever the order of the two.
     private DiffViewMode ModeParameter => _viewModeExplicit || _sideBySideAlias is null
-        ? ViewMode
+        ? (Compact && !_viewModeExplicit ? DiffViewMode.Unified : ViewMode)
         : _sideBySideAlias.Value ? DiffViewMode.SideBySide : DiffViewMode.Unified;
+
+    private IReadOnlyList<SegmentedOption<DiffSegment>> SegmentOptions =>
+    [
+        new() { Value = DiffSegment.Older, Label = Loc["TmDocumentEditor_DiffSegmentOlder"], Icon = "history" },
+        new() { Value = DiffSegment.Newer, Label = Loc["TmDocumentEditor_DiffSegmentNewer"], Icon = "file-text" },
+        new() { Value = DiffSegment.Differences, Label = Loc["TmDocumentEditor_DiffSegmentDiff"], Icon = "file-diff" },
+    ];
+
+    // A phone's Older / Newer segments show the rows that exist on that side (an added block has no older text, a removed one no newer text).
+    private IEnumerable<DiffRow> VisibleRows => !Compact || _segment == DiffSegment.Differences
+        ? _rows
+        : _rows.Where(row => _segment == DiffSegment.Older ? row.Kind != RowKind.Added : row.Kind != RowKind.Removed);
+
+    private Task SetSegmentAsync(DiffSegment segment)
+    {
+        _segment = segment;
+        return Task.CompletedTask;
+    }
 
     /// <inheritdoc />
     public override Task SetParametersAsync(ParameterView parameters)
@@ -285,6 +332,13 @@
                 {
                     @RenderCell(row, false)
                 }
+            </div>
+        }
+        else if (Compact && _segment != DiffSegment.Differences)
+        {
+            @* A phone's single-text segments: the row's text on that side, no marks. *@
+            <div class="tm-document-diff__cell tm-document-diff__cell--unified" data-side="@(_segment == DiffSegment.Older ? "old" : "new")">
+                @(_segment == DiffSegment.Older ? row.OldText : row.NewText)
             </div>
         }
         else

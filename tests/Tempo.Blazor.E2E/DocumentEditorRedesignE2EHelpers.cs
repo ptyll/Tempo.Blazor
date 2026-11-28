@@ -59,6 +59,32 @@ internal static class DocumentEditorRedesignE2EHelpers
     }
 
     /// <summary>
+    /// Opens the inspector at the given tab (<c>comments</c>, <c>revisions</c>, <c>versions</c>, <c>properties</c>, <c>outline</c>, <c>pages</c>) whatever the
+    /// layout is (phase 8, decision G2): a desktop dock is open already; a tablet's side sheet is opened by its edge toggle; a phone's sheet by the
+    /// Comments tile of the action bar. The tab is then chosen.
+    /// </summary>
+    public static async Task OpenInspectorTabAsync(IPage page, string tab)
+    {
+        var tabButton = page.GetByTestId($"document-side-panel-tab-{tab}");
+        if (await tabButton.CountAsync() == 0)
+        {
+            var layout = await page.Locator(".tm-document-editor").First.GetAttributeAsync("data-layout");
+            if (layout == "mobile")
+            {
+                await page.GetByTestId("document-mobile-comments").ClickAsync();
+            }
+            else
+            {
+                await page.GetByTestId("document-side-panel-edge-toggle").ClickAsync();
+            }
+
+            await Assertions.Expect(tabButton).ToBeVisibleAsync(new() { Timeout = 10_000 });
+        }
+
+        await tabButton.ClickAsync();
+    }
+
+    /// <summary>
     /// A ribbon command that opens a floating panel (phase 5): a real click on the bar button when it is on the bar, otherwise the More
     /// entry of the same name. A popup item's More form is a plain entry labelled <paramref name="menuLabel"/> (it carries no test id).
     /// </summary>

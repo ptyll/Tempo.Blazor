@@ -47,6 +47,12 @@ public sealed record DocumentEditorCommandContext
     /// <summary>Whether document comparison is available.</summary>
     public bool CanCompareDocuments { get; init; }
 
+    /// <summary>
+    /// The editor is laid out as a phone (decision G2: viewing plus light edits). The registry disables the tablet-and-up commands
+    /// (<see cref="DocumentEditorCommandRegistry.PhoneRestrictedCommands"/>) while it is set.
+    /// </summary>
+    public bool IsPhoneLayout { get; init; }
+
     /// <summary>Whether the document is in protected (restricted-editing) mode.</summary>
     public bool IsProtected { get; init; }
 

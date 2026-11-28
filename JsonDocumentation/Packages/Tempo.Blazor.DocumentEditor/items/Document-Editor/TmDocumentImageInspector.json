@@ -100,6 +100,12 @@
       "type": "bool",
       "isRequired": false,
       "description": "Whether the inspector renders its own header. The desktop inspector hosts it as a contextual surface whose header names it and passes false."
+    },
+    {
+      "name": "ShortSet",
+      "type": "bool",
+      "isRequired": false,
+      "description": "The short set of a phone (decision G2): the wrapping, the alignment and the alternative text. The picture source, the size, the exact position, the anchor and the stacking order stay for a tablet and up. Defaults to false (the full inspector)."
     }
   ]
 }

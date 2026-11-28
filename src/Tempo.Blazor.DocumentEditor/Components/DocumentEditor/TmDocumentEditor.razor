@@ -2,6 +2,7 @@
 @inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.Abstractions.Layout
 @using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Components.Actions
 @using Tempo.Blazor.Components.Layout
 @using Tempo.Blazor.Components.DocumentEditor.Features
 @using Tempo.Blazor.DocumentEditor.Models
@@ -29,6 +30,7 @@
      tabindex="0"
      data-layout="@lay.CssModifier"
      data-layout-forced="@(LayoutMode != TmLayoutMode.Auto ? "true" : null)"
+     data-page-fit="@(_pageFitApplied ? "true" : null)"
      data-can-view-audit="@CanViewAudit.ToString()"
      data-ribbon-keyboard-mode="@_ribbonKeyboardMode.ToString().ToLowerInvariant()"
      data-blazor-render-count="@NextBlazorRenderCount"
@@ -85,6 +87,7 @@
         @if (HeaderVisible)
         {
             <TmDocumentEditorHeader Title="@HeaderTitle"
+                                    Compact="@IsMobileLayout"
                                     Subtitle="@Subtitle"
                                     ModeLabel="@HeaderModeLabel"
                                     ReadOnly="@EffectiveReadOnly"
@@ -98,7 +101,7 @@
                                     CommandRegistry="@_commandRegistry"
                                     ShowPrintPreview="true"
                                     PrintPreviewActive="@CanvasPrintPreviewActive"
-                                    CanExportPdf="@CanExportPdf"
+                                    CanExportPdf="@(CanExportPdf && !CanvasPrintPreviewActive)"
                                     IsExportingPdf="@_isExportingPdf"
                                     HeaderStart="@HeaderStart"
                                     HeaderActions="@HeaderActions"
@@ -116,6 +119,7 @@
             <TmDocumentEditorToolbar @ref="_toolbar"
                                      CommandRegistry="@_commandRegistry"
                                      ToolbarMode="@ToolbarMode"
+                                     PhoneLayout="@IsMobileLayout"
                                      ReadOnly="@EffectiveReadOnly"
                                      ShowQuickAccess="@(!HeaderVisible)"
                                      IsSaving="@_isSaving"
@@ -221,7 +225,7 @@
                                      ShowBlockStyle="true"
                                      CurrentBlockStyle="@_currentBlockStyle"
                                      OnBlockStyleChanged="ApplyBlockStyleAsync"
-                                     ShowStyleManagement="true"
+                                     ShowStyleManagement="@(!IsMobileLayout)"
                                      ShowAdvancedCharacterFormatting="true"
                                      OnStyleDefinitionChanged="ModifyDocumentStyleAsync"
                                      OnStyleCreatedFromSelection="CreateDocumentStyleFromSelectionAsync"
@@ -236,7 +240,7 @@
                                      OnInsertImageUrl="OpenImageDialogAsync"
                                      OnInsertImageUpload="OpenImageUploadPanelAsync"
                                      OnInsertImageAsset="OpenImageLibraryPanelAsync"
-                                     ShowEquationTools="true"
+                                     ShowEquationTools="@(!IsMobileLayout)"
                                      OnInsertEquation="InsertEquationAsync"
                                      ShowSymbolTools="true"
                                      OnInsertSymbol="InsertSymbolAsync"
@@ -414,10 +418,14 @@
                     <TmDocumentVersionPreviewStrip PreviewVersion="@_previewVersion"
                                                    OnReturnToCurrent="ReturnToCurrentVersionAsync"
                                                    OnRestoreVersion="RestoreVersionAsync" />
-                    <TmDocumentReviewSummary PendingRevisionCount="@PendingRevisionCount"
-                                             OpenCommentCount="@OpenCommentCount"
-                                             OpenComments="OpenCommentsPanelAsync"
-                                             OpenRevisions="OpenRevisionsPanelAsync" />
+                    @* Phase 8: on a phone what the summary counted rides the Comments tile of the action bar as a badge. *@
+                    @if (!IsMobileLayout)
+                    {
+                        <TmDocumentReviewSummary PendingRevisionCount="@PendingRevisionCount"
+                                                 OpenCommentCount="@OpenCommentCount"
+                                                 OpenComments="OpenCommentsPanelAsync"
+                                                 OpenRevisions="OpenRevisionsPanelAsync" />
+                    }
                 </div>
                 @if (CanvasPrintPreviewActive)
                 {
@@ -435,6 +443,7 @@
                 {
                     <div class="tm-document-editor__diff-mode" data-testid="@TestId("document-diff-mode")">
                         <TmDocumentDiffViewer ComparisonResult="@_diffRequest!.Result"
+                                              Compact="@IsMobileLayout"
                                               OldTitle="@_diffRequest.BaseTitle"
                                               NewTitle="@_diffRequest.CompareTitle"
                                               OldMeta="@_diffOldMeta"
@@ -475,151 +484,22 @@
                 </article>
             </section>
 
-            <div class="tm-document-editor__inspector" data-region="inspector" data-focus-region="inspector">
-            @if (CanvasPrintPreviewActive && IsDesktopLayout)
+            @* Phase 8 (DE-2.7): a phone has no inspector region - its panels are sheets of the floating root (see below). A tablet's region is a
+               side sheet that overlays the document (CSS), so the document keeps its width. *@
+            @if (!IsMobileLayout)
             {
-                @PrintPreviewActions
-                @PrintPreviewInfo
+                <div class="tm-document-editor__inspector"
+                     data-region="inspector"
+                     data-focus-region="inspector"
+                     data-presentation="@(IsDesktopLayout ? "docked" : "sheet")">
+                    @if (CanvasPrintPreviewActive && IsDesktopLayout)
+                    {
+                        @PrintPreviewActions
+                        @PrintPreviewInfo
+                    }
+                    @InspectorPanel
+                </div>
             }
-            <TmDocumentSidePanel @ref="_sidePanel"
-                                 IsOpen="@_sidePanelOpen"
-                                 TextTabs="@IsDesktopLayout"
-                                 ActiveTab="@ActiveSidePanelTab"
-                                 ActiveTabChanged="SetSidePanelTabAsync"
-                                 ShowComments="@IsFeatureEnabled(DocumentEditorFeatureNames.Comments)"
-                                 ShowRevisions="@(IsFeatureEnabled(DocumentEditorFeatureNames.TrackChanges) || IsCanvasSuggestionMode)"
-                                 ShowVersions="@ShowVersionHistory"
-                                 ShowProperties="true"
-                                 ShowOutline="@(!IsDesktopLayout)"
-                                 ShowPages="@(!IsDesktopLayout)"
-                                 ContextContent="@InspectorContextContent"
-                                 ContextKind="@_inspectorContext?.Kind"
-                                 ContextTitle="@_inspectorContext?.Title"
-                                 ContextIcon="@_inspectorContext?.Icon"
-                                 ContextCloseTestId="@(_inspectorContext?.Kind == "find" ? "document-find-close" : null)"
-                                 OnContextBack="InspectorBackCallback"
-                                 OnContextClose="CloseInspectorContextAsync"
-                                 CommentsCount="@_comments.Count"
-                                 RevisionsCount="@PendingRevisionCount"
-                                 VersionsCount="@_versions.Count"
-                                 OnOpen="OpenSidePanelAsync"
-                                 OnClose="CloseSidePanel">
-                <CommentsContent>
-                    <TmDocumentCommentRail Comments="@_comments"
-                                           DraftAnchor="@_draftCommentAnchor"
-                                           ComposerOpen="@_commentComposerOpen"
-                                           SelectedCommentId="@_selectedCommentId"
-                                           IsLoading="@_isLoadingComments"
-                                           IsBusy="@_isSubmittingComment"
-                                           CanComment="@CanUseComments"
-                                           CanResolve="@CanResolveComments"
-                                           CanDeleteOwnComments="@CanDeleteOwnComments"
-                                           CurrentAuthorId="@Author?.Id"
-                                           Filter="@_commentFilter"
-                                           FilterChanged="SetCommentFilterAsync"
-                                           SortMode="@_commentSortMode"
-                                           SortModeChanged="SetCommentSortModeAsync"
-                                           CanStartComment="@CanStartComment"
-                                           MentionProvider="@MentionProvider"
-                                           StatusMessage="@_commentMessage"
-                                           OnBeginComment="BeginCommentFromToolbarAsync"
-                                           OnCreateComment="CreateCommentAsync"
-                                           OnCancelComment="CancelCommentComposer"
-                                           OnReplyComment="ReplyToCommentAsync"
-                                           OnEditComment="EditCommentAsync"
-                                           OnResolveComment="ResolveCommentAsync"
-                                           OnReopenComment="ReopenCommentAsync"
-                                           OnDeleteComment="DeleteCommentAsync"
-                                           OnSelectComment="SelectCommentAsync" />
-                </CommentsContent>
-                <RevisionsContent>
-                    @* In canvas suggestion mode the proposed edits are surfaced as suggestions (below); hide the
-                       revision panel so there is no duplicate/competing list of the same engine revisions. *@
-                    @if (!IsCanvasSuggestionMode)
-                    {
-                        <TmDocumentRevisionPanel Revisions="@(_canvasRevisions ?? _document?.Revisions ?? [])"
-                                             IsBusy="@_isReviewingRevision"
-                                             CanReview="@CanReviewRevisions"
-                                             StatusMessage="@_revisionMessage"
-                                             SelectedRevisionId="@_selectedRevisionId"
-                                             PreviewResolver="ResolveRevisionPreview"
-                                             OnSelectRevision="SelectRevision"
-                                             OnAcceptRevision="AcceptRevisionAsync"
-                                             OnRejectRevision="RejectRevisionAsync"
-                                             OnAcceptAllRevisions="AcceptAllRevisionsAsync"
-                                             OnRejectAllRevisions="RejectAllRevisionsAsync" />
-                    }
-                    @if (SuggestionProvider is not null && _suggestionsEnabled)
-                    {
-                        <TmDocumentSuggestionPanel Suggestions="@DisplayedSuggestions"
-                                                   IsLoading="@_isLoadingSuggestions"
-                                                   IsBusy="@_isReviewingSuggestion"
-                                                   CanReview="@CanReviewSuggestions"
-                                                   StatusMessage="@_suggestionMessage"
-                                                   OnSelectSuggestion="SelectSuggestion"
-                                                   OnAcceptSuggestion="AcceptSuggestionAsync"
-                                                   OnRejectSuggestion="RejectSuggestionAsync" />
-                    }
-                </RevisionsContent>
-                <VersionsContent>
-                    <TmDocumentVersionPanel ShowClose="false"
-                                            ShowPreviewStrip="false"
-                                            Versions="@_versions"
-                                            IsLoading="@_isLoadingVersions"
-                                            ReadOnly="@(!CanCreateVersion)"
-                                            StatusMessage="@_versionMessage"
-                                            PreviewVersion="@_previewVersion"
-                                            OnCreateVersion="OpenVersionDialog"
-                                            OnSelectVersion="PreviewVersionAsync"
-                                            OnReturnToCurrent="ReturnToCurrentVersionAsync"
-                                            OnRestoreVersion="RestoreVersionAsync"
-                                            OnShowDiff="ShowVersionDiffAsync"
-                                            OnClose="CloseVersionPanel" />
-                </VersionsContent>
-                <PropertiesContent>
-                    @* On a desktop layout an image or a table is the contextual inspector (ContextContent) while it is open; once the reader
-                       dismissed it, the Properties tab carries the object inspector. Tablet and phone have no context mode - it stays in the tab. *@
-                    @if (ShowImageInspectorInTab)
-                    {
-                        @ImageInspector(true)
-                    }
-                    else if (ShowTableInspectorInTab)
-                    {
-                        @TableInspector(true)
-                    }
-                    else
-                    {
-                        <section class="tm-document-properties-panel" data-testid="@TestId("document-properties-panel")">
-                            <h3>@Loc["TmDocumentEditor_Properties"]</h3>
-                            <dl>
-                                <div>
-                                    <dt>@Loc["TmDocumentEditor_PropertyTitle"]</dt>
-                                    <dd>@DocumentTitle</dd>
-                                </div>
-                                <div>
-                                    <dt>@Loc["TmDocumentEditor_PropertyBlocks"]</dt>
-                                    <dd>@(_document?.Blocks.Count ?? 0)</dd>
-                                </div>
-                                <div>
-                                    <dt>@Loc["TmDocumentEditor_PropertyStatus"]</dt>
-                                    <dd>@DocumentStatus</dd>
-                                </div>
-                            </dl>
-                        </section>
-                    }
-                </PropertiesContent>
-                <OutlineContent>
-                    <TmDocumentOutlinePanel Outline="@_documentOutline"
-                                            ActiveBlockId="@_activeHeadingBlockId"
-                                            OnNavigateToBlock="NavigateToBlockAsync" />
-                </OutlineContent>
-                <PagesContent>
-                    <TmDocumentPageNavigator Metrics="@_pageMetrics"
-                                             ActivePageIndex="@_activePageIndex"
-                                             OnNavigateToPage="NavigateToPageAsync" />
-                </PagesContent>
-            </TmDocumentSidePanel>
-            </div>
         </div>
 
         <TmDocumentEditorStatusBar IsDirty="@_isDirty"
@@ -641,6 +521,19 @@
                                    OnToggleFullscreen="ToggleFullscreenAsync"
                                    RuntimeMessage="@_runtimeMessage"
                                    RuntimeFailed="@_runtimeFailed" />
+
+        @* Phase 8 (decision G2): the action bar of a phone - Comments (with the review count), Print preview, the primary Save and
+           "More". The core TmMobileActionBar sticks inside the editor's container; the print preview has an action bar of its own. *@
+        @if (IsMobileLayout && !CanvasPrintPreviewActive)
+        {
+            <TmMobileActionBar Items="@PhoneActionItems"
+                               MaxVisible="@PhoneActionBarVisible"
+                               LayoutMode="TmLayoutMode.Mobile"
+                               Placement="ActionBarPlacement.StickyContainer"
+                               AriaLabel="@Loc["TmDocumentEditor_ActionBarLabel"]"
+                               Class="tm-document-editor__action-bar"
+                               data-testid="@TestId("document-mobile-action-bar")" />
+        }
         </div>
 
         <div class="tm-document-editor__floating-root"
@@ -651,8 +544,9 @@
             @* Phase 6 (DE-2.3, decision DE2): find is the desktop inspector's context; a tablet or a phone has no room for a docked inspector,
                so it is a floating panel under the ribbon, at its end (a bottom sheet on a phone). An outside press does not close it - the
                reader clicks into the document while searching. *@
-            @if (_findPanelOpen && !IsDesktopLayout)
+            @if (_findPanelOpen && IsMobileLayout)
             {
+                @* A phone shows find as a full-height sheet (its results list is the screen); a tablet and a desktop show it in the inspector. *@
                 <TmDocumentFloatingPanel IsOpen="true"
                                          Kind="find"
                                          Title="@Loc["TmDocumentEditor_FindPanelTitle"]"
@@ -663,11 +557,55 @@
                                          TestIdPrefix="@TestIdPrefix"
                                          Anchor="@FindPanelAnchor"
                                          Align="Tempo.Blazor.Components.Overlay.OverlayAlign.End"
+                                         LayoutMode="TmLayoutMode.Mobile"
                                          CloseOnOutsidePointerDown="false"
                                          FocusOnOpen="false"
                                          OnClose="@(_ => CloseFindPanelAsync())"
                                          OnOpened="FocusFindPanelAsync">
                     @FindInspector
+                </TmDocumentFloatingPanel>
+            }
+
+            @if (IsMobileLayout && _sidePanelOpen && !_findPanelOpen)
+            {
+                @* The inspector of a phone: the same tabs as the docked panel, in a full-height sheet. *@
+                <TmDocumentFloatingPanel IsOpen="true"
+                                         Kind="inspector"
+                                         Title="@InspectorSheetTitle"
+                                         Icon="panel-right"
+                                         Width="DocumentFloatingPanelWidth.Medium"
+                                         PanelTestId="document-inspector-sheet"
+                                         CloseTestId="document-inspector-sheet-close"
+                                         TestIdPrefix="@TestIdPrefix"
+                                         Anchor="@FindPanelAnchor"
+                                         LayoutMode="TmLayoutMode.Mobile"
+                                         OnClose="@(_ => CloseSidePanelFromSheetAsync())">
+                    @InspectorPanel
+                </TmDocumentFloatingPanel>
+            }
+
+            @if (IsMobileLayout && _contextSheetOpen && ContextSheetKind is not null)
+            {
+                @* The object sheet of a phone (an image, a table): a short bottom sheet with the light edits only (decision G2). *@
+                <TmDocumentFloatingPanel IsOpen="true"
+                                         Kind="@(ContextSheetKind + "-context")"
+                                         Title="@ContextSheetTitle"
+                                         Icon="@ContextSheetKind"
+                                         Width="DocumentFloatingPanelWidth.Medium"
+                                         PanelTestId="document-context-sheet"
+                                         CloseTestId="document-context-sheet-close"
+                                         TestIdPrefix="@TestIdPrefix"
+                                         Anchor="@FindPanelAnchor"
+                                         LayoutMode="TmLayoutMode.Mobile"
+                                         OnClose="@(_ => CloseContextSheetAsync())">
+                    @if (ContextSheetKind == "table")
+                    {
+                        @TableInspector(false)
+                    }
+                    else
+                    {
+                        @ImageInspector(false)
+                    }
                 </TmDocumentFloatingPanel>
             }
 
@@ -1413,6 +1351,149 @@
 </TmLayoutObserver>
 
 @code {
+    // Redesign 146c7e1b, phase 8: the inspector is ONE fragment, hosted in the docked region (desktop) / the side sheet (tablet) or in the
+    // bottom sheet of the floating root (phone). Both hosts show the same tabs and the same editor state.
+    private RenderFragment InspectorPanel => @<text>
+    <TmDocumentSidePanel @ref="_sidePanel"
+                         IsOpen="@_sidePanelOpen"
+                         TextTabs="@IsDesktopLayout"
+                         ActiveTab="@ActiveSidePanelTab"
+                         ActiveTabChanged="SetSidePanelTabAsync"
+                         ShowComments="@IsFeatureEnabled(DocumentEditorFeatureNames.Comments)"
+                         ShowRevisions="@(IsFeatureEnabled(DocumentEditorFeatureNames.TrackChanges) || IsCanvasSuggestionMode)"
+                         ShowVersions="@ShowVersionHistory"
+                         ShowProperties="true"
+                         ShowOutline="@(!IsDesktopLayout)"
+                         ShowPages="@(!IsDesktopLayout)"
+                         ContextContent="@InspectorContextContent"
+                         ContextKind="@_inspectorContext?.Kind"
+                         ContextTitle="@_inspectorContext?.Title"
+                         ContextIcon="@_inspectorContext?.Icon"
+                         ContextCloseTestId="@(_inspectorContext?.Kind == "find" ? "document-find-close" : null)"
+                         OnContextBack="InspectorBackCallback"
+                         OnContextClose="CloseInspectorContextAsync"
+                         CommentsCount="@_comments.Count"
+                         RevisionsCount="@PendingRevisionCount"
+                         VersionsCount="@_versions.Count"
+                         OnOpen="OpenSidePanelAsync"
+                         OnClose="CloseSidePanel">
+        <CommentsContent>
+            <TmDocumentCommentRail Comments="@_comments"
+                                   DraftAnchor="@_draftCommentAnchor"
+                                   ComposerOpen="@_commentComposerOpen"
+                                   SelectedCommentId="@_selectedCommentId"
+                                   IsLoading="@_isLoadingComments"
+                                   IsBusy="@_isSubmittingComment"
+                                   CanComment="@CanUseComments"
+                                   CanResolve="@CanResolveComments"
+                                   CanDeleteOwnComments="@CanDeleteOwnComments"
+                                   CurrentAuthorId="@Author?.Id"
+                                   Filter="@_commentFilter"
+                                   FilterChanged="SetCommentFilterAsync"
+                                   SortMode="@_commentSortMode"
+                                   SortModeChanged="SetCommentSortModeAsync"
+                                   CanStartComment="@CanStartComment"
+                                   MentionProvider="@MentionProvider"
+                                   StatusMessage="@_commentMessage"
+                                   OnBeginComment="BeginCommentFromToolbarAsync"
+                                   OnCreateComment="CreateCommentAsync"
+                                   OnCancelComment="CancelCommentComposer"
+                                   OnReplyComment="ReplyToCommentAsync"
+                                   OnEditComment="EditCommentAsync"
+                                   OnResolveComment="ResolveCommentAsync"
+                                   OnReopenComment="ReopenCommentAsync"
+                                   OnDeleteComment="DeleteCommentAsync"
+                                   OnSelectComment="SelectCommentAsync" />
+        </CommentsContent>
+        <RevisionsContent>
+            @* In canvas suggestion mode the proposed edits are surfaced as suggestions (below); hide the
+               revision panel so there is no duplicate/competing list of the same engine revisions. *@
+            @if (!IsCanvasSuggestionMode)
+            {
+                <TmDocumentRevisionPanel Revisions="@(_canvasRevisions ?? _document?.Revisions ?? [])"
+                                     IsBusy="@_isReviewingRevision"
+                                     CanReview="@CanReviewRevisions"
+                                     StatusMessage="@_revisionMessage"
+                                     SelectedRevisionId="@_selectedRevisionId"
+                                     PreviewResolver="ResolveRevisionPreview"
+                                     OnSelectRevision="SelectRevision"
+                                     OnAcceptRevision="AcceptRevisionAsync"
+                                     OnRejectRevision="RejectRevisionAsync"
+                                     OnAcceptAllRevisions="AcceptAllRevisionsAsync"
+                                     OnRejectAllRevisions="RejectAllRevisionsAsync" />
+            }
+            @if (SuggestionProvider is not null && _suggestionsEnabled)
+            {
+                <TmDocumentSuggestionPanel Suggestions="@DisplayedSuggestions"
+                                           IsLoading="@_isLoadingSuggestions"
+                                           IsBusy="@_isReviewingSuggestion"
+                                           CanReview="@CanReviewSuggestions"
+                                           StatusMessage="@_suggestionMessage"
+                                           OnSelectSuggestion="SelectSuggestion"
+                                           OnAcceptSuggestion="AcceptSuggestionAsync"
+                                           OnRejectSuggestion="RejectSuggestionAsync" />
+            }
+        </RevisionsContent>
+        <VersionsContent>
+            <TmDocumentVersionPanel ShowClose="false"
+                                    ShowPreviewStrip="false"
+                                    Versions="@_versions"
+                                    IsLoading="@_isLoadingVersions"
+                                    ReadOnly="@(!CanCreateVersion)"
+                                    StatusMessage="@_versionMessage"
+                                    PreviewVersion="@_previewVersion"
+                                    OnCreateVersion="OpenVersionDialog"
+                                    OnSelectVersion="PreviewVersionAsync"
+                                    OnReturnToCurrent="ReturnToCurrentVersionAsync"
+                                    OnRestoreVersion="RestoreVersionAsync"
+                                    OnShowDiff="ShowVersionDiffAsync"
+                                    OnClose="CloseVersionPanel" />
+        </VersionsContent>
+        <PropertiesContent>
+            @* On a desktop layout an image or a table is the contextual inspector (ContextContent) while it is open; once the reader
+               dismissed it, the Properties tab carries the object inspector. Tablet and phone have no context mode - it stays in the tab. *@
+            @if (ShowImageInspectorInTab)
+            {
+                @ImageInspector(true)
+            }
+            else if (ShowTableInspectorInTab)
+            {
+                @TableInspector(true)
+            }
+            else
+            {
+                <section class="tm-document-properties-panel" data-testid="@TestId("document-properties-panel")">
+                    <h3>@Loc["TmDocumentEditor_Properties"]</h3>
+                    <dl>
+                        <div>
+                            <dt>@Loc["TmDocumentEditor_PropertyTitle"]</dt>
+                            <dd>@DocumentTitle</dd>
+                        </div>
+                        <div>
+                            <dt>@Loc["TmDocumentEditor_PropertyBlocks"]</dt>
+                            <dd>@(_document?.Blocks.Count ?? 0)</dd>
+                        </div>
+                        <div>
+                            <dt>@Loc["TmDocumentEditor_PropertyStatus"]</dt>
+                            <dd>@DocumentStatus</dd>
+                        </div>
+                    </dl>
+                </section>
+            }
+        </PropertiesContent>
+        <OutlineContent>
+            <TmDocumentOutlinePanel Outline="@_documentOutline"
+                                    ActiveBlockId="@_activeHeadingBlockId"
+                                    OnNavigateToBlock="NavigateToBlockAsync" />
+        </OutlineContent>
+        <PagesContent>
+            <TmDocumentPageNavigator Metrics="@_pageMetrics"
+                                     ActivePageIndex="@_activePageIndex"
+                                     OnNavigateToPage="NavigateToPageAsync" />
+        </PagesContent>
+    </TmDocumentSidePanel>
+    </text>;
+
     // Redesign 146c7e1b, phase 6 (DE-2.2 / DE-2.3): the contextual inspector fragments. The image and the table are the same markup in the
     // desktop context and in the tablet / phone Properties tab; only the header differs (the context's own header names the panel).
     private RenderFragment<bool> ImageInspector => showHeader => @<text>
@@ -1425,6 +1506,7 @@
                      data-active-anchor-block-id="@ActiveImageCommandBlockId">
                 <TmDocumentImageInspector Image="coreImage"
                                           ShowHeader="showHeader"
+                                          ShortSet="@IsMobileLayout"
                                           AnchorText="@ActiveImageAnchorText"
                                           AltTextChanged="SetActiveImageAltTextFromPanelAsync"
                                           DecorativeChanged="SetActiveImageDecorativeFromPanelAsync"
@@ -1448,6 +1530,7 @@
                      data-active-anchor-block-id="@ActiveImageInspectorBlockId">
                 <TmDocumentImageInspector Image="activeImage"
                                           ShowHeader="showHeader"
+                                          ShortSet="@IsMobileLayout"
                                           AnchorText="@ActiveImageAnchorText"
                                           AltTextChanged="SetActiveImageAltTextFromPanelAsync"
                                           DecorativeChanged="SetActiveImageDecorativeFromPanelAsync"
@@ -1484,9 +1567,14 @@
                      data-active-table-id="@ActiveTableBlock?.Id"
                      data-active-cell-id="@activeCell.Id">
                 <TmDocumentTablePropertiesPanel Layout="activeTable.Layout"
+                                                ShortSet="@IsMobileLayout"
                                                 LayoutChanged="SetActiveTablePropertiesFromPanelAsync" />
-                <TmDocumentCellPropertiesPanel Cell="activeCell"
-                                               CellChanged="SetActiveCellPropertiesFromPanelAsync" />
+                @if (!IsMobileLayout)
+                {
+                    @* Decision G2: the cell properties are a tablet-and-up surface. *@
+                    <TmDocumentCellPropertiesPanel Cell="activeCell"
+                                                   CellChanged="SetActiveCellPropertiesFromPanelAsync" />
+                }
             </section>
         }
     </text>;

@@ -15,6 +15,16 @@ public sealed class DocumentEditorCommandRegistry
     private string? _lastContextSignature;
 
     /// <summary>
+    /// The commands of decision G2 that are tablet-and-up: page layout, equations, creating / renaming / deleting a style, the cell properties and
+    /// comparing against sources. On a phone layout (<see cref="DocumentEditorCommandContext.IsPhoneLayout"/>) they are disabled whatever the rest of the
+    /// context says, so the command palette and the keyboard cannot reach what the phone chrome hides.
+    /// </summary>
+    public static IReadOnlySet<string> PhoneRestrictedCommands { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "insertEquation", "pageLayout", "createStyle", "renameStyle", "deleteStyle", "cellProperties", "compareDocuments"
+    };
+
+    /// <summary>
     /// Monotonic counter incremented on every ACTUAL refresh (perf plan N7.3). Consumers can use it
     /// as a cheap change token for derived caches (e.g. the toolbar overflow menu groups).
     /// </summary>
@@ -200,7 +210,7 @@ public sealed class DocumentEditorCommandRegistry
             };
         }
 
-        var isEnabled = command.ComputeEnabled(context);
+        var isEnabled = command.ComputeEnabled(context) && !(context.IsPhoneLayout && PhoneRestrictedCommands.Contains(command.Name));
         return new DocumentEditorCommandState
         {
             Name = command.Name,

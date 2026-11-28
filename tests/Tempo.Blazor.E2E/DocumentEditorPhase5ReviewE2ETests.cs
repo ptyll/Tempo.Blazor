@@ -193,15 +193,12 @@ public sealed class DocumentEditorPhase5ReviewE2ETests : WasmTestBase
     public async Task Phone_SymbolTrigger_TapInsertsAtTheCaret()
     {
         var (page, errors) = await OpenAsync(390, 844, touch: true);
-        var point = await page.EvaluateAsync<double[]>(
-            """
-            () => {
-                const node = Array.from(document.querySelectorAll('[data-canvas-text-rect]')).find(item => item.getBoundingClientRect().width > 8);
-                const rect = node.getBoundingClientRect();
-                return [rect.left + rect.width - 2, rect.top + rect.height / 2];
-            }
-            """);
-        await page.Mouse.ClickAsync((float)point[0], (float)point[1]);
+        // A phone fits the page to its column, so the first text may sit below the fold of the demo page: bring it into view first.
+        var text = page.Locator("[data-canvas-text-rect]").First;
+        await text.ScrollIntoViewIfNeededAsync();
+        var box = await text.BoundingBoxAsync();
+        Assert.IsNotNull(box);
+        await page.Mouse.ClickAsync((float)(box.X + box.Width - 2), (float)(box.Y + box.Height / 2));
         await page.Keyboard.PressAsync("End");
 
         await ClickPopupItemAsync(page, "document-ribbon-tab-insert", "");

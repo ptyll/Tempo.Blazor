@@ -607,6 +607,11 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
             await RestoreEditingZoomAsync();
         }
 
+        if (_fitPending)
+        {
+            await FitPageToColumnAsync();
+        }
+
         if (_fitPrintPreviewOnRender)
         {
             _fitPrintPreviewOnRender = false;
@@ -721,14 +726,34 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
     // A version / template preview is a state the reader must not miss: it rides the header as a chip.
     private string? HeaderModeLabel => IsVersionPreview || IsTemplatePreview ? DocumentStatus : null;
 
-    private void ApplyLayout(TmLayoutMode resolved) => _layout = resolved;
+    // Phase 8 (DE-2.7): a tablet and a phone show the inspector as a sheet OVER the document, so it starts closed there - an open sheet
+    // would hide half of a page the reader has not seen yet. The first time a non-desktop layout is seen closes the docked default
+    // (the desktop container is the editor's first frame until the observer measures); later flips keep whatever the reader chose.
+    private bool _sheetLayoutSeen;
+    // The reader opened or closed a panel on purpose (a find, a tab, the edge toggle): a later flip to a narrower layout keeps what they chose.
+    private bool _sidePanelChosenByReader;
+
+    private void ApplyLayout(TmLayoutMode resolved)
+    {
+        _layout = resolved;
+        if (resolved != TmLayoutMode.Desktop && !_sheetLayoutSeen)
+        {
+            _sheetLayoutSeen = true;
+            if (!_sidePanelChosenByReader)
+            {
+                _sidePanelOpen = false;
+            }
+        }
+    }
 
     private async Task OnResolvedLayoutChangedAsync(TmLayoutMode resolved)
     {
-        _layout = resolved;
+        ApplyLayout(resolved);
         // The observer re-renders its content (with the new mode) right after this callback; the implicit render of the editor
         // itself would rebuild the same chrome a second time.
         _suppressNextChromeRender = true;
+        // The tablet-and-up commands (decision G2) are disabled on a phone layout: the registry learns the layout.
+        await RefreshCommandRegistryAsync();
 
         // The left column mounts with a desktop container: its outline and page thumbnails are pulled lazily, so a
         // fresh mount asks the engine for them (a no-op before the canvas is ready).
@@ -737,6 +762,13 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
             await SyncCanvasPageMetricsAsync();
             await SyncCanvasNavigationAsync();
         }
+
+        // The fit is measured after this layout switch has RENDERED (OnAfterRenderAsync): the editor renders once more for it (a non-desktop
+        // container that does not fit its page), the way the print preview and the zoom restore do.
+        if (RequestPageFit())
+        {
+            _suppressNextChromeRender = false;
+        }
     }
 
     // The observer reports every rounded width change; only the crossing of the wide step matters, and a render per resize step
@@ -744,10 +776,14 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
     private async Task OnContainerWidthChangedAsync(double width)
     {
         var before = AutoCollapsed;
+        var widthChanged = Math.Abs(_containerWidth - width) >= 1;
         _containerWidth = width;
+        // A tablet or a phone fits its page to the column: a rotation or a host resize fits it again (a sheet never changes the width).
+        var fitRequested = widthChanged && RequestPageFit();
+
         if (AutoCollapsed == before)
         {
-            _suppressNextChromeRender = true;
+            _suppressNextChromeRender = !fitRequested;
             return;
         }
 
@@ -769,6 +805,85 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
     }
 
     private Task OpenFindFromChromeAsync() => OpenFindPanelAsync(replaceMode: false);
+
+    // Phase 8 (decision G2, `--tm-document-page-fit-zoom`): a tablet or a phone container narrower than its page shows the page as wide as the column - one
+    // text column, no sideways scrolling - until the reader zooms on purpose (the engine then reports a custom zoom, which this never overrides). A
+    // container that holds the page keeps the page at the zoom it has. Focus is never taken: a focus on the canvas opens the virtual keyboard.
+    private bool _fitPending;
+    private bool _pageFitApplied;
+
+    // The page the container cannot hold: the page of the active section (A4 = 794 px when unknown) plus the gutters of the workspace.
+    private bool PageWiderThanColumn
+    {
+        get
+        {
+            var size = ActivePageSettings.Size;
+            var pagePx = size is { Width: > 0 } ? size.Width * 96d / 72d : DefaultPagePixelWidth;
+            return _containerWidth > 0 && _containerWidth < pagePx + WorkspaceGutters;
+        }
+    }
+
+    // Marks a fit as due and tells the caller whether the editor must render (the fit runs in OnAfterRenderAsync, after the layout it measures).
+    private bool RequestPageFit()
+    {
+        if (!IsSheetLayout || _disposed || _zoomLockedByReader)
+        {
+            return false;
+        }
+
+        // Nothing to do while the page fits and no fit was applied before (then the zoom is the reader's / the default).
+        if (!PageWiderThanColumn && !_pageFitApplied)
+        {
+            return false;
+        }
+
+        _fitPending = true;
+        return true;
+    }
+
+    private async Task FitPageToColumnAsync()
+    {
+        if (!_fitPending)
+        {
+            return;
+        }
+
+        _fitPending = false;
+        if (!IsSheetLayout || _disposed || !UsingCanvasEngine || _canvasHost is null || CanvasPrintPreviewActive || _zoomLockedByReader)
+        {
+            return;
+        }
+
+        try
+        {
+            if (PageWiderThanColumn)
+            {
+                // The engine reads the clientWidth of its scroll viewport for the fit, which flushes the layout the render just produced.
+                var firstFit = !_pageFitApplied;
+                _pageFitApplied = true;
+                await RouteToCanvasEngineAsync("fitWidth", null, focus: false);
+                if (firstFit)
+                {
+                    // data-page-fit on the root: the ruler (as wide as the page at 100 percent) gives way while the page is fitted.
+                    await InvokeAsync(StateHasChanged);
+                }
+            }
+            else if (_pageFitApplied)
+            {
+                // The column grew back to hold the page (a rotation, a wider host): the fit made earlier gives way to the page's own size.
+                _pageFitApplied = false;
+                await RouteToCanvasEngineAsync("setZoom", new { percent = 100 }, focus: false);
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (Exception exception) when (exception is JSDisconnectedException or TaskCanceledException or ObjectDisposedException or JSException)
+        {
+            // The circuit or the canvas is gone: there is nothing left to fit.
+        }
+    }
+
+    // Set by an explicit zoom (the status bar, the View tab): the reader's choice wins over the phone's fit.
+    private bool _zoomLockedByReader;
 
     private string DocumentTitle => string.IsNullOrWhiteSpace(_document?.Metadata.Title)
         ? Loc["TmDocumentEditor_UntitledDocument"]
@@ -896,7 +1011,9 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
         && _formatCapabilities.Any(capability =>
             capability.Format == DocumentFormatProviderKind.Docx && capability.CanExport);
 
+    // Decision G2: comparing against sources is a tablet-and-up surface (a phone views the result, it does not set the comparison up).
     private bool CanCompareDocuments => _document is not null
+        && !IsMobileLayout
         && EffectivePermissions.CanRead
         && Provider is not null
         && !IsVersionPreview
@@ -1449,7 +1566,9 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
             _compareDialogOpen = false;
             _compareDocumentSnapshot = null;
             _diffRequest = null;
-            _sidePanelOpen = ShowComments || ShowVersionHistory || _trackChangesEnabled;
+            // A phone and a tablet open their inspector sheet on request only (see ApplyLayout).
+            _sidePanelOpen = !IsSheetLayout && (ShowComments || ShowVersionHistory || _trackChangesEnabled);
+            _contextSheetOpen = false;
             _activeSidePanelTab = _trackChangesEnabled
                 ? DocumentSidePanelTab.Revisions
                 : ShowVersionHistory
@@ -3930,6 +4049,13 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
     {
         if (!string.IsNullOrWhiteSpace(context.ActiveImageId))
         {
+            if (IsMobileLayout)
+            {
+                // A phone never pops a modal sheet because a finger landed on an object; "Properties" asks for it.
+                _activeImageInspectorBlockId = context.Selection.ObjectSelection?.AnchorBlockId ?? context.Selection.AnchorBlockId;
+                return;
+            }
+
             _activeImageInspectorBlockId = context.Selection.ObjectSelection?.AnchorBlockId ?? context.Selection.AnchorBlockId;
             OpenSidePanel(DocumentSidePanelTab.Properties, preserveManualChoice: false);
             return;
@@ -3938,7 +4064,11 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
         if (!string.IsNullOrWhiteSpace(context.ActiveTableCellId) || !string.IsNullOrWhiteSpace(context.ActiveTableId))
         {
             _activeImageInspectorBlockId = null;
-            OpenSidePanel(DocumentSidePanelTab.Properties, preserveManualChoice: false);
+            if (!IsMobileLayout)
+            {
+                OpenSidePanel(DocumentSidePanelTab.Properties, preserveManualChoice: false);
+            }
+
             return;
         }
 
@@ -6379,6 +6509,7 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
 
     private Task OpenSidePanelAsync()
     {
+        _sidePanelChosenByReader = true;
         _sidePanelOpen = true;
         _activeSidePanelTab = NormalizeSidePanelTab(_activeSidePanelTab);
         _focusSidePanelOnRender = true;
@@ -6533,6 +6664,7 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
         CloseFieldPopoversForViewportChange();
         _zoomPercent = Math.Clamp(percent, 50, 200);
         _zoomPageWidth = false;
+        _zoomLockedByReader = true;
         if (await RouteToCanvasEngineAsync("setZoom", new { percent = _zoomPercent }, focus: true))
         {
             return;
@@ -6545,6 +6677,7 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
     {
         CloseFieldPopoversForViewportChange();
         _zoomPageWidth = true;
+        _zoomLockedByReader = false;
         _zoomPercent = 100;
         if (await RouteToCanvasEngineAsync("fitWidth", null, focus: true))
         {
@@ -6602,10 +6735,25 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
             return;
         }
 
+        if (IsMobileLayout && !_sidePanelOpen && tab == DocumentSidePanelTab.Properties && ContextSheetKind is not null)
+        {
+            // An image or a table on a phone is not a tab of the inspector sheet but its own short bottom sheet.
+            OpenContextSheet();
+            return;
+        }
+
         _activeSidePanelTab = NormalizeSidePanelTab(tab);
         _sidePanelOpen = true;
+        if (IsMobileLayout)
+        {
+            // One sheet at a time on a phone: the inspector replaces find and the object sheet.
+            _contextSheetOpen = false;
+            CloseFindForSheetSwap();
+        }
+
         if (manual)
         {
+            _sidePanelChosenByReader = true;
             _sidePanelTabManuallySelected = true;
             _focusSidePanelOnRender = true;
         }
@@ -6617,9 +6765,64 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
 
     private void CloseSidePanel()
     {
+        _sidePanelChosenByReader = true;
         _sidePanelOpen = false;
         _focusDocumentOnRender = true;
     }
+
+    // ── Phase 8 (DE-2.7): the sheets of a phone ────────────────────────────
+
+    // The object whose short bottom sheet is offered: an image first (it is a deliberate selection), then a table. Null when nothing is selected.
+    private string? ContextSheetKind => HasImageInspector ? "image" : HasTableInspector ? "table" : null;
+
+    private bool _contextSheetOpen;
+
+    private void OpenContextSheet()
+    {
+        _contextSheetOpen = true;
+        _sidePanelOpen = false;
+        CloseFindForSheetSwap();
+    }
+
+    private Task CloseContextSheetAsync()
+    {
+        _contextSheetOpen = false;
+        _focusDocumentOnRender = true;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    // The phone shows ONE sheet at a time: opening the inspector (or the object sheet) while find is up closes find, markers and all.
+    private void CloseFindForSheetSwap()
+    {
+        if (!_findPanelOpen)
+        {
+            return;
+        }
+
+        _findPanelOpen = false;
+        _findOpenedTheSidePanel = false;
+        _floatingLayerStack.Remove(FloatingLayerId.FindPanel);
+        _ = ClearSearchMarkersAsync();
+    }
+
+    private Task CloseSidePanelFromSheetAsync()
+    {
+        CloseSidePanel();
+        return InvokeAsync(StateHasChanged);
+    }
+
+    // The title of the inspector sheet follows the tab the reader stands on.
+    private string InspectorSheetTitle => ActiveSidePanelTab switch
+    {
+        DocumentSidePanelTab.Comments => Loc["TmDocumentEditor_Comments"],
+        DocumentSidePanelTab.Revisions => Loc["TmDocumentEditor_Revisions"],
+        DocumentSidePanelTab.Versions => Loc["TmDocumentEditor_Versions"],
+        DocumentSidePanelTab.Outline => Loc["TmDocumentEditor_Outline"],
+        DocumentSidePanelTab.Pages => Loc["TmDocumentEditor_Pages"],
+        _ => Loc["TmDocumentEditor_Properties"]
+    };
+
+    private string ContextSheetTitle => ContextSheetKind == "table" ? Loc["TmDocumentEditor_TableInspector"] : Loc["TmDocumentEditor_ImageTools"];
 
     private DocumentSidePanelTab NormalizeSidePanelTab(DocumentSidePanelTab tab)
     {
@@ -8142,6 +8345,12 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
         }
 
         _zoomPageWidth = string.Equals(fmt.ZoomPreset, "fitWidth", StringComparison.OrdinalIgnoreCase);
+        // The engine left the fit the phone applied (a pinch, the zoom control): that is the reader's decision, the fit never comes back by itself.
+        if (_pageFitApplied && !_zoomPageWidth && !CanvasPrintPreviewActive)
+        {
+            _zoomLockedByReader = true;
+        }
+
         // Entering the print preview fits the page to the (now narrower) document region once, like a browser's print preview does.
         if (fmt.PrintPreviewActive && !_canvasPrintPreviewActive && !_zoomPageWidth)
         {
@@ -8225,7 +8434,11 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
                 Stacking = new DocumentObjectStacking { ZIndex = (int)Math.Round(image.ZIndex) }
             }
         };
-        OpenSidePanel(DocumentSidePanelTab.Properties);
+        if (!IsMobileLayout)
+        {
+            // A phone never pops a modal sheet because a finger landed on an object: "Properties" asks for its short sheet.
+            OpenSidePanel(DocumentSidePanelTab.Properties);
+        }
     }
 
     private async Task SyncCanvasContentControlPopoverAsync()
@@ -8389,8 +8602,17 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
     private static string FirstNonEmpty(params string?[] values)
         => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? string.Empty;
 
-    private Task HandleCanvasEngineReadyAsync(TmDocumentCanvasEngineHost _)
-        => SyncCanvasEngineStateAsync();
+    private async Task HandleCanvasEngineReadyAsync(TmDocumentCanvasEngineHost host)
+    {
+        await SyncCanvasEngineStateAsync();
+        if (RequestPageFit())
+        {
+            // The render that runs the fit must not be swallowed by a suppression flag left over from the layout or the state sync.
+            _suppressNextChromeRender = false;
+            _suppressNextWysiwygStateRender = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
 
     private async Task HandleCanvasEngineChangedAsync(TmDocumentCanvasEngineHost.CanvasEngineChangedState state)
     {
@@ -9119,10 +9341,18 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
 
     private async Task OpenFindPanelAsync(bool replaceMode)
     {
+        _sidePanelChosenByReader = true;
         _findReplaceMode = replaceMode;
         _findPanelOpen = true;
-        // Phase 6 (DE2): on a desktop layout find is the inspector's context, so a closed inspector opens for it - and closes again with it.
-        if (IsDesktopLayout && !_sidePanelOpen)
+        // Phase 6 (DE2) + phase 8: on a desktop AND a tablet layout find is the inspector's context (a desktop dock, a tablet side sheet), so a
+        // closed inspector opens for it - and closes again with it; an open one is REPLACED by find (one side sheet at a time). A phone
+        // shows find as its own sheet and closes the inspector and the object sheet.
+        if (IsMobileLayout)
+        {
+            _sidePanelOpen = false;
+            _contextSheetOpen = false;
+        }
+        else if (!_sidePanelOpen)
         {
             _sidePanelOpen = true;
             _findOpenedTheSidePanel = true;

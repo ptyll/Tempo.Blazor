@@ -882,6 +882,12 @@
           "description": "When IsProtected is true, indicates that the caret / selection anchor is currently inside one of the document's editable markers. false means the caret is outside all markers, so data-affecting commands must be disabled."
         },
         {
+          "name": "IsPhoneLayout",
+          "kind": "Property",
+          "type": "bool",
+          "description": "The editor is laid out as a phone (decision G2: viewing plus light edits). The registry disables the tablet-and-up commands (PhoneRestrictedCommands) while it is set."
+        },
+        {
           "name": "IsProtected",
           "kind": "Property",
           "type": "bool",
@@ -1056,6 +1062,12 @@
           "kind": "Property",
           "type": "IReadOnlyDictionary<string, DocumentEditorCommandState>",
           "description": "Read-only view of the last computed state for every registered command."
+        },
+        {
+          "name": "PhoneRestrictedCommands",
+          "kind": "Property",
+          "type": "static IReadOnlySet<string>",
+          "description": "The commands of decision G2 that are tablet-and-up: page layout, equations, creating / renaming / deleting a style, the cell properties and comparing against sources. On a phone layout (IsPhoneLayout) they are disabled whatever the rest of the context says, so the command palette and the keyboard cannot reach what the phone chrome hides."
         },
         {
           "name": "Version",
@@ -5265,6 +5277,12 @@
       ],
       "parameters": [
         {
+          "name": "Compact",
+          "type": "bool",
+          "isRequired": false,
+          "description": "The phone presentation (decision G2): the view starts as Unified (unless ViewMode is set) and the side-by-side selector gives way to a three-segment switch - Older, Newer, Differences - that shows one text at a time. Defaults to false (the full viewer)."
+        },
+        {
           "name": "ComparisonResult",
           "type": "bool SideBySide { get => ModeParameter == DiffViewMode.SideBySide; set => _sideBySideAlias = value; } /// <summary>Optional precomputed comparison result; its block changes drive the rows.</summary> [Parameter] public DocumentCompareResult?",
           "isRequired": false,
@@ -5804,6 +5822,12 @@
           "type": "DocumentEditorCommandRegistry?",
           "isRequired": false,
           "description": "The editor command registry; its state wins over the plain flags exactly like in the ribbon."
+        },
+        {
+          "name": "Compact",
+          "type": "bool",
+          "isRequired": false,
+          "description": "The phone header (decision G2): the title, the save state as an icon, Search, Undo, Redo and a kebab. Save, Print preview and the export move to the action bar and the kebab; the host's HeaderActions render inside the kebab panel. Defaults to false (the full header)."
         },
         {
           "name": "HeaderActions",
@@ -7009,6 +7033,12 @@
           "description": "Whether selected paragraphs have mixed alignment."
         },
         {
+          "name": "PhoneLayout",
+          "type": "bool",
+          "isRequired": false,
+          "description": "The phone layout (decision G2: viewing plus light edits). The ribbon shows the Home, Insert, Review and View tabs; Math, Layout and References (equations, page layout, fields) are tablet-and-up, the \"More\" menu is a sheet and Save is the action bar's. The editor sets it from its own layout; defaults to false."
+        },
+        {
           "name": "PrintPreviewActive",
           "type": "bool",
           "isRequired": false,
@@ -7636,6 +7666,12 @@
           "type": "EventCallback",
           "isRequired": false,
           "description": "Raised when the image should move one layer backward. The control renders only when this callback is bound."
+        },
+        {
+          "name": "ShortSet",
+          "type": "bool",
+          "isRequired": false,
+          "description": "The short set of a phone (decision G2): the wrapping, the alignment and the alternative text. The picture source, the size, the exact position, the anchor and the stacking order stay for a tablet and up. Defaults to false (the full inspector)."
         },
         {
           "name": "ShowHeader",
@@ -8882,6 +8918,12 @@
           "description": "Raised when table properties change."
         },
         {
+          "name": "ShortSet",
+          "type": "bool",
+          "isRequired": false,
+          "description": "The short set of a phone (decision G2): only the table alignment. The width, the cell padding, the background and the border stay for a tablet and up. Defaults to false (the full panel)."
+        },
+        {
           "name": "TestIdRoot",
           "type": "string",
           "isRequired": false,
@@ -9310,6 +9352,10 @@
     },
     {
       "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/css/components/_document-editor-panels.css",
+      "kind": "Css"
+    },
+    {
+      "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/css/components/_document-editor-sheets.css",
       "kind": "Css"
     },
     {

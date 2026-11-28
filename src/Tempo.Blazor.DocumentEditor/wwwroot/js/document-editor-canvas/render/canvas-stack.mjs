@@ -12,6 +12,22 @@ import { createFontMetricsService } from '../../document-editor/layout/font-metr
 
 export { CANVAS_LAYER_KINDS };
 
+/**
+ * The inline padding of the page column inside the engine root. A desktop keeps the view mode's own padding (24 px a side in print mode); a tablet and a
+ * phone container (the editor's `data-layout`) trade it for a hairline so a page fitted to the column fills it instead of leaving a bezel of 24 px a side.
+ * The fit reads the same number (`getFitPaddingInline`), so what the fit leaves around the page is what is there.
+ */
+export const COMPACT_ROOT_PADDING_INLINE = 4;
+
+export function resolveRootPaddingInline(element, rootPadding) {
+    try {
+        const layout = element?.closest?.('[data-layout]')?.getAttribute?.('data-layout');
+        return layout && layout !== 'desktop' ? Math.min(rootPadding, COMPACT_ROOT_PADDING_INLINE) : rootPadding;
+    } catch {
+        return rootPadding;
+    }
+}
+
 export function createCanvasStack(options = {}) {
     const doc = options.document;
     if (!doc || typeof doc.createElement !== 'function') {
@@ -255,7 +271,7 @@ export function createCanvasStack(options = {}) {
         root.setAttribute('data-canvas-zoom-preset', viewState.zoom.preset);
         root.setAttribute('data-canvas-print-preview-active', String(viewState.printPreview.active === true));
         root.style.gap = `${presentation.rootGap}px`;
-        root.style.padding = `${presentation.rootPadding}px`;
+        root.style.padding = `${presentation.rootPadding}px ${resolveRootPaddingInline(root, presentation.rootPadding)}px`;
         // Perf plan N11.3: while the progressive first layout is incomplete, the bottom spacer adds
         // an ESTIMATE of the unlaid tail (remaining blocks ÷ laid blocks-per-page × average page
         // stride) so the scrollbar length approximates the final document immediately; each idle

@@ -63,7 +63,9 @@
     border-color: transparent;
     border-bottom-color: transparent;
     box-shadow: none;
-    font-weight: var(--tm-font-weight-semibold);
+    /* The weight does not change with the state: a bolder label is wider, and the tabs after it would shift by a couple of pixels every time the
+       reader switches tab. The state is the ink and the underline. */
+    font-weight: var(--tm-font-weight-medium);
 }
 
 .tm-document-editor__ribbon-tab--active::after {
@@ -81,6 +83,12 @@
 .tm-document-editor__ribbon-button:focus-visible {
     outline: 2px solid var(--tm-color-primary);
     outline-offset: 2px;
+}
+
+/* The command row clips its own overflow (tm-toolbar.js measures what fits): an outline OUTSIDE a button at the row's edge would be cut to a bar on
+   one side (the first button of a 320 px row), so the focus ring of a command sits inside the button. */
+.tm-document-editor__ribbon-toolbar .tm-toolbar-btn:focus-visible {
+    outline-offset: -2px;
 }
 
 /* ─── DE-1.2: the ribbon command row ────────────────────────────────────────────────────────────

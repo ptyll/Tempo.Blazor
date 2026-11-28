@@ -36,6 +36,12 @@
       "isRequired": false,
       "default": "\"document-table-properties\"",
       "description": "Raised when table properties change."
+    },
+    {
+      "name": "ShortSet",
+      "type": "bool",
+      "isRequired": false,
+      "description": "The short set of a phone (decision G2): only the table alignment. The width, the cell padding, the background and the border stay for a tablet and up. Defaults to false (the full panel)."
     }
   ]
 }

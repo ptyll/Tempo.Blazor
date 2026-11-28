@@ -57,54 +57,63 @@
                 data-ribbon-tab="@GetRibbonTabDataValue(DocumentRibbonTab.Insert)"
                 data-active="@GetRibbonTabSelected(DocumentRibbonTab.Insert)"
                 data-testid="@TestId("document-ribbon-tab-insert")">@Loc["TmDocumentEditor_TabInsert"]</button>
-        <button type="button"
-                @ref="_mathTab"
-                class="@GetRibbonTabClass(DocumentRibbonTab.Math)"
-                id="@GetRibbonTabId(DocumentRibbonTab.Math)"
-                role="tab"
-                aria-selected="@GetRibbonTabSelected(DocumentRibbonTab.Math)"
-                aria-current="@GetRibbonTabCurrent(DocumentRibbonTab.Math)"
-                aria-controls="@RibbonPanelId"
-                tabindex="@GetRibbonTabIndex(DocumentRibbonTab.Math)"
-                @onclick="() => SelectRibbonTab(DocumentRibbonTab.Math)"
-                @onkeydown="args => HandleRibbonTabKeyDownAsync(args, DocumentRibbonTab.Math)"
-                @onpointerdown:preventDefault="true"
-                @onmousedown:preventDefault="true"
-                data-ribbon-tab="@GetRibbonTabDataValue(DocumentRibbonTab.Math)"
-                data-active="@GetRibbonTabSelected(DocumentRibbonTab.Math)"
-                data-testid="@TestId("document-ribbon-tab-math")">@Loc["TmDocumentEditor_TabMath"]</button>
-        <button type="button"
-                @ref="_layoutTab"
-                class="@GetRibbonTabClass(DocumentRibbonTab.Layout)"
-                id="@GetRibbonTabId(DocumentRibbonTab.Layout)"
-                role="tab"
-                aria-selected="@GetRibbonTabSelected(DocumentRibbonTab.Layout)"
-                aria-current="@GetRibbonTabCurrent(DocumentRibbonTab.Layout)"
-                aria-controls="@RibbonPanelId"
-                tabindex="@GetRibbonTabIndex(DocumentRibbonTab.Layout)"
-                @onclick="() => SelectRibbonTab(DocumentRibbonTab.Layout)"
-                @onkeydown="args => HandleRibbonTabKeyDownAsync(args, DocumentRibbonTab.Layout)"
-                @onpointerdown:preventDefault="true"
-                @onmousedown:preventDefault="true"
-                data-ribbon-tab="@GetRibbonTabDataValue(DocumentRibbonTab.Layout)"
-                data-active="@GetRibbonTabSelected(DocumentRibbonTab.Layout)"
-                data-testid="@TestId("document-ribbon-tab-layout")">@Loc["TmDocumentEditor_TabLayout"]</button>
-        <button type="button"
-                @ref="_referencesTab"
-                class="@GetRibbonTabClass(DocumentRibbonTab.References)"
-                id="@GetRibbonTabId(DocumentRibbonTab.References)"
-                role="tab"
-                aria-selected="@GetRibbonTabSelected(DocumentRibbonTab.References)"
-                aria-current="@GetRibbonTabCurrent(DocumentRibbonTab.References)"
-                aria-controls="@RibbonPanelId"
-                tabindex="@GetRibbonTabIndex(DocumentRibbonTab.References)"
-                @onclick="() => SelectRibbonTab(DocumentRibbonTab.References)"
-                @onkeydown="args => HandleRibbonTabKeyDownAsync(args, DocumentRibbonTab.References)"
-                @onpointerdown:preventDefault="true"
-                @onmousedown:preventDefault="true"
-                data-ribbon-tab="@GetRibbonTabDataValue(DocumentRibbonTab.References)"
-                data-active="@GetRibbonTabSelected(DocumentRibbonTab.References)"
-                data-testid="@TestId("document-ribbon-tab-references")">@Loc["TmDocumentEditor_TabReferences"]</button>
+        @if (!PhoneLayout)
+        {
+            <button type="button"
+                    @ref="_mathTab"
+                    class="@GetRibbonTabClass(DocumentRibbonTab.Math)"
+                    id="@GetRibbonTabId(DocumentRibbonTab.Math)"
+                    role="tab"
+                    aria-selected="@GetRibbonTabSelected(DocumentRibbonTab.Math)"
+                    aria-current="@GetRibbonTabCurrent(DocumentRibbonTab.Math)"
+                    aria-controls="@RibbonPanelId"
+                    tabindex="@GetRibbonTabIndex(DocumentRibbonTab.Math)"
+                    @onclick="() => SelectRibbonTab(DocumentRibbonTab.Math)"
+                    @onkeydown="args => HandleRibbonTabKeyDownAsync(args, DocumentRibbonTab.Math)"
+                    @onpointerdown:preventDefault="true"
+                    @onmousedown:preventDefault="true"
+                    data-ribbon-tab="@GetRibbonTabDataValue(DocumentRibbonTab.Math)"
+                    data-active="@GetRibbonTabSelected(DocumentRibbonTab.Math)"
+                    data-testid="@TestId("document-ribbon-tab-math")">@Loc["TmDocumentEditor_TabMath"]</button>
+        }
+        @if (!PhoneLayout)
+        {
+            <button type="button"
+                    @ref="_layoutTab"
+                    class="@GetRibbonTabClass(DocumentRibbonTab.Layout)"
+                    id="@GetRibbonTabId(DocumentRibbonTab.Layout)"
+                    role="tab"
+                    aria-selected="@GetRibbonTabSelected(DocumentRibbonTab.Layout)"
+                    aria-current="@GetRibbonTabCurrent(DocumentRibbonTab.Layout)"
+                    aria-controls="@RibbonPanelId"
+                    tabindex="@GetRibbonTabIndex(DocumentRibbonTab.Layout)"
+                    @onclick="() => SelectRibbonTab(DocumentRibbonTab.Layout)"
+                    @onkeydown="args => HandleRibbonTabKeyDownAsync(args, DocumentRibbonTab.Layout)"
+                    @onpointerdown:preventDefault="true"
+                    @onmousedown:preventDefault="true"
+                    data-ribbon-tab="@GetRibbonTabDataValue(DocumentRibbonTab.Layout)"
+                    data-active="@GetRibbonTabSelected(DocumentRibbonTab.Layout)"
+                    data-testid="@TestId("document-ribbon-tab-layout")">@Loc["TmDocumentEditor_TabLayout"]</button>
+        }
+        @if (!PhoneLayout)
+        {
+            <button type="button"
+                    @ref="_referencesTab"
+                    class="@GetRibbonTabClass(DocumentRibbonTab.References)"
+                    id="@GetRibbonTabId(DocumentRibbonTab.References)"
+                    role="tab"
+                    aria-selected="@GetRibbonTabSelected(DocumentRibbonTab.References)"
+                    aria-current="@GetRibbonTabCurrent(DocumentRibbonTab.References)"
+                    aria-controls="@RibbonPanelId"
+                    tabindex="@GetRibbonTabIndex(DocumentRibbonTab.References)"
+                    @onclick="() => SelectRibbonTab(DocumentRibbonTab.References)"
+                    @onkeydown="args => HandleRibbonTabKeyDownAsync(args, DocumentRibbonTab.References)"
+                    @onpointerdown:preventDefault="true"
+                    @onmousedown:preventDefault="true"
+                    data-ribbon-tab="@GetRibbonTabDataValue(DocumentRibbonTab.References)"
+                    data-active="@GetRibbonTabSelected(DocumentRibbonTab.References)"
+                    data-testid="@TestId("document-ribbon-tab-references")">@Loc["TmDocumentEditor_TabReferences"]</button>
+        }
         <button type="button"
                 @ref="_reviewTab"
                 class="@GetRibbonTabClass(DocumentRibbonTab.Review)"
@@ -171,7 +180,7 @@
            sections, arrow keys and typeahead - offers the rest. The ribbon keeps no overflow logic of its own. *@
         <TmToolbar Class="tm-document-editor__ribbon-toolbar"
                    Overflow="ToolbarOverflow.Menu"
-                   OverflowPresentation="PanelPresentation.Popover"
+                   OverflowPresentation="@(PhoneLayout ? PanelPresentation.Auto : PanelPresentation.Popover)"
                    Labels="ToolbarLabels.ShrinkBeforeOverflow"
                    AriaLabel="@Loc["TmDocumentEditor_RibbonCommandsLabel"]"
                    OverflowLabel="@Loc["TmDocumentEditor_MoreCommands"]"
@@ -179,14 +188,18 @@
             @if (ShowQuickAccess)
             {
                 <TmToolbarGroup Class="tm-document-editor__ribbon-group tm-document-editor__ribbon-group--quick-access" Label="@Loc["TmDocumentEditor_GroupClipboard"]">
-                    <DocumentRibbonButton Icon="save"
-                                          Text="@Loc["TmDocumentEditor_Save"]"
-                                          Disabled="@(!CanExecuteSave)"
-                                          Tooltip="@SaveTitle"
-                                          AriaLabel="@SaveTitle"
-                                          OnClick='() => ExecuteToolbarCommandAsync("save", OnSave, !ReadOnly && !IsSaving)'
-                                          Command="save"
-                                          TestId="@TestId("document-save")" />
+                    @if (!PhoneLayout)
+                    {
+                        @* A phone's Save is the primary tile of the action bar (exactly one Save per editor). *@
+                        <DocumentRibbonButton Icon="save"
+                                              Text="@Loc["TmDocumentEditor_Save"]"
+                                              Disabled="@(!CanExecuteSave)"
+                                              Tooltip="@SaveTitle"
+                                              AriaLabel="@SaveTitle"
+                                              OnClick='() => ExecuteToolbarCommandAsync("save", OnSave, !ReadOnly && !IsSaving)'
+                                              Command="save"
+                                              TestId="@TestId("document-save")" />
+                    }
                     <DocumentRibbonButton Icon="undo-2"
                                           Text="@Loc["TmDocumentEditor_Undo"]"
                                           Disabled="@(!CanExecuteUndo)"
@@ -345,6 +358,7 @@
                                       PressedState="@GetRegistryFormattingAriaPressed("strikethrough", StrikethroughState)"
                                       OnClick='() => ExecuteToolbarCommandAsync("strikethrough", OnStrikethrough)'
                                       Command="strikethrough"
+                                      Priority="@PhonePrimary("strikethrough")"
                                       TestId="@TestId("document-strikethrough")" />
                 <TmToolbarItem Class="tm-document-editor__ribbon-item tm-document-editor__ribbon-item--color"
                                Priority="@CorePriority("textColor")"
@@ -444,6 +458,7 @@
                                       PressedState="@GetListAriaPressed(BulletListActive, isBullet: true)"
                                       OnClick='() => ExecuteToolbarCommandAsync("bulletList", HandleToggleBulletListAsync)'
                                       Command="bulletList"
+                                      Priority="@PhonePrimary("bulletList")"
                                       TestId="@TestId("document-bullet-list")" />
                 <DocumentRibbonButton Icon="list-ordered"
                                       Text="@Loc["TmDocumentEditor_NumberedList"]"
@@ -914,14 +929,17 @@
                                       OnClick='() => IsFeatureEnabled(DocumentEditorFeatureNames.TrackChanges) ? ExecuteToolbarCommandAsync("openRevisions", OnOpenRevisions, IsFeatureEnabled(DocumentEditorFeatureNames.TrackChanges)) : Task.CompletedTask'
                                       Command="openRevisions"
                                       TestId="@TestId("document-open-revisions")" />
-                <DocumentRibbonButton Icon="git-compare"
-                                      Text="@Loc["TmDocumentEditor_CompareDocuments"]"
-                                      Disabled="@(!IsCommandEnabled("compareDocuments", fallback: CanCompareDocuments))"
-                                      Tooltip="@(GetCommandTitle(Loc["TmDocumentEditor_CompareDocuments"], CanCompareDocuments, Loc["TmDocumentEditor_CommandDisabledUnavailable"]))"
-                                      AriaLabel="@(GetCommandTitle(Loc["TmDocumentEditor_CompareDocuments"], CanCompareDocuments, Loc["TmDocumentEditor_CommandDisabledUnavailable"]))"
-                                      OnClick='() => ExecuteToolbarCommandAsync("compareDocuments", OnCompareDocuments, CanCompareDocuments)'
-                                      Command="compareDocuments"
-                                      TestId="@TestId("document-compare-open")" />
+                @if (!PhoneLayout)
+                {
+                    <DocumentRibbonButton Icon="git-compare"
+                                          Text="@Loc["TmDocumentEditor_CompareDocuments"]"
+                                          Disabled="@(!IsCommandEnabled("compareDocuments", fallback: CanCompareDocuments))"
+                                          Tooltip="@(GetCommandTitle(Loc["TmDocumentEditor_CompareDocuments"], CanCompareDocuments, Loc["TmDocumentEditor_CommandDisabledUnavailable"]))"
+                                          AriaLabel="@(GetCommandTitle(Loc["TmDocumentEditor_CompareDocuments"], CanCompareDocuments, Loc["TmDocumentEditor_CommandDisabledUnavailable"]))"
+                                          OnClick='() => ExecuteToolbarCommandAsync("compareDocuments", OnCompareDocuments, CanCompareDocuments)'
+                                          Command="compareDocuments"
+                                          TestId="@TestId("document-compare-open")" />
+                }
                 <DocumentRibbonButton Icon="lock"
                                       Text="@Loc["TmDocumentEditor_ProtectDocument"]"
                                       Disabled="@(!IsCommandEnabled("protectDocument", fallback: true))"
@@ -1360,10 +1378,27 @@
         => !string.IsNullOrWhiteSpace(CurrentBlockStyle)
         && !IsCurrentStyleBuiltIn;
 
+    // Decision G2: a phone offers viewing and light edits, so the Math, Layout and References tabs (equations, page layout, fields and
+    // citations) exist from a tablet up. Home, Insert (symbol, image, link), Review and View stay.
+    private static readonly DocumentRibbonTab[] PhoneRibbonTabs =
+    [
+        DocumentRibbonTab.Home,
+        DocumentRibbonTab.Insert,
+        DocumentRibbonTab.Review,
+        DocumentRibbonTab.View
+    ];
+
     private IReadOnlyList<DocumentRibbonTab> RibbonTabs
-        => IsHeaderFooterMode
-            ? [.. BaseRibbonTabs, DocumentRibbonTab.HeaderFooter]
-            : BaseRibbonTabs;
+    {
+        get
+        {
+            var baseTabs = PhoneLayout ? PhoneRibbonTabs : BaseRibbonTabs;
+            return IsHeaderFooterMode ? [.. baseTabs, DocumentRibbonTab.HeaderFooter] : baseTabs;
+        }
+    }
+
+    private static bool IsTabletOnlyTab(DocumentRibbonTab tab)
+        => tab is DocumentRibbonTab.Math or DocumentRibbonTab.Layout or DocumentRibbonTab.References;
 
     /// <summary>The primary calls to action (Link, Comment, Image, Table) show their label in the full ribbon; Compact is icon-only.</summary>
     private bool LargeActions => ToolbarMode == DocumentToolbarMode.Ribbon;
@@ -1561,8 +1596,22 @@
 
     // ─── declared priority (the registry is the single source) ──────────────
 
-    private static ToolbarButtonPriority CorePriority(string command)
-        => (DocumentEditorBuiltInToolbar.FindItemByCommandName(command)?.Priority ?? ToolbarItemPriority.Secondary).ToCorePriority();
+    // The registry's rank - except on a phone, where the row has room for few commands: alignment, the lists and the image stay on it (the style and font
+    // selects, which are wide, leave for "More" first). The rank published as data-priority stays the registry's.
+    private static readonly HashSet<string> PhonePrimaryCommands = new(StringComparer.Ordinal) { "alignment", "bulletList", "insertImage" };
+
+    private ToolbarButtonPriority CorePriority(string command)
+        => PhoneLayout && PhonePrimaryCommands.Contains(command)
+            ? ToolbarButtonPriority.Primary
+            : (DocumentEditorBuiltInToolbar.FindItemByCommandName(command)?.Priority ?? ToolbarItemPriority.Secondary).ToCorePriority();
+
+    // Strikethrough is the least used of the four text styles: on a phone it gives its place to the alignment and the list.
+    private ToolbarItemPriority? PhonePrimary(string command)
+        => !PhoneLayout
+            ? null
+            : PhonePrimaryCommands.Contains(command)
+                ? ToolbarItemPriority.Primary
+                : command == "strikethrough" ? ToolbarItemPriority.Secondary : null;
 
     private static string PriorityData(string command)
         => (DocumentEditorBuiltInToolbar.FindItemByCommandName(command)?.Priority ?? ToolbarItemPriority.Secondary).ToDataValue();
@@ -1779,7 +1828,7 @@
     {
         var hash = new HashCode();
         // Value parameters.
-        hash.Add((int)ToolbarMode); hash.Add(ShowQuickAccess); hash.Add(ReadOnly); hash.Add(IsSaving); hash.Add(IsDirty);
+        hash.Add((int)ToolbarMode); hash.Add(PhoneLayout); hash.Add(ShowQuickAccess); hash.Add(ReadOnly); hash.Add(IsSaving); hash.Add(IsDirty);
         hash.Add(SaveMessage); hash.Add(LastSavedAt); hash.Add(CanUndo); hash.Add(CanRedo);
         hash.Add(NextUndoDescription); hash.Add(NextRedoDescription); hash.Add(TrackChangesEnabled);
         hash.Add(CanTrackChanges); hash.Add(IsDocumentProtected); hash.Add(ShowBlocks);
@@ -1829,6 +1878,12 @@
 
     /// <summary>Visual mode used by the toolbar.</summary>
     [Parameter] public DocumentToolbarMode ToolbarMode { get; set; } = DocumentToolbarMode.Ribbon;
+
+    /// <summary>
+    /// The phone layout (decision G2: viewing plus light edits). The ribbon shows the Home, Insert, Review and View tabs; Math, Layout and
+    /// References (equations, page layout, fields) are tablet-and-up. The editor sets it from its own layout; defaults to <c>false</c>.
+    /// </summary>
+    [Parameter] public bool PhoneLayout { get; set; }
 
     [Parameter] public bool ReadOnly { get; set; }
 
@@ -3334,6 +3389,12 @@
         }
         else if (!IsHeaderFooterMode && _activeRibbonTab == DocumentRibbonTab.HeaderFooter)
         {
+            _activeRibbonTab = DocumentRibbonTab.Home;
+        }
+
+        if (PhoneLayout && IsTabletOnlyTab(_activeRibbonTab))
+        {
+            // The tab the reader stood on does not exist on a phone: the ribbon falls back to Home.
             _activeRibbonTab = DocumentRibbonTab.Home;
         }
 

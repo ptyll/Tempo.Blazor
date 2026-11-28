@@ -92,12 +92,11 @@ public class TmDocumentEditorLayoutTests : LocalizationTestBase
         cut.FindAll(".tm-document-side-panel__tab svg").Should().BeEmpty("the desktop tabs are text-only like the reference");
     }
 
-    [Theory]
-    [InlineData(TmLayoutMode.Tablet)]
-    [InlineData(TmLayoutMode.Mobile)]
-    public void Tablet_And_Mobile_KeepOutlinePagesAsSidePanelTabs(TmLayoutMode mode)
+    [Fact]
+    public void Tablet_OutlinePagesAsTabs()
     {
-        var cut = RenderEditor(mode);
+        var cut = RenderEditor(TmLayoutMode.Tablet);
+        cut.Find("[data-testid='document-side-panel-edge-toggle']").Click();
 
         cut.FindAll("[data-region='nav']").Should().BeEmpty("DE1: the left column exists on a desktop container only");
         cut.FindAll("[data-testid='document-navigation-panel']").Should().BeEmpty();
@@ -105,6 +104,20 @@ public class TmDocumentEditorLayoutTests : LocalizationTestBase
         cut.Find("[data-testid='document-side-panel-tab-pages']").Should().NotBeNull();
         cut.FindAll("[data-region]").Select(region => region.GetAttribute("data-region"))
             .Should().Equal("doc", "inspector");
+    }
+
+    [Fact]
+    public void Mobile_OutlinePagesAsTabs_OfTheInspectorSheet_NoRegionsBesideTheDocument()
+    {
+        var cut = RenderEditor(TmLayoutMode.Mobile);
+        cut.FindAll("[data-region]").Select(region => region.GetAttribute("data-region")).Should().Equal("doc");
+
+        cut.Find("[data-testid='document-mobile-comments']").Click();
+
+        cut.WaitForAssertion(() => cut.Find("[data-testid='document-side-panel']").Should().NotBeNull());
+
+        cut.Find("[data-testid='document-side-panel-tab-outline']").Should().NotBeNull();
+        cut.Find("[data-testid='document-side-panel-tab-pages']").Should().NotBeNull();
     }
 
     [Theory]
@@ -213,6 +226,48 @@ public class TmDocumentEditorLayoutTests : LocalizationTestBase
         renders().Should().Be(before, "a resize inside one width step must not rebuild the editor chrome");
     }
 
+    // ── fit to the column (phase 8) ─────────────────────────────────────────
+
+    private async Task<(IRenderedComponent<TmDocumentEditor> Cut, Bunit.JSRuntimeInvocation[] Fits)> RenderAutoAsync(double width, string mode)
+    {
+        SetupLayoutObserverModule();
+        var provider = new InMemoryDocumentEditorProvider();
+        provider.SeedContractDocument("doc-1");
+        var canvas = SetupDocumentCanvasModule();
+        var cut = Render<TmDocumentEditor>(p => p.Add(c => c.DocumentId, "doc-1").Add(c => c.Provider, provider));
+        cut.WaitForAssertion(() => cut.Find("[data-testid='document-canvas-engine-host']").Should().NotBeNull());
+        await MarkCanvasReadyAsync(cut);
+        var observer = cut.FindComponent<TmLayoutObserver>();
+        await cut.InvokeAsync(() => observer.Instance.OnContainerWidthChanged(width));
+        await cut.InvokeAsync(() => observer.Instance.OnLayoutModeChanged(mode));
+        cut.WaitForAssertion(() => cut.Find(".tm-document-editor").GetAttribute("data-layout").Should().Be(mode));
+        await Task.Delay(50);
+        return (cut, canvas.Invocations.Where(i => i.Identifier == "execCommand").ToArray());
+    }
+
+    [Theory]
+    [InlineData(700, "tablet")]
+    [InlineData(390, "mobile")]
+    public async Task Fit_ANonDesktopContainerNarrowerThanThePage_FitsItAfterTheLayoutRendered(double width, string mode)
+    {
+        var (cut, _) = await RenderAutoAsync(width, mode);
+
+        cut.WaitForAssertion(() => cut.Instance.GetType().GetField("_fitPending", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+            .GetValue(cut.Instance).Should().Be(false));
+        var canvas = SetupDocumentCanvasModule();
+        canvas.Invocations.Where(i => i.Identifier == "execCommand" && i.Arguments.Any(a => string.Equals(a as string, "fitWidth", StringComparison.Ordinal)))
+            .Should().NotBeEmpty("the page is wider than the column, so the engine fits it");
+    }
+
+    [Fact]
+    public async Task Fit_AColumnThatHoldsThePage_IsLeftAlone()
+    {
+        var (_, _) = await RenderAutoAsync(1000, "tablet");
+
+        SetupDocumentCanvasModule().Invocations.Where(i => i.Identifier == "execCommand" && i.Arguments.Any(a => string.Equals(a as string, "fitWidth", StringComparison.Ordinal)))
+            .Should().BeEmpty("a 1000 px column holds an A4 page (794 px plus the gutters): no fit, the page keeps its zoom");
+    }
+
     // ── header ─────────────────────────────────────────────────────────────
 
     [Fact]
@@ -302,6 +357,13 @@ public class TmDocumentEditorLayoutTests : LocalizationTestBase
         {
             var matches = cut.FindAll($"[data-testid='{id}']");
             matches.Should().ContainSingle($"{id} must render exactly once ({mode}, header={showHeader})");
+            if (mode == TmLayoutMode.Mobile && id == "document-save")
+            {
+                // Phase 8 (decision G2): a phone's Save is the primary tile of the action bar, with or without the header.
+                matches[0].Closest("[data-testid='document-mobile-action-bar']").Should().NotBeNull("Save is the action bar's primary action on a phone");
+                continue;
+            }
+
             var inHeader = matches[0].Closest("[data-testid='document-header']") is not null;
             inHeader.Should().Be(showHeader, $"{id} belongs to the header exactly when the header is shown");
         }
@@ -462,6 +524,7 @@ public class TmDocumentEditorLayoutTests : LocalizationTestBase
     public void IconTabs_KeepTheirLabelAsTheAccessibleName_AndTextTabsShowIt()
     {
         var tablet = RenderEditor(TmLayoutMode.Tablet);
+        tablet.Find("[data-testid='document-side-panel-edge-toggle']").Click();
         var tab = tablet.Find("[data-testid='document-side-panel-tab-comments']");
         tab.GetAttribute("title").Should().Be("Comments", "a tooltip names the icon");
         tab.QuerySelector("span.tm-document-editor__sr-only")!.TextContent.Should().Be("Comments");

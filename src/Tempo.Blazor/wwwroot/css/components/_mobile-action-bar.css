@@ -155,6 +155,50 @@
   color: var(--tm-mobile-action-bar-icon-chip-fg);
 }
 
+/* A count beside the icon (TmActionItem.Badge): a small pill pinned to the icon's top corner. The tile is the positioning
+   context, so the badge never changes the tile's size. */
+.tm-mobile-action-bar__bar .tm-mobile-action-bar__action {
+  position: relative;
+}
+
+.tm-mobile-action-bar__badge {
+  position: absolute;
+  inset-block-start: var(--tm-space-1);
+  inset-inline-start: calc(50% + var(--tm-space-2));
+  min-inline-size: 1.125rem;
+  padding: 0 var(--tm-space-1);
+  border-radius: var(--tm-radius-full);
+  background: var(--tm-color-primary);
+  color: var(--tm-color-primary-contrast);
+  font-size: var(--tm-font-size-xs);
+  font-weight: var(--tm-font-weight-semibold);
+  line-height: 1.125rem;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* TmActionItem.Primary: the call to action of the bar is a filled tile with the same anatomy as its neighbours (the icon ABOVE a label clamped to two
+   lines): it is one equal tile of the row and never wider, and an icon beside the label would leave a 320 px tile 30 px for a long word ("Enregistrer"). */
+.tm-mobile-action-bar__bar .tm-mobile-action-bar__action--primary {
+  color: var(--tm-color-primary-contrast);
+  background: var(--tm-color-primary);
+  border-radius: var(--tm-radius-control);
+  font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-mobile-action-bar__bar .tm-mobile-action-bar__action--primary:disabled {
+  color: var(--tm-color-text-disabled);
+  background: var(--tm-bg-muted);
+  opacity: 1;
+}
+
+@media (hover: hover) {
+  .tm-mobile-action-bar__bar .tm-mobile-action-bar__action--primary:hover:not(:disabled) {
+    color: var(--tm-color-primary-contrast);
+    background: var(--tm-color-primary-hover);
+  }
+}
+
 /* Two-line clamp: short labels stay whole, long ones (cs/fr at 320) wrap instead of truncating
    into a single-line ellipsis. Y6: break-word + hyphenation (the host sets lang) instead of
    anywhere — a word 1–2px wider than the tile no longer orphans a single character onto its

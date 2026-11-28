@@ -1,0 +1,235 @@
+/* Redesign 146c7e1b, phase 8 (DE-2.7 + the phone parts of DE-1.1 / DE-1.2): the tablet and the phone.
+
+   A TABLET shows the inspector as ONE side sheet that OVERLAYS the document: the region sits in the same grid cell as the document
+   (never in a column of its own), so opening or closing a panel never changes the width the page is laid out in and the canvas is not
+   re-laid-out. The panel inside keeps the sticky parking of the docked one, below the ribbon. At most one thing is open there: the
+   tabs, an object or find - the editor swaps the content, it never stacks a second sheet.
+
+   A PHONE has no inspector region: its panels are sheets of the floating root (core bottom sheets), the action bar is the core
+   TmMobileActionBar, and the document keeps one column. Everything here keys off data-layout (the one value the editor, a forced
+   LayoutMode and the tests share), never off a viewport media query: a phone-sized HOST on a wide screen is a phone. */
+
+.tm-document-editor[data-layout="tablet"] .tm-document-editor__workspace > [data-region="inspector"] {
+    grid-area: doc;
+    justify-self: end;
+    align-self: stretch;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    /* Six finger-sized tabs and the close button need 24rem; a narrower container takes all of it. */
+    width: min(var(--tm-document-sheet-width), 100%);
+    /* The region is the column the sheet slides in; only the sheet itself takes pointer hits, so the page under the empty part stays usable. */
+    pointer-events: none;
+}
+
+.tm-document-editor[data-layout="tablet"] .tm-document-editor__workspace--side-panel-closed > [data-region="inspector"] {
+    width: auto;
+}
+
+/* The sheet is as tall as its content, up to the screen below the ribbon (never taller than the region, which is as tall as the document), and parks
+   below the sticky ribbon. It does not set a height: a short panel (a closed Properties tab) is a short sheet. The docked panel is position: relative
+   (isolation); the sheet is sticky so it follows the reader down the document. */
+.tm-document-editor[data-layout="tablet"] [data-region="inspector"] > .tm-document-side-panel {
+    pointer-events: auto;
+    position: sticky;
+    top: calc(var(--tm-document-ribbon-block-size) + var(--tm-space-2));
+    max-height: min(calc(100dvh - var(--tm-document-ribbon-block-size) - var(--tm-space-6)), 100%);
+    box-shadow: var(--tm-shadow-popover);
+}
+
+.tm-document-editor[data-layout="tablet"] [data-region="inspector"] > .tm-document-side-panel__edge-toggle {
+    pointer-events: auto;
+    position: sticky;
+    top: calc(var(--tm-document-ribbon-block-size) + var(--tm-space-2));
+}
+
+/* The edge toggle of a CLOSED tablet sheet sits over the end of the document: what the doc region shows above the page (the review summary, a version
+   preview strip) leaves it room instead of running under it. */
+.tm-document-editor[data-layout="tablet"] .tm-document-editor__workspace--side-panel-closed .tm-document-editor__doc-banners {
+    padding-inline-end: calc(var(--tm-touch-target) + var(--tm-space-2));
+}
+
+/* The panels of a sheet use the sheet's height: the comment rail (capped at 22rem for a docked column) is no scroller of its own there - the panel body is. */
+.tm-document-editor[data-layout="tablet"] .tm-document-side-panel .tm-document-editor__comment-rail,
+.tm-document-floating-panel__frame[data-floating-kind="inspector"] .tm-document-editor__comment-rail {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+    overflow: visible;
+}
+
+/* The first-frame guard of an Auto editor: a desktop mode in a container narrower than the desktop step already shows the sheet. The same rules as
+   above, answering to the container (a forced mode is the host's decision and is never second-guessed). */
+@container tm-doc-editor (width < 1024px) {
+    .tm-document-editor:not([data-layout-forced])[data-layout="desktop"] .tm-document-editor__workspace > [data-region="inspector"] {
+        grid-area: doc;
+        justify-self: end;
+        align-self: stretch;
+        z-index: 30;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        width: min(var(--tm-document-sheet-width), 100%);
+        pointer-events: none;
+    }
+
+    .tm-document-editor:not([data-layout-forced])[data-layout="desktop"] .tm-document-editor__workspace--side-panel-closed > [data-region="inspector"] {
+        width: auto;
+    }
+
+    .tm-document-editor:not([data-layout-forced])[data-layout="desktop"] [data-region="inspector"] > .tm-document-side-panel {
+        pointer-events: auto;
+        position: sticky;
+        top: calc(var(--tm-document-ribbon-block-size) + var(--tm-space-2));
+        max-height: min(calc(100dvh - var(--tm-document-ribbon-block-size) - var(--tm-space-6)), 100%);
+        box-shadow: var(--tm-shadow-popover);
+    }
+
+    .tm-document-editor:not([data-layout-forced])[data-layout="desktop"] [data-region="inspector"] > .tm-document-side-panel__edge-toggle {
+        pointer-events: auto;
+        position: sticky;
+        top: calc(var(--tm-document-ribbon-block-size) + var(--tm-space-2));
+    }
+
+    .tm-document-editor:not([data-layout-forced])[data-layout="desktop"] .tm-document-editor__workspace--side-panel-closed .tm-document-editor__doc-banners {
+        padding-inline-end: calc(var(--tm-touch-target) + var(--tm-space-2));
+    }
+}
+
+/* A finger-sized edge toggle, sheet controls, fields, option rows, result rows and review actions on a coarse pointer. */
+@media (pointer: coarse) {
+    .tm-document-side-panel__edge-toggle,
+    .tm-document-side-panel__close {
+        width: var(--tm-touch-target);
+        height: var(--tm-touch-target);
+    }
+
+    .tm-document-inspector-form__check {
+        min-height: var(--tm-touch-target);
+    }
+
+    .tm-document-inspector-form__check input[type="checkbox"],
+    .tm-document-find-panel__options input[type="checkbox"] {
+        width: 1.375rem;
+        height: 1.375rem;
+        flex: 0 0 auto;
+    }
+
+    .tm-document-find-panel__clear,
+    .tm-document-replace-panel__clear {
+        width: var(--tm-touch-target);
+        height: var(--tm-touch-target);
+    }
+
+    .tm-document-find-panel__result,
+    .tm-document-review-card__action,
+    .tm-document-diff__nav-button,
+    .tm-document-comment-thread button,
+    .tm-document-comment-composer button,
+    .tm-document-editor__comment-rail > header button,
+    .tm-document-version-panel__create,
+    .tm-document-inspector-form__segmented button,
+    .tm-document-image-inspector__tile,
+    .tm-document-image-inspector__order button,
+    .tm-document-image-inspector__reset,
+    .tm-document-side-panel__tab {
+        min-height: var(--tm-touch-target);
+    }
+
+    /* Inputs and selects of the sheets and the version dialog: 3rem, the finger-sized field of the redesign. */
+    .tm-document-find-panel .tm-input,
+    .tm-document-find-panel select,
+    .tm-document-side-panel select,
+    .tm-document-side-panel .tm-input,
+    .tm-document-side-panel input:not([type="checkbox"]):not([type="radio"]),
+    .tm-document-inspector-form .tm-input,
+    .tm-document-inspector-form select,
+    .tm-document-version-dialog .tm-input,
+    .tm-document-version-dialog input:not([type="checkbox"]):not([type="radio"]),
+    .tm-document-version-dialog select,
+    .tm-document-version-dialog textarea {
+        min-height: 3rem;
+    }
+}
+
+/* ── Phone: the document column ─────────────────────────────────────────────────────────────────── */
+.tm-document-editor[data-layout="mobile"] .tm-document-editor__workspace {
+    padding: var(--tm-space-1);
+}
+
+/* The page of a phone fills its column: the host's own padding is the thin gutter the fit leaves (see getFitPaddingInline in entry.mjs). */
+.tm-document-editor[data-layout="mobile"] .tm-document-wysiwyg-host.tm-wysiwyg-host--paginated {
+    padding: var(--tm-space-1);
+}
+
+/* ── Phone: the action bar ──────────────────────────────────────────────────────────────────────── */
+.tm-document-editor__action-bar {
+    position: sticky;
+    inset-block-end: 0;
+    z-index: 35;
+    background: var(--tm-color-surface-elevated);
+    border-top: 1px solid var(--tm-color-border-subtle);
+    box-shadow: var(--tm-shadow-popover);
+}
+
+/* ── Phone: the sheets ──────────────────────────────────────────────────────────────────────────── */
+/* Find and the inspector are FULL-HEIGHT sheets (their lists are the screen); the object sheet (an image, a table) keeps the content
+   height of the core sheet - a short set of light edits. The kind rides data-floating-kind on the frame. */
+.tm-overlay-panel-sheet:has(.tm-document-floating-panel__frame[data-floating-kind="find"]) .tm-drawer__panel.tm-sheet__panel,
+.tm-overlay-panel-sheet:has(.tm-document-floating-panel__frame[data-floating-kind="inspector"]) .tm-drawer__panel.tm-sheet__panel {
+    --tm-sheet-max: 1;
+    height: calc(var(--tm-sheet-viewport, 100dvh) - var(--tm-space-6));
+    max-height: calc(var(--tm-sheet-viewport, 100dvh) - var(--tm-space-6));
+}
+
+/* The inspector inside its sheet: no docked chrome (the sheet is the frame), and no second X (the sheet header has Done). */
+.tm-document-floating-panel__frame[data-floating-kind="inspector"] .tm-document-side-panel {
+    position: static;
+    height: auto;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+}
+
+.tm-document-floating-panel__frame[data-floating-kind="inspector"] .tm-document-side-panel__close {
+    display: none;
+}
+
+/* The sheet already names the panel (its title and Done), so the panel's own heading and the gap above the tabs go. */
+.tm-document-floating-panel__frame[data-floating-kind="inspector"] .tm-document-floating-panel__body {
+    gap: 0;
+    padding-block-start: 0;
+}
+
+.tm-document-floating-panel__frame[data-floating-kind="inspector"] .tm-document-side-panel__header {
+    padding-block-start: 0;
+}
+
+.tm-document-floating-panel__frame[data-floating-kind="inspector"] .tm-document-comment-rail__header > div > h3,
+.tm-document-floating-panel__frame[data-floating-kind="inspector"] .tm-document-revision-panel__title,
+.tm-document-floating-panel__frame[data-floating-kind="inspector"] .tm-document-editor__version-panel > .tm-document-inspector-header {
+    display: none;
+}
+
+/* ── Phone: the status bar ──────────────────────────────────────────────────────────────────────── */
+/* A phone's page is fitted to the column and its chrome is the header and the action bar: the status bar keeps only what the reader must not miss (the
+   unsaved / failed save state, Retry and the runtime message). The page / word counts, the zoom and the fullscreen switch are a tablet-and-up row, and a
+   bar with nothing to say is not rendered at all instead of leaving an empty strip above the action bar. */
+.tm-document-editor[data-layout="mobile"] .tm-document-editor__status-bar-group--metrics,
+.tm-document-editor[data-layout="mobile"] .tm-document-editor__status-bar-group--controls {
+    display: none;
+}
+
+.tm-document-editor[data-layout="mobile"] .tm-document-editor__status-bar:not(:has(.tm-document-editor__status-bar-group--save > *)) {
+    display: none;
+}
+
+/* A page fitted to a tablet or a phone column: the ruler is as wide as the page at 100 percent, so left in the layout it keeps the mount (and the
+   page, centred in it) wider than the column - the fitted page sat off-centre and clipped. The ruler is a desktop editing aid; it returns with the
+   desktop layout and with a page that holds its own size. */
+.tm-document-editor[data-page-fit="true"]:not([data-layout="desktop"]) .tm-document-canvas-ruler-shell {
+    display: none;
+}

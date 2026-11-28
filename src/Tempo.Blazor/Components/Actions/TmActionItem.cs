@@ -39,6 +39,25 @@ public sealed class TmActionItem
     public string? Icon { get; set; }
 
     /// <summary>
+    /// An optional short count or state ("3", "9+") shown as a small badge beside the label of the <c>TmMobileActionBar</c>
+    /// tile (a pending-changes count on a Comments action, say). Bar tiles only: the "More" menu entry carries no badge. Empty or null renders no badge. The text is part of the tile's
+    /// accessible name, so it must read well after the label.
+    /// </summary>
+    public string? Badge { get; set; }
+
+    /// <summary>
+    /// The words behind <see cref="Badge"/> ("3 to review"). When set, the badge pill is decorative (<c>aria-hidden</c>) and the tile's accessible
+    /// name reads ", {BadgeLabel}" after the label through a visually hidden span; without it the pill's own text is part of the name.
+    /// </summary>
+    public string? BadgeLabel { get; set; }
+
+    /// <summary>
+    /// Marks the action as the primary call to action: its <c>TmMobileActionBar</c> tile is a filled button (icon beside the label) in the primary
+    /// colour instead of an icon-over-label tile. One per bar is the intent; the menu entry is unchanged.
+    /// </summary>
+    public bool Primary { get; set; }
+
+    /// <summary>
     /// Overflow rank ONLY — it never changes the render order. The bar and the "More" menu render
     /// in the order of <c>Items</c>; the items beyond the visible budget move into the menu by
     /// ascending priority (the lowest priority overflows first, ties drop the last item first).

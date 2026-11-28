@@ -194,20 +194,40 @@ public sealed class TmDocumentEditorInspectorContextTests : LocalizationTestBase
         cut.Find("[data-testid='document-side-panel']").GetAttribute("data-context").Should().Be("image", "a fresh selection starts afresh");
     }
 
-    [Theory]
-    [InlineData(TmLayoutMode.Tablet)]
-    [InlineData(TmLayoutMode.Mobile)]
-    public async Task TabletAndMobile_ImageSelection_KeepsTheTabs_AndTheInspectorInTheTab(TmLayoutMode mode)
+    [Fact]
+    public async Task Tablet_ImageSelection_InTheOpenSheet_IsTheContext_LikeTheDesktopDock()
     {
-        var cut = RenderEditor(mode);
+        // Phase 8: a tablet's side sheet is the same surface as the desktop dock, only presented over the document - an image replaces its
+        // tab bar with the contextual header.
+        var cut = RenderEditor(TmLayoutMode.Tablet);
+        cut.Find("[data-testid='document-side-panel-edge-toggle']").Click();
 
         await SelectImageAsync(cut);
 
         var panel = cut.Find("[data-testid='document-side-panel']");
-        panel.HasAttribute("data-context").Should().BeFalse("DE2: the context mode is a desktop inspector");
-        panel.QuerySelectorAll("[role='tablist']").Should().HaveCount(1);
+        panel.GetAttribute("data-context").Should().Be("image");
         panel.QuerySelector("[data-testid='document-image-inspector']").Should().NotBeNull();
-        panel.QuerySelector("[data-testid='document-inspector-header']").Should().NotBeNull("outside the context the inspector carries its own header");
+    }
+
+    [Fact]
+    public async Task Mobile_ImageSelection_KeepsTheTabsInTheInspectorSheet_AndTheInspectorInTheTab()
+    {
+        var cut = RenderEditor(TmLayoutMode.Mobile);
+        await SelectImageAsync(cut);
+        cut.FindAll("[data-testid='document-context-sheet']").Should().BeEmpty("a finger on an object never pops a modal sheet by itself");
+        cut.Find("[data-testid='document-mobile-comments']").Click();
+        cut.WaitForAssertion(() => cut.Find("[data-testid='document-side-panel']").Should().NotBeNull());
+
+        var panel = cut.Find("[data-testid='document-side-panel']");
+        panel.HasAttribute("data-context").Should().BeFalse("DE2: the context mode is a desktop / tablet inspector");
+        panel.QuerySelectorAll("[role='tablist']").Should().HaveCount(1);
+        cut.Find("[data-testid='document-side-panel-tab-properties']").Click();
+        cut.WaitForAssertion(() =>
+        {
+            panel = cut.Find("[data-testid='document-side-panel']");
+            panel.QuerySelector("[data-testid='document-image-inspector']").Should().NotBeNull();
+            panel.QuerySelector("[data-testid='document-inspector-header']").Should().NotBeNull("outside the context the inspector carries its own header");
+        });
     }
 
     [Fact]
@@ -251,21 +271,37 @@ public sealed class TmDocumentEditorInspectorContextTests : LocalizationTestBase
         cut.Find("[data-testid='document-side-panel']").HasAttribute("data-context").Should().BeFalse();
     }
 
-    [Theory]
-    [InlineData(TmLayoutMode.Tablet)]
-    [InlineData(TmLayoutMode.Mobile)]
-    public async Task TabletAndMobile_TableInspector_CarriesTheSharedHeaderWithATitleAndNoX(TmLayoutMode mode)
+    [Fact]
+    public async Task Mobile_TableInspector_CarriesTheSharedHeaderWithATitleAndNoX()
     {
-        var cut = RenderEditor(mode, document => document.Blocks.Add(TableBlock()));
+        var cut = RenderEditor(TmLayoutMode.Mobile, document => document.Blocks.Add(TableBlock()));
 
         await SelectTableCellAsync(cut);
+        cut.Find("[data-testid='document-mobile-comments']").Click();
+        cut.WaitForAssertion(() => cut.Find("[data-testid='document-side-panel']").Should().NotBeNull());
         cut.Find("[data-testid='document-side-panel-tab-properties']").Click();
 
-        var panel = cut.Find("[data-testid='document-side-panel']");
-        panel.HasAttribute("data-context").Should().BeFalse();
-        var shared = panel.QuerySelector("[data-testid='document-inspector-header']")!;
-        shared.QuerySelector("h3")!.TextContent.Should().Be("Table");
-        shared.QuerySelector(".tm-document-inspector-header__close").Should().BeNull("the tab host owns the close button");
+        cut.WaitForAssertion(() =>
+        {
+            var panel = cut.Find("[data-testid='document-side-panel']");
+            panel.HasAttribute("data-context").Should().BeFalse();
+            var shared = panel.QuerySelector("[data-testid='document-inspector-header']")!;
+            shared.QuerySelector("h3")!.TextContent.Should().Be("Table");
+            shared.QuerySelector(".tm-document-inspector-header__close").Should().BeNull("the tab host owns the close button");
+        });
+    }
+
+    [Fact]
+    public async Task Tablet_TableSelection_InTheOpenSheet_IsTheContext_WithTheFullSet()
+    {
+        var cut = RenderEditor(TmLayoutMode.Tablet, document => document.Blocks.Add(TableBlock()));
+        cut.Find("[data-testid='document-side-panel-edge-toggle']").Click();
+
+        await SelectTableCellAsync(cut);
+
+        cut.Find("[data-testid='document-side-panel']").GetAttribute("data-context").Should().Be("table");
+        cut.Find("[data-testid='document-table-properties-width']").Should().NotBeNull("a tablet keeps the whole table inspector");
+        cut.Find("[data-testid='document-cell-properties-panel']").Should().NotBeNull("the cell properties are a tablet-and-up surface");
     }
 
     [Fact]
@@ -426,21 +462,32 @@ public sealed class TmDocumentEditorInspectorContextTests : LocalizationTestBase
         cut.Find("[data-testid='document-side-panel']").GetAttribute("data-context").Should().Be("image");
     }
 
-    [Theory]
-    [InlineData(TmLayoutMode.Tablet)]
-    [InlineData(TmLayoutMode.Mobile)]
-    public async Task TabletAndMobile_Find_IsAFloatingPanelOfTheFloatingRoot(TmLayoutMode mode)
+    [Fact]
+    public async Task Tablet_Find_IsTheContextOfTheSideSheet_NotASecondSurface()
     {
-        var cut = RenderEditor(mode);
+        var cut = RenderEditor(TmLayoutMode.Tablet);
 
         await OpenFindAsync(cut);
 
         cut.FindAll("[data-testid='document-find-panel']").Should().ContainSingle();
-        cut.Find("[data-region='inspector']").QuerySelector("[data-testid='document-find-panel']").Should().BeNull();
-        cut.Find("[data-testid='document-side-panel']").HasAttribute("data-context").Should().BeFalse();
+        cut.Find("[data-region='inspector']").QuerySelector("[data-testid='document-find-panel']").Should().NotBeNull();
+        cut.Find("[data-testid='document-side-panel']").GetAttribute("data-context").Should().Be("find");
+        cut.FindComponents<TmDocumentFloatingPanel>().Where(panel => panel.Instance.Kind == "find").Should().BeEmpty("one side sheet, no floating copy of find");
+    }
+
+    [Fact]
+    public async Task Mobile_Find_IsAFullHeightSheetOfTheFloatingRoot()
+    {
+        var cut = RenderEditor(TmLayoutMode.Mobile);
+
+        await OpenFindAsync(cut);
+
+        cut.FindAll("[data-testid='document-find-panel']").Should().ContainSingle();
+        cut.FindAll("[data-region='inspector']").Should().BeEmpty("a phone has no inspector region");
         var floating = cut.FindComponents<TmDocumentFloatingPanel>().Single(panel => panel.Instance.Kind == "find");
         floating.Instance.CloseOnOutsidePointerDown.Should().BeFalse("the reader clicks into the document while searching");
         floating.Instance.CloseTestId.Should().Be("document-find-close");
+        floating.Instance.LayoutMode.Should().Be(TmLayoutMode.Mobile, "a phone container is a sheet whatever the viewport is");
     }
 
     // ── version preview strip ──────────────────────────────────────────────

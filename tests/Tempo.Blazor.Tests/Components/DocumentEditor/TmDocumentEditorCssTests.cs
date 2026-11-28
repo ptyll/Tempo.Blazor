@@ -341,7 +341,8 @@ public class TmDocumentEditorCssTests
         "_document-editor-comments.css",
         "_document-editor-find.css",
         "_document-editor-panels.css",
-        "_document-editor-canvas-overlays.css"
+        "_document-editor-canvas-overlays.css",
+        "_document-editor-sheets.css"
     ];
 
     private static string ReadComponentCss(string fileName)
@@ -678,6 +679,7 @@ public class TmDocumentEditorCssTests
         ReadComponentCss("_document-editor-panels.css"),
         ReadComponentCss("_document-editor-find.css"),
         ReadComponentCss("_document-editor-canvas-overlays.css"),
+        ReadComponentCss("_document-editor-sheets.css"),
         ReadScopedCss("TmDocumentEditor.razor.css"),
         ReadScopedCss("TmDocumentEditorToolbar.razor.css"),
         ReadScopedCss("TmDocumentCanvasEngineHost.razor.css"),
@@ -717,13 +719,14 @@ public class TmDocumentEditorCssTests
         var rules = CssRules.Parse(css);
 
         CssRules.Body(rules, ".tm-document-editor[data-layout=\"desktop\"] .tm-document-editor__workspace").Should().Contain("grid-template-areas: \"nav doc inspector\"");
-        CssRules.Body(rules, ".tm-document-editor[data-layout=\"tablet\"] .tm-document-editor__workspace").Should().Contain("grid-template-areas: \"doc inspector\"");
+        // Phase 8: a tablet is ONE column - the inspector is a side sheet in the SAME cell as the document, never a column of its own.
+        CssRules.Body(rules, ".tm-document-editor[data-layout=\"tablet\"] .tm-document-editor__workspace").Should().Contain("grid-template-areas: \"doc\"");
         css.Should().NotContain("@container tm-doc-editor (width >= 640px)", "the arrangement does not answer to the container");
         css.Should().NotContain("@container tm-doc-editor (width >= 1024px)");
         css.Should().Contain(".tm-document-editor:not([data-layout-forced])[data-layout=\"desktop\"]", "the first-frame guard never overrides a forced mode");
         CssRules.Body(rules, ".tm-document-editor__workspace > [data-region=\"nav\"]").Should().NotContain("display: none",
             "the column is hidden only by the first-frame guard, never by default");
-        css.Should().Contain("grid-template-areas: \"doc inspector\"");
+        css.Should().NotContain("grid-template-areas: \"doc inspector\"", "no layout gives the inspector a column beside the document any more");
         foreach (var region in new[] { "nav", "doc", "inspector" })
         {
             CssRules.Body(rules, $".tm-document-editor__workspace > [data-region=\"{region}\"]").Should().Contain($"grid-area: {region}");
@@ -817,9 +820,57 @@ public class TmDocumentEditorCssTests
         CssRules.Body(rules, ".tm-document-editor__header").Should().NotContain("container", "a second container would be a second source of truth for the mode");
         css.Should().NotContain("tm-doc-editor-header");
         CssRules.Body(rules, ".tm-document-editor:not([data-layout=\"desktop\"]) .tm-document-editor__header-button--labelled").Should().Contain("aspect-ratio: 1");
-        CssRules.Body(rules, ".tm-document-editor[data-layout=\"mobile\"] .tm-document-editor__header-row").Should().Contain("flex-wrap: wrap");
+        CssRules.Body(rules, ".tm-document-editor[data-layout=\"mobile\"] .tm-document-editor__header-row").Should().Contain("flex-wrap: nowrap", "a phone header is one row");
         css.Should().Contain("@media (pointer: coarse)");
         css.Should().Contain("min-inline-size: var(--tm-touch-target)");
+    }
+
+    [Fact]
+    public void SheetsCss_TabletInspectorOverlaysTheDocumentCell_AndThePhoneKeepsOneColumn()
+    {
+        // Phase 8 (DE-2.7): the contract is semantic - the inspector region of a tablet shares the document's grid cell (so it never takes
+        // width from the page), only the sheet takes pointer hits, the phone has no second row, and everything keys off data-layout.
+        var rules = CssRules.Parse(ReadComponentCss("_document-editor-sheets.css"));
+
+        var region = CssRules.Body(rules, ".tm-document-editor[data-layout=\"tablet\"] .tm-document-editor__workspace > [data-region=\"inspector\"]");
+        region.Should().Contain("grid-area: doc").And.Contain("justify-self: end").And.Contain("pointer-events: none");
+        CssRules.Body(rules, ".tm-document-editor[data-layout=\"tablet\"] [data-region=\"inspector\"] > .tm-document-side-panel")
+            .Should().Contain("pointer-events: auto").And.Contain("--tm-document-ribbon-block-size");
+
+        var sheets = ReadComponentCss("_document-editor-sheets.css");
+        sheets.Should().Contain("data-layout=\"mobile\"");
+        sheets.Should().Contain(".tm-document-editor__action-bar");
+        sheets.Should().NotContain("@media (max-width", "the layout answers to data-layout, never to the viewport");
+    }
+
+    [Fact]
+    public void ToolbarCss_TheCommandRowFocusRingSitsInsideTheButton()
+    {
+        var rules = CssRules.Parse(ReadComponentCss("_document-editor-toolbar.css"));
+
+        CssRules.Body(rules, ".tm-document-editor__ribbon-toolbar .tm-toolbar-btn:focus-visible").Should().Contain("outline-offset: -2px");
+    }
+
+    [Fact]
+    public void SheetsCss_AFittedPageHidesTheRuler_AndAPhoneKeepsOnlyTheSaveStateInTheStatusBar()
+    {
+        var rules = CssRules.Parse(ReadComponentCss("_document-editor-sheets.css"));
+
+        CssRules.Body(rules, ".tm-document-editor[data-page-fit=\"true\"]:not([data-layout=\"desktop\"]) .tm-document-canvas-ruler-shell")
+            .Should().Contain("display: none");
+        var sheets = ReadComponentCss("_document-editor-sheets.css");
+        sheets.Should().Contain(".tm-document-editor[data-layout=\"mobile\"] .tm-document-editor__status-bar-group--metrics")
+            .And.Contain(".tm-document-editor[data-layout=\"mobile\"] .tm-document-editor__status-bar-group--controls");
+    }
+
+    [Fact]
+    public void SheetsCss_PhoneFindAndInspectorSheetsAreFullHeight_ObjectSheetKeepsContentHeight()
+    {
+        var sheets = ReadComponentCss("_document-editor-sheets.css");
+
+        sheets.Should().Contain("data-floating-kind=\"find\"").And.Contain("data-floating-kind=\"inspector\"");
+        sheets.Should().Contain("--tm-sheet-max: 1");
+        sheets.Should().NotContain("data-floating-kind=\"image-context\"", "the object sheet is a short sheet and keeps the core content height");
     }
 
     [Fact]

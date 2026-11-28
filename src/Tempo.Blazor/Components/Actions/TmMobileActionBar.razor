@@ -193,14 +193,16 @@ else
         for (var i = 0; i < visible.Count; i++)
         {
             var item = visible[i];
-            var seq = 10 + (i * 20);
+            var seq = 10 + (i * 30);
             // X3: the bar's own tile button (icon over a two-line label), never .tm-btn — the
             // .tm-btn contract (fixed height, nowrap label) made labels illegible at 320/390.
             // The full label stays in the DOM (clamped to two lines), so no title attribute is
-            // needed — it would only duplicate the accessible name.
+            // needed — it would only duplicate the accessible name. Each item owns a fixed 30-slot stride; only the key carries identity.
             builder.OpenElement(seq, "button");
             builder.AddAttribute(seq + 1, "type", "button");
-            builder.AddAttribute(seq + 2, "class", "tm-mobile-action-bar__action tm-touch-target");
+            builder.AddAttribute(seq + 2, "class", item.Primary
+                ? "tm-mobile-action-bar__action tm-mobile-action-bar__action--primary tm-touch-target"
+                : "tm-mobile-action-bar__action tm-touch-target");
             builder.AddAttribute(seq + 3, "disabled", item.Disabled);
             builder.AddAttribute(seq + 4, "data-action-id", string.IsNullOrEmpty(item.Id) ? item.Label : item.Id);
             if (!string.IsNullOrEmpty(item.TestId))
@@ -238,6 +240,29 @@ else
             builder.AddAttribute(seq + 13, "class", "tm-mobile-action-bar__label-text");
             builder.AddContent(seq + 14, item.Label);
             builder.CloseElement();
+            if (!string.IsNullOrWhiteSpace(item.Badge))
+            {
+                // A short count by the label (a pending-changes number). With a BadgeLabel the tile's accessible name reads ", {label}" (a visually
+                // hidden span) and the pill is decorative; without one the pill's own text is part of the name. The stylesheet pins the pill to the
+                // icon's corner.
+                if (!string.IsNullOrWhiteSpace(item.BadgeLabel))
+                {
+                    builder.OpenElement(seq + 20, "span");
+                    builder.AddAttribute(seq + 21, "class", "tm-sr-only");
+                    builder.AddContent(seq + 22, ", " + item.BadgeLabel);
+                    builder.CloseElement();
+                }
+
+                builder.OpenElement(seq + 23, "span");
+                builder.AddAttribute(seq + 24, "class", "tm-mobile-action-bar__badge");
+                if (!string.IsNullOrWhiteSpace(item.BadgeLabel))
+                {
+                    builder.AddAttribute(seq + 25, "aria-hidden", "true");
+                }
+
+                builder.AddContent(seq + 26, item.Badge);
+                builder.CloseElement();
+            }
             builder.CloseElement();
         }
 

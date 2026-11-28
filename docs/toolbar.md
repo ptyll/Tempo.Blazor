@@ -387,7 +387,7 @@ arrow stops, one Tab stop. Mark other custom focusables yourself or wrap them in
 **Done** (DocumentEditor redesign, phase 4). The DocumentEditor ribbon used to carry its own overflow machinery:
 `ToolbarItemPriority`, `toolbar-overflow.mjs` (which measured which ribbon commands were scrolled out of view of a
 horizontally scrolling strip) and `TmDocumentToolbarOverflowMenu` (a "More" button with a search box). The ribbon now runs on
-`TmToolbar` (`Overflow=Menu`, `OverflowPresentation=Popover`): the module and the menu component are deleted, and the ribbon
+`TmToolbar` (`Overflow=Menu`, `OverflowPresentation=Popover` - `Auto`, a sheet, on a phone layout since phase 8): the module and the menu component are deleted, and the ribbon
 keeps no overflow logic of its own.
 
 * **Priority.** `ToolbarItemPriority` stays as the ribbon's *declared metadata* (`DocumentEditorBuiltInToolbar`), published on every

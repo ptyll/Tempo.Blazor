@@ -90,6 +90,12 @@
       "type": "EventCallback<DiffViewMode>",
       "isRequired": false,
       "description": "Raised when the reader switches the view mode with the built-in selector."
+    },
+    {
+      "name": "Compact",
+      "type": "bool",
+      "isRequired": false,
+      "description": "The phone presentation (decision G2): the view starts as Unified (unless ViewMode is set) and the side-by-side selector gives way to a three-segment switch - Older, Newer, Differences - that shows one text at a time. Defaults to false (the full viewer)."
     }
   ],
   "cssClasses": [

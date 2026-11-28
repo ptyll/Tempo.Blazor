@@ -1051,6 +1051,12 @@ internal static partial class TempoNativeRendererDefinitions
 
     private static void RenderDocumentEditor(WireframeElement el, RenderTreeBuilder b)
     {
+        if (IsDocumentEditorPhone(el))
+        {
+            RenderDocumentEditorPhone(el, b);
+            return;
+        }
+
         var title = el.Props.GetString("title", "Document");
         var showRuler = el.Props.GetBool("showRuler", true);
         var showHeader = el.Props.GetBool("showHeader", false);

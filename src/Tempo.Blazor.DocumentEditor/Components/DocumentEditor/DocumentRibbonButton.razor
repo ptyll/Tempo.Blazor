@@ -84,13 +84,14 @@
     /// <summary>Additional attributes (<c>aria-haspopup</c>, <c>aria-expanded</c>, <c>data-state</c>, ...).</summary>
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
+    // The registry's declared rank: the published data-priority contract. An override (a phone raises the alignment and the list) changes the rank the
+    // core toolbar overflows by, never the attribute hosts and tests read.
     private ToolbarItemPriority DeclaredPriority =>
-        Priority
-        ?? (Command is { Length: > 0 } && DocumentEditorBuiltInToolbar.FindItemByCommandName(Command) is { } item
+        Command is { Length: > 0 } && DocumentEditorBuiltInToolbar.FindItemByCommandName(Command) is { } item
             ? item.Priority
-            : ToolbarItemPriority.Secondary);
+            : ToolbarItemPriority.Secondary;
 
-    private ToolbarButtonPriority EffectivePriority => DeclaredPriority.ToCorePriority();
+    private ToolbarButtonPriority EffectivePriority => (Priority ?? DeclaredPriority).ToCorePriority();
 
     private string PriorityDataValue => DeclaredPriority.ToDataValue();
 

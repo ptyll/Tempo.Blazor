@@ -2,8 +2,8 @@ namespace Tempo.Blazor.Components.Toolbar;
 
 /// <summary>
 /// How important a <see cref="TmToolbarButton"/> is when its <see cref="TmToolbar"/> runs out of room
-/// (<see cref="ToolbarOverflow.Menu"/>). Generalises the DocumentEditor's <c>ToolbarItemPriority</c>
-/// (the editor migrates onto the core mechanism in its own plan). The priority is an overflow RANK
+/// (<see cref="ToolbarOverflow.Menu"/>). The DocumentEditor ribbon runs on this mechanism: its own <c>ToolbarItemPriority</c> is only the
+/// declared registry metadata of a ribbon command (published as <c>data-priority</c>) and is mapped onto this enum. The priority is an overflow RANK
 /// only — buttons always render in the order they are written. The values are NOT ranks: never compare or cast
 /// them (a <see cref="Pinned"/> button is the highest-ranked and numerically the last); the toolbar maps them to a rank
 /// internally.

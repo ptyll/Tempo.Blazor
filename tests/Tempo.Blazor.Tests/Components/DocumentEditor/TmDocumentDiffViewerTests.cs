@@ -58,6 +58,50 @@ public sealed class TmDocumentDiffViewerTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Mobile_DiffDefaultsToUnified_WithSegmentOlderNewerDiff()
+    {
+        var oldDocument = CreateDocument(("b1", "Smlouva je platná"), ("b2", "Odstraněný odstavec"));
+        var newDocument = CreateDocument(("b1", "Smlouva je dnes platná"), ("b3", "Nový odstavec"));
+
+        var cut = Render<TmDocumentDiffViewer>(parameters =>
+            parameters.Add(p => p.OldDocument, oldDocument).Add(p => p.NewDocument, newDocument).Add(p => p.Compact, true));
+
+        // Unified and "Differences" on load; the three segments exist; the side-by-side selector is gone.
+        cut.Find("[data-testid='document-diff-viewer']").GetAttribute("data-view-mode").Should().Be("unified");
+        cut.Find("[data-testid='document-diff-viewer']").GetAttribute("data-segment").Should().Be("differences");
+        cut.FindAll("[data-testid='document-diff-view-mode']").Should().BeEmpty("a phone has no side-by-side selector");
+        cut.FindAll("[data-testid='document-diff-segments'] [role='radio']").Select(radio => radio.TextContent.Trim())
+            .Should().Equal("Older", "Newer", "Differences");
+        cut.FindAll("[data-testid='document-diff-unified']").Should().HaveCount(1);
+        cut.FindAll("[data-diff-kind]").Should().NotBeEmpty("the differences segment marks the changed words");
+
+        // Older: only what exists on the older side, plain text, no marks - the added block is gone.
+        cut.FindAll("[data-testid='document-diff-segments'] [role='radio']")[0].Click();
+        cut.WaitForAssertion(() => cut.Find("[data-testid='document-diff-viewer']").GetAttribute("data-segment").Should().Be("older"));
+        cut.FindAll("[data-diff-kind]").Should().BeEmpty();
+        cut.FindAll(".tm-document-diff__row").Select(row => row.TextContent.Trim()).Should().Equal("Smlouva je platná", "Odstraněný odstavec");
+
+        // Newer: the added block is back, the removed one is gone.
+        cut.FindAll("[data-testid='document-diff-segments'] [role='radio']")[1].Click();
+        cut.WaitForAssertion(() => cut.Find("[data-testid='document-diff-viewer']").GetAttribute("data-segment").Should().Be("newer"));
+        cut.FindAll("[data-diff-kind]").Should().BeEmpty();
+        cut.FindAll(".tm-document-diff__row").Select(row => row.TextContent.Trim()).Should().Equal("Smlouva je dnes platná", "Nový odstavec");
+    }
+
+    [Fact]
+    public void Mobile_ExplicitSideBySide_WinsOverTheCompactDefault()
+    {
+        var cut = Render<TmDocumentDiffViewer>(parameters => parameters
+            .Add(p => p.OldDocument, CreateDocument(("b1", "A")))
+            .Add(p => p.NewDocument, CreateDocument(("b1", "B")))
+            .Add(p => p.Compact, true)
+            .Add(p => p.ViewMode, DiffViewMode.SideBySide));
+
+        cut.Find("[data-testid='document-diff-viewer']").GetAttribute("data-view-mode").Should().Be("sidebyside");
+        cut.FindAll("[data-testid='document-diff-side-by-side']").Should().HaveCount(1);
+    }
+
+    [Fact]
     public void Unified_IsOneColumn_AndKeepsTheChangedWordsInTheSameLine()
     {
         var oldDocument = CreateDocument(("b1", "Smlouva je platná"), ("b2", "Odstraněno"));

@@ -1075,6 +1075,12 @@
       "type": "EventCallback<int>",
       "isRequired": false,
       "description": "Raised when zoom percent changes."
+    },
+    {
+      "name": "PhoneLayout",
+      "type": "bool",
+      "isRequired": false,
+      "description": "The phone layout (decision G2: viewing plus light edits). The ribbon shows the Home, Insert, Review and View tabs; Math, Layout and References (equations, page layout, fields) are tablet-and-up, the \"More\" menu is a sheet and Save is the action bar's. The editor sets it from its own layout; defaults to false."
     }
   ]
 }

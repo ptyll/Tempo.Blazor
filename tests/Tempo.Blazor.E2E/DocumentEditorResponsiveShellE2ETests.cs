@@ -38,7 +38,9 @@ public sealed class DocumentEditorResponsiveShellE2ETests : WasmTestBase
 
             var expected = probe.EditorClientWidth < 640 ? "mobile" : probe.EditorClientWidth < 1024 ? "tablet" : "desktop";
             Assert.AreEqual(expected, probe.Layout, $"{name}: data-layout follows the editor's own width ({probe.EditorClientWidth}px), not the viewport");
-            var expectedRegions = expected == "desktop" ? "nav,doc,inspector" : "doc,inspector";
+            // Phase 8: a tablet's inspector is a side sheet in the document's own cell (its region stays, closed it is the edge toggle), a phone has
+            // no inspector region at all - its panels are sheets.
+            var expectedRegions = expected == "desktop" ? "nav,doc,inspector" : expected == "tablet" ? "doc,inspector" : "doc";
             Assert.AreEqual(expectedRegions, string.Join(",", probe.VisibleRegions), $"{name}: the visible regions");
             Assert.IsTrue(probe.HeaderVisible, $"{name}: the header renders at every width");
             Assert.AreEqual(1, probe.SaveCount, $"{name}: Save renders exactly once");
@@ -51,11 +53,12 @@ public sealed class DocumentEditorResponsiveShellE2ETests : WasmTestBase
             }
             else if (expected == "tablet")
             {
-                Assert.IsTrue(probe.DocRight <= probe.InspectorLeft + 1, $"{name}: document | inspector sit in one row");
+                // The side sheet OVERLAYS the document: it never narrows it (the closed sheet is only an edge toggle at the document's end).
+                Assert.IsTrue(probe.InspectorLeft >= probe.DocLeft - 1 && probe.InspectorLeft <= probe.DocRight + 1, $"{name}: the inspector region shares the document's cell");
             }
             else
             {
-                Assert.IsTrue(probe.InspectorTop >= probe.DocBottom - 1, $"{name}: on a phone the inspector sits under the document");
+                Assert.AreEqual(0, probe.InspectorLeft, $"{name}: a phone has no inspector region");
             }
 
             AssertNoClientErrors(errors, name);
@@ -72,10 +75,10 @@ public sealed class DocumentEditorResponsiveShellE2ETests : WasmTestBase
         // The editor host is the TmLayoutObserver root; pin its width the way a host application would by sizing a parent.
         foreach (var (hostWidth, expectedLayout, expectedRegions) in new[]
         {
-            (420, "mobile", "doc,inspector"),
+            (420, "mobile", "doc"),
             (800, "tablet", "doc,inspector"),
             (1280, "desktop", "nav,doc,inspector"),
-            (560, "mobile", "doc,inspector"),
+            (560, "mobile", "doc"),
         })
         {
             await page.EvaluateAsync("w => { const host = document.querySelector('.tm-document-editor-host'); host.style.width = w + 'px'; host.style.maxWidth = w + 'px'; }", hostWidth);
@@ -104,7 +107,8 @@ public sealed class DocumentEditorResponsiveShellE2ETests : WasmTestBase
         await WaitForPredicateAsync(page, "() => document.querySelector('.tm-document-editor')?.getAttribute('data-layout') === 'tablet'", 10_000);
         await page.WaitForTimeoutAsync(500);
         var after = await page.EvaluateAsync<double>("() => document.querySelector('[data-region=\"doc\"]').getBoundingClientRect().width");
-        Assert.IsTrue(after < before - 100, $"the doc region follows the (smaller) host ({before} -> {after})");
+        // The desktop doc region shared the row with the navigation and the inspector; a tablet's sheet overlays it, so the region is the host's width.
+        Assert.IsTrue(after <= 700 + 1, $"the doc region follows the (smaller) host ({before} -> {after})");
         // The canvas host fills exactly its region (the page inside scrolls in the host, never the page).
         var hostWidth = await page.EvaluateAsync<double>("() => document.querySelector('[data-testid=\"document-canvas-engine-host\"]').getBoundingClientRect().width");
         Assert.IsTrue(hostWidth <= after + 1, $"the canvas host stays inside the doc region ({hostWidth} > {after})");
@@ -156,12 +160,32 @@ public sealed class DocumentEditorResponsiveShellE2ETests : WasmTestBase
     }
 
     [TestMethod]
+    [Description("On a phone container the cycle is header, ribbon, document - the inspector region is gone, its panels are sheets")]
+    public async Task F6_OnAPhoneContainer_HasNoInspectorRegion()
+    {
+        var (page, errors) = await OpenAsync(HistoryDocumentId, 390, 844, touch: true);
+        Assert.AreEqual("mobile", (await ReadShellAsync(page)).Layout);
+
+        await page.GetByTestId("document-canvas-engine-host").ClickAsync();
+        var visited = new List<string>();
+        for (var i = 0; i < 3; i++)
+        {
+            await page.Keyboard.PressAsync("F6");
+            visited.Add(await ActiveRegionAsync(page));
+        }
+
+        CollectionAssert.AreEqual(new[] { "header", "ribbon", "doc" }, visited);
+        AssertNoClientErrors(errors, "F6 phone");
+        await page.Context.CloseAsync();
+    }
+
+    [TestMethod]
     [Description("On a tablet container the cycle skips the (absent) navigation column")]
     public async Task F6_OnATabletContainer_SkipsTheNavigationColumn()
     {
-        var (page, errors) = await OpenAsync(HistoryDocumentId, 1024, 768, touch: true);
+        var (page, errors) = await OpenAsync(HistoryDocumentId, 1180, 820, touch: true);
         var layout = (await ReadShellAsync(page)).Layout;
-        Assert.AreNotEqual("desktop", layout, "the editor next to the demo sidebar at 1024 px is narrower than the desktop step");
+        Assert.AreEqual("tablet", layout, "the editor next to the demo sidebar at 1180 px is a tablet container");
 
         await page.GetByTestId("document-canvas-engine-host").ClickAsync();
         var visited = new List<string>();
@@ -299,8 +323,7 @@ public sealed class DocumentEditorResponsiveShellE2ETests : WasmTestBase
         await WaitForPredicateAsync(page, "() => document.querySelector('.tm-document-editor')?.getAttribute('data-layout') === 'mobile'", 15_000);
         await page.WaitForTimeoutAsync(400);
         var forcedMobile = await ReadShellAsync(page);
-        Assert.AreEqual("doc,inspector", string.Join(",", forcedMobile.VisibleRegions));
-        Assert.IsTrue(forcedMobile.InspectorTop >= forcedMobile.DocBottom - 1, "a forced Mobile stacks the inspector under the document");
+        Assert.AreEqual("doc", string.Join(",", forcedMobile.VisibleRegions), "a forced Mobile has the document only - its panels are sheets");
         var columns = await page.EvaluateAsync<int>("() => getComputedStyle(document.querySelector('.tm-document-editor__workspace')).gridTemplateColumns.split(' ').length");
         Assert.AreEqual(1, columns, "a forced Mobile has exactly one grid track (no empty column)");
 
@@ -379,15 +402,19 @@ public sealed class DocumentEditorResponsiveShellE2ETests : WasmTestBase
     }
 
     [TestMethod]
-    [Description("Tablet icon tabs sit in one row: every inspector tab has the same top at 1024 touch")]
+    [Description("Tablet icon tabs sit in one row, and the close button sits in that row too: every inspector tab has the same top at 1180 touch")]
     public async Task TabletInspectorIconTabs_SitInOneRow()
     {
-        var (page, errors) = await OpenAsync(HistoryDocumentId, 1024, 768, touch: true);
-        Assert.AreNotEqual("desktop", (await ReadShellAsync(page)).Layout);
+        var (page, errors) = await OpenAsync(HistoryDocumentId, 1180, 820, touch: true);
+        Assert.AreEqual("tablet", (await ReadShellAsync(page)).Layout);
+        await page.GetByTestId("document-side-panel-edge-toggle").ClickAsync();
+        await Assertions.Expect(page.GetByTestId("document-side-panel")).ToBeVisibleAsync(new() { Timeout = 10_000 });
 
         var tops = await page.EvaluateAsync<double[]>("() => [...document.querySelectorAll(\"[data-region='inspector'] [role='tab']\")].map(t => Math.round(t.getBoundingClientRect().top))");
         Assert.IsTrue(tops.Length >= 4, $"the inspector has its tabs ({tops.Length})");
         Assert.AreEqual(1, tops.Distinct().Count(), $"all inspector tabs share one top: {string.Join(",", tops)}");
+        var closeTop = await page.EvaluateAsync<double>("() => Math.round(document.querySelector(\"[data-testid='document-side-panel-close']\").getBoundingClientRect().top)");
+        Assert.IsTrue(Math.Abs(closeTop - tops[0]) <= 8, $"the close button shares the tabs' row ({closeTop} vs {tops[0]})");
 
         AssertNoClientErrors(errors, "tablet icon tabs");
         await page.Context.CloseAsync();

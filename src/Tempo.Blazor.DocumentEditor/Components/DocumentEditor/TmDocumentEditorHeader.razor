@@ -1,6 +1,8 @@
 @namespace Tempo.Blazor.Components.DocumentEditor
 @inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Abstractions.Layout
 @using Tempo.Blazor.Components.DocumentEditor.Registry
+@using Tempo.Blazor.Components.Overlay
 
 @* The document header (redesign 146c7e1b, DE-1.1): the title and the save state on the left, the document actions on
    the right and two host slots. Undo / Redo / Save carry the test ids and data-command values they had in the ribbon
@@ -11,6 +13,7 @@
         role="group"
         aria-label="@Loc["TmDocumentEditor_HeaderLabel"]"
         data-focus-region="header"
+        data-compact="@(Compact ? "true" : null)"
         data-testid="@TestId("document-header")">
     @* The header element is the size container, so the rules that adapt the row answer to ITS width and style the row inside it. *@
     <div class="tm-document-editor__header-row">
@@ -35,10 +38,19 @@
         }
         <span class="tm-document-editor__header-status"
               data-testid="@TestId("document-header-status")"
-              data-state="@StatusState">
+              data-state="@StatusState"
+              title="@(Compact && StatusState != "none" ? StatusText : null)">
             @if (StatusState != "none")
             {
-                <span class="tm-document-editor__header-status-dot" aria-hidden="true"></span>
+                @if (Compact)
+                {
+                    @* The phone keeps the state as an icon (the words ride the title attribute and the live region of the editor). *@
+                    <span class="tm-document-editor__header-status-icon" aria-hidden="true"><TmIcon Name="@StatusIcon" Size="IconSize.Sm" /></span>
+                }
+                else
+                {
+                    <span class="tm-document-editor__header-status-dot" aria-hidden="true"></span>
+                }
                 @if (StatusState == "saved")
                 {
                     <span class="tm-document-editor__header-status-text" data-testid="@TestId("document-last-saved")">@StatusText</span>
@@ -86,57 +98,121 @@
                 data-testid="@TestId("document-redo")">
             <TmIcon Name="redo-2" Size="IconSize.Sm" />
         </button>
+        @if (!Compact)
+        {
         @if (ShowPrintPreview)
-        {
+            {
+                <button type="button"
+                        class="tm-btn tm-btn-sm tm-btn-secondary tm-document-editor__header-button tm-document-editor__header-button--labelled"
+                        disabled="@(!IsCommandEnabled("openPrintPreview", true))"
+                        title="@Loc["TmDocumentEditor_PrintPreview"]"
+                        aria-label="@Loc["TmDocumentEditor_PrintPreview"]"
+                        aria-pressed="@(PrintPreviewActive ? "true" : "false")"
+                        @onclick='() => ExecuteAsync("openPrintPreview", OnOpenPrintPreview, true)'
+                        data-command="openPrintPreview"
+                        data-testid="@TestId("document-header-print-preview")">
+                    <TmIcon Name="printer" Size="IconSize.Sm" />
+                    <span class="tm-document-editor__header-button-label">@Loc["TmDocumentEditor_PrintPreview"]</span>
+                </button>
+            }
+            @if (CanExportPdf)
+            {
+                <button type="button"
+                        class="tm-btn tm-btn-sm tm-btn-secondary tm-document-editor__header-button tm-document-editor__header-button--labelled"
+                        disabled="@(!IsCommandEnabled("exportPdf", !IsExportingPdf))"
+                        title="@Loc["TmDocumentEditor_PrintToPdf"]"
+                        aria-label="@Loc["TmDocumentEditor_PrintToPdf"]"
+                        aria-busy="@(IsExportingPdf ? "true" : "false")"
+                        @onclick='() => ExecuteAsync("exportPdf", OnExportPdf, !IsExportingPdf)'
+                        data-command="exportPdf"
+                        data-testid="@TestId("document-header-export-pdf")">
+                    <TmIcon Name="file-down" Size="IconSize.Sm" />
+                    <span class="tm-document-editor__header-button-label">@Loc["TmDocumentEditor_PrintToPdf"]</span>
+                </button>
+            }
             <button type="button"
-                    class="tm-btn tm-btn-sm tm-btn-secondary tm-document-editor__header-button tm-document-editor__header-button--labelled"
-                    disabled="@(!IsCommandEnabled("openPrintPreview", true))"
-                    title="@Loc["TmDocumentEditor_PrintPreview"]"
-                    aria-label="@Loc["TmDocumentEditor_PrintPreview"]"
-                    aria-pressed="@(PrintPreviewActive ? "true" : "false")"
-                    @onclick='() => ExecuteAsync("openPrintPreview", OnOpenPrintPreview, true)'
-                    data-command="openPrintPreview"
-                    data-testid="@TestId("document-header-print-preview")">
-                <TmIcon Name="printer" Size="IconSize.Sm" />
-                <span class="tm-document-editor__header-button-label">@Loc["TmDocumentEditor_PrintPreview"]</span>
+                    class="tm-btn tm-btn-sm tm-btn-primary tm-document-editor__header-button tm-document-editor__header-button--labelled"
+                    disabled="@(!CanExecuteSave)"
+                    title="@SaveTitle"
+                    aria-label="@SaveTitle"
+                    aria-keyshortcuts="Control+S"
+                    @onclick='() => ExecuteAsync("save", OnSave, !ReadOnly && !IsSaving)'
+                    data-command="save"
+                    data-testid="@TestId("document-save")">
+                <TmIcon Name="save" Size="IconSize.Sm" />
+                <span class="tm-document-editor__header-button-label">@Loc["TmDocumentEditor_Save"]</span>
             </button>
+            @if (HeaderActions is not null)
+            {
+                <div class="tm-document-editor__header-host-actions" data-testid="@TestId("document-header-host-actions")">@HeaderActions</div>
+            }
         }
-        @if (CanExportPdf)
+        else if (HeaderActions is not null || CanExportPdf)
         {
+            @* A phone (decision G2): Search, Undo and Redo stay in the header; Save, Comments, Print preview and "More" are the action bar's, and the host's
+               own actions (Share ...) live behind the kebab. *@
             <button type="button"
-                    class="tm-btn tm-btn-sm tm-btn-secondary tm-document-editor__header-button tm-document-editor__header-button--labelled"
-                    disabled="@(!IsCommandEnabled("exportPdf", !IsExportingPdf))"
-                    title="@Loc["TmDocumentEditor_PrintToPdf"]"
-                    aria-label="@Loc["TmDocumentEditor_PrintToPdf"]"
-                    aria-busy="@(IsExportingPdf ? "true" : "false")"
-                    @onclick='() => ExecuteAsync("exportPdf", OnExportPdf, !IsExportingPdf)'
-                    data-command="exportPdf"
-                    data-testid="@TestId("document-header-export-pdf")">
-                <TmIcon Name="file-down" Size="IconSize.Sm" />
-                <span class="tm-document-editor__header-button-label">@Loc["TmDocumentEditor_PrintToPdf"]</span>
+                    @ref="_kebab"
+                    class="tm-btn tm-btn-sm tm-btn-ghost tm-btn-icon tm-document-editor__header-button tm-document-editor__header-kebab"
+                    title="@Loc["TmDocumentEditor_HeaderMore"]"
+                    aria-label="@Loc["TmDocumentEditor_HeaderMore"]"
+                    aria-haspopup="dialog"
+                    aria-expanded="@(_kebabOpen ? "true" : "false")"
+                    aria-controls="@(_kebabOpen ? _kebabPanelId : null)"
+                    @onclick="ToggleKebab"
+                    data-testid="@TestId("document-header-kebab")">
+                <TmIcon Name="more-vertical" Size="IconSize.Sm" />
             </button>
-        }
-        <button type="button"
-                class="tm-btn tm-btn-sm tm-btn-primary tm-document-editor__header-button tm-document-editor__header-button--labelled"
-                disabled="@(!CanExecuteSave)"
-                title="@SaveTitle"
-                aria-label="@SaveTitle"
-                aria-keyshortcuts="Control+S"
-                @onclick='() => ExecuteAsync("save", OnSave, !ReadOnly && !IsSaving)'
-                data-command="save"
-                data-testid="@TestId("document-save")">
-            <TmIcon Name="save" Size="IconSize.Sm" />
-            <span class="tm-document-editor__header-button-label">@Loc["TmDocumentEditor_Save"]</span>
-        </button>
-        @if (HeaderActions is not null)
-        {
-            <div class="tm-document-editor__header-host-actions" data-testid="@TestId("document-header-host-actions")">@HeaderActions</div>
         }
     </div>
     </div>
 </header>
 
+@if (Compact && _kebabOpen && (HeaderActions is not null || CanExportPdf))
+{
+    @* The panel of the kebab: the host's header actions and the built-in exports, in the core overlay panel (a bottom sheet on a phone layout). *@
+    <TmOverlayPanel Id="@_kebabPanelId"
+                    Anchor="@_kebab"
+                    Placement="OverlayPlacement.Bottom"
+                    Align="OverlayAlign.End"
+                    IsOpen="true"
+                    IsOpenChanged="HandleKebabOpenChanged"
+                    Role="dialog"
+                    AriaLabel="@Loc["TmDocumentEditor_HeaderActionsLabel"]"
+                    Title="@Loc["TmDocumentEditor_HeaderActionsLabel"]"
+                    MobilePresentation="PanelPresentation.Auto"
+                    LayoutMode="@TmLayoutMode.Mobile"
+                    Class="tm-document-editor__header-kebab-panel"
+                    data-testid="@TestId("document-header-kebab-panel")">
+        <div class="tm-document-editor__header-kebab-body">
+            @if (CanExportPdf)
+            {
+                <button type="button"
+                        class="tm-btn tm-btn-secondary tm-document-editor__header-kebab-item"
+                        disabled="@(!IsCommandEnabled("exportPdf", !IsExportingPdf))"
+                        @onclick='() => RunFromKebabAsync("exportPdf", OnExportPdf, !IsExportingPdf)'
+                        data-command="exportPdf"
+                        data-testid="@TestId("document-header-export-pdf")">
+                    <TmIcon Name="file-down" Size="IconSize.Sm" />
+                    <span>@Loc["TmDocumentEditor_PrintToPdf"]</span>
+                </button>
+            }
+            @if (HeaderActions is not null)
+            {
+                <div class="tm-document-editor__header-host-actions" data-testid="@TestId("document-header-host-actions")">@HeaderActions</div>
+            }
+        </div>
+    </TmOverlayPanel>
+}
+
 @code {
+    /// <summary>
+    /// The phone header (decision G2): the title, the save state as an icon, Search, Undo, Redo and a kebab. Save, Print preview and the
+    /// export move to the action bar and the kebab; the host's <see cref="HeaderActions"/> render inside the kebab panel. Defaults to
+    /// <c>false</c> (the full header).
+    /// </summary>
+    [Parameter] public bool Compact { get; set; }
+
     /// <summary>Document title shown in the header (the editor passes the host's <c>Title</c> or the document metadata title).</summary>
     [Parameter] public string Title { get; set; } = string.Empty;
 
@@ -209,6 +285,20 @@
     /// <summary>Raised by the Print to PDF button.</summary>
     [Parameter] public EventCallback OnExportPdf { get; set; }
 
+    private readonly string _kebabPanelId = $"tm-document-header-kebab-{Guid.NewGuid():N}";
+    private ElementReference _kebab;
+    private bool _kebabOpen;
+
+    private void ToggleKebab() => _kebabOpen = !_kebabOpen;
+
+    private void HandleKebabOpenChanged(bool open) => _kebabOpen = open;
+
+    private async Task RunFromKebabAsync(string commandName, EventCallback callback, bool fallback)
+    {
+        _kebabOpen = false;
+        await ExecuteAsync(commandName, callback, fallback);
+    }
+
     private string StatusState => IsSaving
         ? "saving"
         : IsDirty
@@ -216,6 +306,13 @@
             : LastSavedAt is not null
                 ? "saved"
                 : "none";
+
+    private string StatusIcon => StatusState switch
+    {
+        "saving" => "refresh",
+        "dirty" => "cloud-upload",
+        _ => "check"
+    };
 
     private string StatusText => StatusState switch
     {

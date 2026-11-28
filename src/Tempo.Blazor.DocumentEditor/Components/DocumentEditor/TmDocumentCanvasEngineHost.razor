@@ -1293,7 +1293,10 @@
 
     private async Task MarkReadyAsync()
     {
-        if (_ready)
+        // The engine may report readiness from inside the awaited mount, before the JS handle came back: every interop call of an OnReady
+        // consumer (the tablet / phone page fit, the first state sync) would then be an unhandled no-op. MountAsync marks the host ready
+        // once the handle is assigned.
+        if (_ready || _handle is null)
         {
             return;
         }

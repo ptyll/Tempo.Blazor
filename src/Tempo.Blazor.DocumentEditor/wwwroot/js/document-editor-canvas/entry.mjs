@@ -23,7 +23,7 @@ import { imageObjectById } from './objects/object-handles.mjs';
 import { createModelStore } from './model/model-store.mjs';
 import { createRecalcInfo } from './perf/recalc-info.mjs';
 import { createPerformanceMetrics } from './perf/runtime-metrics.mjs';
-import { CANVAS_LAYER_KINDS, createCanvasStack } from './render/canvas-stack.mjs';
+import { CANVAS_LAYER_KINDS, createCanvasStack, resolveRootPaddingInline } from './render/canvas-stack.mjs';
 import { createCanvasRulerOverlay, syncBlockVisualization } from './render/ruler.mjs';
 import { createCanvasSearchOverlay } from './search/search-overlay.mjs';
 import { createCanvasSelectionController } from './selection/selection-controller.mjs';
@@ -1707,6 +1707,27 @@ export class CanvasDocumentEngine {
         root?.setAttribute?.('data-canvas-recalc-idle-count', String(recalc.idleReconciliationCount || 0));
     }
 
+    // The room the fit leaves around the page: the 48 px of a desktop, or - on a tablet and a phone (data-layout of the editor root) - the real inline padding of
+    // the mount plus the hairline of the engine root, so a page fitted to a 390 px column fills it instead of leaving a bezel of 24 px a side. Reading the padding flushes the layout the
+    // render just produced, which is what makes a fit requested right after a layout switch measure the NEW arrangement.
+    getFitPaddingInline() {
+        const fallback = 48;
+        try {
+            const layout = this.host?.closest?.('[data-layout]')?.getAttribute?.('data-layout');
+            if (!layout || layout === 'desktop') {
+                return fallback;
+            }
+
+            const style = globalThis.getComputedStyle?.(this.host);
+            const mountPadding = (Number.parseFloat(style?.paddingLeft) || 0) + (Number.parseFloat(style?.paddingRight) || 0);
+            // The engine root inside the mount pads the page column too (a hairline on a tablet / a phone, see resolveRootPaddingInline).
+            const rootPadding = 2 * resolveRootPaddingInline(this.host, 24);
+            return Math.max(8, mountPadding + rootPadding);
+        } catch {
+            return fallback;
+        }
+    }
+
     getViewportMetrics() {
         const layoutPage = Array.isArray(this.lastLayout?.pages) && this.lastLayout.pages.length > 0
             ? this.lastLayout.pages[0]
@@ -1725,7 +1746,7 @@ export class CanvasDocumentEngine {
             viewportWidth: viewportWidth || this.document?.defaultView?.innerWidth || globalThis.innerWidth || 1280,
             viewportHeight: viewportHeight || this.document?.defaultView?.innerHeight || globalThis.innerHeight || 900,
             pageGap: 24,
-            paddingInline: 48,
+            paddingInline: this.getFitPaddingInline(),
             paddingBlock: 48,
         };
     }

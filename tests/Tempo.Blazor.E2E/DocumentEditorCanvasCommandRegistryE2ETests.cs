@@ -157,8 +157,7 @@ public sealed class DocumentEditorCanvasCommandRegistryE2ETests : WasmTestBase
 
         // Edge case: close the panel, select the inline image and run "Replace image" — the SAME
         // panel-opening contract must hold for the image properties commands.
-        await page.GetByTestId("document-side-panel-close").ClickAsync();
-        await Assertions.Expect(page.GetByTestId("document-side-panel")).ToBeHiddenAsync(new() { Timeout = 10_000 });
+        await CloseInspectorAsync(page);
 
         var imagePoint = await ScrollToCanvasElementAsync(page, "[data-canvas-object][data-object-id='contract-inline-image']");
         await page.Mouse.ClickAsync((float)imagePoint.X, (float)imagePoint.Y);
@@ -178,8 +177,7 @@ public sealed class DocumentEditorCanvasCommandRegistryE2ETests : WasmTestBase
         var panelOpen = await page.GetByTestId("document-side-panel").IsVisibleAsync();
         if (panelOpen)
         {
-            await page.GetByTestId("document-side-panel-close").ClickAsync();
-            await Assertions.Expect(page.GetByTestId("document-side-panel")).ToBeHiddenAsync(new() { Timeout = 10_000 });
+            await CloseInspectorAsync(page);
         }
 
         await page.GetByTestId("document-canvas-hidden-input").FocusAsync();
@@ -198,6 +196,27 @@ public sealed class DocumentEditorCanvasCommandRegistryE2ETests : WasmTestBase
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Closes the inspector: a selected object shows it as the CONTEXT (desktop dock, tablet side sheet), whose X only dismisses the context and
+    /// returns to the tabs; the tabs' own X then closes the panel.
+    /// </summary>
+    private static async Task CloseInspectorAsync(IPage page)
+    {
+        var contextClose = page.GetByTestId("document-side-panel-context-close");
+        if (await contextClose.CountAsync() > 0)
+        {
+            await contextClose.ClickAsync();
+        }
+
+        var close = page.GetByTestId("document-side-panel-close");
+        if (await close.CountAsync() > 0)
+        {
+            await close.ClickAsync();
+        }
+
+        await Assertions.Expect(page.GetByTestId("document-side-panel")).ToBeHiddenAsync(new() { Timeout = 10_000 });
+    }
 
     /// <summary>
     /// Scrolls until the selector's element exists (hit rects render only for VISIBLE pages),

@@ -39,6 +39,52 @@ public class TmMobileActionBarTests : LocalizationTestBase
         => labels.Select(label => Action(label)).ToList();
 
     [Fact]
+    public void Badge_RendersBesideTheLabel_AndNamesTheTile()
+    {
+        var items = new List<TmActionItem>
+        {
+            new() { Id = "comments", Label = "Comments", Icon = "message-square", Badge = "3" },
+            new() { Id = "plain", Label = "Plain", Icon = "save" },
+        };
+        var cut = Render<TmMobileActionBar>(p => p
+            .Add(x => x.LayoutMode, TmLayoutMode.Mobile)
+            .Add(x => x.Items, items));
+
+        var tile = cut.Find("[data-action-id='comments']");
+        tile.QuerySelector(".tm-mobile-action-bar__badge")!.TextContent.Should().Be("3");
+        tile.TextContent.Replace(" ", string.Empty).Should().Contain("Comments").And.Contain("3");
+        cut.Find("[data-action-id='plain']").QuerySelector(".tm-mobile-action-bar__badge").Should().BeNull("no Badge, no pill");
+    }
+
+    [Fact]
+    public void BadgeLabel_IsReadAfterTheLabel_AndThePillIsDecorative()
+    {
+        var items = new List<TmActionItem> { new() { Id = "comments", Label = "Comments", Icon = "message-square", Badge = "3", BadgeLabel = "3 items to review" } };
+        var cut = Render<TmMobileActionBar>(p => p.Add(x => x.LayoutMode, TmLayoutMode.Mobile).Add(x => x.Items, items));
+
+        var tile = cut.Find("[data-action-id='comments']");
+        tile.QuerySelector(".tm-sr-only")!.TextContent.Should().Be(", 3 items to review");
+        var pill = tile.QuerySelector(".tm-mobile-action-bar__badge")!;
+        pill.GetAttribute("aria-hidden").Should().Be("true");
+        pill.TextContent.Should().Be("3");
+        tile.TextContent.Trim().Should().Be("Comments, 3 items to review3");
+    }
+
+    [Fact]
+    public void Primary_RendersTheFilledTile_OnlyForThatAction()
+    {
+        var items = new List<TmActionItem>
+        {
+            new() { Id = "a", Label = "A", Icon = "save" },
+            new() { Id = "save", Label = "Save", Icon = "save", Primary = true },
+        };
+        var cut = Render<TmMobileActionBar>(p => p.Add(x => x.LayoutMode, TmLayoutMode.Mobile).Add(x => x.Items, items));
+
+        cut.Find("[data-action-id='save']").ClassList.Should().Contain("tm-mobile-action-bar__action--primary");
+        cut.Find("[data-action-id='a']").ClassList.Should().NotContain("tm-mobile-action-bar__action--primary");
+    }
+
+    [Fact]
     public void MoreThanMaxVisible_MovesRestToMoreSheet()
     {
         var cut = Render<TmMobileActionBar>(p => p

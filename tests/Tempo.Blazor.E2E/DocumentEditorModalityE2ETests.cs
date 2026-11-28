@@ -66,6 +66,15 @@ public sealed class DocumentEditorModalityE2ETests : WasmTestBase
         {
             var page = await OpenAsync(HistoryDocumentId, viewport.Width, viewport.Height, viewport.Touch);
             await page.GetByTestId("document-ribbon-tab-review").ClickAsync();
+            if (viewport.Width < 640)
+            {
+                // Decision G2 (phase 8): comparing against sources is a tablet-and-up surface - a phone offers no entry point to it.
+                await DocumentEditorRedesignE2EHelpers.OpenMoreAsync(page);
+                Assert.AreEqual(0, await page.Locator("[data-testid='document-compare-open'], [data-menu-testid='document-compare-open']").CountAsync(), "a phone has no Compare");
+                await page.Context.CloseAsync();
+                continue;
+            }
+
             var before = await DocumentEditorLayoutShiftGuard.MeasureWorkspaceAsync(page);
             await DocumentEditorRedesignE2EHelpers.ClickRibbonAsync(page, "document-compare-open");
             var dialog = page.GetByTestId("document-compare-dialog");
@@ -139,7 +148,7 @@ public sealed class DocumentEditorModalityE2ETests : WasmTestBase
         foreach (var viewport in PanelViewports)
         {
             var page = await OpenAsync(RevisionsDocumentId, viewport.Width, viewport.Height, viewport.Touch);
-            await page.GetByTestId("document-side-panel-tab-revisions").ClickAsync();
+            await DocumentEditorRedesignE2EHelpers.OpenInspectorTabAsync(page, "revisions");
             await Assertions.Expect(page.GetByTestId("document-revision-item").First).ToBeVisibleAsync(new() { Timeout = 15_000 });
 
             var previews = await page.Locator(".tm-document-revision-panel__preview").AllInnerTextsAsync();

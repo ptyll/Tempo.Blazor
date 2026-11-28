@@ -70,6 +70,11 @@ public partial class TmDocumentEditor
 
     private bool IsMobileLayout => _layout == TmLayoutMode.Mobile;
 
+    private bool IsTabletLayout => _layout == TmLayoutMode.Tablet;
+
+    // A tablet and a phone present the inspector as a sheet over the document; only a desktop docks it beside the page.
+    private bool IsSheetLayout => _layout != TmLayoutMode.Desktop;
+
     // The comparison is shown only while the document is edited normally; the print preview owns the doc region while it is up.
     private bool DiffModeActive => _diffRequest is not null && !CanvasPrintPreviewActive;
 
@@ -150,6 +155,12 @@ public partial class TmDocumentEditor
             null,
             DocumentVersionText.Title(Loc, request.Base),
             DocumentVersionText.Title(Loc, request.Compare));
+        // A phone's sheet covers the whole page: the comparison it just asked for is shown only once the sheet has made room for it.
+        if (IsMobileLayout && _sidePanelOpen)
+        {
+            CloseSidePanel();
+        }
+
         await InvokeAsync(StateHasChanged);
     }
 

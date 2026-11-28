@@ -828,6 +828,7 @@ public partial class TmDocumentEditor
                 && IsFeatureEnabled(DocumentEditorFeatureNames.TrackChanges),
             CanAddComment = CanStartComment,
             CanCompareDocuments = CanCompareDocuments,
+            IsPhoneLayout = IsMobileLayout,
             IsProtected = _isDocumentProtected,
             IsInEditableRegion = _isCaretInEditableRegion
         };
@@ -854,7 +855,7 @@ public partial class TmDocumentEditor
             context.HasDocument, context.IsReadOnly, context.IsProtected, context.IsInEditableRegion,
             context.IsSaving, context.ActiveRegion,
             context.CanExportPdf, context.CanImportDocx, context.CanExportDocx,
-            context.CanTrackChanges, context.CanAddComment, context.CanCompareDocuments,
+            context.CanTrackChanges, context.CanAddComment, context.CanCompareDocuments, context.IsPhoneLayout,
             undo.CanUndo, undo.CanRedo, undo.NextUndoDescription, undo.NextRedoDescription,
             formatting.Bold, formatting.Italic, formatting.Underline, formatting.Strikethrough,
             formatting.FontFamily, formatting.FontFamilyMixed, formatting.FontSize, formatting.FontSizeMixed,

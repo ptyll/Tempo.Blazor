@@ -210,6 +210,16 @@ public sealed class TmOverlayPanelDialogNamingTests : LocalizationTestBase
                 cut.Find("[data-tm-ai-action=\"feedback-down\"]").Click();
                 return cut.Find("[role='dialog']");
             },
+            // The phone header's kebab: a dialog-role core overlay panel named by AriaLabel (phase 8).
+            ["TmDocumentEditorHeader"] = () =>
+            {
+                var cut = Render<Tempo.Blazor.Components.DocumentEditor.TmDocumentEditorHeader>(p => p
+                    .Add(c => c.Compact, true)
+                    .Add(c => c.Title, "Naming sweep")
+                    .Add(c => c.HeaderActions, (Microsoft.AspNetCore.Components.RenderFragment)(b => b.AddMarkupContent(0, "<button>Share</button>"))));
+                cut.Find("[data-testid='document-header-kebab']").Click();
+                return cut.Find("[role='dialog']");
+            },
             ["TmDataTable"] = () =>
             {
                 var cut = Render<TmDataTable<DialogPerson>>(p => p
