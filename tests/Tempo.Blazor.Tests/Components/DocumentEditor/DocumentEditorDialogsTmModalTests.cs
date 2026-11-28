@@ -73,6 +73,50 @@ public sealed class DocumentEditorDialogsTmModalTests : LocalizationTestBase
         }
     }
 
+    // Phase 13: a phone dialog keeps its footer above the on-screen keyboard, and the compare dialog answers to its OWN width.
+    [Fact]
+    public void VersionAndCompareDialogs_OptIntoTheVirtualKeyboardTracking()
+    {
+        Render<TmDocumentVersionDialog>().FindComponent<Tempo.Blazor.Components.Feedback.TmModal>().Instance.TrackVirtualKeyboard
+            .Should().BeTrue("the sheet footer (Create / Cancel) must stay above the keyboard while a field is focused");
+        Render<TmDocumentCompareDialog>(p => p.Add(x => x.CurrentDocument, DocumentEditorDocument.Empty()))
+            .FindComponent<Tempo.Blazor.Components.Feedback.TmModal>().Instance.TrackVirtualKeyboard
+            .Should().BeTrue();
+    }
+
+    [Fact]
+    public void CompareDialog_SourcesLiveInsideTheContentWrapper()
+    {
+        var cut = Render<TmDocumentCompareDialog>(p => p.Add(x => x.CurrentDocument, DocumentEditorDocument.Empty()));
+
+        var wrapper = cut.Find(".tm-modal-body > .tm-document-compare-dialog__content");
+        wrapper.QuerySelector(".tm-document-compare-dialog__sources").Should().NotBeNull(
+            "the content wrapper (the readable column of a pinned phone layout) holds the sources grid");
+    }
+
+    // Phase 13 fix round (UX 5): the first thing a dialog asks for is where the focus lands.
+    [Fact]
+    public void CompareDialog_InitialFocus_IsTheChangeButtonOfTheFirstMissingSource()
+    {
+        var cut = Render<TmDocumentCompareDialog>(p => p.Add(x => x.CurrentDocument, DocumentEditorDocument.Empty()));
+
+        var selector = cut.FindComponent<Tempo.Blazor.Components.Feedback.TmModal>().Instance.InitialFocusSelector;
+        selector.Should().NotBeNullOrWhiteSpace();
+        cut.FindAll(selector!).Should().ContainSingle("the target source is the one that names nothing yet")
+            .Which.GetAttribute("data-testid").Should().Be("document-compare-target-change");
+    }
+
+    [Fact]
+    public void VersionDialog_InitialFocus_IsTheLabelField()
+    {
+        var cut = Render<TmDocumentVersionDialog>();
+
+        var id = cut.FindComponent<Tempo.Blazor.Components.Feedback.TmModal>().Instance.InitialFocusTargetId;
+        id.Should().NotBeNullOrWhiteSpace();
+        cut.Find($"[id='{id}']").GetAttribute("data-testid").Should().Be("document-version-label",
+            "the label is the first thing the reader types; the kind select keeps its sensible default");
+    }
+
     [Fact]
     public void VersionDialog_Footer_IsCancelThenPrimary_WithABorderedCancel()
     {

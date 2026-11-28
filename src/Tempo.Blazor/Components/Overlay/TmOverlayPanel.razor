@@ -345,6 +345,17 @@
     /// </summary>
     [Parameter] public EventCallback<TmLayoutMode> ResolvedLayoutChanged { get; set; }
 
+    /// <summary>
+    /// Raised with the sheet-versus-popover answer (<see cref="IsSheet"/>). The FIRST answer is reported from the panel's first parameter
+    /// set: a forced <see cref="LayoutMode"/>, a viewport scope or <see cref="InitialMode"/> resolves at once; an <c>Auto</c> panel with no
+    /// scope reports the <see cref="InitialMode"/> answer first and its viewport probe's measurement afterwards, as a change. It is reported
+    /// again on every change of the resolved presentation (a layout flip, a <see cref="MobilePresentation"/> change) and never twice for
+    /// the same value. Unlike <see cref="ResolvedLayoutChanged"/> the initial value IS reported, so a wrapper reads the answer here
+    /// instead of deriving it a second time. It is a notification, not a binding: never pair it with <see cref="MobilePresentation"/> or
+    /// <see cref="LayoutMode"/> in a two-way bind - the value is the RESULT of those inputs.
+    /// </summary>
+    [Parameter] public EventCallback<bool> IsSheetChanged { get; set; }
+
     /// <summary>The viewport's layout. A panel presented as a sheet is positioned against the viewport.</summary>
     [CascadingParameter(Name = TmLayoutScopes.Viewport)] public TmLayoutContext? Viewport { get; set; }
 
@@ -367,6 +378,8 @@
     /// button that would duplicate the sheet header's one.
     /// </summary>
     public bool IsSheet => ResolvedPresentation == PanelPresentation.Sheet;
+
+    private bool? _lastReportedSheet;
 
     private PanelPresentation ResolvedPresentation => MobilePresentation == PanelPresentation.Auto
         ? (Context.IsMobile ? PanelPresentation.Sheet : PanelPresentation.Popover)
@@ -593,8 +606,28 @@
         return ReportResolved();
     }
 
-    private Task ReportResolved() => _layout.ReportAsync(
-        Context.Resolved, mode => ResolvedLayoutChanged.InvokeAsync(mode));
+    private async Task ReportResolved()
+    {
+        await _layout.ReportAsync(Context.Resolved, mode => ResolvedLayoutChanged.InvokeAsync(mode));
+        await ReportSheetAsync();
+    }
+
+    // The sheet answer is reported from its first resolution on and whenever it flips - one place for the first render, the probe
+    // and a later parameter change, so a wrapper never repeats the viewport/forced-mode derivation.
+    private async Task ReportSheetAsync()
+    {
+        var sheet = IsSheet;
+        if (_lastReportedSheet == sheet)
+        {
+            return;
+        }
+
+        _lastReportedSheet = sheet;
+        if (IsSheetChanged.HasDelegate)
+        {
+            await IsSheetChanged.InvokeAsync(sheet);
+        }
+    }
 
     // Anchor.Id is part of the signature so swapping the anchor mid-open re-pushes it through
     // update() — a bare options signature would leave the panel tracking the old element.

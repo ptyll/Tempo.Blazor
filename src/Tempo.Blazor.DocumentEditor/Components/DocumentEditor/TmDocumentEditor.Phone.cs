@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Tempo.Blazor.Helpers;
 using Tempo.Blazor.Components.Actions;
 using Tempo.Blazor.Components.DocumentEditor.Features;
 using Tempo.Blazor.Components.Icons;
@@ -12,6 +13,61 @@ namespace Tempo.Blazor.Components.DocumentEditor;
 // bar is the core component, only the list of actions is the editor's.
 public partial class TmDocumentEditor
 {
+    // Phase 13: the bounded frame of a phone is as tall as the LAYOUT viewport, and an on-screen keyboard covers its bottom (the action bar / the
+    // status bar) without shrinking it. The core tm-visual-viewport.js module (through the core VisualViewportInterop, which tracks under its own
+    // id, so a node Blazor already removed is still released) writes the covered gap on the root as --tm-visual-viewport-inset-block-end and the
+    // frame's CSS gives that room up. It is attached only while it can matter, and a failed import is not retried on every render.
+    private VisualViewportInterop? _visualViewport;
+    private bool _visualViewportTracked;
+    private bool _visualViewportUnavailable;
+
+    private bool WantsVisualViewportTracking => !_disposed && !_visualViewportUnavailable && IsMobileLayout && FrameDataValue == "bounded";
+
+    private async Task SyncVisualViewportTrackingAsync()
+    {
+        var wanted = WantsVisualViewportTracking;
+        if (wanted == _visualViewportTracked)
+        {
+            return;
+        }
+
+        _visualViewportTracked = wanted;
+        if (wanted)
+        {
+            _visualViewport ??= new VisualViewportInterop(JSRuntime);
+            if (!await _visualViewport.AttachAsync(_rootElement) && !_disposed)
+            {
+                // The module could not be imported / attached (or a detach raced the attach): do not ask again on every render.
+                _visualViewportUnavailable = true;
+                _visualViewportTracked = false;
+            }
+        }
+        else if (_visualViewport is not null)
+        {
+            await _visualViewport.DetachAsync();
+        }
+    }
+
+    private async Task ReleaseVisualViewportTrackingAsync()
+    {
+        var interop = _visualViewport;
+        _visualViewport = null;
+        _visualViewportTracked = false;
+        if (interop is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await interop.DisposeAsync();
+        }
+        catch
+        {
+            // The JS runtime may already be disconnected during teardown.
+        }
+    }
+
     // The tiles that stay on the bar (the primary action Save is the third); the rest of the list overflows into the "More" sheet.
     private const int PhoneActionBarVisible = 3;
 

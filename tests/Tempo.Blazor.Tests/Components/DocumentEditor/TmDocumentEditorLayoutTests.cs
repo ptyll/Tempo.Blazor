@@ -814,6 +814,57 @@ public class TmDocumentEditorLayoutTests : LocalizationTestBase
             .Should().BeEmpty("G8: changes apply immediately and undo covers them - no Apply / OK footers");
     }
 
+    // ── Phase 13: the phone bounded frame keeps its action / status bar above the on-screen keyboard ──────
+
+    private const string VisualViewportModule = "./_content/Tempo.Blazor/js/tm-visual-viewport.js";
+
+    private BunitJSModuleInterop SetupVisualViewport()
+    {
+        var module = JSInterop.SetupModule(VisualViewportModule);
+        module.SetupVoid("attach", _ => true).SetVoidResult();
+        module.SetupVoid("detach", _ => true).SetVoidResult();
+        return module;
+    }
+
+    [Fact]
+    public void BoundedPhoneFrame_TracksTheVirtualKeyboard_AndStopsWhenTheFrameOrTheLayoutGoesAway()
+    {
+        var module = SetupVisualViewport();
+        var cut = RenderEditor(TmLayoutMode.Mobile, p => p.Add(c => c.Height, "640px"));
+
+        cut.WaitForAssertion(() => module.Invocations.Count(i => i.Identifier == "attach").Should().Be(1));
+
+        cut.Render(parameters => parameters.Add(c => c.Height, null));
+        cut.WaitForAssertion(() => module.Invocations.Should().Contain(i => i.Identifier == "detach"));
+    }
+
+    [Fact]
+    public void BoundedPhoneFrame_AFailedTrackerAttach_IsNotRetriedOnEveryRender()
+    {
+        var module = JSInterop.SetupModule(VisualViewportModule);
+        module.SetupVoid("attach", _ => true).SetException(new Microsoft.JSInterop.JSException("no tracker"));
+        module.SetupVoid("detach", _ => true).SetVoidResult();
+        var cut = RenderEditor(TmLayoutMode.Mobile, p => p.Add(c => c.Height, "640px"));
+        cut.WaitForAssertion(() => module.Invocations.Count(i => i.Identifier == "attach").Should().Be(1));
+
+        cut.Render(parameters => parameters.Add(c => c.Height, "641px"));
+        cut.Render(parameters => parameters.Add(c => c.Height, "642px"));
+
+        module.Invocations.Count(i => i.Identifier == "attach").Should().Be(1, "the failure is latched, not retried per render");
+    }
+
+    [Theory]
+    [InlineData(TmLayoutMode.Mobile, null)]
+    [InlineData(TmLayoutMode.Desktop, "640px")]
+    [InlineData(TmLayoutMode.Tablet, "640px")]
+    public void OtherFrames_NeverImportTheVisualViewportTracker(TmLayoutMode mode, string? height)
+    {
+        var module = SetupVisualViewport();
+        RenderEditor(mode, p => p.Add(c => c.Height, height));
+
+        module.Invocations.Should().BeEmpty("only a bounded phone frame has a bottom edge a keyboard can cover");
+    }
+
     // ── Phase 12: the viewport-bounded frame (Height) ────────────────────
 
     [Fact]

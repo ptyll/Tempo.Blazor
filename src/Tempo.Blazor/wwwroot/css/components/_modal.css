@@ -634,6 +634,24 @@
   padding: 0;
 }
 
+/* TmModal.TrackVirtualKeyboard (opt-in): tm-visual-viewport.js writes the gap an on-screen keyboard covers as a runtime knob and marks the
+   overlay. The layout viewport does not shrink under a keyboard, so a fullscreen panel (and a centred dialog) would keep its footer
+   underneath it: the overlay is padded by the gap instead. A bottom sheet already lifts through --tm-sheet-keyboard (tm-sheet.js). */
+.tm-modal-overlay.tm-modal--fullscreen-presentation[data-tm-keyboard-open] {
+  padding-block-end: var(--tm-visual-viewport-inset-block-end, 0px);
+}
+
+.tm-modal-overlay.tm-modal--dialog[data-tm-keyboard-open] {
+  padding-block-end: calc(var(--tm-space-4) + var(--tm-visual-viewport-inset-block-end, 0px));
+}
+
+/* A tall centred dialog is capped by the viewport (100vh - space-8), not by the overlay's padded box: with the keyboard open it would
+   outgrow the room above the keyboard. 100% resolves against the container, which fills the padded box. */
+.tm-modal-overlay.tm-modal--dialog[data-tm-keyboard-open] .tm-modal,
+.tm-modal-overlay.tm-modal--dialog[data-tm-keyboard-open] .tm-dialog {
+  max-height: 100%;
+}
+
 .tm-modal-overlay.tm-modal--fullscreen-presentation .tm-modal,
 .tm-modal-overlay.tm-modal--fullscreen-presentation .tm-dialog {
   width: 100%;

@@ -743,6 +743,9 @@
   --tm-shadow-popover:         var(--tm-shadow-lg);
   /* WCAG 2.5.5 target size. A minimum, not a height: a control may be taller. */
   --tm-touch-target:           2.75rem;
+  /* The gap an on-screen keyboard covers at the bottom of the layout viewport: 0 until tm-visual-viewport.js (TmModal.TrackVirtualKeyboard, the
+     DocumentEditor's bounded phone frame) writes the measured length INLINE on the tracked element, which beats this inherited default. */
+  --tm-visual-viewport-inset-block-end: 0px;
   /* TmEditorShell TabletPanelPresentation.Overlay: the width of the overlay drawer / side sheet (capped at 60 % of the editor in the component). A host overrides it on an ancestor. */
   --tm-editor-shell-overlay-width: 20rem;
   /* TmAppShell: the width of the navigation overlay drawer the tablet rail expands into. Declared here (not on the shell root) because the drawer renders BESIDE the frame, outside the root's inheritance tree — a host overrides it on an ancestor. */

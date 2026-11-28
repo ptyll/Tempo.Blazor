@@ -180,6 +180,73 @@ public sealed class TmDocumentEditorInspectorContextTests : LocalizationTestBase
     }
 
     [Fact]
+    public async Task Desktop_ADeliberateObjectSelectionScrolledOutOfTheFrame_StillOpensTheInspector()
+    {
+        // Phase 13: the engine hides the object toolbar of an object that sits outside the bounded frame's scroller (reason
+        // 'canvas-selection-scrolled-out'); the reader still CHOSE this object, so the inspector opens all the same.
+        var cut = RenderEditor(TmLayoutMode.Desktop);
+        await SelectImageAsync(cut);
+        cut.Find("[data-testid='document-side-panel-context-close']").Click();
+        cut.Find("[data-testid='document-side-panel']").HasAttribute("data-context").Should().BeFalse();
+
+        var report = typeof(TmDocumentEditor).GetMethod("HandleCanvasMiniToolbarChangedAsync", Instance)!;
+        var request = new WysiwygMiniToolbarRequest
+        {
+            IsVisible = false,
+            Reason = "canvas-selection-scrolled-out",
+            ObjectSelectionSource = "pointer",
+            Selection = new WysiwygSelectionSnapshot { ObjectSelection = new WysiwygObjectSelectionSnapshot { ObjectId = "drawing-1" } },
+        };
+        await cut.InvokeAsync(() => (Task)report.Invoke(cut.Instance, [request])!);
+        cut.Render();
+
+        cut.Find("[data-testid='document-side-panel']").GetAttribute("data-context").Should().Be("image");
+
+        // A scroll re-report ('layout') of the same hidden object never reopens a panel the reader closed again.
+        cut.Find("[data-testid='document-side-panel-context-close']").Click();
+        await cut.InvokeAsync(() => (Task)report.Invoke(cut.Instance, [new WysiwygMiniToolbarRequest { Reason = "canvas-selection-scrolled-out", ObjectSelectionSource = "layout", Selection = request.Selection }])!);
+        cut.Render();
+        cut.Find("[data-testid='document-side-panel']").HasAttribute("data-context").Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Desktop_ALayoutSourceScrolledOutReport_NeverOpensTheInspector()
+    {
+        // The scroll re-report of a hidden object carries the 'layout' source: it is no decision to look at the image again.
+        var cut = RenderEditor(TmLayoutMode.Desktop);
+        await SelectImageAsync(cut);
+        cut.Find("[data-testid='document-side-panel-context-close']").Click();
+
+        var report = typeof(TmDocumentEditor).GetMethod("HandleCanvasMiniToolbarChangedAsync", Instance)!;
+        await cut.InvokeAsync(() => (Task)report.Invoke(cut.Instance, [new WysiwygMiniToolbarRequest
+        {
+            Reason = "canvas-selection-scrolled-out",
+            ObjectSelectionSource = "layout",
+            Selection = new WysiwygSelectionSnapshot { ObjectSelection = new WysiwygObjectSelectionSnapshot { ObjectId = "drawing-1" } },
+        }])!);
+        cut.Render();
+
+        cut.Find("[data-testid='document-side-panel']").HasAttribute("data-context").Should().BeFalse();
+    }
+
+    [Fact]
+    public void AHiddenScrolledOutReport_IsNeverSwallowedByTheOpenColorPicker()
+    {
+        // The colour picker of the mini toolbar keeps the toolbar alive across a hidden report; a selection that scrolled out of the frame is
+        // the one hidden report that must still hide it (the picker would float over the ribbon).
+        var cut = RenderEditor(TmLayoutMode.Desktop);
+        typeof(TmDocumentEditor).GetField("_miniToolbarColorPickerOpen", Instance)!.SetValue(cut.Instance, true);
+        var preserve = typeof(TmDocumentEditor).GetMethod("ShouldPreserveMiniToolbarDuringFloatingInteraction", Instance)!;
+        var selection = new WysiwygSelectionSnapshot { IsCollapsed = false };
+        typeof(TmDocumentEditor).GetField("_lastMiniToolbarRequest", Instance)!.SetValue(cut.Instance, new WysiwygMiniToolbarRequest { IsVisible = true, Selection = selection });
+
+        ((bool)preserve.Invoke(cut.Instance, [new WysiwygMiniToolbarRequest { IsVisible = false, Reason = "canvas-selection-collapsed", Selection = selection }])!)
+            .Should().BeTrue("control: an ordinary hidden report is preserved while the picker is open");
+        ((bool)preserve.Invoke(cut.Instance, [new WysiwygMiniToolbarRequest { IsVisible = false, Reason = "canvas-selection-scrolled-out", Selection = selection }])!)
+            .Should().BeFalse();
+    }
+
+    [Fact]
     public async Task Desktop_Close_ClosesTheContext_AndTheSameImageDoesNotReopenIt()
     {
         var cut = RenderEditor(TmLayoutMode.Desktop);

@@ -288,6 +288,15 @@
     grid-template-areas: "doc";
 }
 
+/* Phase 13: an on-screen keyboard covers the bottom of the LAYOUT viewport without shrinking it, so the phone frame (whose pinned status bar and
+   action bar are its last rows) would end UNDER the keyboard. tm-visual-viewport.js writes how far the keyboard reaches into the frame on the
+   root as --tm-visual-viewport-inset-block-end (0px by default from tokens.css; a frame that ends above the keyboard gets 0); the frame keeps
+   its height and its content gives that room up. Only a bounded phone frame has a bottom edge a keyboard can cover, so only it is tracked. */
+.tm-document-editor[data-frame="bounded"][data-layout="mobile"] {
+    box-sizing: border-box;
+    padding-block-end: var(--tm-visual-viewport-inset-block-end, 0px);
+}
+
 /* A docked column is as tall as its cell and scrolls inside it. (A tablet / readable-floor sheet is a floating panel capped by the same cell.) */
 .tm-document-editor[data-frame="bounded"] .tm-document-editor__navigation,
 .tm-document-editor[data-frame="bounded"] [data-region="inspector"][data-presentation="docked"] {
@@ -1273,8 +1282,13 @@
     line-height: 1;
 }
 
-.tm-document-side-panel__close,
-/* The same finger-sized square as the folded navigation rail on the other side of the document. */
+.tm-document-side-panel__close {
+    width: 2rem;
+    height: 2rem;
+}
+
+/* The same finger-sized square as the folded navigation rail on the other side of the document (a lone square on the document's edge: the close button
+   shares the tab row and keeps its 2rem, or a tab no longer fits the docked tablist). */
 .tm-document-side-panel__edge-toggle {
     width: var(--tm-touch-target);
     height: var(--tm-touch-target);
@@ -2326,6 +2340,13 @@
 .tm-document-editor__page-surface:focus-within {
     outline: 2px solid var(--tm-color-primary);
     outline-offset: 2px;
+}
+
+/* A bounded frame (phase 13): the page surface is as tall as the whole document, so its ring was clipped by the scroller and showed as ONE stray blue
+   line at the right edge of the visible column (a ring on the scroller would be painted UNDER the canvas pages and show up the same way). The focus
+   indicator of the canvas is the engine's own: the caret, the selection and the outline of the active page. */
+.tm-document-editor[data-frame="bounded"] .tm-document-editor__page-surface:focus-within {
+    outline: none;
 }
 
 /* The print preview is a read-only view of the pages: a focus frame around the whole preview area reads as an error state, the toolbar and the actions

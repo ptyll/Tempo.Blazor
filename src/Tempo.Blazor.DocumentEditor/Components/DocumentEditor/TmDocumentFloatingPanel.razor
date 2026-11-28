@@ -31,7 +31,7 @@
                 FlipMinRoom="240"
                 MobilePresentation="PanelPresentation.Auto"
                 LayoutMode="@LayoutMode"
-                ResolvedLayoutChanged="HandleResolvedLayoutChanged"
+                IsSheetChanged="HandleIsSheetChanged"
                 Class="@PanelClass"
                 data-testid="@(string.IsNullOrEmpty(PanelTestId) ? null : TestId(PanelTestId))"
                 data-floating-kind="@Kind"
@@ -75,7 +75,7 @@
     private readonly string _generatedPanelId = $"tm-document-floating-{Guid.NewGuid():N}";
     private readonly string _generatedTitleId = $"tm-document-floating-title-{Guid.NewGuid():N}";
     private ElementReference _frame;
-    private TmLayoutMode _resolved = TmLayoutMode.Desktop;
+    private bool _sheet;
     private bool _wasOpen;
     // One close per open: the core panel reports a sheet's Escape through BOTH IsOpenChanged and OnDismissed.
     private bool _closeRaised;
@@ -196,20 +196,12 @@
         _wasOpen = IsOpen;
     }
 
-    // The core panel presents a sheet when the layout it resolves is Mobile: a forced LayoutMode says so at once, Auto reports it here.
-    // With a viewport scope in the page the core resolves the layout on its FIRST render, which it does not report - read the scope as well.
-    [CascadingParameter(Name = TmLayoutScopes.Viewport)] private TmLayoutContext? Viewport { get; set; }
-
-    private bool _sheet => LayoutMode == TmLayoutMode.Mobile
-        || (LayoutMode == TmLayoutMode.Auto && (Viewport?.IsMobile ?? _resolved == TmLayoutMode.Mobile));
-
-    private void HandleResolvedLayoutChanged(TmLayoutMode mode)
+    // The sheet-versus-popover answer has ONE source: the core panel. It reports the FIRST resolution (a forced LayoutMode, a viewport
+    // scope, the first probe measurement) and every later change through IsSheetChanged, so the wrapper no longer reads the viewport
+    // scope or the forced mode itself.
+    private void HandleIsSheetChanged(bool sheet)
     {
-        if (mode != _resolved)
-        {
-            _resolved = mode;
-            StateHasChanged();
-        }
+        _sheet = sheet;
     }
 
     // A popover closes only through OnDismissed (Escape, an outside press): its IsOpenChanged echo is ignored. A sheet also closes through

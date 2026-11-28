@@ -392,6 +392,74 @@ public sealed class DocumentEditorBoundedFrameE2ETests : WasmTestBase
         }
     }
 
+    [TestMethod]
+    [Description("Phase 13: a bounded PHONE frame gives up the room an on-screen keyboard covers - the action bar ends above the (emulated) keyboard and the knob is cleared again when it closes")]
+    public async Task Bounded_Phone_ActionBarStaysAboveTheKeyboard()
+    {
+        var (page, errors) = await OpenAsync(390, 844, "height=viewport", touch: true);
+        Assert.AreEqual("mobile", await page.Locator(".tm-document-editor").First.GetAttributeAsync("data-layout"));
+
+        await page.EvaluateAsync("""
+            height => {
+                const viewport = window.visualViewport;
+                Object.defineProperty(viewport, 'height', { configurable: true, get: () => height });
+                viewport.dispatchEvent(new Event('resize'));
+            }
+            """, 544);
+        await WaitForPredicateAsync(page, "() => !!document.querySelector('.tm-document-editor').style.getPropertyValue('--tm-visual-viewport-inset-block-end')", 10_000);
+        // The inset is measured relative to the frame, so the bar ends exactly at the visual viewport's bottom edge.
+        await page.WaitForFunctionAsync("() => Math.abs(document.querySelector('[data-testid=\"document-mobile-action-bar\"]').getBoundingClientRect().bottom - window.visualViewport.height) <= 1", null, new() { Timeout = 10_000 });
+        var frame = await page.Locator(".tm-document-editor").First.BoundingBoxAsync();
+        Assert.IsTrue(frame is not null && frame.Height > 300, "the frame keeps its height; only its content gives the room up");
+        Assert.IsTrue(await page.GetByTestId("document-status-bar").CountAsync() == 0 || await page.GetByTestId("document-status-bar").EvaluateAsync<double>("e => e.getBoundingClientRect().bottom") <= 545, "a status bar, when present, is above the keyboard too");
+
+        await page.EvaluateAsync("""
+            height => {
+                Object.defineProperty(window.visualViewport, 'height', { configurable: true, get: () => height });
+                window.visualViewport.dispatchEvent(new Event('resize'));
+            }
+            """, 844);
+        await WaitForPredicateAsync(page, "() => document.querySelector('.tm-document-editor').style.getPropertyValue('--tm-visual-viewport-inset-block-end') === ''", 10_000);
+        var probe = await page.EvaluateAsync<double[]>("() => [document.querySelector('[data-testid=\"document-mobile-action-bar\"]').getBoundingClientRect().bottom, window.innerHeight]");
+        Assert.IsTrue(probe[0] <= probe[1] + 1 && probe[0] > 700, $"the bar is back at the bottom ({probe[0]:0} of {probe[1]:0})");
+        AssertNoClientErrors(errors, "keyboard");
+        await page.Context.CloseAsync();
+    }
+
+    [TestMethod]
+    [Description("Phase 13: the floating mini toolbar of a range selection is clipped by the frame's scroller - hidden once the selection scrolls out of it, back when it returns")]
+    public async Task Bounded_MiniToolbar_FollowsTheScrollerClip()
+    {
+        var (page, errors) = await OpenAsync(1440, 900, "height=viewport&pageFit=off");
+        var point = await page.EvaluateAsync<int[]>("""
+            () => {
+                const region = document.querySelector('[data-region="doc"][data-scroll-viewport="true"]').getBoundingClientRect();
+                const node = Array.from(document.querySelectorAll('[data-canvas-text-rect]'))
+                    .find(n => { const r = n.getBoundingClientRect(); return r.width > 60 && r.top > region.top + 40 && r.bottom < region.bottom - 40; });
+                const r = node.getBoundingClientRect();
+                return [Math.round(r.left + 12), Math.round(r.top + r.height / 2)];
+            }
+            """);
+        await page.Mouse.DblClickAsync(point[0], point[1]);
+        var toolbar = page.GetByTestId("document-mini-toolbar");
+        await Assertions.Expect(toolbar).ToBeVisibleAsync(new() { Timeout = 10_000 });
+        var box = await toolbar.BoundingBoxAsync();
+        var region = await page.Locator("[data-region='doc'][data-scroll-viewport='true']").BoundingBoxAsync();
+        Assert.IsTrue(box is not null && region is not null && box.Y >= region.Y - 1 && box.Y + box.Height <= region.Y + region.Height + 1, "the toolbar sits inside the doc region's scroller");
+
+        // The page surface (as tall as the document) shows no focus ring in a bounded frame - clipped, it was one stray blue line at the column's right edge.
+        Assert.AreEqual("none", await page.EvaluateAsync<string>("() => getComputedStyle(document.querySelector('.tm-document-editor__page-surface')).outlineStyle"));
+
+        await ScrollToPageAsync(page, 9);
+        await Assertions.Expect(toolbar).ToHaveCountAsync(0, new() { Timeout = 10_000 });
+
+        // Page 1 is unmounted while the reader is on page 10 (the virtualizer), so the way back is the scroller's own scrollTop.
+        await page.EvaluateAsync("() => { document.querySelector('[data-region=\"doc\"][data-scroll-viewport=\"true\"]').scrollTop = 0; }");
+        await Assertions.Expect(toolbar).ToBeVisibleAsync(new() { Timeout = 10_000 });
+        AssertNoClientErrors(errors, "mini toolbar clip");
+        await page.Context.CloseAsync();
+    }
+
     private static void AssertNoClientErrors(List<string> errors, string context)
         => Assert.AreEqual(0, errors.Count, $"{context}: no console or page error expected, got: {string.Join(" | ", errors.Take(5))}");
 

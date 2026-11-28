@@ -63,6 +63,13 @@
       "default": "true"
     },
     {
+      "name": "TrackVirtualKeyboard",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Opt-in virtual-keyboard tracking. While the modal is open as a fullscreen panel or a centred dialog, tm-visual-viewport.js measures how far the on-screen keyboard reaches into the overlay (window.visualViewport) and writes it as the custom property --tm-visual-viewport-inset-block-end (tokens.css declares the 0px default) plus a data-tm-keyboard-open marker on the overlay; the overlay pads itself by it so the footer is not under the keyboard. A bottom-sheet presentation ignores the parameter: a sheet already lifts through its own tracking (tm-sheet.js, --tm-sheet-keyboard). Detached when the modal closes or becomes a sheet (since 2.14.0)."
+    },
+    {
       "name": "HeaderActions",
       "type": "RenderFragment?",
       "isRequired": false,

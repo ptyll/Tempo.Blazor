@@ -124,6 +124,15 @@ A browser decides whether a touch pans the page **before** any script runs, so t
 
 `.tm-pointer-dragging` is `user-select: none`, so text is not selected under the finger.
 
+## On-screen keyboard — `tm-visual-viewport.js`
+
+Not a gesture, but the same family of shared core modules: an on-screen keyboard shrinks `window.visualViewport` while the layout viewport stays put, so a
+footer or a status bar pinned to the layout viewport ends up under it. `tm-visual-viewport.js` (`_content/Tempo.Blazor/js/tm-visual-viewport.js`, ES module,
+imported through `IJSObjectReference` - no `<script>` tag; serve `_content/Tempo.Blazor/js/` and list it in a per-file CSP hash) tracks it per STRING ID:
+`attach(element, { id, property? })` writes how far the keyboard reaches into THAT element as `--tm-visual-viewport-inset-block-end` (inline; `tokens.css`
+declares `0px`), `detach(id)` releases it even when Blazor already removed the node, and a tracker whose element is gone detaches itself. Consumers:
+`TmModal.TrackVirtualKeyboard` and the DocumentEditor's bounded phone frame, both through `VisualViewportInterop`. Never write a second keyboard tracker.
+
 ## Multi-pointer gestures — `pointer-gesture.js`
 
 Two-finger pinch/pan and edge auto-scroll live in the `pointer-drag.js` sibling module

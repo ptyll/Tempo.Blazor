@@ -93,5 +93,10 @@ in the page: `data-frame="bounded"` on the root. The tablet and the phone follow
 - **The phone's action bar** is the last in-flow row of the frame, under the workspace (and the status bar, when it has something to say): it does
   not float over the document. The safe-area inset is the core bar's own bottom padding - the editor adds none on top (that would double it). The phone sheets stay in the floating root, outside the size
   container.
+- **The on-screen keyboard** covers the bottom of the layout viewport without shrinking it. A bounded phone frame attaches the core
+  `tm-visual-viewport.js` to its root (only while it is bounded AND a phone, detached otherwise) and gives the covered gap up as bottom padding
+  (`--tm-visual-viewport-inset-block-end`), so the status bar and the action bar stay above the keyboard; the version and compare dialogs opt in to
+  `TmModal.TrackVirtualKeyboard`. The floating mini / object toolbar is clipped against the doc-region scroller (hidden as
+  `canvas-selection-scrolled-out` once the selection leaves it, clamped inside it while partly visible).
 - Everything keys on `data-frame` and `data-layout`, so a frame bounded inside a narrow host is the same on a wide screen; a pinned `LayoutMode` is
   unaffected. See "The bounded frame" in [document-editor-developer-guide.md](document-editor-developer-guide.md).

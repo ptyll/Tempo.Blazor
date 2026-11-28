@@ -77,6 +77,36 @@ focus on the first `menuitem`/`option`, not on Done.
 `ResolvedLayoutChanged`; the dropdown titles its sheet with the trigger text. Anchoring options
 (`Placement`, `Align`, `Offset`, `MatchAnchorWidth`, …) apply to the popover only.
 
+### `IsSheetChanged`: one answer to "sheet or popover?"
+
+`TmOverlayPanel.IsSheet` is the core's answer (`MobilePresentation` + the forced `LayoutMode` or the viewport scope or the probe).
+`ResolvedLayoutChanged` reports the resolved LAYOUT and never the first resolution, so a wrapper that renders different chrome for a
+sheet (the document editor's floating frame drops its own header, because the sheet brings one) used to read the cascading viewport scope
+and the forced layout itself. `IsSheetChanged` (`EventCallback<bool>`, 2.14.0) closes that gap. The FIRST answer is reported from the panel's first
+parameter set: a forced `LayoutMode`, a viewport scope or `InitialMode` resolves at once; an `Auto` panel with no scope reports the `InitialMode`
+answer first and the viewport probe's measurement afterwards, as a change. It is reported again whenever the resolved presentation flips (a layout
+change, a `MobilePresentation` change), never twice for the same value. It is a notification, not a binding - never pair it with `MobilePresentation`
+or `LayoutMode` in a two-way bind. A wrapper renders from the reported value and derives nothing; it still passes an explicit `Anchor`, because
+without one the panel anchors to its previous element sibling, which is the viewport probe whenever the page has no viewport scope.
+
+### Virtual keyboard: `tm-visual-viewport.js` and `TmModal.TrackVirtualKeyboard`
+
+An on-screen keyboard shrinks `window.visualViewport` while the layout viewport stays put, so anything pinned to the layout viewport (a
+fullscreen dialog's footer, a bounded editor's status bar) ends up under the keyboard. The core module `js/tm-visual-viewport.js`
+(`attach(element, { id, property? })` / `detach(id)` / `computeInset(...)`) measures how far the keyboard reaches into the TRACKED ELEMENT
+(its bottom edge below the visual viewport's bottom; an element that ends above the keyboard gets 0) and writes it, rAF-coalesced, as the custom
+property `--tm-visual-viewport-inset-block-end` (a length written inline on the element; `tokens.css` declares the `0px` default on `:root`) plus a
+`data-tm-keyboard-open` marker while a keyboard is assumed (a raw shrink under 80 px is browser chrome; a pinch zoom keeps the last reading). Trackers
+are keyed by the owner's string id, so `detach(id)` works after Blazor removed the node, a disconnected element self-detaches on its next tick, and
+attach is idempotent per id. `options.property` lets another consumer reuse it with its own knob. From C# use the public (advanced)
+`VisualViewportInterop`: one instance per owner, `AttachAsync` returns `false` when the tracker could not be attached (latch instead of
+retrying every render), an attach that finishes after a detach or a dispose detaches itself.
+
+`TmModal.TrackVirtualKeyboard` (default `false`) attaches it to the open overlay of a fullscreen or centred-dialog presentation: the overlay pads
+itself by the gap (a tall centred dialog is capped by the padded box), so the footer stays visible. A bottom-sheet presentation IGNORES the
+parameter: it already lifts through `tm-sheet.js` (`--tm-sheet-keyboard`), and a second tracker would lift it twice; the tracker follows a layout
+flip (dialog <-> sheet). The document editor opts its version and compare dialogs in and attaches the same module to a bounded phone frame.
+
 ### The action-surface overflow menu (F5)
 
 `TmMobileActionBar` and the F4 `TmToolbar` overflow share ONE menu host (the internal

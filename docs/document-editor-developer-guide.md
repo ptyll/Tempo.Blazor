@@ -344,12 +344,33 @@ measured by the core `tm-toolbar.js` (lowest rank leaves first, the later of equ
 
 ## Responsive limits that stay (known and documented)
 
-- The dialogs of the editor (version, compare, style gallery form, image library) tune a few columns with a viewport `@media (max-width: 40rem)`
-  rule, because a `TmModal` body is not a size container; a phone layout pinned on a wide screen keeps their desktop column count (the modal is a
-  sheet / fullscreen through the cascaded viewport scope, only the inner grid differs). The command palette is keyed on `data-layout` and is
-  fullscreen for a pinned phone layout.
-- A `IsSheet` mode of the core floating panel is not part of this plan (the automatic fit-width for a desktop container of 1024 - 1400 px is: the
-  engine fits the page, see "A page wider than the doc region"; the viewport-bounded frame is: see "The bounded frame").
+- The command palette is keyed on `data-layout` and is fullscreen for a pinned phone layout.
+- With `LayoutMode.Auto` the editor's own container decides the layout, but the modal dialogs and the sheets of the floating root resolve the viewport
+  (see "Auto layout caveat" below); pin `LayoutMode` to make them follow the editor.
+
+## Dialogs, sheets and the keyboard (phase 13)
+
+- **One source for "sheet or popover".** `TmDocumentFloatingPanel` renders from `TmOverlayPanel.IsSheetChanged` only: a forced
+  `LayoutMode.Mobile`, a viewport scope and the probe all resolve in the core, which reports the FIRST resolution too. The wrapper has no
+  cascading viewport and no `ResolvedLayoutChanged` handler; it keeps the explicit `Anchor`.
+- **Dialogs answer to their own width and to the layout.** The compare dialog's source grid is an intrinsic
+  `repeat(auto-fit, minmax(min(100%, 18rem), 1fr))`; the style gallery form, the image library and the page-layout form are narrow by default and
+  widen in one `@container tm-doc-floating (width >= 640px)` block (a `TmBreakpoints` constant, the container is the panel body, never the element
+  the query styles), gated `:not([data-layout="mobile"])`. The resolved layout wins over the width: `.tm-modal-overlay[data-layout="mobile"]` (the
+  modal's overlay reads the viewport scope that a forced `LayoutMode` fills) gives the compare dialog its single column, a readable 40rem column
+  and finger-sized footer buttons even on a 1440 px viewport. There is no `@media` on a width in the package (guarded by `TmDocumentEditorPhase13CssTests`).
+- **Auto layout caveat.** With `LayoutMode.Auto` the editor measures its OWN container, but the core `TmModal` dialogs resolve the VIEWPORT (no
+  scope is cascaded): an editor in a narrow column on a wide screen gets desktop-presented dialogs. A host that wants the dialogs to follow the
+  editor pins `LayoutMode` (a forced mode cascades the viewport scope to the dialogs and the floating panels).
+- **Phone dialogs above the keyboard.** The version dialog is a sheet (lifted by the core sheet tracker; the focus opens on its label field); the
+  compare dialog is fullscreen on a phone and passes `TrackVirtualKeyboard="true"` (the focus opens on the "Change..." button of the first missing
+  source). A bounded phone frame attaches the core `tm-visual-viewport.js` to its root through `VisualViewportInterop` and gives
+  `--tm-visual-viewport-inset-block-end` up as padding, so the pinned status bar and the action bar are above the keyboard (the inset is measured
+  relative to the frame).
+- **The floating toolbar follows the frame.** The engine clips the mini / object toolbar payload against the doc-region scroller (`miniToolbarClipRect`):
+  outside it the payload is `isVisible: false` with the reason `canvas-selection-scrolled-out` (an object keeps its selection source, so the
+  inspector still opens for an object the reader chose), partly visible it is clamped into the clip rect - below the selection when there is no
+  room above it - and a scroll that flips the visibility re-reports it as a `layout` report.
 
 ## What the redesign did not do
 

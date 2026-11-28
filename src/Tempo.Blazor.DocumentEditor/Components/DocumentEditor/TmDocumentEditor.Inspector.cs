@@ -86,8 +86,12 @@ public partial class TmDocumentEditor
     // that never reopens a panel the reader closed. An empty report or a caret move never does either.
     private void NoteCanvasSelectionReport(WysiwygMiniToolbarRequest? request)
     {
-        if (!string.Equals(request?.Reason, "canvas-object-selection", StringComparison.Ordinal)
-            || !IsDeliberateObjectSelection(request))
+        // The engine hides the object toolbar of an object scrolled out of a bounded frame's scroller ('canvas-selection-scrolled-out'), but
+        // the reader still chose that object: the report keeps its object selection and its source, so the inspector opens all the same.
+        var objectReport = string.Equals(request?.Reason, "canvas-object-selection", StringComparison.Ordinal)
+            || (string.Equals(request?.Reason, "canvas-selection-scrolled-out", StringComparison.Ordinal)
+                && !string.IsNullOrWhiteSpace(request?.Selection?.ObjectSelection?.ObjectId));
+        if (!objectReport || !IsDeliberateObjectSelection(request))
         {
             return;
         }

@@ -203,6 +203,12 @@
       "description": "Raised when the resolved layout changes (the initial value is not a change). Never pair with LayoutMode — a two-way bind would pin the mode (since 2.9.1)."
     },
     {
+      "name": "IsSheetChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Raised with the sheet-versus-popover answer (IsSheet). The first answer is reported from the first parameter set (a forced LayoutMode, a viewport scope or InitialMode resolves at once; an Auto panel with no scope reports the InitialMode answer first and its probe measurement afterwards, as a change) and again on every change of the resolved presentation, never twice for the same value. Unlike ResolvedLayoutChanged the initial value is reported. A notification, not a binding: never pair it with MobilePresentation or LayoutMode in a two-way bind (since 2.14.0)."
+    },
+    {
       "name": "ChildContent",
       "type": "RenderFragment?",
       "isRequired": false,

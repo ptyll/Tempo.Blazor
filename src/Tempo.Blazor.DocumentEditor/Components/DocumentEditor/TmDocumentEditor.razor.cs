@@ -625,6 +625,8 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
             await AttachRegionCycleAsync();
         }
 
+        await SyncVisualViewportTrackingAsync();
+
         if (_restoreReadingPositionOnRender)
         {
             _restoreReadingPositionOnRender = false;
@@ -4695,6 +4697,13 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
         }
 
         var reason = request?.Reason ?? string.Empty;
+        // A selection that scrolled out of the bounded frame's scroller must hide the toolbar even while its colour picker is open: the
+        // picker would float over the ribbon and the header.
+        if (string.Equals(reason, "canvas-selection-scrolled-out", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
         if (reason.Contains("editable-pointerdown", StringComparison.OrdinalIgnoreCase)
             || reason.Contains("outside-pointerdown", StringComparison.OrdinalIgnoreCase)
             || reason.Contains("api-hide", StringComparison.OrdinalIgnoreCase))
@@ -12764,6 +12773,7 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
 
         await DisableBeforeUnloadGuardAsync();
         await DetachRegionCycleAsync();
+        await ReleaseVisualViewportTrackingAsync();
         await ExitFullscreenOnDisposeAsync();
         if (collaborationSync is not null)
         {

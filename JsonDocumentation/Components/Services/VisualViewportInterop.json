@@ -1,0 +1,30 @@
+{
+  "kind": "Class",
+  "category": "Services",
+  "namespace": "Tempo.Blazor.Helpers",
+  "description": "Advanced API. Per-instance wrapper around the core tm-visual-viewport.js module: tracks how far an on-screen keyboard reaches into ONE element and writes the gap as the custom property --tm-visual-viewport-inset-block-end on it (0px default from tokens.css). The tracker lives in the browser under this instance's own id, so DetachAsync and DisposeAsync release it even when Blazor already removed the element, an attach that finishes after a detach or a dispose detaches itself, and the module is imported lazily on the first attach. TmModal.TrackVirtualKeyboard and the DocumentEditor's bounded phone frame use it.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Helpers/VisualViewportInterop.cs",
+  "documentationStatus": "authored",
+  "members": [
+    {
+      "name": "AttachAsync",
+      "kind": "Method",
+      "type": "Task<bool>",
+      "description": "Starts tracking the element. Returns false when the tracker could not be attached (JS unavailable, the module failed to import, or the owner detached / disposed in the meantime) - a caller that wants to avoid retrying every render latches on it. The optional property names another custom property for a consumer with its own knob."
+    },
+    {
+      "name": "DetachAsync",
+      "kind": "Method",
+      "type": "Task",
+      "description": "Stops tracking and removes the property. Safe to call twice and before any attach."
+    },
+    {
+      "name": "DisposeAsync",
+      "kind": "Method",
+      "type": "ValueTask",
+      "description": "Detaches by id and releases the module. Idempotent."
+    }
+  ],
+  "itemName": "VisualViewportInterop"
+}

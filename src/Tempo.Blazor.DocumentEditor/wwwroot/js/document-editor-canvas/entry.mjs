@@ -1703,7 +1703,8 @@ export class CanvasDocumentEngine {
     }
 
     notifySelectionChanged(state) {
-        const payload = buildMiniToolbarPayload(this.canvasStack, state);
+        this.lastSelectionStateForToolbar = state;
+        const payload = buildMiniToolbarPayload(this.canvasStack, state, miniToolbarClipRect(this.host));
         this.lastMiniToolbarPayload = payload;
         this.rulerOverlay?.update?.(this.lastLayout, this.modelStore.getModel(), {
             ...this.commandRuntime.getViewState(),
@@ -1711,6 +1712,25 @@ export class CanvasDocumentEngine {
         });
         this.liveRegion.announceSelection(state);
         this.onSelectionChange?.(payload);
+    }
+
+    // A scroll never changes the selection, but it can move it out of (or back into) the frame's scroller: the toolbar is told ONLY when its
+    // visibility flips, so a scroll frame costs no host round trip while the selection stays on one side of the clip edge.
+    refreshMiniToolbarClip() {
+        const state = this.lastSelectionStateForToolbar;
+        const previous = this.lastMiniToolbarPayload;
+        if (!state || !previous || !this.onSelectionChange) {
+            return;
+        }
+
+        // A re-report is never a deliberate selection: it must not reopen an inspector the reader closed.
+        const payload = buildMiniToolbarPayload(this.canvasStack, { ...state, objectSelectionSource: 'layout' }, miniToolbarClipRect(this.host));
+        if (payload.isVisible === previous.isVisible) {
+            return;
+        }
+
+        this.lastMiniToolbarPayload = payload;
+        this.onSelectionChange(payload);
     }
 
     handleContextMenu(event) {
@@ -1847,12 +1867,14 @@ export class CanvasDocumentEngine {
                 const neededPages = this.progressivePagesForViewport();
                 if (neededPages > (this.progressiveLayout.laidPages || 0)) {
                     this.render({ progressiveTargetPages: neededPages + 1 });
+                    this.refreshMiniToolbarClip();
                     return;
                 }
             }
 
             // Scroll never changes the model/layout — paint visible pages from the cached plan.
             this.repaint({ forceRepaint: false });
+            this.refreshMiniToolbarClip();
         });
     }
 
@@ -2390,7 +2412,32 @@ function firstRectForMatch(textRects, match) {
         && Number(rect.start || 0) < end) || null;
 }
 
-function buildMiniToolbarPayload(canvasStack, selectionState) {
+// The rectangle the floating mini / object toolbar may live in: the marked doc-region scroller of a bounded frame (the toolbar is fixed to the
+// viewport, so without this clip it would float over the ribbon and the header once the selection scrolled out), or null = the window.
+export function miniToolbarClipRect(host) {
+    const rect = resolveMarkedScrollViewport(host)?.getBoundingClientRect?.();
+    if (!rect) {
+        return null;
+    }
+
+    return { left: Number(rect.left) || 0, top: Number(rect.top) || 0, right: Number(rect.right) || 0, bottom: Number(rect.bottom) || 0 };
+}
+
+function normalizeClipRect(clip, viewportWidth, viewportHeight) {
+    return {
+        left: Math.max(0, Number(clip?.left ?? 0) || 0),
+        top: Math.max(0, Number(clip?.top ?? 0) || 0),
+        right: Math.min(viewportWidth, Number(clip?.right ?? viewportWidth) || viewportWidth),
+        bottom: Math.min(viewportHeight, Number(clip?.bottom ?? viewportHeight) || viewportHeight),
+    };
+}
+
+// True when the whole box lies outside the clip rect (a box that only touches an edge is still partly visible).
+function isOutsideClip(clip, left, top, right, bottom) {
+    return bottom <= clip.top || top >= clip.bottom || right <= clip.left || left >= clip.right;
+}
+
+export function buildMiniToolbarPayload(canvasStack, selectionState, clipRect = null) {
     const selection = toWysiwygSelectionSnapshot(selectionState);
     if (selectionState?.object?.rect) {
         const object = selectionState.object;
@@ -2402,19 +2449,33 @@ function buildMiniToolbarPayload(canvasStack, selectionState) {
             const scale = Number(page?.pageElement?.getAttribute?.('data-canvas-page-zoom-scale') || 1) || 1;
             const viewportWidth = Number(globalThis.innerWidth || pageBounds.width || 1024) || 1024;
             const viewportHeight = Number(globalThis.innerHeight || pageBounds.height || 768) || 768;
+            const clip = normalizeClipRect(clipRect, viewportWidth, viewportHeight);
             const objectTop = pageBounds.top + (Number(object.rect.y || 0) || 0) * scale;
             const objectBottom = pageBounds.top + ((Number(object.rect.y || 0) || 0) + Math.max(1, Number(object.rect.height || 0) || 0)) * scale;
+            const objectLeft = pageBounds.left + (Number(object.rect.x || 0) || 0) * scale;
+            const objectRight = objectLeft + Math.max(1, Number(object.rect.width || 0) || 0) * scale;
             const centerX = pageBounds.left + ((Number(object.rect.x || 0) || 0) + Math.max(1, Number(object.rect.width || 0) || 0) / 2) * scale;
+            if (isOutsideClip(clip, objectLeft, objectTop, objectRight, objectBottom)) {
+                // Scrolled out of the frame's scroller: hidden, but the report keeps the deliberate-selection source so the host still
+                // opens the inspector for the object the reader just chose.
+                return {
+                    isVisible: false,
+                    reason: 'canvas-selection-scrolled-out',
+                    objectSelectionSource: selectionState.objectSelectionSource || 'layout',
+                    selection,
+                };
+            }
+
             // The image panel is a tall multi-row card, not a 44px strip: anchored above the object
             // top it grew DOWN over the whole image, so the object could not be dragged. Prefer the
             // space below the object; fall back to growing upward from the object top.
-            const placement = viewportHeight - objectBottom >= 280 ? 'below' : 'above';
+            const placement = clip.bottom - objectBottom >= 280 ? 'below' : 'above';
             const top = placement === 'below'
                 ? objectBottom + 10
-                : Math.max(8, objectTop - 10);
+                : Math.max(clip.top + 8, objectTop - 10);
             return {
                 isVisible: true,
-                left: Math.max(8, Math.min(viewportWidth - width - 8, centerX - width / 2)),
+                left: Math.max(clip.left + 8, Math.min(clip.right - width - 8, centerX - width / 2)),
                 top,
                 width,
                 height,
@@ -2452,11 +2513,28 @@ function buildMiniToolbarPayload(canvasStack, selectionState) {
     const height = 44;
     const viewportWidth = Number(globalThis.innerWidth || pageBounds.width || 1024) || 1024;
     const viewportHeight = Number(globalThis.innerHeight || pageBounds.height || 768) || 768;
+    const clip = normalizeClipRect(clipRect, viewportWidth, viewportHeight);
+    const selectionLeft = pageBounds.left + (Number(rect.x || 0) || 0);
+    const selectionTop = pageBounds.top + (Number(rect.y || 0) || 0);
+    const selectionRight = selectionLeft + Math.max(1, Number(rect.width || 0) || 0);
+    const selectionBottom = selectionTop + Math.max(1, Number(rect.height || 0) || 0);
+    if (isOutsideClip(clip, selectionLeft, selectionTop, selectionRight, selectionBottom)) {
+        return {
+            isVisible: false,
+            reason: 'canvas-selection-scrolled-out',
+            selection,
+        };
+    }
+
     const centerX = pageBounds.left + (Number(rect.x || 0) || 0) + Math.max(1, Number(rect.width || 0) || 0) / 2;
-    const top = Math.max(8, pageBounds.top + (Number(rect.y || 0) || 0) - height - 10);
+    // Above the selection when there is room for it inside the clip; otherwise BELOW it (a clamp would lay the toolbar over the selected text).
+    const above = selectionTop - height - 10;
+    const top = above >= clip.top + 8
+        ? Math.min(clip.bottom - height - 8, above)
+        : Math.max(clip.top + 8, Math.min(clip.bottom - height - 8, selectionBottom + 10));
     return {
         isVisible: true,
-        left: Math.max(8, Math.min(viewportWidth - width - 8, centerX - width / 2)),
+        left: Math.max(clip.left + 8, Math.min(clip.right - width - 8, centerX - width / 2)),
         top,
         width,
         height,

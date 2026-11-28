@@ -594,6 +594,10 @@ export function stopSpeech(textarea) {
  * RUNTIME knob `--tm-ai-composer-keyboard-inset` plus a `data-tm-keyboard-open` marker on the root. The knob is
  * never declared by the stylesheet — its default lives in the `var()` fallback, so a host override cascades.
  *
+ * NOTE (plan 146c7e1b, phase 13): the core module `_content/Tempo.Blazor/js/tm-visual-viewport.js` is the shared implementation of this tracker
+ * (id-keyed, element-relative inset, self-detach) and accepts `{ property: '--tm-ai-composer-keyboard-inset' }`. Delegating this function to it is
+ * the follow-up that makes it ONE implementation; it stays here for now because of its own node tests and the `minInset` / marker contract.
+ *
  * @param {HTMLElement} root The composer root.
  * @param {{ minInset?: number }} [options] The shrink below which browser chrome is assumed.
  */

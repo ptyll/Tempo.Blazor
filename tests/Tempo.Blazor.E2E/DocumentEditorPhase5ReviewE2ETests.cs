@@ -34,6 +34,9 @@ public sealed class DocumentEditorPhase5ReviewE2ETests : WasmTestBase
         foreach (var (name, width, height, touch) in new[] { ThreeViewports[0], ThreeViewports[2] })
         {
             var (page, errors) = await OpenAsync(width, height, touch);
+            // The demo page flows (bounded=false) and its controls sit above the editor: bring the ribbon to the top of the screen, so the popover has the
+            // whole room below it (the panel is capped by the room, and a 287 px grid in a shorter panel scrolls inside it - a different, valid state).
+            await page.EvaluateAsync("() => document.querySelector('[data-testid=\"document-ribbon-tab-insert\"]').scrollIntoView({ block: 'start' })");
             await ClickPopupItemAsync(page, "document-ribbon-tab-insert", "");
             await ClickPopupItemAsync(page, "document-toolbar-table", "Table");
             await Assertions.Expect(page.GetByTestId("document-table-grid-picker")).ToBeVisibleAsync(new() { Timeout = 10_000 });

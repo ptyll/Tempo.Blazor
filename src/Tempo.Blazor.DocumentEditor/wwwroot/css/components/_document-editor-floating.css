@@ -179,7 +179,8 @@
 
 .tm-document-style-gallery__form {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    /* Narrow by default; a wide panel in a non-phone layout gets its two columns from the container rule at the end of the file. */
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--tm-space-3);
     background: transparent;
     border: 0;
@@ -478,20 +479,7 @@
 }
 
 /* From a 40rem (640px) container the preview takes the left column and the form the right. */
-@container tm-doc-floating (width >= 640px) {
-    .tm-document-page-layout {
-        grid-template-columns: minmax(7rem, 9rem) minmax(0, 1fr);
-        align-items: start;
-    }
-
-    .tm-document-page-layout__grid--four {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-
-    .tm-document-page-layout__grid--columns {
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
-    }
-}
+/* The wide forms live in ONE block at the end of the file ("Wide panels"). */
 
 /* ── Link popover ──────────────────────────────────────────────────────────── */
 .tm-document-link-form {
@@ -570,7 +558,8 @@
 
 .tm-document-image-panel__library {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    /* Two columns by default; a wide panel in a non-phone layout gets its three from the container rule at the end of the file. */
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--tm-space-2);
     margin: 0;
     padding: 0;
@@ -743,7 +732,8 @@
 
 .tm-document-compare-dialog__sources {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    /* As many 18rem columns as the dialog's own width holds (two in the core large modal, one on a phone): no viewport query, no threshold. */
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
     gap: var(--tm-space-3);
 }
 
@@ -874,17 +864,49 @@
 }
 
 /* ── Narrow widths ─────────────────────────────────────────────────────────── */
-@media (max-width: 40rem) {
-    .tm-document-compare-dialog__sources {
-        grid-template-columns: minmax(0, 1fr);
-    }
+/* Phase 13: a narrow dialog or panel is decided by ITS OWN width (the compare sources by an intrinsic auto-fit grid, the panel grids by a
+   container query on the panel body, never on the element the query styles) and by the layout the editor resolved - a viewport @media would
+   leave a forced phone layout on a wide screen with the desktop grids. The panel body is the tm-doc-floating container. */
+/* The resolved layout wins over the width: the modal overlay carries data-layout (a forced editor LayoutMode cascades the viewport scope
+   the modal reads). */
+.tm-modal-overlay[data-layout="mobile"] .tm-document-compare-dialog__sources {
+    grid-template-columns: minmax(0, 1fr);
+}
 
-    .tm-document-style-gallery__form {
-        grid-template-columns: minmax(0, 1fr);
-    }
+/* The pinned phone layout is a fullscreen panel even on a wide screen: keep its content a readable column and its footer a finger-sized row. */
+.tm-modal-overlay[data-layout="mobile"] .tm-document-compare-dialog__content {
+    max-inline-size: 40rem;
+    margin-inline: auto;
+}
 
-    .tm-document-image-panel__library {
+.tm-modal-overlay.tm-document-compare-dialog[data-layout="mobile"] .tm-modal-footer .tm-btn {
+    flex: 1 1 0;
+    min-block-size: var(--tm-touch-target);
+}
+
+/* ── Wide panels ───────────────────────────────────────────────────────────── */
+/* A floating panel gets its multi-column forms from ITS OWN width (the tm-doc-floating container, 40rem = TmBreakpoints.Sm) - and only in a
+   layout that is not the phone's: a forced LayoutMode.Mobile on a wide screen keeps the narrow base columns above. */
+@container tm-doc-floating (width >= 640px) {
+    .tm-document-editor:not([data-layout="mobile"]) .tm-document-style-gallery__form {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .tm-document-editor:not([data-layout="mobile"]) .tm-document-image-panel__library {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .tm-document-editor:not([data-layout="mobile"]) .tm-document-page-layout {
+        grid-template-columns: minmax(7rem, 9rem) minmax(0, 1fr);
+        align-items: start;
+    }
+
+    .tm-document-editor:not([data-layout="mobile"]) .tm-document-page-layout__grid--four {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .tm-document-editor:not([data-layout="mobile"]) .tm-document-page-layout__grid--columns {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
     }
 }
 

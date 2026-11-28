@@ -189,6 +189,18 @@
     [Parameter] public bool ShowCloseButton { get; set; } = true;
 
     /// <summary>
+    /// Opt-in virtual-keyboard tracking (default <c>false</c>, the pattern of <c>TmAiComposer.TrackVirtualKeyboard</c>). While the
+    /// modal is open as a fullscreen panel or a centred dialog, the core <c>tm-visual-viewport.js</c> module measures how far the
+    /// on-screen keyboard reaches into the overlay (from <c>window.visualViewport</c>) and writes it as the custom property
+    /// <c>--tm-visual-viewport-inset-block-end</c> (a length; <c>tokens.css</c> declares the <c>0px</c> default) plus a
+    /// <c>data-tm-keyboard-open</c> marker on the overlay; the overlay pads itself by it so the footer is not under the keyboard.
+    /// A bottom-sheet presentation ignores this parameter: a sheet already lifts above the keyboard through its own tracking
+    /// (<c>tm-sheet.js</c>, <c>--tm-sheet-keyboard</c>), and a second tracker would lift it twice. The tracker is detached when the
+    /// modal closes or becomes a sheet.
+    /// </summary>
+    [Parameter] public bool TrackVirtualKeyboard { get; set; }
+
+    /// <summary>
     /// Extra content rendered in the header row, between the header content and the built-in close
     /// button, wrapped in <c>.tm-modal-header-actions</c>. The typical use is a host-styled close
     /// affordance — e.g. a text <c>TmButton</c> "Close" paired with <see cref="ShowCloseButton"/>
@@ -297,6 +309,8 @@
 
     private ElementReference _overlayElement;
     private ElementReference _panel;
+    private VisualViewportInterop? _visualViewport;
+    private bool _keyboardTracked;
     private TmSheetHandle? _handle;
     private string _titleId = Guid.NewGuid().ToString("N");
 
@@ -409,6 +423,22 @@
             await DetachGestureAsync();
         }
 
+        // Opt-in virtual-keyboard knob on the overlay (any presentation), attached while the modal is open.
+        // A bottom sheet is left to tm-sheet.js (--tm-sheet-keyboard lifts the whole sheet): a second tracker would lift it twice. The
+        // presentation is re-evaluated on every render, so a layout flip attaches or detaches accordingly.
+        var trackKeyboard = Show && TrackVirtualKeyboard && !IsSheet;
+        if (trackKeyboard && !_keyboardTracked)
+        {
+            _keyboardTracked = true;
+            _visualViewport ??= new VisualViewportInterop(JS);
+            await _visualViewport.AttachAsync(_overlayElement);
+        }
+        else if (!trackKeyboard && _keyboardTracked)
+        {
+            _keyboardTracked = false;
+            if (_visualViewport is not null) await _visualViewport.DetachAsync();
+        }
+
         // U1: the modal overlay root is a modal viewport-anchored surface — promote it to the
         // browser top layer right after the render that inserted it. A sheet a host opened before
         // the modal then cannot cover it (top-layer order equals open order). Closing unmounts
@@ -485,6 +515,7 @@
         if (_disposed) return;
         _disposed = true;
         if (_sheet is not null) await _sheet.DisposeAsync();
+        if (_visualViewport is not null) await _visualViewport.DisposeAsync();
         if (_gate is not null) await _gate.DisposeAsync();
         if (_scrollRegion is not null) await _scrollRegion.DisposeAsync();
         _dotNetRef?.Dispose();

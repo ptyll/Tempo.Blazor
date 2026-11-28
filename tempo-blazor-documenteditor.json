@@ -10035,6 +10035,10 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor-canvas/mini-toolbar-clip.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor-canvas/model/canvas-document-model.mjs",
       "kind": "JavaScript"
     },

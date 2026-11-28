@@ -551,6 +551,120 @@ public sealed class DocumentEditorPanelsResponsiveE2ETests : WasmTestBase
 
     // ── helpers ──────────────────────────────────────────────────────────────
 
+    // ── Phase 13: dialogs without a viewport @media, a phone sheet above the on-screen keyboard ─────────────────────────────────────────────
+
+    // The virtual keyboard cannot be summoned in a headless browser; what the page sees of it is a visualViewport that is shorter than the window.
+    private const string EmulateKeyboardScript = """
+        height => {
+            const viewport = window.visualViewport;
+            Object.defineProperty(viewport, 'height', { configurable: true, get: () => height });
+            viewport.dispatchEvent(new Event('resize'));
+        }
+        """;
+
+    [TestMethod]
+    [Description("A phone layout pinned on a 1440 screen: the compare dialog (opened as a desktop dialog, then the layout pinned to Mobile) has ONE column of sources - the grid answers to the resolved layout, not the viewport")]
+    public async Task ForcedPhoneLayout_On1440_CompareDialogHasOneSourceColumn()
+    {
+        var (page, errors) = await OpenAsync("contract-demo", 1440, 900, touch: false);
+        await ClickRibbonAsync(page, "document-ribbon-tab-review");
+        await ClickRibbonAsync(page, "document-compare-open");
+        await Assertions.Expect(page.GetByTestId("document-compare-dialog")).ToBeVisibleAsync(new() { Timeout = 10_000 });
+        await Assertions.Expect(page.GetByTestId("document-compare-base-card")).ToBeVisibleAsync();
+        // The focus opens on the "Change..." button of the first source that names nothing yet (the target).
+        await Assertions.Expect(page.GetByTestId("document-compare-target-change")).ToBeFocusedAsync(new() { Timeout = 10_000 });
+
+        const string columns = "() => getComputedStyle(document.querySelector('.tm-document-compare-dialog__sources')).gridTemplateColumns.split(' ').length";
+        Assert.AreEqual(2, await page.EvaluateAsync<int>(columns), "a desktop dialog is wide enough for two columns of sources");
+
+        // The demo's layout select sits behind the modal: it is driven through the DOM, like a host that re-pins the layout while the dialog is open.
+        await page.EvaluateAsync("""
+            () => {
+                const select = document.querySelector('[data-testid="document-editor-layout-mode"]');
+                select.value = 'Mobile';
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            """);
+        await WaitForPredicateAsync(page, "() => document.querySelector('.tm-document-editor')?.dataset.layout === 'mobile'", 15_000);
+        await WaitForPredicateAsync(page, "() => document.querySelector('.tm-modal-overlay[data-testid=\"document-compare-dialog\"]')?.dataset.layout === 'mobile'", 15_000);
+
+        Assert.AreEqual(1, await page.EvaluateAsync<int>(columns), "the pinned phone layout wins over the 1440 px width: one column of sources");
+        var overlay = await page.GetByTestId("document-compare-dialog").BoundingBoxAsync();
+        var sources = await page.Locator(".tm-document-compare-dialog__sources").BoundingBoxAsync();
+        Assert.IsTrue(overlay is not null && overlay.Width >= 1400, "the pinned phone layout is a fullscreen panel on the wide screen");
+        Assert.IsTrue(sources is not null && sources.Width <= 641 && sources.X > 100, $"its content is a readable centred column ({sources?.Width:0} px wide at x={sources?.X:0})");
+        // Escape closes the dialog and the focus goes back to the document.
+        await page.Keyboard.PressAsync("Escape");
+        await Assertions.Expect(page.GetByTestId("document-compare-dialog")).ToHaveCountAsync(0, new() { Timeout = 10_000 });
+        await Assertions.Expect(page.GetByTestId("document-canvas-hidden-input")).ToBeFocusedAsync(new() { Timeout = 10_000 });
+        CollectionAssert.AreEqual(Array.Empty<string>(), errors);
+        await page.Context.CloseAsync();
+    }
+
+    [TestMethod]
+    [Description("A 390 px version dialog keeps its Create / Cancel footer inside the visual viewport: a shorter window (390 x 420) and an emulated keyboard (the visual viewport shorter than the window) with a field focused")]
+    public async Task Phone_VersionDialog_FooterStaysAboveTheKeyboard()
+    {
+        var (page, errors) = await OpenAsync("contract-demo", 390, 844, touch: true);
+        await OpenInspectorTabAsync(page, "versions");
+        await page.GetByTestId("document-version-create-open").ClickAsync();
+        var dialog = page.GetByTestId("document-version-dialog");
+        await Assertions.Expect(dialog).ToBeVisibleAsync(new() { Timeout = 10_000 });
+        // The label is where the focus opens (no manual focus): the reader types a name first.
+        await Assertions.Expect(page.GetByTestId("document-version-label")).ToBeFocusedAsync(new() { Timeout = 10_000 });
+
+        // A shorter window: the fixed overlay follows the layout viewport, so the footer is inside the visible area.
+        await page.SetViewportSizeAsync(390, 420);
+        await AssertFooterInsideVisualViewportAsync(page, "a 390 x 420 window");
+
+        // An emulated keyboard: the layout viewport keeps its height, the visual viewport shrinks by 300 px.
+        await page.SetViewportSizeAsync(390, 844);
+        await page.EvaluateAsync(EmulateKeyboardScript, 544);
+        await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-version-dialog\"]').getBoundingClientRect().height > 0", 10_000);
+        await page.WaitForFunctionAsync("() => document.querySelector('[data-testid=\"document-version-create-submit\"]').getBoundingClientRect().bottom <= 544 + 1", null, new() { Timeout = 10_000 });
+        await AssertFooterInsideVisualViewportAsync(page, "an emulated keyboard");
+        await Assertions.Expect(page.GetByTestId("document-version-create-submit")).ToBeVisibleAsync();
+        await Assertions.Expect(page.GetByTestId("document-version-cancel")).ToBeVisibleAsync();
+
+        await page.EvaluateAsync(EmulateKeyboardScript, 844);
+        // Escape closes the sheet and the focus goes back to the document.
+        await page.Keyboard.PressAsync("Escape");
+        await Assertions.Expect(dialog).ToHaveCountAsync(0, new() { Timeout = 10_000 });
+        await Assertions.Expect(page.GetByTestId("document-canvas-hidden-input")).ToBeFocusedAsync(new() { Timeout = 10_000 });
+        CollectionAssert.AreEqual(Array.Empty<string>(), errors);
+        await page.Context.CloseAsync();
+    }
+
+    private static async Task AssertFooterInsideVisualViewportAsync(IPage page, string when)
+    {
+        // The sheet follows the window on the next frames (resize -> --tm-sheet-viewport): wait for the state, then assert it.
+        try
+        {
+            await page.WaitForFunctionAsync("""
+                () => {
+                    const viewport = window.visualViewport;
+                    const footer = document.querySelector('[data-testid="document-version-create-submit"]').getBoundingClientRect();
+                    return footer.bottom <= viewport.offsetTop + viewport.height + 1;
+                }
+                """, null, new() { Timeout = 10_000 });
+        }
+        catch (PlaywrightException)
+        {
+            // the measured assertion below reports the numbers
+        }
+
+        var probe = await page.EvaluateAsync<double[]>("""
+            () => {
+                const viewport = window.visualViewport;
+                const submit = document.querySelector('[data-testid="document-version-create-submit"]').getBoundingClientRect();
+                const cancel = document.querySelector('[data-testid="document-version-cancel"]').getBoundingClientRect();
+                return [Math.max(submit.bottom, cancel.bottom), viewport.offsetTop + viewport.height, Math.min(submit.top, cancel.top)];
+            }
+            """);
+        Assert.IsTrue(probe[0] <= probe[1] + 1, $"{when}: the footer buttons end at {probe[0]:0}, inside the visual viewport ({probe[1]:0})");
+        Assert.IsTrue(probe[2] >= 0, $"{when}: the footer buttons start on screen ({probe[2]:0})");
+    }
+
     /// <summary>
     /// Brings a canvas element to the middle of the screen and returns its centre. The canvas draws the pages that are on screen only, so the
     /// document is walked until the element exists, and the element is searched for again after every scroll (it can be redrawn).

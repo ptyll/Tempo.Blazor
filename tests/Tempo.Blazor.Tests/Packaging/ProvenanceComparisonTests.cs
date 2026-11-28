@@ -241,7 +241,8 @@ public class ProvenanceComparisonTests
         // the pinned-on-top registry and the public pin module) — two more excluded files.
         // tm-time-selector.test.mjs (plan 1c95309c Fáze 8) + tm-inline-diff.test.mjs (plan 1c95309c
         // Fáze 10 Whole layout overflow stop) — two more excluded files.
-        denominator.PackExcludedFiles.Should().Be(41);
+        // tm-visual-viewport.test.mjs (plan 146c7e1b phase 13: the visual-viewport keyboard tracker) — one more excluded file.
+        denominator.PackExcludedFiles.Should().Be(42);
     }
 
     /// <summary>

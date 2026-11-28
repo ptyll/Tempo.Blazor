@@ -113,6 +113,7 @@
       "Tempo.Blazor.Components.TreeView",
       "Tempo.Blazor.Components.Workflow",
       "Tempo.Blazor.Configuration",
+      "Tempo.Blazor.Helpers",
       "Tempo.Blazor.Localization",
       "Tempo.Blazor.Resources",
       "Tempo.Blazor.Services"
@@ -16651,6 +16652,13 @@
           "type": "string",
           "isRequired": false,
           "default": "\"\""
+        },
+        {
+          "name": "TrackVirtualKeyboard",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Opt-in virtual-keyboard tracking. While the modal is open as a fullscreen panel or a centred dialog, tm-visual-viewport.js measures how far the on-screen keyboard reaches into the overlay (window.visualViewport) and writes it as the custom property --tm-visual-viewport-inset-block-end (tokens.css declares the 0px default) plus a data-tm-keyboard-open marker on the overlay; the overlay pads itself by it so the footer is not under the keyboard. A bottom-sheet presentation ignores the parameter: a sheet already lifts through its own tracking (tm-sheet.js, --tm-sheet-keyboard). Detached when the modal closes or becomes a sheet (since 2.14.0).",
+          "default": "false"
         }
       ],
       "cssClasses": [
@@ -19494,6 +19502,47 @@
         {
           "title": "Lightbox with delete",
           "code": "<TmLightbox IsOpen=\"true\" ImageUrl=\"/img/photo.jpg\" ImageAlt=\"Vacation\" IsFirst=\"false\" IsLast=\"false\" CurrentIndex=\"2\" TotalCount=\"10\" CanDelete=\"true\" OnClose=\"@Close\" OnPrev=\"@Prev\" OnNext=\"@Next\" OnDelete=\"@Delete\" />"
+        }
+      ]
+    },
+    {
+      "itemName": "VisualViewportInterop",
+      "kind": "Class",
+      "category": "Helpers",
+      "namespace": "Tempo.Blazor.Helpers",
+      "description": "Advanced API. Per-instance wrapper around the core tm-visual-viewport.js module: tracks how far an on-screen keyboard reaches into ONE element and writes the gap as the custom property --tm-visual-viewport-inset-block-end on it (0px default from tokens.css). The tracker lives in the browser under this instance's own id, so DetachAsync and DisposeAsync release it even when Blazor already removed the element, an attach that finishes after a detach or a dispose detaches itself, and the module is imported lazily on the first attach. TmModal.TrackVirtualKeyboard and the DocumentEditor's bounded phone frame use it.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Helpers/VisualViewportInterop.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "AttachAsync",
+          "kind": "Method",
+          "type": "Task<bool>",
+          "description": "Starts tracking the element. Returns false when the tracker could not be attached (JS unavailable, the module failed to import, or the owner detached / disposed in the meantime) - a caller that wants to avoid retrying every render latches on it. The optional property names another custom property for a consumer with its own knob.",
+          "parameters": [
+            {
+              "name": "element",
+              "type": "ElementReference"
+            },
+            {
+              "name": "property",
+              "type": "string?",
+              "default": "null"
+            }
+          ]
+        },
+        {
+          "name": "DetachAsync",
+          "kind": "Method",
+          "type": "Task",
+          "description": "Stops tracking and removes the property. Safe to call twice and before any attach."
+        },
+        {
+          "name": "DisposeAsync",
+          "kind": "Method",
+          "type": "ValueTask",
+          "description": "Detaches by id and releases the module. Idempotent."
         }
       ]
     },
@@ -28496,6 +28545,12 @@
           "type": "EventCallback<bool>",
           "isRequired": false,
           "description": "Fires when the open state should change (two-way bindable)."
+        },
+        {
+          "name": "IsSheetChanged",
+          "type": "EventCallback<bool>",
+          "isRequired": false,
+          "description": "Raised with the sheet-versus-popover answer (IsSheet). The first answer is reported from the first parameter set (a forced LayoutMode, a viewport scope or InitialMode resolves at once; an Auto panel with no scope reports the InitialMode answer first and its probe measurement afterwards, as a change) and again on every change of the resolved presentation, never twice for the same value. Unlike ResolvedLayoutChanged the initial value is reported. A notification, not a binding: never pair it with MobilePresentation or LayoutMode in a two-way bind (since 2.14.0)."
         },
         {
           "name": "LayoutMode",
@@ -38240,6 +38295,10 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor/wwwroot/js/tm-visual-viewport.js",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor/wwwroot/js/workflow-designer.js",
       "kind": "JavaScript"
     },
@@ -38404,16 +38463,20 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-visual-viewport.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor/wwwroot/js/__tests__/workflow-designer-pointer.test.mjs",
       "kind": "JavaScript"
     }
   ],
   "summary": {
-    "itemCount": 471,
-    "manualItemCount": 471,
-    "generatedItemCount": 463,
+    "itemCount": 472,
+    "manualItemCount": 472,
+    "generatedItemCount": 464,
     "generatedOnlyItemCount": 0,
     "componentCount": 239,
-    "publicApiTypeCount": 224
+    "publicApiTypeCount": 225
   }
 }

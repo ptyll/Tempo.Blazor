@@ -10,8 +10,9 @@
          Title="@Loc["TmDocumentEditor_CreateVersion"]"
          Size="ModalSize.Small"
          MobilePresentation="MobilePresentation.Auto"
+         TrackVirtualKeyboard="true"
          FooterLayout="FooterLayout.Inline"
-         InitialFocusTargetId="@_kindSelectId"
+         InitialFocusTargetId="@_labelInputId"
          CloseButtonAdditionalAttributes="@CloseButtonAttributes"
          Class="tm-document-version-dialog"
          RestoreFocusTargetId="@RestoreFocusTargetId"
@@ -39,7 +40,7 @@
 
             <label class="tm-document-version-dialog__field">
                 <span>@Loc["TmDocumentEditor_VersionLabel"]</span>
-                <input class="tm-input" value="@_label" @oninput="args => _label = args.Value?.ToString()" data-testid="@TestId("document-version-label")" />
+                <input id="@_labelInputId" class="tm-input" value="@_label" @oninput="args => _label = args.Value?.ToString()" data-testid="@TestId("document-version-label")" />
             </label>
 
             <label class="tm-document-version-dialog__field">
@@ -73,6 +74,7 @@
     /// </summary>
     [Parameter] public string? RestoreFocusTargetId { get; set; }
 
+    private readonly string _labelInputId = $"tm-document-version-label-{Guid.NewGuid():N}";
     private readonly string _kindSelectId = $"tm-document-version-kind-{Guid.NewGuid():N}";
     private readonly string _formId = $"tm-document-version-form-{Guid.NewGuid():N}";
     private readonly string _errorId = $"tm-document-version-error-{Guid.NewGuid():N}";

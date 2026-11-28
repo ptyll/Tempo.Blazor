@@ -14,6 +14,8 @@
          Title="@Loc["TmDocumentEditor_CompareDialogTitle"]"
          Size="ModalSize.Large"
          MobilePresentation="MobilePresentation.AutoFullscreen"
+         TrackVirtualKeyboard="true"
+         InitialFocusSelector="@InitialFocusSelector"
          FooterLayout="FooterLayout.Inline"
          Class="tm-document-compare-dialog"
          CloseButtonAdditionalAttributes="@CloseButtonAttributes"
@@ -21,6 +23,8 @@
          OnClose="OnClose"
          data-testid="@TestId("document-compare-dialog")">
     <ChildContent>
+        @* The size container of the dialog's own content (phase 13): the source grid answers to THIS width, not to the viewport. *@
+        <div class="tm-document-compare-dialog__content">
         <p class="tm-document-compare-dialog__intro">@Loc["TmDocumentEditor_CompareEmpty"]</p>
 
         @* Redesign 146c7e1b, phase 7 (DE-2.6): each source is a CARD (title, what it is, "Change..."); the picker (current / history version /
@@ -87,6 +91,7 @@
                 }
             </section>
         }
+        </div>
     </ChildContent>
     <Footer>
         @* The primary action first, Cancel at the far end (the mockup's order). *@
@@ -201,6 +206,10 @@
     private bool? _focusChangeOfBase;
 
     // Compare needs both sources to name something: a current document, a picked version, a typed id, an uploaded file.
+    // The focus opens on the "Change..." button of the first source that still names nothing (the base is the current document, so normally the
+    // target); with both valid it opens on the base card's button.
+    private string InitialFocusSelector => $"[data-testid='{TestId(IsSourceValid(true) && !IsSourceValid(false) ? "document-compare-target-change" : "document-compare-base-change")}']";
+
     private bool CanCompare => IsSourceValid(true) && IsSourceValid(false);
 
     private bool IsSourceValid(bool isBase) => ChoiceOf(isBase) switch
