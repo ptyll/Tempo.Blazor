@@ -39,9 +39,15 @@ public class ReportEmbeddingPageAriaTests : LocalizationTestBase
 
         cut.Find("[data-testid='embedding-mode-remote']").Click();
 
-        cut.Find("[data-testid='embedding-mode-remote']").GetAttribute("aria-selected")
-            .Should().Be("true", "the clicked Remote tab is active now");
-        cut.Find("[data-testid='embedding-mode-embedded']").GetAttribute("aria-selected")
-            .Should().Be("false");
+        // WaitForAssertion, not a bare assert: ShowRemote flips _mode synchronously, but under
+        // parallel full-suite load the re-render can land after Click returns (documented
+        // full-suite flake — the assertion itself is deterministic, the timing is not).
+        cut.WaitForAssertion(() =>
+        {
+            cut.Find("[data-testid='embedding-mode-remote']").GetAttribute("aria-selected")
+                .Should().Be("true", "the clicked Remote tab is active now");
+            cut.Find("[data-testid='embedding-mode-embedded']").GetAttribute("aria-selected")
+                .Should().Be("false");
+        });
     }
 }
