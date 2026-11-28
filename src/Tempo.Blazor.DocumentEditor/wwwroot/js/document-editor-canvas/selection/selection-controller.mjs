@@ -55,6 +55,11 @@ export function createCanvasSelectionController(options = {}) {
     let model = null;
     let selection = null;
     let objectSelection = null;
+    // WHERE an object selection comes from, stamped by the deliberate paths ('pointer' = a click on the object that did not drag,
+    // 'keyboard' = Tab-cycling) and consumed by the NEXT selection notification. Every other notification (a re-layout, a drag /
+    // resize / rotate preview, the host's state re-render) reports 'layout'. The host opens its inspector only for a new object or a
+    // deliberate selection, so a closed inspector is not popped back by a re-report of the same object.
+    let objectSelectionSource = null;
     let compositionRange = null;
     let pointerState = null;
     let selectionRevision = 0;
@@ -542,6 +547,8 @@ export function createCanvasSelectionController(options = {}) {
             });
         }
 
+        // A release on an object that never moved is a click ON the object: the reader's decision to look at it.
+        const deliberateObjectClick = pointerState.mode === 'object-move' && pointerState.dragging !== true && !!objectSelection;
         pointerState = null;
         root?.setAttribute?.('data-canvas-object-dragging', 'false');
         root?.setAttribute?.('data-canvas-connector-endpoint-dragging', 'false');
@@ -552,6 +559,11 @@ export function createCanvasSelectionController(options = {}) {
         syncObjectSnapAttributes(null);
         if (root?.style) {
             root.style.cursor = '';
+        }
+
+        if (deliberateObjectClick) {
+            objectSelectionSource = 'pointer';
+            renderOverlay();
         }
     }
 
@@ -868,6 +880,7 @@ export function createCanvasSelectionController(options = {}) {
             { blockId: nextObject.blockId, offset: 0 },
             { blockId: nextObject.blockId, offset: 0 },
             nextObject);
+        objectSelectionSource = 'keyboard';
         renderOverlay();
         return true;
     }
@@ -990,6 +1003,9 @@ export function createCanvasSelectionController(options = {}) {
     }
 
     function renderOverlay() {
+        // One-shot: the stamp belongs to THIS render, whether or not it ends in a notification.
+        const source = objectSelectionSource || 'layout';
+        objectSelectionSource = null;
         if (!canvasStack?.pages) {
             return;
         }
@@ -1152,7 +1168,7 @@ export function createCanvasSelectionController(options = {}) {
             root?.removeAttribute?.('data-canvas-header-footer-edit-scope');
         }
         root?.setAttribute?.('data-canvas-composition-active', String(!!compositionRange && !isCollapsed(compositionRange)));
-        onSelectionChanged?.(api.getState());
+        onSelectionChanged?.({ ...api.getState(), objectSelectionSource: source });
     }
 
     function clearOverlayCanvases() {

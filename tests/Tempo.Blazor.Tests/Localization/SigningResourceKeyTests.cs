@@ -42,7 +42,8 @@ public class SigningResourceKeyTests
         var signingDirectory = Path.Combine(FindRepositoryRoot(), "src", "Tempo.Blazor.Signing");
         var keys = new List<(string File, string Key)>();
         foreach (var path in Directory.EnumerateFiles(signingDirectory, "*.razor", SearchOption.AllDirectories)
-                     .Concat(Directory.EnumerateFiles(signingDirectory, "*.cs", SearchOption.AllDirectories)))
+                     .Concat(Directory.EnumerateFiles(signingDirectory, "*.cs", SearchOption.AllDirectories))
+                     .Where(path => IsAuthoredSource(Path.GetRelativePath(signingDirectory, path))))
         {
             var text = File.ReadAllText(path);
             foreach (Match match in LocKeyPattern.Matches(text))
@@ -52,6 +53,19 @@ public class SigningResourceKeyTests
         }
 
         return keys;
+    }
+
+    /// <summary>
+    /// Only authored sources count: generated output under <c>bin/</c>, <c>obj/</c> (a stale
+    /// <c>obj/genonly/**/*_razor.g.cs</c> keeps keys that no longer exist in the sources) and
+    /// <c>node_modules/</c> is excluded — the same segment filter the other repo guard tests use. The path is RELATIVE to the package
+    /// directory: a checkout that itself lives under a folder called <c>bin</c> or <c>obj</c> must not exclude every source.
+    /// </summary>
+    internal static bool IsAuthoredSource(string relativePath)
+    {
+        var segments = relativePath.Replace('\\', '/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+        return !segments.Take(segments.Length - 1).Any(segment =>
+            segment is "bin" or "obj" or "node_modules");
     }
 
     [Fact]
@@ -68,6 +82,32 @@ public class SigningResourceKeyTests
         missing.Should().BeEmpty(
             "every Loc[\"…\"] key used by the Signing package must exist in TmResources.json:\n{0}",
             string.Join("\n", missing.Select(entry => $"{entry.Key} ({entry.File})")));
+    }
+
+    [Theory]
+    [InlineData("obj/genonly/net10.0/TmSigningFormRunner_razor.g.cs", false)]
+    [InlineData("bin\\Debug\\X.cs", false)]
+    [InlineData("node_modules/x/y.cs", false)]
+    [InlineData("Components/obj/x.cs", false)]
+    [InlineData("Components/TmSigningFormRunner.razor", true)]
+    [InlineData("Components/bin.cs", true)]
+    public void Authored_source_filter_skips_build_output_and_node_modules(string relativePath, bool expected)
+        => IsAuthoredSource(relativePath).Should().Be(expected);
+
+    [Fact]
+    public void Authored_source_filter_keeps_sources_of_a_checkout_that_lives_under_a_bin_or_obj_folder()
+    {
+        var signingDirectory = Path.Combine("home", "ci", "bin", "obj", "repo", "src", "Tempo.Blazor.Signing");
+        var path = Path.Combine(signingDirectory, "Components", "TmSigningFormRunner.razor");
+
+        IsAuthoredSource(Path.GetRelativePath(signingDirectory, path)).Should().BeTrue();
+    }
+
+    [Fact]
+    public void The_authored_signing_sources_are_found_and_use_the_localizer()
+    {
+        UsedKeysLazy.Value.Should().NotBeEmpty();
+        UsedKeysLazy.Value.Select(entry => entry.File).Distinct().Should().NotBeEmpty();
     }
 
     private static string FindRepositoryRoot()

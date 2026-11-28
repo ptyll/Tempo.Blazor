@@ -72,17 +72,38 @@ public partial class TmDocumentEditor
         _stickyTableCellId = null;
         _inspectorContextDismissedKey = null;
         _selectionContext = DocumentEditorSelectionContext.Empty;
+        // The selected image belongs to the old document too: an object id may repeat in the next one, and "the same object" must not
+        // keep a freshly loaded document's image from opening the inspector.
+        _activeCanvasImageObjectId = null;
+        _activeCanvasImageBlockId = null;
+        _activeCanvasImageRunId = null;
+        _canvasActiveImage = null;
     }
 
-    // A deliberate click on an image (the engine reports reason "canvas-object-selection") opens its context again even when the reader had
-    // dismissed it; an empty report or a caret move never does.
+    // DE-INSPECTOR-OPENS-ON-NEW-OR-DELIBERATE-SELECTION: the inspector opens for a NEW object (SyncCanvasActiveImage) or for a deliberate
+    // selection of the one already selected - the engine stamps an object selection report "pointer" (a click on the object that did not
+    // drag) or "keyboard" (object cycling); every other report ("layout": a re-layout, a drag preview, the state re-render) is a re-report
+    // that never reopens a panel the reader closed. An empty report or a caret move never does either.
     private void NoteCanvasSelectionReport(WysiwygMiniToolbarRequest? request)
     {
-        if (string.Equals(request?.Reason, "canvas-object-selection", StringComparison.Ordinal))
+        if (!string.Equals(request?.Reason, "canvas-object-selection", StringComparison.Ordinal)
+            || !IsDeliberateObjectSelection(request))
         {
-            ForgetDismissedContext("image:");
+            return;
+        }
+
+        ForgetDismissedContext("image:");
+        if (HasImageInspector && !IsMobileLayout && (!_sidePanelOpen || _activeSidePanelTab != DocumentSidePanelTab.Properties))
+        {
+            // A closed panel opens, and an open one standing on another tab (comments, revisions ...) moves to Properties: the reader asked
+            // for THIS object. The inspector context of a desktop dock replaces the tabs anyway; the tab is what returns after its X.
+            OpenSidePanel(DocumentSidePanelTab.Properties);
         }
     }
+
+    internal static bool IsDeliberateObjectSelection(WysiwygMiniToolbarRequest? request) =>
+        string.Equals(request?.ObjectSelectionSource, "pointer", StringComparison.Ordinal)
+        || string.Equals(request?.ObjectSelectionSource, "keyboard", StringComparison.Ordinal);
 
     // A panel edit re-lays the table out and the engine may then report the caret in a cell paragraph WITHOUT the cell id: that is still the
     // same table, not a decision to leave it.

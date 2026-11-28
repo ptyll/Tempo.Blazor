@@ -225,6 +225,16 @@ sheet (24 rem is wide enough; the row scrolls with an edge fade when a long labe
 a phone. Revision cards take their text from `TmDocumentRevisionPanel.PreviewResolver` (`Func<DocumentRevision, DocumentRevisionPreview?>`, the
 editor reads the range from the document; a resolver that returns `null` falls back to the payload's human line, never the raw payload).
 
+**When the inspector opens (decision `DE-INSPECTOR-OPENS-ON-NEW-OR-DELIBERATE-SELECTION`).** The inspector opens for a NEW object
+(a different object id than the one the editor last saw selected) or for a DELIBERATE selection of the one already selected - never because the
+engine re-reported it. The canvas engine stamps every object selection notification with `objectSelectionSource` (carried to the host as
+`WysiwygMiniToolbarRequest.ObjectSelectionSource`): `pointer` = the release of a click on the object that did not drag, `keyboard` = Tab-cycling
+between objects, `layout` = everything else (a re-layout, a drag / resize / rotate preview, the host's state re-render). The stamp is one-shot - the
+next notification is `layout` again. Only `pointer` and `keyboard` forget a dismissal, reopen a closed panel (non-phone layouts) and move an open
+panel standing on another tab (comments, revisions ...) to Properties; a `layout` report, a caret move and an empty report change nothing, so a
+reader who closed the inspector while the image stays selected does not see it pop back after the next edit. Loading, importing or restoring a
+document forgets the selected image (`ResetInspectorSelectionMemory`), so an object id that repeats in the next document opens the inspector again.
+
 ## Document-region modes and the comparison
 
 Besides editing the doc region has two modes (phase 7). The **print preview** is the engine's own state (`openPrintPreview`): no ribbon, page
@@ -283,3 +293,14 @@ Route `/document-editor` má pro knihovní uživatele pokrývat:
 - comments and review sample data,
 - paste report sample HTML,
 - autosave error provider toggle.
+
+## Headless export parity: host fonts (decision `DE-EXPORT-PARITY-HOST-FONTS`)
+
+The headless export (a snapshot-less PDF / DOCX of a stored document) lays the document out from the advance tables of the faces the HOST registers,
+while the live canvas measures with whatever the browser resolves the theme's font stack (`Aptos, Arial, sans-serif`) to. The two paginate the same only
+when the host's font catalog resolves the SAME faces the browser does for that stack: on Linux `Arial` resolves to Liberation Sans (the metric-compatible
+substitute), not DejaVu Sans, which is ~8 % wider with taller lines (the contract demo was 3 server pages against 4 browser pages). A host catalog
+therefore registers ONE family as a whole - never a bold of one family next to the regular of another - and prefers the metric-compatible family; the demo's
+`DemoDocumentExportFontCatalog` probes Windows Arial, then Liberation Sans in the Debian (`/usr/share/fonts/truetype/liberation/`), Fedora
+(`/usr/share/fonts/liberation-sans/`, `/usr/share/fonts/liberation/`) and Arch (`/usr/share/fonts/TTF/`) locations, then DejaVu Sans, and exposes the
+chosen `FamilyName`. A host without any known face keeps failing closed (`TempoDocumentLayoutException`) rather than degrading to non-WYSIWYG output.

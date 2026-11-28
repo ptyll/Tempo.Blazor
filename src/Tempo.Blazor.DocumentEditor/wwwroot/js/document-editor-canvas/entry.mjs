@@ -1921,6 +1921,8 @@ function buildMiniToolbarPayload(canvasStack, selectionState) {
                 viewportHeight,
                 placement,
                 reason: 'canvas-object-selection',
+                // 'pointer' | 'keyboard' (a deliberate selection) or 'layout' (a re-report): the host opens its inspector only for the former.
+                objectSelectionSource: selectionState.objectSelectionSource || 'layout',
                 selection,
             };
         }

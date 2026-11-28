@@ -100,4 +100,12 @@ public sealed class WysiwygMiniToolbarRequest : WysiwygFloatingUiPosition
     /// (growing up). Null keeps the default top-anchored behavior.
     /// </summary>
     public string? Placement { get; set; }
+
+    /// <summary>
+    /// Where an object selection report comes from: <c>pointer</c> (a click on the object that did not drag) or
+    /// <c>keyboard</c> (object cycling) are the reader's deliberate selections; <c>layout</c> (a re-layout, a drag preview,
+    /// a state re-render) is a re-report of what is already selected. Null for a report that carries no object selection
+    /// or from an engine that does not stamp the source.
+    /// </summary>
+    public string? ObjectSelectionSource { get; set; }
 }

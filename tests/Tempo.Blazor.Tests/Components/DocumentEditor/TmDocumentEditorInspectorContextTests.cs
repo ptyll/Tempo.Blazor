@@ -1,5 +1,7 @@
 using System.Reflection;
 using Bunit;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 using FluentAssertions;
 using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components.DocumentEditor;
@@ -17,6 +19,16 @@ namespace Tempo.Blazor.Tests.Components.DocumentEditor;
 public sealed class TmDocumentEditorInspectorContextTests : LocalizationTestBase
 {
     private const BindingFlags Instance = BindingFlags.Instance | BindingFlags.NonPublic;
+
+    /// <summary>
+    /// The editor's debounced toolbar/format sync (200 ms) reads the engine state back; under bUnit's loose JS
+    /// interop that readback reports "no image selected" and would forget a dismissal / the selected image. A fake
+    /// clock keeps that background sync from ever firing on wall-clock time, so every step of a test is decided
+    /// by the test alone, not by how long the machine took between two statements.
+    /// </summary>
+    private readonly FakeTimeProvider _clock = new();
+
+    public TmDocumentEditorInspectorContextTests() => Services.AddSingleton<TimeProvider>(_clock);
 
     private IRenderedComponent<TmDocumentEditor> RenderEditor(TmLayoutMode mode, Action<DocumentEditorDocument>? seed = null)
     {
@@ -135,10 +147,16 @@ public sealed class TmDocumentEditorInspectorContextTests : LocalizationTestBase
         panel.QuerySelector("[data-testid='document-side-panel-context-header']").Should().BeNull();
     }
 
-    private static Task ReportCanvasSelectionAsync(IRenderedComponent<TmDocumentEditor> cut, string? reason)
+    private static Task ReportCanvasSelectionAsync(IRenderedComponent<TmDocumentEditor> cut, string? reason, string? source = null)
     {
         var report = typeof(TmDocumentEditor).GetMethod("HandleCanvasMiniToolbarChangedAsync", Instance)!;
-        return cut.InvokeAsync(() => (Task)report.Invoke(cut.Instance, [new WysiwygMiniToolbarRequest { Reason = reason }])!);
+        return cut.InvokeAsync(() => (Task)report.Invoke(cut.Instance, [new WysiwygMiniToolbarRequest { Reason = reason, ObjectSelectionSource = source }])!);
+    }
+
+    private static Task OpenTabAsync(IRenderedComponent<TmDocumentEditor> cut, DocumentSidePanelTab tab)
+    {
+        var open = typeof(TmDocumentEditor).GetMethod("OpenSidePanel", Instance)!;
+        return cut.InvokeAsync(() => open.Invoke(cut.Instance, [tab, true, true]));
     }
 
     [Fact]
@@ -156,7 +174,7 @@ public sealed class TmDocumentEditorInspectorContextTests : LocalizationTestBase
         cut.Find("[data-testid='document-side-panel']").HasAttribute("data-context").Should().BeFalse();
 
         // ... a deliberate click on the image (the engine reports an object selection) is.
-        await ReportCanvasSelectionAsync(cut, "canvas-object-selection");
+        await ReportCanvasSelectionAsync(cut, "canvas-object-selection", "pointer");
         cut.Render();
         cut.Find("[data-testid='document-side-panel']").GetAttribute("data-context").Should().Be("image");
     }
@@ -178,6 +196,148 @@ public sealed class TmDocumentEditorInspectorContextTests : LocalizationTestBase
 
         // ... a different object opens it afresh ...
         await SelectImageAsync(cut, "drawing-2");
+        cut.Find("[data-testid='document-side-panel']").GetAttribute("data-context").Should().Be("image");
+    }
+
+    [Fact]
+    public async Task Desktop_ClosingThePanel_WhileTheImageStaysSelected_IsNotUndoneByALaterStateSync()
+    {
+        // The engine state read-back (the debounced toolbar sync) re-reports the SAME selected image after every edit or caret move. That
+        // report is not a new selection: a reader who closed the inspector (the context X, then the panel X) must not see it pop up again
+        // 200 ms later - on a loaded machine that late reopen raced the E2E "panel hidden" check (Phase10_PropertiesCommands).
+        var cut = RenderEditor(TmLayoutMode.Desktop);
+        await SelectImageAsync(cut);
+        cut.Find("[data-testid='document-side-panel-context-close']").Click();
+        cut.Find("[data-testid='document-side-panel-close']").Click();
+        cut.FindAll("[data-testid='document-side-panel']").Should().BeEmpty();
+
+        await SelectImageAsync(cut, "drawing-1");
+
+        cut.FindAll("[data-testid='document-side-panel']").Should().BeEmpty("the same image re-reported is not a new selection");
+    }
+
+    [Fact]
+    public async Task Desktop_AnotherClickOnTheSameImage_ReopensAPanelTheReaderClosed()
+    {
+        var cut = RenderEditor(TmLayoutMode.Desktop);
+        await SelectImageAsync(cut);
+        cut.Find("[data-testid='document-side-panel-context-close']").Click();
+        cut.Find("[data-testid='document-side-panel-close']").Click();
+        cut.FindAll("[data-testid='document-side-panel']").Should().BeEmpty();
+
+        // A deliberate click on the image (the engine reports an object selection) is a decision to look at it again.
+        await ReportCanvasSelectionAsync(cut, "canvas-object-selection", "pointer");
+        cut.Render();
+
+        cut.Find("[data-testid='document-side-panel']").GetAttribute("data-context").Should().Be("image");
+    }
+
+    [Fact]
+    public async Task Desktop_ALayoutReportOfTheSelectedImage_NeverReopensAPanelTheReaderClosed()
+    {
+        // The engine re-reports the selected object whenever it re-lays out or re-renders its overlay (a drag preview, an edit elsewhere,
+        // the host's state read-back): that is not the reader looking at the object again.
+        var cut = RenderEditor(TmLayoutMode.Desktop);
+        await SelectImageAsync(cut);
+        cut.Find("[data-testid='document-side-panel-context-close']").Click();
+        cut.Find("[data-testid='document-side-panel-close']").Click();
+        cut.FindAll("[data-testid='document-side-panel']").Should().BeEmpty();
+
+        await ReportCanvasSelectionAsync(cut, "canvas-object-selection", "layout");
+        await ReportCanvasSelectionAsync(cut, "canvas-object-selection", null);
+        cut.Render();
+
+        cut.FindAll("[data-testid='document-side-panel']").Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Desktop_AKeyboardSelectionOfTheImage_ReopensAClosedPanel()
+    {
+        var cut = RenderEditor(TmLayoutMode.Desktop);
+        await SelectImageAsync(cut);
+        cut.Find("[data-testid='document-side-panel-context-close']").Click();
+        cut.Find("[data-testid='document-side-panel-close']").Click();
+        cut.FindAll("[data-testid='document-side-panel']").Should().BeEmpty();
+
+        await ReportCanvasSelectionAsync(cut, "canvas-object-selection", "keyboard");
+        cut.Render();
+
+        cut.Find("[data-testid='document-side-panel']").GetAttribute("data-context").Should().Be("image");
+    }
+
+    [Fact]
+    public async Task Tablet_ADeliberateClickOnTheImage_SwitchesAnOpenPanelToProperties_ALayoutReportDoesNot()
+    {
+        var cut = RenderEditor(TmLayoutMode.Tablet);
+        await SelectImageAsync(cut);
+        await OpenTabAsync(cut, DocumentSidePanelTab.Comments);
+        cut.Render();
+        cut.Find("[data-testid='document-side-panel']").GetAttribute("data-active-tab").Should().Be("comments");
+
+        await ReportCanvasSelectionAsync(cut, "canvas-object-selection", "layout");
+        cut.Render();
+        cut.Find("[data-testid='document-side-panel']").GetAttribute("data-active-tab").Should().Be("comments", "a re-report keeps the tab the reader stands on");
+
+        await ReportCanvasSelectionAsync(cut, "canvas-object-selection", "pointer");
+        cut.Render();
+        cut.Find("[data-testid='document-side-panel']").GetAttribute("data-active-tab").Should().Be("properties");
+    }
+
+    [Fact]
+    public async Task Desktop_TheDebouncedStateReadBack_OfTheSameImage_DoesNotReopenAClosedPanel()
+    {
+        // The real debounce: a caret report schedules the 200 ms toolbar sync on the editor's clock; its read-back reports the SAME selected
+        // image again and must leave the closed panel closed (the pre-fix code called OpenSidePanel on every read-back).
+        SetDocumentCanvasFormattingStateJson("""{"image":{"objectId":"drawing-1","blockId":"block-1","runId":"run-1","url":"https://example.test/picture.png","altText":"A picture","width":144,"height":96,"wrapMode":"square"}}""");
+        var cut = RenderEditor(TmLayoutMode.Desktop);
+        await SelectImageAsync(cut);
+        cut.Find("[data-testid='document-side-panel-context-close']").Click();
+        cut.Find("[data-testid='document-side-panel-close']").Click();
+        cut.FindAll("[data-testid='document-side-panel']").Should().BeEmpty();
+
+        var module = SetupDocumentCanvasModule();
+        var readBacksBefore = module.Invocations["getFormattingStateJson"].Count;
+        await ReportCanvasSelectionAsync(cut, "canvas-selection-collapsed");
+        _clock.Advance(TimeSpan.FromMilliseconds(500));
+        // The continuation of the fake-timer delay runs on the thread pool: wait for the read-back itself, not for wall-clock time.
+        cut.WaitForAssertion(
+            () => module.Invocations["getFormattingStateJson"].Count.Should().BeGreaterThan(readBacksBefore, "the debounced sync must really have run"),
+            TimeSpan.FromSeconds(5));
+        cut.WaitForState(() => true);
+        cut.Render();
+
+        cut.FindAll("[data-testid='document-side-panel']").Should().BeEmpty("the read-back re-reported the same image, which is not a new selection");
+    }
+
+    [Fact]
+    public async Task Desktop_LoadingADocument_ForgetsTheSelectedImage_SoTheSameObjectIdOpensTheInspectorAgain()
+    {
+        // The object id of the previous document's image can equal one of the next document ("drawing-1" in every contract demo): the
+        // selection memory belongs to the document that is gone.
+        var cut = RenderEditor(TmLayoutMode.Desktop);
+        await SelectImageAsync(cut);
+        cut.Find("[data-testid='document-side-panel-context-close']").Click();
+        cut.Find("[data-testid='document-side-panel-close']").Click();
+        cut.FindAll("[data-testid='document-side-panel']").Should().BeEmpty();
+
+        var reset = typeof(TmDocumentEditor).GetMethod("ResetInspectorSelectionMemory", Instance)!;
+        await cut.InvokeAsync(() => reset.Invoke(cut.Instance, null));
+        await SelectImageAsync(cut, "drawing-1");
+
+        cut.Find("[data-testid='document-side-panel']").GetAttribute("data-context").Should().Be("image");
+    }
+
+    [Fact]
+    public async Task Desktop_ADifferentImage_OpensAClosedPanelAfresh()
+    {
+        var cut = RenderEditor(TmLayoutMode.Desktop);
+        await SelectImageAsync(cut);
+        cut.Find("[data-testid='document-side-panel-context-close']").Click();
+        cut.Find("[data-testid='document-side-panel-close']").Click();
+        cut.FindAll("[data-testid='document-side-panel']").Should().BeEmpty();
+
+        await SelectImageAsync(cut, "drawing-2");
+
         cut.Find("[data-testid='document-side-panel']").GetAttribute("data-context").Should().Be("image");
     }
 
@@ -547,5 +707,33 @@ public sealed class TmDocumentEditorInspectorContextTests : LocalizationTestBase
             item.QuerySelector("ins")!.TextContent.Should().Be(paragraphText[..5].Trim());
         });
         paragraphId.Should().NotBeNullOrEmpty();
+    }
+
+    [Fact]
+    public async Task Desktop_AnOpenCommandPalette_SurvivesTheDebouncedStateSync_WithItsQueryAndItems()
+    {
+        // The engine's selection report is followed by the debounced (200 ms) state read-back, which re-renders the editor chrome and refreshes
+        // the command registry. A palette opened in between must come through it intact - the E2E "wait until the editor settled" helper
+        // existed only because that was unproven.
+        var cut = RenderEditor(TmLayoutMode.Desktop);
+        await ReportCanvasSelectionAsync(cut, "canvas-selection-collapsed");
+        var open = typeof(TmDocumentEditor).GetMethod("OpenCommandPaletteAsync", Instance)!;
+        await cut.InvokeAsync(() => (Task)open.Invoke(cut.Instance, null)!);
+        cut.WaitForAssertion(() => cut.Find("[data-testid='document-command-palette']"));
+        cut.Find("[data-testid='document-command-palette-search']").Input("table");
+        var itemsBefore = cut.FindAll("[data-testid='document-command-palette-item']").Count;
+
+        var module = SetupDocumentCanvasModule();
+        var readBacksBefore = module.Invocations["getFormattingStateJson"].Count;
+        _clock.Advance(TimeSpan.FromMilliseconds(500));
+        cut.WaitForAssertion(
+            () => module.Invocations["getFormattingStateJson"].Count.Should().BeGreaterThan(readBacksBefore, "the debounced sync must really have run"),
+            TimeSpan.FromSeconds(5));
+        cut.Render();
+
+        cut.Find("[data-testid='document-command-palette']").Should().NotBeNull();
+        var search = cut.Find("[data-testid='document-command-palette-search']");
+        search.GetAttribute("value").Should().Be("table", "the re-render must not reset the typed query");
+        cut.FindAll("[data-testid='document-command-palette-item']").Count.Should().Be(itemsBefore);
     }
 }

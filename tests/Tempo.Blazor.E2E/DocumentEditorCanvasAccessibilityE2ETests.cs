@@ -51,7 +51,7 @@ public sealed class DocumentEditorCanvasAccessibilityE2ETests : WasmTestBase
         await OpenCanvasDocumentAsync(page, "phase-17-canvas-comments-revisions");
         var searchToken = await ReadFirstMirrorSearchTokenAsync(page);
         Assert.IsFalse(string.IsNullOrWhiteSpace(searchToken), "Phase 17 mirror should expose searchable text.");
-        await ExecuteCanvasCommandAsync(page, "find", new { query = searchToken });
+        await ExecuteCanvasFindAsync(page, searchToken);
         await Assertions.Expect(page.GetByTestId("document-canvas-live-region"))
             .ToHaveAttributeAsync("data-canvas-live-kind", "find", new() { Timeout = 10_000 });
         await Assertions.Expect(page.GetByTestId("document-canvas-live-region"))
@@ -220,22 +220,56 @@ public sealed class DocumentEditorCanvasAccessibilityE2ETests : WasmTestBase
         await WaitForPredicateAsync(page, "() => document.querySelector('[data-testid=\"document-canvas-a11y-mirror\"]')?.children.length > 0", 30_000);
     }
 
-    private static async Task ExecuteCanvasCommandAsync(IPage page, string commandId, object argument)
+    /// <summary>
+    /// Runs the engine's <c>find</c> on the mounted canvas the way an automation seam can: through the engine module, by handle.
+    /// <para>
+    /// Mitigation, not a root-cause fix (Phase 10 diagnosis, 5 of 8 runs on a CPU-loaded machine): a plain <c>page.EvaluateAsync</c> that
+    /// calls <c>execCommand</c> was torn down by Chromium with "Execution context was destroyed, most likely because of a navigation"
+    /// although the page never navigates - no frame navigation, no <c>Runtime.executionContextDestroyed</c>/<c>Cleared</c> CDP event,
+    /// the same document and URL afterwards; the smaller evaluates around it (readyState, the module import, the handle read) all
+    /// succeeded and only the one that runs the engine command died, so the product is not the trigger. <c>WaitForFunction</c> is
+    /// Playwright's primitive for exactly that: it re-targets the function onto the live context and polls until it reports success.
+    /// </para>
+    /// <para>
+    /// The retry may re-run a function that already executed the command before it died, so this seam is for IDEMPOTENT queries ONLY
+    /// (<c>find</c> re-selects the same match) - never a mutating command. A run-once guard keyed by this call's nonce on <c>window</c>
+    /// makes the retry a no-op after a run that did reach the engine; the guard entry is removed again once the call returned.
+    /// </para>
+    /// </summary>
+    private static async Task ExecuteCanvasFindAsync(IPage page, string query)
     {
-        // The demo page can still be settling a late navigation (the previous document's before-unload / the new one's first
-        // reconcile) when the first evaluate lands: wait for the load to settle and re-open the engine handle before running it.
-        await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        var nonce = Guid.NewGuid().ToString("N");
         await page.WaitForSelectorAsync("[data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']", new PageWaitForSelectorOptions { Timeout = 30_000 });
-        await page.EvaluateAsync(
-            """
-            async ([commandId, argument]) => {
-                const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
-                const handle = host?.getAttribute('data-canvas-engine-handle') || '';
-                const module = await import('/_content/Tempo.Blazor.DocumentEditor/js/document-editor-canvas/interop.mjs');
-                module.execCommand(handle, commandId, JSON.stringify(argument));
+        try
+        {
+            await page.WaitForFunctionAsync(
+                """
+                async ([nonce, query]) => {
+                    const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
+                    const handle = host?.getAttribute('data-canvas-engine-handle') || '';
+                    if (!handle) return false;
+                    const ran = window.__tmFindRuns || (window.__tmFindRuns = new Set());
+                    if (ran.has(nonce)) return true;
+                    ran.add(nonce);
+                    const module = await import('/_content/Tempo.Blazor.DocumentEditor/js/document-editor-canvas/interop.mjs');
+                    module.execCommand(handle, 'find', JSON.stringify({ query }));
+                    return true;
+                }
+                """,
+                new object[] { nonce, query },
+                new PageWaitForFunctionOptions { Timeout = 30_000 });
+        }
+        finally
+        {
+            try
+            {
+                await page.EvaluateAsync("nonce => window.__tmFindRuns?.delete(nonce)", nonce);
             }
-            """,
-            new object[] { commandId, argument });
+            catch (PlaywrightException)
+            {
+                // The page went away with the test: nothing left to clean.
+            }
+        }
     }
 
     private static async Task ClickCanvasBlockAsync(IPage page, string blockId, int offset)

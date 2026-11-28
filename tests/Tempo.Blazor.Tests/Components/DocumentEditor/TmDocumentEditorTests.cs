@@ -122,6 +122,11 @@ public class TmDocumentEditorTests : LocalizationTestBase
         var (paragraph, inline) = GetFirstParagraphTextRun(seeded);
         var interval = TimeSpan.FromMinutes(1);
 
+        // A real engine stays dirty until a save is acknowledged. With the default (clean) stub the editor's debounced
+        // toolbar sync reads isDirty back, and whichever of that sync or the autosave timer ran first decided whether a
+        // save was attempted at all - a race, not a contract. The sync now rides the same fake clock, so pin the truth.
+        SetDocumentCanvasIsDirty(true);
+
         var cut = RenderDocumentEditor(parameters =>
             parameters.Add(p => p.DocumentId, "doc-1")
                       .Add(p => p.Provider, provider)

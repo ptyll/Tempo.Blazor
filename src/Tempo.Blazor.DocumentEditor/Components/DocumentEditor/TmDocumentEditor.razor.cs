@@ -8412,7 +8412,10 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
             return;
         }
 
-        if (!string.Equals(_activeCanvasImageObjectId, image.ObjectId, StringComparison.Ordinal))
+        // The engine state read-back (the debounced toolbar sync) re-reports the SAME selected image after every edit or caret move; only a
+        // different object is a new selection that may open the inspector - otherwise a reader who just closed the panel sees it pop back up.
+        var isNewSelection = !string.Equals(_activeCanvasImageObjectId, image.ObjectId, StringComparison.Ordinal);
+        if (isNewSelection)
         {
             ForgetDismissedContext("image:");
         }
@@ -8437,15 +8440,21 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
                 Stacking = new DocumentObjectStacking { ZIndex = (int)Math.Round(image.ZIndex) }
             }
         };
-        if (!IsMobileLayout)
+        if (isNewSelection && !IsMobileLayout)
         {
             // A phone never pops a modal sheet because a finger landed on an object: "Properties" asks for its short sheet.
             OpenSidePanel(DocumentSidePanelTab.Properties);
         }
     }
 
+    // The read-back below awaits an interop call and may be started again (a debounced sync, a command's fast sync, a document swap) before
+    // the first one answers: only the NEWEST read may write the popover state, or an older answer about a previous caret would overwrite it
+    // and the field popover would flicker or vanish under the selection that is really there.
+    private int _contentControlSyncVersion;
+
     private async Task SyncCanvasContentControlPopoverAsync()
     {
+        var version = ++_contentControlSyncVersion;
         if (_canvasHost is null || !UsingCanvasEngine || EffectiveReadOnly)
         {
             _activeCanvasContentControl = null;
@@ -8453,6 +8462,11 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
         }
 
         var selection = await _canvasHost.GetSelectionStateAsync();
+        if (version != _contentControlSyncVersion || _disposed)
+        {
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(selection.FocusBlockId))
         {
             _activeCanvasContentControl = null;
@@ -8679,7 +8693,7 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
     {
         try
         {
-            await Task.Delay(CanvasToolbarSyncDebounce);
+            await Task.Delay(CanvasToolbarSyncDebounce, Clock);
         }
         catch (TaskCanceledException)
         {

@@ -195,6 +195,40 @@ function notifyShown(root) {
 }
 
 /**
+ * A subtree that was rendered while its root was not yet in the top layer can come out of the promote
+ * with children that have NO layout box (computed display says flex/block, but offsetParent is null and
+ * the rect is 0x0): Chromium keeps the stale "not rendered" state until the style of the element is
+ * invalidated again. The command palette lost its search header that way - open, focus-trapped, and
+ * unusable (E2E failure Phase10_PropertiesCommands under CPU load). A synchronous display toggle
+ * (no frame is painted in between) re-creates the boxes. It only runs when a descendant really lacks
+ * its box; a healthy promote pays one querySelectorAll plus an offsetParent read per control.
+ * @param {HTMLElement} root the promoted root
+ */
+function flushStaleBoxes(root) {
+    try {
+        if (!root || typeof root.querySelectorAll !== 'function' || !root.style) return;
+        const stale = [...root.querySelectorAll('input, button, [role="option"], [tabindex]')]
+            .some(el => {
+                // Inside a hidden ancestor (inactive tab, [hidden], collapsed submenu) the parent has
+                // no box either - that is not a stale box, so it must not force a re-layout.
+                if (el.offsetParent !== null) return false;
+                const parent = el.parentElement;
+                if (!parent || (parent !== root && parent.offsetParent === null)) return false;
+                const style = getComputedStyle(el);
+                return style.display !== 'none' && style.position !== 'fixed';
+            });
+        if (!stale) return;
+        const previous = root.style.display;
+        root.style.display = 'none';
+        void root.offsetWidth;
+        root.style.display = previous;
+    }
+    catch {
+        // A detached root or a stub without layout: nothing to flush.
+    }
+}
+
+/**
  * Promotes a modal overlay root to the browser top layer. Every modal viewport-anchored overlay
  * root carries popover="manual" (F3 review round 2, U1): a modal drawer at any position, the
  * TmModal/TmDialog overlay root, the command palette, the keyboard-shortcuts overlay, the
@@ -223,6 +257,7 @@ export function promote(root) {
         return;
     }
     show(root);
+    flushStaleBoxes(root);
     if (isNativeModalOpen()) return;
     if (entry) {
         reRaise((other, otherEntry) => other !== root && otherEntry.priority > entry.priority);

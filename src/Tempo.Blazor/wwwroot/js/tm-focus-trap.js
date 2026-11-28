@@ -430,9 +430,12 @@ export function activate(element, id, escapeHandler, closeOnEscape, restoreTarge
         // panel's first visible place() has run by then and the move lands. Stops early the
         // moment focus is inside, after deactivation, and never starts where rAF does not exist
         // (the node-test stubs).
+        // The container itself is NOT a landing (same rule as `alreadyInside` above): it only ever holds focus through the tabindex="-1"
+        // fallback of a first move that found no visible focusable yet (the command palette under load: popover promoted, input not
+        // laid out). Counting it as landed stopped the retry and left the focus on the container for good.
         const landed = () => {
             const current = document.activeElement;
-            return !!current && (current === element || element.contains(current));
+            return !!current && current !== element && element.contains(current);
         };
         if (typeof requestAnimationFrame === 'function' && !landed()) {
             const retry = (attemptsLeft) => {

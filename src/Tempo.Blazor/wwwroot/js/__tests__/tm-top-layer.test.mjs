@@ -295,3 +295,68 @@ test('a second copy of the module shares the one registry', async () => {
     }
     finally { cleanup(); }
 });
+
+// A subtree rendered while its root was outside the top layer can come out of the promote with children that have no layout box
+// (offsetParent null although the computed display is not none): the command palette lost its search header that way.
+function boxedRoot({ staleChildren, hiddenAncestor = false }) {
+    const styleWrites = [];
+    let display = '';
+    const child = (stale) => ({ offsetParent: stale ? null : {}, computed: { display: 'flex', position: 'static' } });
+    const children = [child(false), child(staleChildren)];
+    const root = {
+        isConnected: true,
+        _open: false,
+        matches: (selector) => selector === ':popover-open' ? root._open : false,
+        showPopover() { root._open = true; },
+        hidePopover() { root._open = false; },
+        querySelectorAll: () => children,
+        get offsetWidth() { styleWrites.push('reflow'); return 100; },
+        style: {
+            get display() { return display; },
+            set display(value) { display = value; styleWrites.push(`display=${value}`); },
+        },
+    };
+    const hiddenParent = { offsetParent: null };
+    for (const c of children) c.parentElement = hiddenAncestor ? hiddenParent : root;
+    return { root, children, styleWrites };
+}
+
+test('promote re-creates the boxes of a subtree that came out of the top layer without them', () => {
+    const { root, children, styleWrites } = boxedRoot({ staleChildren: true });
+    globalThis.getComputedStyle = (el) => children.find(child => child === el)?.computed;
+    try {
+        promote(root);
+    }
+    finally {
+        delete globalThis.getComputedStyle;
+    }
+
+    assert.deepEqual(styleWrites, ['display=none', 'reflow', 'display='],
+        'a synchronous display toggle with a layout read in between, restoring the previous value');
+});
+
+test('promote ignores controls inside a hidden ancestor (an inactive tab panel is not a stale box)', () => {
+    const { root, children, styleWrites } = boxedRoot({ staleChildren: true, hiddenAncestor: true });
+    globalThis.getComputedStyle = (el) => children.find(child => child === el)?.computed;
+    try {
+        promote(root);
+    }
+    finally {
+        delete globalThis.getComputedStyle;
+    }
+
+    assert.deepEqual(styleWrites, [], 'no display toggle when the parent has no box either');
+});
+
+test('promote leaves a healthy subtree alone', () => {
+    const { root, children, styleWrites } = boxedRoot({ staleChildren: false });
+    globalThis.getComputedStyle = (el) => children.find(child => child === el)?.computed;
+    try {
+        promote(root);
+    }
+    finally {
+        delete globalThis.getComputedStyle;
+    }
+
+    assert.deepEqual(styleWrites, []);
+});

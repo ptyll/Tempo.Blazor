@@ -470,6 +470,38 @@ test('initial focus retries on the next animation frames when the first move did
     }
 });
 
+test('initial focus that fell back to the scope container is retried until the real control is focusable', () => {
+    // A control that is not yet focusable when the trap activates (the command palette under load: its popover root was promoted but
+    // the input still had no offsetParent) sends the focus to the tabindex=-1 CONTAINER. The container is the last resort, not a landing:
+    // the retry frames must keep resolving the first real control and move the focus there once it exists.
+    const body = element();
+    const scope = element(body);
+    const input = element(scope);
+    let controls = [];
+    scope.querySelectorAll = () => controls;
+    const frames = [];
+    globalThis.requestAnimationFrame = (cb) => { frames.push(cb); return frames.length; };
+    try {
+        installDom(body);
+
+        activate(scope, 'scope', null, false, null, true);
+
+        assert.equal(scope.focusCalls, 1, 'nothing focusable yet: the container takes the focus');
+        assert.equal(frames.length, 1, 'the container is not a landing: a retry frame is scheduled');
+
+        controls = [input];
+        frames.shift()(0);
+
+        assert.equal(input.focusCalls, 1, 'the retry moved the focus onto the first real control');
+        assert.equal(document.activeElement, input);
+        while (frames.length) frames.shift()(0);
+        assert.equal(input.focusCalls, 1, 'landed: the last scheduled frame is a no-op');
+    }
+    finally {
+        delete globalThis.requestAnimationFrame;
+    }
+});
+
 test('the initial-focus retry stops early once focus landed', () => {
     const body = element();
     const scope = element(body);

@@ -15,6 +15,7 @@ public abstract class LocalizationTestBase : BunitContext
     private const string DocumentCanvasInteropModulePath = "./_content/Tempo.Blazor.DocumentEditor/js/document-editor-canvas/interop.mjs";
 
     private BunitJSModuleInterop? _documentCanvasModule;
+    private JSRuntimeInvocationHandler<bool>? _documentCanvasIsDirty;
     private JSRuntimeInvocationHandler<string?>? _documentCanvasGetModelJson;
     private JSRuntimeInvocationHandler<string?>? _documentCanvasExecCommand;
     private JSRuntimeInvocationHandler<string?>? _documentCanvasGetFormattingStateJson;
@@ -142,7 +143,8 @@ public abstract class LocalizationTestBase : BunitContext
         module.Setup<string?>("getOfflineStateJson", _ => true).SetResult(null);
         module.Setup<string?>("getLayoutSnapshotJson", _ => true).SetResult(null);
         module.Setup<string?>("getCollaborationStateJson", _ => true).SetResult(null);
-        module.Setup<bool>("isDirty", _ => true).SetResult(false);
+        _documentCanvasIsDirty = module.Setup<bool>("isDirty", _ => true);
+        _documentCanvasIsDirty.SetResult(false);
         module.Setup<string?>("takeLocalOperationBatchesJson", _ => true).SetResult("[]");
         _documentCanvasApplyRemoteOperationBatch = module.Setup<string?>("applyRemoteOperationBatch", _ => true);
         _documentCanvasApplyRemoteOperationBatch.SetResult("""{"success":true,"changed":true}""");
@@ -230,6 +232,17 @@ public abstract class LocalizationTestBase : BunitContext
     {
         SetupDocumentCanvasModule();
         _documentCanvasGetSelectionStateJson?.SetResult(stateJson);
+    }
+
+    /// <summary>
+    /// Sets the dirty flag the mocked canvas engine reports (default <c>false</c>). A real engine stays dirty until a
+    /// save is acknowledged; a test that exercises a save which must stay pending/fail pins <c>true</c> so the editor's
+    /// debounced state read-back cannot flip the document clean behind the test's back.
+    /// </summary>
+    protected void SetDocumentCanvasIsDirty(bool isDirty)
+    {
+        SetupDocumentCanvasModule();
+        _documentCanvasIsDirty?.SetResult(isDirty);
     }
 
     /// <summary>Sets the annotation state returned by the mocked canvas engine.</summary>

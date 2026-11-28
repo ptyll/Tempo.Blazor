@@ -141,10 +141,7 @@ public sealed class DocumentEditorCanvasCommandRegistryE2ETests : WasmTestBase
             new PageWaitForFunctionOptions { Timeout = 10_000 });
 
         // Command palette → "Table properties" opens the Properties side panel (no engine no-op).
-        await page.GetByTestId("document-canvas-hidden-input").FocusAsync();
-        await page.Keyboard.PressAsync("Control+Shift+P");
-        await Assertions.Expect(page.GetByTestId("document-command-palette")).ToBeVisibleAsync(new() { Timeout = 10_000 });
-        await page.GetByTestId("document-command-palette-search").FillAsync("tableProperties");
+        await OpenCommandPaletteAndSearchAsync(page, "tableProperties");
         var tablePropertiesItem = page.Locator("[data-testid='document-command-palette-item'][data-command='tableProperties']");
         await Assertions.Expect(tablePropertiesItem).ToBeEnabledAsync(new() { Timeout = 10_000 });
         await tablePropertiesItem.ClickAsync();
@@ -172,18 +169,14 @@ public sealed class DocumentEditorCanvasCommandRegistryE2ETests : WasmTestBase
             null,
             new PageWaitForFunctionOptions { Timeout = 10_000 });
 
-        // Selecting an object may auto-open the panel — close it so the palette command's own
-        // panel-opening behaviour is what the assertion proves.
-        var panelOpen = await page.GetByTestId("document-side-panel").IsVisibleAsync();
-        if (panelOpen)
-        {
-            await CloseInspectorAsync(page);
-        }
+        // Selecting an object opens the inspector as its image CONTEXT on a desktop (the engine's selection report reaches Blazor
+        // after the canvas attribute above flips). Wait for that STATE, then close it, so the palette command's own panel-opening
+        // behaviour is what the assertion proves - a one-shot IsVisible read right after the click raced the report.
+        await Assertions.Expect(page.Locator("[data-testid='document-side-panel'][data-context='image']"))
+            .ToBeVisibleAsync(new() { Timeout = 10_000 });
+        await CloseInspectorAsync(page);
 
-        await page.GetByTestId("document-canvas-hidden-input").FocusAsync();
-        await page.Keyboard.PressAsync("Control+Shift+P");
-        await Assertions.Expect(page.GetByTestId("document-command-palette")).ToBeVisibleAsync(new() { Timeout = 10_000 });
-        await page.GetByTestId("document-command-palette-search").FillAsync("replaceImage");
+        await OpenCommandPaletteAndSearchAsync(page, "replaceImage");
         var replaceImageItem = page.Locator("[data-testid='document-command-palette-item'][data-command='replaceImage']");
         await Assertions.Expect(replaceImageItem).ToBeEnabledAsync(new() { Timeout = 10_000 });
         await replaceImageItem.ClickAsync();
@@ -198,24 +191,53 @@ public sealed class DocumentEditorCanvasCommandRegistryE2ETests : WasmTestBase
     // ─── Helpers ─────────────────────────────────────────────────────────────
 
     /// <summary>
+    /// Opens the command palette from the canvas and types the query, waiting for the STATE each step produces: the palette is up, its
+    /// search input holds the focus (the core palette focuses it on open), and after the fill the input still holds the query - a fill into
+    /// a palette that was re-created by a late editor render would leave an empty field, which the value assertion catches.
+    /// </summary>
+    private static async Task OpenCommandPaletteAndSearchAsync(IPage page, string query)
+    {
+        await page.GetByTestId("document-canvas-hidden-input").FocusAsync();
+        await page.Keyboard.PressAsync("Control+Shift+P");
+        var search = page.GetByTestId("document-command-palette-search");
+        await Assertions.Expect(page.GetByTestId("document-command-palette")).ToBeVisibleAsync(new() { Timeout = 10_000 });
+        try
+        {
+            await Assertions.Expect(search).ToBeFocusedAsync(new() { Timeout = 10_000 });
+        }
+        catch (PlaywrightException ex)
+        {
+            var active = await page.EvaluateAsync<string>(
+                "() => { const a = document.activeElement; return a ? a.tagName + '|' + (a.getAttribute('data-testid') || '') + '|' + (a.className || '') : 'none'; }");
+            throw new PlaywrightException($"The command palette opened but its search input never took the focus; the focus is on [{active}]. {ex.Message}", ex);
+        }
+
+        await search.FillAsync(query);
+        await Assertions.Expect(search).ToHaveValueAsync(query, new() { Timeout = 10_000 });
+    }
+
+    /// <summary>
     /// Closes the inspector: a selected object shows it as the CONTEXT (desktop dock, tablet side sheet), whose X only dismisses the context and
-    /// returns to the tabs; the tabs' own X then closes the panel.
+    /// returns to the tabs; the tabs' own X then closes the panel. Every step waits for the STATE the previous click produces (the context
+    /// header gone, the tabs' X rendered) - a one-shot <c>CountAsync</c> straight after the click races the Blazor re-render and, on a loaded
+    /// machine, skipped the second X and timed out on "panel hidden".
     /// </summary>
     private static async Task CloseInspectorAsync(IPage page)
     {
-        var contextClose = page.GetByTestId("document-side-panel-context-close");
-        if (await contextClose.CountAsync() > 0)
+        var panel = page.GetByTestId("document-side-panel");
+        var contextPanel = page.Locator("[data-testid='document-side-panel'][data-context]");
+        if (await contextPanel.CountAsync() > 0)
         {
-            await contextClose.ClickAsync();
+            await page.GetByTestId("document-side-panel-context-close").ClickAsync();
+            await Assertions.Expect(contextPanel).ToHaveCountAsync(0, new() { Timeout = 10_000 });
         }
 
-        var close = page.GetByTestId("document-side-panel-close");
-        if (await close.CountAsync() > 0)
+        if (await panel.CountAsync() > 0)
         {
-            await close.ClickAsync();
+            await page.GetByTestId("document-side-panel-close").ClickAsync(new() { Timeout = 10_000 });
         }
 
-        await Assertions.Expect(page.GetByTestId("document-side-panel")).ToBeHiddenAsync(new() { Timeout = 10_000 });
+        await Assertions.Expect(panel).ToBeHiddenAsync(new() { Timeout = 10_000 });
     }
 
     /// <summary>
