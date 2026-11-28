@@ -268,6 +268,29 @@ public class TmDocumentEditorModesTests : LocalizationTestBase
     }
 
     [Fact]
+    public async Task Tablet_VersionPanel_ShowDifferences_ClosesTheSideSheet_SoTheComparisonIsSeen()
+    {
+        var provider = new InMemoryDocumentEditorProvider();
+        provider.SeedContractDocument("doc-1");
+        await provider.CreateVersionAsync(new DocumentVersionCreateRequest { DocumentId = "doc-1", Label = "Draft", Author = new DocumentEditorAuthor { Id = "a", DisplayName = "Ada" } });
+        await provider.CreateVersionAsync(new DocumentVersionCreateRequest { DocumentId = "doc-1", Label = "Final", Author = new DocumentEditorAuthor { Id = "a", DisplayName = "Ada" } });
+
+        var cut = RenderDocumentEditor(parameters =>
+            parameters.Add(p => p.DocumentId, "doc-1").Add(p => p.Provider, provider).Add(p => p.LayoutMode, TmLayoutMode.Tablet));
+        cut.WaitForAssertion(() => cut.Find("[data-testid='document-side-panel-edge-toggle']").Should().NotBeNull());
+        cut.Find("[data-testid='document-side-panel-edge-toggle']").Click();
+        cut.Find("[data-testid='document-side-panel-tab-versions']").Click();
+        cut.WaitForAssertion(() => cut.FindAll("[data-testid='document-version-item']").Should().HaveCount(2));
+
+        FindVersionButton(cut, "document-version-diff-base", "Draft").Click();
+        FindVersionButton(cut, "document-version-diff-compare", "Final").Click();
+        cut.Find("[data-testid='document-version-show-diff']").Click();
+
+        cut.WaitForAssertion(() => cut.Find("[data-testid='document-diff-viewer']").Should().NotBeNull());
+        cut.FindAll("[data-testid='document-side-panel']").Should().BeEmpty("the side sheet overlays the document and would hide the right column of the comparison it asked for");
+    }
+
+    [Fact]
     public async Task Mobile_VersionPanel_ShowDifferences_ClosesTheSheet_SoTheComparisonIsSeen()
     {
         var provider = new InMemoryDocumentEditorProvider();
@@ -378,6 +401,102 @@ public class TmDocumentEditorModesTests : LocalizationTestBase
 
         cut.WaitForAssertion(() => HasCanvasCommand("setZoom").Should().BeTrue());
         cut.FindAll("[data-testid='document-diff-mode']").Should().HaveCount(1, "a zoom changes the view, not the document");
+    }
+
+    private static Task RunPaletteCommandAsync(IRenderedComponent<TmDocumentEditor> cut, string command)
+    {
+        var method = typeof(TmDocumentEditor).GetMethod("ExecuteCommandPaletteCommandAsync", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+        return cut.InvokeAsync(() => (Task)method.Invoke(cut.Instance, [command])!);
+    }
+
+    [Fact]
+    public async Task ComparisonMode_ADataCommandOfThePalette_LeavesTheComparisonFirst_ThenRuns()
+    {
+        var cut = await OpenComparisonModeAsync();
+        HasCanvasCommand("bold").Should().BeFalse();
+
+        await RunPaletteCommandAsync(cut, "bold");
+
+        cut.WaitForAssertion(() => cut.FindAll("[data-testid='document-diff-mode']").Should().BeEmpty("the palette follows the same rule as the ribbon"));
+        cut.WaitForAssertion(() => HasCanvasCommand("bold").Should().BeTrue());
+    }
+
+    private async Task<IRenderedComponent<TmDocumentEditor>> OpenComparisonModeAsync(TmLayoutMode layout)
+    {
+        var provider = new InMemoryDocumentEditorProvider();
+        provider.SeedContractDocument("doc-1");
+        await provider.CreateVersionAsync(new DocumentVersionCreateRequest { DocumentId = "doc-1", Label = "Draft", Author = new DocumentEditorAuthor { Id = "a", DisplayName = "Ada" } });
+        await provider.CreateVersionAsync(new DocumentVersionCreateRequest { DocumentId = "doc-1", Label = "Final", Author = new DocumentEditorAuthor { Id = "a", DisplayName = "Ada" } });
+        var cut = RenderDocumentEditor(parameters =>
+            parameters.Add(p => p.DocumentId, "doc-1").Add(p => p.Provider, provider).Add(p => p.LayoutMode, layout));
+        var host = cut.FindComponent<TmDocumentCanvasEngineHost>();
+        await cut.InvokeAsync(() => host.Instance.OnCanvasEngineReady("{}"));
+        if (layout == TmLayoutMode.Mobile)
+        {
+            cut.WaitForAssertion(() => cut.Find("[data-testid='document-mobile-comments']").Should().NotBeNull());
+            cut.Find("[data-testid='document-mobile-comments']").Click();
+        }
+        else
+        {
+            cut.WaitForAssertion(() => cut.Find("[data-testid='document-side-panel-edge-toggle']").Should().NotBeNull());
+            cut.Find("[data-testid='document-side-panel-edge-toggle']").Click();
+        }
+
+        cut.WaitForAssertion(() => cut.Find("[data-testid='document-side-panel-tab-versions']").Should().NotBeNull());
+        cut.Find("[data-testid='document-side-panel-tab-versions']").Click();
+        cut.WaitForAssertion(() => cut.FindAll("[data-testid='document-version-item']").Should().HaveCount(2));
+        FindVersionButton(cut, "document-version-diff-base", "Draft").Click();
+        FindVersionButton(cut, "document-version-diff-compare", "Final").Click();
+        cut.Find("[data-testid='document-version-show-diff']").Click();
+        cut.WaitForAssertion(() => cut.Find("[data-testid='document-diff-mode']").Should().NotBeNull());
+        return cut;
+    }
+
+    [Fact]
+    public async Task Tablet_ComparisonMode_APanelCommand_ClosesTheComparison_AndOpensTheSideSheet()
+    {
+        var cut = await OpenComparisonModeAsync(TmLayoutMode.Tablet);
+
+        await RunPaletteCommandAsync(cut, "openRevisions");
+
+        cut.WaitForAssertion(() => cut.FindAll("[data-testid='document-diff-mode']").Should().BeEmpty());
+        cut.WaitForAssertion(() => cut.Find("[data-testid='document-side-panel-tab-revisions']").GetAttribute("aria-selected").Should().Be("true"));
+    }
+
+    [Fact]
+    public async Task Mobile_ComparisonMode_APanelCommand_KeepsTheComparison_AndOpensTheSheet()
+    {
+        var cut = await OpenComparisonModeAsync(TmLayoutMode.Mobile);
+
+        await RunPaletteCommandAsync(cut, "openRevisions");
+
+        cut.FindAll("[data-testid='document-diff-mode']").Should().HaveCount(1, "a phone's panels are sheets over the page, the comparison stays under the sheet");
+        cut.WaitForAssertion(() => cut.Find("[data-testid='document-side-panel-tab-revisions']").GetAttribute("aria-selected").Should().Be("true"));
+    }
+
+    [Fact]
+    public async Task ComparisonMode_CtrlAltV_LeavesTheComparison_AndShowsTheVersionsPanel()
+    {
+        var cut = await OpenComparisonModeAsync();
+
+        cut.Find("[data-testid='document-diff-mode']").KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "v", CtrlKey = true, AltKey = true });
+
+        cut.WaitForAssertion(() => cut.FindAll("[data-testid='document-diff-mode']").Should().BeEmpty("the shortcut used to be swallowed while the comparison was shown"));
+        cut.WaitForAssertion(() => cut.Find("[data-testid='document-side-panel-tab-versions']").GetAttribute("aria-selected").Should().Be("true"));
+    }
+
+    [Theory]
+    [InlineData("openRevisions", "revisions")]
+    [InlineData("openComments", "comments")]
+    [InlineData("openVersions", "versions")]
+    public async Task ComparisonMode_APanelCommandOfThePalette_LeavesTheComparison_AndShowsThePanelBesideTheDocument(string command, string tab)
+    {
+        var cut = await OpenComparisonModeAsync();
+
+        await RunPaletteCommandAsync(cut, command);
+
+        cut.WaitForAssertion(() => cut.FindAll("[data-testid='document-diff-mode']").Should().BeEmpty("the docked inspector steps aside for the comparison, so the panel needs the document back"));
+        cut.WaitForAssertion(() => cut.Find($"[data-testid='document-side-panel-tab-{tab}']").GetAttribute("aria-selected").Should().Be("true"));
     }
 
     [Fact]

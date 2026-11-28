@@ -31,6 +31,8 @@
    below the sticky ribbon. It does not set a height: a short panel (a closed Properties tab) is a short sheet. The docked panel is position: relative
    (isolation); the sheet is sticky so it follows the reader down the document. */
 .tm-document-editor[data-layout="tablet"] [data-region="inspector"] > .tm-document-side-panel {
+    /* the text-tab panel is an inline-size container (its own tab density): in the flex column of the region it must be told to fill it */
+    inline-size: 100%;
     pointer-events: auto;
     position: sticky;
     top: calc(var(--tm-document-ribbon-block-size) + var(--tm-space-2));
@@ -79,6 +81,7 @@
     }
 
     .tm-document-editor:not([data-layout-forced])[data-layout="desktop"] [data-region="inspector"] > .tm-document-side-panel {
+        inline-size: 100%;
         pointer-events: auto;
         position: sticky;
         top: calc(var(--tm-document-ribbon-block-size) + var(--tm-space-2));
@@ -124,6 +127,7 @@
 
     .tm-document-find-panel__result,
     .tm-document-review-card__action,
+    .tm-document-revision-panel__batch-action,
     .tm-document-diff__nav-button,
     .tm-document-comment-thread button,
     .tm-document-comment-composer button,
@@ -171,6 +175,44 @@
     background: var(--tm-color-surface-elevated);
     border-top: 1px solid var(--tm-color-border-subtle);
     box-shadow: var(--tm-shadow-popover);
+}
+
+/* A 320 px phone: five equal tiles leave each about 54 px, a hair under "Comments" at the core's label size - the word broke mid-letter. The tiles take
+   the bar's gap and padding back (the bar is a single row of tiles, so the gutters are the only slack); a longer word of another language keeps the core's hyphenation. */
+@container tm-doc-editor (width < 22.5rem) {
+    .tm-document-editor__action-bar .tm-mobile-action-bar__bar {
+        gap: var(--tm-space-1);
+        padding-inline: var(--tm-space-1);
+    }
+
+    .tm-document-editor__action-bar .tm-mobile-action-bar__action,
+    .tm-document-editor__action-bar .tm-mobile-action-bar__more {
+        padding-inline: 0;
+    }
+}
+
+/* A tablet's side sheet reads its tabs as text (like the desktop dock and the reference); a finger gets a finger-sized row of them. */
+@media (pointer: coarse) {
+    .tm-document-editor[data-layout="tablet"] .tm-document-side-panel[data-tab-style="text"] .tm-document-side-panel__tab {
+        min-height: var(--tm-touch-target);
+    }
+}
+
+/* ── Phone: the header kebab sheet ──────────────────────────────────────────────────────────────── */
+/* The sheet is a column of actions - the built-in export and whatever the host put in HeaderActions. Every one is a full-width row of the same touch
+   height (a host's primary button used to sit beside the export at its content width and its own height). */
+.tm-document-editor__header-kebab-body,
+.tm-document-editor__header-kebab-body .tm-document-editor__header-host-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--tm-space-2);
+}
+
+.tm-document-editor__header-kebab-body .tm-btn {
+    inline-size: 100%;
+    min-block-size: var(--tm-touch-target);
+    justify-content: center;
 }
 
 /* ── Phone: the sheets ──────────────────────────────────────────────────────────────────────────── */

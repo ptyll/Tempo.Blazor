@@ -134,14 +134,16 @@ public sealed class TmDocumentEditorSheetsTests : LocalizationTestBase
         {
             document.Revisions.Add(Revision("revision-1"));
             document.Revisions.Add(Revision("revision-2"));
+            document.Comments.Add(new DocumentComment { Id = "comment-open", Status = DocumentCommentStatus.Open });
+            document.Comments.Add(new DocumentComment { Id = "comment-open-2", Status = DocumentCommentStatus.Open });
         });
 
         cut.FindAll("[data-testid='document-review-summary']").Should().BeEmpty("the banner is not rendered on a phone");
         var badge = cut.Find("[data-action-id='comments'] .tm-mobile-action-bar__badge");
-        badge.TextContent.Should().Be("3", "two pending changes plus the contract's one open comment ride the Comments tile");
+        badge.TextContent.Should().Be("2", "the Comments tile counts what it opens - the open comment threads; the pending changes are the Revisions tab's badge");
         // The tile reads its label and then the words behind the number; the pill is decorative. Exact text, no whitespace stripping.
-        cut.Find("[data-action-id='comments']").TextContent.Trim().Should().Be("Comments, 3 items to review3");
-        cut.Find("[data-action-id='comments'] .tm-sr-only").TextContent.Should().Be(", 3 items to review");
+        cut.Find("[data-action-id='comments']").TextContent.Trim().Should().Be("Comments, 2 open comments2");
+        cut.Find("[data-action-id='comments'] .tm-sr-only").TextContent.Should().Be(", 2 open comments");
         badge.GetAttribute("aria-hidden").Should().Be("true");
     }
 
@@ -203,7 +205,7 @@ public sealed class TmDocumentEditorSheetsTests : LocalizationTestBase
 
         var registered = Tempo.Blazor.Components.DocumentEditor.Registry.DocumentEditorCommandRegistry.PhoneRestrictedCommands
             .Where(name => phoneRegistry.GetState(name) is not null).ToList();
-        registered.Should().Contain(["insertEquation", "compareDocuments"], "the registered members of the G2 set");
+        registered.Should().BeEquivalentTo(new[] { "insertEquation", "cellProperties", "compareDocuments" }, "every member of the G2 set is a registered command (no dead names)");
         foreach (var name in registered)
         {
             phoneRegistry.GetState(name)!.IsEnabled.Should().BeFalse($"{name} is tablet-and-up (decision G2)");
@@ -212,7 +214,7 @@ public sealed class TmDocumentEditorSheetsTests : LocalizationTestBase
         tabletRegistry.GetState("insertEquation")!.IsEnabled.Should().BeTrue("a tablet edits in full");
         tabletRegistry.GetState("compareDocuments")!.IsEnabled.Should().BeTrue();
         Tempo.Blazor.Components.DocumentEditor.Registry.DocumentEditorCommandRegistry.PhoneRestrictedCommands
-            .Should().Contain(["insertEquation", "pageLayout", "createStyle", "renameStyle", "deleteStyle", "cellProperties", "compareDocuments"]);
+            .Should().BeEquivalentTo(["insertEquation", "cellProperties", "compareDocuments"], "only registered commands belong in the set");
     }
 
     [Fact]
@@ -227,11 +229,22 @@ public sealed class TmDocumentEditorSheetsTests : LocalizationTestBase
     [Fact]
     public void Mobile_ActionBarBadge_CountsOnlyWhatIsStillOpen()
     {
+        var cut = RenderEditor(TmLayoutMode.Mobile, document =>
+        {
+            document.Comments.Add(new DocumentComment { Id = "open", Status = DocumentCommentStatus.Open });
+            document.Comments.Add(new DocumentComment { Id = "done", Status = DocumentCommentStatus.Resolved });
+        });
+
+        cut.Find("[data-action-id='comments'] .tm-mobile-action-bar__badge").TextContent.Should().Be("1", "a resolved thread is not counted");
+        cut.FindAll("[data-action-id='print-preview'] .tm-mobile-action-bar__badge").Should().BeEmpty("only the Comments tile carries a count");
+    }
+
+    [Fact]
+    public void Mobile_ActionBar_CommentsTileHasNoBadge_WithoutOpenComments()
+    {
         var cut = RenderEditor(TmLayoutMode.Mobile);
 
-        // The seeded contract carries one open comment and no pending change.
-        cut.Find("[data-action-id='comments'] .tm-mobile-action-bar__badge").TextContent.Should().Be("1");
-        cut.FindAll("[data-action-id='print-preview'] .tm-mobile-action-bar__badge").Should().BeEmpty("only the Comments tile carries a count");
+        cut.FindAll("[data-action-id='comments'] .tm-mobile-action-bar__badge").Should().BeEmpty("a pending change is not a comment");
     }
 
     [Fact]

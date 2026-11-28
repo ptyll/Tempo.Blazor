@@ -74,14 +74,25 @@ public sealed class DocumentEditorDialogsTmModalTests : LocalizationTestBase
     }
 
     [Fact]
+    public void VersionDialog_Footer_IsCancelThenPrimary_WithABorderedCancel()
+    {
+        var cut = Render<TmDocumentVersionDialog>(p => p.Add(x => x.RequireMajorDescription, false));
+
+        var buttons = cut.FindAll(".tm-modal-footer button").Select(b => b.GetAttribute("data-testid")).ToList();
+        buttons.Should().Equal("document-version-cancel", "document-version-create-submit");
+        cut.Find("[data-testid='document-version-cancel']").ClassList.Should().Contain("tm-btn-secondary").And.NotContain("tm-btn-ghost");
+        cut.Find("[data-testid='document-version-create-submit']").ClassList.Should().Contain("tm-btn-primary");
+    }
+
+    [Fact]
     public void CompareDialog_EmptyState_IsOneFramedCard_NotABlankBlock()
     {
         var cut = Render<TmDocumentCompareDialog>(p => p.Add(x => x.CurrentDocument, DocumentEditorDocument.Empty()));
 
         var ready = cut.Find("[data-testid='document-compare-empty']");
         ready.TagName.ToLowerInvariant().Should().Be("section");
-        ready.QuerySelector("h4")!.TextContent.Should().Be("Ready to compare");
-        ready.QuerySelector(".tm-document-compare-dialog__ready-hint svg").Should().NotBeNull();
+        ready.QuerySelector("h4")!.TextContent.Should().Be("Choose both sources to compare.", "while a source is missing the card names what is missing, not 'Ready'");
+        ready.QuerySelector(".tm-document-compare-dialog__ready-hint svg").Should().BeNull("the 'Click Compare' hint only appears when Compare can be clicked");
         cut.Find(".tm-document-compare-dialog__intro").TextContent.Should().NotBeNullOrWhiteSpace();
         cut.FindAll(".tm-document-editor__state").Should().BeEmpty("the old stray state block is gone");
     }

@@ -608,7 +608,7 @@ public partial class TmDocumentEditor
             descriptionKey: "TmDocumentEditor_PrintPreview",
             tooltipKey: "TmDocumentEditor_PrintPreview",
             category: "View",
-            icon: "printer"));
+            icon: "book-open"));
 
         _commandRegistry.Register(new FuncDocumentEditorCommandEntry(
             "printDocument", affectsData: false,

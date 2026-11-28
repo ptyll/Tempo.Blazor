@@ -50,7 +50,8 @@ public sealed class DocumentEditorRedesignPhase7E2ETests : WasmTestBase
 
         // The changed block is tinted on BOTH sides and the next-change navigation selects it.
         await page.GetByTestId("document-diff-next").ClickAsync();
-        var current = page.Locator(".tm-document-diff__row[aria-current='true']");
+        // scoped to the editor's own comparison: the demo page also shows a standalone viewer card, whose first change is preselected too
+        var current = page.Locator("[data-testid='document-diff-mode'] .tm-document-diff__row[aria-current='true']");
         await Assertions.Expect(current).ToHaveCountAsync(1);
         await Assertions.Expect(current).ToHaveAttributeAsync("data-change-kind", "changed");
         Assert.IsTrue(await current.Locator("[data-side='old']").IsVisibleAsync() && await current.Locator("[data-side='new']").IsVisibleAsync());

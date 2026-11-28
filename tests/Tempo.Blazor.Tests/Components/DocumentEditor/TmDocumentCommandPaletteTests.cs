@@ -21,6 +21,26 @@ public class TmDocumentCommandPaletteTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Open_HidesTheCommandsThatNeedAValueThePaletteCannotGive()
+    {
+        var commands = MakeCommands();
+        foreach (var name in new[] { "fontFamily", "fontSize", "textColor", "highlightColor", "lineSpacing", "spacingBefore", "spacingAfter", "paragraphAlignment", "changeCase" })
+        {
+            commands[name] = new DocumentEditorCommandState { Name = name, IsEnabled = true, DescriptionKey = "TmDocumentEditor_SpacingBefore", Category = "Paragraph" };
+        }
+
+        var cut = Render<TmDocumentCommandPalette>(parameters => parameters.Add(p => p.IsOpen, true).Add(p => p.Commands, commands));
+
+        // A row that runs with no payload does nothing: the font, the colours, the spacing and the alignment are picked in their ribbon menus.
+        foreach (var name in new[] { "fontFamily", "fontSize", "textColor", "highlightColor", "lineSpacing", "spacingBefore", "spacingAfter", "paragraphAlignment", "changeCase" })
+        {
+            cut.FindAll($"[data-command='{name}']").Should().BeEmpty($"{name} would be a row that does nothing");
+        }
+
+        cut.FindAll("[data-testid='document-command-palette-item']").Should().HaveCount(2, "the ordinary commands stay");
+    }
+
+    [Fact]
     public void Open_RendersOnlyVisibleCommands()
     {
         var cut = Render<TmDocumentCommandPalette>(parameters =>

@@ -521,13 +521,19 @@ public class TmDocumentEditorLayoutTests : LocalizationTestBase
     }
 
     [Fact]
-    public void IconTabs_KeepTheirLabelAsTheAccessibleName_AndTextTabsShowIt()
+    public void IconTabs_OnAPhoneKeepTheirLabelAsTheAccessibleName_AndTextTabsShowIt()
     {
-        var tablet = RenderEditor(TmLayoutMode.Tablet);
-        tablet.Find("[data-testid='document-side-panel-edge-toggle']").Click();
-        var tab = tablet.Find("[data-testid='document-side-panel-tab-comments']");
+        // A phone's bottom sheet is as narrow as the screen: six labels do not fit, so the tabs are icons with the label as the accessible name.
+        var phone = RenderEditor(TmLayoutMode.Mobile);
+        phone.Find("[data-testid='document-mobile-comments']").Click();
+        var tab = phone.Find("[data-testid='document-side-panel-tab-comments']");
         tab.GetAttribute("title").Should().Be("Comments", "a tooltip names the icon");
         tab.QuerySelector("span.tm-document-editor__sr-only")!.TextContent.Should().Be("Comments");
+
+        // A tablet's side sheet is 24rem wide (the container is at least 768 px): the tabs read as text like the reference, and scroll if a long label needs it.
+        var tablet = RenderEditor(TmLayoutMode.Tablet);
+        tablet.Find("[data-testid='document-side-panel-edge-toggle']").Click();
+        tablet.Find("[data-testid='document-side-panel']").GetAttribute("data-tab-style").Should().Be("text");
 
         var desktop = RenderEditor(TmLayoutMode.Desktop);
         var textTab = desktop.Find("[data-testid='document-side-panel-tab-comments']");

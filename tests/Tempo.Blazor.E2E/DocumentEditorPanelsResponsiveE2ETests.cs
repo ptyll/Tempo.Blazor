@@ -204,9 +204,25 @@ public sealed class DocumentEditorPanelsResponsiveE2ETests : WasmTestBase
             var header = await page.GetByTestId("document-header").BoundingBoxAsync();
             Assert.IsNotNull(header);
             Assert.IsTrue(header.Height <= 70, $"{name}: the header is one row ({header.Height}px)");
-            foreach (var id in new[] { "document-header-search", "document-undo", "document-redo" })
+            await AssertTouchTargetAsync(page.GetByTestId("document-header-search"), $"{name}: document-header-search");
+            if (width < 360)
             {
-                await AssertTouchTargetAsync(page.GetByTestId(id), $"{name}: {id}");
+                // A 320 px row keeps the title: Undo and Redo are in the kebab panel (phase 9, TmDocumentEditorHeader.Dense).
+                Assert.AreEqual(0, await page.GetByTestId("document-header-actions").GetByTestId("document-undo").CountAsync(), $"{name}: no undo on the row");
+                await page.GetByTestId("document-header-kebab").ClickAsync();
+                foreach (var id in new[] { "document-undo", "document-redo" })
+                {
+                    await AssertTouchTargetAsync(page.GetByTestId("document-header-kebab-panel").GetByTestId(id), $"{name}: {id} in the kebab");
+                }
+
+                await page.Keyboard.PressAsync("Escape");
+            }
+            else
+            {
+                foreach (var id in new[] { "document-undo", "document-redo" })
+                {
+                    await AssertTouchTargetAsync(page.GetByTestId(id), $"{name}: {id}");
+                }
             }
 
             var tabs = await page.Locator("[data-testid^='document-ribbon-tab-']").EvaluateAllAsync<string[]>("els => els.map(e => e.getAttribute('data-testid').replace('document-ribbon-tab-', ''))");
@@ -477,7 +493,7 @@ public sealed class DocumentEditorPanelsResponsiveE2ETests : WasmTestBase
             await AssertTouchTargetAsync(page.GetByTestId("document-find-clear"), $"{name}: find clear");
 
             // The ribbon and the header controls are finger-sized too.
-            foreach (var id in new[] { "document-header-search", "document-undo", "document-redo", "document-save" })
+            foreach (var id in new[] { "document-header-search", "document-save" }.Concat(width < 360 ? Array.Empty<string>() : new[] { "document-undo", "document-redo" }))
             {
                 await AssertTouchTargetAsync(page.GetByTestId(id).First, $"{name}: {id}");
             }

@@ -17,7 +17,7 @@
     <div class="tm-document-editor__status-bar-group tm-document-editor__status-bar-group--save" role="status" aria-live="polite">
         @if (PendingCount > 0)
         {
-            <span class="tm-document-editor__pending" data-testid="@TestId("document-pending-status")" aria-live="polite">
+            <span class="tm-document-editor__pending" data-testid="@TestId("document-pending-status")">
                 @if (!string.IsNullOrWhiteSpace(PendingMessage))
                 {
                     @PendingMessage

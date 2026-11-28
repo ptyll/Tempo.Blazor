@@ -247,11 +247,12 @@
         ? (Compact && !_viewModeExplicit ? DiffViewMode.Unified : ViewMode)
         : _sideBySideAlias.Value ? DiffViewMode.SideBySide : DiffViewMode.Unified;
 
+    // Text only: three equal shares of a 320 px column cannot hold an icon AND "Differences" / "Différences" without clipping the word.
     private IReadOnlyList<SegmentedOption<DiffSegment>> SegmentOptions =>
     [
-        new() { Value = DiffSegment.Older, Label = Loc["TmDocumentEditor_DiffSegmentOlder"], Icon = "history" },
-        new() { Value = DiffSegment.Newer, Label = Loc["TmDocumentEditor_DiffSegmentNewer"], Icon = "file-text" },
-        new() { Value = DiffSegment.Differences, Label = Loc["TmDocumentEditor_DiffSegmentDiff"], Icon = "file-diff" },
+        new() { Value = DiffSegment.Older, Label = Loc["TmDocumentEditor_DiffSegmentOlder"] },
+        new() { Value = DiffSegment.Newer, Label = Loc["TmDocumentEditor_DiffSegmentNewer"] },
+        new() { Value = DiffSegment.Differences, Label = Loc["TmDocumentEditor_DiffSegmentDiff"] },
     ];
 
     // A phone's Older / Newer segments show the rows that exist on that side (an added block has no older text, a removed one no newer text).
@@ -409,6 +410,9 @@
         }
 
         _degraded = result?.TextDiff.IsDegraded == true || result?.Changes.Any(c => c.TextDiff.IsDegraded) == true;
+        // The first change is the current one from the start (marked, counted "1 / N", Next goes to the second) - not focused: the reader's focus stays
+        // where it was. An initial block of the host wins below.
+        _current = _changeCount > 0 ? 0 : -1;
         ApplyInitialBlock();
     }
 

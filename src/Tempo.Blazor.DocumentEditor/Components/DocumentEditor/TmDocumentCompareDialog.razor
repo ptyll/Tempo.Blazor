@@ -71,11 +71,20 @@
         {
             @* The empty result is one card with a title and a framed hint - no stray blank block between the sources and the footer. *@
             <section class="tm-document-compare-dialog__ready" aria-labelledby="@_readyTitleId" data-testid="@TestId("document-compare-empty")">
-                <h4 id="@_readyTitleId" class="tm-document-compare-dialog__ready-title">@Loc["TmDocumentEditor_CompareReadyTitle"]</h4>
-                <div class="tm-document-compare-dialog__ready-hint">
-                    <TmIcon Name="git-compare" Size="IconSize.Lg" />
-                    <span>@Loc["TmDocumentEditor_CompareReadyHint"]</span>
-                </div>
+                @* Compare is disabled until both sources name something: the card says WHAT is missing (and is the button's description) instead of
+                   announcing "Ready" over a disabled button. *@
+                @if (CanCompare)
+                {
+                    <h4 id="@_readyTitleId" class="tm-document-compare-dialog__ready-title">@Loc["TmDocumentEditor_CompareReadyTitle"]</h4>
+                    <div class="tm-document-compare-dialog__ready-hint">
+                        <TmIcon Name="git-compare" Size="IconSize.Lg" />
+                        <span>@Loc["TmDocumentEditor_CompareReadyHint"]</span>
+                    </div>
+                }
+                else
+                {
+                    <h4 id="@_readyTitleId" class="tm-document-compare-dialog__ready-title">@Loc["TmDocumentEditor_CompareRunHint"]</h4>
+                }
             </section>
         }
     </ChildContent>
@@ -84,7 +93,7 @@
         <button type="button"
                 class="tm-btn tm-btn-sm tm-btn-primary"
                 disabled="@(_isComparing || !CanCompare)"
-                title="@(CanCompare ? null : Loc["TmDocumentEditor_CompareRunHint"])"
+                aria-describedby="@(CanCompare || _result is not null || _isComparing ? null : _readyTitleId)"
                 @onclick="RunCompareAsync"
                 data-testid="@TestId("document-compare-run")">
             @Loc["TmDocumentEditor_CompareRun"]

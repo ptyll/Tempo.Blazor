@@ -88,6 +88,7 @@
         {
             <TmDocumentEditorHeader Title="@HeaderTitle"
                                     Compact="@IsMobileLayout"
+                                    Dense="@IsDensePhoneHeader"
                                     Subtitle="@Subtitle"
                                     ModeLabel="@HeaderModeLabel"
                                     ReadOnly="@EffectiveReadOnly"
@@ -1356,7 +1357,7 @@
     private RenderFragment InspectorPanel => @<text>
     <TmDocumentSidePanel @ref="_sidePanel"
                          IsOpen="@_sidePanelOpen"
-                         TextTabs="@IsDesktopLayout"
+                         TextTabs="@(!IsMobileLayout)"
                          ActiveTab="@ActiveSidePanelTab"
                          ActiveTabChanged="SetSidePanelTabAsync"
                          ShowComments="@IsFeatureEnabled(DocumentEditorFeatureNames.Comments)"

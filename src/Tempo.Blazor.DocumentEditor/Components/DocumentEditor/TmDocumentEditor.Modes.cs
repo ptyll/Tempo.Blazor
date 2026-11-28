@@ -44,6 +44,17 @@ public partial class TmDocumentEditor
         }
     }
 
+    // The comparison owns the whole doc region on a desktop and a tablet (the docked inspector steps aside, like the reference), so a panel asked for
+    // from the palette, the ribbon or Ctrl+Alt+V would open into nothing: the comparison closes first (the "Back to document" of the mode) and the
+    // panel shows beside the document. A phone's panels are sheets over the page, so the comparison stays under the sheet.
+    private async Task LeaveComparisonForPanelAsync()
+    {
+        if (DiffModeActive && !IsMobileLayout)
+        {
+            await CloseDiffModeAsync();
+        }
+    }
+
     // A registry command knows whether it affects the data; a command without a registry state falls back to the view-only list.
     private async Task LeaveComparisonForRegistryCommandAsync(string command)
     {
@@ -155,8 +166,9 @@ public partial class TmDocumentEditor
             null,
             DocumentVersionText.Title(Loc, request.Base),
             DocumentVersionText.Title(Loc, request.Compare));
-        // A phone's sheet covers the whole page: the comparison it just asked for is shown only once the sheet has made room for it.
-        if (IsMobileLayout && _sidePanelOpen)
+        // A phone's sheet covers the whole page and a tablet's side sheet overlays the right half of it: the comparison it just asked for is shown only once
+        // the sheet has made room for it (a desktop's docked inspector steps aside by itself).
+        if (IsSheetLayout && _sidePanelOpen)
         {
             CloseSidePanel();
         }

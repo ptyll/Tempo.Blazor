@@ -176,10 +176,7 @@ public sealed class TmDocumentDiffViewerTests : LocalizationTestBase
         var cut = Render<TmDocumentDiffViewer>(parameters =>
             parameters.Add(p => p.OldDocument, oldDocument).Add(p => p.NewDocument, newDocument));
 
-        cut.FindAll("[aria-current='true']").Should().BeEmpty();
-        cut.Find("[data-testid='document-diff-position']").TextContent.Should().Contain("3");
-
-        cut.Find("[data-testid='document-diff-next']").Click();
+        // The first change is preselected: marked and counted "1 / 3" before anything is pressed.
         cut.Find("[aria-current='true']").GetAttribute("data-change-kind").Should().Be("removed");
         cut.Find("[data-testid='document-diff-position']").TextContent.Should().Contain("1").And.Contain("3");
 
@@ -190,6 +187,18 @@ public sealed class TmDocumentDiffViewerTests : LocalizationTestBase
         cut.Find("[data-testid='document-diff-previous']").Click();
         cut.Find("[aria-current='true']").GetAttribute("data-change-kind").Should().Be("removed");
         cut.FindAll("[aria-current='true']").Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void SingleChange_IsPreselected_AndNextKeepsExactlyOneCurrentRow()
+    {
+        var cut = Render<TmDocumentDiffViewer>(parameters =>
+            parameters.Add(p => p.OldDocument, CreateDocument(("b1", "Same"), ("b2", "Old text")))
+                      .Add(p => p.NewDocument, CreateDocument(("b1", "Same"), ("b2", "New text"))));
+
+        cut.FindAll(".tm-document-diff__row[aria-current='true']").Should().HaveCount(1);
+        cut.Find("[data-testid='document-diff-next']").Click();
+        cut.FindAll(".tm-document-diff__row[aria-current='true']").Should().HaveCount(1, "the only change stays the current one");
     }
 
     [Fact]

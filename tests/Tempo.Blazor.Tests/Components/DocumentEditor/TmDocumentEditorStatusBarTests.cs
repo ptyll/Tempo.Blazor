@@ -30,6 +30,18 @@ public class TmDocumentEditorStatusBarTests : LocalizationTestBase
     }
 
     [Fact]
+    public void StatusBar_PendingSpan_IsInsideTheOneLiveRegion_NotALiveRegionOfItsOwn()
+    {
+        var cut = Render<TmDocumentEditorStatusBar>(p =>
+            p.Add(x => x.PendingCount, 1)
+             .Add(x => x.PendingMessage, "Saving..."));
+
+        var pending = cut.Find("[data-testid='document-pending-status']");
+        pending.HasAttribute("aria-live").Should().BeFalse("a nested live region is announced twice by some readers");
+        pending.ParentElement!.GetAttribute("role").Should().Be("status");
+    }
+
+    [Fact]
     public void StatusBar_PendingMessage_ShowsMessageText()
     {
         var cut = Render<TmDocumentEditorStatusBar>(p =>

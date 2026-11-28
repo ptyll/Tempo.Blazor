@@ -6621,7 +6621,7 @@
   "TmDocumentEditor_CompareVersionPlaceholder": "Vyberte verzi",
   "TmDocumentEditor_CompareBaseVersionAria": "Verze původního dokumentu",
   "TmDocumentEditor_CompareTargetVersionAria": "Verze nového dokumentu",
-  "TmDocumentEditor_CompareDocumentIdNone": "Zatím bez ID dokumentu",
+  "TmDocumentEditor_CompareDocumentIdNone": "Dokument není vybrán",
   "TmDocumentEditor_CompareUploadNone": "Zatím nevybrán žádný soubor",
   "TmDocumentEditor_CompareResultTitle": "Výsledek",
   "TmDocumentEditor_CompareOpenComparison": "Otevřít porovnání",

@@ -1067,7 +1067,7 @@
           "name": "PhoneRestrictedCommands",
           "kind": "Property",
           "type": "static IReadOnlySet<string>",
-          "description": "The commands of decision G2 that are tablet-and-up: page layout, equations, creating / renaming / deleting a style, the cell properties and comparing against sources. On a phone layout (IsPhoneLayout) they are disabled whatever the rest of the context says, so the command palette and the keyboard cannot reach what the phone chrome hides."
+          "description": "The REGISTERED commands of decision G2 that are tablet-and-up: equations, the cell properties and comparing against sources. On a phone layout (IsPhoneLayout) they are disabled whatever the rest of the context says, so the command palette and the keyboard cannot reach what the phone chrome hides. The set only bites on registered commands: the other G2 members (page layout, creating / renaming / deleting a style) are not registry commands - they are toolbar buttons and dialogs the phone chrome simply does not render."
         },
         {
           "name": "Version",
@@ -5828,6 +5828,12 @@
           "type": "bool",
           "isRequired": false,
           "description": "The phone header (decision G2): the title, the save state as an icon, Search, Undo, Redo and a kebab. Save, Print preview and the export move to the action bar and the kebab; the host's HeaderActions render inside the kebab panel. Defaults to false (the full header)."
+        },
+        {
+          "name": "Dense",
+          "type": "bool",
+          "isRequired": false,
+          "description": "The densest phone row (a container narrower than 340 px, i.e. a 320 px phone: the editor sits a gutter inside the viewport): with Compact, Undo and Redo leave the row for the kebab panel so the title keeps its room. The editor sets it from its measured container width; defaults to false."
         },
         {
           "name": "HeaderActions",

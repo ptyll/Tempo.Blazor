@@ -835,16 +835,19 @@
     white-space: nowrap;
 }
 
-/* The sentence is the part that gives way: it ellipsizes first, and below a tablet it leaves the row (it stays in the accessibility tree). */
+/* The sentence ("3 pending changes and 1 open comment") says what the two buttons beside it already say in their labels: it is the strip's
+   accessible description, not a second visible copy - so it is visually hidden at every width (it stays in the accessibility tree). */
 .tm-document-review-summary__text span {
-    min-width: 0;
-    padding-inline-start: var(--tm-space-3);
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
     overflow: hidden;
-    color: var(--tm-color-text-secondary);
-    font-size: var(--tm-font-size-sm);
-    text-overflow: ellipsis;
+    border: 0;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
     white-space: nowrap;
-    border-inline-start: 1px solid var(--tm-color-border);
 }
 
 .tm-document-review-summary__actions {
@@ -856,21 +859,6 @@
 
 .tm-document-review-summary__actions .tm-btn {
     gap: var(--tm-space-1);
-}
-
-@container tm-doc-editor (width < 1024px) {
-    .tm-document-review-summary__text span {
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        margin: -1px;
-        padding: 0;
-        overflow: hidden;
-        border: 0;
-        clip: rect(0 0 0 0);
-        clip-path: inset(50%);
-        white-space: nowrap;
-    }
 }
 
 @container tm-doc-editor (width < 640px) {
@@ -1123,6 +1111,26 @@
     align-items: center;
     justify-content: flex-end;
     gap: var(--tm-space-2) var(--tm-space-3);
+}
+
+/* The phone's Older | Newer | Differences switch owns the whole row: left to its content width the third label ("Differences") truncated at 390. */
+.tm-document-diff__segments {
+    flex: 1 1 100%;
+    min-width: 0;
+}
+
+/* Three equal shares of a 320 px column are ~93 px: the label at the control size plus the segment's gutters clipped "Differences" to "Differen...". The
+   labels take the small size and the thin gutter, so the longest word fits whole. */
+.tm-document-diff__segments .tm-segmented .tm-segmented__option {
+    padding-inline: var(--tm-space-1);
+    font-size: var(--tm-font-size-sm);
+}
+
+/* A 320 px column: "Differences" in the small size is still 92 px (semibold) against an 85 px share - the extra-small size is 72 px. */
+@container tm-doc-diff (width < 20rem) {
+    .tm-document-diff__segments .tm-segmented .tm-segmented__option {
+        font-size: var(--tm-font-size-xs);
+    }
 }
 
 .tm-document-diff__view-mode {

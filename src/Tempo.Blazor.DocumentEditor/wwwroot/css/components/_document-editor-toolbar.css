@@ -653,8 +653,11 @@
     min-height: var(--tm-touch-target);
 }
 
+/* A 320 px phone has 270 px for the row at an 8 px gutter; B I U + alignment + More needs about 280 (the fixed gaps of the dividers and empty groups
+   count too), so the core toolbar - which drops by count - kept B I U and left an empty strip. A 2 px gutter (the controls carry their own 44 px
+   touch box) gives the row the 12 px back. */
 :where(.tm-document-editor[data-layout="mobile"]) .tm-document-editor__ribbon-toolbar.tm-toolbar {
-    padding-inline: max(var(--tm-space-2), env(safe-area-inset-left)) max(var(--tm-space-2), env(safe-area-inset-right));
+    padding-inline: max(calc(var(--tm-space-1) / 2), env(safe-area-inset-left)) max(calc(var(--tm-space-1) / 2), env(safe-area-inset-right));
 }
 
 /* The phone's own command row is a later phase. Until then the pinned popup items and the colour pickers cannot collapse, so the narrowest

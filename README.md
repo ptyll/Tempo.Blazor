@@ -46,6 +46,10 @@ sheet, the overlay top layer, the editor shell, toolbar overflow, the shared poi
 drag — are mapped in [docs/redesign-foundation.md](docs/redesign-foundation.md). Each
 contract has its own document; that page links them.
 
+## Document Editor Layout
+
+`TmDocumentEditor` lays itself out from its own container (`LayoutMode`, default `Auto`: desktop from 1024 px, tablet from 640 px, phone below), with a header (`HeaderStart` / `HeaderActions` slots), a one-row ribbon with priority overflow, a docked inspector (a side sheet on a tablet, bottom sheets on a phone), print preview and comparison modes and a status bar. Link the package stylesheet (`_content/Tempo.Blazor.DocumentEditor/css/tempo-blazor-document-editor.css`) and, for the phone action bar and the sheets, the core `tempo-blazor.css`. See [docs/document-editor-developer-guide.md](docs/document-editor-developer-guide.md) and [docs/document-editor-tablet-mobile.md](docs/document-editor-tablet-mobile.md).
+
 ## Document Editor Cutover
 
 `TmDocumentEditor` defaults to the canvas engine after the phase 25 cutover. Rollback and migration notes are in [docs/document-editor-canvas-cutover.md](docs/document-editor-canvas-cutover.md).

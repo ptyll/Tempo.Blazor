@@ -529,6 +529,7 @@
                                           Tooltip="@(GetEditingCommandTitle(Loc["TmDocumentEditor_Link"]))"
                                           OnClick='() => ExecuteToolbarCommandAsync("link", ToggleLinkDialogAsync)'
                                           Command="link"
+                                          Priority="@PhonePrimary("link")"
                                           TestId="@TestId("document-link")"
                                           aria-haspopup="dialog"
                                           aria-controls="@(_linkDialogOpen ? FloatingPanelId("link") : null)"
@@ -541,6 +542,7 @@
                                       Tooltip="@(GetCommandTitle(Loc["TmDocumentEditor_AddComment"], CanComment, Loc["TmDocumentEditor_CommandDisabledUnavailable"]))"
                                       OnClick='() => ExecuteToolbarCommandAsync("addComment", OnAddComment, CanComment)'
                                       Command="addComment"
+                                      Priority="@PhonePrimary("addComment")"
                                       TestId="@TestId("document-add-comment")" />
                 @if (IsFeatureEnabled(DocumentEditorFeatureNames.Image))
                 {
@@ -1022,7 +1024,7 @@
                                       Command="fullscreen" />
                 @if (ShowPrintPreviewTools)
                 {
-                    <DocumentRibbonButton Icon="printer"
+                    <DocumentRibbonButton Icon="book-open"
                                           Text="@Loc["TmDocumentEditor_PrintPreview"]"
                                           Disabled="@(!IsCommandEnabled("openPrintPreview", fallback: true))"
                                           Tooltip="@Loc["TmDocumentEditor_PrintPreview"]"
@@ -1596,22 +1598,23 @@
 
     // ─── declared priority (the registry is the single source) ──────────────
 
-    // The registry's rank - except on a phone, where the row has room for few commands: alignment, the lists and the image stay on it (the style and font
-    // selects, which are wide, leave for "More" first). The rank published as data-priority stays the registry's.
-    private static readonly HashSet<string> PhonePrimaryCommands = new(StringComparer.Ordinal) { "alignment", "bulletList", "insertImage" };
+    // The registry's rank - except on a phone, where the row has room for few commands. The core toolbar drops by COUNT: lowest rank first, among equals
+    // the LATER control first, and it never backfills a gap with a smaller later control. The phone's Home row is B I U (the registry's Primary) + the
+    // alignment menu and the bulleted list: every OTHER command that goes through here is Secondary on a phone, so it leaves first (the link, the comment,
+    // the table and the image would otherwise sit after the list and take its place). A 390 px row is B I U + alignment + the list, a 320 px row
+    // B I U + alignment - the phone row's gutter is 2 px for exactly that (see _document-editor-toolbar.css). The rank published as data-priority stays
+    // the registry's.
+    private static readonly HashSet<string> PhoneKeptCommands = new(StringComparer.Ordinal) { "alignment", "bulletList" };
 
     private ToolbarButtonPriority CorePriority(string command)
-        => PhoneLayout && PhonePrimaryCommands.Contains(command)
-            ? ToolbarButtonPriority.Primary
+        => PhoneLayout
+            ? (PhoneKeptCommands.Contains(command) ? ToolbarButtonPriority.Primary : ToolbarButtonPriority.Secondary)
             : (DocumentEditorBuiltInToolbar.FindItemByCommandName(command)?.Priority ?? ToolbarItemPriority.Secondary).ToCorePriority();
 
-    // Strikethrough is the least used of the four text styles: on a phone it gives its place to the alignment and the list.
     private ToolbarItemPriority? PhonePrimary(string command)
         => !PhoneLayout
             ? null
-            : PhonePrimaryCommands.Contains(command)
-                ? ToolbarItemPriority.Primary
-                : command == "strikethrough" ? ToolbarItemPriority.Secondary : null;
+            : PhoneKeptCommands.Contains(command) ? ToolbarItemPriority.Primary : ToolbarItemPriority.Secondary;
 
     private static string PriorityData(string command)
         => (DocumentEditorBuiltInToolbar.FindItemByCommandName(command)?.Priority ?? ToolbarItemPriority.Secondary).ToDataValue();

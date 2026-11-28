@@ -11,7 +11,7 @@ source of truth: the markup, the CSS and the tests all key off it, never off a v
 | Inspector | docked, open by default | ONE side sheet over the document, closed by default, opened by the edge toggle | sheets of the floating root (core bottom sheets), closed by default |
 | Find | the inspector's context | the same side sheet's context (replaces the tabs) | its own full-height sheet |
 | Image / table | the inspector's context | the same sheet's context | a short bottom sheet on request ("Properties") |
-| Outline / Pages | the left column | tabs of the side sheet | tabs of the inspector sheet / "More" |
+| Outline / Pages | the left column | tabs of the side sheet (text tabs, like the dock) | icon tabs of the inspector sheet / "More" |
 | Header | full | full, labels dropped | one row: title, state icon, Search, Undo, Redo, kebab |
 | Ribbon | all tabs, priority overflow | all tabs | Home, Insert, Review, View; one tools row; "More" is a sheet |
 | Chrome at the bottom | status bar | status bar | status bar + the action bar |
@@ -43,6 +43,21 @@ full height (`data-floating-kind="find"` / `"inspector"`), the object sheet keep
 The core `TmMobileActionBar` (`Placement=StickyContainer`, so it sticks inside the editor, never against the viewport): Comments (with the review count as
 a badge - the pending revisions plus the open comments; the summary banner is not rendered on a phone), Print preview, the primary Save and "More" (Find,
 Revisions, Versions, Outline, Pages, Properties; Print to PDF is behind the header kebab only). The host's `HeaderActions` live behind the header kebab.
+
+## The phone Home row
+
+The row has room for B I U and a few 44 px controls. The core toolbar drops by count (lowest rank first, among equals the LATER control first) and never
+backfills a gap, so the phone ranks are: B I U, the alignment menu and the bulleted list `Primary`; EVERY other command that goes through `CorePriority` /
+`PhonePrimary` (link, comment, table, image, strikethrough, colours, the wide style / font selects) is `Secondary` on a phone and leaves first. The row's gutter
+is 2 px (8 px left a 320 px row a few pixels short of the alignment menu and an empty strip). Result: a 320 px row is B I U + alignment, a 390 px row B I U +
+alignment + the list. The published `data-priority` stays the registry's rank. The action bar's tiles take the gutters back below a 22.5 rem container so
+"Comments" is never broken mid-word.
+
+## Registry scope
+
+`DocumentEditorCommandRegistry.PhoneRestrictedCommands` is `insertEquation`, `cellProperties` and `compareDocuments` - the REGISTERED commands of the
+tablet-and-up set; they are disabled on a phone layout whatever the context says. Page layout and the style management are not registry commands: the
+phone ribbon does not render them.
 
 ## Not on a phone, on purpose
 

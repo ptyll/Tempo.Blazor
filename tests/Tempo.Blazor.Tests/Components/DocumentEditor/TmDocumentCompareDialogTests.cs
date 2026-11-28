@@ -166,12 +166,18 @@ public class TmDocumentCompareDialogTests : LocalizationTestBase
 
         var run = cut.Find("[data-testid='document-compare-run']");
         run.HasAttribute("disabled").Should().BeTrue("the default target is an empty document id");
-        run.GetAttribute("title").Should().Be("Choose both sources to compare.");
+        run.HasAttribute("title").Should().BeFalse("a disabled button's title is never shown to a keyboard or touch user");
+        var describedBy = run.GetAttribute("aria-describedby");
+        describedBy.Should().NotBeNullOrEmpty();
+        cut.Find($"[id='{describedBy}']").TextContent.Should().Be("Choose both sources to compare.", "the reason is the empty state's own text");
+        cut.Find("[data-testid='document-compare-target-label']").TextContent.Should().Be("No document selected");
 
         cut.Find("[data-testid='document-compare-target-change']").Click();
         cut.Find("[data-testid='document-compare-target-document-id']").Input("doc-x");
 
         cut.Find("[data-testid='document-compare-run']").HasAttribute("disabled").Should().BeFalse();
+        cut.Find("[data-testid='document-compare-run']").HasAttribute("aria-describedby").Should().BeFalse("nothing to explain once Compare is enabled");
+        cut.Find("[data-testid='document-compare-empty'] h4").TextContent.Should().Be("Ready to compare");
         cut.Find("[data-testid='document-compare-target-document-id']").Input("   ");
         cut.Find("[data-testid='document-compare-run']").HasAttribute("disabled").Should().BeTrue("a blank id names nothing");
     }

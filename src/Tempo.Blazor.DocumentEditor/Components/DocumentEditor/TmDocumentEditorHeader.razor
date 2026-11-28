@@ -75,6 +75,8 @@
                 data-testid="@TestId("document-header-search")">
             <TmIcon Name="search" Size="IconSize.Sm" />
         </button>
+        @if (!(Compact && Dense))
+        {
         <span class="tm-document-editor__header-divider" aria-hidden="true"></span>
         <button type="button"
                 class="tm-btn tm-btn-sm tm-btn-ghost tm-btn-icon tm-document-editor__header-button"
@@ -98,6 +100,7 @@
                 data-testid="@TestId("document-redo")">
             <TmIcon Name="redo-2" Size="IconSize.Sm" />
         </button>
+        }
         @if (!Compact)
         {
         @if (ShowPrintPreview)
@@ -111,7 +114,7 @@
                         @onclick='() => ExecuteAsync("openPrintPreview", OnOpenPrintPreview, true)'
                         data-command="openPrintPreview"
                         data-testid="@TestId("document-header-print-preview")">
-                    <TmIcon Name="printer" Size="IconSize.Sm" />
+                    <TmIcon Name="book-open" Size="IconSize.Sm" />
                     <span class="tm-document-editor__header-button-label">@Loc["TmDocumentEditor_PrintPreview"]</span>
                 </button>
             }
@@ -147,7 +150,7 @@
                 <div class="tm-document-editor__header-host-actions" data-testid="@TestId("document-header-host-actions")">@HeaderActions</div>
             }
         }
-        else if (HeaderActions is not null || CanExportPdf)
+        else if (HeaderActions is not null || CanExportPdf || Dense)
         {
             @* A phone (decision G2): Search, Undo and Redo stay in the header; Save, Comments, Print preview and "More" are the action bar's, and the host's
                own actions (Share ...) live behind the kebab. *@
@@ -168,7 +171,7 @@
     </div>
 </header>
 
-@if (Compact && _kebabOpen && (HeaderActions is not null || CanExportPdf))
+@if (Compact && _kebabOpen && (HeaderActions is not null || CanExportPdf || Dense))
 {
     @* The panel of the kebab: the host's header actions and the built-in exports, in the core overlay panel (a bottom sheet on a phone layout). *@
     <TmOverlayPanel Id="@_kebabPanelId"
@@ -185,6 +188,29 @@
                     Class="tm-document-editor__header-kebab-panel"
                     data-testid="@TestId("document-header-kebab-panel")">
         <div class="tm-document-editor__header-kebab-body">
+            @if (Dense)
+            {
+                <button type="button"
+                        class="tm-btn tm-btn-secondary tm-document-editor__header-kebab-item"
+                        disabled="@(!CanExecuteUndo)"
+                        aria-keyshortcuts="Control+Z"
+                        @onclick='() => RunFromKebabAsync("undo", OnUndo, !ReadOnly && CanUndo)'
+                        data-command="undo"
+                        data-testid="@TestId("document-undo")">
+                    <TmIcon Name="undo-2" Size="IconSize.Sm" />
+                    <span>@UndoTitle</span>
+                </button>
+                <button type="button"
+                        class="tm-btn tm-btn-secondary tm-document-editor__header-kebab-item"
+                        disabled="@(!CanExecuteRedo)"
+                        aria-keyshortcuts="Control+Y Control+Shift+Z"
+                        @onclick='() => RunFromKebabAsync("redo", OnRedo, !ReadOnly && CanRedo)'
+                        data-command="redo"
+                        data-testid="@TestId("document-redo")">
+                    <TmIcon Name="redo-2" Size="IconSize.Sm" />
+                    <span>@RedoTitle</span>
+                </button>
+            }
             @if (CanExportPdf)
             {
                 <button type="button"
@@ -212,6 +238,12 @@
     /// <c>false</c> (the full header).
     /// </summary>
     [Parameter] public bool Compact { get; set; }
+
+    /// <summary>
+    /// The densest phone row (a container narrower than 340 px, i.e. a 320 px phone: the editor sits a gutter inside the viewport): with <see cref="Compact"/>, Undo and Redo leave the row for the kebab panel so the
+    /// title keeps its room. The editor sets it from its measured container width; defaults to <c>false</c>.
+    /// </summary>
+    [Parameter] public bool Dense { get; set; }
 
     /// <summary>Document title shown in the header (the editor passes the host's <c>Title</c> or the document metadata title).</summary>
     [Parameter] public string Title { get; set; } = string.Empty;

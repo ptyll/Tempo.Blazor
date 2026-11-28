@@ -8,6 +8,20 @@ namespace Tempo.Blazor.Tests.Components.DocumentEditor;
 
 public class DocumentEditorToolbarRegistryTests
 {
+    [Fact]
+    public void ViewTab_NeverGivesTwoCommandsTheSameIcon()
+    {
+        // Print preview and Print used to share the printer; two identical glyphs side by side on the View tab cannot be told apart by an icon-only reader.
+        var duplicates = DocumentEditorBuiltInToolbar.DefaultItems.Concat(DocumentEditorBuiltInToolbar.RibbonLocalCommands)
+            .Where(item => item.Tab == DocumentToolbarTab.View && !string.IsNullOrEmpty(item.Icon))
+            .GroupBy(item => item.Icon!)
+            .Where(group => group.Count() > 1)
+            .Select(group => $"{group.Key}: {string.Join(", ", group.Select(i => i.Id))}")
+            .ToList();
+
+        duplicates.Should().BeEmpty();
+    }
+
     // ─── 3.1 DocumentToolbarItem ──────────────────────────────────────────────
 
     [Fact]

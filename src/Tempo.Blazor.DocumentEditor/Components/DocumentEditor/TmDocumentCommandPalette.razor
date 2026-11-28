@@ -55,9 +55,16 @@
     /// <summary>Raised when a command is selected. A disabled command is never raised.</summary>
     [Parameter] public EventCallback<string> OnExecuteCommand { get; set; }
 
+    // Commands that only do something with a value picked in their ribbon menu (a font, a colour, a spacing, an alignment, a case): the palette runs a
+    // command without a payload, so such a row would do nothing. They stay registry commands (the ribbon and hosts use them), just not rows here.
+    private static readonly HashSet<string> PayloadOnlyCommands = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "fontFamily", "fontSize", "textColor", "highlightColor", "lineSpacing", "spacingBefore", "spacingAfter", "paragraphAlignment", "changeCase",
+    };
+
     private IReadOnlyList<DocumentEditorCommandState> VisibleCommands =>
         (Commands?.Values ?? Array.Empty<DocumentEditorCommandState>())
-        .Where(command => command.IsVisible)
+        .Where(command => command.IsVisible && !PayloadOnlyCommands.Contains(command.Name))
         .ToArray();
 
     /// <inheritdoc />

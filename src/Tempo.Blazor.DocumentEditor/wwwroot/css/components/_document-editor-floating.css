@@ -833,35 +833,34 @@
 
 /* ── Command palette (the core TmCommandPalette, modifier only) ──────────────────
    The list, the groups, the shortcut keys, the disabled rows and the top-layer promotion are the CORE palette's: nothing here
-   restyles .tm-command-palette-*. The modifier only makes the panel fullscreen on a phone (the search input keeps the shared focus ring). */
-@media (max-width: 40rem) {
-    .tm-document-command-palette.tm-command-palette-backdrop {
-        padding-block-start: 0;
-        align-items: stretch;
-    }
+   restyles .tm-command-palette-*. The modifier only makes the panel fullscreen on a phone LAYOUT (the search input keeps the shared focus ring) - keyed on
+   the editor's data-layout like every other phone rule, so a LayoutMode pinned to Mobile on a wide screen is fullscreen too. */
+.tm-document-editor[data-layout="mobile"] .tm-document-command-palette.tm-command-palette-backdrop {
+    padding-block-start: 0;
+    align-items: stretch;
+}
 
-    .tm-document-command-palette .tm-command-palette {
-        inline-size: 100vw;
-        block-size: 100dvh;
-        max-inline-size: none;
-        max-block-size: 100dvh;
-        border-radius: 0;
-        border-inline: 0;
-        display: flex;
-        flex-direction: column;
-    }
+.tm-document-editor[data-layout="mobile"] .tm-document-command-palette .tm-command-palette {
+    inline-size: 100vw;
+    block-size: 100dvh;
+    max-inline-size: none;
+    max-block-size: 100dvh;
+    border-radius: 0;
+    border-inline: 0;
+    display: flex;
+    flex-direction: column;
+}
 
-    /* The list is the one flexible row of the column: min-block-size 0 lets it shrink and scroll instead of pushing the search row out. */
-    .tm-document-command-palette .tm-command-palette-list {
-        max-block-size: none;
-        min-block-size: 0;
-        flex: 1 1 auto;
-        overflow-y: auto;
-    }
+/* The list is the one flexible row of the column: min-block-size 0 lets it shrink and scroll instead of pushing the search row out. */
+.tm-document-editor[data-layout="mobile"] .tm-document-command-palette .tm-command-palette-list {
+    max-block-size: none;
+    min-block-size: 0;
+    flex: 1 1 auto;
+    overflow-y: auto;
+}
 
-    .tm-document-command-palette .tm-command-palette-header {
-        flex: 0 0 auto;
-    }
+.tm-document-editor[data-layout="mobile"] .tm-document-command-palette .tm-command-palette-header {
+    flex: 0 0 auto;
 }
 
 /* ── Touch targets (WCAG 2.5.8): a coarse pointer gets the shared touch size on every control of a panel ── */

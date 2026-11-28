@@ -140,7 +140,7 @@
    density and the cqw track widths. Mobile first: one column, the inspector under the document. */
 .tm-document-editor__workspace {
     --tm-document-nav-width: clamp(14rem, 18cqw, 17rem);
-    --tm-document-inspector-width: clamp(20rem, 26cqw, 24rem);
+    --tm-document-inspector-width: clamp(22rem, 26cqw, 24rem);
 
     position: relative;
     display: grid;
@@ -408,6 +408,14 @@
 .tm-document-editor:not([data-layout="desktop"]) .tm-document-editor__header-subtitle,
 .tm-document-editor:not([data-layout="desktop"]) .tm-document-editor__header-button--labelled > .tm-document-editor__header-button-label {
     display: none;
+}
+
+/* A header toggle that is on (Print preview while the preview is up) reads as on: the tinted pressed surface of the ribbon toggles. */
+.tm-document-editor__header-button[aria-pressed="true"],
+.tm-document-editor__header-button[aria-pressed="true"]:hover:not(:disabled) {
+    color: var(--tm-color-primary);
+    background: var(--tm-color-primary-subtle);
+    border-color: var(--tm-color-primary);
 }
 
 .tm-document-editor:not([data-layout="desktop"]) .tm-document-editor__header-button--labelled {
@@ -970,6 +978,12 @@
     mask-image: linear-gradient(to right, transparent, var(--tm-color-text) var(--tm-space-6), var(--tm-color-text) calc(100% - var(--tm-space-6)), transparent);
 }
 
+/* The panel is a size container for its own density: a narrow dock (below 23 rem) fits four labels and their count badges on one row by tightening the
+   tab gutter and the type size, so no tab is half-hidden behind the edge fade. */
+.tm-document-side-panel[data-tab-style="text"] {
+    container: tm-doc-panel / inline-size;
+}
+
 .tm-document-side-panel[data-tab-style="text"] .tm-document-side-panel__tab {
     flex: 0 0 auto;
     padding-inline: var(--tm-space-2);
@@ -985,6 +999,23 @@
 
 .tm-document-side-panel[data-tab-style="text"] .tm-document-side-panel__close {
     flex: none;
+}
+
+@container tm-doc-panel (width < 23rem) {
+    .tm-document-side-panel[data-tab-style="text"] .tm-document-side-panel__tab {
+        padding-inline: calc(var(--tm-space-1) / 2);
+        font-size: var(--tm-font-size-xs);
+    }
+
+    .tm-document-side-panel[data-tab-style="text"] .tm-document-side-panel__tabs {
+        gap: 0;
+    }
+
+    .tm-document-side-panel[data-tab-style="text"] .tm-document-side-panel__badge {
+        min-width: 0.875rem;
+        height: 0.875rem;
+        padding-inline: 0.125rem;
+    }
 }
 
 /* Icon tabs sit in ONE row, whatever the panel width: equal columns that never shrink below the tab size, the close button
@@ -2133,6 +2164,12 @@
 .tm-document-editor__page-surface:focus-within {
     outline: 2px solid var(--tm-color-primary);
     outline-offset: 2px;
+}
+
+/* The print preview is a read-only view of the pages: a focus frame around the whole preview area reads as an error state, the toolbar and the actions
+   carry their own focus rings. */
+.tm-document-editor__workspace--print-preview .tm-document-editor__page-surface:focus-within {
+    outline: none;
 }
 
 /* Phone container: ONE column, the document only. The inspector is a sheet of the floating root (phase 8). */

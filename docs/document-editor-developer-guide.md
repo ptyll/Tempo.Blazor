@@ -2,6 +2,13 @@
 
 Tento dokument shrnuje integrační body, které vznikly během CKEditor-inspired redesignu `TmDocumentEditor`. Praktické demo je na route `/document-editor`; ukazuje toolbar režimy, feature toggles, image provider, table properties, comments/review, paste report a autosave error scénář.
 
+> **Redesign map (plan 146c7e1b, closed in phase 9).** The chrome of the editor was rebuilt in nine phases; this guide is the contract, the
+> topic documents are [document-editor-tablet-mobile.md](document-editor-tablet-mobile.md) (G2, sheets, action bar), [toolbar.md](toolbar.md)
+> (the ribbon on the core `TmToolbar`) and the core docs for the primitives the editor only wraps (`TmOverlayPanel`, `TmModal`, `TmCommandPalette`,
+> `TmMobileActionBar`, `TmLayoutObserver`). Jump to: [Layout Modes](#layout-modes), [Header and host slots](#header-and-host-slots-g9),
+> [Contextual inspector and find](#contextual-inspector-and-find-de2), [Document-region modes](#document-region-modes-and-the-comparison),
+> [Phone scope](#phone-scope-decision-g2), [The `data-priority` contract](#the-data-priority-contract), [What is not here](#what-the-redesign-did-not-do).
+
 ## Feature Registry
 
 Editor startuje s `DocumentEditorBuiltInFeatures.CreateDefaultRegistry()`. Feature implementuje `IDocumentEditorFeature` a má stabilní `Name`, volitelné `Requires` a registrační metody pro commandy, toolbar, shortcuty, floating UI a schema hooky.
@@ -34,7 +41,8 @@ The ribbon is ONE icon row on the core `TmToolbar` (`Overflow=Menu`, `OverflowPr
   the bar. The More menu is the core `role="menu"` (groups, arrows, typeahead; toggles are `menuitemcheckbox`). Every item that owns a
   popup has a More form too (phase 5), so nothing is pinned. A test or host that needs a command that may be collapsed clicks the bar button
   when it is visible and the More entry otherwise (`DocumentEditorRedesignE2EHelpers.ClickRibbonAsync` is the reference helper).
-- **Phone:** the phone layout keeps a horizontal scroll fallback until its own command row (a later phase).
+- **Phone:** `TmDocumentEditorToolbar.PhoneLayout` renders Home, Insert, Review and View as ONE tools row (the core overflow, "More" is a sheet);
+  On a phone B I U, alignment and the bulleted list stay `Primary` and every other command is `Secondary` (a 320 px row is B I U + alignment, a 390 px row adds the list; the row's gutter is 2 px); the published `data-priority` stays the registry rank.
 
 ### Floating UI (DE-1.4 .. DE-1.7)
 
@@ -160,8 +168,8 @@ is `data-layout="desktop|tablet|mobile"` on `.tm-document-editor`; the steps are
 | Container | Regions (`[data-region]`) | Outline and Pages |
 |-----------|---------------------------|-------------------|
 | Desktop, 1024 px and more | `nav` \| `doc` \| `inspector` under the header and the ribbon | the left column (`TmDocumentNavigationPanel`, foldable - it starts folded into its rail while the container is narrower than navigation + A4 page + inspector + gutters, 1546 px for A4, the reader's choice wins); the inspector has the text tabs Properties, Comments, Revisions, Versions |
-| Tablet, 640 - 1023 px | `doc` \| `inspector` | tabs of the inspector (`DocumentSidePanelTab.Outline` / `Pages`) |
-| Mobile, below 640 px | one column, the inspector under the document | tabs of the inspector (sheets and the action bar arrive with the phone phase) |
+| Tablet, 640 - 1023 px | `doc`, with the inspector as ONE side sheet over it (same grid cell) | tabs of the side sheet (`DocumentSidePanelTab.Outline` / `Pages`), read as text tabs |
+| Mobile, below 640 px | `doc` only - no inspector region; panels are bottom sheets of the floating root | tabs of the inspector sheet / the action bar "More" |
 
 - **Header.** `ShowHeader` (default `true`) renders `TmDocumentEditorHeader`: the title (`Title`, else the document metadata
   title), `Subtitle`, the save state, Search (opens the find panel), Undo, Redo, Print preview, Print to PDF (only when a
@@ -196,6 +204,67 @@ is `data-layout="desktop|tablet|mobile"` on `.tm-document-editor`; the steps are
   region that is absent or hidden is skipped; a modal surface owns the key while it is up). The handler is the small module
   `js/document-editor/interop/region-cycle.mjs` because the browser default of F6 must be cancelled synchronously. The ribbon
   keyboard mode (Alt / F10, `data-ribbon-keyboard-mode`) is separate Blazor state and is not touched.
+
+## Header and host slots (G9)
+
+`ShowHeader` (default `true`) renders `TmDocumentEditorHeader`: title (`Title`, else the document metadata title), `Subtitle`, the save
+state, Search, Undo, Redo, Print preview, Print to PDF (only with a `PdfExportProvider` and the export right) and the primary Save. The editor
+owns neither "Back" nor "Share" (decision G9 - the application shell is the host's): `HeaderStart` (before the title) and `HeaderActions` (after
+the editor's own actions; behind the kebab on a phone) are the slots. Undo / Redo / Save render exactly once - in the header, or, with
+`ShowHeader="false"`, in the ribbon quick-access group. `TmDocumentEditorHeader.Compact` is the phone row (title, state icon, Search, Undo,
+Redo, kebab); the kebab is a `role="dialog"` core overlay panel (a bottom sheet on a phone) whose rows are full-width, one touch height.
+Test ids `document-save`, `document-undo`, `document-redo`, `document-header-*` are stable.
+
+## Contextual inspector and find (DE2)
+
+The inspector is ONE fragment (`TmDocumentSidePanel`) hosted by the docked region (desktop), the side sheet (tablet) or a bottom sheet (phone).
+On a desktop a selected image or table, and an open find, replace the tab bar with a contextual header (`ContextContent` / `ContextTitle` /
+`ContextKind` / `OnContextBack` / `OnContextClose`; no new `DocumentSidePanelTab` value); a tablet puts the same context in the side sheet, a phone
+opens find as its own full-height sheet and an object as a short sheet on request ("Properties"). Text tabs are used on a desktop AND a tablet
+sheet (24 rem is wide enough; the row scrolls with an edge fade when a long label needs it) and icon tabs - the label as the accessible name - on
+a phone. Revision cards take their text from `TmDocumentRevisionPanel.PreviewResolver` (`Func<DocumentRevision, DocumentRevisionPreview?>`, the
+editor reads the range from the document; a resolver that returns `null` falls back to the payload's human line, never the raw payload).
+
+## Document-region modes and the comparison
+
+Besides editing the doc region has two modes (phase 7). The **print preview** is the engine's own state (`openPrintPreview`): no ribbon, page
+thumbnails on the left, the page / zoom bar above the page, the action cards and the read-only information on the right (desktop) or in a bar
+inside the doc region (tablet / phone). The **comparison** shows `TmDocumentDiffViewer` (`ViewMode` = `DiffViewMode.SideBySide | Unified`,
+`OldMeta` / `NewMeta`, `Compact` for the phone's Older / Newer / Differences switch) inside `[data-testid="document-diff-mode"]`; the canvas engine
+stays mounted (one canvas, never a copy) and the page surface is `hidden`. It owns the whole workspace on a desktop and a tablet - the docked
+inspector steps aside - so a panel asked for from the palette, the ribbon or Ctrl+Alt+V (comments / revisions / versions) first leaves the
+comparison ("Back to document") and then shows the panel; a phone's panels are sheets and stay over the comparison. A command that changes the
+document leaves the comparison before it runs; a view command (zoom, fullscreen, print preview) does not. The diff is text by block (decision
+DE3), never formatted; Replace-all / accept-all and friends follow the usual registry rules.
+
+## Phone scope (decision G2)
+
+A tablet edits in full; a phone views and makes light edits (see [document-editor-tablet-mobile.md](document-editor-tablet-mobile.md) for the full
+table). `DocumentEditorCommandRegistry.PhoneRestrictedCommands` is the registry half of that scope - the REGISTERED commands `insertEquation`,
+`cellProperties` and `compareDocuments` are disabled whatever the context says while `DocumentEditorCommandContext.IsPhoneLayout` is set, so the
+palette and the keyboard cannot reach what the phone chrome hides. The set only bites on registered commands: page layout and the style
+management are toolbar buttons and dialogs the phone ribbon simply does not render. The set is a static read-only set owned by the editor; a registered command can read `DocumentEditorCommandContext.IsPhoneLayout` in its own `computeEnabled`.
+
+## The `data-priority` contract
+
+Every ribbon command keeps `data-command`, `data-testid` and publishes `data-priority` (`primary` / `secondary` / `overflowonly`) - the rank
+declared in `DocumentEditorBuiltInToolbar` (`DefaultItems`, `RibbonLocalCommands`). It is a stable contract for hosts, tests and the Modeling
+package: key off those attributes (and `data-tm-group`), never off the toolbar's internal DOM or a positional selector. Which commands fit is
+measured by the core `tm-toolbar.js` (lowest rank leaves first, the later of equal ranks first); a phone re-ranks the row for its width (`PhoneKeptCommands`) without changing the published value. Ribbon icons are unique per tab (`ViewTab_NeverGivesTwoCommandsTheSameIcon`).
+
+## Responsive limits that stay (known and documented)
+
+- The dialogs of the editor (version, compare, style gallery form, image library) tune a few columns with a viewport `@media (max-width: 40rem)`
+  rule, because a `TmModal` body is not a size container; a phone layout pinned on a wide screen keeps their desktop column count (the modal is a
+  sheet / fullscreen through the cascaded viewport scope, only the inner grid differs). The command palette is keyed on `data-layout` and is
+  fullscreen for a pinned phone layout.
+- A desktop container of 1024 - 1400 px keeps the A4 page at 100 percent next to the docked inspector (the page scrolls inside the canvas host);
+  an automatic fit-width for that band, a viewport-bounded editor frame and a `IsSheet` mode of the core floating panel are not part of this plan.
+
+## What the redesign did not do
+
+Share / "back" / the application shell, transactional footers (G8: every change applies at once and is undoable), a formatted diff, a Blocks tab
+and the Word features of the background of the references (DE-1.9 / DE-2.8 stay in the backlog).
 
 ## Accessibility Expectations
 

@@ -52,7 +52,8 @@ public class TmMobileActionBarTests : LocalizationTestBase
 
         var tile = cut.Find("[data-action-id='comments']");
         tile.QuerySelector(".tm-mobile-action-bar__badge")!.TextContent.Should().Be("3");
-        tile.TextContent.Replace(" ", string.Empty).Should().Contain("Comments").And.Contain("3");
+        tile.QuerySelector(".tm-mobile-action-bar__label-text")!.TextContent.Trim().Should().Be("Comments");
+        tile.TextContent.Trim().Should().Be("Comments3");
         cut.Find("[data-action-id='plain']").QuerySelector(".tm-mobile-action-bar__badge").Should().BeNull("no Badge, no pill");
     }
 

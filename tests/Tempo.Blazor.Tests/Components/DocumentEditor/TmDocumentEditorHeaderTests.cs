@@ -10,6 +10,44 @@ namespace Tempo.Blazor.Tests.Components.DocumentEditor;
 public class TmDocumentEditorHeaderTests : LocalizationTestBase
 {
     [Fact]
+    public void DensePhoneHeader_MovesUndoAndRedoIntoTheKebab_SoTheTitleKeepsItsRoom()
+    {
+        var undone = 0;
+        var cut = Render<TmDocumentEditorHeader>(p => p
+            .Add(c => c.Title, "Service agreement")
+            .Add(c => c.Compact, true)
+            .Add(c => c.Dense, true)
+            .Add(c => c.OnUndo, EventCallback.Factory.Create(this, () => undone++)));
+
+        cut.FindAll("[data-testid='document-header-actions'] [data-testid='document-undo']").Should().BeEmpty("a 320 px row has no room for them beside the title");
+        cut.FindAll("[data-testid='document-header-actions'] [data-testid='document-redo']").Should().BeEmpty();
+        cut.Find("[data-testid='document-header-kebab']").Click();
+
+        var panel = cut.Find("[data-testid='document-header-kebab-panel']");
+        panel.QuerySelector("[data-testid='document-undo']").Should().NotBeNull();
+        panel.QuerySelector("[data-testid='document-redo']").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void PrintPreviewButton_IsPressed_WhileThePreviewIsUp()
+    {
+        var on = Render<TmDocumentEditorHeader>(p => p.Add(c => c.Title, "A").Add(c => c.ShowPrintPreview, true).Add(c => c.PrintPreviewActive, true));
+        var off = Render<TmDocumentEditorHeader>(p => p.Add(c => c.Title, "A").Add(c => c.ShowPrintPreview, true).Add(c => c.PrintPreviewActive, false));
+
+        on.Find("[data-testid='document-header-print-preview']").GetAttribute("aria-pressed").Should().Be("true");
+        off.Find("[data-testid='document-header-print-preview']").GetAttribute("aria-pressed").Should().Be("false");
+    }
+
+    [Fact]
+    public void CompactHeader_WithoutDense_KeepsUndoAndRedoOnTheRow()
+    {
+        var cut = Render<TmDocumentEditorHeader>(p => p.Add(c => c.Title, "Aurora").Add(c => c.Compact, true));
+
+        cut.FindAll("[data-testid='document-header-actions'] [data-testid='document-undo']").Should().HaveCount(1);
+        cut.FindAll("[data-testid='document-header-actions'] [data-testid='document-redo']").Should().HaveCount(1);
+    }
+
+    [Fact]
     public void NoSaveYet_ShowsNoStatus()
     {
         var cut = Render<TmDocumentEditorHeader>(p => p.Add(c => c.Title, "Aurora"));

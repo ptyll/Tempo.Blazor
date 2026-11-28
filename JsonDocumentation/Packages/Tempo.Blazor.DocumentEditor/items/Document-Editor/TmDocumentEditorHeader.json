@@ -160,6 +160,12 @@
       "type": "bool",
       "isRequired": false,
       "description": "The phone header (decision G2): the title, the save state as an icon, Search, Undo, Redo and a kebab. Save, Print preview and the export move to the action bar and the kebab; the host's HeaderActions render inside the kebab panel. Defaults to false (the full header)."
+    },
+    {
+      "name": "Dense",
+      "type": "bool",
+      "isRequired": false,
+      "description": "The densest phone row (a container narrower than 340 px, i.e. a 320 px phone: the editor sits a gutter inside the viewport): with Compact, Undo and Redo leave the row for the kebab panel so the title keeps its room. The editor sets it from its measured container width; defaults to false."
     }
   ],
   "cssClasses": [

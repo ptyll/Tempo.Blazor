@@ -6518,20 +6518,23 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
 
     private async Task OpenCommentsPanelAsync()
     {
+        await LeaveComparisonForPanelAsync();
         OpenSidePanel(DocumentSidePanelTab.Comments, manual: true);
         await InvokeAsync(StateHasChanged);
     }
 
-    private Task OpenRevisionsPanelAsync()
+    private async Task OpenRevisionsPanelAsync()
     {
+        await LeaveComparisonForPanelAsync();
         OpenSidePanel(DocumentSidePanelTab.Revisions, manual: true);
-        return InvokeAsync(StateHasChanged);
+        await InvokeAsync(StateHasChanged);
     }
 
-    private Task OpenVersionsPanelAsync()
+    private async Task OpenVersionsPanelAsync()
     {
+        await LeaveComparisonForPanelAsync();
         OpenSidePanel(DocumentSidePanelTab.Versions, manual: true);
-        return InvokeAsync(StateHasChanged);
+        await InvokeAsync(StateHasChanged);
     }
 
     private Task SetCommentFilterAsync(DocumentCommentFilter filter)
@@ -9244,7 +9247,7 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
         }
 
         var keyboardCommand = _keyboardManager.GetCommand(args);
-        if (DiffModeActive && keyboardCommand != DocumentEditorKeyboardCommand.ClosePanel)
+        if (DiffModeActive && keyboardCommand is not (DocumentEditorKeyboardCommand.ClosePanel or DocumentEditorKeyboardCommand.OpenVersions))
         {
             return;
         }
@@ -9252,8 +9255,8 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
         switch (keyboardCommand)
         {
             case DocumentEditorKeyboardCommand.OpenVersions:
-                OpenSidePanel(DocumentSidePanelTab.Versions, manual: true);
-                await InvokeAsync(StateHasChanged);
+                // the panel command leaves a comparison first (see LeaveComparisonForPanelAsync) and renders
+                await OpenVersionsPanelAsync();
                 break;
             case DocumentEditorKeyboardCommand.ActivateRibbon:
                 await ActivateRibbonKeyboardModeAsync();

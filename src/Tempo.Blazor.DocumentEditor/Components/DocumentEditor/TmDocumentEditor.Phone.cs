@@ -15,9 +15,11 @@ public partial class TmDocumentEditor
     // The tiles that stay on the bar (the primary action Save is the third); the rest of the list overflows into the "More" sheet.
     private const int PhoneActionBarVisible = 3;
 
-    // One badge, one number: the review summary banner of the doc region is not rendered on a phone, so what it counted (the pending
-    // changes and the open comments) rides the Comments tile - the way to the panels that answer them.
-    private int ReviewBadgeCount => PendingRevisionCount + OpenCommentCount;
+    // One badge, one number: the review summary banner of the doc region is not rendered on a phone. The Comments tile counts what it opens (the open
+    // threads, read as "N open comments"); the pending changes are the badge of the Revisions tab in the sheet.
+
+    // A phone container narrower than 340 px (a 320 px viewport; a 390 px one measures about 358) keeps the title on the header row by sending Undo / Redo to the kebab (the width is the measured one; a pinned layout has none).
+    private bool IsDensePhoneHeader => IsMobileLayout && _containerWidth > 0 && _containerWidth < 340;
 
     private static string? BadgeText(int count) => count <= 0 ? null : count > 99 ? "99+" : count.ToString(System.Globalization.CultureInfo.CurrentCulture);
 
@@ -40,8 +42,9 @@ public partial class TmDocumentEditor
                     TestId = TestId("document-mobile-comments"),
                     Label = Loc["TmDocumentEditor_Comments"],
                     Icon = IconNames.MessageSquare,
-                    Badge = BadgeText(ReviewBadgeCount),
-                    BadgeLabel = BadgeLabel(ReviewBadgeCount),
+                    // The Comments tile counts what it opens - the open threads; a pending change is counted on the Revisions tab of the sheet.
+                    Badge = BadgeText(OpenCommentCount),
+                    BadgeLabel = OpenCommentCount > 0 ? Loc.Plural("TmDocumentEditor_ReviewSummaryOpenComments", OpenCommentCount) : null,
                     Priority = 100,
                     Overflow = ActionOverflow.Never,
                     OnClick = EventCallback.Factory.Create(this, OpenCommentsPanelAsync)
@@ -70,7 +73,7 @@ public partial class TmDocumentEditor
                 TestId = TestId("document-mobile-print-preview"),
                 // The tile is two short lines wide: its label is the short form of the command's name (French "Aperçu avant impression" would be cut).
                 Label = Loc["TmDocumentEditor_PrintPreviewTile"],
-                Icon = IconNames.Printer,
+                Icon = IconNames.BookOpen,
                 // The availability the header button had: the preview needs the canvas engine and an enabled command.
                 Disabled = !UsingCanvasEngine || !IsCommandEnabled("openPrintPreview", true),
                 Priority = 90,

@@ -15,13 +15,14 @@ public sealed class DocumentEditorCommandRegistry
     private string? _lastContextSignature;
 
     /// <summary>
-    /// The commands of decision G2 that are tablet-and-up: page layout, equations, creating / renaming / deleting a style, the cell properties and
-    /// comparing against sources. On a phone layout (<see cref="DocumentEditorCommandContext.IsPhoneLayout"/>) they are disabled whatever the rest of the
-    /// context says, so the command palette and the keyboard cannot reach what the phone chrome hides.
+    /// The REGISTERED commands of decision G2 that are tablet-and-up: equations, the cell properties and comparing against sources. On a phone layout
+    /// (<see cref="DocumentEditorCommandContext.IsPhoneLayout"/>) they are disabled whatever the rest of the context says, so the command palette and the
+    /// keyboard cannot reach what the phone chrome hides. The set only bites on registered commands: the other G2 members (page layout, creating /
+    /// renaming / deleting a style) are not registry commands - they are toolbar buttons and dialogs the phone chrome simply does not render.
     /// </summary>
     public static IReadOnlySet<string> PhoneRestrictedCommands { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
-        "insertEquation", "pageLayout", "createStyle", "renameStyle", "deleteStyle", "cellProperties", "compareDocuments"
+        "insertEquation", "cellProperties", "compareDocuments"
     };
 
     /// <summary>

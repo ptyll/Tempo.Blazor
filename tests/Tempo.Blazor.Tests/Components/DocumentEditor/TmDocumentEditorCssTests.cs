@@ -776,7 +776,6 @@ public class TmDocumentEditorCssTests
                 var body = withoutComments.Substring(start, Math.Min(400, withoutComments.Length - start));
                 var viewportBound = body.Contains(".tm-document-version-dialog", StringComparison.Ordinal)
                     || body.Contains(".tm-document-compare-dialog__sources", StringComparison.Ordinal)
-                    || body.Contains(".tm-document-command-palette", StringComparison.Ordinal)
                     || body.Contains(".tm-document-symbol-menu", StringComparison.Ordinal);
                 if (!viewportBound)
                 {
@@ -914,6 +913,50 @@ public class TmDocumentEditorCssTests
     }
 
     [Fact]
+    public void HeaderToggle_WhenPressed_ReadsAsOn()
+    {
+        var rules = CssRules.Parse(ReadComponentCss("_document-editor.css"));
+
+        CssRules.Body(rules, ".tm-document-editor__header-button[aria-pressed=\"true\"]").Should().Contain("background: var(--tm-color-primary-subtle)").And.Contain("color: var(--tm-color-primary)");
+        var subtitle = CssRules.Body(rules, ".tm-document-editor:not([data-layout=\"desktop\"]) .tm-document-editor__header-subtitle");
+        subtitle.Should().Contain("display: none").And.NotContain("background");
+    }
+
+    [Fact]
+    public void PrintPreview_DoesNotFrameThePageSurface_WithTheFocusOutline()
+    {
+        var rules = CssRules.Parse(ReadComponentCss("_document-editor.css"));
+
+        CssRules.Body(rules, ".tm-document-editor__page-surface:focus-within").Should().Contain("outline: 2px solid var(--tm-color-primary)");
+        CssRules.Body(rules, ".tm-document-editor__workspace--print-preview .tm-document-editor__page-surface:focus-within").Should().Contain("outline: none");
+    }
+
+    [Fact]
+    public void CoarsePointer_RevisionBatchActions_AreTouchTargets()
+    {
+        var css = ReadComponentCss("_document-editor-sheets.css");
+        var coarse = System.Text.RegularExpressions.Regex.Match(css, @"@media \(pointer: coarse\)\s*\{.*?\n\}", System.Text.RegularExpressions.RegexOptions.Singleline).Value;
+
+        var rule = System.Text.RegularExpressions.Regex.Match(coarse, @"(?<sel>[^{}]*\.tm-document-revision-panel__batch-action[^{}]*)\{(?<body>[^}]*)\}");
+        rule.Success.Should().BeTrue("Accept all / Reject all sit in the coarse-pointer block with the per-card actions");
+        rule.Groups["body"].Value.Should().Contain("min-height: var(--tm-touch-target)");
+        rule.Groups["sel"].Value.Should().Contain(".tm-document-review-card__action");
+    }
+
+    [Fact]
+    public void SidePanelTextTabs_TakeADenserForm_InANarrowPanel_AndTheDockIsWideEnoughForFourOfThem()
+    {
+        var css = ReadComponentCss("_document-editor.css");
+        var rules = CssRules.Parse(css);
+
+        CssRules.Body(rules, ".tm-document-side-panel[data-tab-style=\"text\"]").Should().Contain("container: tm-doc-panel / inline-size");
+        css.Should().Contain("@container tm-doc-panel (width < 23rem)");
+        var dense = System.Text.RegularExpressions.Regex.Match(css, @"@container tm-doc-panel \(width < 23rem\)\s*\{(?<body>.*?)\n\}", System.Text.RegularExpressions.RegexOptions.Singleline).Groups["body"].Value;
+        dense.Should().Contain("padding-inline: calc(var(--tm-space-1) / 2)").And.Contain("font-size: var(--tm-font-size-xs)");
+        CssRules.Body(rules, ".tm-document-editor__workspace").Should().Contain("--tm-document-inspector-width: clamp(22rem, 26cqw, 24rem)", "Properties, Comments, Revisions and Versions fit the dock without a sideways scroll");
+    }
+
+    [Fact]
     public void SidePanelTextTabs_FadeTheEdgeThatStillHidesTabs()
     {
         var rules = CssRules.Parse(ReadComponentCss("_document-editor.css"));
@@ -925,7 +968,30 @@ public class TmDocumentEditorCssTests
     }
 
     [Fact]
-    public void ReviewSummary_IsOneRow_WithADividerAndTheSentenceHiddenWhenNarrow()
+    public void CommandPalette_GoesFullscreenOnThePhoneLayout_NotOnAViewportWidth()
+    {
+        var rules = CssRules.Parse(ReadComponentCss("_document-editor-floating.css"));
+
+        var panel = CssRules.Body(rules, ".tm-document-editor[data-layout=\"mobile\"] .tm-document-command-palette .tm-command-palette");
+        panel.Should().Contain("inline-size: 100vw").And.Contain("block-size: 100dvh");
+        CssRules.Body(rules, ".tm-document-editor[data-layout=\"mobile\"] .tm-document-command-palette .tm-command-palette-list").Should().Contain("flex: 1 1 auto");
+    }
+
+    [Fact]
+    public void PhoneLayout_TunesTheActionBarTilesAndTheKebabSheet_ForNarrowColumns()
+    {
+        var sheets = ReadComponentCss("_document-editor-sheets.css");
+        var rules = CssRules.Parse(sheets);
+
+        sheets.Should().Contain("@container tm-doc-editor (width < 22.5rem)", "the 320 px tiles take the bar's gutters back");
+        CssRules.Body(rules, ".tm-document-editor__header-kebab-body .tm-btn").Should().Contain("min-block-size: var(--tm-touch-target)").And.Contain("inline-size: 100%");
+        CssRules.Body(rules, ".tm-document-editor[data-layout=\"tablet\"] .tm-document-side-panel[data-tab-style=\"text\"] .tm-document-side-panel__tab")
+            .Should().Contain("min-height: var(--tm-touch-target)");
+        CssRules.Body(CssRules.Parse(ReadComponentCss("_document-editor-panels.css")), ".tm-document-diff__segments").Should().Contain("flex: 1 1 100%");
+    }
+
+    [Fact]
+    public void ReviewSummary_IsOneRow_AndTheSentenceIsVisuallyHidden_BecauseTheButtonsSayTheSame()
     {
         var css = ReadComponentCss("_document-editor-panels.css");
         var rules = CssRules.Parse(css);
@@ -933,9 +999,8 @@ public class TmDocumentEditorCssTests
         CssRules.Body(rules, ".tm-document-review-summary").Should().Contain("flex-wrap: nowrap");
         CssRules.Body(rules, ".tm-document-review-summary__text").Should().Contain("flex-wrap: nowrap").And.Contain("min-width: 0");
         var sentence = CssRules.Body(rules, ".tm-document-review-summary__text span");
-        sentence.Should().Contain("text-overflow: ellipsis").And.Contain("min-width: 0").And.Contain("border-inline-start");
-        css.Should().Contain("@container tm-doc-editor", "the sentence leaves the row when the doc region is narrow");
-        css.Should().MatchRegex(@"@container[^{]*\{[^@]*\.tm-document-review-summary__text span\s*\{[^}]*clip");
+        sentence.Should().Contain("clip: rect(0 0 0 0)").And.Contain("position: absolute", "the sentence duplicates the two buttons' labels: accessible, not visible, at every width");
+        sentence.Should().NotContain("text-overflow");
     }
 
     [Fact]

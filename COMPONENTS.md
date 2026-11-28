@@ -7276,6 +7276,19 @@ Signing modely jsou v `Tempo.Blazor.Abstractions`, aby je mohlo referencovat API
 <link href="_content/Tempo.Blazor/css/tempo-blazor.css" rel="stylesheet" />
 ```
 
+### TmDocumentEditor — rozložení, hlavička, panely a režimy plochy
+
+Chrome editoru (ribbon, plovoucí panely, dialogy, inspektor, stavový řádek) je přestavěno nad jádrovými primitivy; plátno (canvas engine) se nemění. Závazný popis je v [docs/document-editor-developer-guide.md](docs/document-editor-developer-guide.md), tablet / telefon v [docs/document-editor-tablet-mobile.md](docs/document-editor-tablet-mobile.md).
+
+| Téma | Kontrakt |
+|------|----------|
+| `LayoutMode` (`TmLayoutMode`, výchozí `Auto`) | Editor se rozloží podle SVÉHO kontejneru (640 / 1024 px), ne viewportu; `Desktop` / `Tablet` / `Mobile` rozložení připnou. Výsledek je `data-layout` na `.tm-document-editor` a regiony `[data-region="nav|doc|inspector"]`. |
+| Hlavička a sloty | `ShowHeader`, `Title`, `Subtitle`; editor nemá „Zpět“ ani „Sdílet“ — `HeaderStart` / `HeaderActions` jsou sloty hostitele (na telefonu za kebabem). |
+| Ribbon | Jeden řádek ikon na jádrovém `TmToolbar` s prioritním overflow; `data-command`, `data-testid` a `data-priority` (`primary` / `secondary` / `overflowonly`) jsou stabilní kontrakt, hostitelé nikdy nesahají do DOM skupin. |
+| Inspektor | Desktop: ukotvený, textové záložky; objekt (obrázek / tabulka) a Najít a nahradit jsou jeho kontext. Tablet: jeden boční sheet nad dokumentem. Telefon: spodní sheety. `TmDocumentRevisionPanel.PreviewResolver` dodává text revize z dokumentu. |
+| Režimy plochy | Náhled tisku (`openPrintPreview`) a porovnání (`TmDocumentDiffViewer`, `DiffViewMode.SideBySide` / `Unified`, `Compact` pro telefon) nahrazují plochu dokumentu; canvas zůstává jeden. |
+| Telefon (rozhodnutí G2) | Čtení a lehké úpravy: bez Math / Layout / References, bez porovnání se zdroji a správy stylů; akční lišta jádra `TmMobileActionBar` (Komentáře, Náhled tisku, Uložit, Více). |
+
 ### Most TmDocumentEditor → Signing
 
 `TmDocumentEditor` (canvas engine, `RenderEngine="CanvasEnginePreview"`) umí sloužit jako autor podpisových

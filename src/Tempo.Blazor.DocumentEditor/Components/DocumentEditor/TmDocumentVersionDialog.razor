@@ -59,7 +59,7 @@
         </form>
     </ChildContent>
     <Footer>
-        <button type="button" class="tm-btn tm-btn-sm tm-btn-ghost" @onclick="OnCancel" data-testid="@TestId("document-version-cancel")">@Loc["TmDocumentEditor_Cancel"]</button>
+        <button type="button" class="tm-btn tm-btn-sm tm-btn-secondary" @onclick="OnCancel" data-testid="@TestId("document-version-cancel")">@Loc["TmDocumentEditor_Cancel"]</button>
         <button type="submit" form="@_formId" class="tm-btn tm-btn-sm tm-btn-primary" disabled="@IsBusy" data-testid="@TestId("document-version-create-submit")">
             @Loc["TmDocumentEditor_CreateVersion"]
         </button>

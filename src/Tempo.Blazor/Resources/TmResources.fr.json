@@ -6556,7 +6556,7 @@
   "TmDocumentEditor_CompareVersionPlaceholder": "Choisissez une version",
   "TmDocumentEditor_CompareBaseVersionAria": "Version du document d'origine",
   "TmDocumentEditor_CompareTargetVersionAria": "Version du nouveau document",
-  "TmDocumentEditor_CompareDocumentIdNone": "Pas encore d'identifiant",
+  "TmDocumentEditor_CompareDocumentIdNone": "Aucun document sélectionné",
   "TmDocumentEditor_CompareUploadNone": "Aucun fichier choisi",
   "TmDocumentEditor_CompareResultTitle": "Résultat",
   "TmDocumentEditor_CompareOpenComparison": "Ouvrir la comparaison",
