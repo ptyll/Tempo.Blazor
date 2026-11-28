@@ -29,7 +29,7 @@ public sealed class DocumentEditorCanvasUxSignoffE2ETests : WasmTestBase
                 var context = await CreateContextAsync();
                 var page = await context.NewPageAsync();
                 await page.SetViewportSizeAsync(w, h);
-                await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?documentId={docId}");
+                await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?bounded=false&documentId={docId}");
                 await page.WaitForSelectorAsync("[data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']", new PageWaitForSelectorOptions
                 {
                     State = WaitForSelectorState.Attached,

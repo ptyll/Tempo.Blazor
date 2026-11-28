@@ -42,11 +42,105 @@ export function createCanvasDocumentEngine(options = {}) {
     return new CanvasDocumentEngine(options);
 }
 
+// Phase 12 (the viewport-bounded editor frame): the editor marks the element that scrolls the document - its document region - with this attribute
+// (`data-scroll-viewport="true"`; a FROZEN contract between the editor markup, the CSS and this engine - a host that mounts the engine in its own frame sets it
+// on the element that scrolls the document)
+// when a host bounds the frame (`Height`) or the editor is fullscreen. The marked element is THE scroll viewport whatever its overflow state says: it
+// is the scroller even while the document is short enough that nothing scrolls yet, and the window is not.
+const SCROLL_VIEWPORT_ATTRIBUTE = 'data-scroll-viewport';
+
+function isMarkedScrollViewport(node) {
+    return node?.getAttribute?.(SCROLL_VIEWPORT_ATTRIBUTE) === 'true';
+}
+
+// The marked scroller of an element is looked up on every viewport read and every scroll event: the last answer is kept per element and trusted while
+// the node is still marked and still holds the element (it is re-resolved when the frame changes - fullscreen, a new Height).
+const markedScrollViewportCache = new WeakMap();
+
+function resolveMarkedScrollViewport(element) {
+    if (element && typeof element === 'object') {
+        const cached = markedScrollViewportCache.get(element);
+        if (cached && isMarkedScrollViewport(cached) && cached.isConnected !== false && cached.contains?.(element) !== false) {
+            return cached;
+        }
+    }
+
+    let node = element?.parentElement || null;
+    while (node) {
+        if (isMarkedScrollViewport(node)) {
+            if (element && typeof element === 'object') {
+                markedScrollViewportCache.set(element, node);
+            }
+
+            return node;
+        }
+
+        node = node.parentElement;
+    }
+
+    markedScrollViewportCache.delete(element ?? {});
+    return null;
+}
+
+// Brings an element into view the way `element.scrollIntoView` does, but by scrolling ONLY the marked scroller of a bounded frame: the native call
+// scrolls every scrollable ancestor (the window and a host's own panels included), which a frame that is supposed to keep the page still must not do.
+// Without a marked scroller it is the native call, unchanged.
+export function scrollElementIntoViewWithin(host, element, options = {}) {
+    const scroller = resolveMarkedScrollViewport(host);
+    if (!scroller) {
+        element?.scrollIntoView?.(options);
+        return;
+    }
+
+    const view = scroller.getBoundingClientRect?.();
+    const rect = element?.getBoundingClientRect?.();
+    if (!view || !rect) {
+        return;
+    }
+
+    const viewHeight = Number(scroller.clientHeight) || Number(view.height) || 0;
+    const viewWidth = Number(scroller.clientWidth) || Number(view.width) || 0;
+    const viewLeft = Number(view.left) || 0;
+    const delta = (start, end, viewStart, viewSize, mode) => {
+        if (mode === 'start') {
+            return start - viewStart;
+        }
+
+        if (mode === 'center') {
+            return (start + end) / 2 - (viewStart + viewSize / 2);
+        }
+
+        if (mode === 'end') {
+            return end - (viewStart + viewSize);
+        }
+
+        if (start < viewStart) {
+            return start - viewStart;
+        }
+
+        return end > viewStart + viewSize ? end - (viewStart + viewSize) : 0;
+    };
+    const dy = delta(Number(rect.top) || 0, Number(rect.bottom) || 0, Number(view.top) || 0, viewHeight, options.block || 'nearest');
+    const dx = delta(Number(rect.left) || 0, Number(rect.right) || 0, viewLeft, viewWidth, options.inline || 'nearest');
+    if (Math.abs(dy) >= 1) {
+        scroller.scrollTop = (Number(scroller.scrollTop) || 0) + dy;
+    }
+
+    if (Math.abs(dx) >= 1) {
+        scroller.scrollLeft = (Number(scroller.scrollLeft) || 0) + dx;
+    }
+}
+
 // The mount element is content-sized (it hugs the laid-out pages), so zoom presets that measure it
 // feed back into themselves. The stable viewport is the nearest clipping scroll ancestor — the
 // Blazor host wraps the mount in an overflow:auto shell; in bare/embedded mounts without one we
 // fall back to the host itself (and then to the window) so engine math still has a sane viewport.
 function resolveScrollViewportElement(element) {
+    const marked = resolveMarkedScrollViewport(element);
+    if (marked) {
+        return marked;
+    }
+
     let node = element?.parentElement || null;
     const view = element?.ownerDocument?.defaultView || globalThis;
     while (node) {
@@ -63,6 +157,11 @@ function resolveScrollViewportElement(element) {
 // The element that really scrolls the document VERTICALLY: the nearest ancestor that clips and has something to scroll, otherwise the page itself.
 // It is not always the horizontal viewport the fit measures (a host may clip the column with overflow:hidden and scroll the window).
 function resolveVerticalScroller(element) {
+    const marked = resolveMarkedScrollViewport(element);
+    if (marked) {
+        return { element: marked, isDocument: false };
+    }
+
     const view = element?.ownerDocument?.defaultView || globalThis;
     let node = element?.parentElement || null;
     while (node) {
@@ -287,6 +386,14 @@ export class CanvasDocumentEngine {
         this.clickHandler = event => this.handleClick(event);
         this.wheelHandler = event => this.handleWheel(event);
         this.scrollHandler = () => this.handleScroll();
+        // Phase 12: a scroll event does not bubble, so the scroller of a bounded frame (an element, not the window) is caught on its way down: ONE
+        // capture-phase listener on the window that reacts only to the marked scroller that holds this engine's mount.
+        this.boundedScrollHandler = event => {
+            const target = event?.target;
+            if (isMarkedScrollViewport(target) && target.contains?.(this.host) === true) {
+                this.handleScroll();
+            }
+        };
         this.scrollRenderPending = false;
         // Phase 11: the configured automatic fit ('off' | 'narrow' | 'always'); the live state of the zoom (a reader's zoom turns it off
         // until fitWidth / resetZoom) is `zoom.autoFit` of the view state, this is the mode `resetZoom` returns to.
@@ -320,6 +427,7 @@ export class CanvasDocumentEngine {
         this.canvasStack.root?.addEventListener?.('wheel', this.wheelHandler, { passive: false });
         this.host?.addEventListener?.('scroll', this.scrollHandler, { passive: true });
         this.document?.defaultView?.addEventListener?.('scroll', this.scrollHandler, { passive: true });
+        this.document?.defaultView?.addEventListener?.('scroll', this.boundedScrollHandler, { capture: true, passive: true });
         this.host.setAttribute?.('data-canvas-engine-ready', 'false');
         this.host.setAttribute?.('data-canvas-engine-page-strategy', this.layoutService.pageSurfaceStrategy);
         this.mounted = true;
@@ -482,11 +590,56 @@ export class CanvasDocumentEngine {
         return box.exact;
     }
 
+    // The element that scrolls the document vertically: the marked document region of a bounded frame, the nearest overflowing ancestor, or the page.
+    resolveReadingScroller() {
+        return resolveVerticalScroller(this.host);
+    }
+
+    // The frame around the document changes (fullscreen, a new Height): the scroller may be another box and its scroll position is gone. The host asks
+    // for the reader's place BEFORE the change and restores it after the render - one shot, kept as page + fraction like the fit does.
+    captureReadingPosition() {
+        this.pendingReadingAnchor = this.mounted ? this.captureReadingAnchor(this.resolveReadingScroller()) : null;
+        return this.pendingReadingAnchor !== null;
+    }
+
+    restoreReadingPosition() {
+        const anchor = this.pendingReadingAnchor || null;
+        this.pendingReadingAnchor = null;
+        if (!anchor || !this.mounted) {
+            return false;
+        }
+
+        const view = this.document?.defaultView || globalThis;
+        const frame = view.requestAnimationFrame?.bind(view) || globalThis.requestAnimationFrame;
+        const apply = framesLeft => {
+            if (!this.mounted) {
+                return;
+            }
+
+            // the scroller is resolved again every frame: the marker moves with the frame
+            const scroller = this.resolveReadingScroller();
+            if (scroller) {
+                this.restoreReadingAnchor(anchor, scroller);
+                this.handleScroll();
+            }
+
+            if (framesLeft > 0 && typeof frame === 'function') {
+                frame(() => apply(framesLeft - 1));
+            }
+        };
+        apply(0);
+        if (typeof frame === 'function') {
+            frame(() => apply(READING_ANCHOR_SETTLE_FRAMES + 3));
+        }
+
+        return true;
+    }
+
     // The auto-fit family of commands (and the explicit fit) change the scale: the reader stays at the same place of the document instead of
     // at the same pixel offset. The scale changes the page size but not the layout, so "page + fraction" is exact; a document that cannot
     // be measured (no mounted page) keeps the proportional scroll offset.
     execZoomKeepingReadingPosition(commandId, argument) {
-        const scroller = resolveVerticalScroller(this.host);
+        const scroller = this.resolveReadingScroller();
         const anchor = this.captureReadingAnchor(scroller);
         const fallbackScrollTop = Number(scroller?.element?.scrollTop) || 0;
         const before = this.commandRuntime.getViewState().zoom || {};
@@ -922,6 +1075,7 @@ export class CanvasDocumentEngine {
         this.canvasStack.root?.removeEventListener?.('wheel', this.wheelHandler);
         this.host?.removeEventListener?.('scroll', this.scrollHandler);
         this.document?.defaultView?.removeEventListener?.('scroll', this.scrollHandler);
+        this.document?.defaultView?.removeEventListener?.('scroll', this.boundedScrollHandler, { capture: true });
         this.pendingInputRender = null;
         this.inputRenderScheduled = false;
         this.clearIdleReconciliationTimer();
@@ -1945,6 +2099,19 @@ export class CanvasDocumentEngine {
         const view = this.document?.defaultView || globalThis;
         const bounds = this.host?.getBoundingClientRect?.() || null;
         const rootBounds = this.canvasStack.root?.getBoundingClientRect?.() || null;
+        // Phase 12: in a bounded frame the document region scrolls (not the window): the reader's place is how far the engine root is above the top
+        // edge of THAT scroller, and the visible height is the scroller's own.
+        const boundedScroller = resolveMarkedScrollViewport(this.host);
+        if (boundedScroller) {
+            const viewTop = Number(boundedScroller.getBoundingClientRect?.().top) || 0;
+            return {
+                scrollTop: Number(explicit.scrollTop ?? (rootBounds ? Math.max(0, viewTop - (Number(rootBounds.top) || 0)) : boundedScroller.scrollTop) ?? 0) || 0,
+                height: Number(explicit.height ?? boundedScroller.clientHeight ?? bounds?.height ?? view?.innerHeight ?? globalThis.innerHeight ?? 900) || 900,
+                width: Number(explicit.width ?? this.host?.clientWidth ?? bounds?.width ?? view?.innerWidth ?? globalThis.innerWidth ?? 1280) || 1280,
+                overscanPages: Number(explicit.overscanPages ?? 1) || 1,
+            };
+        }
+
         const hostHasOwnScroll = Number(this.host?.scrollHeight || 0) > Number(this.host?.clientHeight || 0);
         const inferredScrollTop = rootBounds
             ? Math.max(0, -Number(rootBounds.top || 0))
@@ -2059,7 +2226,7 @@ export class CanvasDocumentEngine {
             // The match is on a virtualized page that is not mounted yet: bring the page in (it mounts on a later frame).
             this.scrollToPage(pageIndex);
         } else {
-            mounted().scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+            scrollElementIntoViewWithin(this.host, mounted(), { block: 'nearest', inline: 'nearest' });
             this.scrollMatchRectIntoView(rect);
         }
 
@@ -2096,7 +2263,7 @@ export class CanvasDocumentEngine {
             + `width:1px;height:${Math.max(1, (Number(rect.height) || 0) * scale)}px;pointer-events:none;visibility:hidden;`;
         element.appendChild(probe);
         try {
-            probe.scrollIntoView?.({ block: 'center', inline: 'nearest' });
+            scrollElementIntoViewWithin(this.host, probe, { block: 'center', inline: 'nearest' });
         } finally {
             probe.remove?.();
         }
@@ -2104,7 +2271,41 @@ export class CanvasDocumentEngine {
 
     scrollMarkerIntoView(marker) {
         const page = this.canvasStack.pages.get(String(marker?.pageIndex ?? 0));
-        page?.pageElement?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+        scrollElementIntoViewWithin(this.host, page?.pageElement, { block: 'nearest', inline: 'nearest' });
+    }
+
+    // Phase 12: the estimate above lands near the page; once the repaint of that scroll has mounted it, the real element takes the exact position.
+    // The loop gives up as soon as the scroll position is no longer the one the estimate set: a reader who scrolled meanwhile is not pulled back.
+    settleBoundedPageScroll(pageIndex, expectedScrollTop) {
+        const view = this.document?.defaultView || globalThis;
+        const frame = view.requestAnimationFrame?.bind(view);
+        if (!frame) {
+            return;
+        }
+
+        let attempts = 0;
+        const settle = () => {
+            if (!this.mounted) {
+                return;
+            }
+
+            const scroller = resolveMarkedScrollViewport(this.host);
+            if (!scroller || Math.abs((Number(scroller.scrollTop) || 0) - expectedScrollTop) > 2) {
+                return;
+            }
+
+            const element = this.canvasStack.pages.get(String(pageIndex))?.pageElement;
+            if (element) {
+                scrollElementIntoViewWithin(this.host, element, { block: 'start', inline: 'nearest' });
+                return;
+            }
+
+            attempts += 1;
+            if (attempts < 12) {
+                frame(settle);
+            }
+        };
+        frame(settle);
     }
 
     // B9: scroll a page into view from the navigator. A mounted page scrolls directly; a virtualized
@@ -2120,8 +2321,8 @@ export class CanvasDocumentEngine {
 
         const idx = Math.max(0, Math.min(pages.length - 1, Number(pageIndex) || 0));
         const mounted = this.canvasStack.pages.get(String(idx));
-        if (mounted?.pageElement?.scrollIntoView) {
-            mounted.pageElement.scrollIntoView({ block: 'start', inline: 'nearest' });
+        if (mounted?.pageElement?.scrollIntoView || (mounted?.pageElement && resolveMarkedScrollViewport(this.host))) {
+            scrollElementIntoViewWithin(this.host, mounted.pageElement, { block: 'start', inline: 'nearest' });
             return { scrolled: true, pageIndex: idx, mounted: true };
         }
 
@@ -2132,6 +2333,20 @@ export class CanvasDocumentEngine {
         const top = padding + idx * (pageHeight + gap);
         const host = this.host;
         const view = this.document?.defaultView || globalThis;
+        const boundedScroller = resolveMarkedScrollViewport(host);
+        if (boundedScroller) {
+            // Phase 12: the bounded frame scrolls its document region. The page top is the engine root's offset inside the scroller's content plus the
+            // padding and the SCALED page stride (the estimate must follow the zoom the fit set); a mounted page then takes the exact position.
+            const scale = Number(this.lastRender?.view?.zoomScale || 1) || 1;
+            const rootTop = Number(this.canvasStack.root?.getBoundingClientRect?.().top) || 0;
+            const viewTop = Number(boundedScroller.getBoundingClientRect?.().top) || 0;
+            const rootOffset = rootTop - viewTop + (Number(boundedScroller.scrollTop) || 0);
+            boundedScroller.scrollTop = Math.max(0, rootOffset + padding + idx * (pageHeight * scale + gap));
+            this.handleScroll();
+            this.settleBoundedPageScroll(idx, Number(boundedScroller.scrollTop) || 0);
+            return { scrolled: true, pageIndex: idx, mounted: false };
+        }
+
         if (host && Number(host.scrollHeight || 0) > Number(host.clientHeight || 0)) {
             host.scrollTop = top;
         } else if (typeof view.scrollTo === 'function') {

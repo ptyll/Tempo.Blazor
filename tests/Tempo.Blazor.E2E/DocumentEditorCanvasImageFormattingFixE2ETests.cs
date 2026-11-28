@@ -512,7 +512,7 @@ public sealed class DocumentEditorCanvasImageFormattingFixE2ETests : WasmTestBas
 
     private async Task OpenContractDocumentAsync(IPage page)
     {
-        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?documentId={ContractDocumentId}");
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?bounded=false&documentId={ContractDocumentId}");
         var host = page.GetByTestId("document-canvas-engine-host");
         await Assertions.Expect(host).ToBeVisibleAsync(new() { Timeout = 120_000 });
         await Assertions.Expect(host).ToHaveAttributeAsync("data-canvas-engine-ready", "true", new() { Timeout = 120_000 });

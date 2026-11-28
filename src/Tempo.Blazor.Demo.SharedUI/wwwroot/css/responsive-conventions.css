@@ -193,3 +193,45 @@
   line-height: var(--tm-line-height-normal);
   color: var(--tm-text-secondary);
 }
+
+/* The demo shell above a page body: on a phone the fixed 4rem header (the wrapper pads by it) plus the 4rem sticky top bar plus the 2rem
+   page padding top and bottom; from the shell's lg step the sidebar is docked and there is no fixed header. ONE variable carries it, so every demo page
+   that hosts a viewport-bounded DocumentEditor takes exactly what is left and neither the page nor the demo top bar overlaps the editor. */
+:root {
+  --demo-shell-chrome-block-size: 12.5rem;
+}
+
+@media (min-width: 64rem) {
+  :root {
+    --demo-shell-chrome-block-size: 8.5rem;
+  }
+}
+
+/* /canvas-engine-host?height=viewport: the editor alone. */
+.demo-document-frame {
+  height: calc(100dvh - var(--demo-shell-chrome-block-size));
+  min-height: 24rem;
+  background: var(--tm-bg-workspace);
+}
+
+/* /document-editor (bounded, the default): the controls over the editor in one column of the same height. The controls are capped and scroll inside
+   themselves; the editor takes the rest of the column. */
+.demo-document-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-3);
+  height: calc(100dvh - var(--demo-shell-chrome-block-size));
+  min-height: 24rem;
+}
+
+.demo-document-page__controls {
+  flex: 0 0 auto;
+  max-height: 28dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.demo-document-page__editor {
+  flex: 1 1 0;
+  min-height: 0;
+}

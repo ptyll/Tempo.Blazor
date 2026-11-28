@@ -27,7 +27,7 @@ public sealed class DocumentEditorSigningBridgeE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1000);
-        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor", WaitUntilState.DOMContentLoaded);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?bounded=false", WaitUntilState.DOMContentLoaded);
 
         await page.WaitForSelectorAsync("[data-testid='document-editor-demo']", new PageWaitForSelectorOptions
         {

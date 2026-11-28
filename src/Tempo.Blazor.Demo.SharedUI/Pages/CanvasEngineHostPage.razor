@@ -21,8 +21,8 @@
 
 @* N3: MainLayout already provides the page's <main> landmark — a second <main> here nests
    landmarks, so this wrapper is a labelled region instead. *@
-<section class="min-h-screen bg-slate-100 p-4 pt-24 dark:bg-slate-950"
-         style="padding-top: 96px;"
+<section class="@SectionClass"
+         style="@SectionStyle"
          aria-label="Canvas engine host"
          data-testid="canvas-engine-host-page">
     <TmDocumentEditor DocumentId="@DocumentId"
@@ -48,6 +48,7 @@
                           SuggestionsEnabled="@SuggestionMode"
 	                      ShowToolbar="@ShowToolbar"
                           PageFitMode="@EffectivePageFitMode"
+                          Height="@EditorHeight"
                           ShowHeader="@(ShowHeader ?? true)"
                           PdfForensicWatermark="@(ForensicPdf ? new DocumentPdfForensicWatermarkOptions() : null)"
                           TokenProvider="@TokenProvider"
@@ -94,6 +95,24 @@
     [Parameter]
     [SupplyParameterFromQuery(Name = "pageFit")]
     public string? PageFit { get; set; }
+
+    /// <summary>
+    /// Bounds the editor frame (<c>TmDocumentEditor.Height</c>): <c>viewport</c> gives the editor exactly the viewport below the demo chrome (the page itself
+    /// then does not scroll), any other value is passed through as a CSS length (<c>600px</c>). Omitted = the editor flows in the page as before.
+    /// </summary>
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "height")]
+    public string? Height { get; set; }
+
+    private bool FillsViewport => string.Equals(Height?.Trim(), "viewport", StringComparison.OrdinalIgnoreCase);
+
+    private string? EditorHeight => FillsViewport ? "100%" : string.IsNullOrWhiteSpace(Height) ? null : Height;
+
+    private string SectionClass => FillsViewport
+        ? "demo-document-frame"
+        : "min-h-screen bg-slate-100 p-4 pt-24 dark:bg-slate-950";
+
+    private string? SectionStyle => FillsViewport ? null : "padding-top: 96px;";
 
     private DocumentPageFitMode EffectivePageFitMode => PageFit?.Trim().ToLowerInvariant() switch
     {

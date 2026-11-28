@@ -277,7 +277,7 @@ public sealed class DocumentEditorRedesignPhase8CaptureE2ETests : BaselineGenera
     {
         var context = await CreateContextAsync(ContextOptions(width, height, touch));
         var page = await context.NewPageAsync();
-        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?documentId={documentId}", WaitUntilState.DOMContentLoaded);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?bounded=false&documentId={documentId}", WaitUntilState.DOMContentLoaded);
         await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-engine-host"][data-canvas-engine-ready="true"]')
                 && document.querySelectorAll('[data-canvas-text-rect]').length >= 1
@@ -291,7 +291,7 @@ public sealed class DocumentEditorRedesignPhase8CaptureE2ETests : BaselineGenera
     {
         var context = await CreateContextAsync(ContextOptions(width, height, touch));
         var page = await context.NewPageAsync();
-        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?documentId={documentId}", WaitUntilState.DOMContentLoaded);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?bounded=false&documentId={documentId}", WaitUntilState.DOMContentLoaded);
         await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-engine-host"][data-canvas-engine-ready="true"]')
                 && document.querySelectorAll('[data-canvas-text-rect]').length >= 1

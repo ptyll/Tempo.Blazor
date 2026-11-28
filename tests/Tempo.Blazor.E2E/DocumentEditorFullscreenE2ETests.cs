@@ -57,9 +57,17 @@ public sealed class DocumentEditorFullscreenE2ETests : WasmTestBase
         // canvas input first: after the toggle re-render the ribbon button may have lost focus, and a
         // body-focused Escape would never reach the editor root handler.
         //
-        // Escape peels editor layers topmost-first (Word parity): the canvas-engine-host demo opens
-        // with the side panel visible, so the FIRST Escape closes the side panel and only the next
-        // one exits fullscreen. Assert the layering explicitly instead of hiding it behind a retry.
+        // Escape peels editor layers topmost-first (Word parity): with the side panel open the FIRST Escape
+        // closes the side panel and only the next one exits fullscreen. Assert the layering explicitly instead
+        // of hiding it behind a retry. The panel is opened here on purpose: since the readable floor (phase 11)
+        // the demo's 1048 px container presents the inspector as a sheet that starts closed.
+        var sidePanel = page.GetByTestId("document-side-panel");
+        if (await sidePanel.CountAsync() == 0 || !await sidePanel.First.IsVisibleAsync())
+        {
+            await page.GetByTestId("document-side-panel-edge-toggle").ClickAsync();
+        }
+
+        await Assertions.Expect(sidePanel.First).ToBeVisibleAsync(new() { Timeout = 10_000 });
         await FocusHiddenCanvasInputAsync(page);
         await page.Keyboard.PressAsync("Escape");
         await Assertions.Expect(page.GetByTestId("document-side-panel"))

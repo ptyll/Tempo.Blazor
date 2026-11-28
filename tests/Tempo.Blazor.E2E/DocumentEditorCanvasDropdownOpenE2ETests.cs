@@ -182,7 +182,7 @@ public sealed class DocumentEditorCanvasDropdownOpenE2ETests : WasmTestBase
 
     private async Task OpenDocumentAsync(IPage page, string documentId, string blockId)
     {
-        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?documentId={documentId}", WaitUntilState.DOMContentLoaded);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?bounded=false&documentId={documentId}", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync(
             "[data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']",
             new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 120_000 });

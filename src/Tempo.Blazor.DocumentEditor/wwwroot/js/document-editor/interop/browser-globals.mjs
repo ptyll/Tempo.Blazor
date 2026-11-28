@@ -104,9 +104,9 @@ export function installDocumentEditorBrowserGlobals(win = globalThis.window ?? g
     }
   };
 
-  // The fullscreen CSS (body.tm-document-editor--fullscreen .tm-document-editor) keys off a BODY
-  // class because the editor elevates itself with position:fixed above the host layout; the body
-  // overflow lock stops the page behind it from scrolling.
+  // Fullscreen is the editor's own state (data-fullscreen on its root: the bounded frame at 100dvh, lifted with
+  // position:fixed above the host layout). The BODY class is kept for hosts that style around it, and the body
+  // overflow lock stops the page behind the editor from scrolling.
   target.setFullscreen = function setFullscreen(fullscreen) {
     const body = win.document?.body;
     if (!body) {

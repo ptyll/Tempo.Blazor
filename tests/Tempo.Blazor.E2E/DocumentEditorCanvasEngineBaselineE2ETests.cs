@@ -19,7 +19,7 @@ public sealed class DocumentEditorCanvasEngineBaselineE2ETests : WasmTestBase
     [TestMethod]
     public async Task Baseline_CurrentCanvasEngine_CapturesDesktopScreenshots()
     {
-        var page = await OpenBaselineDocumentEditorAsync("/document-editor?documentId=onlyoffice-parity-2026-05-24", 1440, 1000);
+        var page = await OpenBaselineDocumentEditorAsync("/document-editor?bounded=false&documentId=onlyoffice-parity-2026-05-24", 1440, 1000);
         var output = CreateOutputDirectory("desktop-1440x1000");
         var fullPath = Path.Combine(output, "00-current-canvas-full.png");
         var editorPath = Path.Combine(output, "01-current-canvas-editor.png");
@@ -70,7 +70,7 @@ public sealed class DocumentEditorCanvasEngineBaselineE2ETests : WasmTestBase
     [TestMethod]
     public async Task CanvasEngineRouteFlag_RendersCanvasHost()
     {
-        var page = await OpenBaselineDocumentEditorAsync("/document-editor?tmDocumentEditorEngine=canvas", 1280, 800);
+        var page = await OpenBaselineDocumentEditorAsync("/document-editor?bounded=false&tmDocumentEditorEngine=canvas", 1280, 800);
         var probe = await CaptureProbeAsync(page);
 
         Assert.IsTrue(probe.HasCanvasHost, "The canvas engine route flag must render the canvas host.");
@@ -102,7 +102,7 @@ public sealed class DocumentEditorCanvasEngineBaselineE2ETests : WasmTestBase
     [TestMethod]
     public async Task CanvasEngineRouteFlag_RendersCanvasHostWhenEnabled()
     {
-        var page = await OpenBaselineDocumentEditorAsync("/document-editor?tmDocumentEditorEngine=canvas", 1280, 800);
+        var page = await OpenBaselineDocumentEditorAsync("/document-editor?bounded=false&tmDocumentEditorEngine=canvas", 1280, 800);
 
         await page.WaitForSelectorAsync("[data-testid='document-canvas-engine-host']", new PageWaitForSelectorOptions
         {

@@ -777,7 +777,7 @@ public sealed class DocumentEditorResponsiveShellE2ETests : WasmTestBase
         var page = await context.NewPageAsync();
         var errors = new List<string>();
         page.PageError += (_, message) => errors.Add($"pageerror: {message}");
-        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?documentId=large-perf-1000", WaitUntilState.DOMContentLoaded);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?bounded=false&documentId=large-perf-1000", WaitUntilState.DOMContentLoaded);
         await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-engine-host"][data-canvas-engine-ready="true"]')
                 && Number(document.querySelector('[data-testid="document-canvas-engine-root"]')?.getAttribute('data-canvas-estimated-page-count') || '0') >= 4
@@ -965,7 +965,7 @@ public sealed class DocumentEditorResponsiveShellE2ETests : WasmTestBase
         };
 
         var url = route == "/document-editor" && documentId == "contract-demo"
-            ? $"{BaseUrl}{route}?documentId={documentId}"
+            ? $"{BaseUrl}{route}?bounded=false&documentId={documentId}"
             : OpenUrl(BaseUrl, documentId, route);
         await GotoAppReadyAsync(page, url, WaitUntilState.DOMContentLoaded);
         await WaitForPredicateAsync(page, """
@@ -1061,7 +1061,7 @@ public sealed class DocumentEditorRedesignPhase3CaptureE2ETests : BaselineGenera
     {
         var context = await CreateContextAsync(ContextOptions(width, height, touch));
         var page = await context.NewPageAsync();
-        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?documentId={documentId}", WaitUntilState.DOMContentLoaded);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?bounded=false&documentId={documentId}", WaitUntilState.DOMContentLoaded);
         await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-engine-host"][data-canvas-engine-ready="true"]')
                 && document.querySelectorAll('[data-canvas-text-rect]').length >= 1

@@ -25,7 +25,7 @@ public sealed class DocumentEditorCanvasOverlapPerfE2ETests : WasmTestBase
 
         var context = await CreateContextAsync(new BrowserNewContextOptions(), trace: false);
         var page = await context.NewPageAsync();
-        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor", WaitUntilState.NetworkIdle);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?bounded=false", WaitUntilState.NetworkIdle);
 
         // Wait for the canvas engine host to mount and report ready.
         await page.WaitForSelectorAsync("[data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']", new PageWaitForSelectorOptions
@@ -130,7 +130,7 @@ public sealed class DocumentEditorCanvasOverlapPerfE2ETests : WasmTestBase
     {
         var context = await CreateContextAsync(new BrowserNewContextOptions(), trace: false);
         var page = await context.NewPageAsync();
-        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor", WaitUntilState.NetworkIdle);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?bounded=false", WaitUntilState.NetworkIdle);
         await page.WaitForSelectorAsync("[data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']", new PageWaitForSelectorOptions
         {
             State = WaitForSelectorState.Attached,
@@ -167,7 +167,7 @@ public sealed class DocumentEditorCanvasOverlapPerfE2ETests : WasmTestBase
     {
         var context = await CreateContextAsync(new BrowserNewContextOptions(), trace: false);
         var page = await context.NewPageAsync();
-        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor", WaitUntilState.NetworkIdle);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?bounded=false", WaitUntilState.NetworkIdle);
         await page.WaitForSelectorAsync("[data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']", new PageWaitForSelectorOptions
         {
             State = WaitForSelectorState.Attached,

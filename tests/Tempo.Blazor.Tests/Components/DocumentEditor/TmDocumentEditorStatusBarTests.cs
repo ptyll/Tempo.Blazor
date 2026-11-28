@@ -8,6 +8,33 @@ namespace Tempo.Blazor.Tests.Components.DocumentEditor;
 
 public class TmDocumentEditorStatusBarTests : LocalizationTestBase
 {
+    // ── Phase 12 fix round: the status bar of a mode that is not editing ───────────────────────────────
+
+    [Fact]
+    public void StatusBar_ModeLabel_ReplacesTheEditingRegionText()
+    {
+        var cut = Render<TmDocumentEditorStatusBar>(p => p
+            .Add(x => x.ActiveRegionLabel, "body")
+            .Add(x => x.ModeLabel, "Print preview"));
+
+        cut.Find("[data-testid='document-status-region']").TextContent.Trim().Should().Be("Print preview");
+        Render<TmDocumentEditorStatusBar>(p => p.Add(x => x.ActiveRegionLabel, "body"))
+            .Find("[data-testid='document-status-region']").TextContent.Should().Contain("body");
+    }
+
+    [Fact]
+    public void StatusBar_ShowZoomFalse_HidesTheZoomButKeepsTheFullscreenSwitch()
+    {
+        var cut = Render<TmDocumentEditorStatusBar>(p => p
+            .Add(x => x.ShowZoom, false)
+            .Add(x => x.OnZoomChanged, EventCallback.Factory.Create<int>(this, _ => { }))
+            .Add(x => x.OnToggleFullscreen, EventCallback.Factory.Create(this, () => { })));
+
+        cut.FindAll("[data-testid='document-status-zoom']").Should().BeEmpty();
+        cut.FindAll("[data-testid='document-status-zoom-controls']").Should().BeEmpty();
+        cut.FindAll("[data-testid='document-status-fullscreen']").Should().HaveCount(1);
+    }
+
     // ── Pending indicator ───────────────────────────────────────────────────
 
     [Fact]

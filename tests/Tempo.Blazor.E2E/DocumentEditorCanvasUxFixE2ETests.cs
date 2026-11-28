@@ -781,7 +781,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
 
     private async Task OpenDocumentAsync(IPage page, string documentId, string? blockId)
     {
-        var url = $"{BaseUrl}/document-editor?documentId={documentId}";
+        var url = $"{BaseUrl}/document-editor?bounded=false&documentId={documentId}";
         for (var attempt = 0; attempt < 2; attempt++)
         {
             try

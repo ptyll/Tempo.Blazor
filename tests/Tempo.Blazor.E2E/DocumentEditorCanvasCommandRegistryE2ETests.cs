@@ -279,7 +279,7 @@ public sealed class DocumentEditorCanvasCommandRegistryE2ETests : WasmTestBase
 
     private async Task OpenDocumentAsync(IPage page)
     {
-        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?documentId={ContractDocumentId}", WaitUntilState.DOMContentLoaded);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?bounded=false&documentId={ContractDocumentId}", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync(
             "[data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']",
             new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 120_000 });

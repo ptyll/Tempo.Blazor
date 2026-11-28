@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { CANVAS_LAYER_KINDS, CanvasDocumentEngine, createCanvasDocumentEngine } from './entry.mjs';
+import { CANVAS_LAYER_KINDS, CanvasDocumentEngine, createCanvasDocumentEngine, scrollElementIntoViewWithin } from './entry.mjs';
 import { COMPACT_ROOT_PADDING_INLINE, resolveRootPaddingInline } from './render/canvas-stack.mjs';
 
 test('createCanvasDocumentEngine mounts a canvas-per-visible-page stack without Blazor', () => {
@@ -1446,4 +1446,231 @@ test('getFitPaddingInline adds the mount padding to the root padding in every la
     assert.equal(withStyle('desktop', 0, 0), 48);
     assert.equal(withStyle('mobile', 8, 8), 8 + 8 + 2 * COMPACT_ROOT_PADDING_INLINE);
     assert.equal(withStyle('tablet', 8, 8), 8 + 8 + 2 * COMPACT_ROOT_PADDING_INLINE);
+});
+
+// ── Phase 12: the viewport-bounded frame - the document region is the scroller (data-scroll-viewport) ─────────────────
+
+function markAsBoundedScroller(h, { top = 100, clientHeight = 600 } = {}) {
+    h.scroller.getAttribute = name => (name === 'data-scroll-viewport' ? 'true' : null);
+    h.scroller.clientHeight = clientHeight;
+    h.scroller.scrollHeight = 9000;
+    h.scroller.getBoundingClientRect = () => ({ top, height: clientHeight, width: h.scroller.clientWidth });
+}
+
+function createBoundedEngine(h, options = {}) {
+    h.doc.defaultView.addEventListener = (type, listener, opts) => { (h.viewListeners ||= []).push({ type, listener, opts, added: true }); };
+    h.doc.defaultView.removeEventListener = (type, listener, opts) => { (h.viewListeners ||= []).push({ type, listener, opts, added: false }); };
+    h.doc.documentElement = { scrollTop: 0, scrollHeight: 900, clientHeight: 900, getBoundingClientRect: () => ({ top: 0 }) };
+    h.doc.scrollingElement = h.doc.documentElement;
+    h.host.ownerDocument = h.doc;
+    return createCanvasDocumentEngine({
+        host: h.host,
+        document: h.doc,
+        model: createTextModel('Bounded frame.', 0),
+        autoFit: 'off',
+        ...options,
+    });
+}
+
+test('bounded frame: readViewport measures the marked scroller, not the window', () => {
+    const h = createAutoFitHarness(1200);
+    markAsBoundedScroller(h, { top: 100, clientHeight: 600 });
+    const engine = createBoundedEngine(h);
+    engine.render();
+    // the engine root is 2400 px above the top edge of the scroller's visible area: the reader is 2400 px down the document
+    engine.canvasStack.root.getBoundingClientRect = () => ({ top: 100 - 2400 });
+
+    const viewport = engine.readViewport();
+
+    assert.equal(viewport.scrollTop, 2400);
+    assert.equal(viewport.height, 600, 'the height is the scroller\'s own, not window.innerHeight (900)');
+    engine.destroy();
+});
+
+test('bounded frame: without a marked scroller readViewport keeps the window measurements', () => {
+    const h = createAutoFitHarness(1200);
+    const engine = createBoundedEngine(h);
+    engine.render();
+    engine.canvasStack.root.getBoundingClientRect = () => ({ top: -700 });
+
+    const viewport = engine.readViewport();
+
+    assert.equal(viewport.scrollTop, 700);
+    assert.equal(viewport.height, 900, 'window.innerHeight - the page is the scroller');
+    engine.destroy();
+});
+
+test('bounded frame: an explicit viewport still wins over the measured one', () => {
+    const h = createAutoFitHarness(1200);
+    markAsBoundedScroller(h);
+    const engine = createBoundedEngine(h);
+    engine.render();
+    engine.viewport = { scrollTop: 50, height: 321 };
+
+    const viewport = engine.readViewport();
+
+    assert.equal(viewport.scrollTop, 50);
+    assert.equal(viewport.height, 321);
+    engine.destroy();
+});
+
+test('bounded frame: the scroll viewport the fit measures is the marked scroller', () => {
+    const h = createAutoFitHarness(1200);
+    markAsBoundedScroller(h);
+    const engine = createBoundedEngine(h);
+    engine.render();
+
+    const metrics = engine.getViewportMetrics();
+
+    assert.equal(metrics.viewportHeight, 600, 'fit-page fits the bounded frame, not the window');
+    assert.equal(metrics.viewportWidth, 1200);
+    engine.destroy();
+});
+
+test('bounded frame: a scroll of the marked scroller repaints (captured on the window), the scroll of anything else does not', () => {
+    const h = createAutoFitHarness(1200);
+    markAsBoundedScroller(h);
+    h.scroller.contains = node => node === h.host;
+    const engine = createBoundedEngine(h);
+    engine.render();
+    let scrolls = 0;
+    engine.handleScroll = () => { scrolls += 1; };
+    const captured = h.viewListeners.filter(entry => entry.type === 'scroll' && entry.added && entry.opts?.capture === true);
+    assert.equal(captured.length, 1, 'ONE capture-phase listener: scroll does not bubble, a scroller is found by its event target');
+
+    captured[0].listener({ target: h.scroller });
+    assert.equal(scrolls, 1);
+    captured[0].listener({ target: { getAttribute: () => null, contains: () => false } });
+    captured[0].listener({ target: h.doc });
+    assert.equal(scrolls, 1, 'a scrolled inspector panel or the page itself is not the document scroller');
+
+    engine.destroy();
+    const removed = h.viewListeners.filter(entry => entry.type === 'scroll' && entry.added === false && entry.opts?.capture === true);
+    assert.equal(removed.length, 1, 'the capture listener is removed with the same capture flag');
+    assert.equal(removed[0].listener, captured[0].listener);
+});
+
+test('bounded frame: scrollToPage of an unmounted page scrolls the marked scroller by the scaled page stride (never the window)', () => {
+    const h = createAutoFitHarness(1200);
+    markAsBoundedScroller(h, { top: 100, clientHeight: 600 });
+    const engine = createBoundedEngine(h);
+    engine.render();
+    let windowScrolls = 0;
+    h.doc.defaultView.scrollTo = () => { windowScrolls += 1; };
+    // a twelve page document at half scale, page 10 not mounted; the engine root sits 40 px below the scroller's top edge
+    engine.lastRender = { displayList: { pages: Array.from({ length: 12 }, () => ({ height: 1000 })) }, view: { zoomScale: 0.5 } };
+    engine.canvasStack.pages.delete('10');
+    engine.canvasStack.root.getBoundingClientRect = () => ({ top: 100 + 40 - h.scroller.scrollTop });
+    h.scroller.scrollTop = 0;
+
+    const result = engine.scrollToPage(10);
+
+    assert.deepEqual({ scrolled: result.scrolled, mounted: result.mounted, pageIndex: result.pageIndex }, { scrolled: true, mounted: false, pageIndex: 10 });
+    assert.equal(windowScrolls, 0, 'the window was not touched');
+    assert.equal(h.scroller.scrollTop, 40 + 24 + 10 * (1000 * 0.5 + 24), 'root offset + padding + the stride of the SCALED pages');
+    engine.destroy();
+});
+
+test('bounded frame: the reading position of a fit is kept on the marked scroller even when it does not overflow yet', () => {
+    const h = createAutoFitHarness(1200);
+    markAsBoundedScroller(h, { top: 0, clientHeight: 600 });
+    h.scroller.scrollHeight = 600; // a short document: nothing to scroll, but the marker still names the scroller
+    const engine = createBoundedEngine(h, { autoFit: 'narrow' });
+    engine.render();
+    h.doc.documentElement.scrollTop = 123;
+
+    const scroller = engine.resolveReadingScroller();
+
+    assert.equal(scroller.element, h.scroller);
+    assert.equal(scroller.isDocument, false);
+    engine.destroy();
+});
+
+// ── Phase 12 fix round: scrolling inside the marked scroller only, the settle loop yields to the reader, the reading position survives a frame change ──
+
+function fakeScrollTarget(rect) {
+    const target = { scrolled: [], getBoundingClientRect: () => rect(), scrollIntoView: options => target.scrolled.push(options) };
+    return target;
+}
+
+test('scrollElementIntoViewWithin scrolls only the marked scroller (the page and every other ancestor keep their position)', () => {
+    const h = createAutoFitHarness(1200);
+    markAsBoundedScroller(h, { top: 100, clientHeight: 600 });
+    h.scroller.scrollLeft = 0;
+    h.scroller.clientWidth = 1200;
+    h.scroller.scrollTop = 1000;
+    h.scroller.getBoundingClientRect = () => ({ top: 100, left: 0, height: 600, width: 1200 });
+    const target = fakeScrollTarget(() => ({ top: 900, bottom: 940, left: 10, right: 60, height: 40, width: 50 }));
+
+    scrollElementIntoViewWithin(h.host, target, { block: 'start', inline: 'nearest' });
+    assert.equal(h.scroller.scrollTop, 1000 + (900 - 100), 'the element top is brought to the top edge of the scroller');
+    assert.equal(target.scrolled.length, 0, 'the native scrollIntoView (which scrolls every ancestor, the window included) is not used');
+
+    h.scroller.scrollTop = 1000;
+    scrollElementIntoViewWithin(h.host, target, { block: 'center', inline: 'nearest' });
+    assert.equal(h.scroller.scrollTop, 1000 + (920 - (100 + 300)), 'center puts the middle of the element in the middle of the scroller');
+
+    h.scroller.scrollTop = 1000;
+    const inView = fakeScrollTarget(() => ({ top: 200, bottom: 240, left: 10, right: 60, height: 40, width: 50 }));
+    scrollElementIntoViewWithin(h.host, inView, { block: 'nearest', inline: 'nearest' });
+    assert.equal(h.scroller.scrollTop, 1000, 'nearest leaves an element that is already visible alone');
+    const below = fakeScrollTarget(() => ({ top: 760, bottom: 800, left: 10, right: 60, height: 40, width: 50 }));
+    scrollElementIntoViewWithin(h.host, below, { block: 'nearest', inline: 'nearest' });
+    assert.equal(h.scroller.scrollTop, 1000 + (800 - 700), 'nearest brings an element below the view just into it');
+});
+
+test('scrollElementIntoViewWithin falls back to the native scrollIntoView without a marked scroller', () => {
+    const h = createAutoFitHarness(1200);
+    const target = fakeScrollTarget(() => ({ top: 0, bottom: 10, left: 0, right: 10, height: 10, width: 10 }));
+
+    scrollElementIntoViewWithin(h.host, target, { block: 'center', inline: 'nearest' });
+
+    assert.deepEqual(target.scrolled, [{ block: 'center', inline: 'nearest' }]);
+});
+
+test('bounded frame: the settle loop of scrollToPage yields to a reader who scrolled in between', () => {
+    const h = createAutoFitHarness(1200);
+    markAsBoundedScroller(h, { top: 100, clientHeight: 600 });
+    h.scroller.getBoundingClientRect = () => ({ top: 100, left: 0, height: 600, width: 1200 });
+    const engine = createBoundedEngine(h);
+    engine.render();
+    engine.lastRender = { displayList: { pages: Array.from({ length: 12 }, () => ({ height: 1000 })) }, view: { zoomScale: 0.5 } };
+    engine.canvasStack.root.getBoundingClientRect = () => ({ top: 140 - h.scroller.scrollTop });
+    engine.canvasStack.pages.delete('10');
+    h.scroller.scrollTop = 0;
+
+    engine.scrollToPage(10);
+    const expected = h.scroller.scrollTop;
+    // the repaint mounts the page; meanwhile the reader scrolls elsewhere
+    const page = { getBoundingClientRect: () => ({ top: 5000, bottom: 5500, left: 0, right: 10, height: 500, width: 10 }), scrollIntoView: () => { throw new Error('native'); } };
+    engine.canvasStack.pages.set('10', { pageElement: page });
+    h.scroller.scrollTop = expected + 700;
+    h.flush();
+
+    assert.equal(h.scroller.scrollTop, expected + 700, 'the reader\'s own scroll is not yanked back to the page');
+    engine.destroy();
+});
+
+test('bounded frame: the reading position survives a change of the frame (fullscreen, a new Height)', () => {
+    const h = createAutoFitHarness(1200);
+    markAsBoundedScroller(h, { top: 100, clientHeight: 600 });
+    let viewTop = 100;
+    h.scroller.getBoundingClientRect = () => ({ top: viewTop, left: 0, height: 600, width: 1200 });
+    const engine = createBoundedEngine(h);
+    engine.render();
+    const pageTop = 2400; // the page starts 2400 px into the scroller's content
+    const page = engine.canvasStack.pages.get('0').pageElement;
+    page.getBoundingClientRect = () => ({ top: viewTop + pageTop - h.scroller.scrollTop, height: 1123, bottom: viewTop + pageTop - h.scroller.scrollTop + 1123 });
+    h.scroller.scrollTop = pageTop + 300;
+
+    assert.equal(engine.captureReadingPosition(), true);
+    // the frame changes: another scroller box, the scroll position is gone
+    viewTop = 0;
+    h.scroller.scrollTop = 0;
+    assert.equal(engine.restoreReadingPosition(), true);
+    h.flush();
+
+    assert.ok(Math.abs(h.scroller.scrollTop - (pageTop + 300)) < 2, `scrollTop ${h.scroller.scrollTop}`);
+    assert.equal(engine.restoreReadingPosition(), false, 'a restore is one-shot');
+    engine.destroy();
 });

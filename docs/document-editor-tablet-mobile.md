@@ -79,3 +79,19 @@ the column). `PageFitMode="Off"` restores the old fixed zoom, `FitWidth` makes t
 
 On a coarse pointer every control of the chrome is at least `--tm-touch-target` (44 px): header buttons, ribbon tabs and tools, side panel tabs and
 close, the action bar tiles. The ribbon "More" and the print preview are the core mechanisms (no editor-owned overflow model).
+
+## A bounded frame (`Height`)
+
+With `TmDocumentEditor.Height` set (or in fullscreen, which is the same frame at `100dvh`) the editor is a frame of fixed height instead of flowing
+in the page: `data-frame="bounded"` on the root. The tablet and the phone follow the same structure as in the flow, with these differences:
+
+- **The document region is the scroller** (`[data-region="doc"][data-scroll-viewport="true"]`), in both axes. The page itself does not scroll, so the
+  status bar is always on screen and the horizontal scrollbar of a page wider than its column (`PageFitMode.Off`, a pinned zoom) is at the bottom of the
+  visible workspace, not at the end of the document.
+- **The tablet's side sheet** keeps its sticky parking, now inside the frame: it sits at the top edge of the scroll area (the ribbon is outside the
+  scroller, so the published ribbon size is 0 there) and caps itself by the frame (`--tm-document-frame-block-size`), never by the viewport.
+- **The phone's action bar** is the last in-flow row of the frame, under the workspace (and the status bar, when it has something to say): it does
+  not float over the document. The safe-area inset is the core bar's own bottom padding - the editor adds none on top (that would double it). The phone sheets stay in the floating root, outside the size
+  container.
+- Everything keys on `data-frame` and `data-layout`, so a frame bounded inside a narrow host is the same on a wide screen; a pinned `LayoutMode` is
+  unaffected. See "The bounded frame" in [document-editor-developer-guide.md](document-editor-developer-guide.md).

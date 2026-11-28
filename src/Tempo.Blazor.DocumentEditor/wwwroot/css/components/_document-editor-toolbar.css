@@ -1,5 +1,11 @@
 /* Fáze 15: soubor je jediný zdroj stylů ribbonu (legacy blok v _document-editor.css smazán),
    proto zde deklarujeme i base display/color vlastnosti dřív děděné z legacy bloku. */
+/* A bounded frame keeps the ribbon above its scroller: nothing scrolls under it, so it has nothing to stick to (phase 12). */
+.tm-document-editor[data-frame="bounded"] .tm-document-editor__ribbon {
+    position: relative;
+    top: auto;
+}
+
 .tm-document-editor__ribbon {
     position: sticky;
     top: 0;

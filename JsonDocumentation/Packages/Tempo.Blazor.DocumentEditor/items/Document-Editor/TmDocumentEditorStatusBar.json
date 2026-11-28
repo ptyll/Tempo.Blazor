@@ -12,6 +12,19 @@
   ],
   "parameters": [
     {
+      "name": "ModeLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Names the mode the editor is in instead of the region being edited (the print preview: \"Print preview\"). Empty keeps \"Editing {region}\"."
+    },
+    {
+      "name": "ShowZoom",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the zoom control (or label) is shown. A mode that has a zoom of its own, like the print preview, hides this one."
+    },
+    {
       "name": "IsDirty",
       "type": "bool",
       "isRequired": false,

@@ -26,7 +26,7 @@ public class DocumentEditorBaselineScreenshots : BaselineGeneratorTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(width, height);
-        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor", WaitUntilState.DOMContentLoaded);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?bounded=false", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync("[data-testid='document-editor-demo']", new PageWaitForSelectorOptions
         {
             State = WaitForSelectorState.Attached,
@@ -256,7 +256,7 @@ public class DocumentEditorBaselineScreenshots : BaselineGeneratorTestBase
         // ═══════════════════════════════════════════════════════════════
         // 6. COMPACT TOOLBAR
         // ═══════════════════════════════════════════════════════════════
-        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?toolbarMode=compact", WaitUntilState.DOMContentLoaded);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?bounded=false&toolbarMode=compact", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync("[data-testid='document-editor-demo']", new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 60000 });
         await page.WaitForTimeoutAsync(800);
         await CaptureAsync(page, "06-toolbar-compact.png");
@@ -264,7 +264,7 @@ public class DocumentEditorBaselineScreenshots : BaselineGeneratorTestBase
         // ═══════════════════════════════════════════════════════════════
         // 7. DISTRACTION-FREE
         // ═══════════════════════════════════════════════════════════════
-        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?toolbarMode=distractionFree", WaitUntilState.DOMContentLoaded);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?bounded=false&toolbarMode=distractionFree", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync("[data-testid='document-editor-demo']", new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 60000 });
         await page.WaitForTimeoutAsync(800);
         await CaptureAsync(page, "07-toolbar-distraction-free.png");
@@ -272,7 +272,7 @@ public class DocumentEditorBaselineScreenshots : BaselineGeneratorTestBase
         // ═══════════════════════════════════════════════════════════════
         // 8. MINI TOOLBAR (text selection)
         // ═══════════════════════════════════════════════════════════════
-        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor", WaitUntilState.DOMContentLoaded);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?bounded=false", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync("[data-testid='document-wysiwyg-host'] .tm-wysiwyg-block", new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 60000 });
         await page.WaitForTimeoutAsync(600);
         await SelectFirstInlineRangeAsync(page, 0, 5);
@@ -301,7 +301,7 @@ public class DocumentEditorBaselineScreenshots : BaselineGeneratorTestBase
         // ═══════════════════════════════════════════════════════════════
         // 11. SIDE PANEL – COMMENTS
         // ═══════════════════════════════════════════════════════════════
-        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?documentId=contract-demo", WaitUntilState.DOMContentLoaded);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?bounded=false&documentId=contract-demo", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync("[data-testid='document-side-panel']", new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 60000 });
         await page.WaitForTimeoutAsync(600);
         await OpenSidePanelTabAsync(page, "Comments");
@@ -340,7 +340,7 @@ public class DocumentEditorBaselineScreenshots : BaselineGeneratorTestBase
         // ═══════════════════════════════════════════════════════════════
         // 17. SIDE PANEL – IMAGE INSPECTOR
         // ═══════════════════════════════════════════════════════════════
-        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?documentId=exhibits-demo", WaitUntilState.DOMContentLoaded);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?bounded=false&documentId=exhibits-demo", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync("[data-testid='document-wysiwyg-host'] img, [data-testid='document-wysiwyg-host'] figure", new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 60000 });
         await page.WaitForTimeoutAsync(600);
         await ClickOnImageAsync(page);
@@ -351,7 +351,7 @@ public class DocumentEditorBaselineScreenshots : BaselineGeneratorTestBase
         // ═══════════════════════════════════════════════════════════════
         // 18. FIND / REPLACE PANEL
         // ═══════════════════════════════════════════════════════════════
-        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?documentId=contract-demo", WaitUntilState.DOMContentLoaded);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?bounded=false&documentId=contract-demo", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync("[data-testid='document-editor-demo']", new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 60000 });
         await page.WaitForTimeoutAsync(600);
         var docBody2 = page.Locator("[data-testid='document-wysiwyg-host'] .tm-wysiwyg-page__body[contenteditable]").First;
@@ -398,7 +398,7 @@ public class DocumentEditorBaselineScreenshots : BaselineGeneratorTestBase
         // ═══════════════════════════════════════════════════════════════
         // 22. FULL SHELL (overview)
         // ═══════════════════════════════════════════════════════════════
-        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?documentId=filing-demo", WaitUntilState.DOMContentLoaded);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?bounded=false&documentId=filing-demo", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync("[data-testid='document-editor-demo']", new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 60000 });
         await page.WaitForTimeoutAsync(800);
         await CaptureAsync(page, "22-full-shell-filing.png");
@@ -442,7 +442,7 @@ public class DocumentEditorBaselineScreenshots : BaselineGeneratorTestBase
         // ═══════════════════════════════════════════════════════════════
         // 25. RIBBON WITH RULER VISIBLE
         // ═══════════════════════════════════════════════════════════════
-        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?documentId=contract-demo", WaitUntilState.DOMContentLoaded);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?bounded=false&documentId=contract-demo", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync("[data-testid='document-editor-demo']", new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 60000 });
         await page.WaitForTimeoutAsync(600);
         await ClickTabAsync(page, "document-ribbon-tab-view");
@@ -457,7 +457,7 @@ public class DocumentEditorBaselineScreenshots : BaselineGeneratorTestBase
         // ═══════════════════════════════════════════════════════════════
         // 26. DARK MODE OVERVIEW
         // ═══════════════════════════════════════════════════════════════
-        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?documentId=contract-demo", WaitUntilState.DOMContentLoaded);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?bounded=false&documentId=contract-demo", WaitUntilState.DOMContentLoaded);
         await page.WaitForSelectorAsync("[data-testid='document-editor-demo']", new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 60000 });
         await page.WaitForTimeoutAsync(600);
         await ToggleDarkModeAsync(page);

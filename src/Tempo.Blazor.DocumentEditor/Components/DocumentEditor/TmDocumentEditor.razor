@@ -16,6 +16,8 @@
                   ResolvedLayoutChanged="OnResolvedLayoutChangedAsync"
                   ContainerWidthChanged="OnContainerWidthChangedAsync"
                   IsContainer="false"
+                  Style="@HostFrameStyle"
+                  data-frame="@HostFrameDataValue"
                   Class="tm-document-editor-host">
 <LayoutContent Context="lay">
 @{ ApplyLayout(lay.Resolved); _inspectorContext = ResolveInspectorContext(); }
@@ -31,6 +33,8 @@
      data-layout="@lay.CssModifier"
      data-inspector-sheet="@(InspectorIsSheet && IsDesktopLayout ? "true" : null)"
      data-layout-forced="@(LayoutMode != TmLayoutMode.Auto ? "true" : null)"
+     data-frame="@FrameDataValue"
+     data-fullscreen="@(_isFullscreen ? "true" : null)"
      data-page-fit="@(_pageFitApplied ? "true" : null)"
      data-can-view-audit="@CanViewAudit.ToString()"
      data-ribbon-keyboard-mode="@_ribbonKeyboardMode.ToString().ToLowerInvariant()"
@@ -415,6 +419,7 @@
             <section class="tm-document-editor__surface"
                      data-region="doc"
                      data-focus-region="doc"
+                     data-scroll-viewport="@(FrameDataValue is null ? null : "true")"
                      aria-label="@Loc["TmDocumentEditor_DocumentSurfaceLabel"]">
                 @* Internal slot of the doc region (DE-1.1): banners that belong to the document, not to the whole
                    editor - today the review summary; the version preview and the diff land here in later phases. *@
@@ -520,6 +525,8 @@
                                    PageCount="@DocumentPageCount"
                                    CurrentPage="@(_activePageIndex + 1)"
                                    ActiveRegionLabel="@ActiveRegionLabel"
+                                   ModeLabel="@(CanvasPrintPreviewActive ? Loc["TmDocumentEditor_PrintPreview"].ToString() : null)"
+                                   ShowZoom="@(!CanvasPrintPreviewActive)"
                                    ZoomLabel="@ZoomStatusLabel"
                                    ZoomAriaLabel="@ZoomStatusAriaLabel"
                                    ZoomPercent="@_zoomPercent"

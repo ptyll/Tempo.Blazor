@@ -19,12 +19,13 @@
     z-index: 1;
 }
 
-/* ── Fullscreen mode ── */
-body.tm-document-editor--fullscreen .tm-document-editor {
+/* ── Fullscreen mode ──
+   The same bounded frame at 100dvh (data-frame="bounded" with --tm-document-editor-height: 100dvh, set by the editor): the only thing fullscreen adds is
+   lifting the root over the host layout. The body class stays as the page's scroll lock and for hosts; this rule keys on the editor's own state. */
+.tm-document-editor[data-fullscreen="true"] {
     position: fixed;
     inset: 0;
     z-index: 9999;
-    overflow: hidden;
 }
 
 /* ── Search result highlights (the ONLY declaration of the search marker look) ──

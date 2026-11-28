@@ -30,7 +30,7 @@ public sealed class DocumentEditorCanvasPerfBudgetE2ETests : WasmTestBase
         var context = await CreateContextAsync(new BrowserNewContextOptions(), trace: false);
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1000);
-        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?documentId={LargeDocId}");
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?bounded=false&documentId={LargeDocId}");
         await page.WaitForSelectorAsync("[data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']", new PageWaitForSelectorOptions
         {
             State = WaitForSelectorState.Attached,
@@ -91,7 +91,7 @@ public sealed class DocumentEditorCanvasPerfBudgetE2ETests : WasmTestBase
         var context = await CreateContextAsync(new BrowserNewContextOptions(), trace: false);
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1000);
-        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?documentId={LargeDocId}");
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?bounded=false&documentId={LargeDocId}");
         await page.WaitForSelectorAsync("[data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']", new PageWaitForSelectorOptions
         {
             State = WaitForSelectorState.Attached,

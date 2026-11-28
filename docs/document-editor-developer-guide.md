@@ -230,6 +230,54 @@ is `data-layout="desktop|tablet|mobile"` on `.tm-document-editor`; the steps are
 - **Why the navigation column still folds below 1546 px.** The phase-3 fold (navigation + A4 page + inspector + gutters) stays: with the fit a
   1200 px container WITHOUT the fold would give the page 576 px (a 0.6 scale, text too small to read), WITH the fold (the 3 rem rail) 800 px
   (about 0.93). The fold buys readable text, the fit guarantees no clipping for the rest; the reader's own choice of the column still wins.
+- **The bounded frame (`Height`, phase 12; decision `DE-BOUNDED-FRAME-DOC-SCROLLER`).** `TmDocumentEditor.Height` (`string?`, a CSS length: `600px`,
+  `100%`, `calc(100dvh - 5rem)`, `clamp(20rem, 80dvh, 60rem)`, `var(--host-height)`; `null` = today's flow) bounds the editor. Only a number with a unit or a
+  `calc` / `min` / `max` / `clamp` / `var` expression with balanced parentheses is accepted - `auto`, `none`, `inherit`, a unit-less number or anything with a
+  semicolon / brace / quote is ignored (the editor flows), never written into a style. With a value the root gets `data-frame="bounded"`; the height is the custom
+  property `--tm-document-editor-height` on the `TmLayoutObserver` wrapper `.tm-document-editor-host` (also `data-frame="bounded"`), which the root inherits - the
+  root renders **no `style` attribute** of its own, so a host's `style` in `AdditionalAttributes` can neither clobber nor be clobbered by the frame. The editor
+  becomes a flex column of that height: the header and the ribbon on top (the ribbon is no longer sticky - nothing scrolls under it), then
+  `.tm-document-editor__main`, which fills what is left (`flex: 1 1 auto; min-block-size: 0`), and under it the status bar, pinned because nothing scrolls past it
+  (a phone's `TmMobileActionBar` is the last in-flow row of the same column). The frame takes its height from the flex chain only (no size containment): a
+  percentage `Height` in a parent without a definite height resolves to `auto` and the editor flows at its natural height instead of collapsing.
+  The workspace is a one-row grid (`grid-template-rows: minmax(0, 1fr)`, `overflow: hidden`) and **only its regions scroll**, each inside its own cell: the
+  **document region** (`[data-region="doc"]`, marked `data-scroll-viewport="true"`) in both axes (`scrollbar-gutter: stable`, `overflow-anchor: none` - the
+  virtualizer mounts and unmounts pages under the reader and the browser's scroll anchoring moved the scroll by three pages within 100 ms), the docked navigation
+  column and the docked inspector panel (full column height, `overscroll-behavior: contain`, the panel body scrolls). The canvas host inside the document region
+  is `overflow: visible` (its own scroller would put the horizontal scrollbar at the end of the document, which is the problem this solves), and the comment rail
+  stops being a second scroller. The sticky panels cap with `--tm-document-frame-block-size` (`100dvh` in the flow, `100%` of their cell in a frame; the published
+  ribbon size is reset to 0 inside main). Every rule keys on `data-frame` and `data-layout`, never on a viewport media query (`TmDocumentEditorCssTests` walks the
+  enclosing at-rules). Sheets, dialogs and the floating root stay OUTSIDE `.tm-document-editor__main` (a container is the containing block of fixed descendants).
+  - **`data-scroll-viewport="true"` is a frozen attribute** (editor markup, CSS and the canvas engine share it): the engine treats the nearest ancestor that
+    carries it as THE scroll viewport whatever its overflow state says. A host that mounts the engine in its own frame sets it on the element that scrolls the
+    document.
+  - **Engine.** `entry.mjs`: `resolveScrollViewportElement` (the fit's viewport and its `ResizeObserver` target), `resolveVerticalScroller` (the reading anchor of a
+    fit, `scrollerViewTop`), `readViewport()` (the scroll position is how far the engine root is above the TOP of that scroller, the height is its `clientHeight`),
+    `scrollToPage` (an unmounted page: root offset + padding + the SCALED page stride, then a settle loop that snaps the real page into place and gives up as soon
+    as the reader scrolled) and the scroll listener - a scroll event does not bubble, so ONE capture-phase window listener reacts to the marked scroller that holds
+    the mount. Everything that used `scrollIntoView` (find "go to result", the page navigator, a mounted page, a match probe) goes through
+    `scrollElementIntoViewWithin`, which scrolls ONLY the marked scroller - the native call scrolls every ancestor, the window and a host's panels included.
+    The marked scroller of an element is cached per element and re-validated. The engine has no caret-into-view or drag auto-scroll of its own (the hidden input
+    focuses with `preventScroll`), so there was nothing to migrate there. The fit of phase 11 measures the same element, so `fit-page` fits the frame's height.
+  - **Virtualization in CSS pixels.** `createPageVirtualizer().plan(pages, viewport, { scale })` brings the pages into CSS pixels (heights times the zoom; the gap
+    between pages and the padding are CSS already) before it compares them with the viewport and sizes the spacers: at a zoom below 1 (a fitted tablet / phone)
+    the unscaled model mounted pages two or three strides below the reader. The plan also returns `activePageIndex` - the first page that reaches below the top
+    quarter of the view (at most 120 px) - and `getPageMetricsJson` uses it, so "Page X of Y" names the page the reader is on, not the overscan page above it.
+  - **The reader's place survives a change of the frame.** `captureReadingPosition()` / `restoreReadingPosition()` (engine, `interop.mjs`,
+    `TmDocumentCanvasEngineHost.CaptureReadingPositionAsync` / `RestoreReadingPositionAsync`) keep page + fraction across entering / leaving fullscreen and a
+    runtime change of `Height`: the editor captures before the state changes and restores after the render.
+  - **Fullscreen is the same frame.** `_isFullscreen` renders `data-frame="bounded"` + `data-fullscreen="true"` on the root; CSS
+    (`.tm-document-editor[data-fullscreen="true"]`) sets `--tm-document-editor-height: 100dvh` and `position: fixed; inset: 0` (no
+    `body.tm-document-editor--fullscreen` selector any more - the body class and the body scroll lock stay, set by `tmDocumentEditor.setFullscreen`). The
+    observer wrapper keeps only the HOST's `Height`, so the page does not grow a viewport-tall hole while the root is lifted out of the flow.
+  - **Print preview.** The status bar names the mode ("Print preview", the existing key) instead of "Editing body" and hides its zoom (the preview has its own).
+  - **Phone.** The bar sits under the workspace (and under the status bar when it has something to say). The core `TmMobileActionBar` pads its bottom by
+    `env(safe-area-inset-bottom)` itself, so the editor adds nothing on top of it; without a bar the status bar takes that padding (`:last-child`).
+  - **Demo.** `/canvas-engine-host?height=viewport` gives the editor exactly the viewport under the demo chrome (`.demo-document-frame`); any other `height` value is
+    passed through as a CSS length. `/document-editor` is bounded by default: a flex column `.demo-document-page` of the same height
+    (`--demo-shell-chrome-block-size`, one variable for both pages) with the capped controls on top and the editor (`Height="100%"`) taking the rest, so the page does
+    not scroll; the checkbox `document-editor-bounded` (or `?bounded=false`) returns to the flowing editor with the building-block cards below it. The E2E specs
+    of the flowing editor open the page with an explicit `bounded=false` (`FlowingDocumentEditorUrl`), the specs of the frame with `bounded=true`.
 - **Doc region banner slot.** `.tm-document-editor__doc-banners` (`data-testid="document-doc-banners"`) sits above the page
   inside `[data-region="doc"]`; the review summary and the version preview strip (`TmDocumentVersionPreviewStrip`) live there, the diff banner joins later.
 - **F6.** F6 / Shift+F6 cycle the landmarks marked `data-focus-region`: header, ribbon, navigation, document, inspector (a
@@ -300,8 +348,8 @@ measured by the core `tm-toolbar.js` (lowest rank leaves first, the later of equ
   rule, because a `TmModal` body is not a size container; a phone layout pinned on a wide screen keeps their desktop column count (the modal is a
   sheet / fullscreen through the cascaded viewport scope, only the inner grid differs). The command palette is keyed on `data-layout` and is
   fullscreen for a pinned phone layout.
-- A viewport-bounded editor frame and a `IsSheet` mode of the core floating panel are not part of this plan (the automatic fit-width for a
-  desktop container of 1024 - 1400 px is: the engine fits the page, see "A page wider than the doc region").
+- A `IsSheet` mode of the core floating panel is not part of this plan (the automatic fit-width for a desktop container of 1024 - 1400 px is: the
+  engine fits the page, see "A page wider than the doc region"; the viewport-bounded frame is: see "The bounded frame").
 
 ## What the redesign did not do
 

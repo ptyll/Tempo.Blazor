@@ -497,7 +497,7 @@ public sealed class DocumentEditorRedesignPhase2E2ETests : WasmTestBase
     {
         var context = await CreateContextAsync(ContextOptions(1440, 900, false));
         var page = await context.NewPageAsync();
-        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor", WaitUntilState.DOMContentLoaded);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?bounded=false", WaitUntilState.DOMContentLoaded);
         var card = page.GetByTestId("document-inspector-blocks-card");
         await Assertions.Expect(card).ToBeVisibleAsync(new() { Timeout = 60_000 });
         await card.ScrollIntoViewIfNeededAsync();
@@ -735,7 +735,7 @@ public sealed class DocumentEditorRedesignPhase2CaptureE2ETests : BaselineGenera
     {
         var context = await CreateContextAsync(ContextOptions(1440, 900, touch: false));
         var page = await context.NewPageAsync();
-        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor", WaitUntilState.DOMContentLoaded);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?bounded=false", WaitUntilState.DOMContentLoaded);
         var card = page.GetByTestId("document-inspector-blocks-card");
         await Assertions.Expect(card).ToBeVisibleAsync(new() { Timeout = 60_000 });
         await card.ScrollIntoViewIfNeededAsync();
@@ -802,7 +802,7 @@ public sealed class DocumentEditorRedesignPhase2CaptureE2ETests : BaselineGenera
         // The canvas-engine-host route takes the seeded document id; the full editor page does for the contract demo
         // document only (the history document is the page's default).
         var url = route == "/document-editor" && documentId == ContractDocumentId
-            ? $"{BaseUrl}{route}?documentId={documentId}"
+            ? $"{BaseUrl}{route}?bounded=false&documentId={documentId}"
             : OpenUrl(BaseUrl, documentId, route);
         await GotoAppReadyAsync(page, url, WaitUntilState.DOMContentLoaded);
         await WaitForPredicateAsync(page, """

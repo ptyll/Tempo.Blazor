@@ -211,7 +211,7 @@ public sealed class DocumentEditorRedesignPhase9CaptureE2ETests : BaselineGenera
     {
         var context = await CreateContextAsync(ContextOptions(width, height, touch));
         var page = await context.NewPageAsync();
-        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?documentId={documentId}", WaitUntilState.DOMContentLoaded);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?bounded=false&documentId={documentId}", WaitUntilState.DOMContentLoaded);
         await WaitReadyAsync(page);
         await page.WaitForTimeoutAsync(600);
         return page;

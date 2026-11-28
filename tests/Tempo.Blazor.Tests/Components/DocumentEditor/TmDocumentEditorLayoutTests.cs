@@ -814,6 +814,207 @@ public class TmDocumentEditorLayoutTests : LocalizationTestBase
             .Should().BeEmpty("G8: changes apply immediately and undo covers them - no Apply / OK footers");
     }
 
+    // ── Phase 12: the viewport-bounded frame (Height) ────────────────────
+
+    [Fact]
+    public void Height_Null_KeepsTheDocumentFlow_NoBoundedFrameMarkers()
+    {
+        var cut = RenderEditor(TmLayoutMode.Desktop);
+
+        var root = cut.Find(".tm-document-editor");
+        root.HasAttribute("data-frame").Should().BeFalse("without Height the editor flows in the page exactly as before");
+        (root.GetAttribute("style") ?? string.Empty).Should().NotContain("--tm-document-editor-height");
+        cut.Find(".tm-document-editor-host").HasAttribute("data-frame").Should().BeFalse();
+        cut.Find("[data-region='doc']").HasAttribute("data-scroll-viewport").Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData("600px")]
+    [InlineData("100%")]
+    [InlineData("calc(100dvh - 5rem)")]
+    [InlineData("min(48rem, 100dvh)")]
+    [InlineData("40rem")]
+    [InlineData("100svh")]
+    [InlineData("clamp(20rem, 80dvh, 60rem)")]
+    [InlineData("var(--host-height)")]
+    public void Height_Set_RendersTheBoundedFrame_OnTheRootAndTheObserverHost(string height)
+    {
+        var cut = RenderEditor(TmLayoutMode.Desktop, p => p.Add(c => c.Height, height));
+
+        var root = cut.Find(".tm-document-editor");
+        root.GetAttribute("data-frame").Should().Be("bounded");
+        root.HasAttribute("style").Should().BeFalse("the root renders no style attribute of its own - the height is inherited from the observer wrapper, so a host's own style cannot clobber it");
+        var host = cut.Find(".tm-document-editor-host");
+        host.GetAttribute("data-frame").Should().Be("bounded", "the observer wrapper carries the same height so a percentage resolves through it");
+        host.GetAttribute("style").Should().Contain($"--tm-document-editor-height: {height}");
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Height_BlankOrWhitespace_IsTreatedAsNull(string height)
+    {
+        var cut = RenderEditor(TmLayoutMode.Desktop, p => p.Add(c => c.Height, height));
+
+        cut.Find(".tm-document-editor").HasAttribute("data-frame").Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData("600px; position: fixed")]
+    [InlineData("600px} body{display:none")]
+    [InlineData("url(javascript:alert(1))")]
+    [InlineData("600px !important")]
+    [InlineData("auto")]
+    [InlineData("none")]
+    [InlineData("inherit")]
+    [InlineData("foo")]
+    [InlineData("600")]
+    [InlineData("calc(100dvh - 5rem")]
+    [InlineData("calc(100dvh - 5rem))")]
+    [InlineData("px")]
+    public void Height_ThatIsNotACssLength_IsIgnored_NeverInjectedIntoTheStyle(string height)
+    {
+        var cut = RenderEditor(TmLayoutMode.Desktop, p => p.Add(c => c.Height, height));
+
+        var root = cut.Find(".tm-document-editor");
+        root.HasAttribute("data-frame").Should().BeFalse("a value that is not a CSS length must not become a declaration");
+        (root.GetAttribute("style") ?? string.Empty).Should().NotContain("position");
+    }
+
+    [Fact]
+    public void Height_ChangedAfterTheFirstRender_TogglesTheFrame()
+    {
+        var cut = RenderEditor(TmLayoutMode.Desktop);
+        cut.Find(".tm-document-editor").HasAttribute("data-frame").Should().BeFalse();
+
+        cut.Render(parameters => parameters.Add(c => c.Height, "520px"));
+        cut.Find(".tm-document-editor").GetAttribute("data-frame").Should().Be("bounded");
+        cut.Find(".tm-document-editor-host").GetAttribute("style").Should().Contain("520px");
+
+        cut.Render(parameters => parameters.Add(c => c.Height, null));
+        cut.Find(".tm-document-editor").HasAttribute("data-frame").Should().BeFalse();
+        cut.Find(".tm-document-editor-host").HasAttribute("data-frame").Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData(TmLayoutMode.Desktop)]
+    [InlineData(TmLayoutMode.Tablet)]
+    [InlineData(TmLayoutMode.Mobile)]
+    public void Bounded_TheDocRegionIsTheScrollViewport_AndTheStatusBarIsPinnedOutsideIt(TmLayoutMode mode)
+    {
+        var cut = RenderEditor(mode, p => p.Add(c => c.Height, "640px"));
+
+        var doc = cut.Find("[data-region='doc']");
+        doc.GetAttribute("data-scroll-viewport").Should().Be("true", "the engine measures and scrolls this element");
+        doc.QuerySelector("[data-testid='document-canvas-engine-host']").Should().NotBeNull();
+
+        var main = cut.Find("[data-testid='document-editor-main']");
+        var workspace = cut.Find("[data-testid='document-editor-workspace']");
+        var statusBar = cut.Find(".tm-document-editor__status-bar");
+        statusBar.ParentElement!.GetAttribute("data-testid").Should().Be("document-editor-main", "the status bar is a sibling of the workspace under main, never inside the scroller");
+        statusBar.Closest("[data-testid='document-editor-workspace']").Should().BeNull();
+        statusBar.Closest("[data-scroll-viewport]").Should().BeNull();
+        workspace.ParentElement!.GetAttribute("data-testid").Should().Be("document-editor-main");
+        main.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Bounded_FloatingSurfaces_StayOutsideTheMainSizeContainer()
+    {
+        var cut = RenderEditor(TmLayoutMode.Desktop, p => p.Add(c => c.Height, "640px"));
+
+        var floating = cut.Find("[data-testid='document-floating-root']");
+        floating.Closest("[data-testid='document-editor-main']").Should().BeNull(
+            "main is a size container (the containing block of every fixed descendant) - sheets and floating panels must stay outside it");
+        cut.Find(".tm-document-editor__ribbon").Closest("[data-testid='document-editor-main']").Should().BeNull();
+    }
+
+    [Fact]
+    public void Bounded_Phone_TheActionBarIsInFlowUnderTheWorkspace_NotInsideTheScroller()
+    {
+        var cut = RenderEditor(TmLayoutMode.Mobile, p => p.Add(c => c.Height, "640px"));
+
+        var bar = cut.Find("[data-testid='document-mobile-action-bar']");
+        var main = cut.Find("[data-testid='document-editor-main']");
+        bar.Closest("[data-testid='document-editor-main']")!.GetAttribute("data-testid").Should().Be("document-editor-main");
+        bar.Closest("[data-testid='document-editor-workspace']").Should().BeNull("the action bar sits under the workspace, it never covers the document");
+        bar.Closest("[data-scroll-viewport]").Should().BeNull();
+        var order = main.Children.Select(child => child.GetAttribute("data-testid") ?? child.ClassName ?? string.Empty).ToList();
+        order.FindIndex(id => id.Contains("document-mobile-action-bar", StringComparison.Ordinal))
+            .Should().BeGreaterThan(order.IndexOf("document-editor-workspace"), "in flow, after the workspace");
+    }
+
+    [Fact]
+    public void Fullscreen_UsesTheBoundedFrame_AndLeavesItWhenToggledOff()
+    {
+        JSInterop.SetupVoid("tmDocumentEditor.setFullscreen", _ => true).SetVoidResult();
+        var cut = RenderEditor(TmLayoutMode.Desktop);
+        cut.Find(".tm-document-editor").HasAttribute("data-frame").Should().BeFalse();
+
+        cut.Find("[data-testid='document-status-fullscreen']").Click();
+
+        var root = cut.Find(".tm-document-editor");
+        root.GetAttribute("data-frame").Should().Be("bounded", "fullscreen is the bounded frame at 100dvh - one path");
+        root.GetAttribute("data-fullscreen").Should().Be("true");
+        root.HasAttribute("style").Should().BeFalse("fullscreen sets the frame height in CSS (data-fullscreen), not in an inline style");
+        cut.Find("[data-region='doc']").GetAttribute("data-scroll-viewport").Should().Be("true");
+
+        cut.Find("[data-testid='document-status-fullscreen']").Click();
+
+        root = cut.Find(".tm-document-editor");
+        root.HasAttribute("data-frame").Should().BeFalse();
+        root.HasAttribute("data-fullscreen").Should().BeFalse();
+    }
+
+    [Fact]
+    public void Fullscreen_WithAHeight_StillCoversTheViewport_AndRestoresTheHostHeightAfterwards()
+    {
+        JSInterop.SetupVoid("tmDocumentEditor.setFullscreen", _ => true).SetVoidResult();
+        var cut = RenderEditor(TmLayoutMode.Desktop, p => p.Add(c => c.Height, "480px"));
+
+        cut.Find("[data-testid='document-status-fullscreen']").Click();
+        cut.Find(".tm-document-editor").GetAttribute("data-fullscreen").Should().Be("true");
+        cut.Find(".tm-document-editor-host").GetAttribute("style").Should().Contain("--tm-document-editor-height: 480px", "the wrapper keeps the host's height while the root is lifted");
+
+        cut.Find("[data-testid='document-status-fullscreen']").Click();
+        cut.Find(".tm-document-editor").HasAttribute("data-fullscreen").Should().BeFalse();
+        cut.Find(".tm-document-editor").GetAttribute("data-frame").Should().Be("bounded");
+    }
+
+    [Fact]
+    public void Fullscreen_KeepsTheReadingPosition_CaptureBeforeAndRestoreAfterTheRender()
+    {
+        JSInterop.SetupVoid("tmDocumentEditor.setFullscreen", _ => true).SetVoidResult();
+        var cut = RenderEditor(TmLayoutMode.Desktop);
+        var module = SetupDocumentCanvasModule();
+
+        cut.Find("[data-testid='document-status-fullscreen']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var names = module.Invocations.Select(invocation => invocation.Identifier).ToList();
+            names.Should().Contain("captureReadingPosition", "the place is remembered BEFORE the frame changes");
+            names.Should().Contain("restoreReadingPosition", "and put back after the render");
+            names.IndexOf("captureReadingPosition").Should().BeLessThan(names.LastIndexOf("restoreReadingPosition"));
+        });
+    }
+
+    [Fact]
+    public void Height_ChangedAtRuntime_KeepsTheReadingPosition()
+    {
+        var cut = RenderEditor(TmLayoutMode.Desktop);
+        var module = SetupDocumentCanvasModule();
+        var before = module.Invocations.Count(invocation => invocation.Identifier == "captureReadingPosition");
+
+        cut.Render(parameters => parameters.Add(c => c.Height, "520px"));
+
+        cut.WaitForAssertion(() =>
+        {
+            module.Invocations.Count(invocation => invocation.Identifier == "captureReadingPosition").Should().Be(before + 1);
+            module.Invocations.Count(invocation => invocation.Identifier == "restoreReadingPosition").Should().BeGreaterThan(0);
+        });
+    }
+
     private static Task MarkCanvasReadyAsync(IRenderedComponent<TmDocumentEditor> cut, string? stateJson = "{}")
     {
         var host = cut.FindComponent<TmDocumentCanvasEngineHost>();

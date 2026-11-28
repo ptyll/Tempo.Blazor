@@ -261,7 +261,7 @@ public sealed class DocumentEditorRedesignPhase5CaptureE2ETests : BaselineGenera
     {
         var context = await CreateContextAsync(ContextOptions(width, height, touch));
         var page = await context.NewPageAsync();
-        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?documentId=contract-demo", Microsoft.Playwright.WaitUntilState.DOMContentLoaded);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?bounded=false&documentId=contract-demo", Microsoft.Playwright.WaitUntilState.DOMContentLoaded);
         await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-engine-host"][data-canvas-engine-ready="true"]')
                 && document.querySelectorAll('[data-canvas-text-rect]').length >= 1

@@ -222,7 +222,7 @@ export function createCanvasStack(options = {}) {
         const displayList = plan.displayList;
         const allRenderPages = plan.allRenderPages;
         const pixelRatio = Math.max(1, Number(pixelRatioProvider()) || 1);
-        const virtualization = virtualizer.plan(allRenderPages, options.viewport || {});
+        const virtualization = virtualizer.plan(allRenderPages, options.viewport || {}, { scale: zoomScale });
         const renderPages = virtualization.pages;
 
         // Invalidate the shared overlay placement snapshot ONLY when the page geometry can actually move

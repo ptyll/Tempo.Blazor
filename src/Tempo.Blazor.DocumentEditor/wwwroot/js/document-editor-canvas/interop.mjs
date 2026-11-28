@@ -612,7 +612,11 @@ export function getPageMetricsJson(handle) {
     const visible = Array.isArray(snapshot.render?.virtualization?.visiblePageIndexes)
         ? snapshot.render.virtualization.visiblePageIndexes.map(Number)
         : [];
-    const activePageIndex = visible.length ? Math.max(0, Math.min(Math.max(0, total - 1), visible[0])) : 0;
+    // The page the reader is on comes from the virtualizer (the first page that reaches below the top quarter of the view); the first mounted page is only
+    // the fallback, because the window of mounted pages starts with an overscan page above the view.
+    const planned = Number(snapshot.render?.virtualization?.activePageIndex);
+    const first = Number.isFinite(planned) ? planned : (visible.length ? visible[0] : 0);
+    const activePageIndex = Math.max(0, Math.min(Math.max(0, total - 1), first));
     const indexOf = (page, ordinal) => Number(page?.index ?? ordinal);
     const pages = total > 0
         ? Array.from({ length: total }, (_, ordinal) => {
@@ -708,6 +712,15 @@ function clampJpegQuality(quality) {
     }
 
     return Math.min(1, Math.max(0.1, value));
+}
+
+// Phase 12: the reader's place survives a change of the frame around the document (fullscreen, a new Height) - capture before, restore after the render.
+export function captureReadingPosition(handle) {
+    return getInstance(handle).engine.captureReadingPosition();
+}
+
+export function restoreReadingPosition(handle) {
+    return getInstance(handle).engine.restoreReadingPosition();
 }
 
 // B9: scroll a page into view from the navigator (works for virtualized/unmounted pages too).

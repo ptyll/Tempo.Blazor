@@ -34,7 +34,16 @@ internal static class DocumentEditorRedesignE2EHelpers
     public static string OpenUrl(string baseUrl, string documentId, string route)
         => route == "/canvas-engine-host"
             ? $"{baseUrl}{route}?documentId={documentId}&showToolbar=true&preferLocalDraft=false"
-            : $"{baseUrl}{route}";
+            // the specs of the flowing editor open the demo page unbounded (the page bounds the editor to the viewport by default since phase 12)
+            : route == "/document-editor" ? $"{baseUrl}{route}?bounded=false" : $"{baseUrl}{route}";
+
+    /// <summary>The demo <c>/document-editor</c> page with the editor flowing in the page (<c>bounded=false</c>) - what the specs written before the bounded frame measure.</summary>
+    public static string FlowingDocumentEditorUrl(string baseUrl, string query = "")
+        => $"{baseUrl}/document-editor?bounded=false{(string.IsNullOrEmpty(query) ? string.Empty : "&" + query)}";
+
+    /// <summary>The demo <c>/document-editor</c> page with the editor bounded to the viewport (the page default).</summary>
+    public static string BoundedDocumentEditorUrl(string baseUrl, string query = "")
+        => $"{baseUrl}/document-editor?bounded=true{(string.IsNullOrEmpty(query) ? string.Empty : "&" + query)}";
 
     /// <summary>
     /// A REAL click on a ribbon command (redesign 146c7e1b, phase 4: the old pointer-intercepting siblings are gone, so the

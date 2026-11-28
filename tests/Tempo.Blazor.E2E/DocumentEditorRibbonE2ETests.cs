@@ -539,7 +539,7 @@ public sealed class DocumentEditorRibbonE2ETests : WasmTestBase
                 errors.Add(message.Text);
             }
         };
-        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?documentId=contract-demo", WaitUntilState.DOMContentLoaded);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?bounded=false&documentId=contract-demo", WaitUntilState.DOMContentLoaded);
         await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-engine-host"][data-canvas-engine-ready="true"]')
                 && document.querySelectorAll('[data-canvas-text-rect]').length >= 1
@@ -737,7 +737,7 @@ public sealed class DocumentEditorRedesignPhase4CaptureE2ETests : BaselineGenera
     {
         var context = await CreateContextAsync(ContextOptions(width, height, touch));
         var page = await context.NewPageAsync();
-        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?documentId=contract-demo", WaitUntilState.DOMContentLoaded);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?bounded=false&documentId=contract-demo", WaitUntilState.DOMContentLoaded);
         await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-engine-host"][data-canvas-engine-ready="true"]')
                 && document.querySelectorAll('[data-canvas-text-rect]').length >= 1

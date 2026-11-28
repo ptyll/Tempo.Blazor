@@ -627,7 +627,7 @@ public sealed class DocumentEditorPanelsResponsiveE2ETests : WasmTestBase
             }
         };
 
-        var url = route == "/document-editor" ? $"{BaseUrl}{route}?documentId={documentId}" : OpenUrl(BaseUrl, documentId, route);
+        var url = route == "/document-editor" ? $"{BaseUrl}{route}?bounded=false&documentId={documentId}" : OpenUrl(BaseUrl, documentId, route);
         await GotoAppReadyAsync(page, url, WaitUntilState.DOMContentLoaded);
         await WaitForPredicateAsync(page, """
             () => document.querySelector('[data-testid="document-canvas-engine-host"][data-canvas-engine-ready="true"]')

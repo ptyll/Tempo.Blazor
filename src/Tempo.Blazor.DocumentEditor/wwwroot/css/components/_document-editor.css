@@ -13,6 +13,9 @@
     --tm-document-ribbon-block-size: 0px;
     /* The width of a tablet's side sheet: six finger-sized tabs and the close button (phase 8). */
     --tm-document-sheet-width: 24rem;
+    /* The block size the sticky panels (navigation, inspector, print pages) are capped by: the viewport while the editor flows in the page, the
+       the cell of the frame while it is bounded (phase 12 - see the bounded frame below). */
+    --tm-document-frame-block-size: 100dvh;
 
     display: flex;
     flex-direction: column;
@@ -228,6 +231,116 @@
     .tm-document-editor__workspace {
         gap: var(--tm-space-3);
     }
+}
+
+/* ── Viewport-bounded frame (phase 12) ─────────────────────────────────────────────────────────────────
+   `Height` (or fullscreen, which is the same frame at 100dvh) bounds the editor: the root is a flex column of fixed height - header, ribbon, then the
+   main column that fills what is left - and the main column is the workspace (the bounded area) with the status bar under it, pinned because nothing
+   scrolls past it. Inside the workspace the DOCUMENT region is the one scroller (both axes), so the horizontal scrollbar of a page wider than its
+   column sits at the bottom of what the reader sees instead of at the end of a twelve-page document, and the page itself never scrolls. The
+   navigation and the inspector are cells of the same one-row grid: each is as tall as the cell and scrolls inside it, never the workspace.
+   Every rule keys on data-frame (the one value markup, CSS and tests share), never on a viewport media query: a bounded editor in a narrow host is
+   the same frame as one on a wide screen. Without Height none of this applies and the editor flows in the page exactly as before. The frame gets its
+   height from the flex chain only (flex-basis auto, min size 0): a percentage Height inside a parent that has no definite height resolves to auto and
+   the editor then flows at its natural height instead of collapsing. */
+.tm-document-editor[data-frame="bounded"] {
+    height: var(--tm-document-editor-height);
+    min-height: 0;
+}
+
+.tm-document-editor-host[data-frame="bounded"] {
+    height: var(--tm-document-editor-height);
+    min-height: 0;
+}
+
+/* Fullscreen is the same frame at the height of the viewport; this overrides the Height a host set on the observer wrapper. */
+.tm-document-editor[data-fullscreen="true"] {
+    --tm-document-editor-height: 100dvh;
+}
+
+/* The chrome above the main column keeps its own height; only the main column gives way. */
+.tm-document-editor[data-frame="bounded"] > :not(.tm-document-editor__main) {
+    flex-shrink: 0;
+}
+
+/* The ribbon is outside the scroller, so the columns park at its top edge (the published ribbon size is not subtracted), and the sticky panels are as
+   tall as their cell (a percentage of the stretched grid cell) instead of the viewport. */
+.tm-document-editor[data-frame="bounded"] .tm-document-editor__main {
+    flex: 1 1 auto;
+    min-block-size: 0;
+    --tm-document-ribbon-block-size: 0px;
+    --tm-document-frame-block-size: 100%;
+}
+
+/* The workspace is the bounded area: one row as tall as the frame leaves it, so no region can stretch it past the frame. Nothing in it scrolls but the
+   regions (the document, the navigation, the inspector), each inside its own cell. */
+.tm-document-editor[data-frame="bounded"] .tm-document-editor__workspace {
+    flex: 1 1 auto;
+    min-height: 0;
+    min-block-size: 0;
+    grid-template-rows: minmax(0, 1fr);
+    align-items: stretch;
+    padding-block-start: 0;
+    overflow: hidden;
+}
+
+.tm-document-editor[data-frame="bounded"][data-layout="mobile"] .tm-document-editor__workspace {
+    grid-template-areas: "doc";
+}
+
+/* A docked column is as tall as its cell and scrolls inside it. (A tablet / readable-floor sheet is a floating panel capped by the same cell.) */
+.tm-document-editor[data-frame="bounded"] .tm-document-editor__navigation,
+.tm-document-editor[data-frame="bounded"] [data-region="inspector"][data-presentation="docked"] {
+    min-block-size: 0;
+    max-block-size: 100%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+/* The docked inspector panel fills its column: its body scrolls, not the column. */
+.tm-document-editor[data-frame="bounded"] [data-region="inspector"][data-presentation="docked"] > .tm-document-side-panel {
+    block-size: 100%;
+    max-block-size: 100%;
+}
+
+/* The document region scrolls the document in both axes. The canvas host inside it stops being a scroller of its own (it grows with the pages, so its
+   scrollbar would sit at the end of the document). */
+.tm-document-editor[data-frame="bounded"] [data-region="doc"][data-scroll-viewport="true"] {
+    min-block-size: 0;
+    min-inline-size: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+    /* The engine mounts and unmounts whole pages under the reader and sizes the gaps itself (a virtualized document): the browser's own scroll anchoring
+       would "compensate" for that by moving the scroll position by several pages (a jump from page 8 to page 11 within 100 ms). */
+    overflow-anchor: none;
+}
+
+.tm-document-editor[data-frame="bounded"] [data-region="doc"][data-scroll-viewport="true"] > * {
+    flex-shrink: 0;
+}
+
+.tm-document-editor[data-frame="bounded"] .tm-document-canvas-engine-host {
+    overflow: visible;
+}
+
+/* A panel's own list is not a second scroller in a frame: the comment rail grows and the side panel body scrolls. */
+.tm-document-editor[data-frame="bounded"] .tm-document-editor__comment-rail {
+    max-height: none;
+}
+
+/* The status bar is pinned under the scroller; the last edge of the frame keeps clear of a home indicator. A phone's last edge is the action bar. */
+.tm-document-editor[data-frame="bounded"] .tm-document-editor__status-bar {
+    flex: 0 0 auto;
+}
+
+.tm-document-editor[data-frame="bounded"] .tm-document-editor__status-bar:last-child {
+    padding-block-end: env(safe-area-inset-bottom);
+}
+
+/* The docked inspector panel is capped by the frame, not by the viewport minus a header allowance. */
+.tm-document-editor[data-frame="bounded"] .tm-document-side-panel {
+    max-height: calc(var(--tm-document-frame-block-size) - var(--tm-space-6));
 }
 
 /* The surface does not clip: the canvas host inside it is the horizontal scroller, so a page wider than the doc region stays
@@ -907,7 +1020,7 @@
     width: 100%;
     min-height: 0;
     height: auto;
-    max-height: calc(100dvh - 8rem);
+    max-height: calc(var(--tm-document-frame-block-size) - 8rem);
     overflow: hidden;
     background: var(--tm-color-surface-elevated);
     border: 1px solid var(--tm-color-border-subtle);
@@ -1161,9 +1274,10 @@
 }
 
 .tm-document-side-panel__close,
+/* The same finger-sized square as the folded navigation rail on the other side of the document. */
 .tm-document-side-panel__edge-toggle {
-    width: 2rem;
-    height: 2rem;
+    width: var(--tm-touch-target);
+    height: var(--tm-touch-target);
 }
 
 .tm-document-side-panel__edge-toggle {
@@ -2307,7 +2421,7 @@
     display: flex;
     flex-direction: column;
     gap: var(--tm-space-3);
-    max-height: calc(100dvh - var(--tm-document-ribbon-block-size) - var(--tm-space-6));
+    max-height: calc(var(--tm-document-frame-block-size) - var(--tm-document-ribbon-block-size) - var(--tm-space-6));
     padding: var(--tm-space-3);
     overflow: auto;
     background: var(--tm-color-surface-elevated);

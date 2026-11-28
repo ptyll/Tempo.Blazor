@@ -344,7 +344,7 @@ public sealed class DocumentEditorRedesignPhase6E2ETests : WasmTestBase
         var context = await CreateContextAsync(ContextOptions(width, height, touch));
         var page = await context.NewPageAsync();
         var url = route == "/document-editor" && documentId == ContractDocumentId
-            ? $"{BaseUrl}{route}?documentId={documentId}"
+            ? $"{BaseUrl}{route}?bounded=false&documentId={documentId}"
             : OpenUrl(BaseUrl, documentId, route);
         await GotoAppReadyAsync(page, url, WaitUntilState.DOMContentLoaded);
         await WaitForPredicateAsync(page, """

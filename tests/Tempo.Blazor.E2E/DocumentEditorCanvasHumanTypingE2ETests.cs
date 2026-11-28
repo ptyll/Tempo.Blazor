@@ -24,7 +24,7 @@ public sealed class DocumentEditorCanvasHumanTypingE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1000);
-        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?documentId={LargeDocId}");
+        await GotoAppReadyAsync(page, $"{BaseUrl}/document-editor?bounded=false&documentId={LargeDocId}");
         await page.WaitForSelectorAsync("[data-testid='document-canvas-engine-host'][data-canvas-engine-ready='true']", new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 120_000 });
         await WaitForPredicateAsync(page, "() => document.querySelectorAll('[data-canvas-text-rect]').length > 0", 120_000);
         await page.WaitForTimeoutAsync(500);

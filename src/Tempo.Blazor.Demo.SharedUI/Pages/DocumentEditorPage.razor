@@ -23,7 +23,11 @@
 
 <PageTitle>Document Editor - Tempo.Blazor</PageTitle>
 
-<div class="mb-6">
+@* Bounded (the default): the page is a flex column of exactly the viewport under the demo chrome - the controls on top (capped, they scroll inside
+   themselves), the editor takes the rest, so the page itself does not scroll and the status bar of the editor is always on screen. Unbounded
+   (checkbox / ?bounded=false): the editor flows in the page as before and the cards below show. *@
+<div class="@(_bounded ? "demo-document-page" : null)" data-testid="document-editor-page-frame" data-bounded="@(_bounded ? "true" : "false")">
+<div class="@(_bounded ? "demo-document-page__controls" : "mb-6")" data-testid="document-editor-controls">
     <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">Document Editor</h1>
     <div class="flex flex-wrap items-center gap-3">
         <button type="button"
@@ -106,6 +110,13 @@
                 <option value="@DocumentPageFitMode.Off">Off (fixed zoom)</option>
                 <option value="@DocumentPageFitMode.FitWidth">Fit width (always)</option>
             </select>
+        </label>
+        <label class="inline-flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+            <input class="rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                   type="checkbox"
+                   @bind="_bounded"
+                   data-testid="document-editor-bounded" />
+            Bounded frame
         </label>
         <label class="inline-flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
             Host width
@@ -238,10 +249,11 @@
     </div>
 </div>
 
-<div style="@HostStyle" data-testid="document-editor-host">
+<div style="@HostStyle" class="@(_bounded ? "demo-document-page__editor" : null)" data-testid="document-editor-host">
 <TmDocumentEditor DocumentId="@_documentId"
                   LayoutMode="@_layoutMode"
                   PageFitMode="@_pageFitMode"
+                  Height="@BoundedHeight"
                   ShowHeader="@_showHeader"
                   Subtitle="@(_headerSlots ? "Demo document" : null)"
                   HeaderStart="@(_headerSlots ? DemoHeaderStart : null)"
@@ -270,16 +282,26 @@
                   OnDocumentLoaded="HandleDocumentLoaded"
                   data-testid="document-editor-demo" />
 </div>
+</div>
 
-<DocumentInspectorBuildingBlocksCard />
+@if (!_bounded)
+{
+    <DocumentInspectorBuildingBlocksCard />
 
-<DocumentComparisonModesCard />
+    <DocumentComparisonModesCard />
+}
 
 @code {
     private string _documentId = "contract-demo";
     private TmLayoutMode _layoutMode = TmLayoutMode.Auto;
     private DocumentPageFitMode _pageFitMode = DocumentPageFitMode.Auto;
     private string _hostWidth = string.Empty;
+
+    // The editor fills what is left of the viewport under the demo chrome (.demo-document-page): the ribbon cannot slide under the sticky demo top bar because
+    // a bounded frame has no page scroll to stick against, the status bar is always on screen and the document region is the scroller. `?bounded=false` (or the
+    // checkbox) returns to the editor that flows in the page, with the cards below it.
+    private bool _bounded = true;
+    private string? BoundedHeight => _bounded ? "100%" : null;
     private bool _showHeader = true;
     private bool _headerSlots;
     private string HostStyle => string.IsNullOrEmpty(_hostWidth) ? "min-width: 0" : $"width: {_hostWidth}; max-width: 100%";
@@ -331,6 +353,7 @@
     protected override void OnInitialized()
     {
         _documentId = ReadQueryString("documentId", _documentId);
+        _bounded = !string.Equals(ReadQueryString("bounded", "true"), "false", StringComparison.OrdinalIgnoreCase);
         if (string.Equals(ReadQueryString("recovery", string.Empty), "2026-05-23", StringComparison.Ordinal))
         {
             _documentId = InMemoryDocumentEditorProvider.Recovery20260523DocumentId;

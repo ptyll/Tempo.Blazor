@@ -36,7 +36,7 @@
     pointer-events: auto;
     position: sticky;
     top: calc(var(--tm-document-ribbon-block-size) + var(--tm-space-2));
-    max-height: min(calc(100dvh - var(--tm-document-ribbon-block-size) - var(--tm-space-6)), 100%);
+    max-height: min(calc(var(--tm-document-frame-block-size) - var(--tm-document-ribbon-block-size) - var(--tm-space-6)), 100%);
     box-shadow: var(--tm-shadow-popover);
 }
 
@@ -97,7 +97,7 @@
     pointer-events: auto;
     position: sticky;
     top: calc(var(--tm-document-ribbon-block-size) + var(--tm-space-2));
-    max-height: min(calc(100dvh - var(--tm-document-ribbon-block-size) - var(--tm-space-6)), 100%);
+    max-height: min(calc(var(--tm-document-frame-block-size) - var(--tm-document-ribbon-block-size) - var(--tm-space-6)), 100%);
     box-shadow: var(--tm-shadow-popover);
 }
 
@@ -142,7 +142,7 @@
         pointer-events: auto;
         position: sticky;
         top: calc(var(--tm-document-ribbon-block-size) + var(--tm-space-2));
-        max-height: min(calc(100dvh - var(--tm-document-ribbon-block-size) - var(--tm-space-6)), 100%);
+        max-height: min(calc(var(--tm-document-frame-block-size) - var(--tm-document-ribbon-block-size) - var(--tm-space-6)), 100%);
         box-shadow: var(--tm-shadow-popover);
     }
 
@@ -232,6 +232,13 @@
     background: var(--tm-color-surface-elevated);
     border-top: 1px solid var(--tm-color-border-subtle);
     box-shadow: var(--tm-shadow-popover);
+}
+
+/* In a bounded frame the bar is the last in-flow row of the main column, under the workspace and the status bar: it never covers the document. Its
+   own bottom padding (core TmMobileActionBar) keeps the tiles clear of the home indicator. */
+.tm-document-editor[data-frame="bounded"] .tm-document-editor__action-bar {
+    position: relative;
+    flex: 0 0 auto;
 }
 
 /* A 320 px phone: five equal tiles leave each about 54 px, a hair under "Comments" at the core's label size - the word broke mid-letter. The tiles take

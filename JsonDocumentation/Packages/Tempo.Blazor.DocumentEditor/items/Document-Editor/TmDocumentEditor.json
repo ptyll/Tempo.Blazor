@@ -27,6 +27,12 @@
       "description": "How the canvas engine fits the page to the document column. Auto (default) fits the page only when the column is narrower than the page - a desktop container of 1024 - 1400 px next to the docked inspector, a tablet, a phone - and never enlarges it; Off leaves the zoom alone; FitWidth always follows the width. The reader's own zoom wins over the fit until \"Automatic\" (Ctrl+0) or \"Page width\" is chosen. Changing the parameter after mount applies the new mode at once and REPLACES the reader's zoom. A desktop container whose docked inspector would squeeze the fitted page below 75 percent presents the inspector as the overlay sheet instead (decision DE-AUTO-FIT-READABLE-FLOOR)."
     },
     {
+      "name": "Height",
+      "type": "string?",
+      "isRequired": false,
+      "description": "A CSS length (600px, 100%, calc(100dvh - 5rem), clamp(20rem, 80dvh, 60rem), var(--host-height)) that bounds the height of the editor frame. null (default) keeps the editor in the flow of the page: it is as tall as its document and the page scrolls. With a value the frame is a flex column of that height - the header and the ribbon on top, the workspace in the middle, the status bar at the bottom - and the document region of the workspace is the one scroller (both axes), so the status bar is always visible, the horizontal scrollbar of a wide page is reachable without scrolling to the end of the document and the page itself does not scroll. The root gets data-frame=\"bounded\"; the height is the custom property --tm-document-editor-height on the observer wrapper (.tm-document-editor-host), and the root renders no style attribute of its own. Only a number with a unit (px, rem, %, vh/dvh/svh/lvh, cqh, ...) or a calc / min / max / clamp / var expression is accepted; anything else (auto, none, inherit, a value with a semicolon or a brace) is ignored and the editor flows. A percentage needs a parent with a definite height - without one it resolves to auto and the editor flows at its natural height instead of collapsing. Fullscreen is the same frame at 100dvh; the reader's place in the document survives entering and leaving it and a change of Height."
+    },
+    {
       "name": "PdfForensicWatermark",
       "type": "DocumentPdfForensicWatermarkOptions?",
       "isRequired": false,

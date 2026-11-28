@@ -12,7 +12,7 @@
            fullscreen switch are controls of the bar, not just text. *@
         <span data-testid="@TestId("document-status-page-count")" data-current-page="@Math.Max(1, CurrentPage)" data-page-count="@Math.Max(1, PageCount)">@Loc["TmDocumentEditor_StatusPageOf", Math.Max(1, CurrentPage), Math.Max(1, PageCount)]</span>
         <span data-testid="@TestId("document-status-word-count")">@Loc.Plural("TmDocumentEditor_WordCount", WordCount)</span>
-        <span data-testid="@TestId("document-status-region")">@Loc["TmDocumentEditor_ActiveRegion", ActiveRegionLabel]</span>
+        <span data-testid="@TestId("document-status-region")">@(string.IsNullOrWhiteSpace(ModeLabel) ? Loc["TmDocumentEditor_ActiveRegion", ActiveRegionLabel] : ModeLabel)</span>
     </div>
 
 
@@ -62,7 +62,11 @@
     </div>
 
     <div class="tm-document-editor__status-bar-group tm-document-editor__status-bar-group--controls">
-        @if (OnZoomChanged.HasDelegate)
+        @if (!ShowZoom)
+        {
+            @* a mode with a zoom of its own (the print preview) shows none here *@
+        }
+        else if (OnZoomChanged.HasDelegate)
         {
             <div class="tm-document-editor__status-zoom" role="group" aria-label="@Loc["TmDocumentEditor_ZoomGroupLabel"]" data-testid="@TestId("document-status-zoom-controls")">
                 <button type="button"
@@ -128,6 +132,14 @@
 </footer>
 
 @code {
+    /// <summary>
+    /// Names the mode the editor is in instead of the region being edited (the print preview: "Print preview"). Empty keeps "Editing {region}".
+    /// </summary>
+    [Parameter] public string? ModeLabel { get; set; }
+
+    /// <summary>Whether the zoom control (or label) is shown. A mode that has a zoom of its own, like the print preview, hides this one.</summary>
+    [Parameter] public bool ShowZoom { get; set; } = true;
+
     /// <summary>Whether the document has local unsaved changes.</summary>
     [Parameter] public bool IsDirty { get; set; }
 

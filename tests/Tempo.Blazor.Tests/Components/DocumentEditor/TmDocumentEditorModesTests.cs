@@ -98,6 +98,23 @@ public class TmDocumentEditorModesTests : LocalizationTestBase
     }
 
     [Fact]
+    public async Task PrintPreview_StatusBar_NamesTheMode_AndLeavesTheZoomToThePreview()
+    {
+        var cut = RenderEditor();
+        cut.Find("[data-testid='document-status-region']").TextContent.Should().Contain("body", "editing: the active region");
+        cut.FindAll("[data-testid='document-status-zoom']").Should().HaveCount(1);
+
+        await SetPrintPreviewAsync(cut, true);
+
+        cut.WaitForAssertion(() =>
+        {
+            cut.Find("[data-testid='document-status-region']").TextContent.Trim().Should().Be("Print preview", "the printout is not being edited");
+            cut.FindAll("[data-testid='document-status-zoom']").Should().BeEmpty("the print preview has its own zoom in its toolbar");
+        });
+        cut.FindAll("[data-testid='document-status-fullscreen']").Should().HaveCount(1);
+    }
+
+    [Fact]
     public async Task PrintPreview_KeepsTheStableActionTestIds_InTheInspectorRegion()
     {
         var cut = RenderEditor();

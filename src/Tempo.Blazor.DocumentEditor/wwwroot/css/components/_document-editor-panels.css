@@ -1424,7 +1424,7 @@
     display: grid;
     gap: var(--tm-space-3);
     align-content: start;
-    max-block-size: calc(100dvh - var(--tm-document-ribbon-block-size) - var(--tm-space-6));
+    max-block-size: calc(var(--tm-document-frame-block-size) - var(--tm-document-ribbon-block-size) - var(--tm-space-6));
     overflow-y: auto;
 }
 

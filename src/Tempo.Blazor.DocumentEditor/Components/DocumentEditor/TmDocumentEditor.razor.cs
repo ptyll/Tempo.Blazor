@@ -109,6 +109,20 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
     /// </summary>
     [Parameter] public DocumentPageFitMode PageFitMode { get; set; } = DocumentPageFitMode.Auto;
 
+    /// <summary>
+    /// A CSS length (<c>600px</c>, <c>100%</c>, <c>calc(100dvh - 5rem)</c>, <c>clamp(20rem, 80dvh, 60rem)</c>, <c>var(--host-height)</c>) that bounds the height of the
+    /// editor frame. <c>null</c> (default) keeps the editor in the flow of the page: it is as tall as its document and the page scrolls. With a value the frame is
+    /// a flex column of that height - the header and the ribbon on top, the workspace in the middle, the status bar at the bottom - and the document region
+    /// of the workspace is the one scroller (both axes), so the status bar is always visible, the horizontal scrollbar of a wide page is reachable without
+    /// scrolling to the end of the document and the page itself does not scroll. The root gets <c>data-frame="bounded"</c>; the height is the custom property
+    /// <c>--tm-document-editor-height</c> on the observer wrapper (<c>.tm-document-editor-host</c>), and the root renders no style attribute of its own.
+    /// Only a number with a unit (<c>px</c>, <c>rem</c>, <c>%</c>, <c>vh</c>/<c>dvh</c>/<c>svh</c>/<c>lvh</c>, <c>cqh</c>, ...) or a <c>calc</c> / <c>min</c> / <c>max</c> / <c>clamp</c> /
+    /// <c>var</c> expression is accepted; anything else (<c>auto</c>, <c>none</c>, <c>inherit</c>, a value with a semicolon or a brace) is ignored and the editor flows.
+    /// A percentage needs a parent with a definite height - without one it resolves to <c>auto</c> and the editor flows at its natural height instead of collapsing.
+    /// Fullscreen is the same frame at <c>100dvh</c>; the reader's place in the document survives entering and leaving it and a change of <c>Height</c>.
+    /// </summary>
+    [Parameter] public string? Height { get; set; }
+
     /// <summary>Whether the comments rail is displayed.</summary>
     [Parameter] public bool ShowComments { get; set; } = true;
 
@@ -611,6 +625,12 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
             await AttachRegionCycleAsync();
         }
 
+        if (_restoreReadingPositionOnRender)
+        {
+            _restoreReadingPositionOnRender = false;
+            await RestoreReadingPositionAfterFrameChangeAsync();
+        }
+
         if (_restoreZoomOnRender)
         {
             _restoreZoomOnRender = false;
@@ -710,6 +730,101 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
     }
 
     private bool IsDesktopLayout => _layout == TmLayoutMode.Desktop;
+
+    // The viewport-bounded frame (phase 12): the host's Height, or - while fullscreen - the whole viewport. Both are the SAME frame (data-frame="bounded"
+    // keys every rule), so fullscreen has no layout of its own. The height itself is the custom property --tm-document-editor-height on the observer
+    // wrapper (the root inherits it; a fullscreen root overrides it in CSS) - the root renders no inline style, so a host's own `style` attribute
+    // (AdditionalAttributes) can neither be clobbered by it nor clobber it.
+    private static readonly System.Text.RegularExpressions.Regex CssLengthPattern = new(
+        @"^(0|-?(\d+\.?\d*|\.\d+)(px|rem|em|%|vh|dvh|svh|lvh|vw|dvw|svw|lvw|vmin|vmax|cqh|cqw|ch|ex|pt|cm|mm|in))$",
+        System.Text.RegularExpressions.RegexOptions.Compiled | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+    private static readonly System.Text.RegularExpressions.Regex CssLengthFunctionPattern = new(
+        @"^(calc|min|max|clamp|var)\([A-Za-z0-9%.,()+\-*/ ]+\)$",
+        System.Text.RegularExpressions.RegexOptions.Compiled | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+    /// <summary>Whether <paramref name="value"/> is a CSS length the frame accepts: a number with a unit (or 0), or a calc / min / max / clamp / var expression with balanced parentheses.</summary>
+    internal static bool IsCssLength(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var text = value.Trim();
+        if (CssLengthPattern.IsMatch(text))
+        {
+            return true;
+        }
+
+        if (!CssLengthFunctionPattern.IsMatch(text))
+        {
+            return false;
+        }
+
+        var depth = 0;
+        foreach (var character in text)
+        {
+            if (character == '(')
+            {
+                depth++;
+            }
+            else if (character == ')' && --depth < 0)
+            {
+                return false;
+            }
+        }
+
+        return depth == 0;
+    }
+
+    private string? EffectiveHeight => IsCssLength(Height) ? Height!.Trim() : null;
+
+    private string? FrameDataValue => _isFullscreen || EffectiveHeight is not null ? "bounded" : null;
+
+    // The observer wrapper keeps the HOST's height only: fullscreen lifts the root out of the flow, so the wrapper must not turn into a viewport-tall hole.
+    private string? HostFrameDataValue => EffectiveHeight is null ? null : "bounded";
+
+    private string? HostFrameStyle => EffectiveHeight is null ? null : $"--tm-document-editor-height: {EffectiveHeight}";
+
+    // The place of the reader across a change of the frame (fullscreen, a new Height): captured before, restored after the render.
+    private bool _restoreReadingPositionOnRender;
+    private string? _appliedFrameHeight;
+
+    private async Task RestoreReadingPositionAfterFrameChangeAsync()
+    {
+        if (_canvasHost is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _canvasHost.RestoreReadingPositionAsync();
+        }
+        catch (Exception exception) when (exception is JSException or InvalidOperationException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException)
+        {
+            // the engine went away between the render and the restore
+        }
+    }
+
+    private async Task CaptureReadingPositionForFrameChangeAsync()
+    {
+        if (_canvasHost is null || !UsingCanvasEngine)
+        {
+            return;
+        }
+
+        try
+        {
+            await _canvasHost.CaptureReadingPositionAsync();
+            _restoreReadingPositionOnRender = true;
+        }
+        catch (Exception exception) when (exception is JSException or InvalidOperationException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException)
+        {
+            // no engine yet (prerender, a disposed circuit): there is no place to keep
+        }
+    }
 
     private bool _readableFloorSheet;
 
@@ -1363,6 +1478,18 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
         if (LayoutMode != TmLayoutMode.Auto)
         {
             _layout = LayoutMode;
+        }
+
+        // A runtime change of Height changes the frame around the document (flow <-> bounded, another size): the reader keeps their place.
+        var frameHeight = EffectiveHeight;
+        if (frameHeight != _appliedFrameHeight)
+        {
+            var firstPass = _appliedFrameHeight is null && frameHeight is null;
+            _appliedFrameHeight = frameHeight;
+            if (!firstPass && _canvasHost is not null)
+            {
+                await CaptureReadingPositionForFrameChangeAsync();
+            }
         }
 
         // A host that flips PageFitMode (or pins a LayoutMode) changes whether the readable floor applies at the width it already has.
@@ -5711,6 +5838,7 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
 
     private async Task ToggleFullscreenAsync()
     {
+        await CaptureReadingPositionForFrameChangeAsync();
         _isFullscreen = !_isFullscreen;
         await ApplyFullscreenAsync(_isFullscreen);
         await RefreshCommandRegistryAsync();

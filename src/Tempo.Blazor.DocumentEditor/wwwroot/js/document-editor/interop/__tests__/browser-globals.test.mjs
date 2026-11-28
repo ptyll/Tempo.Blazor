@@ -70,7 +70,7 @@ test('setFullscreen toggles the body class and scroll lock', () => {
   const body = win.document.body;
 
   win.tmDocumentEditor.setFullscreen(true);
-  assert.equal(body.classList.contains('tm-document-editor--fullscreen'), true, 'entering fullscreen must add the body class the CSS keys off');
+  assert.equal(body.classList.contains('tm-document-editor--fullscreen'), true, 'entering fullscreen must add the body class hosts key off');
   assert.equal(body.style.overflow, 'hidden', 'entering fullscreen must lock body scrolling');
 
   // Idempotent: re-entering keeps a single class and the lock.

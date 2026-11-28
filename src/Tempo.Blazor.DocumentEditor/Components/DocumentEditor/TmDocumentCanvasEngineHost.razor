@@ -716,6 +716,31 @@
         });
     }
 
+    /// <summary>
+    /// Remembers the reader's place (the page at the top of the view and how far down it) before the frame around the document changes: fullscreen, a new
+    /// <c>Height</c>. Pair it with <see cref="RestoreReadingPositionAsync"/> after the render.
+    /// </summary>
+    public async Task CaptureReadingPositionAsync()
+    {
+        if (_module is null || _handle is null)
+        {
+            return;
+        }
+
+        await _module.InvokeAsync<bool>("captureReadingPosition", _handle);
+    }
+
+    /// <summary>Puts the document back at the place captured by <see cref="CaptureReadingPositionAsync"/> (one shot; a no-op without a capture).</summary>
+    public async Task RestoreReadingPositionAsync()
+    {
+        if (_module is null || _handle is null)
+        {
+            return;
+        }
+
+        await _module.InvokeAsync<bool>("restoreReadingPosition", _handle);
+    }
+
     /// <summary>Scrolls a page into view from the navigator (handles virtualized pages) (B9).</summary>
     public async Task ScrollToPageAsync(int pageIndex)
     {
