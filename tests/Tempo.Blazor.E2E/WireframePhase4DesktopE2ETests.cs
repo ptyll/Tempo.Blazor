@@ -107,8 +107,12 @@ public sealed class WireframePhase4DesktopE2ETests : WasmTestBase
         await tabsEditor.ScrollIntoViewIfNeededAsync();
 
         Assert.IsTrue(await tabsEditor.Locator(".tm-wd-editor__page-tab").CountAsync() >= 1, "horizontal page tabs render");
-        var tabTitles = await tabsEditor.Locator("[data-region='left'] [role='tab']").AllInnerTextsAsync();
-        CollectionAssert.AreEqual(new[] { "Components", "Layers" }, tabTitles.Select(t => t.Trim()).ToArray());
+        // Scope to the side panel's TmTabs strip (.tm-wd-side__tabs): the toolbox inside the same
+        // region renders its All/Built-in/Custom FILTER tabs (role=tab) since the demo registered
+        // the marketing provider (plan b75365fb, fáze 4h) — a bare [role='tab'] query sees those too.
+        var tabTitles = await tabsEditor.Locator("[data-region='left'] .tm-wd-side__tabs [role='tab']").AllInnerTextsAsync();
+        CollectionAssert.AreEqual(new[] { "Components", "Layers" }, tabTitles.Select(t => t.Trim()).ToArray(),
+            $"the left panel tabs were: [{string.Join(" | ", tabTitles.Select(t => t.Trim()))}]");
         Assert.AreEqual(0, await tabsEditor.Locator(".tm-wd-pages").CountAsync());
     }
 

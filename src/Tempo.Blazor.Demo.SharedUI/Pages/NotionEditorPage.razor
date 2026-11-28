@@ -900,6 +900,26 @@
     </TmModal>
 </section>
 
+@* The block type switcher is not wired into the editor chrome (the inline toolbar has its own
+   turn-into panel) — this card gives the component a reachable surface for docs and E2E. *@
+<section class="demo-section mt-6" data-testid="notion-type-switcher-demo">
+    <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">Block type switcher</h3>
+    <button class="px-3 py-1.5 text-sm rounded border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
+            data-testid="notion-type-switcher-open"
+            @onclick="() => _typeSwitcherOpen = true">
+        Open block type switcher
+    </button>
+    <span class="ml-3 text-sm text-slate-500 dark:text-slate-400" data-testid="notion-type-switcher-current">@_typeSwitcherCurrent</span>
+    @* Demo-only fixed position (viewport coordinates): the switcher is a floating panel and the demo
+       does not measure the trigger, so after scrolling the panel may sit away from the button. *@
+    <TmNotionBlockTypeSwitcher Visible="_typeSwitcherOpen"
+                               Top="620"
+                               Left="320"
+                               CurrentType="_typeSwitcherCurrent"
+                               OnTypeChanged="HandleTypeSwitcherChanged"
+                               OnClosed="() => _typeSwitcherOpen = false" />
+</section>
+
 @code {
     // ── CF18-7 modal demo state ──────────────────────────────────────────────
 
@@ -907,6 +927,17 @@
     private bool _overlayDemoAi;
     private bool _overlayDemoMention;
     private NotionEditorContext? _overlayDemoContext;
+
+    // ── Block type switcher demo state ───────────────────────────────────────
+
+    private bool _typeSwitcherOpen;
+    private BlockType _typeSwitcherCurrent = BlockType.Paragraph;
+
+    private void HandleTypeSwitcherChanged(BlockType type)
+    {
+        _typeSwitcherCurrent = type;
+        _typeSwitcherOpen = false;
+    }
 
     // ── Undo / redo cheatsheet ───────────────────────────────────────────────
 

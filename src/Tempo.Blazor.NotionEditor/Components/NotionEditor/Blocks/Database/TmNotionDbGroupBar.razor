@@ -24,7 +24,7 @@
         <button class="tm-dbgb__field-item @(_selectedFieldId is null ? "tm-dbgb__field-item--active" : "")"
                 type="button"
                 role="option"
-                aria-selected="@(_selectedFieldId is null)"
+                aria-selected="@BoolText(_selectedFieldId is null)"
                 disabled="@ReadOnly"
                 @onclick="() => SelectFieldAsync(null)">
             <span class="tm-dbgb__field-icon" aria-hidden="true">
@@ -48,7 +48,7 @@
             <button class="tm-dbgb__field-item @(_selectedFieldId == f.Id ? "tm-dbgb__field-item--active" : "")"
                     type="button"
                     role="option"
-                    aria-selected="@(_selectedFieldId == f.Id)"
+                    aria-selected="@BoolText(_selectedFieldId == f.Id)"
                     disabled="@ReadOnly"
                     @onclick="() => SelectFieldAsync(f.Id)">
                 <span class="tm-dbgb__field-icon" aria-hidden="true"><TmIcon Name="@DatabaseFieldIcons.Get(f.Type)" Size="IconSize.Xs" /></span>

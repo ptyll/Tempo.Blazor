@@ -2,12 +2,12 @@
 @implements IDisposable
 @using Tempo.Blazor.Components.Icons
 
-<div class="tm-accordion-item @(IsExpanded ? "tm-accordion-item--expanded" : "") @(Disabled ? "tm-accordion-item--disabled" : "") @Class" @attributes="AdditionalAttributes">
+<div class="tm-accordion-item @(_expanded ? "tm-accordion-item--expanded" : "") @(Disabled ? "tm-accordion-item--disabled" : "") @Class" @attributes="AdditionalAttributes">
     <button type="button"
             class="tm-accordion-item__header"
-            aria-expanded="@(IsExpanded ? "true" : "false")"
+            aria-expanded="@(_expanded ? "true" : "false")"
             disabled="@(Disabled ? true : (bool?)null)"
-            @onclick="Toggle">
+            @onclick="ToggleAsync">
         <div class="tm-accordion-item__header-text">
             @if (!string.IsNullOrEmpty(Icon))
             {
@@ -30,7 +30,7 @@
         </span>
     </button>
 
-    @if (IsExpanded)
+    @if (_expanded)
     {
         <div class="tm-accordion-item__body" role="region">
             @ChildContent
@@ -50,8 +50,36 @@
     /// <summary>Optional icon name.</summary>
     [Parameter] public string? Icon { get; set; }
 
-    /// <summary>Whether this item is expanded.</summary>
+    /// <summary>
+    /// Whether this item is expanded. The parameter is never assigned inside the component —
+    /// the rendered state lives in an internal field. UNCONTROLLED (no
+    /// <see cref="IsExpandedChanged"/>): the value seeds the state on first render and is
+    /// re-applied only when the host actually changes it, so a parent re-render no longer
+    /// resets a user-driven toggle. CONTROLLED (<see cref="IsExpandedChanged"/> present, e.g.
+    /// <c>@bind-IsExpanded</c>): the parameter is the single source of truth — a host that does
+    /// not update the value after the callback rejects the toggle. Ignored while the parent
+    /// accordion controls the item through <see cref="TmAccordion.ExpandedKeys"/> (the item has
+    /// a <see cref="Key"/> and the accordion's <c>ExpandedKeys</c> is non-null).
+    /// </summary>
     [Parameter] public bool IsExpanded { get; set; }
+
+    /// <summary>
+    /// Raised when the user requests an expansion change (click / Enter / Space) — add it (or
+    /// <c>@bind-IsExpanded</c>) to take control of the state. Not raised for a disabled item,
+    /// and not raised while the parent accordion's <see cref="TmAccordion.ExpandedKeys"/>
+    /// controls this item (the change is reported through
+    /// <see cref="TmAccordion.ExpandedKeysChanged"/> instead).
+    /// </summary>
+    [Parameter] public EventCallback<bool> IsExpandedChanged { get; set; }
+
+    /// <summary>
+    /// Stable identity of the item for group control and URL sync. When the parent
+    /// <see cref="TmAccordion"/> has a non-null <see cref="TmAccordion.ExpandedKeys"/>, every
+    /// keyed item's expansion is owned by the accordion host. Keys compare ordinally
+    /// (case-sensitive); duplicate <see cref="Key"/> values share one state. <c>null</c>
+    /// (default) leaves the item self-managed.
+    /// </summary>
+    [Parameter] public string? Key { get; set; }
 
     /// <summary>Whether this item is disabled.</summary>
     [Parameter] public bool Disabled { get; set; }
@@ -65,9 +93,60 @@
     /// <summary>Item body content.</summary>
     [Parameter] public RenderFragment? ChildContent { get; set; }
 
+    private bool _expanded;
+    private bool _lastIsExpandedParam;
+    private bool _parametersSeen;
+
+    /// <summary>The rendered expansion state — the single source the markup reads.</summary>
+    internal bool CurrentExpanded => _expanded;
+
+    /// <summary>Whether the parent accordion's <c>ExpandedKeys</c> owns this item's state.</summary>
+    internal bool IsGroupControlled => Parent is not null && Parent.ControlsKeys && Key is not null;
+
+    /// <summary>
+    /// Re-applies the group-controlled expansion state pushed by the parent accordion when its
+    /// <see cref="TmAccordion.ExpandedKeys"/> changes. Items recompute the same value in their
+    /// own <see cref="OnParametersSet"/>, but an item without body content is not guaranteed a
+    /// parameter pass when only the keys change — the parent therefore syncs every registered
+    /// keyed item directly.
+    /// </summary>
+    internal void SyncFromGroup()
+    {
+        if (!IsGroupControlled) return;
+        var value = Parent!.IsKeyExpanded(Key!);
+        if (value != _expanded)
+        {
+            _expanded = value;
+            StateHasChanged();
+        }
+    }
+
     protected override void OnInitialized()
     {
         Parent?.RegisterItem(this);
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (IsGroupControlled)
+        {
+            _expanded = Parent!.IsKeyExpanded(Key!);
+        }
+        else if (IsExpandedChanged.HasDelegate)
+        {
+            // Controlled: the parameter is the only source of truth — a host that ignores the
+            // callback rejects the toggle on the next render.
+            _expanded = IsExpanded;
+        }
+        else if (!_parametersSeen || IsExpanded != _lastIsExpandedParam)
+        {
+            // Uncontrolled: seed once, then re-apply only a REAL value change — a parent
+            // re-render with an unchanged parameter must not overwrite a user-driven toggle.
+            _expanded = IsExpanded;
+        }
+
+        _lastIsExpandedParam = IsExpanded;
+        _parametersSeen = true;
     }
 
     public void Dispose()
@@ -75,17 +154,51 @@
         Parent?.UnregisterItem(this);
     }
 
-    internal void Collapse()
+    private async Task ToggleAsync()
     {
-        IsExpanded = false;
+        if (Disabled) return;
+        if (Parent is not null)
+        {
+            await Parent.RequestToggleAsync(this);
+        }
+        else
+        {
+            await ApplyExpansionAsync(!_expanded);
+        }
+    }
+
+    /// <summary>
+    /// Collapses the item on the parent accordion's request (single-mode sibling close).
+    /// Controlled items report through <see cref="IsExpandedChanged"/>; group-controlled items
+    /// are owned by the accordion's key snapshot and stay untouched here.
+    /// </summary>
+    internal async Task RequestCollapseAsync()
+    {
+        if (IsGroupControlled) return;
+        if (IsExpandedChanged.HasDelegate)
+        {
+            await IsExpandedChanged.InvokeAsync(false);
+        }
+        else
+        {
+            _expanded = false;
+        }
         StateHasChanged();
     }
 
-    private void Toggle()
+    /// <summary>Applies an expansion change requested by the parent accordion or a standalone toggle.</summary>
+    internal async Task ApplyExpansionAsync(bool expand)
     {
-        if (Disabled) return;
-        IsExpanded = !IsExpanded;
-        Parent?.OnItemToggled(this);
+        if (IsGroupControlled) return;
+        if (IsExpandedChanged.HasDelegate)
+        {
+            await IsExpandedChanged.InvokeAsync(expand);
+        }
+        else
+        {
+            _expanded = expand;
+        }
+        StateHasChanged();
     }
     // No keydown emulation: the header is a native <button>, which produces
     // click for Enter (on keydown) and Space (on keyup) by itself. A synthetic

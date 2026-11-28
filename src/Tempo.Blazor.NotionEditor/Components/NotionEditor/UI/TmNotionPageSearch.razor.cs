@@ -422,6 +422,10 @@ public partial class TmNotionPageSearch : TmComponentBase, IAsyncDisposable
     private bool IsPageSelected(int pageIndex) => pageIndex == _selectedIndex;
     private bool IsBlockSelected(int blockIndex) => (_pages.Count + blockIndex) == _selectedIndex;
 
+    // aria-selected must carry the strings "true"/"false" — a Blazor bool renders the invalid
+    // empty value (true) or drops the attribute (false).
+    private static string BoolText(bool value) => value ? "true" : "false";
+
     // ── Dispose ───────────────────────────────────────────────────────────────
 
     public async ValueTask DisposeAsync()

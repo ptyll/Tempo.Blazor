@@ -1,5 +1,5 @@
 {
-  "count": 1159,
+  "count": 1158,
   "violations": {
     "color-literal|src/Tempo.Blazor.Demo.InteractiveAuto/Tempo.Blazor.Demo.InteractiveAuto/Components/Layout/ReconnectModal.razor.css|background-color: #3b6ea2;": 1,
     "color-literal|src/Tempo.Blazor.Demo.InteractiveAuto/Tempo.Blazor.Demo.InteractiveAuto/Components/Layout/ReconnectModal.razor.css|background-color: #6b9ed2;": 2,
@@ -62,7 +62,7 @@
     "color-literal|src/Tempo.Blazor.Demo/wwwroot/css/app.css|color: #6ee7b7;": 1,
     "color-literal|src/Tempo.Blazor.Demo/wwwroot/css/app.css|color: #7c3aed;": 1,
     "color-literal|src/Tempo.Blazor.Demo/wwwroot/css/app.css|color: #818cf8;": 1,
-    "color-literal|src/Tempo.Blazor.Demo/wwwroot/css/app.css|color: #94a3b8;": 4,
+    "color-literal|src/Tempo.Blazor.Demo/wwwroot/css/app.css|color: #94a3b8;": 3,
     "color-literal|src/Tempo.Blazor.Demo/wwwroot/css/app.css|color: #991b1b;": 1,
     "color-literal|src/Tempo.Blazor.Demo/wwwroot/css/app.css|color: #a78bfa;": 1,
     "color-literal|src/Tempo.Blazor.Demo/wwwroot/css/app.css|color: #be185d;": 1,

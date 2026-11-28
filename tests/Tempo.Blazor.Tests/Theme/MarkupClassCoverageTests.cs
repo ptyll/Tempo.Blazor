@@ -554,7 +554,14 @@ public sealed class MarkupClassCoverageTests
             // cannot see the suffix — 17 → 20. The shared comment list adds one more interpolated
             // status class — 17 → 18.
             // The scan already contained these stems; the declared count now matches it.
-            ExpectedUnmeasurableStems: 34),
+            // Plan b75365fb fáze 4k review (APG tab wiring): the import/export dialog's tab and
+            // tabpanel ids ("tm-dbie-tab-import-{guid}", "tm-dbie-tab-export-{guid}",
+            // "tm-dbie-panel-{guid}") and the database block's per-instance view-tab id prefix
+            // ("tm-db-viewtab-{guid}") joined the scanned population — 34 → 38.
+            // Plan b75365fb fáze 4k re-review (the database view tabs were not actually wired):
+            // the view tabpanel's own per-instance id ("tm-db-viewpanel-{guid}") joined the
+            // scanned population — 38 → 39.
+            ExpectedUnmeasurableStems: 39),
     ];
 
     [Fact]

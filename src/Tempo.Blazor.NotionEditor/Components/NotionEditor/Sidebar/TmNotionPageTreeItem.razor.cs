@@ -68,6 +68,10 @@ public partial class TmNotionPageTreeItem : TmComponentBase
 
     private bool MenuOpen => _menuPhase != MenuPhase.None;
 
+    // ARIA state attributes are strings: a Blazor bool renders the invalid empty value (true)
+    // or omits the attribute entirely (false) — never a valid "true"/"false" state.
+    private static string BoolText(bool value) => value ? "true" : "false";
+
     // ── Selection ─────────────────────────────────────────────────────────────
 
     private async Task OnSelectionChangedAsync(ChangeEventArgs e)

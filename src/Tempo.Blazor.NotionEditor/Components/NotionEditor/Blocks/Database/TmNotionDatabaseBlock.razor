@@ -225,8 +225,10 @@
                 {
                     <button class="tm-db__view-tab @(_activeViewId == v.Id ? "tm-db__view-tab--active" : "")"
                             role="tab"
+                            id="@ViewTabDomId(v.Id)"
                             data-testid="@TestId("notion-db-view-tab")"
-                            aria-selected="@(_activeViewId == v.Id)"
+                            aria-selected="@BoolText(_activeViewId == v.Id)"
+                            aria-controls="@_viewPanelId"
                             type="button"
                             @onclick="() => SetActiveViewAsync(v.Id)"
                             @ondblclick="() => { if (!ReadOnly) StartRenameView(v); }">
@@ -626,7 +628,16 @@
     }
 
     @* ── View area ───────────────────────────────────────────────────────── *@
-    <div class="tm-db__view-area" role="tabpanel">
+    @* The tabpanel the view tabs control. It is a tabpanel only where the tablist exists
+       (desktop/tablet); on a mobile layout the tablist is not rendered, so the panel is a plain
+       labelled region. When there is no tab element to label it from (ActiveViewTabDomId is
+       null — overflow view, active-tab rename or mobile) the panel falls back to an aria-label
+       with the view's name. *@
+    <div class="tm-db__view-area"
+         role="@(IsMobileLayout ? null : "tabpanel")"
+         id="@_viewPanelId"
+         aria-labelledby="@ActiveViewTabDomId"
+         aria-label="@(ActiveViewTabDomId is null ? _activeView?.Name : null)">
         @if (_loading)
         {
             <div class="tm-db__skeleton" aria-busy="true" aria-label="@Loc["Tm_Loading"]">

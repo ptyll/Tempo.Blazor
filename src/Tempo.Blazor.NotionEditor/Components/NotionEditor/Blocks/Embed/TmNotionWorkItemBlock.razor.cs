@@ -386,6 +386,8 @@ public partial class TmNotionWorkItemBlock : ComponentBase, IDisposable
 
         builder.OpenElement(seq++, "div");
         builder.AddAttribute(seq++, "class", "tm-work-item__actions");
+        builder.AddAttribute(seq++, "role", "group");
+        builder.AddAttribute(seq++, "aria-label", Loc["Notion_WorkItem_DisplayMode"]);
         RenderModeButton(builder, ref seq, WorkItemDisplayMode.Card, Loc["Notion_WorkItem_Mode_Card"]);
         RenderModeButton(builder, ref seq, WorkItemDisplayMode.List, Loc["Notion_WorkItem_Mode_List"]);
         RenderModeButton(builder, ref seq, WorkItemDisplayMode.Inline, Loc["Notion_WorkItem_Mode_Inline"]);
@@ -404,7 +406,7 @@ public partial class TmNotionWorkItemBlock : ComponentBase, IDisposable
         builder.OpenElement(seq++, "button");
         builder.AddAttribute(seq++, "class", mode == CurrentDisplayMode ? "tm-work-item__mode tm-work-item__mode--active" : "tm-work-item__mode");
         builder.AddAttribute(seq++, "type", "button");
-        builder.AddAttribute(seq++, "aria-pressed", mode == CurrentDisplayMode);
+        builder.AddAttribute(seq++, "aria-pressed", mode == CurrentDisplayMode ? "true" : "false");
         builder.AddAttribute(seq++, "onclick", EventCallback.Factory.Create(this, () => SetDisplayModeAsync(mode)));
         builder.AddContent(seq++, label);
         builder.CloseElement();

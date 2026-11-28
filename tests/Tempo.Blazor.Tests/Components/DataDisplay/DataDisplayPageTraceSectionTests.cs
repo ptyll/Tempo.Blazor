@@ -78,10 +78,12 @@ public class DataDisplayPageTraceSectionTests : DemoPageLocalizationTestBase
 
         toggle().Click();
 
-        toggle().TextContent.Trim().Should().Be("Stop live trace");
+        // WaitForAssertion, not bare asserts: the TmButton OnClick dispatch and the re-render can
+        // land after Click returns under parallel full-suite load (documented CI flake).
+        cut.WaitForAssertion(() => toggle().TextContent.Trim().Should().Be("Stop live trace"));
 
         toggle().Click();
-        toggle().TextContent.Trim().Should().Be("Start live trace");
+        cut.WaitForAssertion(() => toggle().TextContent.Trim().Should().Be("Start live trace"));
     }
 
     [Fact]

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.NotionEditor.Enums;
 using Tempo.Blazor.NotionEditor.Interfaces;
 using Tempo.Blazor.NotionEditor.Models;
@@ -132,7 +133,15 @@ public partial class TmNotionDbFieldEditor : ComponentBase
     private void AddOption()
         => _options.Add(new OptionRowModel(Guid.NewGuid().ToString(), string.Empty, "gray"));
 
-    private void RemoveOption(OptionRowModel opt) => _options.Remove(opt);
+    private void RemoveOption(OptionRowModel opt)
+    {
+        _options.Remove(opt);
+        // The removed option's radiogroup left the DOM — drop its element references too.
+        foreach (var key in _dotRefs.Keys
+                     .Where(k => k.StartsWith($"{opt.Id}:", StringComparison.Ordinal))
+                     .ToList())
+            _dotRefs.Remove(key);
+    }
 
     /// <summary>Non-drag alternative to the DnD reorder (WCAG 2.5.7): moves the option by delta.</summary>
     private void MoveOption(OptionRowModel opt, int delta)
@@ -168,6 +177,53 @@ public partial class TmNotionDbFieldEditor : ComponentBase
     private void StartDrag(OptionRowModel opt)  => _dragging = opt;
     private void SetDragOver(OptionRowModel opt) => _dragOver = opt;
     private void EndDrag() { _dragging = null; _dragOver = null; }
+
+    // ── Option color dots — APG radiogroup (the TmColorPalette pattern) ───────
+
+    /// <summary>Per-dot element references for the roving-tabindex focus move, keyed by
+    /// "{optionId}:{color}" (every option row owns its own radiogroup).</summary>
+    private readonly Dictionary<string, ElementReference> _dotRefs = [];
+
+    private static string DotRefKey(OptionRowModel option, string color) => $"{option.Id}:{color}";
+
+    /// <summary>Roving tabindex: the checked dot is the radiogroup's single tab stop. When the
+    /// option's color matches no dot (an imported hex color), the FIRST dot stands in — the group
+    /// never leaves the keyboard without a tab stop.</summary>
+    private string ColorDotTabIndex(OptionRowModel option, string color)
+    {
+        var checkedIndex = Array.IndexOf(SelectColors, option.Color);
+        if (checkedIndex < 0) checkedIndex = 0;
+        return Array.IndexOf(SelectColors, color) == checkedIndex ? "0" : "-1";
+    }
+
+    /// <summary>
+    /// APG radiogroup keyboard model: ←/→/↑/↓ move the focus AND the selection together, wrapping
+    /// at both ends; Home/End jump to the first/last color. Enter/Space are left to the native
+    /// button (one activation per key press — docs/keyboard-activation-convention.md), so they
+    /// are NOT emulated here.
+    /// </summary>
+    private async Task HandleColorDotKeyDownAsync(KeyboardEventArgs e, OptionRowModel option, string color)
+    {
+        var index = Array.IndexOf(SelectColors, color);
+        if (index < 0) return;
+
+        var nextIndex = e.Key switch
+        {
+            "ArrowRight" or "ArrowDown" => (index + 1) % SelectColors.Length,
+            "ArrowLeft" or "ArrowUp" => (index - 1 + SelectColors.Length) % SelectColors.Length,
+            "Home" => 0,
+            "End" => SelectColors.Length - 1,
+            _ => -1
+        };
+        if (nextIndex < 0 || nextIndex == index) return;
+
+        var nextColor = SelectColors[nextIndex];
+        option.Color = nextColor;
+        if (_dotRefs.TryGetValue(DotRefKey(option, nextColor), out var target))
+        {
+            try { await target.FocusAsync(); } catch { }
+        }
+    }
 
     private void DropOn(OptionRowModel target)
     {
@@ -342,6 +398,10 @@ public partial class TmNotionDbFieldEditor : ComponentBase
     };
 
     // ── Inner models ──────────────────────────────────────────────────────────
+
+    // ARIA state attributes carry the strings "true"/"false" — a bool renders as an empty
+    // attribute value (invalid ARIA) or is omitted entirely (plan b75365fb, fáze 4k).
+    private static string BoolText(bool value) => value ? "true" : "false";
 
     internal static readonly string[] SelectColors =
         ["gray", "red", "orange", "yellow", "green", "blue", "purple", "pink", "brown"];

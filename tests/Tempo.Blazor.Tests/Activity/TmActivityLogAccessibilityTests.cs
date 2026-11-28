@@ -35,6 +35,34 @@ public class TmActivityLogAccessibilityTests : LocalizationTestBase
     }
 
     [Fact]
+    public void ActivityLog_Tabs_RenderAriaSelectedAsStateStrings_InBothStates()
+    {
+        // Fáze 4h (plan b75365fb): aria-selected is an ARIA STATE attribute — it must carry the
+        // strings "true"/"false". A bool value renders the invalid empty value on the active tab
+        // and drops the attribute entirely on the inactive ones.
+        var cut = Render<TmActivityLog>(p => p
+            .Add(x => x.ShowTimeline, true)
+            .Add(x => x.ShowComments, true)
+            .Add(x => x.ShowAttachments, true)
+            .Add(x => x.TimelineEntries, Array.Empty<ITimelineEntry>())
+            .Add(x => x.Comments, Array.Empty<TmCommentEntry>())
+            .Add(x => x.Attachments, Array.Empty<TmAttachment>()));
+
+        var tabs = cut.FindAll(".tm-activity-tab");
+        tabs.Should().HaveCount(3);
+        tabs[0].GetAttribute("aria-selected").Should().Be("true", "Timeline is the default tab");
+        tabs[1].GetAttribute("aria-selected").Should().Be("false");
+        tabs[2].GetAttribute("aria-selected").Should().Be("false");
+
+        tabs[2].Click();
+
+        var after = cut.FindAll(".tm-activity-tab");
+        after[0].GetAttribute("aria-selected").Should().Be("false");
+        after[1].GetAttribute("aria-selected").Should().Be("false");
+        after[2].GetAttribute("aria-selected").Should().Be("true", "the clicked Attachments tab is active now");
+    }
+
+    [Fact]
     public void ActivityLog_TabPanel_HasAriaLabelledBy()
     {
         var cut = Render<TmActivityLog>(p => p

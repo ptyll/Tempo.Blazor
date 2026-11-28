@@ -113,7 +113,7 @@
       "name": "ReadOnly",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether the panel should prevent edits."
+      "description": "Whether the panel should prevent edits. Every inner editor renders disabled, so the lock is announced on the controls themselves; the root <aside> carries the stable tm-signing-field-editor-panel--readonly class for hosts and deliberately NO aria-readonly (ARIA 1.2 does not support it on the aside's complementary role). The ReadOnly checkbox of the edited field itself stays enabled — it is the control that changes the flag."
     },
     {
       "name": "ShowGeometry",

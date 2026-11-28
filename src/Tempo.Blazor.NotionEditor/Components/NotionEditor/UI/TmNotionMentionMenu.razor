@@ -51,21 +51,21 @@
                 <button class="tm-nmm__tab @(_tab == MentionTab.People ? "tm-nmm__tab--active" : "")"
                         type="button"
                         role="tab"
-                        aria-selected="@(_tab == MentionTab.People)"
+                        aria-selected="@BoolText(_tab == MentionTab.People)"
                         @onclick="() => SwitchTabAsync(MentionTab.People)">
                     @Loc["TmNotionMentionMenu_TabPeople"]
                 </button>
                 <button class="tm-nmm__tab @(_tab == MentionTab.Pages ? "tm-nmm__tab--active" : "")"
                         type="button"
                         role="tab"
-                        aria-selected="@(_tab == MentionTab.Pages)"
+                        aria-selected="@BoolText(_tab == MentionTab.Pages)"
                         @onclick="() => SwitchTabAsync(MentionTab.Pages)">
                     @Loc["TmNotionMentionMenu_TabPages"]
                 </button>
                 <button class="tm-nmm__tab @(_tab == MentionTab.Date ? "tm-nmm__tab--active" : "")"
                         type="button"
                         role="tab"
-                        aria-selected="@(_tab == MentionTab.Date)"
+                        aria-selected="@BoolText(_tab == MentionTab.Date)"
                         @onclick="() => SwitchTabAsync(MentionTab.Date)">
                     @Loc["TmNotionMentionMenu_TabDate"]
                 </button>
@@ -96,7 +96,7 @@
                     <div id="@($"{_listId}-opt-{pIdx}")"
                          class="tm-nmm__item @(pIdx == _selectedIndex ? "tm-nmm__item--selected" : "")"
                          role="option"
-                         aria-selected="@(pIdx == _selectedIndex)"
+                         aria-selected="@BoolText(pIdx == _selectedIndex)"
                          @onclick="() => SelectUserAsync(p)"
                          @onpointermove="() => _selectedIndex = pIdx">
                         <TmAvatar Name="@p.DisplayName"
@@ -127,7 +127,7 @@
                     <div id="@($"{_listId}-opt-{pgIdx}")"
                          class="tm-nmm__item @(pgIdx == _selectedIndex ? "tm-nmm__item--selected" : "")"
                          role="option"
-                         aria-selected="@(pgIdx == _selectedIndex)"
+                         aria-selected="@BoolText(pgIdx == _selectedIndex)"
                          @onclick="() => SelectPageAsync(capturedPg)"
                          @onpointermove="() => _selectedIndex = pgIdx">
                         <span class="tm-nmm__page-icon" aria-hidden="true">@GetPageIcon(capturedPg)</span>
@@ -142,7 +142,7 @@
             {
                 <div id="@($"{_listId}-opt-0")"
                      class="tm-nmm__item @(0 == _selectedIndex ? "tm-nmm__item--selected" : "")"
-                     role="option" aria-selected="@(0 == _selectedIndex)"
+                     role="option" aria-selected="@BoolText(0 == _selectedIndex)"
                      @onclick="() => SelectDateByIndexAsync(0)"
                      @onpointermove="() => _selectedIndex = 0">
                     @DateIcon
@@ -150,7 +150,7 @@
                 </div>
                 <div id="@($"{_listId}-opt-1")"
                      class="tm-nmm__item @(1 == _selectedIndex ? "tm-nmm__item--selected" : "")"
-                     role="option" aria-selected="@(1 == _selectedIndex)"
+                     role="option" aria-selected="@BoolText(1 == _selectedIndex)"
                      @onclick="() => SelectDateByIndexAsync(1)"
                      @onpointermove="() => _selectedIndex = 1">
                     @DateIcon
@@ -158,7 +158,7 @@
                 </div>
                 <div id="@($"{_listId}-opt-2")"
                      class="tm-nmm__item @(2 == _selectedIndex ? "tm-nmm__item--selected" : "")"
-                     role="option" aria-selected="@(2 == _selectedIndex)"
+                     role="option" aria-selected="@BoolText(2 == _selectedIndex)"
                      @onclick="() => SelectDateByIndexAsync(2)"
                      @onpointermove="() => _selectedIndex = 2">
                     @DateIcon

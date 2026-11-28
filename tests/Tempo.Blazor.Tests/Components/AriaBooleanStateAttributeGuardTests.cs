@@ -28,14 +28,44 @@ namespace Tempo.Blazor.Tests.Components;
 /// <item>code-behind: <c>AddAttribute(seq, "aria-X", value)</c> — passes for a string literal,
 /// an expression producing the state strings (<c>.ToString()</c>, <c>BoolText(…)</c>, a ternary
 /// with the literals), a <c>var</c> initialized from those strings, or a string-typed
-/// identifier; anything else is an offender.</item>
+/// identifier; anything else is an offender;</item>
+/// <item>code-behind <c>@attributes</c> dictionary: <c>attrs["aria-X"] = value</c> — the same
+/// value rules as <c>AddAttribute</c> (fáze 4k review).</item>
 /// </list>
-/// Known pre-existing offenders outside this phase's scope are FROZEN (the list may only
-/// shrink — fixing a site removes its entry; adding a new site fails the guard).
+/// Fáze 4h (plan b75365fb) extended the sweep to the demo surfaces
+/// (<c>Tempo.Blazor.Demo.SharedUI</c>, <c>Tempo.ReportServer.Web.Client</c>) with zero tolerance —
+/// no frozen entries there. Fáze 4i fixed the NotionEditor page and sidebar sites (the settings
+/// menu, watch button, sidebar sections, page tree, comment panel, my tasks and page history)
+/// through a string <c>BoolText</c> helper — except the watch toggle, whose <c>aria-pressed</c>
+/// was removed entirely (its changing name announces the state, APG) — shrinking the frozen
+/// list by 19. Fáze 4j fixed the NotionEditor menu and search surfaces (the mention menu tabs
+/// and option lists, the comment mention input, the emoji picker categories, the token
+/// dropdown, the block type switcher and the page search results) through the same string
+/// <c>BoolText</c> helper — shrinking the frozen list by another 14. Fáze 4k fixed the last ten
+/// sites (the NotionEditor blocks and database: the toggle block arrow, the table group toggle
+/// and row expander, the view tabs, the import/export tabs, the group bar, the field editor
+/// color dots and the work item display modes) and with the list empty REMOVED the frozen-list
+/// mechanism — the guard now holds the library and the demo at ZERO tolerance: any boolean
+/// ARIA state expression fails, with no exceptions list to hide behind.
+/// The fáze 4k review widened the net twice: (1) the attribute set now covers the whole
+/// true/false-token family — <c>aria-busy</c> / <c>aria-hidden</c> / <c>aria-disabled</c> /
+/// <c>aria-invalid</c> / <c>aria-required</c> / <c>aria-modal</c> / <c>aria-readonly</c> /
+/// <c>aria-multiselectable</c> / <c>aria-atomic</c> join the original four. Those tokens may
+/// OMIT the attribute instead of rendering <c>"false"</c> (<c>? "true" : null</c> is a valid
+/// string-producing expression), but a raw bool is the same defect — the one real offender the
+/// widened sweep found was the <c>TmNotionSidebar</c> New page <c>aria-busy="@_isCreatingPage"</c>,
+/// fixed in the same review round. (2) The declaration resolution now includes PARTIAL SIBLINGS
+/// (<c>TmStatCard.Kpi.cs</c> declares <c>TmStatCard.razor</c>'s <c>BusyAttribute</c>) and the
+/// <c>@attributes</c> dictionary form (<c>attrs["aria-invalid"] = InvalidText</c> in
+/// <c>TmSigningChoiceStep.razor.cs</c>) is detected next to <c>AddAttribute</c>.
 /// </summary>
 public class AriaBooleanStateAttributeGuardTests
 {
-    private const string Attr = "aria-(?:expanded|pressed|selected|checked)";
+    // The true/false-token ARIA state family. expanded/pressed/selected/checked must render the
+    // state in BOTH positions; the rest may omit the attribute instead of "false" — but none of
+    // them may ever receive a raw bool.
+    private const string Attr =
+        "aria-(?:expanded|pressed|selected|checked|busy|hidden|disabled|invalid|required|modal|readonly|multiselectable|atomic)";
 
     // aria-X="@identifier" — identifier directly followed by the closing quote.
     private static readonly Regex Bare =
@@ -64,69 +94,11 @@ public class AriaBooleanStateAttributeGuardTests
         new("AddAttribute\\(\\s*[^,]+,\\s*\"(?<attr>" + Attr + ")\"\\s*,\\s*(?<val>[^;]+?)\\s*\\);",
             RegexOptions.Compiled);
 
-    private static readonly string[] Frozen =
-    [
-        // ── bare identifier offenders (known debt, see plan_report_remaining) ────────────────
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Page/TmNotionPageSettingsMenu.razor|aria-expanded|@_open",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Page/TmNotionPageSettingsMenu.razor|aria-expanded|@_exportOpen",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Page/TmNotionPageSettingsMenu.razor|aria-expanded|@_importOpen",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Page/TmNotionPageSettingsMenu.razor|aria-expanded|@_moveToOpen",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionWatchButton.razor|aria-pressed|@_watching",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionTokenDropdown.razor|aria-selected|@isSelected",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Lists/TmNotionToggleBlock.razor|aria-expanded|@_isOpen",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Sidebar/TmNotionSidebarRecent.razor|aria-expanded|@_isExpanded",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Sidebar/TmNotionSidebarFavorites.razor|aria-expanded|@_isExpanded",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Sidebar/TmNotionSidebar.razor|aria-expanded|@_pagesExpanded",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Sidebar/TmNotionPageTreeItem.razor|aria-selected|@IsActive",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Sidebar/TmNotionPageTreeItem.razor|aria-expanded|@MenuOpen",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDbTableView.razor|aria-expanded|@isExpanded",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionBlockTypeSwitcher.razor|aria-selected|@isCurrent",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionPageCommentPanel.razor|aria-expanded|@Expanded",
-        "src/Tempo.Blazor.Wireframe/Components/Wireframe/TmWireframeEditor.razor|aria-selected|@isActive",
-        // ── parenthesised bool-expression offenders ───────────────────────────────────────────
-        "src/Tempo.Blazor.Reporting/Components/TmReportDesigner.razor|aria-selected|@(tab == _activeTab)",
-        "src/Tempo.Blazor.Wireframe/Components/Wireframe/TmWireframeToolbox.razor|aria-selected|@(_filterMode == f)",
-        "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/TmSpreadsheetFormatCellsDialog.razor|aria-selected|@(_activeTab == tab)",
-        "src/Tempo.Blazor/Components/Activity/TmActivityLog.razor|aria-selected|@(_activeTab == ActivityTab.Timeline)",
-        "src/Tempo.Blazor/Components/Activity/TmActivityLog.razor|aria-selected|@(_activeTab == ActivityTab.Comments)",
-        "src/Tempo.Blazor/Components/Activity/TmActivityLog.razor|aria-selected|@(_activeTab == ActivityTab.Attachments)",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionPageHistory.razor|aria-pressed|@(_diffViewMode == NotionDiffViewMode.Inline)",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionPageHistory.razor|aria-pressed|@(_diffViewMode == NotionDiffViewMode.SideBySide)",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionMentionMenu.razor|aria-selected|@(_tab == MentionTab.People)",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionMentionMenu.razor|aria-selected|@(_tab == MentionTab.Pages)",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionMentionMenu.razor|aria-selected|@(_tab == MentionTab.Date)",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionMentionMenu.razor|aria-selected|@(pIdx == _selectedIndex)",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionMentionMenu.razor|aria-selected|@(pgIdx == _selectedIndex)",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionMentionMenu.razor|aria-selected|@(0 == _selectedIndex)",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionMentionMenu.razor|aria-selected|@(1 == _selectedIndex)",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionMentionMenu.razor|aria-selected|@(2 == _selectedIndex)",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmCommentMentionInput.razor|aria-selected|@(idx == _selectedIndex)",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionEmojiPicker.razor|aria-selected|@(_activeCategory == capturedTab.Category)",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDbFieldEditor.razor|aria-pressed|@(o.Color == cc)",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDatabaseBlock.razor|aria-selected|@(_activeViewId == v.Id)",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDbTableView.razor|aria-expanded|@(!isCollapsed)",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDbImportExport.razor|aria-selected|@(_tab == ActiveTab.Import)",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDbImportExport.razor|aria-selected|@(_tab == ActiveTab.Export)",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDbGroupBar.razor|aria-selected|@(_selectedFieldId is null)",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDbGroupBar.razor|aria-selected|@(_selectedFieldId == f.Id)",
-        "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/TmSpreadsheetDataValidationDialog.razor|aria-selected|@(_activeTab == \"Settings\")",
-        "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/TmSpreadsheetDataValidationDialog.razor|aria-selected|@(_activeTab == \"InputMessage\")",
-        "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/TmSpreadsheetDataValidationDialog.razor|aria-selected|@(_activeTab == \"ErrorAlert\")",
-        // ── dotted member paths (review round: a bool model property renders the invalid empty
-        //    value; the guard cannot see the type across files, so these stay frozen until the
-        //    sites pass the state as a string) ────────────────────────────────────────────────
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Page/TmNotionPageSettingsMenu.razor|aria-checked|@Page.IsFullWidth",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Page/TmNotionPageSettingsMenu.razor|aria-checked|@Page.IsSmallText",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Page/TmNotionPageSettingsMenu.razor|aria-checked|@Page.IsLocked",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Page/TmNotionPageSettingsMenu.razor|aria-checked|@Page.IsFavorite",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionMyTasks.razor|aria-pressed|@task.IsCompleted",
-        // ── method calls declared bool in the same file ───────────────────────────────────────
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Sidebar/TmNotionSidebar.razor|aria-selected|@IsActivePage(page)",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionPageSearch.razor|aria-selected|@IsPageSelected(pIdx)",
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionPageSearch.razor|aria-selected|@IsBlockSelected(bIdx)",
-        // ── code-behind AddAttribute with a bool expression ───────────────────────────────────
-        "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Embed/TmNotionWorkItemBlock.razor.cs|aria-pressed|mode == CurrentDisplayMode",
-    ];
+    // attrs["aria-X"] = value — an @attributes dictionary entry in a code-behind .cs file
+    // (the value ends at the statement/initializer separator).
+    private static readonly Regex CsAttrDictionary =
+        new("\\[\\s*\"(?<attr>" + Attr + ")\"\\s*\\]\\s*=\\s*(?<val>[^;,}\\r\\n]+)",
+            RegexOptions.Compiled);
 
     [Fact]
     public void NoAriaStateAttribute_ReceivesABooleanExpression()
@@ -148,58 +120,19 @@ public class AriaBooleanStateAttributeGuardTests
                 code += "\n" + File.ReadAllText(codeBehindPath);
             }
 
-            var stringIds = new HashSet<string>(
-                StringDecl.Matches(code).Select(m => m.Groups["id"].Value),
-                StringComparer.Ordinal);
-
-            foreach (Match m in Bare.Matches(razor))
+            // Partial siblings (TmStatCard.Kpi.cs next to TmStatCard.razor) declare helpers the
+            // razor binds — without them a legitimate string helper reads as an unproven bool.
+            var directory = Path.GetDirectoryName(file)!;
+            var siblingPattern = Path.GetFileNameWithoutExtension(file) + ".*.cs";
+            foreach (var sibling in Directory.EnumerateFiles(directory, siblingPattern))
             {
-                var id = m.Groups["id"].Value;
-                if (stringIds.Contains(id)) continue; // a string helper property (e.g. AriaPressed)
-                offenders.Add($"{relative}|{m.Value.Split('=')[0]}|@{id}");
+                if (string.Equals(sibling, codeBehindPath, StringComparison.OrdinalIgnoreCase)) continue;
+                code += "\n" + File.ReadAllText(sibling);
             }
 
-            foreach (Match m in Parens.Matches(razor))
+            foreach (var offender in RazorAttributeOffenders(razor, code))
             {
-                var expr = m.Groups["expr"].Value;
-                // String-producing: a ternary with the literal state strings ("mixed" is the
-                // third valid aria-checked value), or a .ToString() call.
-                if (expr.Contains("\"true\"", StringComparison.Ordinal)
-                    || expr.Contains("\"false\"", StringComparison.Ordinal)
-                    || expr.Contains("\"mixed\"", StringComparison.Ordinal)
-                    || expr.Contains(".ToString(", StringComparison.Ordinal))
-                {
-                    continue;
-                }
-
-                offenders.Add($"{relative}|{m.Value.Split('=')[0]}|@({expr})");
-            }
-
-            foreach (Match m in Dotted.Matches(razor))
-            {
-                var expr = m.Groups["expr"].Value;
-                if (!expr.Contains('.') && !expr.Contains('(')) continue; // covered by Bare
-
-                var key = KeyOf(expr);
-                if (stringIds.Contains(key)) continue; // a string member/method (e.g. BoolText)
-                if (expr.Contains(".ToString(", StringComparison.Ordinal)) continue;
-
-                if (expr.Contains('('))
-                {
-                    // A method call is an offender only when the swept file declares it bool —
-                    // an unknown helper may legitimately return the state strings.
-                    if (Regex.IsMatch(code, $@"\bbool\s+{Regex.Escape(key)}\s*\("))
-                    {
-                        offenders.Add($"{relative}|{m.Value.Split('=')[0]}|@{expr}");
-                    }
-
-                    continue;
-                }
-
-                // A dotted path is an offender unless its last segment is proven string above —
-                // the guard cannot see the member's type across files, and a bool model
-                // property is exactly the defect this guard exists for.
-                offenders.Add($"{relative}|{m.Value.Split('=')[0]}|@{expr}");
+                offenders.Add($"{relative}|{offender}");
             }
         }
 
@@ -210,27 +143,114 @@ public class AriaBooleanStateAttributeGuardTests
             var relative = Path.GetRelativePath(root.FullName, file).Replace('\\', '/');
             var code = File.ReadAllText(file);
 
-            foreach (Match m in CsAddAttribute.Matches(code))
+            foreach (var offender in CsAttributeOffenders(code))
             {
-                var val = m.Groups["val"].Value.Trim();
-                if (IsStringValued(val, code)) continue;
-                offenders.Add($"{relative}|{m.Groups["attr"].Value}|{val}");
+                offenders.Add($"{relative}|{offender}");
             }
         }
 
-        var offenderSet = offenders.ToHashSet(StringComparer.Ordinal);
-        var frozenSet = Frozen.ToHashSet(StringComparer.Ordinal);
-
-        offenderSet.Except(frozenSet).Should().BeEmpty(
-            "no aria-expanded/aria-pressed/aria-selected/aria-checked may receive a boolean " +
-            "expression (invalid empty ARIA value). New occurrences — fix them; the frozen list " +
-            "may only shrink. Found:\n" + string.Join("\n", offenderSet.Except(frozenSet)));
-
-        frozenSet.Except(offenderSet).Should().BeEmpty(
-            "every frozen entry must still exist — remove entries when the underlying site is " +
-            "fixed so the debt list can only shrink. No longer matching:\n" +
-            string.Join("\n", frozenSet.Except(offenderSet)));
+        // Fáze 4k (plan b75365fb): the frozen list is gone — zero tolerance. Every boolean ARIA
+        // state expression in the library or the demo surfaces fails the guard; there is no
+        // exceptions list to add a new site to.
+        offenders.Should().BeEmpty(
+            "no aria-expanded/aria-pressed/aria-selected/aria-checked/aria-busy/aria-hidden/" +
+            "aria-disabled/aria-invalid/aria-required/aria-modal/aria-readonly/" +
+            "aria-multiselectable/aria-atomic may receive a boolean expression (invalid empty " +
+            "ARIA value) — pass the strings ? \"true\" : \"false\" (or a BoolText helper); the " +
+            "true/false-token attributes (busy/hidden/disabled/…) may omit the attribute " +
+            "instead of \"false\": ? \"true\" : null. Found:\n" + string.Join("\n", offenders));
     }
+
+    // Every boolean ARIA state expression in one razor file, given the file's combined
+    // declaration text (razor + code-behind + partial siblings). Entries are "attr|expr".
+    internal static List<string> RazorAttributeOffenders(string razor, string code)
+    {
+        var offenders = new List<string>();
+
+        var stringIds = new HashSet<string>(
+            StringDecl.Matches(code).Select(m => m.Groups["id"].Value),
+            StringComparer.Ordinal);
+
+        foreach (Match m in Bare.Matches(razor))
+        {
+            var id = m.Groups["id"].Value;
+            if (stringIds.Contains(id)) continue; // a string helper property (e.g. AriaPressed)
+            offenders.Add($"{m.Value.Split('=')[0]}|@{id}");
+        }
+
+        foreach (Match m in Parens.Matches(razor))
+        {
+            var expr = m.Groups["expr"].Value;
+            // String-producing: a ternary with the literal state strings ("mixed" is the
+            // third valid aria-checked value; "true" : null is the valid omission form of the
+            // true/false-token attributes), or a .ToString() call.
+            if (ProducesStateString(expr)) continue;
+
+            offenders.Add($"{m.Value.Split('=')[0]}|@({expr})");
+        }
+
+        foreach (Match m in Dotted.Matches(razor))
+        {
+            var expr = m.Groups["expr"].Value;
+            if (!expr.Contains('.') && !expr.Contains('(')) continue; // covered by Bare
+
+            var key = KeyOf(expr);
+            if (stringIds.Contains(key)) continue; // a string member/method (e.g. BoolText)
+            if (expr.Contains(".ToString(", StringComparison.Ordinal)) continue;
+
+            if (expr.Contains('('))
+            {
+                // A method call is an offender only when the swept file declares it bool —
+                // an unknown helper may legitimately return the state strings.
+                if (Regex.IsMatch(code, $@"\bbool\s+{Regex.Escape(key)}\s*\("))
+                {
+                    offenders.Add($"{m.Value.Split('=')[0]}|@{expr}");
+                }
+
+                continue;
+            }
+
+            // A dotted path is an offender unless its last segment is proven string above —
+            // the guard cannot see the member's type across files, and a bool model
+            // property is exactly the defect this guard exists for.
+            offenders.Add($"{m.Value.Split('=')[0]}|@{expr}");
+        }
+
+        return offenders;
+    }
+
+    // Every boolean ARIA state value assigned in one code-behind file — through
+    // AddAttribute(seq, "aria-X", value) or an @attributes dictionary entry
+    // attrs["aria-X"] = value. Entries are "attr|value".
+    internal static List<string> CsAttributeOffenders(string code)
+    {
+        var offenders = new List<string>();
+
+        foreach (Match m in CsAddAttribute.Matches(code))
+        {
+            var val = m.Groups["val"].Value.Trim();
+            if (IsStringValued(val, code)) continue;
+            offenders.Add($"{m.Groups["attr"].Value}|{val}");
+        }
+
+        foreach (Match m in CsAttrDictionary.Matches(code))
+        {
+            var val = m.Groups["val"].Value.Trim();
+            if (IsStringValued(val, code)) continue;
+            offenders.Add($"{m.Groups["attr"].Value}|{val}");
+        }
+
+        return offenders;
+    }
+
+    // The expression yields the state strings: a ternary carrying a "true"/"false"/"mixed"
+    // literal (the other branch may be null — the omission form of the true/false-token
+    // attributes) or a .ToString() call.
+    private static bool ProducesStateString(string expr)
+        => expr.Contains("\"true\"", StringComparison.Ordinal)
+            || expr.Contains("\"false\"", StringComparison.Ordinal)
+            || expr.Contains("\"mixed\"", StringComparison.Ordinal)
+            || expr.Contains(".ToString(", StringComparison.Ordinal);
 
     // The member the attribute actually reads: the last path segment before the call's "(".
     private static string KeyOf(string expr)
@@ -240,17 +260,14 @@ public class AriaBooleanStateAttributeGuardTests
         return segments[^1];
     }
 
-    // An AddAttribute value is string-valued when it is a string literal, an expression that
-    // produces the state strings, or a bare identifier the file declares as string (or as a var
-    // initialized from the state strings — DocumentToolbarToggleRenderer's "pressed" switch).
+    // An AddAttribute / dictionary value is string-valued when it is a string literal, an
+    // expression that produces the state strings, or a bare identifier the file declares as
+    // string (or as a var initialized from the state strings — DocumentToolbarToggleRenderer's
+    // "pressed" switch).
     private static bool IsStringValued(string val, string code)
     {
         if (val.StartsWith('"')) return true;
-        if (val.Contains("\"true\"", StringComparison.Ordinal)
-            || val.Contains("\"false\"", StringComparison.Ordinal)
-            || val.Contains("\"mixed\"", StringComparison.Ordinal)
-            || val.Contains(".ToString(", StringComparison.Ordinal)
-            || val.Contains("BoolText(", StringComparison.Ordinal))
+        if (ProducesStateString(val) || val.Contains("BoolText(", StringComparison.Ordinal))
         {
             return true;
         }
@@ -263,18 +280,79 @@ public class AriaBooleanStateAttributeGuardTests
         if (!varDecl.Success) return false;
 
         var init = varDecl.Groups["init"].Value;
-        return init.Contains("\"true\"", StringComparison.Ordinal)
-            || init.Contains("\"false\"", StringComparison.Ordinal)
-            || init.Contains("\"mixed\"", StringComparison.Ordinal)
-            || init.Contains(".ToString(", StringComparison.Ordinal)
-            || init.Contains("BoolText(", StringComparison.Ordinal);
+        return ProducesStateString(init) || init.Contains("BoolText(", StringComparison.Ordinal);
     }
 
-    private static bool IsLibrarySource(string path)
+    // The true/false-token attributes may omit the attribute instead of rendering "false" —
+    // ? "true" : null is a valid string-producing expression, never an offender. A raw bool
+    // identifier is the same defect on every attribute of the family.
+    [Theory]
+    [InlineData("aria-busy=\"@(_isCreatingPage ? \"true\" : null)\"", false)]
+    [InlineData("aria-hidden=\"@(Compact ? \"true\" : \"false\")\"", false)]
+    [InlineData("aria-disabled=\"@(ReadOnly ? \"true\" : null)\"", false)]
+    [InlineData("aria-busy=\"@_isCreatingPage\"", true)]
+    [InlineData("aria-pressed=\"@IsOn\"", true)]
+    [InlineData("aria-modal=\"@IsModal\"", true)]
+    public void RazorAttribute_TrueTokenExpressions_Pass_BoolExpressionsFail(string markup, bool expectedOffender)
+    {
+        var offenders = RazorAttributeOffenders(markup, markup);
+        offenders.Should().HaveCount(expectedOffender ? 1 : 0,
+            expectedOffender
+                ? $"a raw bool must be reported: {markup}"
+                : $"a string-producing expression is valid: {markup}");
+    }
+
+    // The @attributes dictionary form in code-behind: a bool value is the same defect as a bool
+    // AddAttribute value; the state strings (including the null-omitting ternary) pass.
+    [Theory]
+    [InlineData("attrs[\"aria-pressed\"] = isOn;", "aria-pressed|isOn")]
+    [InlineData("attrs[\"aria-busy\"] = _loading;", "aria-busy|_loading")]
+    [InlineData("attrs[\"aria-expanded\"] = isOn ? \"true\" : \"false\";", null)]
+    [InlineData("attrs[\"aria-busy\"] = _loading ? \"true\" : null;", null)]
+    [InlineData("private string? BusyText => _loading ? \"true\" : null;\nattrs[\"aria-busy\"] = BusyText;", null)]
+    public void CsAttributeDictionary_BoolValue_IsAnOffender(string snippet, string? expectedOffender)
+    {
+        var offenders = CsAttributeOffenders(snippet);
+        if (expectedOffender is null)
+        {
+            offenders.Should().BeEmpty($"a string-valued dictionary entry is valid: {snippet}");
+        }
+        else
+        {
+            offenders.Should().Equal(expectedOffender);
+        }
+    }
+
+    // Pinned by the theory below: the demo sweep must include exactly the surfaces hosts copy
+    // (Demo.SharedUI pages, the Report Server web client) and exclude everything else demo-ish
+    // (the WASM/Server demo hosts, the Report Server host, build output).
+    [Theory]
+    [InlineData("C:/repo/src/Tempo.Blazor.Demo.SharedUI/Pages/ReportEmbeddingPage.razor", true)]
+    [InlineData("C:/repo/src/Tempo.Blazor.Demo.SharedUI/Pages/TestSuiteManagerPage.razor.cs", true)]
+    [InlineData("C:/repo/src/Tempo.ReportServer.Web.Client/Pages/ReportDesignerPage.razor", true)]
+    [InlineData("C:/repo/src/Tempo.Blazor.Demo/Pages/Index.razor", false)]
+    [InlineData("C:/repo/src/Tempo.ReportServer.Web/App.razor", false)]
+    [InlineData("C:/repo/src/Tempo.Blazor.Demo.SharedUI/obj/Debug/net10.0/Generated.razor", false)]
+    [InlineData("C:/repo/src/Tempo.Blazor/Components/Buttons/TmButton.razor", true)]
+    public void IsLibrarySource_PinsTheDemoSweepBoundaries(string path, bool expected)
+    {
+        IsLibrarySource(path).Should().Be(expected);
+    }
+
+    internal static bool IsLibrarySource(string path)
     {
         var p = path.Replace('\\', '/');
         if (!p.Contains("/src/")) return false;
         if (p.Contains("/bin/") || p.Contains("/obj/")) return false;
+        // Fáze 4h (plan b75365fb): the demo surfaces joined the sweep — the Demo.SharedUI pages
+        // and the Report Server web client render the same attributes hosts copy, so a bool
+        // state there is the same defect. The whole guard is zero-tolerance since fáze 4k.
+        if (p.Contains("/Tempo.Blazor.Demo.SharedUI/") || p.Contains("/Tempo.ReportServer.Web.Client/"))
+        {
+            return p.EndsWith(".razor", StringComparison.OrdinalIgnoreCase)
+                || p.EndsWith(".cs", StringComparison.OrdinalIgnoreCase);
+        }
+
         if (p.Contains(".Demo") || p.Contains("ReportServer")) return false;
         return p.EndsWith(".razor", StringComparison.OrdinalIgnoreCase)
             || p.EndsWith(".cs", StringComparison.OrdinalIgnoreCase);

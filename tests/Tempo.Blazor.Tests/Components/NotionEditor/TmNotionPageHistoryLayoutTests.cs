@@ -79,6 +79,32 @@ public sealed class TmNotionPageHistoryLayoutTests : LocalizationTestBase
         host.Find("[data-testid='notion-history-restore']").HasAttribute("disabled").Should().BeFalse();
     }
 
+    /// <summary>
+    /// Fáze 4g (plan b75365fb): the version preview is display-only (sanitized static HTML, no
+    /// interactive Blazor elements), so the lock needs no announcement — but the container used
+    /// to carry <c>aria-readonly="true"</c> on a generic <c>&lt;div&gt;</c>, where ARIA 1.2
+    /// supports neither the attribute nor the <c>aria-label</c> it also carried. The preview is
+    /// now a named <c>role="region"</c> without <c>aria-readonly</c>.
+    /// </summary>
+    [Fact]
+    public async Task Preview_IsANamedRegion_WithoutAriaReadonly()
+    {
+        var host = RenderHistory();
+        host.WaitForAssertion(() => host.FindAll(".tm-nph__version-item").Should().HaveCount(2));
+
+        await host.FindAll(".tm-nph__version-item")[1].ClickAsync(new MouseEventArgs());
+
+        host.WaitForAssertion(() =>
+        {
+            var preview = host.Find(".tm-nph__preview");
+            preview.GetAttribute("role").Should().Be("region",
+                "a named region gives the preview an accessible name — aria-label is prohibited on a generic div");
+            preview.GetAttribute("aria-label").Should().Be("Version preview (read-only)");
+            preview.HasAttribute("aria-readonly").Should().BeFalse(
+                "aria-readonly is not a supported attribute on role=region (ARIA 1.2); the preview is display-only");
+        });
+    }
+
     [Fact]
     public async Task ExitComparison_AfterTwoPicks_ShowsAPreview()
     {

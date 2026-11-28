@@ -32,7 +32,7 @@
 
                 <button class="tm-notion-type-switcher__item @(isCurrent ? "tm-notion-type-switcher__item--current" : "") @(isHighlighted ? "tm-notion-type-switcher__item--highlighted" : "")"
                         role="option"
-                        aria-selected="@isCurrent"
+                        aria-selected="@BoolText(isCurrent)"
                         data-type-idx="@capturedIndex"
                         @onclick="() => SelectTypeAsync(capturedItem.Type)"
                         @onclick:preventDefault="true"

@@ -770,6 +770,10 @@ public partial class TmNotionPageCommentPanel : ComponentBase, IDisposable, ITmD
     private static string AvatarInitial(string name)
         => name.Length > 0 ? name[0].ToString().ToUpperInvariant() : "?";
 
+    // ARIA state attributes are strings: a Blazor bool renders the invalid empty value (true)
+    // or omits the attribute entirely (false) — never a valid "true"/"false" state.
+    private static string BoolText(bool value) => value ? "true" : "false";
+
     private static string StripHtml(string html)
     {
         if (string.IsNullOrEmpty(html)) return string.Empty;

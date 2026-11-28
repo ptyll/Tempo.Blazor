@@ -212,6 +212,30 @@ public class TmWireframeToolboxTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Toolbox_FilterTabs_RenderAriaSelectedAsStateStrings_InBothStates()
+    {
+        // Fáze 4h (plan b75365fb): aria-selected is an ARIA STATE attribute — the filter tabs must
+        // carry the strings "true"/"false"; a bool comparison renders the invalid empty value on
+        // the active filter and drops the attribute on the rest.
+        var registry = BuildRegistry(
+            MakeDef("TmButton",    "Buttons", isBuiltIn: true),
+            MakeDef("HeroSection", "Custom",  isBuiltIn: false));
+        Services.AddSingleton(registry);
+
+        var cut = Render<TmWireframeToolbox>();
+
+        var tabs = cut.FindAll(".tm-wd-toolbox__filter-btn");
+        tabs.Should().HaveCount(3);
+        tabs.Select(t => t.GetAttribute("aria-selected")).Should().Equal("true", "false", "false");
+
+        tabs[2].Click();
+
+        cut.FindAll(".tm-wd-toolbox__filter-btn")
+            .Select(t => t.GetAttribute("aria-selected"))
+            .Should().Equal(new[] { "false", "false", "true" }, "the clicked Custom filter is active now");
+    }
+
+    [Fact]
     public void Toolbox_CustomComponent_ShowsBadge()
     {
         var registry = BuildRegistry(

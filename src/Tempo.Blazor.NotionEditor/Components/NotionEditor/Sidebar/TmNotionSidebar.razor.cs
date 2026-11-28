@@ -352,6 +352,10 @@ public partial class TmNotionSidebar : ComponentBase, IAsyncDisposable
         ActivePageId is not null &&
         page.Id.ToString().Equals(ActivePageId, StringComparison.OrdinalIgnoreCase);
 
+    // ARIA state attributes are strings: a Blazor bool renders the invalid empty value (true)
+    // or omits the attribute entirely (false) — never a valid "true"/"false" state.
+    private static string BoolText(bool value) => value ? "true" : "false";
+
     private async Task<IEnumerable<INotionPage>> GetRootPagesAsync(string? selectedSpaceIdOverride = null)
     {
         var selectedSpaceId = selectedSpaceIdOverride ?? ActiveSelectedSpaceId;

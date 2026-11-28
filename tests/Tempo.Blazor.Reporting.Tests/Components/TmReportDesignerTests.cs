@@ -21,6 +21,26 @@ public sealed class TmReportDesignerTests : ReportingComponentTestBase
     }
 
     [Fact]
+    public void Designer_Tabs_RenderAriaSelectedAsStateStrings_InBothStates()
+    {
+        // Fáze 4h (plan b75365fb): aria-selected carries the strings "true"/"false" — a bool
+        // comparison renders the invalid empty value on the active tab and drops the attribute
+        // on the inactive ones.
+        var cut = Render<TmReportDesigner>(parameters => parameters
+            .Add(component => component.Definition, Definition()));
+
+        cut.Find("[data-testid='tm-designer-tab-design']").GetAttribute("aria-selected").Should().Be("true");
+        cut.Find("[data-testid='tm-designer-tab-data']").GetAttribute("aria-selected").Should().Be("false");
+        cut.Find("[data-testid='tm-designer-tab-preview']").GetAttribute("aria-selected").Should().Be("false");
+
+        cut.Find("[data-testid='tm-designer-tab-data']").Click();
+
+        cut.Find("[data-testid='tm-designer-tab-design']").GetAttribute("aria-selected").Should().Be("false");
+        cut.Find("[data-testid='tm-designer-tab-data']").GetAttribute("aria-selected").Should().Be("true");
+        cut.Find("[data-testid='tm-designer-tab-preview']").GetAttribute("aria-selected").Should().Be("false");
+    }
+
+    [Fact]
     public void Designer_RendersBandsAndUpdatesBandHeightAndZoom()
     {
         var cut = Render<TmReportDesigner>(parameters => parameters

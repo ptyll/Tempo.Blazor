@@ -564,6 +564,10 @@ public partial class TmNotionPageSettingsMenu : TmComponentBase, IAsyncDisposabl
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
+    // ARIA state attributes are strings: a Blazor bool renders the invalid empty value (true)
+    // or omits the attribute entirely (false) — never a valid "true"/"false" state.
+    private static string BoolText(bool value) => value ? "true" : "false";
+
     private static string GetPageIcon(INotionPage p) =>
         string.IsNullOrEmpty(p.IconEmoji) ? "📄" : p.IconEmoji;
 

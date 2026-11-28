@@ -109,6 +109,10 @@ public partial class TmNotionToggleBlock : ComponentBase, IAsyncDisposable
             ? string.Empty
             : $"tm-notion-bg-{NotionColorTokens.Name(Content.BackgroundColor)}";
 
+    // ARIA state attributes carry the strings "true"/"false" — a bool renders as an empty
+    // attribute value (invalid ARIA) or is omitted entirely (plan b75365fb, fáze 4k).
+    private static string BoolText(bool value) => value ? "true" : "false";
+
     // ── Lifecycle ────────────────────────────────────────────────────────────
 
     protected override void OnInitialized()

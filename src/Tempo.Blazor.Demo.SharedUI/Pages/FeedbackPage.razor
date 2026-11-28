@@ -2,8 +2,11 @@
 @inject ToastService Toast
 @inject ITmNotificationService Notifications
 @inject ITmLocalizer Loc
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
 @inject Tempo.Blazor.Demo.SharedUI.Services.DemoToastPresentationState ToastPresentation
 @implements IDisposable
+@using Microsoft.JSInterop
 @using Tempo.Blazor.Abstractions.Shared
 @using Tempo.Blazor.Components.Workflow
 @using Tempo.Blazor.Components.Notifications
@@ -1221,6 +1224,36 @@
             </TmAccordionItem>
         </TmAccordion>
     </div>
+
+    <!-- URL-synced (@bind-ExpandedKeys) + two-way @bind-IsExpanded -->
+    <div class="showcase-card mt-4 scroll-mt-24" data-testid="accordion-url-sync-card" id="accordion-url-sync" tabindex="-1">
+        <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">URL-synced (@@bind-ExpandedKeys)</p>
+        <TmAccordion ExpandedKeys="_urlExpandedKeys" ExpandedKeysChanged="OnUrlExpandedKeysChanged">
+            <TmAccordionItem Key="install" Title="How do I install it?" Subtitle="The state lives in the URL">
+                <p class="text-sm">Install via NuGet: <code class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">dotnet add package Tempo.Blazor</code>. Reload the page — the expansion survives because it is seeded from the <code class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">expanded</code> query parameter.</p>
+            </TmAccordionItem>
+            <TmAccordionItem Key="dark-mode" Title="Does it survive a theme toggle?">
+                <p class="text-sm">Yes — the accordion is group-controlled through <code class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">@@bind-ExpandedKeys</code>, so re-renders and theme switches never reset it.</p>
+            </TmAccordionItem>
+            <TmAccordionItem Key="license" Title="Is it deep-linkable?">
+                <p class="text-sm">Share the URL with <a class="text-sky-600 dark:text-sky-400 underline" href="feedback?expanded=license#accordion-url-sync"><code class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">?expanded=license#accordion-url-sync</code></a> and this very section opens — scrolled into view — for the recipient.</p>
+            </TmAccordionItem>
+        </TmAccordion>
+        @* The read-out intentionally echoes the RAW query: keys without a matching item survive
+           every snapshot (contract), so a deep link like ?expanded=install,license is NOT
+           normalized down to the one key single mode actually renders. *@
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-3">
+            Current query: <code class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded font-mono" data-testid="accordion-url-readout">@UrlExpandedReadout</code>
+        </p>
+
+        <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-5 mb-3">Two-way @@bind-IsExpanded</p>
+        <TmCheckbox @bind-Value="_boundExpanded" Label="Bound item expanded" data-testid="accordion-bound-checkbox" />
+        <TmAccordion Class="mt-2">
+            <TmAccordionItem Title="Bound item" @bind-IsExpanded="_boundExpanded">
+                <p class="text-sm">This item and the checkbox above share one state — toggle either side and the other follows.</p>
+            </TmAccordionItem>
+        </TmAccordion>
+    </div>
 </section>
 
 <!-- Number Input -->
@@ -1320,6 +1353,62 @@
 @code {
     private bool _paletteOpen;
     private List<Tempo.Blazor.Interfaces.ICommandPaletteAction> _paletteActions = new();
+
+    /// <summary>Deep-link seed of the URL-synced accordion card (<c>/feedback?expanded=install</c>).</summary>
+    [SupplyParameterFromQuery(Name = "expanded")]
+    public string? ExpandedQuery { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || string.IsNullOrWhiteSpace(ExpandedQuery))
+        {
+            return;
+        }
+
+        // Deep link (?expanded=…#accordion-url-sync): focus the card and bring the opened
+        // section into view once the initial layout settles. The JS helper scrolls INSTANTLY
+        // after the settle wait — a plain FocusAsync scrolls smoothly (the demo's global
+        // scroll-behavior) and late-rendering sections above the card interrupt that
+        // animation, leaving the card outside the viewport.
+        try
+        {
+            var module = await JS.InvokeAsync<IJSObjectReference>(
+                "import", "./_content/Tempo.Blazor.Demo.SharedUI/js/demo-app-ready.js");
+            await module.InvokeVoidAsync("focusDeepLinkTargetWhenSettled", "#accordion-url-sync");
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit dropped mid-wait (Server) — the deep-link scroll is best-effort.
+        }
+        catch (OperationCanceledException)
+        {
+            // Navigation away cancelled the interop — nothing to scroll anymore.
+        }
+    }
+
+    /// <summary>Group-controlled keys of the URL-synced accordion — never null, so the accordion stays controlled.</summary>
+    private IReadOnlyCollection<string> _urlExpandedKeys = Array.Empty<string>();
+
+    /// <summary>Shared state of the two-way <c>@@bind-IsExpanded</c> sample (checkbox ↔ item).</summary>
+    private bool _boundExpanded;
+
+    protected override void OnParametersSet()
+    {
+        _urlExpandedKeys = string.IsNullOrWhiteSpace(ExpandedQuery)
+            ? Array.Empty<string>()
+            : ExpandedQuery.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    }
+
+    private string UrlExpandedReadout =>
+        string.IsNullOrWhiteSpace(ExpandedQuery) ? "(no expanded parameter)" : $"?expanded={ExpandedQuery}";
+
+    private void OnUrlExpandedKeysChanged(IReadOnlyCollection<string> keys)
+    {
+        _urlExpandedKeys = keys;
+        var csv = keys.Count == 0 ? null : string.Join(',', keys);
+        // replace: true — toggling a section must not pile up history entries.
+        NavigationManager.NavigateTo(NavigationManager.GetUriWithQueryParameter("expanded", csv), replace: true);
+    }
 
     /// <summary>The recipient every bell, the chip and every published notification share.</summary>
     private const string Recipient = "demo";

@@ -2,7 +2,7 @@
   "itemName": "TmNotionPageHistory",
   "kind": "Component",
   "category": "Notion Editor",
-  "description": "Version-history dialog with a paginated version list and a content pane showing either a read-only version preview or a diff (via TmNotionDiffViewer), supporting compare mode and restore with confirmation.",
+  "description": "Version-history dialog with a paginated version list and a content pane showing either a read-only version preview or a diff (via TmNotionDiffViewer), supporting compare mode and restore with confirmation. The version preview (.tm-nph__preview) is a named role=region — a display-only container of sanitized static block HTML, so it carries no aria-readonly (ARIA 1.2 does not support the attribute on a region).",
   "packageId": "Tempo.Blazor.NotionEditor",
   "namespace": "Tempo.Blazor.Components.NotionEditor.UI",
   "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionPageHistory.razor",

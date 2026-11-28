@@ -18,6 +18,16 @@ public partial class TmNotionDbImportExport : ComponentBase
 
     private string ExportViewName => $"tm-dbie-view-{_idSuffix}";
 
+    // Tab ↔ tabpanel wiring (APG tabs): each tab names the shared panel it controls and the
+    // panel names the ACTIVE tab as its label.
+    private string ImportTabId => $"tm-dbie-tab-import-{_idSuffix}";
+
+    private string ExportTabId => $"tm-dbie-tab-export-{_idSuffix}";
+
+    private string PanelId => $"tm-dbie-panel-{_idSuffix}";
+
+    private string ActiveTabDomId => _tab == ActiveTab.Import ? ImportTabId : ExportTabId;
+
     [CascadingParameter] private NotionEditorContext Context { get; set; } = default!;
 
     // ── Parameters ────────────────────────────────────────────────────────────
@@ -42,6 +52,10 @@ public partial class TmNotionDbImportExport : ComponentBase
 
     private ActiveTab  _tab        = ActiveTab.Import;
     private ImportStep _importStep = ImportStep.Upload;
+
+    // ARIA state attributes carry the strings "true"/"false" — a bool renders as an empty
+    // attribute value (invalid ARIA) or is omitted entirely (plan b75365fb, fáze 4k).
+    private static string BoolText(bool value) => value ? "true" : "false";
 
     // ── Import state ──────────────────────────────────────────────────────────
 

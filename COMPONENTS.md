@@ -1443,6 +1443,9 @@ Akordeon pro sbalitelné sekce.
 | Parametr | Typ | Výchozí | Popis |
 |----------|-----|---------|-------|
 | `Multiple` | `bool` | `false` | Povolit více otevřených sekcí |
+| `ExpandedKeys` | `IReadOnlyCollection<string>?` | `null` | Skupinové řízení stavu podle klíčů položek (`@bind-ExpandedKeys`); non-null hodnota vlastní stav všech položek s `Key` |
+| `ExpandedKeysChanged` | `EventCallback<IReadOnlyCollection<string>>` | — | Jednou za klik emituje nový immutable snapshot klíčů (pořadí = pořadí registrace; u statického seznamu položek = pořadí v DOM, později podmíněně vložená položka se připojí na konec) |
+| `OnItemToggled` | `EventCallback<AccordionItemToggleEventArgs>` | — | Notifikace každé uživatelské změny (`Key`, `Expanded`, `Index`), včetně implicitního zavření sourozence v single režimu |
 | `ChildContent` | `RenderFragment?` | `null` | TmAccordionItem děti |
 | `Class` | `string?` | `null` | Další CSS třídy |
 | `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
@@ -1451,37 +1454,82 @@ Akordeon pro sbalitelné sekce.
 
 | Parametr | Typ | Výchozí | Popis |
 |----------|-----|---------|-------|
-| `Id` | `string` | **povinný** | Unikátní ID |
 | `Title` | `string` | **povinný** | Nadpis |
-| `ChildContent` | `RenderFragment` | — | Obsah |
+| `Subtitle` | `string?` | `null` | Podtitulek pod nadpisem |
+| `Icon` | `string?` | `null` | Ikona v hlavičce |
+| `IsExpanded` | `bool` | `false` | Rozbalený stav (parametr se uvnitř komponenty nikdy nepřiřazuje) |
+| `IsExpandedChanged` | `EventCallback<bool>` | — | Callback uživatelského přepnutí (`@bind-IsExpanded`) |
+| `Key` | `string?` | `null` | Stabilní identita položky pro skupinové řízení / URL sync (ordinální porovnání, case-sensitive; duplicitní klíče sdílí jeden stav) |
+| `Disabled` | `bool` | `false` | Zakázaná položka (callbacky nevolá) |
+| `ChildContent` | `RenderFragment?` | `null` | Obsah |
 | `Class` | `string?` | `null` | Další CSS třídy |
 | `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
+
+#### Controlled vs. uncontrolled
+
+- **Uncontrolled** (bez `IsExpandedChanged` a bez skupinového řízení): `IsExpanded` seeduje interní stav při prvním renderu a znovu jen když se hodnota parametru skutečně změní — re-render rodiče uživatelem otevřenou položku nezavře. Deklarativní přepnutí hodnoty hostem funguje dál.
+- **Controlled** (`@bind-IsExpanded`): klik jen vyvolá `IsExpandedChanged(!aktuální)`; host, který hodnotu neaktualizuje, tím přepnutí odmítne.
+- **Skupinové řízení** (`ExpandedKeys` non-null na `TmAccordion`): vlastní stav všech položek s `Key` — jejich `IsExpanded`/`IsExpandedChanged` se ignoruje; položky bez `Key` zůstávají ve vlastním režimu. Klíče se porovnávají ordinálně (case-sensitive) a duplicitní `Key` sdílí jeden stav. V single režimu nese snapshot max. 1 klíč VYRENDEROVANÉ položky; seed s více klíči ponechá první položku v pořadí registrace. Klíč, který nemá odpovídající položku, snapshot přežije (na konci) — limit „max 1 klíč" se vztahuje jen na klíče vyrendrovaných položek.
+- Hledáte `InitiallyExpanded`? Není potřeba — uncontrolled `IsExpanded` je seed.
 
 #### Příklady
 
 ```razor
 @* Základní (jen jeden otevřený) *@
 <TmAccordion>
-    <TmAccordionItem Id="faq1" Title="Co je Tempo.Blazor?">
+    <TmAccordionItem Title="Co je Tempo.Blazor?">
         Knihovna UI komponent pro Blazor.
     </TmAccordionItem>
-    <TmAccordionItem Id="faq2" Title="Jak nainstalovat?">
+    <TmAccordionItem Title="Jak nainstalovat?">
         Přidejte NuGet balíček Tempo.Blazor.
     </TmAccordionItem>
-    <TmAccordionItem Id="faq3" Title="Je zdarma?">
+    <TmAccordionItem Title="Je zdarma?">
         Ano, pro interní použití.
     </TmAccordionItem>
 </TmAccordion>
 
 @* Více otevřených *@
 <TmAccordion Multiple="true">
-    <TmAccordionItem Id="s1" Title="Osobní údaje">
+    <TmAccordionItem Title="Osobní údaje" Subtitle="Krok 1" Icon="user">
         <TmTextInput @bind-Value="_name" Label="Jméno" />
     </TmAccordionItem>
-    <TmAccordionItem Id="s2" Title="Kontakt">
+    <TmAccordionItem Title="Kontakt" Disabled="true">
         <TmTextInput @bind-Value="_email" Label="Email" />
     </TmAccordionItem>
 </TmAccordion>
+
+@* Obousměrné rozbalení jedné položky *@
+<TmAccordion>
+    <TmAccordionItem Title="Detail" @bind-IsExpanded="_detailOpen">
+        ...
+    </TmAccordionItem>
+</TmAccordion>
+
+@* URL sync celé skupiny (?expanded=install,dark-mode) *@
+@page "/faq"
+@inject NavigationManager Nav
+
+<TmAccordion ExpandedKeys="_expanded" ExpandedKeysChanged="OnExpandedChanged">
+    <TmAccordionItem Key="install" Title="Instalace">...</TmAccordionItem>
+    <TmAccordionItem Key="dark-mode" Title="Dark mode">...</TmAccordionItem>
+</TmAccordion>
+
+@code {
+    [SupplyParameterFromQuery(Name = "expanded")] public string? ExpandedQuery { get; set; }
+    private IReadOnlyCollection<string> _expanded = Array.Empty<string>();
+
+    protected override void OnParametersSet() =>
+        _expanded = string.IsNullOrWhiteSpace(ExpandedQuery)
+            ? Array.Empty<string>()
+            : ExpandedQuery.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    private void OnExpandedChanged(IReadOnlyCollection<string> keys)
+    {
+        _expanded = keys;
+        var csv = keys.Count == 0 ? null : string.Join(',', keys);
+        Nav.NavigateTo(Nav.GetUriWithQueryParameter("expanded", csv), replace: true);
+    }
+}
 ```
 
 ### TmChip

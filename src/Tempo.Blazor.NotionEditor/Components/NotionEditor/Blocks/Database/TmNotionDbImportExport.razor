@@ -18,12 +18,14 @@
         <div class="tm-dbie">
 
         @* ── Tabs ──────────────────────────────────────────────────────── *@
-        <div class="tm-dbie__tabs" role="tablist">
+        <div class="tm-dbie__tabs" role="tablist" aria-label="@Loc["TmNotionDbImportExport_Title"]">
             @if (!ReadOnly)
             {
                 <button class="tm-dbie__tab @(_tab == ActiveTab.Import ? "tm-dbie__tab--active" : "")"
                         role="tab"
-                        aria-selected="@(_tab == ActiveTab.Import)"
+                        id="@ImportTabId"
+                        aria-selected="@BoolText(_tab == ActiveTab.Import)"
+                        aria-controls="@PanelId"
                         type="button"
                         @onclick="() => SetTab(ActiveTab.Import)">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -36,7 +38,9 @@
             }
             <button class="tm-dbie__tab @(_tab == ActiveTab.Export ? "tm-dbie__tab--active" : "")"
                     role="tab"
-                    aria-selected="@(_tab == ActiveTab.Export)"
+                    id="@ExportTabId"
+                    aria-selected="@BoolText(_tab == ActiveTab.Export)"
+                    aria-controls="@PanelId"
                     type="button"
                     @onclick="() => SetTab(ActiveTab.Export)">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -49,7 +53,7 @@
         </div>
 
         @* ── Body ──────────────────────────────────────────────────────── *@
-        <div class="tm-dbie__body">
+        <div class="tm-dbie__body" role="tabpanel" id="@PanelId" aria-labelledby="@ActiveTabDomId">
 
             @if (_tab == ActiveTab.Import)
             {

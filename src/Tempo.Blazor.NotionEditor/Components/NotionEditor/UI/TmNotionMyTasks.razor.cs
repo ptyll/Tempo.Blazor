@@ -239,6 +239,10 @@ public partial class TmNotionMyTasks : TmComponentBase
     private static string FilterClass(bool active)
         => active ? "tm-my-tasks__filter tm-my-tasks__filter--active" : "tm-my-tasks__filter";
 
+    // ARIA state attributes are strings: a Blazor bool renders the invalid empty value (true)
+    // or omits the attribute entirely (false) — never a valid "true"/"false" state.
+    private static string BoolText(bool value) => value ? "true" : "false";
+
     private static string TaskClass(TmWorkItem task)
         => task.IsCompleted ? "tm-my-tasks__item tm-my-tasks__item--completed" : "tm-my-tasks__item";
 

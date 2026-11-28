@@ -92,7 +92,7 @@
                                     <button type="button"
                                             class="tm-my-tasks__check"
                                             aria-label="@string.Format(System.Globalization.CultureInfo.CurrentCulture, Loc["Notion_Tasks_ToggleCompleteFor"], task.Title)"
-                                            aria-pressed="@task.IsCompleted"
+                                            aria-pressed="@BoolText(task.IsCompleted)"
                                             @onclick="() => ToggleTaskAsync(task)">
                                         @if (task.IsCompleted)
                                         {

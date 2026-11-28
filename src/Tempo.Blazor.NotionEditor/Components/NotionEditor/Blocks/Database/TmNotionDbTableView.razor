@@ -114,8 +114,8 @@
                                         <button class="tm-dbt__group-toggle"
                                                 type="button"
                                                 data-testid="@TestId("notion-db-group-toggle")"
-                                                aria-expanded="@(!isCollapsed)"
-                                                aria-label="@(isCollapsed ? Loc["TmNotionDb_ExpandGroup"] : Loc["TmNotionDb_CollapseGroup"])"
+                                                aria-expanded="@BoolText(!isCollapsed)"
+                                                aria-label="@(isCollapsed ? Loc["TmNotionDb_ExpandGroup", g.Label ?? Loc["TmNotionDbTableView_GroupNoValue"]] : Loc["TmNotionDb_CollapseGroup", g.Label ?? Loc["TmNotionDbTableView_GroupNoValue"]])"
                                                 @onclick="() => ToggleGroup(g.Key)">
                                             <svg class="tm-dbt__group-chevron @(isCollapsed ? "tm-dbt__group-chevron--collapsed" : "")"
                                                  width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -204,7 +204,7 @@
                                                     {
                                                         <button class="tm-dbt__expand-btn"
                                                                 type="button"
-                                                                aria-expanded="@isExpanded"
+                                                                aria-expanded="@BoolText(isExpanded)"
                                                                 aria-label="@(isExpanded ? Loc["TmNotionDbTableView_CollapseRow"] : Loc["TmNotionDbTableView_ExpandRow"])"
                                                                 @onclick="() => ToggleExpandRecord(cellRec)"
                                                                 @onclick:stopPropagation="true">

@@ -6,10 +6,11 @@
 @if (Provider is not null && !string.IsNullOrWhiteSpace(PageId) && !string.IsNullOrWhiteSpace(UserId))
 {
     <div class="tm-notion-watch @(_watching ? "tm-notion-watch--active" : "")" data-testid="@TestId("notion-watch-button")">
+        @* No aria-pressed: the toggle's NAME changes with the state ("Watch page" ↔ "Unwatch"),
+           so a pressed state on top of the changing name would be announced twice (APG). *@
         <button type="button"
                 class="tm-notion-watch__toggle"
                 data-testid="@TestId("notion-watch-toggle")"
-                aria-pressed="@_watching"
                 aria-label="@ToggleLabel"
                 title="@ToggleLabel"
                 disabled="@_busy"

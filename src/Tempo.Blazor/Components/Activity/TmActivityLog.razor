@@ -9,7 +9,7 @@
                     type="button"
                     role="tab"
                     id="tm-activity-tab-timeline"
-                    aria-selected="@(_activeTab == ActivityTab.Timeline)"
+                    aria-selected="@(_activeTab == ActivityTab.Timeline ? "true" : "false")"
                     @onclick="() => _activeTab = ActivityTab.Timeline">
                 @Loc["TmActivityLog_TimelineTab"]
             </button>
@@ -20,7 +20,7 @@
                     type="button"
                     role="tab"
                     id="tm-activity-tab-comments"
-                    aria-selected="@(_activeTab == ActivityTab.Comments)"
+                    aria-selected="@(_activeTab == ActivityTab.Comments ? "true" : "false")"
                     @onclick="() => _activeTab = ActivityTab.Comments">
                 @Loc["TmActivityLog_CommentsTab"]
                 @if (Comments.Count > 0)
@@ -35,7 +35,7 @@
                     type="button"
                     role="tab"
                     id="tm-activity-tab-attachments"
-                    aria-selected="@(_activeTab == ActivityTab.Attachments)"
+                    aria-selected="@(_activeTab == ActivityTab.Attachments ? "true" : "false")"
                     @onclick="() => _activeTab = ActivityTab.Attachments">
                 @Loc["TmActivityLog_AttachmentsTab"]
                 @if (Attachments.Count > 0)

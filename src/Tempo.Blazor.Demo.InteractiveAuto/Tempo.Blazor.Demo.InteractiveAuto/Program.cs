@@ -121,6 +121,8 @@ builder.Services.AddTempoBlazorAI();
 builder.Services.AddTempoBlazorDocumentEditor();
 builder.Services.AddTempoBlazorDiagramEditor();
 builder.Services.AddTempoBlazorWireframe();
+// Demo custom wireframe components (HeroSection / FeatureCard / CtaBanner) for the /wireframe-editor custom-provider section.
+builder.Services.AddWireframeComponentProvider<Tempo.Blazor.Demo.Services.DemoMarketingComponentProvider>();
 builder.Services.AddTempoBlazorModeling();
 // Second demo modeling source (phase 3): the header provider select lists both keys.
 builder.Services.AddSingleton<IModelingModelProvider, Tempo.Blazor.Demo.SharedUI.Services.DemoUmlModelingModelProvider>();

@@ -74,6 +74,44 @@ public class TmSigningFieldEditorPanelTests : LocalizationTestBase
         captured.Options.Select(option => option.Value).Should().Equal("Option 1", "Option 2");
     }
 
+    /// <summary>
+    /// Fáze 4g (plan b75365fb): the panel root is an <c>&lt;aside&gt;</c> (implicit role
+    /// complementary) and ARIA 1.2 does NOT support <c>aria-readonly</c> on complementary —
+    /// the attribute used to sit on the root and told a screen reader nothing. The lock is
+    /// announced where it applies: every inner editor renders <c>disabled</c>. Hosts that need
+    /// the locked panel key off the stable <c>tm-signing-field-editor-panel--readonly</c> root
+    /// class (kept byte-identical).
+    /// </summary>
+    [Fact]
+    public void ReadOnly_RootAside_HasNoAriaReadonly_KeepsTheReadonlyClass()
+    {
+        var cut = Render<TmSigningFieldEditorPanel>(parameters =>
+            parameters.Add(p => p.Field, CreateField())
+                      .Add(p => p.ReadOnly, true));
+
+        var aside = cut.Find("aside.tm-signing-field-editor-panel");
+        aside.HasAttribute("aria-readonly").Should().BeFalse(
+            "aria-readonly is not a supported attribute on role=complementary (ARIA 1.2)");
+        aside.ClassList.Should().Contain("tm-signing-field-editor-panel--readonly",
+            "the stable root class is the host hook for the locked panel");
+
+        // The lock is announced on the controls themselves — the inner editors are disabled.
+        cut.Find(".tm-signing-field-editor-panel__name").HasAttribute("disabled").Should().BeTrue();
+        cut.Find(".tm-signing-field-editor-panel__type").HasAttribute("disabled").Should().BeTrue();
+    }
+
+    [Fact]
+    public void Editable_RootAside_HasNoAriaReadonly_Either()
+    {
+        var cut = Render<TmSigningFieldEditorPanel>(parameters =>
+            parameters.Add(p => p.Field, CreateField()));
+
+        var aside = cut.Find("aside.tm-signing-field-editor-panel");
+        aside.HasAttribute("aria-readonly").Should().BeFalse(
+            "aria-readonly=\"false\" on complementary was as invalid as \"true\"");
+        aside.ClassList.Should().NotContain("tm-signing-field-editor-panel--readonly");
+    }
+
     [Fact]
     public void ReadOnly_DisablesControls()
     {

@@ -12,7 +12,7 @@
         <button class="tm-notion-toggle__arrow"
                 type="button"
                 aria-label="@Loc["TmNotionToggleBlock_Expand"]"
-                aria-expanded="@_isOpen"
+                aria-expanded="@BoolText(_isOpen)"
                 @onclick="HandleArrowClickAsync"
                 @onclick:stopPropagation="true">
             <svg width="8" height="8" viewBox="0 0 8 8" fill="none" aria-hidden="true">

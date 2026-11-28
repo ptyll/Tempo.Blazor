@@ -94,6 +94,10 @@ public partial class TmNotionBlockTypeSwitcher : ComponentBase
     private bool   _wasVisible;
     private int    _highlightedIndex = -1;
 
+    // aria-selected must carry the strings "true"/"false" — a Blazor bool renders the invalid
+    // empty value (true) or drops the attribute (false).
+    private static string BoolText(bool value) => value ? "true" : "false";
+
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
     protected override void OnParametersSet()
